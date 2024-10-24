@@ -6,6 +6,22 @@
 #include "raylib.h"
 #include <stdlib.h>  // Required for: malloc(), free()
 
+// This is the maximum amount of elements (quads) per batch
+// NOTE: This value is defined in [rlgl] module and can be changed there
+#define MAX_SPAWN_COUNT 1000
+// This is the maximum amount of elements (quads) per batch
+// NOTE: This value is defined in [rlgl] module and can be changed there
+#define MAX_PROJECTILE_COUNT 50000
+
+
+typedef enum actor_type 
+{
+    ENEMY,
+    PROJECTILE_ENEMY,
+    PLAYER,
+    PROJECTILE_PLAYER,
+} actor_type;
+
 // Unsigned int types.
 typedef unsigned char u8;
 typedef unsigned short u16;

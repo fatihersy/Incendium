@@ -1,6 +1,7 @@
 #include "player.h"
 
 #include "ability.h"
+#include "collision.h"
 
 bool player_system_initialized = false;
 

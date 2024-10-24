@@ -1,6 +1,7 @@
 #include "spawn.h"
 
 #include "resource.h"
+#include "collision.h"
 
 Character2D* spawns = {0};
 i16 current_spawn_count = 0;
@@ -16,12 +17,26 @@ bool spawn_system_initialize() {
     return true;
 }
 
-bool spawn_character(Character2D character) {
+bool spawn_character(Character2D character, actor_type type) {
+    Texture2D tex = get_texture_by_id(character.texId);
+    character.ID = current_spawn_count;
+    
+    character.collision = (Rectangle){
+        .width = tex.width,
+        .height = tex.height,
+        .x = character.position.x,
+        .y = character.position.y};
 
-    spawns[current_spawn_count] = character;
+    add_collision((Rectangle){
+        .x = character.position.x,
+        .y = character.position.y,
+        .width = tex.width,
+        .height = tex.height,
+    },
+    type);
+
     character.initialized = true;
-
-    current_spawn_count++;
+    spawns[current_spawn_count++] = character;
 
     return true;
 }
@@ -35,14 +50,13 @@ Character2D get_character(u32 ID) {
 }
 
 bool update_spawns() {
-
-    
+    for (i32 i = 0; i < current_spawn_count; i++) {
+    }
 
     return true;
 }
 
 bool render_spawns() {
-
     // Enemies
     for (i32 i = 0; i < current_spawn_count; i++) {
         DrawTexture(
