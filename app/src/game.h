@@ -4,10 +4,6 @@
 
 #include "defines.h"
 
-typedef struct game_state {
-    f32 delta_time;
-} game_state;
-
 bool game_initialize();
 
 bool game_update();

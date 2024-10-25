@@ -19,24 +19,14 @@ bool game_initialize() {
     player_system_initialize();
     spawn_system_initialize();
     resource_system_initialize();
-    collision_system_initialize();
 
-    set_player_position(get_screen_size().x / 2, get_screen_size().y / 2);
-
-    player_state _player = *get_player_state();
-
-    add_collision((Rectangle){
-                      .x = _player.position.x - _player.player_texture.width / 2,
-                      .y = _player.position.y - _player.player_texture.height / 2,
-                      .width = _player.player_texture.width,
-                      .height = _player.player_texture.height,
-                  },
-                  PLAYER);
+    get_player_state()->position.x = get_screen_size().x / 2;
+    get_player_state()->position.y = get_screen_size().y / 2;
 
     unsigned int texId = load_texture("D:\\Workspace\\CLang\\Resources\\fudesumi.png", true, (Vector2){32, 32});
     Texture2D tex = get_texture_by_id(texId);
 
-    for (size_t i = 0; i < 360; i += 10) {
+    for (size_t i = 0; i < 360; i += 60) {
         Vector2 position = get_a_point_of_a_circle(get_active_camera().offset, 500, i);
 
         spawn_character((Character2D){
@@ -57,7 +47,6 @@ bool game_update() {
 
     update_player();
     update_spawns();
-    update_collision();
 
     // radius -= 1;
 
@@ -77,7 +66,6 @@ bool game_render() {
 
     render_player();
     render_spawns();
-    render_collision();
 
     end_draw();
     return true;

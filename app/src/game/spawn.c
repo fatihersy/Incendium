@@ -19,21 +19,13 @@ bool spawn_system_initialize() {
 
 bool spawn_character(Character2D character, actor_type type) {
     Texture2D tex = get_texture_by_id(character.texId);
-    character.ID = current_spawn_count;
+    character.character_id = current_spawn_count;
     
-    character.collision = (Rectangle){
+    character.collision_rect = (Rectangle){
         .width = tex.width,
         .height = tex.height,
         .x = character.position.x,
         .y = character.position.y};
-
-    add_collision((Rectangle){
-        .x = character.position.x,
-        .y = character.position.y,
-        .width = tex.width,
-        .height = tex.height,
-    },
-    type);
 
     character.initialized = true;
     spawns[current_spawn_count++] = character;
@@ -41,16 +33,15 @@ bool spawn_character(Character2D character, actor_type type) {
     return true;
 }
 
-Character2D get_character(u32 ID) {
-    for (i32 i = 0; i < MAX_SPAWN_COUNT; i++) {
-        if (spawns[i].ID == ID) return spawns[i];
-    }
-
-    return (Character2D){.initialized = false};
+Character2D* get_spawn_data() {
+    return spawns;
 }
 
 bool update_spawns() {
-    for (i32 i = 0; i < current_spawn_count; i++) {
+    for (i32 i = 0; i < current_spawn_count; i++) 
+    {
+        spawns[i].collision_rect.x = spawns[i].position.x;
+        spawns[i].collision_rect.y = spawns[i].position.y;
     }
 
     return true;
@@ -64,6 +55,19 @@ bool render_spawns() {
             spawns[i].position.x,
             spawns[i].position.y,
             WHITE);
+
+        #if DEBUG_COLLISIONS
+
+        DrawRectangleLines
+        (
+            spawns[i].collision_rect.x,
+            spawns[i].collision_rect.y,
+            spawns[i].collision_rect.width,
+            spawns[i].collision_rect.height,
+            WHITE
+        );
+
+        #endif
     }
 
     return true;

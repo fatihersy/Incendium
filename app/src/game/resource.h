@@ -4,12 +4,6 @@
 
 #include "defines.h"
 
-typedef struct resource_system_state 
-{
-    i16 texture_amouth;
-
-} resource_system_state;
-
 bool resource_system_initialize();
 
 bool update_resource_system();

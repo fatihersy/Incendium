@@ -6,21 +6,11 @@
 #include "raylib.h"
 #include <stdlib.h>  // Required for: malloc(), free()
 
-// This is the maximum amount of elements (quads) per batch
-// NOTE: This value is defined in [rlgl] module and can be changed there
 #define MAX_SPAWN_COUNT 1000
-// This is the maximum amount of elements (quads) per batch
-// NOTE: This value is defined in [rlgl] module and can be changed there
-#define MAX_PROJECTILE_COUNT 50000
 
+#define MAX_PROJECTILE_COUNT 500
 
-typedef enum actor_type 
-{
-    ENEMY,
-    PROJECTILE_ENEMY,
-    PLAYER,
-    PROJECTILE_PLAYER,
-} actor_type;
+#define DEBUG_COLLISIONS 1
 
 // Unsigned int types.
 typedef unsigned char u8;
@@ -40,6 +30,79 @@ typedef double f64;
 
 // Boolean types
 typedef int b32;
+
+typedef struct resource_system_state 
+{
+    i16 texture_amouth;
+
+} resource_system_state;
+
+typedef enum actor_type 
+{
+    ENEMY,
+    PROJECTILE_ENEMY,
+    PLAYER,
+    PROJECTILE_PLAYER,
+} actor_type;
+
+typedef enum ability_type {
+    fireball,
+} ability_type;
+
+typedef struct collision 
+{
+    bool is_active;
+
+    actor_type type;
+    Rectangle* rect;
+    i16 amount;
+} collision;
+
+typedef struct Character2D {
+    unsigned int texId;
+    i16 character_id;
+    bool initialized;
+
+    Rectangle collision_rect;
+    Vector2 position;
+    i16 health;
+    i16 speed;
+} Character2D;
+
+typedef struct ability
+{
+    ability_type type;
+    Vector2 location;
+    i16 rotation;
+    Character2D* projectiles;
+} ability;
+
+typedef struct ability_system_state 
+{
+    actor_type owner_type;
+    Vector2 owner_position;
+
+    ability* abilities;
+    i16 ability_amount;
+} ability_system_state;
+
+typedef struct game_data {
+    
+} game_data;
+
+
+typedef struct player_state
+{
+    bool initialized;
+    Vector2 position;
+    collision collisions;
+    Texture2D player_texture;
+    const char* texture_path;
+} player_state;
+
+typedef struct game_state {
+    f32 delta_time;
+} game_state;
 
 // Properly define static assertions.
 #if defined(__clang__) || defined(__gcc__)

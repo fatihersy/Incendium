@@ -21,7 +21,16 @@ bool player_system_initialize() {
 
     player->player_texture = LoadTexture(player->texture_path);
 
-    ability_system = ability_system_initialize();
+    ability_system = ability_system_initialize(PLAYER);
+    player->collisions = *collision_system_initialize(1);
+
+    player->collisions.rect[0] = (Rectangle) 
+    {
+        .x = player->position.x - player->player_texture.width / 2,
+        .y = player->position.y - player->player_texture.height / 2,
+        .width = player->player_texture.width,
+        .height = player->player_texture.height
+    };
 
     add_ability(ability_system, fireball);
 
@@ -38,32 +47,28 @@ player_state* get_player_state() {
     return player;
 }
 
-void set_player_position(i16 x, i16 y) {
-    player->position.x = x;
-    player->position.y = y;
-}
-
 bool update_player() {
     if (!player_system_initialized) return false;
 
-    if (IsKeyDown(KEY_W))
-    {
-        set_player_position(get_player_state()->position.x, get_player_state()->position.y-1);
+    if (IsKeyDown(KEY_W)) {
+        player->position.y -= 1;
     }
-    if (IsKeyDown(KEY_A))
-    {
-        set_player_position(get_player_state()->position.x-1, get_player_state()->position.y);
+    if (IsKeyDown(KEY_A)) {
+        player->position.x -= 1;
     }
-    if (IsKeyDown(KEY_S))
-    {
-        set_player_position(get_player_state()->position.x, get_player_state()->position.y+1);
+    if (IsKeyDown(KEY_S)) {
+        player->position.y += 1;
     }
-    if (IsKeyDown(KEY_D))
-    {
-        set_player_position(get_player_state()->position.x+1, get_player_state()->position.y);
+    if (IsKeyDown(KEY_D)) {
+        player->position.x += 1;
     }
-    
+
     update_abilities(ability_system, player->position);
+
+     player->collisions.rect->x = player->position.x - player->player_texture.width/2;
+     player->collisions.rect->y = player->position.y - player->player_texture.height/2;
+     player->collisions.rect->width = player->player_texture.width;
+     player->collisions.rect->height = player->player_texture.height;
 
     return true;
 }
@@ -75,11 +80,21 @@ bool render_player() {
 
     DrawTexture(
         player->player_texture,
-        player->position.x - player->player_texture.width/2,
-        player->position.y - player->player_texture.height/2,
+        player->position.x - player->player_texture.width / 2,
+        player->position.y - player->player_texture.height / 2,
         WHITE);
 
-    render_abilities(ability_system, player->position);
+    render_abilities(ability_system);
+
+    #if DEBUG_COLLISIONS
+    DrawRectangleLines(
+        player->collisions.rect->x,
+        player->collisions.rect->y,
+        player->collisions.rect->width,
+        player->collisions.rect->height,
+        WHITE
+    );
+    #endif
 
     return true;
 }

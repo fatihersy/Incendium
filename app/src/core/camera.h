@@ -4,7 +4,6 @@
 
 #include "defines.h"
 
-
 Camera2D create_camera(Vector2 position, u16 screenWidth, u16 screenHeight, f32 rotation);
 
 Camera2D get_active_camera();
