@@ -8,7 +8,10 @@
 bool spawn_system_initialize();
 bool spawn_character(Character2D character, actor_type type);
 
-Character2D* get_spawn_data();
+spawn_system_state* get_spawn_system();
+
+void kill_spawn(u16 _id);
+
 bool update_spawns();
 bool render_spawns();
 

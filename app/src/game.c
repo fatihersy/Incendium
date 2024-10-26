@@ -23,16 +23,19 @@ bool game_initialize() {
     get_player_state()->position.x = get_screen_size().x / 2;
     get_player_state()->position.y = get_screen_size().y / 2;
 
-    unsigned int texId = load_texture("D:\\Workspace\\CLang\\Resources\\fudesumi.png", true, (Vector2){32, 32});
+    unsigned int texId = load_texture("D:\\Workspace\\CLang\\Resources\\fudesumi.png", true, (Vector2){64, 64});
     Texture2D tex = get_texture_by_id(texId);
 
-    for (size_t i = 0; i < 360; i += 60) {
+    for (size_t i = 0; i < 360; i += 20) {
         Vector2 position = get_a_point_of_a_circle(get_active_camera().offset, 500, i);
 
         spawn_character((Character2D){
             .texId = texId,
             .initialized = true,
-            .position = position
+            .position = position,
+            .speed = 1,
+            .health = 100,
+            .damage = 10,
         },
         ENEMY);
     }

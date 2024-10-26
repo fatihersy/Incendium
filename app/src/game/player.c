@@ -51,16 +51,16 @@ bool update_player() {
     if (!player_system_initialized) return false;
 
     if (IsKeyDown(KEY_W)) {
-        player->position.y -= 1;
+        player->position.y -= 2;
     }
     if (IsKeyDown(KEY_A)) {
-        player->position.x -= 1;
+        player->position.x -= 2;
     }
     if (IsKeyDown(KEY_S)) {
-        player->position.y += 1;
+        player->position.y += 2;
     }
     if (IsKeyDown(KEY_D)) {
-        player->position.x += 1;
+        player->position.x += 2;
     }
 
     update_abilities(ability_system, player->position);

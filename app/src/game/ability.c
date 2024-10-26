@@ -3,6 +3,8 @@
 
 #include "collision.h"
 
+#include "game_manager.h"
+
 #define MAX_ABILITY_AMOUNT 10
 
 #define FIRE_BALL_BALL_RADIUS 12
@@ -39,7 +41,7 @@ void add_ability(ability_system_state* system, ability_type type) {
                     (
                         system->owner_position, 
                         FIRE_BALL_CIRCLE_RADIUS, 
-                        ((90*i) + system->abilities[i].rotation) % 360
+                        (((360 / FIRE_BALL_BALL_COUNT)*i) + system->abilities[i].rotation) % 360
                     );
 
                 system->abilities->projectiles[i - 1].collision_rect.x = system->abilities->projectiles[i - 1].position.x;
@@ -70,10 +72,12 @@ bool update_abilities(ability_system_state* system, Vector2 position) {
                         (
                             system->owner_position, 
                             FIRE_BALL_CIRCLE_RADIUS, 
-                            ((90*j) + system->abilities[i].rotation) % 360
+                            (((360 / FIRE_BALL_BALL_COUNT)*j) + system->abilities[i].rotation) % 360
                         );
                     system->abilities->projectiles[j - 1].collision_rect.x = system->abilities->projectiles[j - 1].position.x;
                     system->abilities->projectiles[j - 1].collision_rect.y = system->abilities->projectiles[j - 1].position.y;
+
+                    damage_any_collade(&system->abilities->projectiles[j - 1]);
                 }
 
                 break;
@@ -101,6 +105,7 @@ bool render_abilities(ability_system_state* system)
                         FIRE_BALL_BALL_RADIUS,
                         RED);
                     
+                    #if DEBUG_COLLISIONS
                     DrawRectangleLines
                     (
                         system->abilities[i].projectiles[j].position.x - FIRE_BALL_CIRCLE_RADIUS_DIV_4,
@@ -109,6 +114,7 @@ bool render_abilities(ability_system_state* system)
                         FIRE_BALL_BALL_DIAMETER,
                         WHITE
                     );
+                    #endif
                 };
                 break;
             }

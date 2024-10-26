@@ -24,13 +24,31 @@ void set_player_position(i16 x, i16 y) {
     get_player_state()->position.y = y;
 }
 
-Character2D* get_actor_by_id(u32 ID) {
+Vector2 get_player_position() {
 
-    Character2D* spawn_data = get_spawn_data();
+    return get_player_state()->position;
+}
+
+Character2D* get_actor_by_id(u16 ID) {
+
+    spawn_system_state* spawn_data = get_spawn_system();
 
     for (i32 i = 0; i < MAX_SPAWN_COUNT; i++) {
-        if (spawn_data[i].character_id == ID) return &spawn_data[i];
+        if (spawn_data->spawns[i].character_id == ID) return &spawn_data->spawns[i];
     }
 
     return (Character2D*){0};
+}
+
+void damage_any_collade(Character2D* _character) 
+{
+    spawn_system_state* spawn_system = get_spawn_system();
+
+    for (size_t i = 0; i < spawn_system->current_spawn_count; i++)
+    {
+        if(CheckCollisionRecs(spawn_system->spawns[i].collision_rect, _character->collision_rect)) 
+        {
+            kill_spawn(spawn_system->spawns[i].character_id);
+        }
+    }
 }

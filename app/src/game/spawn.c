@@ -2,25 +2,56 @@
 
 #include "resource.h"
 #include "collision.h"
+#include "game_manager.h"
+#include "core/fmath.h"
 
-Character2D* spawns = {0};
-i16 current_spawn_count = 0;
+spawn_system_state* spawn_system;
 
 bool spawn_system_initialized = false;
 
 bool spawn_system_initialize() {
     if (spawn_system_initialized) return false;
 
-    spawns = (Character2D*)malloc(MAX_SPAWN_COUNT * sizeof(Character2D));
+    spawn_system = (spawn_system_state*)malloc(sizeof(spawn_system_state));
+    spawn_system->spawns = (Character2D*)malloc(MAX_SPAWN_COUNT * sizeof(Character2D));
+    spawn_system->current_spawn_count = 0;
 
     spawn_system_initialized = true;
     return true;
 }
 
+void kill_spawn(u16 _id) {
+    Character2D* character;
+    Character2D* spawns = spawn_system->spawns;
+    u16 spawn_count = spawn_system->current_spawn_count;
+
+    for (size_t i = 0; i < spawn_count; i++) {
+        if (spawns[i].character_id == _id) {
+            character = &spawns[i];
+            break;
+        }
+    }
+
+    if (character->initialized == false) return;
+
+    if (character->character_id != spawn_count - 1) {
+        spawns[_id] = spawns[spawn_count - 1];
+
+        spawns[spawn_count - 1] = (Character2D){0};
+
+        spawn_system->current_spawn_count--;
+
+        spawns[_id].character_id = _id;
+    } else {
+        spawns[_id] = (Character2D){0};
+        spawn_system->current_spawn_count--;
+    }
+}
+
 bool spawn_character(Character2D character, actor_type type) {
     Texture2D tex = get_texture_by_id(character.texId);
-    character.character_id = current_spawn_count;
-    
+    character.character_id = spawn_system->current_spawn_count;
+
     character.collision_rect = (Rectangle){
         .width = tex.width,
         .height = tex.height,
@@ -28,20 +59,22 @@ bool spawn_character(Character2D character, actor_type type) {
         .y = character.position.y};
 
     character.initialized = true;
-    spawns[current_spawn_count++] = character;
+    spawn_system->spawns[spawn_system->current_spawn_count++] = character;
 
     return true;
 }
 
-Character2D* get_spawn_data() {
-    return spawns;
-}
-
 bool update_spawns() {
-    for (i32 i = 0; i < current_spawn_count; i++) 
+
+    Vector2 player_position = get_player_position();
+ 
+    for (i32 i = 0; i < spawn_system->current_spawn_count; i++) 
     {
-        spawns[i].collision_rect.x = spawns[i].position.x;
-        spawns[i].collision_rect.y = spawns[i].position.y;
+        Vector2 new_position = move_towards(spawn_system->spawns[i].position, player_position, spawn_system->spawns[i].speed);
+
+        spawn_system->spawns[i].position = new_position;
+        spawn_system->spawns[i].collision_rect.x = new_position.x;
+        spawn_system->spawns[i].collision_rect.y = new_position.y;
     }
 
     return true;
@@ -49,26 +82,27 @@ bool update_spawns() {
 
 bool render_spawns() {
     // Enemies
-    for (i32 i = 0; i < current_spawn_count; i++) {
-        DrawTexture(
-            get_texture_by_id(spawns[i].texId),
-            spawns[i].position.x,
-            spawns[i].position.y,
-            WHITE);
+    for (i32 i = 0; i < spawn_system->current_spawn_count; i++) {
+        if (spawn_system->spawns[i].initialized) {
+            DrawTexture(
+                get_texture_by_id(spawn_system->spawns[i].texId),
+                spawn_system->spawns[i].position.x,
+                spawn_system->spawns[i].position.y,
+                WHITE);
 
-        #if DEBUG_COLLISIONS
-
-        DrawRectangleLines
-        (
-            spawns[i].collision_rect.x,
-            spawns[i].collision_rect.y,
-            spawns[i].collision_rect.width,
-            spawns[i].collision_rect.height,
-            WHITE
-        );
-
-        #endif
+#if DEBUG_COLLISIONS
+            DrawRectangleLines(
+                spawn_system->spawns[i].collision_rect.x,
+                spawn_system->spawns[i].collision_rect.y,
+                spawn_system->spawns[i].collision_rect.width,
+                spawn_system->spawns[i].collision_rect.height,
+                WHITE);
+#endif
+        }
     }
-
     return true;
+}
+
+spawn_system_state* get_spawn_system() {
+    return spawn_system;
 }

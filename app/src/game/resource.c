@@ -34,12 +34,12 @@ Texture2D get_texture_by_id(unsigned int id)
         if(textures[i].id == id) return textures[i];
     }
     
-    return (Texture2D) { .id = INVALID_ID };
+    return (Texture2D) { .id = INVALID_ID32 };
 }
 
 unsigned int load_texture(const char* path, bool resize, Vector2 new_size) 
 {
-    if(!FileExists(path)) return INVALID_ID;
+    if(!FileExists(path)) return INVALID_ID32;
 
     Texture2D tex = LoadTexture(path);
 

@@ -10,7 +10,7 @@
 
 #define MAX_PROJECTILE_COUNT 500
 
-#define DEBUG_COLLISIONS 1
+#define DEBUG_COLLISIONS 0
 
 // Unsigned int types.
 typedef unsigned char u8;
@@ -37,6 +37,24 @@ typedef struct resource_system_state
 
 } resource_system_state;
 
+typedef struct Character2D {
+    unsigned int texId;
+    u16 character_id;
+    bool initialized;
+
+    Rectangle collision_rect;
+    Vector2 position;
+    i16 health;
+    i16 speed;
+    i16 damage;
+} Character2D;
+
+typedef struct spawn_system_state 
+{
+    Character2D* spawns;
+    u16 current_spawn_count;
+} spawn_system_state;
+
 typedef enum actor_type 
 {
     ENEMY,
@@ -57,17 +75,6 @@ typedef struct collision
     Rectangle* rect;
     i16 amount;
 } collision;
-
-typedef struct Character2D {
-    unsigned int texId;
-    i16 character_id;
-    bool initialized;
-
-    Rectangle collision_rect;
-    Vector2 position;
-    i16 health;
-    i16 speed;
-} Character2D;
 
 typedef struct ability
 {
@@ -129,7 +136,8 @@ STATIC_ASSERT(sizeof(f64) == 8, "Expected f64 to be 8 bytes.");
  * @brief Any id set to this should be considered invalid,
  * and not actually pointing to a real object.
  */
-#define INVALID_ID 4294967295U
+#define INVALID_ID32 4294967295U
+#define INVALID_ID16 65535U
 
 // Platform detection
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) 
