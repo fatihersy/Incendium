@@ -1,5 +1,6 @@
 #include "game_manager.h"
 
+#include "core/ftime.h"
 #include "player.h"
 #include "spawn.h"
 
@@ -40,7 +41,19 @@ Character2D* get_actor_by_id(u16 ID) {
     return (Character2D*){0};
 }
 
-void damage_any_collade(Character2D* _character) 
+float get_time_elapsed(elapse_time_type type) 
+{
+    timer* time = get_timer();
+
+    if(time->remaining == 0) {
+        reset_time(type);
+        return 0;
+    };
+
+    return time->remaining;
+}
+
+bool damage_any_collade(Character2D* _character) 
 {
     spawn_system_state* spawn_system = get_spawn_system();
 
@@ -49,6 +62,9 @@ void damage_any_collade(Character2D* _character)
         if(CheckCollisionRecs(spawn_system->spawns[i].collision_rect, _character->collision_rect)) 
         {
             kill_spawn(spawn_system->spawns[i].character_id);
+            return true;
         }
     }
+
+    return false;
 }

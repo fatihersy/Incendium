@@ -32,7 +32,11 @@ bool player_system_initialize() {
         .height = player->player_texture.height
     };
 
-    add_ability(ability_system, fireball);
+    //add_ability(ability_system, fireball);
+    add_ability(ability_system, salvo);
+    //add_ability(ability_system, radiation);
+    //add_ability(ability_system, direct_fire);
+
 
     player_system_initialized = true;
 

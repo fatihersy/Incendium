@@ -10,7 +10,7 @@
 
 #define MAX_PROJECTILE_COUNT 500
 
-#define DEBUG_COLLISIONS 0
+#define DEBUG_COLLISIONS 1
 
 // Unsigned int types.
 typedef unsigned char u8;
@@ -31,32 +31,41 @@ typedef double f64;
 // Boolean types
 typedef int b32;
 
-typedef struct resource_system_state 
-{
+typedef struct resource_system_state {
     i16 texture_amouth;
 
 } resource_system_state;
 
+typedef enum elapse_time_type {
+    SALVO_ETA
+} elapse_time_type;
+
+typedef struct timer {
+    elapse_time_type type;
+    float total_delay;
+    float remaining;
+} timer;
+
 typedef struct Character2D {
-    unsigned int texId;
     u16 character_id;
+    unsigned int texId;
     bool initialized;
 
     Rectangle collision_rect;
     Vector2 position;
+
+    i16 rotation;
     i16 health;
-    i16 speed;
     i16 damage;
+    float speed;
 } Character2D;
 
-typedef struct spawn_system_state 
-{
+typedef struct spawn_system_state {
     Character2D* spawns;
     u16 current_spawn_count;
 } spawn_system_state;
 
-typedef enum actor_type 
-{
+typedef enum actor_type {
     ENEMY,
     PROJECTILE_ENEMY,
     PLAYER,
@@ -65,10 +74,12 @@ typedef enum actor_type
 
 typedef enum ability_type {
     fireball,
+    salvo,
+    radiation,
+    direct_fire,
 } ability_type;
 
-typedef struct collision 
-{
+typedef struct collision {
     bool is_active;
 
     actor_type type;
@@ -76,16 +87,22 @@ typedef struct collision
     i16 amount;
 } collision;
 
-typedef struct ability
-{
+typedef struct ability {
+    bool is_on_fire;
+
     ability_type type;
-    Vector2 location;
+    Vector2 position;
     i16 rotation;
+    i16 fire_rate;
+
+    Vector2* projectile_target_position;
     Character2D* projectiles;
+    float* projectile_process;
+
+    float overall_process;
 } ability;
 
-typedef struct ability_system_state 
-{
+typedef struct ability_system_state {
     actor_type owner_type;
     Vector2 owner_position;
 
@@ -94,12 +111,9 @@ typedef struct ability_system_state
 } ability_system_state;
 
 typedef struct game_data {
-    
 } game_data;
 
-
-typedef struct player_state
-{
+typedef struct player_state {
     bool initialized;
     Vector2 position;
     collision collisions;
@@ -140,7 +154,7 @@ STATIC_ASSERT(sizeof(f64) == 8, "Expected f64 to be 8 bytes.");
 #define INVALID_ID16 65535U
 
 // Platform detection
-#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) 
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
 #define KPLATFORM_WINDOWS 1
 #ifndef _WIN64
 #error "64-bit is required on Windows!"
@@ -195,7 +209,7 @@ STATIC_ASSERT(sizeof(f64) == 8, "Expected f64 to be 8 bytes.");
 
 #define KCLAMP(value, min, max) (value <= min) ? min : (value >= max) ? max \
                                                                       : value;
-                                                                      
+
 // Inlining
 #if defined(__clang__) || defined(__gcc__)
 #define KINLINE __attribute__((always_inline)) inline
