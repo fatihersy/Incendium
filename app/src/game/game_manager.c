@@ -35,7 +35,7 @@ Character2D* get_actor_by_id(u16 ID) {
     spawn_system_state* spawn_data = get_spawn_system();
 
     for (i32 i = 0; i < MAX_SPAWN_COUNT; i++) {
-        if (spawn_data->spawns[i].character_id == ID) return &spawn_data->spawns[i];
+        if (spawn_data->spawns[i]->character_id == ID) return spawn_data->spawns[i];
     }
 
     return (Character2D*){0};
@@ -59,9 +59,9 @@ bool damage_any_collade(Character2D* _character)
 
     for (size_t i = 0; i < spawn_system->current_spawn_count; i++)
     {
-        if(CheckCollisionRecs(spawn_system->spawns[i].collision_rect, _character->collision_rect)) 
+        if(CheckCollisionRecs(spawn_system->spawns[i]->collision_rect, _character->collision_rect)) 
         {
-            kill_spawn(spawn_system->spawns[i].character_id);
+            kill_spawn(spawn_system->spawns[i]->character_id);
             return true;
         }
     }

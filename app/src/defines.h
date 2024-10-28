@@ -5,12 +5,37 @@
 
 #include "raylib.h"
 #include <stdlib.h>  // Required for: malloc(), free()
+#include <string.h>
 
 #define MAX_SPAWN_COUNT 1000
+#define MAX_PROJECTILE_COUNT 50
+#define MAX_TEXTURE_SLOTS 50
 
-#define MAX_PROJECTILE_COUNT 500
+#define MAX_ABILITY_AMOUNT 10
+
+#define FIRE_BALL_BALL_COUNT 4
+#define FIRE_BALL_BALL_RADIUS 12
+#define FIRE_BALL_BALL_DIAMETER FIRE_BALL_BALL_RADIUS * 2
+#define FIRE_BALL_CIRCLE_RADIUS 50
+#define FIRE_BALL_CIRCLE_RADIUS_DIV_2 FIRE_BALL_CIRCLE_RADIUS / 2
+#define FIRE_BALL_CIRCLE_RADIUS_DIV_4 FIRE_BALL_CIRCLE_RADIUS / 4
+
+#define RADIATION_CIRCLE_RADIUS 100
+#define RADIATION_CIRCLE_DIAMETER RADIATION_CIRCLE_RADIUS * 2
+#define RADIATION_CIRCLE_RADIUS_DIV_2 RADIATION_CIRCLE_RADIUS / 2
+#define RADIATION_CIRCLE_RADIUS_DIV_4 RADIATION_CIRCLE_RADIUS / 4
+
+#define DIRECT_FIRE_SQUARE_WIDTH 35
+#define DIRECT_FIRE_SQUARE_HEIGHT 100
+#define DIRECT_FIRE_SQUARE_HEIGHT_DIV_2 DIRECT_FIRE_SQUARE_HEIGHT / 2
+
+#define SALVO_PROJECTILE_AT_A_TIME 2
+#define SALVO_FIRE_COUNT 3
+#define SALVO_PROJECTILE_COUNT SALVO_PROJECTILE_AT_A_TIME * SALVO_FIRE_COUNT
+#define SALVO_FIRE_RATE 1  // in sec
 
 #define DEBUG_COLLISIONS 1
+
 
 // Unsigned int types.
 typedef unsigned char u8;
@@ -42,8 +67,8 @@ typedef enum elapse_time_type {
 
 typedef struct timer {
     elapse_time_type type;
-    float total_delay;
-    float remaining;
+    f32 total_delay;
+    f32 remaining;
 } timer;
 
 typedef struct Character2D {
@@ -54,14 +79,14 @@ typedef struct Character2D {
     Rectangle collision_rect;
     Vector2 position;
 
-    i16 rotation;
+    u16 rotation;
     i16 health;
     i16 damage;
-    float speed;
+    f32 speed;
 } Character2D;
 
 typedef struct spawn_system_state {
-    Character2D* spawns;
+    Character2D* spawns[MAX_SPAWN_COUNT];
     u16 current_spawn_count;
 } spawn_system_state;
 
@@ -92,21 +117,21 @@ typedef struct ability {
 
     ability_type type;
     Vector2 position;
-    i16 rotation;
+    u16 rotation;
     i16 fire_rate;
 
-    Vector2* projectile_target_position;
-    Character2D* projectiles;
-    float* projectile_process;
+    Vector2* projectile_target_position[MAX_PROJECTILE_COUNT];
+    Character2D* projectiles[MAX_PROJECTILE_COUNT];
+    f32* projectile_process[MAX_PROJECTILE_COUNT];
 
-    float overall_process;
+    f32 overall_process;
 } ability;
 
 typedef struct ability_system_state {
     actor_type owner_type;
     Vector2 owner_position;
 
-    ability* abilities;
+    ability* abilities[MAX_ABILITY_AMOUNT];
     i16 ability_amount;
 } ability_system_state;
 
@@ -144,7 +169,7 @@ STATIC_ASSERT(sizeof(i32) == 4, "Expected i32 to be 4 bytes.");
 STATIC_ASSERT(sizeof(i64) == 8, "Expected i64 to be 8 bytes.");
 
 STATIC_ASSERT(sizeof(f32) == 4, "Expected f32 to be 4 bytes.");
-STATIC_ASSERT(sizeof(f64) == 8, "Expected f64 to be 8 bytes.");
+STATIC_ASSERT(sizeof(f64) == 8, "Expected float to be 8 bytes.");
 
 /**
  * @brief Any id set to this should be considered invalid,

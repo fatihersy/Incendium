@@ -2,9 +2,7 @@
 
 resource_system_state* resource_system;
 
-#define MAX_TEXTURE_SLOTS 50
-
- Texture2D* textures;
+Texture2D* textures;
 
 bool resource_system_initialized = false;
 
@@ -12,7 +10,6 @@ bool resource_system_initialize() {
     if (resource_system_initialized) return false;
     
     resource_system = (resource_system_state*)malloc(sizeof(resource_system_state));
-
     textures = (Texture2D*)malloc(MAX_TEXTURE_SLOTS * sizeof(Texture2D));
 
     resource_system->texture_amouth = -1;

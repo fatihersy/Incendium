@@ -5,7 +5,7 @@
 
 bool player_system_initialized = false;
 
-player_state* player = (player_state*){0};
+player_state* player = {0};
 
 ability_system_state* ability_system;
 
@@ -13,7 +13,7 @@ bool player_system_initialize() {
     if (player_system_initialized) return false;
 
     player = (player_state*)malloc(sizeof(player_state));
-
+    
     player->position.x = 0;
     player->position.y = 0;
 

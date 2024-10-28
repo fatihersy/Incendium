@@ -13,7 +13,7 @@ bool spawn_system_initialize() {
     if (spawn_system_initialized) return false;
 
     spawn_system = (spawn_system_state*)malloc(sizeof(spawn_system_state));
-    spawn_system->spawns = (Character2D*)malloc(MAX_SPAWN_COUNT * sizeof(Character2D));
+
     spawn_system->current_spawn_count = 0;
 
     spawn_system_initialized = true;
@@ -22,12 +22,12 @@ bool spawn_system_initialize() {
 
 void kill_spawn(u16 _id) {
     Character2D* character;
-    Character2D* spawns = spawn_system->spawns;
+    Character2D** spawns = spawn_system->spawns;
     u16 spawn_count = spawn_system->current_spawn_count;
 
     for (size_t i = 0; i < spawn_count; i++) {
-        if (spawns[i].character_id == _id) {
-            character = &spawns[i];
+        if (spawns[i]->character_id == _id) {
+            character = spawns[i];
             break;
         }
     }
@@ -37,13 +37,13 @@ void kill_spawn(u16 _id) {
     if (character->character_id != spawn_count - 1) {
         spawns[_id] = spawns[spawn_count - 1];
 
-        spawns[spawn_count - 1] = (Character2D){0};
+        spawns[spawn_count - 1] = (Character2D*){0};
 
         spawn_system->current_spawn_count--;
 
-        spawns[_id].character_id = _id;
+        spawns[_id]->character_id = _id;
     } else {
-        spawns[_id] = (Character2D){0};
+        spawns[_id] = (Character2D*){0};
         spawn_system->current_spawn_count--;
     }
 }
@@ -59,7 +59,7 @@ bool spawn_character(Character2D character, actor_type type) {
         .y = character.position.y};
 
     character.initialized = true;
-    spawn_system->spawns[spawn_system->current_spawn_count++] = character;
+    spawn_system->spawns[spawn_system->current_spawn_count++] = &character;
 
     return true;
 }
@@ -70,11 +70,11 @@ bool update_spawns() {
  
     for (i32 i = 0; i < spawn_system->current_spawn_count; i++) 
     {
-        Vector2 new_position = move_towards(spawn_system->spawns[i].position, player_position, spawn_system->spawns[i].speed);
+        Vector2 new_position = move_towards(spawn_system->spawns[i]->position, player_position, spawn_system->spawns[i]->speed);
 
-        spawn_system->spawns[i].position = new_position;
-        spawn_system->spawns[i].collision_rect.x = new_position.x;
-        spawn_system->spawns[i].collision_rect.y = new_position.y;
+        spawn_system->spawns[i]->position = new_position;
+        spawn_system->spawns[i]->collision_rect.x = new_position.x;
+        spawn_system->spawns[i]->collision_rect.y = new_position.y;
     }
 
     return true;
@@ -83,19 +83,19 @@ bool update_spawns() {
 bool render_spawns() {
     // Enemies
     for (i32 i = 0; i < spawn_system->current_spawn_count; i++) {
-        if (spawn_system->spawns[i].initialized) {
+        if (spawn_system->spawns[i]->initialized) {
             DrawTexture(
-                get_texture_by_id(spawn_system->spawns[i].texId),
-                spawn_system->spawns[i].position.x,
-                spawn_system->spawns[i].position.y,
+                get_texture_by_id(spawn_system->spawns[i]->texId),
+                spawn_system->spawns[i]->position.x,
+                spawn_system->spawns[i]->position.y,
                 WHITE);
 
 #if DEBUG_COLLISIONS
             DrawRectangleLines(
-                spawn_system->spawns[i].collision_rect.x,
-                spawn_system->spawns[i].collision_rect.y,
-                spawn_system->spawns[i].collision_rect.width,
-                spawn_system->spawns[i].collision_rect.height,
+                spawn_system->spawns[i]->collision_rect.x,
+                spawn_system->spawns[i]->collision_rect.y,
+                spawn_system->spawns[i]->collision_rect.width,
+                spawn_system->spawns[i]->collision_rect.height,
                 WHITE);
 #endif
         }
