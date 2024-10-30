@@ -3,7 +3,7 @@
 
 int main() 
 {
-    game_initialize();
+    if(!game_initialize()) return 1;
 
     while (!WindowShouldClose())
     {
@@ -14,5 +14,5 @@ int main()
 
     // TODO: Destroy game
 
-    return true;
+    return 0;
 }

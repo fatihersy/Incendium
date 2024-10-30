@@ -1,11 +1,13 @@
 #include "ftime.h"
 
-timer* _timer;
+#include "core/fmemory.h"
+
+static timer* _timer;
 bool time_system_initialized = false;
 
 void time_system_initialize() {
 
-    _timer = (timer*)malloc(sizeof(timer));
+    _timer = (timer*)allocate_memory(sizeof(timer), true);
 
     _timer->total_delay = 1;
     _timer->remaining = _timer->total_delay;
@@ -23,7 +25,16 @@ timer* get_timer()
 void reset_time(elapse_time_type type) {
     if (!time_system_initialized) return;
 
-    _timer->remaining = _timer->total_delay;
+    switch (type)
+    {
+    case SALVO_ETA:
+        _timer->remaining = _timer->total_delay;
+        break;
+    
+    default:
+        break;
+    }
+    
 }
 
 void update_time() 

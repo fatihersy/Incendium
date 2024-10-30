@@ -4,12 +4,12 @@
 #define DEFINES_H
 
 #include "raylib.h"
-#include <stdlib.h>  // Required for: malloc(), free()
-#include <string.h>
 
-#define MAX_SPAWN_COUNT 1000
+#define TOTAL_ALLOCATED_MEMORY 64 * 1024 * 1024
+
+#define MAX_SPAWN_COUNT 100
 #define MAX_PROJECTILE_COUNT 50
-#define MAX_TEXTURE_SLOTS 50
+#define MAX_TEXTURE_SLOTS 10
 
 #define MAX_ABILITY_AMOUNT 10
 
@@ -31,11 +31,10 @@
 
 #define SALVO_PROJECTILE_AT_A_TIME 2
 #define SALVO_FIRE_COUNT 3
-#define SALVO_PROJECTILE_COUNT SALVO_PROJECTILE_AT_A_TIME * SALVO_FIRE_COUNT
+#define SALVO_PROJECTILE_COUNT SALVO_PROJECTILE_AT_A_TIME* SALVO_FIRE_COUNT
 #define SALVO_FIRE_RATE 1  // in sec
 
 #define DEBUG_COLLISIONS 1
-
 
 // Unsigned int types.
 typedef unsigned char u8;
@@ -56,40 +55,6 @@ typedef double f64;
 // Boolean types
 typedef int b32;
 
-typedef struct resource_system_state {
-    i16 texture_amouth;
-
-} resource_system_state;
-
-typedef enum elapse_time_type {
-    SALVO_ETA
-} elapse_time_type;
-
-typedef struct timer {
-    elapse_time_type type;
-    f32 total_delay;
-    f32 remaining;
-} timer;
-
-typedef struct Character2D {
-    u16 character_id;
-    unsigned int texId;
-    bool initialized;
-
-    Rectangle collision_rect;
-    Vector2 position;
-
-    u16 rotation;
-    i16 health;
-    i16 damage;
-    f32 speed;
-} Character2D;
-
-typedef struct spawn_system_state {
-    Character2D* spawns[MAX_SPAWN_COUNT];
-    u16 current_spawn_count;
-} spawn_system_state;
-
 typedef enum actor_type {
     ENEMY,
     PROJECTILE_ENEMY,
@@ -104,13 +69,24 @@ typedef enum ability_type {
     direct_fire,
 } ability_type;
 
-typedef struct collision {
-    bool is_active;
+typedef enum elapse_time_type {
+    SALVO_ETA
+} elapse_time_type;
 
+typedef struct Character2D {
+    u16 character_id;
+    unsigned int texId;
+    bool initialized;
+
+    Rectangle collision_rect;
+    Vector2 position;
     actor_type type;
-    Rectangle* rect;
-    i16 amount;
-} collision;
+
+    u16 rotation;
+    i16 health;
+    i16 damage;
+    f32 speed;
+} Character2D;
 
 typedef struct ability {
     bool is_on_fire;
@@ -120,35 +96,56 @@ typedef struct ability {
     u16 rotation;
     i16 fire_rate;
 
-    Vector2* projectile_target_position[MAX_PROJECTILE_COUNT];
-    Character2D* projectiles[MAX_PROJECTILE_COUNT];
-    f32* projectile_process[MAX_PROJECTILE_COUNT];
+    Vector2 projectile_target_position[MAX_PROJECTILE_COUNT];
+    Character2D projectiles[MAX_PROJECTILE_COUNT];
+    f32 projectile_process[MAX_PROJECTILE_COUNT];
 
     f32 overall_process;
 } ability;
+
+typedef struct resource_system_state {
+    i16 texture_amouth;
+    Texture2D textures[MAX_TEXTURE_SLOTS];
+} resource_system_state;
 
 typedef struct ability_system_state {
     actor_type owner_type;
     Vector2 owner_position;
 
-    ability* abilities[MAX_ABILITY_AMOUNT];
+    ability abilities[MAX_ABILITY_AMOUNT];
     i16 ability_amount;
 } ability_system_state;
 
-typedef struct game_data {
-} game_data;
+typedef struct spawn_system_state {
+    Character2D spawns[MAX_SPAWN_COUNT];
+    u16 current_spawn_count;
+} spawn_system_state;
 
 typedef struct player_state {
     bool initialized;
     Vector2 position;
-    collision collisions;
+    Rectangle collision;
     Texture2D player_texture;
     const char* texture_path;
+
+    ability_system_state ability_system;
 } player_state;
+
+typedef struct memory_system_state {
+    u64 linear_memory_total_size;
+    u64 linear_memory_allocated;
+    void* linear_memory;
+} memory_system_state;
 
 typedef struct game_state {
     f32 delta_time;
 } game_state;
+
+typedef struct timer {
+    elapse_time_type type;
+    f32 total_delay;
+    f32 remaining;
+} timer;
 
 // Properly define static assertions.
 #if defined(__clang__) || defined(__gcc__)

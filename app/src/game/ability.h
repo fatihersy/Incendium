@@ -5,7 +5,7 @@
 
 #include "defines.h"
 
-ability_system_state* ability_system_initialize(actor_type _owner_type);
+ability_system_state ability_system_initialize(actor_type _owner_type);
 
 void add_ability(ability_system_state* ability_system, ability_type type);
 

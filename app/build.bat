@@ -11,7 +11,7 @@ FOR /R %%f in (*.c) do (
 REM echo "Files:" %cFilenames%
 
 SET assembly=app
-SET compilerFlags=-g 
+SET compilerFlags=-g
 REM -Wall -Werror
 SET includeFlags=-Isrc -I../vendor/include/
 SET linkerFlags=-L../bin/ -L../vendor/lib/ -lraylib -lGdi32 -lWinMM -lUser32 -lShell32

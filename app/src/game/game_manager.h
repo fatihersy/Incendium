@@ -5,7 +5,7 @@
 
 #include "defines.h"
 
-bool game_manager_initialize();
+bool game_manager_initialize(Vector2 screen_size);
 
 void set_player_position(i16 x, i16 y);
 
@@ -15,6 +15,7 @@ float get_time_elapsed(elapse_time_type type);
 
 bool damage_any_collade(Character2D* _character);
 
-
+void update_game_manager();
+void render_game_manager();
 
 #endif

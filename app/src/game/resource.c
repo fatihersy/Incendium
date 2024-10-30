@@ -1,16 +1,16 @@
 #include "resource.h"
 
-resource_system_state* resource_system;
+#include "core/fmemory.h"
 
-Texture2D* textures;
+static resource_system_state* resource_system;
+
 
 bool resource_system_initialized = false;
 
 bool resource_system_initialize() {
     if (resource_system_initialized) return false;
     
-    resource_system = (resource_system_state*)malloc(sizeof(resource_system_state));
-    textures = (Texture2D*)malloc(MAX_TEXTURE_SLOTS * sizeof(Texture2D));
+    resource_system = (resource_system_state*)allocate_memory_linear(sizeof(resource_system_state), true);
 
     resource_system->texture_amouth = -1;
 
@@ -26,9 +26,9 @@ bool update_resource_system() {
 
 Texture2D get_texture_by_id(unsigned int id) 
 {
-    for (size_t i = 0; i < resource_system->texture_amouth+1; i++)
+    for (i16 i = 0; i < resource_system->texture_amouth+1; i++)
     {
-        if(textures[i].id == id) return textures[i];
+        if(resource_system->textures[i].id == id) return resource_system->textures[i];
     }
     
     return (Texture2D) { .id = INVALID_ID32 };
@@ -51,7 +51,7 @@ unsigned int load_texture(const char* path, bool resize, Vector2 new_size)
         tex = LoadTexture(path);
     }
 
-    textures[++resource_system->texture_amouth] = tex;
+    resource_system->textures[++resource_system->texture_amouth] = tex;
 
-    return textures[resource_system->texture_amouth].id;
+    return resource_system->textures[resource_system->texture_amouth].id;
 }
