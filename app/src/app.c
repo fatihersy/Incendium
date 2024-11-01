@@ -1,13 +1,13 @@
-#include "game.h"
+#include "app.h"
 
 #include "core/window.h"
-#include "core/camera.h"
 #include "core/ftime.h"
 #include "core/fmemory.h"
 
+#include "game/camera.h"
 #include "game/game_manager.h"
 
-bool game_initialize() {
+bool app_initialize() {
     // Essentials
     create_window("title");
 
@@ -24,20 +24,23 @@ bool game_initialize() {
     return true;
 }
 
-bool game_update() {
+bool app_update() {
     update_camera(get_player_position());
+    
+    update_ui();
 
     update_game_manager();
     update_time();
-
+    
     return true;
 }
 
-bool game_render() {
+bool app_render() {
     begin_draw();
 
     render_game_manager();
-
+    
     end_draw();
+
     return true;
 }

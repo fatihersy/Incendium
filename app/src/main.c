@@ -1,15 +1,15 @@
-#include "game.h"
+#include "app.h"
 
 
 int main() 
 {
-    if(!game_initialize()) return 1;
+    if(!app_initialize()) return 1;
 
     while (!WindowShouldClose())
     {
-        game_update();
+        app_update();
 
-        game_render();
+        app_render();
     }
 
     // TODO: Destroy game
