@@ -1,38 +1,51 @@
 #include "user_interface.h"
 
+#include "core/event.h"
+
 #define RAYGUI_IMPLEMENTATION
 #include "raygui.h"
 
-#include "core/window.h"
-
-#include "game/camera.h"
-
-bool showMessageBox = false;
 Vector2 screen_center = {0};
-Vector2 screen_up_left = {0};
+Vector2 offset = {0};
 
-void update_user_interface(Vector2 offset) 
-{
-    Camera2D cam = get_active_camera();
-    Vector2 screen_half_size = get_screen_half_size();
+scene_type gm_current_scene_type = 0;
 
-    screen_center = GetWorldToScreen2D(cam.target, cam);
-    screen_up_left = (Vector2)
-    {
-        screen_center.x - screen_half_size.x / 2 + offset.x,
-        screen_center.y - screen_half_size.y / 2 + offset.y
-    };
+void user_interface_system_initialize() {
+
+}
+
+void update_user_interface(Vector2 _offset, Vector2 _screen_half_size, scene_type _current_scene_type, Camera2D _camera) {
+    screen_center = _screen_half_size;
+
+    offset = _offset;
+    gm_current_scene_type = _current_scene_type;
 }
 
 void render_user_interface() {
-    if (GuiButton((Rectangle){24, 24, 120, 30}, "#191#Show Message")) showMessageBox = true;
+    switch (gm_current_scene_type) {
+        case scene_main_menu: 
+        {
+            if (GuiButton((Rectangle){screen_center.x - BTN_DIM_X_DIV2, screen_center.y - BTN_DIM_Y_DIV2 - 40, BTN_DIM_X, BTN_DIM_Y}, "Play"))
+            {
+                
+            };
+            if (GuiButton((Rectangle){screen_center.x - BTN_DIM_X_DIV2, screen_center.y - BTN_DIM_Y_DIV2, BTN_DIM_X, BTN_DIM_Y}, "Settings")) 
+            {
+                // TODO: Settings
+            };
+            if (GuiButton((Rectangle){screen_center.x - BTN_DIM_X_DIV2, screen_center.y - BTN_DIM_Y_DIV2 + 40, BTN_DIM_X, BTN_DIM_Y}, "Quit")) 
+            {
+                event_fire(EVENT_CODE_APPLICATION_QUIT, 0, (event_context){0});
+            };
 
-    if (showMessageBox) {
-        int result = GuiMessageBox((Rectangle){85, 70, 250, 100},
-                                   "#191#Message Box", "Hi! This is a message!", "Nice;Cool");
+            break;
+        }
+        case scene_in_game: {
+            DrawFPS(offset.x, offset.y);
+            break;
+        }
 
-        if (result >= 0) showMessageBox = false;
+        default:
+            break;
     }
-
-    DrawFPS(screen_up_left.x, screen_up_left.y);
 }

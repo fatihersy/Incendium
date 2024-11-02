@@ -5,7 +5,7 @@ int main()
 {
     if(!app_initialize()) return 1;
 
-    while (!WindowShouldClose())
+    while (window_should_close())
     {
         app_update();
 

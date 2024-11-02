@@ -2,19 +2,19 @@
 
 #include "game/camera.h"
 
-#include "user_interface.h"
-
-const int screenWidth = 1280;
-const int screenHeight = 720;
-
-const Vector2 screen_half_size = (Vector2){ screenWidth / 2, screenHeight / 2};
+#define SCREEN_WIDTH 1280
+#define SCREEN_HEIGHT 720
+#define SCREEN_WIDTH_OFFSET 38
+#define SCREEN_HEIGHT_OFFSET 20
+#define SCREEN_WIDTH_DIV2 SCREEN_WIDTH / 2
+#define SCREEN_HEIGHT_DIV2 SCREEN_HEIGHT / 2
 
 bool create_window(const char* title) {
     if (IsWindowReady()) return false;
 
-    InitWindow(screenWidth, screenHeight, title);
+    InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, title);
 
-    create_camera(screen_half_size, screenWidth, screenHeight, 0);
+    create_camera((Vector2) {SCREEN_WIDTH_DIV2, SCREEN_HEIGHT_DIV2}, SCREEN_WIDTH, SCREEN_HEIGHT, 0);
 
     SetTargetFPS(60);  // Set our game to run at 60 frames-per-second
 
@@ -22,17 +22,13 @@ bool create_window(const char* title) {
 }
 
 Vector2 get_screen_size() {
-    return (Vector2) { screenWidth, screenHeight};
+    return (Vector2) { SCREEN_WIDTH, SCREEN_HEIGHT};
 }
 Vector2 get_screen_half_size() {
-    return (Vector2) { screenWidth, screenHeight};
+    return (Vector2) { SCREEN_WIDTH_DIV2, SCREEN_HEIGHT_DIV2};
 }
 
-void update_ui() {
-    update_user_interface((Vector2){ 5, 5});
-}
-
-void begin_draw() 
+void pre_draw() 
 {
     BeginDrawing();
 
@@ -40,12 +36,7 @@ void begin_draw()
     BeginMode2D(get_active_camera());
 }
 
-void end_draw() {
-
-    DrawPixel(0, 0, WHITE);  // Center of the world
+void post_draw() 
+{
     EndMode2D();
-
-    render_user_interface();
-
-    EndDrawing();
 }

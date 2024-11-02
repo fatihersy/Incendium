@@ -2,7 +2,8 @@
 
 #include "core/fmemory.h"
 
-#include "ability.h"
+#include "game/ability.h"
+#include "game/resource.h"
 
 bool player_system_initialized = false;
 
@@ -21,9 +22,7 @@ bool player_system_initialize() {
     player->position.x = 0;
     player->position.y = 0;
 
-    player->texture_path = "D:\\Workspace\\CLang\\Resources\\wabbit_alpha.png";
-
-    player->player_texture = LoadTexture(player->texture_path);
+    player->player_texture = get_texture_by_enum(PLAYER_TEXTURE);
 
     player->ability_system = ability_system_initialize(PLAYER);
 

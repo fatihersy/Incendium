@@ -6,8 +6,9 @@
 
 bool app_initialize();
 
-bool app_update();
+bool window_should_close();
 
+bool app_update();
 bool app_render();
 
 #endif

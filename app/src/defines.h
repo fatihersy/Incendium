@@ -7,6 +7,11 @@
 
 #define TOTAL_ALLOCATED_MEMORY 64 * 1024 * 1024
 
+#define BTN_DIM_X 120
+#define BTN_DIM_Y 30
+#define BTN_DIM_X_DIV2 BTN_DIM_X / 2
+#define BTN_DIM_Y_DIV2 BTN_DIM_Y / 2
+
 #define MAX_SPAWN_COUNT 100
 #define MAX_PROJECTILE_COUNT 50
 #define MAX_TEXTURE_SLOTS 10
@@ -62,6 +67,11 @@ typedef enum actor_type {
     PROJECTILE_PLAYER,
 } actor_type;
 
+typedef enum scene_type {
+    scene_main_menu,
+    scene_in_game
+} scene_type;
+
 typedef enum ability_type {
     fireball,
     salvo,
@@ -73,9 +83,16 @@ typedef enum elapse_time_type {
     SALVO_ETA
 } elapse_time_type;
 
+typedef enum resource_type {
+    UNSPECIFIED,
+    PLAYER_TEXTURE,
+    ENEMY_TEXTURE,
+    BACKGROUND,
+} resource_type;
+
 typedef struct Character2D {
     u16 character_id;
-    unsigned int texId;
+    resource_type res_type;
     bool initialized;
 
     Rectangle collision_rect;

@@ -50,7 +50,7 @@ void kill_spawn(u16 _id) {
 }
 
 bool spawn_character(Character2D character, actor_type _type) {
-    Texture2D tex = get_texture_by_id(character.texId);
+    Texture2D tex = get_texture_by_enum(ENEMY_TEXTURE);
     character.character_id = spawn_system->current_spawn_count;
     character.type = _type;
 
@@ -87,7 +87,7 @@ bool render_spawns() {
     for (i32 i = 0; i < spawn_system->current_spawn_count; i++) {
         if (spawn_system->spawns[i].initialized) {
 
-            Texture2D tex = get_texture_by_id(spawn_system->spawns[i].texId);
+            Texture2D tex = get_texture_by_enum(ENEMY_TEXTURE);
 
             if(tex.id == INVALID_ID32) {
                 TraceLog(LOG_ERROR, "INVALID TEXTURE!");

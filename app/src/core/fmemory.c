@@ -6,7 +6,6 @@
 static memory_system_state* memory_system;
 
 void memory_system_initialize() {
-
     memory_system = (memory_system_state*)malloc(sizeof(memory_system_state));
     memory_system->linear_memory_total_size = TOTAL_ALLOCATED_MEMORY;
     memory_system->linear_memory_allocated = 0;
@@ -15,8 +14,7 @@ void memory_system_initialize() {
     memory_system->linear_memory = malloc(memory_system->linear_memory_total_size);
 }
 
-void* allocate_memory_linear(u64 size, bool will_zero_memory) 
-{
+void* allocate_memory_linear(u64 size, bool will_zero_memory) {
     if (memory_system->linear_memory_allocated + size > memory_system->linear_memory_total_size) {
         u64 remaining = memory_system->linear_memory_total_size - memory_system->linear_memory_allocated;
         TraceLog(LOG_ERROR, "Tried to allocate %lluB, only %lluB remaining.", size, remaining);
@@ -50,4 +48,12 @@ void free_memory(void* block) {
 
 void zero_memory(void* block, u64 size) {
     memset(block, 0, size);
+}
+
+void* copy_memory(void* dest, const void* source, u64 size) {
+    return memcpy(dest, source, size);
+}
+
+void* set_memory(void* dest, i32 value, u64 size) {
+    return memset(dest, value, size);
 }

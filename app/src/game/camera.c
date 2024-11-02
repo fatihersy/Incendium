@@ -22,7 +22,7 @@ Camera2D get_active_camera() {
 
 bool update_camera(Vector2 position) 
 {
-    camera.target = (Vector2) {position.x + 20.f, position.y + 20.f};
+    camera.target = (Vector2) {position.x, position.y};
 
     return true;
 }
