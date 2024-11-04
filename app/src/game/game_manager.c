@@ -2,10 +2,13 @@
 
 #include "core/fmath.h"
 #include "core/ftime.h"
+#include "core/event.h"
 
 #include "resource.h"
 #include "player.h"
 #include "spawn.h"
+
+#include "user_interface.h"
 
 const int gridsize = 33;
 const int map_size = gridsize * 100;
@@ -19,6 +22,8 @@ bool is_game_paused = false;
 
 void draw_background();
 void show_pause_screen();
+
+bool game_manager_on_event(u16 code, void* sender, void* listener_inst, event_context context);
 
 bool game_manager_initialize(Vector2 _screen_size) {
     if (game_manager_initialized) return false;
@@ -34,6 +39,8 @@ bool game_manager_initialize(Vector2 _screen_size) {
     load_scene();
 
     game_manager_initialized = true;
+
+    event_register(EVENT_CODE_SCENE_IN_GAME, 0, game_manager_on_event);
 
     return true;
 }
@@ -180,14 +187,30 @@ void draw_background() {
 void show_pause_screen() {
     DrawRectangle(screen_size.x / 2 - 150, 0, 300, screen_size.y, (Color){53, 59, 72, 155});  // rgba()
 
-/*     if (GuiButton((Rectangle){screen_half_size.x - BTN_DIM_X_DIV2, screen_half_size.y - BTN_DIM_Y_DIV2 - 40, BTN_DIM_X, BTN_DIM_Y}, "Play")) {
-        set_current_scene_type(scene_in_game);
-        load_scene();
-    };
-    if (GuiButton((Rectangle){screen_half_size.x - BTN_DIM_X_DIV2, screen_half_size.y - BTN_DIM_Y_DIV2, BTN_DIM_X, BTN_DIM_Y}, "Settings")) {
+    if (gui_button(STANDARD, screen_half_size.x, screen_half_size.y - 40, "Continue")) {
+        is_game_paused = false;
+    }
+    if (gui_button(STANDARD, screen_half_size.x, screen_half_size.y, "Settings")) {
         // TODO: Settings
-    };
-    if (GuiButton((Rectangle){screen_half_size.x - BTN_DIM_X_DIV2, screen_half_size.y - BTN_DIM_Y_DIV2 + 40, BTN_DIM_X, BTN_DIM_Y}, "Quit")) {
-        current_scene_type = scene_main_menu;
-    }; */
+    }
+    if (gui_button(STANDARD, screen_half_size.x, screen_half_size.y + 40, "Quit")) {
+        event_fire(EVENT_CODE_APPLICATION_QUIT, 0, (event_context){0});
+    }
+}
+
+
+bool game_manager_on_event(u16 code, void* sender, void* listener_inst, event_context context) {
+    switch (code)
+    {
+    case EVENT_CODE_SCENE_IN_GAME:
+        current_scene_type = scene_in_game;
+        load_scene();
+        return true;
+        break;
+    
+    default:
+        break;
+    }
+
+    return false;
 }

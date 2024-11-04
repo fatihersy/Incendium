@@ -16,7 +16,7 @@ REM -Wall -Werror
 SET includeFlags=-Isrc -I../vendor/include/
 SET linkerFlags=-L../bin/ -L../vendor/lib/ -lraylib -lGdi32 -lWinMM -lUser32 -lShell32
 SET linker= -Xlinker /NODEFAULTLIB:libcmt
-SET defines=-D_DEBUG -DKIMPORT
+SET defines=-D_DEBUG
 
 ECHO "Building %assembly%%..."
 clang %cFilenames% %compilerFlags% -o ../bin/%assembly%.exe %defines% %includeFlags% %linkerFlags% %linker%

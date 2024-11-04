@@ -9,8 +9,8 @@
 
 #define BTN_DIM_X 120
 #define BTN_DIM_Y 30
-#define BTN_DIM_X_DIV2 BTN_DIM_X / 2
-#define BTN_DIM_Y_DIV2 BTN_DIM_Y / 2
+#define BTN_DIM_X_DIV2 (int)(BTN_DIM_X / 2)
+#define BTN_DIM_Y_DIV2 (int)(BTN_DIM_Y / 2)
 
 #define MAX_SPAWN_COUNT 100
 #define MAX_PROJECTILE_COUNT 50
