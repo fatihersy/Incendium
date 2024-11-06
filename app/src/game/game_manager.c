@@ -4,6 +4,7 @@
 #include "core/ftime.h"
 #include "core/event.h"
 
+#include "defines.h"
 #include "resource.h"
 #include "player.h"
 #include "spawn.h"
@@ -31,6 +32,7 @@ bool game_manager_initialize(Vector2 _screen_size) {
     if (!resource_system_initialize()) return false;
     if (!player_system_initialize()) return false;
     if (!spawn_system_initialize()) return false;
+    user_interface_system_initialize();
 
     screen_size = _screen_size;
     screen_half_size = (Vector2){ _screen_size.x / 2, _screen_size.y / 2 };
@@ -41,6 +43,8 @@ bool game_manager_initialize(Vector2 _screen_size) {
     game_manager_initialized = true;
 
     event_register(EVENT_CODE_SCENE_IN_GAME, 0, game_manager_on_event);
+    event_register(EVENT_CODE_PAUSE_GAME, 0, game_manager_on_event);
+    event_register(EVENT_CODE_UNPAUSE_GAME, 0, game_manager_on_event);
 
     return true;
 }
@@ -84,9 +88,17 @@ void update_game_manager() {
             break;
         }
         case scene_in_game: {
-            if (IsKeyPressed(KEY_ESCAPE)) is_game_paused = !is_game_paused;
-            if (is_game_paused) break;
+            if (IsKeyPressed(KEY_ESCAPE) ) 
+            {
+              is_game_paused = !is_game_paused;
+            }
+            if (is_game_paused)
+            {
+              event_fire(EVENT_CODE_PAUSE_GAME, 0, (event_context) {0}); 
+              break;
+            }
 
+            event_fire(EVENT_CODE_UNPAUSE_GAME, 0, (event_context) {0});
             update_player();
             update_spawns();
 
@@ -108,11 +120,8 @@ void render_game_manager() {
         case scene_in_game: {
             render_player();
             render_spawns();
-
-            if (is_game_paused) show_pause_screen();
             break;
         }
-
         default:
             break;
     }
@@ -184,30 +193,39 @@ void draw_background() {
     }
 }
 
-void show_pause_screen() {
-    DrawRectangle(screen_size.x / 2 - 150, 0, 300, screen_size.y, (Color){53, 59, 72, 155});  // rgba()
-
-    if (gui_button(STANDARD, screen_half_size.x, screen_half_size.y - 40, "Continue")) {
-        is_game_paused = false;
-    }
-    if (gui_button(STANDARD, screen_half_size.x, screen_half_size.y, "Settings")) {
-        // TODO: Settings
-    }
-    if (gui_button(STANDARD, screen_half_size.x, screen_half_size.y + 40, "Quit")) {
-        event_fire(EVENT_CODE_APPLICATION_QUIT, 0, (event_context){0});
-    }
-}
-
-
 bool game_manager_on_event(u16 code, void* sender, void* listener_inst, event_context context) {
     switch (code)
     {
     case EVENT_CODE_SCENE_IN_GAME:
+    {
         current_scene_type = scene_in_game;
         load_scene();
         return true;
         break;
-    
+    }
+    case EVENT_CODE_SCENE_MAIN_MENU:
+    {
+        current_scene_type = scene_main_menu;
+        load_scene();
+        return true;
+        break;
+    }
+    case EVENT_CODE_PAUSE_GAME:
+    {
+        is_game_paused = true;
+        event_fire(EVENT_CODE_UI_SHOW_PAUSE_SCREEN, 0, (event_context) {0});
+        
+        return true;
+        break;
+    }
+    case EVENT_CODE_UNPAUSE_GAME:
+    {
+        is_game_paused = false;
+        event_fire(EVENT_CODE_UI_SHOW_UNPAUSE_SCREEN, 0, (event_context) {0});
+        
+        return true;
+        break;
+    }
     default:
         break;
     }

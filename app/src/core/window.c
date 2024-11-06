@@ -1,6 +1,7 @@
 #include "window.h"
 
 #include "game/camera.h"
+#include "raylib.h"
 
 #define SCREEN_WIDTH 1280
 #define SCREEN_HEIGHT 720
@@ -30,9 +31,9 @@ Vector2 get_screen_half_size() {
 
 void pre_draw() 
 {
-    BeginDrawing();
-
     ClearBackground((Color){19, 15, 64, 1.f});
+
+    BeginDrawing();
     BeginMode2D(get_active_camera());
 }
 

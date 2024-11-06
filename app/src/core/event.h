@@ -39,8 +39,14 @@ bool event_fire(u16 code, void* sender, event_context context);
 typedef enum system_event_code {
     
     EVENT_CODE_APPLICATION_QUIT = 0x01,
-    EVENT_CODE_SCENE_IN_GAME = 0x02,
-    EVENT_CODE_SCENE_MAIN_MENU = 0x03,
+
+    EVENT_CODE_SCENE_IN_GAME,
+    EVENT_CODE_SCENE_MAIN_MENU,
+
+    EVENT_CODE_PAUSE_GAME,
+    EVENT_CODE_UNPAUSE_GAME,
+    EVENT_CODE_UI_SHOW_PAUSE_SCREEN,
+    EVENT_CODE_UI_SHOW_UNPAUSE_SCREEN,
 
     MAX_EVENT_CODE = 0xFF
 } system_event_code;
