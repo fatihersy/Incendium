@@ -2,6 +2,7 @@
 
 #include "core/fmemory.h"
 
+#include "defines.h"
 #include "game/ability.h"
 #include "game/resource.h"
 
@@ -27,8 +28,8 @@ bool player_system_initialize() {
     player->ability_system = ability_system_initialize(PLAYER);
 
     player->collision = (Rectangle){
-        .x = player->position.x - player->player_texture.width / 2,
-        .y = player->position.y - player->player_texture.height / 2,
+        .x = player->position.x - player->player_texture.width / 2.f,
+        .y = player->position.y - player->player_texture.height / 2.f,
         .width = player->player_texture.width,
         .height = player->player_texture.height};
 
@@ -68,8 +69,8 @@ bool update_player() {
 
     update_abilities(&player->ability_system, player->position);
 
-    player->collision.x = player->position.x - player->player_texture.width / 2;
-    player->collision.y = player->position.y - player->player_texture.height / 2;
+    player->collision.x = player->position.x - player->player_texture.width / 2.f;
+    player->collision.y = player->position.y - player->player_texture.height / 2.f;
     player->collision.width = player->player_texture.width;
     player->collision.height = player->player_texture.height;
 
@@ -83,8 +84,8 @@ bool render_player() {
 
     DrawTexture(
         player->player_texture,
-        player->position.x - player->player_texture.width / 2,
-        player->position.y - player->player_texture.height / 2,
+        player->position.x - player->player_texture.width / 2.f,
+        player->position.y - player->player_texture.height / 2.f,
         WHITE);
 
     render_abilities(&player->ability_system);
@@ -100,3 +101,4 @@ bool render_player() {
 
     return true;
 }
+

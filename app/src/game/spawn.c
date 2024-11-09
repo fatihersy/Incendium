@@ -3,6 +3,7 @@
 #include "core/fmath.h"
 #include "core/fmemory.h"
 
+#include "defines.h"
 #include "resource.h"
 #include "game_manager.h"
 
@@ -114,4 +115,14 @@ bool render_spawns() {
 
 spawn_system_state* get_spawn_system() {
     return spawn_system;
+}
+
+void clean_up_spawn_system() {
+    for (u16 i = 0; i < spawn_system->current_spawn_count; i++) {
+        spawn_system->spawns[i] = (Character2D){0};
+    }
+
+    spawn_system->current_spawn_count = 0;
+
+    //spawn_system = (spawn_system_state*){0};
 }

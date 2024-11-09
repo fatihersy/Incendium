@@ -23,6 +23,7 @@ bool is_game_paused = false;
 
 void draw_background();
 void show_pause_screen();
+void clean_up();
 
 bool game_manager_on_event(u16 code, void* sender, void* listener_inst, event_context context);
 
@@ -45,6 +46,7 @@ bool game_manager_initialize(Vector2 _screen_size) {
     event_register(EVENT_CODE_SCENE_IN_GAME, 0, game_manager_on_event);
     event_register(EVENT_CODE_PAUSE_GAME, 0, game_manager_on_event);
     event_register(EVENT_CODE_UNPAUSE_GAME, 0, game_manager_on_event);
+    event_register(EVENT_CODE_RETURN_MAIN_MENU_GAME, 0, game_manager_on_event);
 
     return true;
 }
@@ -227,9 +229,22 @@ bool game_manager_on_event(u16 code, void* sender, void* listener_inst, event_co
         return true;
         break;
     }
-    default:
+    case EVENT_CODE_RETURN_MAIN_MENU_GAME:
+    {
+        is_game_paused = false;
+        current_scene_type = scene_main_menu;
+        clean_up();
+        load_scene();
+        
+        return true;
         break;
+    }
+    default: break;
     }
 
     return false;
+}
+
+void clean_up() {
+    clean_up_spawn_system();
 }

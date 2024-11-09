@@ -1,9 +1,29 @@
 #include "ability.h"
 
 #include "core/fmath.h"
-#include "core/fmemory.h"
 
 #include "game_manager.h"
+
+#define FIRE_BALL_BALL_COUNT 4
+#define FIRE_BALL_BALL_RADIUS 12
+#define FIRE_BALL_BALL_DIAMETER FIRE_BALL_BALL_RADIUS * 2
+#define FIRE_BALL_CIRCLE_RADIUS 50
+#define FIRE_BALL_CIRCLE_RADIUS_DIV_2 FIRE_BALL_CIRCLE_RADIUS / 2
+#define FIRE_BALL_CIRCLE_RADIUS_DIV_4 FIRE_BALL_CIRCLE_RADIUS / 4
+
+#define RADIATION_CIRCLE_RADIUS 100
+#define RADIATION_CIRCLE_DIAMETER RADIATION_CIRCLE_RADIUS * 2
+#define RADIATION_CIRCLE_RADIUS_DIV_2 RADIATION_CIRCLE_RADIUS / 2
+#define RADIATION_CIRCLE_RADIUS_DIV_4 RADIATION_CIRCLE_RADIUS / 4
+
+#define DIRECT_FIRE_SQUARE_WIDTH 35
+#define DIRECT_FIRE_SQUARE_HEIGHT 100
+#define DIRECT_FIRE_SQUARE_HEIGHT_DIV_2 DIRECT_FIRE_SQUARE_HEIGHT / 2.f
+
+#define SALVO_PROJECTILE_AT_A_TIME 2
+#define SALVO_FIRE_COUNT 3
+#define SALVO_PROJECTILE_COUNT SALVO_PROJECTILE_AT_A_TIME* SALVO_FIRE_COUNT
+#define SALVO_FIRE_RATE 1  // in sec
 
 ability_system_state ability_system_initialize(actor_type _owner_type) {
 
@@ -75,7 +95,7 @@ void add_ability(ability_system_state* system, ability_type type) {
         case direct_fire: {
             _ability->projectiles[0].initialized = true;
             _ability->position.x = system->owner_position.x;
-            _ability->position.y = system->owner_position.y - DIRECT_FIRE_SQUARE_HEIGHT / 2;
+            _ability->position.y = system->owner_position.y - DIRECT_FIRE_SQUARE_HEIGHT / 2.f;
 
             _ability->projectiles[0].collision_rect.x = _ability->position.x;
             _ability->projectiles[0].collision_rect.y = _ability->position.y;
