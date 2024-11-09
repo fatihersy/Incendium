@@ -174,8 +174,9 @@ bool damage_any_collade(Character2D* _character) {
 void draw_background() {
     switch (current_scene_type) {
         case scene_main_menu: {
-            DrawLine(screen_size.x / 2, 0, screen_size.x / 2, screen_size.y, (Color){255, 255, 255, 255});
-            DrawLine(0, screen_size.y / 2, screen_size.x, screen_size.y / 2, (Color){255, 255, 255, 255});
+            // Centering guidelines
+            //DrawLine(screen_size.x / 2, 0, screen_size.x / 2, screen_size.y, (Color){255, 255, 255, 255});
+            //DrawLine(0, screen_size.y / 2, screen_size.x, screen_size.y / 2, (Color){255, 255, 255, 255});
             break;
         }
         case scene_in_game: {

@@ -13,9 +13,9 @@ bool resource_system_initialize() {
 
     resource_system->texture_amouth = -1;
 
-    load_texture("D:\\Workspace\\CLang\\Resources\\fudesumi.png", true, (Vector2){64, 64}, ENEMY_TEXTURE);
-    load_texture("D:\\Workspace\\CLang\\Resources\\space.png", true, (Vector2){64, 64}, BACKGROUND);
-    load_texture("D:\\Workspace\\CLang\\Resources\\wabbit_alpha.png", true, (Vector2){32, 32}, PLAYER_TEXTURE);
+    load_texture("D:\\Workspace\\Resources\\fudesumi.png", true, (Vector2){64, 64}, ENEMY_TEXTURE);
+    load_texture("D:\\Workspace\\Resources\\space_bg.png", true, (Vector2){3840 , 2160}, BACKGROUND);
+    load_texture("D:\\Workspace\\Resources\\wabbit_alpha.png", true, (Vector2){32, 32}, PLAYER_TEXTURE);
 
     resource_system_initialized = true;
 

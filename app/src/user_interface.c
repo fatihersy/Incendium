@@ -1,11 +1,29 @@
 #include "user_interface.h"
 
 #include "core/event.h"
+
+#include "defines.h"
 #include "game/camera.h"
+#include "game/resource.h"
 #include "raylib.h"
 
 #define RAYGUI_IMPLEMENTATION
 #include "raygui.h"
+
+// raygui embedded styles
+// NOTE: Included in the same order as selector
+#define MAX_GUI_STYLES_AVAILABLE   12       // NOTE: Included light style
+#include "game/styles/style_jungle.h"            // raygui style: jungle
+#include "game/styles/style_candy.h"             // raygui style: candy
+#include "game/styles/style_lavanda.h"           // raygui style: lavanda
+#include "game/styles/style_cyber.h"             // raygui style: cyber
+#include "game/styles/style_terminal.h"          // raygui style: terminal
+#include "game/styles/style_ashes.h"             // raygui style: ashes
+#include "game/styles/style_bluish.h"            // raygui style: bluish
+#include "game/styles/style_dark.h"              // raygui style: dark
+#include "game/styles/style_cherry.h"            // raygui style: cherry
+#include "game/styles/style_sunny.h"             // raygui style: sunny
+#include "game/styles/style_enefete.h"           // raygui style: enefete
 
 Vector2 screen_center = {0};
 Vector2 offset = {0};
@@ -19,6 +37,8 @@ bool user_interface_on_event(u16 code, void *sender, void *listener_inst,
                              event_context context);
 
 void user_interface_system_initialize() {
+
+  GuiLoadStyleCherry();
 
   event_register(EVENT_CODE_UI_SHOW_PAUSE_SCREEN, 0, user_interface_on_event);
   event_register(EVENT_CODE_UI_SHOW_UNPAUSE_SCREEN, 0, user_interface_on_event);
@@ -35,6 +55,29 @@ void update_user_interface(Vector2 _offset, Vector2 _screen_half_size,
 void render_user_interface() {
   switch (gm_current_scene_type) {
   case scene_main_menu: {
+
+    DrawTexturePro
+    (
+      get_texture_by_enum(BACKGROUND),
+      (Rectangle) 
+      {
+        .x = 0, 
+        .y = 0, 
+        .width = get_texture_by_enum(BACKGROUND).width, 
+        .height = get_texture_by_enum(BACKGROUND).height
+      }, 
+      (Rectangle) 
+      {
+        .x = 0, 
+        .y = 0, 
+        .width = GetScreenWidth(), 
+        .height = GetScreenHeight()
+      }, 
+      (Vector2) {.x = 0, .y = 0},
+      0,
+      WHITE
+    );
+
     if (GuiButton((Rectangle){screen_center.x - BTN_DIM_X_DIV2,
                               screen_center.y - BTN_DIM_Y_DIV2 - 40, BTN_DIM_X,
                               BTN_DIM_Y},
@@ -64,7 +107,7 @@ void render_user_interface() {
     break;
   }
 
-  if (b_show_pause_screen) {
+  if (b_show_pause_screen && gm_current_scene_type == scene_in_game) {
     show_pause_screen();
   }
 }
@@ -84,7 +127,7 @@ void show_pause_screen()
 {
   Vector2 screen_pos = GetScreenToWorld2D((Vector2) {screen_center.x, screen_center.y - 40}, get_active_camera());
   
-  DrawRectangle(screen_pos.x - 150, 0, 300, GetScreenHeight(), (Color){53, 59, 72, 155}); // rgba()
+  DrawRectangle(screen_center.x - 150, 0, 300, GetScreenHeight(), (Color){53, 59, 72, 155}); // rgba()
 
   if (gui_button(STANDARD, screen_center.x, screen_center.y - 40, "Continue")) 
   {

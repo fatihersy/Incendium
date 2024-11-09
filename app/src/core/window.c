@@ -1,14 +1,13 @@
 #include "window.h"
 
 #include "game/camera.h"
-#include "raylib.h"
 
-#define SCREEN_WIDTH 1280
-#define SCREEN_HEIGHT 720
+#define SCREEN_WIDTH 1920 
+#define SCREEN_HEIGHT 1080
 #define SCREEN_WIDTH_OFFSET 38
 #define SCREEN_HEIGHT_OFFSET 20
-#define SCREEN_WIDTH_DIV2 SCREEN_WIDTH / 2
-#define SCREEN_HEIGHT_DIV2 SCREEN_HEIGHT / 2
+#define SCREEN_WIDTH_DIV2 SCREEN_WIDTH / 2.f
+#define SCREEN_HEIGHT_DIV2 SCREEN_HEIGHT / 2.f
 
 bool create_window(const char* title) {
     if (IsWindowReady()) return false;
