@@ -4,23 +4,38 @@
 #include "raymath.h"
 
 Vector2 get_a_point_of_a_circle(Vector2 position, i16 radius, i16 angle) {
-    return (Vector2)
-    {
-        position.x + (radius * cos(angle * 3.1415f / 180.f)),
-        position.y + (radius * sin(angle * 3.1415f / 180.f))
-    };
+  return (Vector2){position.x + (radius * cos(angle * 3.1415f / 180.f)),
+                   position.y + (radius * sin(angle * 3.1415f / 180.f))};
 }
 
-Vector2 move_towards(Vector2 position, Vector2 target, f32 speed) 
-{
-    return Vector2MoveTowards(position, target, (float)speed);
+Vector2 move_towards(Vector2 position, Vector2 target, f32 speed) {
+    
+  return Vector2MoveTowards(position, target, (float)speed);
 }
 
-bool Vec2Equals(Vector2 v1, Vector2 v2, i8 tolerans) {
+bool vec2_equals(Vector2 v1, Vector2 v2, i8 tolerans) {
 
-    int tolerans1 = fabsf(v1.x - v2.x);
+  int tolerans1 = fabsf(v1.x - v2.x);
+  int tolerans2 = fabsf(v1.y - v2.y);
+  return 
+  (
+    tolerans1 <= tolerans && 
+    tolerans1 >= 0 && 
+    tolerans2 <= tolerans &&
+    tolerans2 >= 0);
+}
 
-    int tolerans2 = fabsf(v1.y - v2.y);
+Vector2 vec2_subtract(Vector2 v1, Vector2 v2) {
+  return Vector2Subtract(v1, v2);
+}
 
-    return (tolerans1 <= tolerans && tolerans1 >= 0 && tolerans2 <= tolerans && tolerans2 >= 0);
+Vector2 vec2_add(Vector2 v1, Vector2 v2) {
+  return Vector2Add(v1, v2);
+}
+Vector2 vec2_scale(Vector2 v1, float f1) {
+  return Vector2Scale(v1, f1);
+}
+
+float vec2_lenght(Vector2 v1) { 
+  return Vector2Length(v1); 
 }

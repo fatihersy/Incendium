@@ -40,14 +40,19 @@ typedef enum system_event_code {
     
     EVENT_CODE_APPLICATION_QUIT = 0x01,
 
+    // game_manager.c
     EVENT_CODE_SCENE_IN_GAME,
     EVENT_CODE_SCENE_MAIN_MENU,
     EVENT_CODE_RETURN_MAIN_MENU_GAME,
-
     EVENT_CODE_PAUSE_GAME,
     EVENT_CODE_UNPAUSE_GAME,
+
+    // user_interface.c
     EVENT_CODE_UI_SHOW_PAUSE_SCREEN,
     EVENT_CODE_UI_SHOW_UNPAUSE_SCREEN,
+
+    // player.c
+    EVENT_CODE_PLAYER_ADD_EXP,
 
     MAX_EVENT_CODE = 0xFF
 } system_event_code;

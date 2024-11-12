@@ -1,12 +1,18 @@
 #include "camera.h"
 
-static Camera2D camera;
+#include "core/fmath.h"
+#include "raylib.h"
 
-Camera2D create_camera(Vector2 position, u16 screenWidth, u16 screenHeight, u8 rotation) {
+static Camera2D camera;
+static float camera_min_speed = 30;
+static float camera_min_effect_lenght = 10;
+static float camera_fraction_speed = 3.f;
+
+Camera2D create_camera(Vector2 position, u8 rotation) {
     
     Camera2D cam = {0};
 
-    cam.offset = (Vector2){screenWidth / 2.0f, screenHeight / 2.0f};
+    cam.offset = (Vector2){SCREEN_WIDTH_DIV2, SCREEN_HEIGHT_DIV2};
     cam.target = (Vector2){position.x, position.y};
     cam.rotation = rotation;
     cam.zoom = 1.0f;
@@ -22,7 +28,18 @@ Camera2D get_active_camera() {
 
 bool update_camera(Vector2 position) 
 {
-    camera.target = (Vector2) {position.x, position.y};
+    camera.offset = (Vector2){SCREEN_WIDTH_DIV2, SCREEN_HEIGHT_DIV2};
 
+    Vector2 diff = vec2_subtract(position, camera.target);
+    float length = vec2_lenght(diff);
+
+    if (length > camera_min_effect_lenght)
+    {
+        float speed = FMAX(camera_fraction_speed*length, camera_min_speed);
+        camera.target = vec2_add(camera.target, vec2_scale(diff, speed*GetFrameTime()/length));
+    }
+
+    camera.target = (Vector2) {position.x, position.y};
+    
     return true;
 }

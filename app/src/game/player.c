@@ -1,14 +1,20 @@
 #include "player.h"
 
+#include "core/event.h"
 #include "core/fmemory.h"
 
-#include "defines.h"
 #include "game/ability.h"
 #include "game/resource.h"
+#include <stdbool.h>
+
+// To avoid dublicate symbol errors. Implementation in defines.h
+extern const u32 level_curve[MAX_PLAYER_LEVEL+1];
 
 bool player_system_initialized = false;
 
 static player_state* player;
+
+bool player_system_on_event(u16 code, void* sender, void* listener_inst, event_context context);
 
 bool player_system_initialize() {
     if (player_system_initialized) return false;
@@ -19,6 +25,8 @@ bool player_system_initialize() {
         TraceLog(LOG_FATAL, "PLAYER_SYSTEM ALLOCATION FAILED");
         return false;
     }
+
+    event_register(EVENT_CODE_PLAYER_ADD_EXP, 0, player_system_on_event);
 
     player->position.x = 0;
     player->position.y = 0;
@@ -38,6 +46,12 @@ bool player_system_initialize() {
     // add_ability(ability_system, radiation);
     // add_ability(ability_system, direct_fire);
 
+    player->health_current = 100;
+    player->health_max = 100;
+    player->level = 1;
+    player->exp_current = 0;
+    player->exp_to_next_level = level_curve[player->level];
+
     player_system_initialized = true;
 
     return true;
@@ -49,6 +63,22 @@ player_state* get_player_state() {
     }
 
     return player;
+}
+
+void add_exp_to_player(u32 exp) {
+    u32 curr = player->exp_current;
+    u32 to_next = player->exp_to_next_level;
+
+    if ( curr + exp >= to_next) 
+    {
+        player->exp_current = (curr + exp) - to_next;
+        player->level++;
+        player->exp_to_next_level = level_curve[player->level];
+        player->player_have_skill_points = true;
+    }
+    else {
+        player->exp_current += exp;
+    }
 }
 
 bool update_player() {
@@ -102,3 +132,13 @@ bool render_player() {
     return true;
 }
 
+bool player_system_on_event(u16 code, void* sender, void* listener_inst, event_context context) {
+    switch (code) {
+        case EVENT_CODE_PLAYER_ADD_EXP:
+        add_exp_to_player(context.data.u32[0]);
+
+        default: return false;
+    }
+
+    return false;
+}

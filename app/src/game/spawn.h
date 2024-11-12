@@ -13,7 +13,7 @@ void clean_up_spawn_system();
 
 void kill_spawn(u16 _id);
 
-bool update_spawns();
+bool update_spawns(Vector2 player_position);
 bool render_spawns();
 
 

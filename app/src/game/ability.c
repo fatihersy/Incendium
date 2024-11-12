@@ -2,28 +2,31 @@
 
 #include "core/fmath.h"
 
+#include "defines.h"
 #include "game_manager.h"
 
-#define FIRE_BALL_BALL_COUNT 4
-#define FIRE_BALL_BALL_RADIUS 12
-#define FIRE_BALL_BALL_DIAMETER FIRE_BALL_BALL_RADIUS * 2
-#define FIRE_BALL_CIRCLE_RADIUS 50
-#define FIRE_BALL_CIRCLE_RADIUS_DIV_2 FIRE_BALL_CIRCLE_RADIUS / 2
-#define FIRE_BALL_CIRCLE_RADIUS_DIV_4 FIRE_BALL_CIRCLE_RADIUS / 4
+void update_dirty_ability_system(ability_system_state* system);
 
-#define RADIATION_CIRCLE_RADIUS 100
-#define RADIATION_CIRCLE_DIAMETER RADIATION_CIRCLE_RADIUS * 2
-#define RADIATION_CIRCLE_RADIUS_DIV_2 RADIATION_CIRCLE_RADIUS / 2
-#define RADIATION_CIRCLE_RADIUS_DIV_4 RADIATION_CIRCLE_RADIUS / 4
+u16 fire_ball_ball_count = 4;
+u16 fire_ball_ball_radius = 12;
+u16 fire_ball_ball_diameter = 12 * 2;
+u16 fire_ball_circle_radius = 80;
+u16 fire_ball_circle_radius_div_2 = 40;
+u16 fire_ball_circle_radius_div_4 = 20;
 
-#define DIRECT_FIRE_SQUARE_WIDTH 35
-#define DIRECT_FIRE_SQUARE_HEIGHT 100
-#define DIRECT_FIRE_SQUARE_HEIGHT_DIV_2 DIRECT_FIRE_SQUARE_HEIGHT / 2.f
+u16 radiation_circle_radius = 100;
+u16 radiation_circle_diameter = 200;
+u16 radiation_circle_radius_div_2 = 50;
+u16 radiation_circle_radius_div_4 = 25;
 
-#define SALVO_PROJECTILE_AT_A_TIME 2
-#define SALVO_FIRE_COUNT 3
-#define SALVO_PROJECTILE_COUNT SALVO_PROJECTILE_AT_A_TIME* SALVO_FIRE_COUNT
-#define SALVO_FIRE_RATE 1  // in sec
+u16 direct_fire_square_width = 35;
+u16 direct_fire_square_height = 100;
+u16 direct_fire_square_height_div_2 = 50;
+
+u16 salvo_projectile_at_a_time = 2;
+u16 salvo_fire_count = 3;
+u16 salvo_projectile_count = 6;
+u16 salvo_fire_rate = 1;
 
 ability_system_state ability_system_initialize(actor_type _owner_type) {
 
@@ -48,18 +51,18 @@ void add_ability(ability_system_state* system, ability_type type) {
         case fireball: {
             _ability->position = system->owner_position;
 
-            for (u32 i = 1; i <= FIRE_BALL_BALL_COUNT; i++) {
+            for (u32 i = 1; i <= fire_ball_ball_count; i++) {
                 _ability->projectiles[i - 1].initialized = true;
                 _ability->projectiles[i - 1].position =
                     get_a_point_of_a_circle(
                         _ability->position,
-                        FIRE_BALL_CIRCLE_RADIUS,
-                        (((360 / FIRE_BALL_BALL_COUNT) * i) + _ability->rotation) % 360);
+                        fire_ball_circle_radius,
+                        (((360 / fire_ball_ball_count) * i) + _ability->rotation) % 360);
 
                 _ability->projectiles[i - 1].collision_rect.x = _ability->projectiles[i - 1].position.x;
                 _ability->projectiles[i - 1].collision_rect.y = _ability->projectiles[i - 1].position.y;
-                _ability->projectiles[i - 1].collision_rect.width = FIRE_BALL_BALL_DIAMETER;
-                _ability->projectiles[i - 1].collision_rect.height = FIRE_BALL_BALL_DIAMETER;
+                _ability->projectiles[i - 1].collision_rect.width = fire_ball_ball_diameter;
+                _ability->projectiles[i - 1].collision_rect.height = fire_ball_ball_diameter;
             }
             break;
         }
@@ -68,9 +71,9 @@ void add_ability(ability_system_state* system, ability_type type) {
             _ability->overall_process = 0.f;
 
             _ability->position = system->owner_position;
-            _ability->fire_rate = SALVO_FIRE_RATE;
+            _ability->fire_rate = salvo_fire_rate;
 
-            for (u32 i = 0; i <= SALVO_PROJECTILE_COUNT; i++) {
+            for (u32 i = 0; i <= salvo_projectile_count; i++) {
                 _ability->projectiles[i].initialized = false;
                 _ability->projectiles[i].position = _ability->position;
                 _ability->projectiles[i].speed = 1.0f;
@@ -87,20 +90,20 @@ void add_ability(ability_system_state* system, ability_type type) {
 
             _ability->projectiles[0].collision_rect.x = _ability->projectiles[0].position.x;
             _ability->projectiles[0].collision_rect.y = _ability->projectiles[0].position.y;
-            _ability->projectiles[0].collision_rect.width = RADIATION_CIRCLE_DIAMETER;
-            _ability->projectiles[0].collision_rect.height = RADIATION_CIRCLE_DIAMETER;
+            _ability->projectiles[0].collision_rect.width = radiation_circle_diameter;
+            _ability->projectiles[0].collision_rect.height = radiation_circle_diameter;
 
             break;
         }
         case direct_fire: {
             _ability->projectiles[0].initialized = true;
             _ability->position.x = system->owner_position.x;
-            _ability->position.y = system->owner_position.y - DIRECT_FIRE_SQUARE_HEIGHT / 2.f;
+            _ability->position.y = system->owner_position.y - direct_fire_square_height / 2.f;
 
             _ability->projectiles[0].collision_rect.x = _ability->position.x;
             _ability->projectiles[0].collision_rect.y = _ability->position.y;
-            _ability->projectiles[0].collision_rect.width = DIRECT_FIRE_SQUARE_WIDTH;
-            _ability->projectiles[0].collision_rect.height = DIRECT_FIRE_SQUARE_HEIGHT;
+            _ability->projectiles[0].collision_rect.width = direct_fire_square_width;
+            _ability->projectiles[0].collision_rect.height = direct_fire_square_height;
             break;
         }
 
@@ -110,6 +113,10 @@ void add_ability(ability_system_state* system, ability_type type) {
 }
 
 bool update_abilities(ability_system_state* system, Vector2 position) {
+    if (system->is_dirty_ability_system) {
+        update_dirty_ability_system(system);
+    }
+
     system->owner_position = position;
 
     for (i16 i = 0; i < system->ability_amount + 1; i++) {
@@ -121,14 +128,14 @@ bool update_abilities(ability_system_state* system, Vector2 position) {
 
                 if (_ability->rotation > 359) _ability->rotation = 1;
 
-                for (i16 j = 1; j <= FIRE_BALL_BALL_COUNT; j++) {
+                for (i16 j = 1; j <= fire_ball_ball_count; j++) {
                     _ability->projectiles[j - 1].position =
                         get_a_point_of_a_circle(
                             system->owner_position,
-                            FIRE_BALL_CIRCLE_RADIUS,
-                            (((360 / FIRE_BALL_BALL_COUNT) * j) + _ability->rotation) % 360);
-                    _ability->projectiles[j - 1].collision_rect.x = _ability->projectiles[j - 1].position.x - FIRE_BALL_BALL_RADIUS;
-                    _ability->projectiles[j - 1].collision_rect.y = _ability->projectiles[j - 1].position.y - FIRE_BALL_BALL_RADIUS;
+                            fire_ball_circle_radius,
+                            (((360 / fire_ball_ball_count) * j) + _ability->rotation) % 360);
+                    _ability->projectiles[j - 1].collision_rect.x = _ability->projectiles[j - 1].position.x - fire_ball_ball_radius;
+                    _ability->projectiles[j - 1].collision_rect.y = _ability->projectiles[j - 1].position.y - fire_ball_ball_radius;
 
                     damage_any_collade(&_ability->projectiles[j - 1]);
                 }
@@ -139,7 +146,7 @@ bool update_abilities(ability_system_state* system, Vector2 position) {
             case salvo: {
                 _ability->is_on_fire = false;
 
-                for (u32 j = 0; j < SALVO_PROJECTILE_COUNT; j++) {
+                for (u32 j = 0; j < salvo_projectile_count; j++) {
                     if (_ability->projectiles[j].initialized) {
                         _ability->is_on_fire = true;
 
@@ -160,7 +167,7 @@ bool update_abilities(ability_system_state* system, Vector2 position) {
 
                         // if (damage_any_collade(&_ability->projectiles[j])) _ability->projectiles[j].initialized = false;
 
-                        if (_ability->overall_process > 0.3f || Vec2Equals(_ability->projectiles[j].position, _ability->projectile_target_position[j], 5)) {
+                        if (_ability->overall_process > 0.3f || vec2_equals(_ability->projectiles[j].position, _ability->projectile_target_position[j], 5)) {
                             _ability->projectiles[j].initialized = false;
                             _ability->projectile_process[j] = 0.f;
                         }
@@ -171,7 +178,7 @@ bool update_abilities(ability_system_state* system, Vector2 position) {
                 _ability->position = system->owner_position;
                 _ability->projectiles[0].initialized = true;
 
-                for (u32 j = 0; j < SALVO_PROJECTILE_COUNT; j++) {
+                for (u32 j = 0; j < salvo_projectile_count; j++) {
                     _ability->projectiles[j].rotation = GetRandomValue(0, 360); // TODO: SOME WIERD SHIT HAPPENING HERE
                     _ability->projectiles[j].speed = GetRandomValue(0, 100) / 100.f + .5;
 
@@ -194,8 +201,8 @@ bool update_abilities(ability_system_state* system, Vector2 position) {
                 _ability->position = system->owner_position;
                 _ability->projectiles[0].position = _ability->position;
 
-                _ability->projectiles[0].collision_rect.x = _ability->projectiles[0].position.x - RADIATION_CIRCLE_RADIUS;
-                _ability->projectiles[0].collision_rect.y = _ability->projectiles[0].position.y - RADIATION_CIRCLE_RADIUS;
+                _ability->projectiles[0].collision_rect.x = _ability->projectiles[0].position.x - radiation_circle_radius;
+                _ability->projectiles[0].collision_rect.y = _ability->projectiles[0].position.y - radiation_circle_radius;
 
                 break;
             }
@@ -203,7 +210,7 @@ bool update_abilities(ability_system_state* system, Vector2 position) {
             case direct_fire: {
                 if (!_ability->is_on_fire) {
                     _ability->position.x = system->owner_position.x;
-                    _ability->position.y = system->owner_position.y - DIRECT_FIRE_SQUARE_HEIGHT_DIV_2;
+                    _ability->position.y = system->owner_position.y - direct_fire_square_height_div_2;
                     _ability->projectiles[0].position = _ability->position;
 
                     _ability->projectiles[0].collision_rect.x = _ability->position.x;
@@ -221,7 +228,7 @@ bool update_abilities(ability_system_state* system, Vector2 position) {
                     _ability->projectiles[0].collision_rect.x = _ability->projectiles[0].position.x;
                     _ability->projectiles[0].collision_rect.y = _ability->projectiles[0].position.y;
 
-                    if (Vec2Equals(_ability->projectiles[0].position, (Vector2){_ability->position.x + 200, _ability->position.y}, 5)) {
+                    if (vec2_equals(_ability->projectiles[0].position, (Vector2){_ability->position.x + 200, _ability->position.y}, 5)) {
                         _ability->is_on_fire = false;
                         TraceLog(LOG_INFO, "_ability->is_on_fire = false;");
                     }
@@ -242,10 +249,10 @@ bool render_abilities(ability_system_state* system) {
     for (i16 i = 0; i < system->ability_amount + 1; i++) {
         switch (system->abilities[i].type) {
             case fireball: {
-                for (i16 j = 0; j < FIRE_BALL_BALL_COUNT; j++) {
+                for (i16 j = 0; j < fire_ball_ball_count; j++) {
                     DrawCircleV(
                         system->abilities[i].projectiles[j].position,
-                        FIRE_BALL_BALL_RADIUS,
+                        fire_ball_ball_radius,
                         RED);
 
 #if DEBUG_COLLISIONS
@@ -261,7 +268,7 @@ bool render_abilities(ability_system_state* system) {
             }
 
             case salvo: {
-                for (u32 j = 0; j < SALVO_PROJECTILE_COUNT; j++) {
+                for (u32 j = 0; j < salvo_projectile_count; j++) {
                     if (system->abilities[i].projectiles[j].initialized) {
                         DrawCircleV(
                             system->abilities[i].projectiles[j].position,
@@ -277,7 +284,7 @@ bool render_abilities(ability_system_state* system) {
                 if (system->abilities[i].projectiles[0].initialized) {
                     DrawCircleV(
                         system->abilities[i].projectiles[0].position,
-                        RADIATION_CIRCLE_RADIUS,
+                        radiation_circle_radius,
                         (Color){32, 191, 107, 100});  // rgba(32, 191, 107,1.0)
 
 #if DEBUG_COLLISIONS
@@ -296,8 +303,8 @@ bool render_abilities(ability_system_state* system) {
                     DrawRectangle(
                         system->abilities[i].projectiles[0].position.x,
                         system->abilities[i].projectiles[0].position.y,
-                        DIRECT_FIRE_SQUARE_WIDTH,
-                        DIRECT_FIRE_SQUARE_HEIGHT,
+                        direct_fire_square_width,
+                        direct_fire_square_height,
                         (Color){32, 191, 107, 100});  // rgba(32, 191, 107,1.0)
 #if DEBUG_COLLISIONS
                     DrawRectangleLines(
@@ -315,4 +322,24 @@ bool render_abilities(ability_system_state* system) {
         }
     }
     return true;
+}
+
+void update_dirty_ability_system(ability_system_state* system) {
+    if (!system->is_dirty_ability_system) {
+        return;
+    }
+
+    for (int i = 0; i <= system->ability_amount; i++) {
+        switch (system->abilities[i].type) 
+        {
+            case fireball: {
+                fire_ball_ball_count = 4 + system->abilities[i].level;
+                break;
+            }
+
+            default: break;
+        };
+    }
+
+    system->is_dirty_ability_system = false;
 }

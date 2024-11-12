@@ -1,13 +1,15 @@
 #include "spawn.h"
 
+#include "core/event.h"
 #include "core/fmath.h"
 #include "core/fmemory.h"
 
-#include "defines.h"
 #include "resource.h"
-#include "game_manager.h"
 
 static spawn_system_state* spawn_system;
+
+// To avoid dublicate symbol errors. Implementation in defines.h
+extern const u32 level_curve[MAX_PLAYER_LEVEL+1];
 
 bool spawn_system_initialized = false;
 
@@ -48,6 +50,8 @@ void kill_spawn(u16 _id) {
         spawns[_id] = (Character2D){0};
         spawn_system->current_spawn_count--;
     }
+
+    event_fire(EVENT_CODE_PLAYER_ADD_EXP, 0, (event_context) { .data.u32[0] = 32});
 }
 
 bool spawn_character(Character2D character, actor_type _type) {
@@ -67,9 +71,7 @@ bool spawn_character(Character2D character, actor_type _type) {
     return true;
 }
 
-bool update_spawns() {
-
-    Vector2 player_position = get_player_position();
+bool update_spawns(Vector2 player_position) {
  
     for (i32 i = 0; i < spawn_system->current_spawn_count; i++) 
     {
