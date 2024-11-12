@@ -17,8 +17,9 @@
 #define MAX_PROJECTILE_COUNT 50
 #define MAX_TEXTURE_SLOTS 10
 #define MAX_ABILITY_AMOUNT 10
+#define MAX_SPRITESHEET_SLOTS 50
 
-#define DEBUG_COLLISIONS 1
+#define DEBUG_COLLISIONS 0
 
 // Unsigned int types.
 typedef unsigned char u8;
@@ -62,16 +63,37 @@ typedef enum elapse_time_type {
     SALVO_ETA
 } elapse_time_type;
 
-typedef enum resource_type {
-    UNSPECIFIED,
+typedef enum texture_type {
+    TEX_UNSPECIFIED,
     PLAYER_TEXTURE,
     ENEMY_TEXTURE,
     BACKGROUND,
-} resource_type;
+} texture_type;
+
+typedef enum spritesheet_type {
+	SPRITESHEET_UNSPECIFIED,
+	LEVEL_UP_SHEET,
+
+} spritesheet_type;
+
+typedef struct spritesheet {
+	spritesheet_type type;
+	u8 frame_total;
+	u8 col_total;
+	u8 row_total;
+	u8 current_col;
+	u8 current_row;
+	Rectangle current_frame_rect;
+
+	Texture2D handle;
+	Rectangle coord;
+	bool is_started;
+
+} spritesheet;
 
 typedef struct Character2D {
     u16 character_id;
-    resource_type res_type;
+    texture_type res_type;
     bool initialized;
 
     Rectangle collision_rect;
@@ -102,7 +124,9 @@ typedef struct ability {
 
 typedef struct resource_system_state {
     i16 texture_amouth;
+	i16 sprite_amouth;
     Texture2D textures[MAX_TEXTURE_SLOTS];
+	spritesheet sprites[MAX_SPRITESHEET_SLOTS];
 } resource_system_state;
 
 typedef struct ability_system_state {

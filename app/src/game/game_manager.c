@@ -102,6 +102,7 @@ void update_game_manager() {
     if(!is_game_paused) {
       update_player();
       update_spawns(get_player_position());
+      update_resource_system();
     }
 
     break;
@@ -122,6 +123,7 @@ void render_game_manager() {
   case scene_in_game: {
     render_player();
     render_spawns();
+    render_resource_system();
     break;
   }
   default:

@@ -3,8 +3,10 @@
 #include "core/event.h"
 #include "core/fmemory.h"
 
+#include "defines.h"
 #include "game/ability.h"
 #include "game/resource.h"
+#include "game_manager.h"
 #include <stdbool.h>
 
 // To avoid dublicate symbol errors. Implementation in defines.h
@@ -75,6 +77,7 @@ void add_exp_to_player(u32 exp) {
         player->level++;
         player->exp_to_next_level = level_curve[player->level];
         player->player_have_skill_points = true;
+        play_sprite(LEVEL_UP_SHEET, get_player_position());
     }
     else {
         player->exp_current += exp;
