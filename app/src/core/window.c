@@ -1,6 +1,8 @@
 #include "window.h"
 
+#include "defines.h"
 #include "game/camera.h"
+#include "raylib.h"
 
 bool create_window(const char* title) {
     if (IsWindowReady()) return false;
@@ -9,7 +11,8 @@ bool create_window(const char* title) {
 
     create_camera((Vector2) {SCREEN_WIDTH_DIV2, SCREEN_HEIGHT_DIV2}, 0);
 
-    SetTargetFPS(60);  // Set our game to run at 60 frames-per-second
+    SetConfigFlags(FLAG_VSYNC_HINT | FLAG_WINDOW_HIGHDPI);
+    SetTargetFPS(TARGET_FPS);  // Set our game to run at 60 frames-per-second
 
     return true;
 }

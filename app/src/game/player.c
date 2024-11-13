@@ -6,8 +6,7 @@
 #include "defines.h"
 #include "game/ability.h"
 #include "game/resource.h"
-#include "game_manager.h"
-#include <stdbool.h>
+#include "raylib.h"
 
 // To avoid dublicate symbol errors. Implementation in defines.h
 extern const u32 level_curve[MAX_PLAYER_LEVEL+1];
@@ -43,7 +42,7 @@ bool player_system_initialize() {
         .width = player->player_texture.width,
         .height = player->player_texture.height};
 
-    add_ability(&player->ability_system, fireball);
+    add_ability(&player->ability_system, FIREBALL);
     // add_ability(ability_system, salvo);
     // add_ability(ability_system, radiation);
     // add_ability(ability_system, direct_fire);
@@ -53,6 +52,7 @@ bool player_system_initialize() {
     player->level = 1;
     player->exp_current = 0;
     player->exp_to_next_level = level_curve[player->level];
+    player->is_moving = false;
 
     player_system_initialized = true;
 
@@ -77,7 +77,7 @@ void add_exp_to_player(u32 exp) {
         player->level++;
         player->exp_to_next_level = level_curve[player->level];
         player->player_have_skill_points = true;
-        play_sprite(LEVEL_UP_SHEET, get_player_position());
+        play_sprite(LEVEL_UP_SHEET, ON_PLAYER, true, (Vector2){0}, 0);
     }
     else {
         player->exp_current += exp;
@@ -89,15 +89,22 @@ bool update_player() {
 
     if (IsKeyDown(KEY_W)) {
         player->position.y -= 2;
+        player->is_moving = true;
     }
     if (IsKeyDown(KEY_A)) {
         player->position.x -= 2;
+        player->is_moving = true;
     }
     if (IsKeyDown(KEY_S)) {
         player->position.y += 2;
+        player->is_moving = true;
     }
     if (IsKeyDown(KEY_D)) {
         player->position.x += 2;
+        player->is_moving = true;
+    }
+    if (IsKeyUp(KEY_W) && IsKeyUp(KEY_A) && IsKeyUp(KEY_S) && IsKeyUp(KEY_D)) {    
+        player->is_moving = false;
     }
 
     update_abilities(&player->ability_system, player->position);
@@ -115,11 +122,22 @@ bool render_player() {
         return false;
     }
 
-    DrawTexture(
+/*  DrawTexture(
         player->player_texture,
         player->position.x - player->player_texture.width / 2.f,
         player->position.y - player->player_texture.height / 2.f,
-        WHITE);
+        WHITE); */
+
+    if(player->is_moving) 
+    {
+        play_sprite(PLAYER_ANIMATION_RUN, ON_PLAYER, false, (Vector2) {0}, 0);
+        stop_sprite(PLAYER_ANIMATION_IDLE);
+    }
+    else 
+    {
+        play_sprite(PLAYER_ANIMATION_IDLE, ON_PLAYER, false, (Vector2) {0}, 0);
+        stop_sprite(PLAYER_ANIMATION_RUN);
+    } 
 
     render_abilities(&player->ability_system);
 

@@ -74,7 +74,7 @@ void update_user_interface(Vector2 _offset, Vector2 _screen_half_size,
 
 void render_user_interface() {
   switch (gm_current_scene_type) {
-  case scene_main_menu: {
+  case SCENE_MAIN_MENU: {
 
     DrawTexturePro(
         get_texture_by_enum(BACKGROUND),
@@ -101,7 +101,7 @@ void render_user_interface() {
 
     break;
   }
-  case scene_in_game: {
+  case SCENE_IN_GAME: {
 
     GuiProgressBar(
       (Rectangle) {20, 20, 200, 12}, 
@@ -129,7 +129,7 @@ void render_user_interface() {
     break;
   }
 
-  if (b_show_pause_screen && gm_current_scene_type == scene_in_game) {
+  if (b_show_pause_screen) {
     show_pause_screen();
   }
 }
@@ -155,6 +155,7 @@ void show_pause_screen() {
     // TODO: Settings
   }
   if (gui_button(STANDARD, screen_center.x/2.f, screen_center.y + BTN_SPACE_BTW(1), "Main Menu")) {
+    b_show_pause_screen = false;
     event_fire(EVENT_CODE_RETURN_MAIN_MENU_GAME, 0, (event_context) {0});
   }
   if (gui_button(STANDARD, screen_center.x/2.f, screen_center.y + BTN_SPACE_BTW(2), "Quit")) {
@@ -188,7 +189,7 @@ bool gui_button(button_type type, int x, int y, const char *text) {
 
 void show_skill_up() {
   if(gui_button(SQUARE, screen_center.x, screen_center.y / 2.f, "#05#")) {
-    p_player->ability_system.abilities[fireball].level++;
+    p_player->ability_system.abilities[FIREBALL].level++;
     p_player->ability_system.is_dirty_ability_system = true;
     p_player->player_have_skill_points = false;
   }

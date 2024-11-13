@@ -6,6 +6,7 @@
 #include "raylib.h"
 
 #define TOTAL_ALLOCATED_MEMORY 64 * 1024 * 1024
+#define TARGET_FPS 60
 
 #define SCREEN_WIDTH 1280    
 #define SCREEN_HEIGHT 720
@@ -48,15 +49,15 @@ typedef enum actor_type {
 } actor_type;
 
 typedef enum scene_type {
-    scene_main_menu,
-    scene_in_game
+    SCENE_MAIN_MENU,
+    SCENE_IN_GAME
 } scene_type;
 
 typedef enum ability_type {
-    fireball,
-    salvo,
-    radiation,
-    direct_fire,
+    FIREBALL,
+    SALVO,
+    RADIATION,
+    DIRECT_FIRE,
 } ability_type;
 
 typedef enum elapse_time_type {
@@ -72,23 +73,37 @@ typedef enum texture_type {
 
 typedef enum spritesheet_type {
 	SPRITESHEET_UNSPECIFIED,
+	PLAYER_ANIMATION_IDLE,
+	PLAYER_ANIMATION_RUN,
 	LEVEL_UP_SHEET,
 
 } spritesheet_type;
 
+typedef enum spritesheet_playmod {
+	SPRITESHEET_PLAYMOD_UNSPECIFIED,
+	ON_SITE,
+	ON_PLAYER,
+	ON_SPAWN
+} spritesheet_playmod;
+
 typedef struct spritesheet {
 	spritesheet_type type;
-	u8 frame_total;
-	u8 col_total;
-	u8 row_total;
-	u8 current_col;
-	u8 current_row;
+	u16 frame_total;
+	u16 col_total;
+	u16 row_total;
+	u16 current_col;
+	u16 current_row;
+	u16 current_frame;
 	Rectangle current_frame_rect;
 
 	Texture2D handle;
+	i16 fps;
+	i16 counter;
 	Rectangle coord;
+	spritesheet_playmod playmod;
+	u16 attached_spawn;
 	bool is_started;
-
+	bool play_once;
 } spritesheet;
 
 typedef struct Character2D {
@@ -157,6 +172,7 @@ typedef struct player_state {
     u32 exp_to_next_level;
     u32 exp_current; 
     bool player_have_skill_points;
+	bool is_moving;
 
     ability_system_state ability_system;
 } player_state;

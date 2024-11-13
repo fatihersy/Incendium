@@ -5,7 +5,9 @@
 #include "core/ftime.h"
 
 
+#include "defines.h"
 #include "player.h"
+#include "raylib.h"
 #include "resource.h"
 #include "spawn.h"
 
@@ -44,7 +46,7 @@ bool game_manager_initialize(Vector2 _screen_size) {
   screen_size = _screen_size;
   screen_half_size = (Vector2){_screen_size.x / 2, _screen_size.y / 2};
 
-  current_scene_type = scene_main_menu;
+  current_scene_type = SCENE_MAIN_MENU;
   load_scene();
 
   game_manager_initialized = true;
@@ -86,11 +88,14 @@ float get_time_elapsed(elapse_time_type type) {
 scene_type get_current_scene_type() { return current_scene_type; }
 
 void update_game_manager() {
+
+  if(GetFPS() > TARGET_FPS) return;
+
   switch (current_scene_type) {
-  case scene_main_menu: {
+  case SCENE_MAIN_MENU: {
     break;
   }
-  case scene_in_game: {
+  case SCENE_IN_GAME: {
     if (IsKeyPressed(KEY_ESCAPE)) {
       is_game_paused = !is_game_paused;
         (is_game_paused) 
@@ -114,13 +119,15 @@ void update_game_manager() {
 }
 
 void render_game_manager() {
+  
+  if(GetFPS() > TARGET_FPS) return;
   draw_background();
 
   switch (current_scene_type) {
-  case scene_main_menu: {
+  case SCENE_MAIN_MENU: {
     break;
   }
-  case scene_in_game: {
+  case SCENE_IN_GAME: {
     render_player();
     render_spawns();
     render_resource_system();
@@ -135,10 +142,10 @@ void load_scene() {
   set_player_position(screen_size.x / 2, screen_size.y / 2);
 
   switch (current_scene_type) {
-  case scene_main_menu: {
+  case SCENE_MAIN_MENU: {
     break;
   }
-  case scene_in_game: {
+  case SCENE_IN_GAME: {
     for (u32 i = 0; i < 360; i += 20) {
       Vector2 position = get_a_point_of_a_circle(get_player_position(), 500, i);
 
@@ -178,14 +185,14 @@ bool damage_any_collade(Character2D *_character) {
 
 void draw_background() {
   switch (current_scene_type) {
-  case scene_main_menu: {
+  case SCENE_MAIN_MENU: {
     // Centering guidelines
     // DrawLine(screen_size.x / 2, 0, screen_size.x / 2, screen_size.y,
     // (Color){255, 255, 255, 255}); DrawLine(0, screen_size.y / 2,
     // screen_size.x, screen_size.y / 2, (Color){255, 255, 255, 255});
     break;
   }
-  case scene_in_game: {
+  case SCENE_IN_GAME: {
     for (i16 i = -map_size + 13; i < map_size; i += gridsize) { // X Axis
       DrawLine(i, -map_size, i, i + (map_size), (Color){21, 17, 71, 255});
     }
@@ -204,13 +211,13 @@ bool game_manager_on_event(u16 code, void *sender, void *listener_inst,
                            event_context context) {
   switch (code) {
   case EVENT_CODE_SCENE_IN_GAME: {
-    current_scene_type = scene_in_game;
+    current_scene_type = SCENE_IN_GAME;
     load_scene();
     return true;
     break;
   }
   case EVENT_CODE_SCENE_MAIN_MENU: {
-    current_scene_type = scene_main_menu;
+    current_scene_type = SCENE_MAIN_MENU;
     load_scene();
     return true;
     break;
@@ -231,7 +238,7 @@ bool game_manager_on_event(u16 code, void *sender, void *listener_inst,
   }
   case EVENT_CODE_RETURN_MAIN_MENU_GAME: {
     is_game_paused = false;
-    current_scene_type = scene_main_menu;
+    current_scene_type = SCENE_MAIN_MENU;
     clean_up();
     load_scene();
 

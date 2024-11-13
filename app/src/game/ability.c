@@ -48,7 +48,7 @@ void add_ability(ability_system_state* system, ability_type type) {
     ability* _ability = &system->abilities[system->ability_amount];
 
     switch (type) {
-        case fireball: {
+        case FIREBALL: {
             _ability->position = system->owner_position;
 
             for (u32 i = 1; i <= fire_ball_ball_count; i++) {
@@ -67,7 +67,7 @@ void add_ability(ability_system_state* system, ability_type type) {
             break;
         }
 
-        case salvo: {
+        case SALVO: {
             _ability->overall_process = 0.f;
 
             _ability->position = system->owner_position;
@@ -82,7 +82,7 @@ void add_ability(ability_system_state* system, ability_type type) {
             }
             break;
         }
-        case radiation: {
+        case RADIATION: {
             _ability->position = system->owner_position;
 
             _ability->projectiles[0].initialized = true;
@@ -95,7 +95,7 @@ void add_ability(ability_system_state* system, ability_type type) {
 
             break;
         }
-        case direct_fire: {
+        case DIRECT_FIRE: {
             _ability->projectiles[0].initialized = true;
             _ability->position.x = system->owner_position.x;
             _ability->position.y = system->owner_position.y - direct_fire_square_height / 2.f;
@@ -123,7 +123,7 @@ bool update_abilities(ability_system_state* system, Vector2 position) {
         ability* _ability = &system->abilities[i];
 
         switch (_ability->type) {
-            case fireball: {
+            case FIREBALL: {
                 _ability->rotation += 1;
 
                 if (_ability->rotation > 359) _ability->rotation = 1;
@@ -143,7 +143,7 @@ bool update_abilities(ability_system_state* system, Vector2 position) {
                 break;
             }
 
-            case salvo: {
+            case SALVO: {
                 _ability->is_on_fire = false;
 
                 for (u32 j = 0; j < salvo_projectile_count; j++) {
@@ -197,7 +197,7 @@ bool update_abilities(ability_system_state* system, Vector2 position) {
                 break;
             }
 
-            case radiation: {
+            case RADIATION: {
                 _ability->position = system->owner_position;
                 _ability->projectiles[0].position = _ability->position;
 
@@ -207,7 +207,7 @@ bool update_abilities(ability_system_state* system, Vector2 position) {
                 break;
             }
 
-            case direct_fire: {
+            case DIRECT_FIRE: {
                 if (!_ability->is_on_fire) {
                     _ability->position.x = system->owner_position.x;
                     _ability->position.y = system->owner_position.y - direct_fire_square_height_div_2;
@@ -248,7 +248,7 @@ bool update_abilities(ability_system_state* system, Vector2 position) {
 bool render_abilities(ability_system_state* system) {
     for (i16 i = 0; i < system->ability_amount + 1; i++) {
         switch (system->abilities[i].type) {
-            case fireball: {
+            case FIREBALL: {
                 for (i16 j = 0; j < fire_ball_ball_count; j++) {
                     DrawCircleV(
                         system->abilities[i].projectiles[j].position,
@@ -267,7 +267,7 @@ bool render_abilities(ability_system_state* system) {
                 break;
             }
 
-            case salvo: {
+            case SALVO: {
                 for (u32 j = 0; j < salvo_projectile_count; j++) {
                     if (system->abilities[i].projectiles[j].initialized) {
                         DrawCircleV(
@@ -280,7 +280,7 @@ bool render_abilities(ability_system_state* system) {
                 break;
             }
 
-            case radiation: {
+            case RADIATION: {
                 if (system->abilities[i].projectiles[0].initialized) {
                     DrawCircleV(
                         system->abilities[i].projectiles[0].position,
@@ -298,7 +298,7 @@ bool render_abilities(ability_system_state* system) {
                 }
                 break;
             }
-            case direct_fire: {
+            case DIRECT_FIRE: {
                 if (system->abilities[i].projectiles[0].initialized) {
                     DrawRectangle(
                         system->abilities[i].projectiles[0].position.x,
@@ -332,7 +332,7 @@ void update_dirty_ability_system(ability_system_state* system) {
     for (int i = 0; i <= system->ability_amount; i++) {
         switch (system->abilities[i].type) 
         {
-            case fireball: {
+            case FIREBALL: {
                 fire_ball_ball_count = 4 + system->abilities[i].level;
                 break;
             }
