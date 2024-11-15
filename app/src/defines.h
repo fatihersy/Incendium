@@ -5,7 +5,7 @@
 
 #include "raylib.h"
 
-#define TOTAL_ALLOCATED_MEMORY 64 * 1024 * 1024
+#define TOTAL_ALLOCATED_MEMORY 128 * 1024 * 1024
 #define TARGET_FPS 60
 
 #define SCREEN_WIDTH 1280    
@@ -19,6 +19,7 @@
 #define MAX_TEXTURE_SLOTS 10
 #define MAX_ABILITY_AMOUNT 10
 #define MAX_SPRITESHEET_SLOTS 50
+#define MAX_BUTTONS_COUNT 50
 
 #define DEBUG_COLLISIONS 0
 
@@ -69,15 +70,8 @@ typedef enum texture_type {
     PLAYER_TEXTURE,
     ENEMY_TEXTURE,
     BACKGROUND,
+	BUTTON_TEXTURE,
 } texture_type;
-
-typedef enum spritesheet_type {
-	SPRITESHEET_UNSPECIFIED,
-	PLAYER_ANIMATION_IDLE,
-	PLAYER_ANIMATION_RUN,
-	LEVEL_UP_SHEET,
-
-} spritesheet_type;
 
 typedef enum spritesheet_playmod {
 	SPRITESHEET_PLAYMOD_UNSPECIFIED,
@@ -86,22 +80,57 @@ typedef enum spritesheet_playmod {
 	ON_SPAWN
 } spritesheet_playmod;
 
+typedef enum world_direction {
+	LEFT,
+	RIGHT,
+} world_direction;
+
+typedef enum spritesheet_type {
+	SPRITESHEET_UNSPECIFIED,
+	PLAYER_ANIMATION_IDLELEFT,
+	PLAYER_ANIMATION_IDLERIGHT,
+	PLAYER_ANIMATION_MOVELEFT,
+	PLAYER_ANIMATION_MOVERIGHT,
+	BUTTON_REFLECTION_SHEET,
+	LEVEL_UP_SHEET,
+
+} spritesheet_type;
+
+typedef enum button_state {
+	BTN_STATE_UP,
+	BTN_STATE_HOVER,
+	BTN_STATE_PRESSED
+} button_state;
+
+typedef enum button_type { BTN_TYPE_UNDEFINED, BTN_TYPE_STANDARD, BTN_TYPE_SQUARE } button_type;
+typedef struct button {
+    const char* text;
+	u16 id;
+    button_type btn_type;
+	texture_type tex_type;
+    button_state state;
+    
+    Rectangle source;
+    Rectangle dest;
+} button;
+
 typedef struct spritesheet {
 	spritesheet_type type;
-	u16 frame_total;
 	u16 col_total;
 	u16 row_total;
+	u16 frame_total;
 	u16 current_col;
 	u16 current_row;
 	u16 current_frame;
 	Rectangle current_frame_rect;
+	Rectangle coord;
 
 	Texture2D handle;
 	i16 fps;
 	i16 counter;
-	Rectangle coord;
 	spritesheet_playmod playmod;
 	u16 attached_spawn;
+	world_direction w_direction;
 	bool is_started;
 	bool play_once;
 } spritesheet;
@@ -113,6 +142,7 @@ typedef struct Character2D {
 
     Rectangle collision_rect;
     Vector2 position;
+	world_direction w_direction;
     actor_type type;
 
     u16 rotation;
@@ -137,34 +167,22 @@ typedef struct ability {
     f32 overall_process;
 } ability;
 
-typedef struct resource_system_state {
-    i16 texture_amouth;
-	i16 sprite_amouth;
-    Texture2D textures[MAX_TEXTURE_SLOTS];
-	spritesheet sprites[MAX_SPRITESHEET_SLOTS];
-} resource_system_state;
-
 typedef struct ability_system_state {
     actor_type owner_type;
     Vector2 owner_position;
+	u16 player_width;
+	u16 player_height;
     bool is_dirty_ability_system;
 
     ability abilities[MAX_ABILITY_AMOUNT];
     i16 ability_amount;
 } ability_system_state;
 
-typedef struct spawn_system_state {
-    Character2D spawns[MAX_SPAWN_COUNT];
-    u16 current_spawn_count;
-} spawn_system_state;
-
 typedef struct player_state {
-    Texture2D player_texture;
-    const char* texture_path;
-
     bool initialized;
     Vector2 position;
-    Rectangle collision;
+	Vector2 dimentions;
+	world_direction w_direction;
 
     u8 health_max;
     u8 health_current;
@@ -174,8 +192,36 @@ typedef struct player_state {
     bool player_have_skill_points;
 	bool is_moving;
 
+    Rectangle collision;
     ability_system_state ability_system;
 } player_state;
+
+typedef struct user_interface_system_state {
+	Vector2 screen_center;
+	Vector2 offset;
+	Vector2 mouse_pos;
+	button buttons[MAX_BUTTONS_COUNT];
+	u16 button_count;
+
+	player_state* p_player;
+	float p_player_health;
+	float p_player_exp;
+
+	scene_type gm_current_scene_type;
+	bool b_show_pause_screen;
+} user_interface_system_state;
+
+typedef struct resource_system_state {
+    i16 texture_amouth;
+	i16 sprite_amouth;
+    Texture2D textures[MAX_TEXTURE_SLOTS];
+	spritesheet sprites[MAX_SPRITESHEET_SLOTS];
+} resource_system_state;
+
+typedef struct spawn_system_state {
+    Character2D spawns[MAX_SPAWN_COUNT];
+    u16 current_spawn_count;
+} spawn_system_state;
 
 typedef struct memory_system_state {
     u64 linear_memory_total_size;

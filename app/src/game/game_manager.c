@@ -4,10 +4,7 @@
 #include "core/fmath.h"
 #include "core/ftime.h"
 
-
-#include "defines.h"
 #include "player.h"
-#include "raylib.h"
 #include "resource.h"
 #include "spawn.h"
 
@@ -60,9 +57,13 @@ bool game_manager_initialize(Vector2 _screen_size) {
 }
 
 void set_player_position(i16 x, i16 y) {
-  get_player_state()->position.x = x;
-  get_player_state()->position.y = y;
+  event_fire(EVENT_CODE_PLAYER_SET_POSITION, 0, (event_context) 
+  { 
+    .data.f32[0] = x,
+    .data.f32[1] = y,
+  });
 }
+
 void set_current_scene_type(scene_type type) { current_scene_type = type; }
 Vector2 get_player_position() { return get_player_state()->position; }
 Character2D *get_actor_by_id(u16 ID) {
@@ -87,12 +88,17 @@ float get_time_elapsed(elapse_time_type type) {
 }
 scene_type get_current_scene_type() { return current_scene_type; }
 
+Vector2 get_player_dimentions() {
+  return get_player_state()->dimentions;
+}
+
 void update_game_manager() {
 
   if(GetFPS() > TARGET_FPS) return;
 
   switch (current_scene_type) {
   case SCENE_MAIN_MENU: {
+      update_resource_system();
     break;
   }
   case SCENE_IN_GAME: {
@@ -125,6 +131,7 @@ void render_game_manager() {
 
   switch (current_scene_type) {
   case SCENE_MAIN_MENU: {
+    render_resource_system();
     break;
   }
   case SCENE_IN_GAME: {

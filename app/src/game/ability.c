@@ -2,7 +2,6 @@
 
 #include "core/fmath.h"
 
-#include "defines.h"
 #include "game_manager.h"
 
 void update_dirty_ability_system(ability_system_state* system);
@@ -28,12 +27,14 @@ u16 salvo_fire_count = 3;
 u16 salvo_projectile_count = 6;
 u16 salvo_fire_rate = 1;
 
-ability_system_state ability_system_initialize(actor_type _owner_type) {
+ability_system_state ability_system_initialize(actor_type _owner_type, Vector2 _dimentions) {
 
     ability_system_state _system;
 
     _system.ability_amount = -1;
     _system.owner_type = _owner_type;
+    _system.player_width = _dimentions.x;
+    _system.player_height = _dimentions.y;
 
     _system.abilities[0].rotation = 55;
 
@@ -117,7 +118,8 @@ bool update_abilities(ability_system_state* system, Vector2 position) {
         update_dirty_ability_system(system);
     }
 
-    system->owner_position = position;
+    system->owner_position.x = position.x;
+    system->owner_position.y = position.y;
 
     for (i16 i = 0; i < system->ability_amount + 1; i++) {
         ability* _ability = &system->abilities[i];

@@ -8,7 +8,6 @@
 #include "game/camera.h"
 #include "game/game_manager.h"
 
-#include "raylib.h"
 #include "user_interface.h"
 
 bool application_on_event(u16 code, void* sender, void* listener_inst, event_context context);

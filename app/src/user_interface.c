@@ -1,17 +1,18 @@
 #include "user_interface.h"
 
+#include "core/fmemory.h"
 #include "core/event.h"
 
 #include "defines.h"
 #include "game/resource.h"
 #include "game/player.h"
 
-#define RAYGUI_IMPLEMENTATION
-#include "raygui.h"
+/* #define RAYGUI_IMPLEMENTATION
+#include "raygui.h" */
 
 // raygui embedded styles
 // NOTE: Included in the same order as selector
-#define MAX_GUI_STYLES_AVAILABLE 12     // NOTE: Included light style
+/* #define MAX_GUI_STYLES_AVAILABLE 12     // NOTE: Included light style
 #include "game/styles/style_ashes.h"    // raygui style: ashes
 #include "game/styles/style_bluish.h"   // raygui style: bluish
 #include "game/styles/style_candy.h"    // raygui style: candy
@@ -22,12 +23,13 @@
 #include "game/styles/style_jungle.h"   // raygui style: jungle
 #include "game/styles/style_lavanda.h"  // raygui style: lavanda
 #include "game/styles/style_sunny.h"    // raygui style: sunny
-#include "game/styles/style_terminal.h" // raygui style: terminal
+#include "game/styles/style_terminal.h" // raygui style: terminal */
+#include "raylib.h"
 
-#define BTN_DIM_X 180
-#define BTN_DIM_Y 40
-#define BTN_DIM_X_DIV2 BTN_DIM_X / 2.f
-#define BTN_DIM_Y_DIV2 BTN_DIM_Y / 2.f
+#define BTN_MENU_DIM_X 250
+#define BTN_MENU_DIM_Y 50
+#define BTN_MENU_DIM_X_DIV2 BTN_MENU_DIM_X / 2.f
+#define BTN_MENU_DIM_Y_DIV2 BTN_MENU_DIM_Y / 2.f
 #define BTN_SQUARE_DIM 70
 #define BTN_SQUARE_DIM_DIV2 BTN_SQUARE_DIM / 2.f
 #define BTN_SPACE_BTW(i) (BTN_DIM_Y+15)*i
@@ -35,48 +37,79 @@
 #define PAUSE_MENU_TOTAL_WIDTH 850
 #define PAUSE_MENU_TOTAL_HEIGHT 480
 
-Vector2 screen_center = {0};
-Vector2 offset = {0};
-
-player_state* p_player;
-float p_player_health;
-float p_player_exp;
-
-scene_type gm_current_scene_type = 0;
-bool b_show_pause_screen = false;
-bool b_user_interface_system_initialized = false;
+static user_interface_system_state* ui_system_state;
 
 bool user_interface_on_event(u16 code, void *sender, void *listener_inst, event_context context);
-bool gui_button(button_type type, int x, int y, const char *text);
+void register_button(const char* _text, u16 _x, u16 _y, button_type _btn_type, texture_type _tex_type, Vector2 source_dim);
+bool gui_button(button _btn);
 void show_pause_screen();
 void show_skill_up();
 
+bool b_user_interface_system_initialized = false;
 
 void user_interface_system_initialize() {
+  if(b_user_interface_system_initialized) return;
 
-  GuiLoadStyleCherry();
+  ui_system_state = (user_interface_system_state*)allocate_memory_linear(sizeof(user_interface_system_state), true);
 
-  p_player = get_player_state();
+  ui_system_state->p_player = get_player_state();
+  ui_system_state->p_player_exp = ui_system_state->p_player->exp_current;
+  ui_system_state->p_player_health = ui_system_state->p_player->health_current;
+  
+  b_user_interface_system_initialized = true;
+  
+  register_button("Play", SCREEN_WIDTH_DIV2, SCREEN_HEIGHT_DIV2, BTN_TYPE_STANDARD, BUTTON_TEXTURE, (Vector2) {80, 16}); 
+
 
   event_register(EVENT_CODE_UI_SHOW_PAUSE_SCREEN, 0, user_interface_on_event);
   event_register(EVENT_CODE_UI_SHOW_UNPAUSE_SCREEN, 0, user_interface_on_event);
+
 }
 
-void update_user_interface(Vector2 _offset, Vector2 _screen_half_size,
-                           scene_type _current_scene_type, Camera2D _camera) {
-  screen_center = _screen_half_size;
-  p_player_health = (float)p_player->health_current;
-  p_player_exp = (float)p_player->exp_current;
+void update_user_interface(Vector2 _offset, Vector2 _screen_half_size, scene_type _current_scene_type, Camera2D _camera) {
+  ui_system_state->screen_center = _screen_half_size;  
+  ui_system_state->p_player_health = (float)ui_system_state->p_player->health_current;
+  ui_system_state->p_player_exp = (float)ui_system_state->p_player->exp_current;
+  ui_system_state->mouse_pos = GetMousePosition();
+  ui_system_state->offset = _offset;
+  ui_system_state->gm_current_scene_type = _current_scene_type;
 
-  offset = _offset;
-  gm_current_scene_type = _current_scene_type;
+  for (int i = 0; i < ui_system_state->button_count; ++i) {
+    if(ui_system_state->buttons[i].btn_type == BTN_TYPE_UNDEFINED) continue;
+    button btn = ui_system_state->buttons[i];
+
+    if(CheckCollisionPointRec(ui_system_state->mouse_pos, btn.dest)) {
+
+      if(IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
+        stop_sprite(BUTTON_REFLECTION_SHEET, true);
+        btn.state = BTN_STATE_PRESSED;
+        btn.source.x = btn.source.width;
+      }
+      else 
+      {
+        if(btn.state == BTN_STATE_UP)
+        {
+          play_sprite(BUTTON_REFLECTION_SHEET, ON_SITE, true, (Rectangle){btn.dest.x, btn.dest.y, .width = BTN_MENU_DIM_X, .height = BTN_MENU_DIM_Y}, false, 0);
+        }
+        btn.state = BTN_STATE_HOVER;
+        btn.source.x = 0;
+      }
+    }
+    else 
+    {      
+      btn.state = BTN_STATE_UP;
+      btn.source.x = 0;
+    }
+
+    ui_system_state->buttons[i] = btn;
+  }
 }
 
 void render_user_interface() {
-  switch (gm_current_scene_type) {
+  switch (ui_system_state->gm_current_scene_type) {
   case SCENE_MAIN_MENU: {
 
-    DrawTexturePro(
+/*     DrawTexturePro(
         get_texture_by_enum(BACKGROUND),
         (Rectangle){.x = 0,
                     .y = 0,
@@ -87,23 +120,23 @@ void render_user_interface() {
                     .width = GetScreenWidth(),
                     .height = GetScreenHeight()},
         (Vector2){.x = 0, .y = 0}, 0,
-        WHITE); // Draws the background to main menu
+        WHITE); // Draws the background to main menu */
 
-    if (gui_button(STANDARD, screen_center.x, screen_center.y + BTN_SPACE_BTW(-1), "Play")) {
-      event_fire(EVENT_CODE_SCENE_IN_GAME, 0, (event_context){0});
+    if (gui_button(ui_system_state->buttons[0])) {
+      //event_fire(EVENT_CODE_SCENE_IN_GAME, 0, (event_context){0});
     };
-    if (gui_button(STANDARD, screen_center.x, screen_center.y, "Settings")) {
+/*     if (gui_button((button) {0})) {
       // TODO: Settings
     };
-    if (gui_button(STANDARD, screen_center.x, screen_center.y + BTN_SPACE_BTW(1), "Quit")) {
+    if (gui_button((button) {0})) {
       event_fire(EVENT_CODE_APPLICATION_QUIT, 0, (event_context){0});
-    };
+    }; */
 
     break;
   }
   case SCENE_IN_GAME: {
 
-    GuiProgressBar(
+/*     GuiProgressBar(
       (Rectangle) {20, 20, 200, 12}, 
       "", 
       TextFormat("%d", p_player->health_current), 
@@ -117,9 +150,9 @@ void render_user_interface() {
       "", 
       &p_player_exp, 
       0, 
-      p_player->exp_to_next_level);
+      p_player->exp_to_next_level); */
 
-    if (p_player->player_have_skill_points) {
+    if (ui_system_state->p_player->player_have_skill_points) {
       show_skill_up();
     }
 
@@ -129,7 +162,7 @@ void render_user_interface() {
     break;
   }
 
-  if (b_show_pause_screen) {
+  if (ui_system_state->b_show_pause_screen) {
     show_pause_screen();
   }
 }
@@ -145,68 +178,84 @@ void show_pause_screen() {
 
 
 
-  if (gui_button(STANDARD, screen_center.x/2.f, screen_center.y + BTN_SPACE_BTW(-2), "Continue")) {
+  if (gui_button((button){0})) {
     event_fire(EVENT_CODE_UNPAUSE_GAME, 0, (event_context){0});
   }
-  if (gui_button(STANDARD, screen_center.x/2.f, screen_center.y + BTN_SPACE_BTW(-1), "Tips")) {
+  if (gui_button((button){0})) {
     event_fire(EVENT_CODE_APPLICATION_QUIT, 0, (event_context){0});
   }
-  if (gui_button(STANDARD, screen_center.x/2.f, screen_center.y     , "Settings")) {
+  if (gui_button((button){0})) {
     // TODO: Settings
   }
-  if (gui_button(STANDARD, screen_center.x/2.f, screen_center.y + BTN_SPACE_BTW(1), "Main Menu")) {
-    b_show_pause_screen = false;
+  if (gui_button((button){0})) {
+    ui_system_state->b_show_pause_screen = false;
     event_fire(EVENT_CODE_RETURN_MAIN_MENU_GAME, 0, (event_context) {0});
   }
-  if (gui_button(STANDARD, screen_center.x/2.f, screen_center.y + BTN_SPACE_BTW(2), "Quit")) {
+  if (gui_button((button){0})) {
     event_fire(EVENT_CODE_APPLICATION_QUIT, 0, (event_context){0});
   }
 }
 
-bool gui_button(button_type type, int x, int y, const char *text) {
-  switch (type) {
-  case UNDEFINED: {
-    return false;
-  }
-  case STANDARD: {
-    return GuiButton((Rectangle){
-      x - BTN_DIM_X_DIV2, 
-      y - BTN_DIM_Y_DIV2,
-      BTN_DIM_X, BTN_DIM_Y
+bool gui_button(button _btn) {
+
+  DrawTexturePro(
+    get_texture_by_enum(BUTTON_TEXTURE), 
+    _btn.source, 
+    _btn.dest, 
+    (Vector2){0}, 
+    0, 
+    WHITE
+  );
+
+  return _btn.state == BTN_STATE_PRESSED;
+}
+
+void register_button(const char* _text, u16 _x, u16 _y, button_type _btn_type, texture_type _tex_type, Vector2 source_dim) {
+  if(_btn_type == BTN_TYPE_UNDEFINED || !b_user_interface_system_initialized) return;
+
+  button btn = {
+    .id = ui_system_state->button_count,
+    .text = _text,
+    .btn_type = _btn_type,
+    .tex_type = _tex_type,
+    .state = BTN_STATE_UP,
+    .dest = (Rectangle) {
+      .x = _x - BTN_MENU_DIM_X_DIV2,
+      .y = _y - BTN_MENU_DIM_Y_DIV2,
+      .width = BTN_MENU_DIM_X,
+      .height = BTN_MENU_DIM_Y
     },
-    text);
-  }
-  case SQUARE: {
-    return GuiButton((Rectangle){
-      x - BTN_SQUARE_DIM_DIV2, 
-      y - BTN_SQUARE_DIM_DIV2,
-      BTN_SQUARE_DIM, BTN_SQUARE_DIM
+    .source = (Rectangle) {
+      .x = 0,
+      .y = 0,
+      .width = source_dim.x,
+      .height = source_dim.y
     },
-    text);
-  }
   };
+
+  ui_system_state->buttons[ui_system_state->button_count] = btn;
+  ui_system_state->button_count++;
 }
 
 void show_skill_up() {
-  if(gui_button(SQUARE, screen_center.x, screen_center.y / 2.f, "#05#")) {
-    p_player->ability_system.abilities[FIREBALL].level++;
-    p_player->ability_system.is_dirty_ability_system = true;
-    p_player->player_have_skill_points = false;
+  if(gui_button((button){0})) {
+    ui_system_state->p_player->ability_system.abilities[FIREBALL].level++;
+    ui_system_state->p_player->ability_system.is_dirty_ability_system = true;
+    ui_system_state->p_player->player_have_skill_points = false;
   }
 }
 
-bool user_interface_on_event(u16 code, void *sender, void *listener_inst,
-                             event_context context) {
+bool user_interface_on_event(u16 code, void *sender, void *listener_inst, event_context context) {
   switch (code) {
   case EVENT_CODE_UI_SHOW_PAUSE_SCREEN: { // DON'T FIRE GAME_ENGINE PAUSE EVENTS
                                           // HERE
-    b_show_pause_screen = true;
+    ui_system_state->b_show_pause_screen = true;
     return true;
     break;
   }
   case EVENT_CODE_UI_SHOW_UNPAUSE_SCREEN: { // DON'T FIRE GAME_ENGINE PAUSE
                                             // EVENTS HERE
-    b_show_pause_screen = false;
+    ui_system_state->b_show_pause_screen = false;
     return true;
     break;
   }

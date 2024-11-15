@@ -53,6 +53,7 @@ typedef enum system_event_code {
 
     // player.c
     EVENT_CODE_PLAYER_ADD_EXP,
+    EVENT_CODE_PLAYER_SET_POSITION,
 
     MAX_EVENT_CODE = 0xFF
 } system_event_code;

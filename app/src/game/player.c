@@ -28,19 +28,21 @@ bool player_system_initialize() {
     }
 
     event_register(EVENT_CODE_PLAYER_ADD_EXP, 0, player_system_on_event);
+    event_register(EVENT_CODE_PLAYER_SET_POSITION, 0, player_system_on_event);
 
     player->position.x = 0;
     player->position.y = 0;
+    player->dimentions = (Vector2) {86, 86};
 
-    player->player_texture = get_texture_by_enum(PLAYER_TEXTURE);
+    player->ability_system = ability_system_initialize(PLAYER, player->dimentions);
 
-    player->ability_system = ability_system_initialize(PLAYER);
-
-    player->collision = (Rectangle){
-        .x = player->position.x - player->player_texture.width / 2.f,
-        .y = player->position.y - player->player_texture.height / 2.f,
-        .width = player->player_texture.width,
-        .height = player->player_texture.height};
+    player->collision = (Rectangle)
+    {
+        .x = player->position.x - player->dimentions.x / 2.f,
+        .y = player->position.y - player->dimentions.y / 2.f,
+        .width = player->dimentions.x,
+        .height = player->dimentions.y
+    };
 
     add_ability(&player->ability_system, FIREBALL);
     // add_ability(ability_system, salvo);
@@ -53,8 +55,8 @@ bool player_system_initialize() {
     player->exp_current = 0;
     player->exp_to_next_level = level_curve[player->level];
     player->is_moving = false;
-
     player_system_initialized = true;
+    player->initialized = true;
 
     return true;
 }
@@ -77,7 +79,7 @@ void add_exp_to_player(u32 exp) {
         player->level++;
         player->exp_to_next_level = level_curve[player->level];
         player->player_have_skill_points = true;
-        play_sprite(LEVEL_UP_SHEET, ON_PLAYER, true, (Vector2){0}, 0);
+        play_sprite(LEVEL_UP_SHEET, ON_PLAYER, true, (Rectangle){0}, true, 0);
     }
     else {
         player->exp_current += exp;
@@ -93,6 +95,7 @@ bool update_player() {
     }
     if (IsKeyDown(KEY_A)) {
         player->position.x -= 2;
+        player->w_direction = LEFT;
         player->is_moving = true;
     }
     if (IsKeyDown(KEY_S)) {
@@ -101,6 +104,7 @@ bool update_player() {
     }
     if (IsKeyDown(KEY_D)) {
         player->position.x += 2;
+        player->w_direction = RIGHT;
         player->is_moving = true;
     }
     if (IsKeyUp(KEY_W) && IsKeyUp(KEY_A) && IsKeyUp(KEY_S) && IsKeyUp(KEY_D)) {    
@@ -109,11 +113,10 @@ bool update_player() {
 
     update_abilities(&player->ability_system, player->position);
 
-    player->collision.x = player->position.x - player->player_texture.width / 2.f;
-    player->collision.y = player->position.y - player->player_texture.height / 2.f;
-    player->collision.width = player->player_texture.width;
-    player->collision.height = player->player_texture.height;
-
+    player->collision.x = player->position.x - player->dimentions.x / 2.f;
+    player->collision.y = player->position.y - player->dimentions.y / 2.f;
+    player->collision.width = player->dimentions.x;
+    player->collision.height = player->dimentions.y;
     return true;
 }
 
@@ -122,21 +125,43 @@ bool render_player() {
         return false;
     }
 
-/*  DrawTexture(
-        player->player_texture,
-        player->position.x - player->player_texture.width / 2.f,
-        player->position.y - player->player_texture.height / 2.f,
-        WHITE); */
-
     if(player->is_moving) 
     {
-        play_sprite(PLAYER_ANIMATION_RUN, ON_PLAYER, false, (Vector2) {0}, 0);
-        stop_sprite(PLAYER_ANIMATION_IDLE);
+        switch (player->w_direction) 
+        {
+            case LEFT: {
+                play_sprite(PLAYER_ANIMATION_MOVELEFT, ON_PLAYER, false, (Rectangle) {0}, true, 0);
+                stop_sprite(PLAYER_ANIMATION_MOVERIGHT, true);
+                break;
+            };
+            case RIGHT: {
+                play_sprite(PLAYER_ANIMATION_MOVERIGHT, ON_PLAYER, false, (Rectangle) {0}, true, 0);
+                stop_sprite(PLAYER_ANIMATION_MOVELEFT, true);
+                break;
+            };
+        }
+        stop_sprite(PLAYER_ANIMATION_IDLELEFT, true);
+        stop_sprite(PLAYER_ANIMATION_IDLERIGHT, true);
     }
     else 
     {
-        play_sprite(PLAYER_ANIMATION_IDLE, ON_PLAYER, false, (Vector2) {0}, 0);
-        stop_sprite(PLAYER_ANIMATION_RUN);
+        switch (player->w_direction) 
+        {
+            case LEFT: {        
+                play_sprite(PLAYER_ANIMATION_IDLELEFT, ON_PLAYER, false, (Rectangle) {0}, true, 0);
+                stop_sprite(PLAYER_ANIMATION_MOVELEFT, true);
+                stop_sprite(PLAYER_ANIMATION_MOVERIGHT, true);
+                break;
+            };
+            case RIGHT: {        
+                play_sprite(PLAYER_ANIMATION_IDLERIGHT, ON_PLAYER, false, (Rectangle) {0}, true, 0);
+                stop_sprite(PLAYER_ANIMATION_MOVELEFT, true);
+                stop_sprite(PLAYER_ANIMATION_MOVERIGHT, true);
+                break;
+            };
+        }
+
+
     } 
 
     render_abilities(&player->ability_system);
@@ -155,8 +180,16 @@ bool render_player() {
 
 bool player_system_on_event(u16 code, void* sender, void* listener_inst, event_context context) {
     switch (code) {
-        case EVENT_CODE_PLAYER_ADD_EXP:
-        add_exp_to_player(context.data.u32[0]);
+        case EVENT_CODE_PLAYER_ADD_EXP: {
+            add_exp_to_player(context.data.u32[0]);
+            break;
+        }
+        case EVENT_CODE_PLAYER_SET_POSITION: {
+            player->position.x = context.data.f32[0]; 
+            player->position.y = context.data.f32[1]; 
+            player->collision.x = player->position.x; 
+            player->collision.y = player->position.y; 
+        }
 
         default: return false;
     }
