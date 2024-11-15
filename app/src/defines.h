@@ -8,6 +8,7 @@
 #define TOTAL_ALLOCATED_MEMORY 128 * 1024 * 1024
 #define TARGET_FPS 60
 
+#define UI_FONT_SPACING 1
 #define SCREEN_WIDTH 1280    
 #define SCREEN_HEIGHT 720
 #define SCREEN_WIDTH_DIV2 SCREEN_WIDTH / 2.f
@@ -19,7 +20,6 @@
 #define MAX_TEXTURE_SLOTS 10
 #define MAX_ABILITY_AMOUNT 10
 #define MAX_SPRITESHEET_SLOTS 50
-#define MAX_BUTTONS_COUNT 50
 
 #define DEBUG_COLLISIONS 0
 
@@ -92,6 +92,7 @@ typedef enum spritesheet_type {
 	PLAYER_ANIMATION_MOVELEFT,
 	PLAYER_ANIMATION_MOVERIGHT,
 	BUTTON_REFLECTION_SHEET,
+	BUTTON_CRT_SHEET,
 	LEVEL_UP_SHEET,
 
 } spritesheet_type;
@@ -102,10 +103,22 @@ typedef enum button_state {
 	BTN_STATE_PRESSED
 } button_state;
 
-typedef enum button_type { BTN_TYPE_UNDEFINED, BTN_TYPE_STANDARD, BTN_TYPE_SQUARE } button_type;
+typedef enum button_type 
+{ 
+	BTN_TYPE_UNDEFINED, 
+	BTN_TYPE_MAINMENU_BUTTON_PLAY, 
+	BTN_TYPE_MAINMENU_BUTTON_OPTIONS, 
+	BTN_TYPE_MAINMENU_BUTTON_EXTRAS, 
+	BTN_TYPE_MAINMENU_BUTTON_EXIT, 
+	BTN_TYPE_SQUARE,
+
+	BTN_TYPE_MAX
+} button_type;
 typedef struct button {
-    const char* text;
 	u16 id;
+	const char* text;
+	Vector2 text_pos;
+	u16 text_spacing;
     button_type btn_type;
 	texture_type tex_type;
     button_state state;
@@ -200,9 +213,8 @@ typedef struct user_interface_system_state {
 	Vector2 screen_center;
 	Vector2 offset;
 	Vector2 mouse_pos;
-	button buttons[MAX_BUTTONS_COUNT];
-	u16 button_count;
-
+	button buttons[BTN_TYPE_MAX];
+	Font ui_font;
 	player_state* p_player;
 	float p_player_health;
 	float p_player_exp;

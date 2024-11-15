@@ -28,9 +28,10 @@ bool resource_system_initialize() {
     load_spritesheet("IdleRight", PLAYER_ANIMATION_IDLERIGHT, 15, 86, 86, 1, 4);
     load_spritesheet("MoveLeft", PLAYER_ANIMATION_MOVELEFT, 10, 86, 86, 1, 6);
     load_spritesheet("MoveRight", PLAYER_ANIMATION_MOVERIGHT, 10, 86, 86, 1, 6);
-    load_spritesheet("ButtonReflection", BUTTON_REFLECTION_SHEET, 10, 80, 16, 1, 9);
+    load_spritesheet("ButtonReflection", BUTTON_REFLECTION_SHEET, 30, 80, 16, 1, 9);
+    load_spritesheet("ButtonCRT", BUTTON_CRT_SHEET, 8, 78, 12, 1, 4);
 
-    resource_system_initialized = true;
+    resource_system_initialized = true; 
 
     return true;
 }

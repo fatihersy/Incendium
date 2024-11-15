@@ -127,7 +127,7 @@ void update_game_manager() {
 void render_game_manager() {
   
   if(GetFPS() > TARGET_FPS) return;
-  draw_background();
+  draw_background();    
 
   switch (current_scene_type) {
   case SCENE_MAIN_MENU: {
@@ -197,6 +197,18 @@ void draw_background() {
     // DrawLine(screen_size.x / 2, 0, screen_size.x / 2, screen_size.y,
     // (Color){255, 255, 255, 255}); DrawLine(0, screen_size.y / 2,
     // screen_size.x, screen_size.y / 2, (Color){255, 255, 255, 255});
+      DrawTexturePro(
+      get_texture_by_enum(BACKGROUND),
+        (Rectangle){.x = 0,
+                    .y = 0,
+                    .width = get_texture_by_enum(BACKGROUND).width,
+                    .height = get_texture_by_enum(BACKGROUND).height},
+        (Rectangle){.x = 0,
+                    .y = 0,
+                    .width = GetScreenWidth(),
+                    .height = GetScreenHeight()},
+        (Vector2){.x = 0, .y = 0}, 0,
+        WHITE); // Draws the background to main menu
     break;
   }
   case SCENE_IN_GAME: {
