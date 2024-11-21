@@ -4,7 +4,9 @@
 #include "core/fmath.h"
 #include "core/ftime.h"
 
+#include "defines.h"
 #include "player.h"
+#include "raylib.h"
 #include "resource.h"
 #include "spawn.h"
 
@@ -65,7 +67,7 @@ void set_player_position(i16 x, i16 y) {
 }
 
 void set_current_scene_type(scene_type type) { current_scene_type = type; }
-Vector2 get_player_position() { return get_player_state()->position; }
+Vector2 get_player_position() { return get_player_state()->position;}
 Character2D *get_actor_by_id(u16 ID) {
   spawn_system_state *spawn_data = get_spawn_system();
 
@@ -95,6 +97,7 @@ Vector2 get_player_dimentions() {
 void update_game_manager() {
 
   if(GetFPS() > TARGET_FPS) return;
+  //TraceLog(LOG_INFO, "player.position {x:%d, y:%d}", get_player_position().x, get_player_position().y);
 
   switch (current_scene_type) {
   case SCENE_MAIN_MENU: {
@@ -128,6 +131,7 @@ void render_game_manager() {
   
   if(GetFPS() > TARGET_FPS) return;
   draw_background();    
+
 
   switch (current_scene_type) {
   case SCENE_MAIN_MENU: {
@@ -193,10 +197,10 @@ bool damage_any_collade(Character2D *_character) {
 void draw_background() {
   switch (current_scene_type) {
   case SCENE_MAIN_MENU: {
-    // Centering guidelines
-    // DrawLine(screen_size.x / 2, 0, screen_size.x / 2, screen_size.y,
-    // (Color){255, 255, 255, 255}); DrawLine(0, screen_size.y / 2,
-    // screen_size.x, screen_size.y / 2, (Color){255, 255, 255, 255});
+    //Centering guidelines
+/*     DrawLine(screen_size.x / 2, 0, screen_size.x / 2, screen_size.y,
+    (Color){255, 255, 255, 255}); DrawLine(0, screen_size.y / 2,
+    screen_size.x, screen_size.y / 2, (Color){255, 255, 255, 255}); */
       DrawTexturePro(
       get_texture_by_enum(BACKGROUND),
         (Rectangle){.x = 0,

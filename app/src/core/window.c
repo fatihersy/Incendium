@@ -26,9 +26,9 @@ Vector2 get_screen_half_size() {
 
 void pre_draw() 
 {
-    ClearBackground((Color){19, 15, 64, 1.f});
-
     BeginDrawing();
+
+    ClearBackground((Color){19, 15, 64, 1.f});
     BeginMode2D(get_active_camera());
 }
 

@@ -20,6 +20,7 @@
 #define MAX_TEXTURE_SLOTS 10
 #define MAX_ABILITY_AMOUNT 10
 #define MAX_SPRITESHEET_SLOTS 50
+#define MAX_RENDER_SPRITEQUEUE 50
 
 #define DEBUG_COLLISIONS 0
 
@@ -114,14 +115,21 @@ typedef enum button_type
 
 	BTN_TYPE_MAX
 } button_type;
+typedef enum resource_type {
+  RESOURCE_TYPE_SPRITESHEET,
+  RESOURCE_TYPE_TEXTURE
+} resource_type;
+
 typedef struct button {
 	u16 id;
 	const char* text;
+  	scene_type render_on_scene;
 	Vector2 text_pos;
 	u16 text_spacing;
     button_type btn_type;
 	texture_type tex_type;
     button_state state;
+	u16 crt_render_index;
     
     Rectangle source;
     Rectangle dest;
@@ -142,6 +150,8 @@ typedef struct spritesheet {
 	i16 fps;
 	i16 counter;
 	spritesheet_playmod playmod;
+  	scene_type render_on_scene;
+	i16 render_queue_index;
 	u16 attached_spawn;
 	world_direction w_direction;
 	bool is_started;
@@ -196,6 +206,7 @@ typedef struct player_state {
     Vector2 position;
 	Vector2 dimentions;
 	world_direction w_direction;
+	u16 last_played_sprite_id;
 
     u8 health_max;
     u8 health_current;
@@ -226,8 +237,12 @@ typedef struct user_interface_system_state {
 typedef struct resource_system_state {
     i16 texture_amouth;
 	i16 sprite_amouth;
+	i16 render_queue_amouth;
     Texture2D textures[MAX_TEXTURE_SLOTS];
 	spritesheet sprites[MAX_SPRITESHEET_SLOTS];
+	spritesheet render_sprite_queue[MAX_RENDER_SPRITEQUEUE];
+
+    scene_type game_on_scene;
 } resource_system_state;
 
 typedef struct spawn_system_state {

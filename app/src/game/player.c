@@ -5,6 +5,7 @@
 
 #include "defines.h"
 #include "game/ability.h"
+#include "game/game_manager.h"
 #include "game/resource.h"
 #include "raylib.h"
 
@@ -16,6 +17,8 @@ bool player_system_initialized = false;
 static player_state* player;
 
 bool player_system_on_event(u16 code, void* sender, void* listener_inst, event_context context);
+
+void move(spritesheet_type player_anim_sheet);
 
 bool player_system_initialize() {
     if (player_system_initialized) return false;
@@ -55,8 +58,10 @@ bool player_system_initialize() {
     player->exp_current = 0;
     player->exp_to_next_level = level_curve[player->level];
     player->is_moving = false;
+    player->w_direction = LEFT;
     player_system_initialized = true;
     player->initialized = true;
+    player->last_played_sprite_id = SPRITESHEET_UNSPECIFIED;
 
     return true;
 }
@@ -65,7 +70,7 @@ player_state* get_player_state() {
     if (!player_system_initialized) {
         return (player_state*)0;
     }
-
+    //TraceLog(LOG_INFO, "player.position {x:%d, y:%d}", player->position.x, player->position.y);
     return player;
 }
 
@@ -79,7 +84,12 @@ void add_exp_to_player(u32 exp) {
         player->level++;
         player->exp_to_next_level = level_curve[player->level];
         player->player_have_skill_points = true;
-        play_sprite(LEVEL_UP_SHEET, ON_PLAYER, true, (Rectangle){0}, true, 0);
+        play_sprite(
+            LEVEL_UP_SHEET, 
+            SCENE_IN_GAME, 
+            ON_PLAYER, 
+            true, 
+            (Rectangle){0}, true, 0);
     }
     else {
         player->exp_current += exp;
@@ -125,44 +135,20 @@ bool render_player() {
         return false;
     }
 
-    if(player->is_moving) 
+    if(player->is_moving) switch (player->w_direction) 
     {
-        switch (player->w_direction) 
-        {
-            case LEFT: {
-                play_sprite(PLAYER_ANIMATION_MOVELEFT, ON_PLAYER, false, (Rectangle) {0}, true, 0);
-                stop_sprite(PLAYER_ANIMATION_MOVERIGHT, true);
-                break;
-            };
-            case RIGHT: {
-                play_sprite(PLAYER_ANIMATION_MOVERIGHT, ON_PLAYER, false, (Rectangle) {0}, true, 0);
-                stop_sprite(PLAYER_ANIMATION_MOVELEFT, true);
-                break;
-            };
-        }
-        stop_sprite(PLAYER_ANIMATION_IDLELEFT, true);
-        stop_sprite(PLAYER_ANIMATION_IDLERIGHT, true);
+        case LEFT: move(PLAYER_ANIMATION_MOVELEFT);
+        break;
+        case RIGHT: move(PLAYER_ANIMATION_MOVERIGHT);
+        break;
     }
-    else 
+    else switch (player->w_direction) 
     {
-        switch (player->w_direction) 
-        {
-            case LEFT: {        
-                play_sprite(PLAYER_ANIMATION_IDLELEFT, ON_PLAYER, false, (Rectangle) {0}, true, 0);
-                stop_sprite(PLAYER_ANIMATION_MOVELEFT, true);
-                stop_sprite(PLAYER_ANIMATION_MOVERIGHT, true);
-                break;
-            };
-            case RIGHT: {        
-                play_sprite(PLAYER_ANIMATION_IDLERIGHT, ON_PLAYER, false, (Rectangle) {0}, true, 0);
-                stop_sprite(PLAYER_ANIMATION_MOVELEFT, true);
-                stop_sprite(PLAYER_ANIMATION_MOVERIGHT, true);
-                break;
-            };
-        }
-
-
-    } 
+        case LEFT:move(PLAYER_ANIMATION_IDLELEFT);
+        break;
+        case RIGHT:move(PLAYER_ANIMATION_IDLERIGHT);
+        break;
+    }
 
     render_abilities(&player->ability_system);
 
@@ -195,4 +181,23 @@ bool player_system_on_event(u16 code, void* sender, void* listener_inst, event_c
     }
 
     return false;
+}
+
+void move(spritesheet_type player_anim_sheet) {
+    player->last_played_sprite_id = play_sprite(
+        player_anim_sheet, 
+        SCENE_IN_GAME, 
+        ON_PLAYER, 
+        false, 
+        (Rectangle) 
+        { 
+            .x = get_player_position().x,
+            .y = get_player_position().y,
+            .width = get_player_dimentions().x,
+            .height = get_player_dimentions().y,
+        }, 
+        true, 
+        0
+    );
+    stop_sprite(player->last_played_sprite_id);
 }

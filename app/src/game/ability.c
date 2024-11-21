@@ -232,7 +232,7 @@ bool update_abilities(ability_system_state* system, Vector2 position) {
 
                     if (vec2_equals(_ability->projectiles[0].position, (Vector2){_ability->position.x + 200, _ability->position.y}, 5)) {
                         _ability->is_on_fire = false;
-                        TraceLog(LOG_INFO, "_ability->is_on_fire = false;");
+                        //TraceLog(LOG_INFO, "_ability->is_on_fire = false;");
                     }
                 }
 
