@@ -3,11 +3,8 @@
 #include "core/event.h"
 #include "core/fmemory.h"
 
-#include "defines.h"
 #include "game/ability.h"
-#include "game/game_manager.h"
 #include "game/resource.h"
-#include "raylib.h"
 
 // To avoid dublicate symbol errors. Implementation in defines.h
 extern const u32 level_curve[MAX_PLAYER_LEVEL+1];
@@ -61,8 +58,11 @@ bool player_system_initialize() {
     player->w_direction = LEFT;
     player_system_initialized = true;
     player->initialized = true;
-    player->last_played_sprite_id = SPRITESHEET_UNSPECIFIED;
-
+    player->move_left_sprite_queue_index = register_sprite(PLAYER_ANIMATION_MOVELEFT, SCENE_IN_GAME, false, true);
+    player->move_right_sprite_queue_index = register_sprite(PLAYER_ANIMATION_MOVERIGHT, SCENE_IN_GAME, false, true);
+    player->idle_left_sprite_queue_index = register_sprite(PLAYER_ANIMATION_IDLELEFT, SCENE_IN_GAME, false, true);
+    player->idle_right_sprite_queue_index = register_sprite(PLAYER_ANIMATION_IDLERIGHT, SCENE_IN_GAME, false, true);
+    
     return true;
 }
 
@@ -84,12 +84,7 @@ void add_exp_to_player(u32 exp) {
         player->level++;
         player->exp_to_next_level = level_curve[player->level];
         player->player_have_skill_points = true;
-        play_sprite(
-            LEVEL_UP_SHEET, 
-            SCENE_IN_GAME, 
-            ON_PLAYER, 
-            true, 
-            (Rectangle){0}, true, 0);
+        //play_sprite_on_player(player->);
     }
     else {
         player->exp_current += exp;
@@ -184,20 +179,37 @@ bool player_system_on_event(u16 code, void* sender, void* listener_inst, event_c
 }
 
 void move(spritesheet_type player_anim_sheet) {
-    player->last_played_sprite_id = play_sprite(
-        player_anim_sheet, 
-        SCENE_IN_GAME, 
-        ON_PLAYER, 
-        false, 
-        (Rectangle) 
-        { 
-            .x = get_player_position().x,
-            .y = get_player_position().y,
-            .width = get_player_dimentions().x,
-            .height = get_player_dimentions().y,
-        }, 
-        true, 
-        0
-    );
+
     stop_sprite(player->last_played_sprite_id);
+    switch (player_anim_sheet) {
+        case SPRITESHEET_UNSPECIFIED: TraceLog(LOG_ERROR, "ERROR::player::move()::move function called with unspecified value.");
+        break;
+        case BUTTON_REFLECTION_SHEET: TraceLog(LOG_ERROR, "ERROR::player::move()::move function called with wrong value.");
+        break;
+        case BUTTON_CRT_SHEET: TraceLog(LOG_ERROR, "ERROR::player::move()::move function called with wrong value.");
+        break;
+        case LEVEL_UP_SHEET: TraceLog(LOG_ERROR, "ERROR::player::move()::move function called with wrong value.");
+        break;
+
+        case PLAYER_ANIMATION_MOVELEFT: {
+            play_sprite_on_player(player->move_left_sprite_queue_index);
+            player->last_played_sprite_id = player->move_left_sprite_queue_index;
+            break;
+        }
+        case PLAYER_ANIMATION_MOVERIGHT: {
+            play_sprite_on_player(player->move_right_sprite_queue_index);
+            player->last_played_sprite_id = player->move_right_sprite_queue_index;
+            break;
+        }
+        case PLAYER_ANIMATION_IDLELEFT:  {
+            play_sprite_on_player(player->idle_left_sprite_queue_index);
+            player->last_played_sprite_id = player->idle_left_sprite_queue_index;
+            break;
+        }
+        case PLAYER_ANIMATION_IDLERIGHT:  {
+            play_sprite_on_player(player->idle_left_sprite_queue_index);
+            player->last_played_sprite_id = player->idle_left_sprite_queue_index;
+            break;
+        }
+    }
 }

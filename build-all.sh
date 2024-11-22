@@ -4,7 +4,7 @@ set echo on
 
 echo "Building everything..."
 
-# pushd testbed
+# pushd app
 # source build.sh
 # popd
 

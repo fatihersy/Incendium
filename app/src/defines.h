@@ -77,8 +77,7 @@ typedef enum texture_type {
 typedef enum spritesheet_playmod {
 	SPRITESHEET_PLAYMOD_UNSPECIFIED,
 	ON_SITE,
-	ON_PLAYER,
-	ON_SPAWN
+	ON_PLAYER
 } spritesheet_playmod;
 
 typedef enum world_direction {
@@ -130,6 +129,8 @@ typedef struct button {
 	texture_type tex_type;
     button_state state;
 	u16 crt_render_index;
+	u16 reflection_render_index;
+	bool is_reflection_played;
     
     Rectangle source;
     Rectangle dest;
@@ -149,11 +150,12 @@ typedef struct spritesheet {
 	Texture2D handle;
 	i16 fps;
 	i16 counter;
-	spritesheet_playmod playmod;
-  	scene_type render_on_scene;
-	i16 render_queue_index;
+	u16 render_queue_index;
 	u16 attached_spawn;
+  	scene_type render_on_scene;
 	world_direction w_direction;
+	spritesheet_playmod playmod;
+	bool should_center;
 	bool is_started;
 	bool play_once;
 } spritesheet;
@@ -206,6 +208,10 @@ typedef struct player_state {
     Vector2 position;
 	Vector2 dimentions;
 	world_direction w_direction;
+	u16 move_left_sprite_queue_index;
+	u16 move_right_sprite_queue_index;
+	u16 idle_left_sprite_queue_index;
+	u16 idle_right_sprite_queue_index;
 	u16 last_played_sprite_id;
 
     u8 health_max;

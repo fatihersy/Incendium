@@ -50,8 +50,6 @@ void register_button(const char *_text, u16 _x, u16 _y, button_type _btn_type,
 void show_pause_screen();
 void show_skill_up();
 
-int  i_t = 0;
-
 void user_interface_system_initialize() {
   if (b_user_interface_system_initialized)
     return;
@@ -100,6 +98,10 @@ void update_user_interface(Vector2 _offset, Vector2 _screen_half_size,
 
   for (int i = 0; i < BTN_TYPE_MAX; ++i) {
     if (ui_system_state->buttons[i].btn_type == BTN_TYPE_UNDEFINED) {
+/*       TraceLog(
+          LOG_WARNING,
+          "user_interface::update_user_interface()::Button:%d was undefined",
+          i); */
       continue;
     }
     if (ui_system_state->buttons[i].render_on_scene !=
@@ -111,25 +113,20 @@ void update_user_interface(Vector2 _offset, Vector2 _screen_half_size,
     if (CheckCollisionPointRec(ui_system_state->mouse_pos, btn.dest)) {
 
       if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
-        stop_sprite(ui_system_state->buttons[i].crt_render_index);
         btn.state = BTN_STATE_PRESSED;
         btn.source.x = btn.source.width;
       } else {
-        if (btn.state == BTN_STATE_UP) {
-          ui_system_state->buttons[i].crt_render_index = play_sprite(
-              BUTTON_REFLECTION_SHEET, SCENE_MAIN_MENU, ON_SITE, true,
-              (Rectangle){btn.dest.x, btn.dest.y, .width = BTN_MENU_DIM_X,
-                          .height = BTN_MENU_DIM_Y},
-              false, 0);
+        if (btn.state != BTN_STATE_HOVER) {
+          btn.state = BTN_STATE_HOVER;
+          btn.source.x = 0;
         }
-        btn.state = BTN_STATE_HOVER;
-        btn.source.x = 0;
       }
     } else {
       if (btn.state != BTN_STATE_UP) {
+        stop_sprite(btn.reflection_render_index);
+        btn.is_reflection_played = false;
         btn.state = BTN_STATE_UP;
         btn.source.x = 0;
-        stop_sprite(ui_system_state->buttons[i].crt_render_index);
       }
     }
 
@@ -138,7 +135,6 @@ void update_user_interface(Vector2 _offset, Vector2 _screen_half_size,
 }
 
 void render_user_interface() {
-  i_t++;
   switch (ui_system_state->gm_current_scene_type) {
   case SCENE_MAIN_MENU: {
 
@@ -214,49 +210,37 @@ void show_pause_screen() {
 }
 
 bool gui_button(button_type _type) {
-  if (_type == BTN_TYPE_UNDEFINED) {return false;}
-
+  if (_type == BTN_TYPE_UNDEFINED) {
+    return false;
+  }
   button _btn = ui_system_state->buttons[_type];
-
-  TraceLog(LOG_INFO, "gui_button(): %d", _btn.crt_render_index);
-
   DrawTexturePro(get_texture_by_enum(BUTTON_TEXTURE), _btn.source, _btn.dest,
                  (Vector2){0}, 0, WHITE);
+  if (!is_sprite_playing(_btn.crt_render_index)) {
+    play_sprite_on_site(_btn.crt_render_index, _btn.dest);
+  }
 
-  if (_btn.state == BTN_STATE_PRESSED) {
-    if (!is_sprite_playing(_btn.crt_render_index)) {
-      u16 queue_id =
-        play_sprite(BUTTON_CRT_SHEET, SCENE_MAIN_MENU, ON_SITE, false,
-                    (Rectangle){.x = _btn.dest.x,
-                                .y = _btn.dest.y + 2,
-                                .width = _btn.dest.width,
-                                .height = _btn.dest.height},
-                    false, 0);
-      if (queue_id == INVALID_ID16){
-        TraceLog(LOG_ERROR, "ERROR::user_interface::gui_button()::Unable to render BUTTON_CRT_SHEET");
-      }
-      ui_system_state->buttons[_type].crt_render_index = queue_id;
-    }
+  if (_btn.state == BTN_STATE_PRESSED) 
+  {
     DrawTextEx(ui_system_state->ui_font, _btn.text,
                (Vector2){.x = _btn.text_pos.x, .y = _btn.text_pos.y + 3},
                ui_system_state->ui_font.baseSize, _btn.text_spacing,
                theme_color_yellow);
-  } else {
-    if (!is_sprite_playing(_btn.crt_render_index)) {
-      u16 queue_id = play_sprite(BUTTON_CRT_SHEET, SCENE_MAIN_MENU, ON_SITE,
-                               false, _btn.dest, false, 0);
-      if (queue_id == INVALID_ID16){
-        TraceLog(LOG_ERROR, "ERROR::user_interface::gui_button()::Unable to "
-                          "render BUTTON_CRT_SHEET");
+  } 
+  else 
+  {
+    if (_btn.state == BTN_STATE_HOVER) {
+      if (_btn.is_reflection_played == false) {
+        play_sprite_on_site(_btn.reflection_render_index, _btn.dest);
+        _btn.is_reflection_played = true;
       }
-      ui_system_state->buttons[_type].crt_render_index = queue_id;
     }
     DrawTextEx(ui_system_state->ui_font, _btn.text,
                (Vector2){.x = _btn.text_pos.x, .y = _btn.text_pos.y - 3},
                ui_system_state->ui_font.baseSize, _btn.text_spacing,
                theme_color_yellow);
   }
-
+  ui_system_state->buttons[_type] = _btn;
   return _btn.state == BTN_STATE_PRESSED;
 }
 
@@ -270,22 +254,25 @@ void register_button(const char *_text, u16 _x, u16 _y, button_type _btn_type,
                     ui_system_state->ui_font.baseSize, UI_FONT_SPACING);
   button btn = {
       .id = _btn_type,
+      .btn_type = _btn_type,
       .text = _text,
       .render_on_scene = render_scene,
-      .btn_type = _btn_type,
-      .crt_render_index = 0,
+      .crt_render_index = register_sprite(BUTTON_CRT_SHEET, SCENE_MAIN_MENU, false, false),
+      .reflection_render_index = register_sprite(BUTTON_REFLECTION_SHEET, SCENE_MAIN_MENU, true, false),
+      .is_reflection_played = false,
       .text_spacing = UI_FONT_SPACING,
       .tex_type = _tex_type,
       .text_pos.x = _x - text_measure.x / 2.f,
       .text_pos.y = _y - text_measure.y / 2.f,
       .state = BTN_STATE_UP,
-      .dest = (Rectangle){.x = _x - BTN_MENU_DIM_X_DIV2,
-                          .y = _y - BTN_MENU_DIM_Y_DIV2,
-                          .width = BTN_MENU_DIM_X,
-                          .height = BTN_MENU_DIM_Y},
-      .source =
-          (Rectangle){
-              .x = 0, .y = 0, .width = source_dim.x, .height = source_dim.y},
+      .dest = (Rectangle){
+        .x = _x - BTN_MENU_DIM_X_DIV2, .y = _y - BTN_MENU_DIM_Y_DIV2,
+        .width = BTN_MENU_DIM_X, .height = BTN_MENU_DIM_Y
+      },
+      .source = (Rectangle){
+        .x = 0, .y = 0, 
+        .width = source_dim.x, .height = source_dim.y
+      },
   };
 
   ui_system_state->buttons[_btn_type] = btn;
