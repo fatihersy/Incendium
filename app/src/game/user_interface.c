@@ -123,7 +123,7 @@ void update_user_interface(Vector2 _offset, Vector2 _screen_half_size,
       }
     } else {
       if (btn.state != BTN_STATE_UP) {
-        stop_sprite(btn.reflection_render_index);
+        stop_sprite(btn.reflection_render_index, true);
         btn.is_reflection_played = false;
         btn.state = BTN_STATE_UP;
         btn.source.x = 0;

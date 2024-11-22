@@ -20,7 +20,7 @@ void play_sprite_on_player(u16 _id);
 void play_sprite_on_site(u16 _id, Rectangle dest);
 void update_sprite(u16 queue_index);
 void queue_sprite_change_location(u16 queue_index, Rectangle dest);
-void stop_sprite(i16 i);
+void stop_sprite(i16 i, bool reset);
 bool is_sprite_playing(u16 i);
 void load_spritesheet(const char* _path, spritesheet_type _type, u8 _fps, u8 _frame_width, u8 _frame_height, u8 _total_row, u8 _total_col);
 

@@ -5,6 +5,7 @@
 
 #include "game/ability.h"
 #include "game/resource.h"
+#include <stdbool.h>
 
 // To avoid dublicate symbol errors. Implementation in defines.h
 extern const u32 level_curve[MAX_PLAYER_LEVEL+1];
@@ -180,7 +181,7 @@ bool player_system_on_event(u16 code, void* sender, void* listener_inst, event_c
 
 void move(spritesheet_type player_anim_sheet) {
 
-    stop_sprite(player->last_played_sprite_id);
+    stop_sprite(player->last_played_sprite_id, false);
     switch (player_anim_sheet) {
         case SPRITESHEET_UNSPECIFIED: TraceLog(LOG_ERROR, "ERROR::player::move()::move function called with unspecified value.");
         break;

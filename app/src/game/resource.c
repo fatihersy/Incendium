@@ -5,6 +5,7 @@
 #include "defines.h"
 #include "game_manager.h"
 #include "raylib.h"
+#include <stdbool.h>
 
 static resource_system_state *resource_system;
 
@@ -137,8 +138,7 @@ u16 register_sprite(spritesheet_type _type, scene_type _scene, bool _play_once, 
   ss.is_started = false;
   ss.should_center = center_sprite;
 
-  resource_system->render_sprite_queue[resource_system->render_queue_amouth] =
-      ss;
+  resource_system->render_sprite_queue[resource_system->render_queue_amouth] = ss;
 
   return resource_system->render_queue_amouth++;
 }
@@ -188,7 +188,8 @@ void update_sprite(u16 queue_index) {
       sheet.current_row = 0;
       sheet.current_col = 0;
       if (sheet.play_once) {
-        stop_sprite(queue_index);
+        stop_sprite(queue_index, true);
+        return;
       }
     }
   }
@@ -201,12 +202,13 @@ void update_sprite(u16 queue_index) {
     default: {
       TraceLog(LOG_ERROR,
       "ERROR::resources::update_resource_system()::Sprite was corrupted");
-      stop_sprite(queue_index);
+      stop_sprite(queue_index, true);
+      return;
     }
     case SPRITESHEET_PLAYMOD_UNSPECIFIED:{
       TraceLog(LOG_ERROR,
       "ERROR::resources::update_resource_system()::Sprite was corrupted");
-      stop_sprite(queue_index);
+      stop_sprite(queue_index, true);
       return;
     }
 
@@ -232,13 +234,18 @@ bool is_sprite_playing(u16 i) {
                   : resource_system->render_sprite_queue[i].is_started == true;
 }
 
-void stop_sprite(i16 i) {
+void stop_sprite(i16 i, bool reset) {
   if (i > resource_system->render_queue_amouth || i < 0) {
     TraceLog(LOG_ERROR, "ERROR::resource::stop_sprite()::Given index value is "
                         "out of bound! Unable to stop sprite");
     return;
   }
   if (i == 0) return;
+  if (reset) {
+    resource_system->render_sprite_queue[i].counter = 0;
+    resource_system->render_sprite_queue[i].current_col = 0;
+    resource_system->render_sprite_queue[i].current_row = 0;
+  }
 
   resource_system->render_sprite_queue[i].is_started = false;
 }
