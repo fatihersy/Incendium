@@ -2,17 +2,13 @@
 
 #include "core/fmemory.h"
 
-#include "defines.h"
 #include "game_manager.h"
-#include "raylib.h"
-#include <stdbool.h>
 
 static resource_system_state *resource_system;
 
 bool resource_system_initialized = false;
 
-const char *resource_path = "/run/media/fatihersy/HDD/Workspace/Resources/";
-const char *rs_path(const char *_path);
+const char *resource_path = RESOURCE_PATH;
 
 bool resource_system_initialize() {
   if (resource_system_initialized)
@@ -23,16 +19,17 @@ bool resource_system_initialize() {
 
   resource_system->texture_amouth = -1;
 
-  load_texture("fudesumi", true, (Vector2){64, 64}, ENEMY_TEXTURE);
-  load_texture("space_bg", true, (Vector2){3840, 2160}, BACKGROUND);
-  load_texture("MenuButton", false, (Vector2){0, 0}, BUTTON_TEXTURE);
-  load_spritesheet("level_up_sheet", LEVEL_UP_SHEET, 60, 150, 150, 8, 8);
-  load_spritesheet("IdleLeft", PLAYER_ANIMATION_IDLELEFT, 15, 86, 86, 1, 4);
-  load_spritesheet("IdleRight", PLAYER_ANIMATION_IDLERIGHT, 15, 86, 86, 1, 4);
-  load_spritesheet("MoveLeft", PLAYER_ANIMATION_MOVELEFT, 10, 86, 86, 1, 6);
-  load_spritesheet("MoveRight", PLAYER_ANIMATION_MOVERIGHT, 10, 86, 86, 1, 6);
-  load_spritesheet("ButtonReflection", BUTTON_REFLECTION_SHEET, 30, 80, 16, 1, 9);
-  load_spritesheet("ButtonCRT", BUTTON_CRT_SHEET, 8, 78, 12, 1, 4);
+  //NOTE: _path = "%s%s", RESOURCE_PATH, _path
+  load_texture("fudesumi.png", true, (Vector2){64, 64}, ENEMY_TEXTURE);
+  load_texture("space_bg.png", true, (Vector2){3840, 2160}, BACKGROUND);
+  load_texture("MenuButton.png", false, (Vector2){0, 0}, BUTTON_TEXTURE);
+  load_spritesheet("level_up_sheet.png", LEVEL_UP_SHEET, 60, 150, 150, 8, 8);
+  load_spritesheet("IdleLeft.png", PLAYER_ANIMATION_IDLELEFT, 15, 86, 86, 1, 4);
+  load_spritesheet("IdleRight.png", PLAYER_ANIMATION_IDLERIGHT, 15, 86, 86, 1, 4);
+  load_spritesheet("MoveLeft.png", PLAYER_ANIMATION_MOVELEFT, 10, 86, 86, 1, 6);
+  load_spritesheet("MoveRight.png", PLAYER_ANIMATION_MOVERIGHT, 10, 86, 86, 1, 6);
+  load_spritesheet("ButtonReflection.png", BUTTON_REFLECTION_SHEET, 30, 80, 16, 1, 9);
+  load_spritesheet("ButtonCRT.png", BUTTON_CRT_SHEET, 8, 78, 12, 1, 4);
 
   resource_system_initialized = true;
 
@@ -83,21 +80,21 @@ void render_resource_system() {
   }
 }
 
-Texture2D get_texture_by_id(unsigned int id) {
+Texture2D* get_texture_by_id(unsigned int id) {
   for (i16 i = 0; i <= resource_system->texture_amouth; ++i) {
     if (resource_system->textures[i].id == id)
-      return resource_system->textures[i];
+      return &resource_system->textures[i];
   }
 
-  return (Texture2D){.id = INVALID_ID32};
+  return (Texture2D*){0};
 }
 
-Texture2D get_texture_by_enum(texture_type type) {
+Texture2D* get_texture_by_enum(texture_type type) {
 
   if (type > MAX_TEXTURE_SLOTS || type == TEX_UNSPECIFIED)
-    return (Texture2D){.id = INVALID_ID32};
+    return (Texture2D*){0};
 
-  return resource_system->textures[type];
+  return &resource_system->textures[type];
 }
 
 spritesheet get_spritesheet_by_enum(spritesheet_type type) {
@@ -110,7 +107,7 @@ spritesheet get_spritesheet_by_enum(spritesheet_type type) {
 }
 
 const char *rs_path(const char *_path) {
-  return TextFormat("%s%s%s", resource_path, _path, ".png");
+  return TextFormat("%s%s", resource_path, _path);
 }
 
 void flip_texture_spritesheet(spritesheet_type _type,
@@ -132,15 +129,15 @@ void flip_texture_spritesheet(spritesheet_type _type,
 
 u16 register_sprite(spritesheet_type _type, scene_type _scene, bool _play_once, bool center_sprite) {
   spritesheet ss = resource_system->sprites[_type];
+  resource_system->render_queue_amouth++;
 
   ss.render_on_scene = _scene;
   ss.play_once = _play_once;
   ss.is_started = false;
   ss.should_center = center_sprite;
-
   resource_system->render_sprite_queue[resource_system->render_queue_amouth] = ss;
 
-  return resource_system->render_queue_amouth++;
+  return resource_system->render_queue_amouth;
 }
 
 void play_sprite_on_site(u16 _id, Rectangle dest) {

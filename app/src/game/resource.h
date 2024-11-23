@@ -3,7 +3,6 @@
 #define RESOURCE_H
 
 #include "defines.h"
-#include "raylib.h"
 
 bool resource_system_initialize();
 
@@ -11,8 +10,9 @@ void update_resource_system();
 void render_resource_system();
 
 unsigned int load_texture(const char* _path, bool resize, Vector2 new_size, texture_type type);
-Texture2D get_texture_by_id(unsigned int id);
-Texture2D get_texture_by_enum(texture_type type);
+const char *rs_path(const char *_path);
+Texture2D* get_texture_by_id(unsigned int id);
+Texture2D* get_texture_by_enum(texture_type type);
 spritesheet get_spritesheet_by_enum(spritesheet_type type);
 void flip_texture_spritesheet(spritesheet_type _type, world_direction _w_direction);
 u16 register_sprite(spritesheet_type _type, scene_type _scene, bool _play_once, bool center_sprite);

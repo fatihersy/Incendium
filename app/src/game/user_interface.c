@@ -7,25 +7,6 @@
 #include "game/player.h"
 #include "game/resource.h"
 
-/* #define RAYGUI_IMPLEMENTATION
-#include "raygui.h" */
-
-// raygui embedded styles
-// NOTE: Included in the same order as selector
-/* #define MAX_GUI_STYLES_AVAILABLE 12     // NOTE: Included light style
-#include "game/styles/style_ashes.h"    // raygui style: ashes
-#include "game/styles/style_bluish.h"   // raygui style: bluish
-#include "game/styles/style_candy.h"    // raygui style: candy
-#include "game/styles/style_cherry.h"   // raygui style: cherry
-#include "game/styles/style_cyber.h"    // raygui style: cyber
-#include "game/styles/style_dark.h"     // raygui style: dark
-#include "game/styles/style_enefete.h"  // raygui style: enefete
-#include "game/styles/style_jungle.h"   // raygui style: jungle
-#include "game/styles/style_lavanda.h"  // raygui style: lavanda
-#include "game/styles/style_sunny.h"    // raygui style: sunny
-#include "game/styles/style_terminal.h" // raygui style: terminal */
-#include "raylib.h"
-
 #define BTN_MENU_DIM_X 250
 #define BTN_MENU_DIM_Y 50
 #define BTN_MENU_DIM_X_DIV2 BTN_MENU_DIM_X / 2.f
@@ -60,27 +41,50 @@ void user_interface_system_initialize() {
   ui_system_state->p_player = get_player_state();
   ui_system_state->p_player_exp = ui_system_state->p_player->exp_current;
   ui_system_state->p_player_health = ui_system_state->p_player->health_current;
-  ui_system_state->ui_font =
-      LoadFont("D:\\Workspace\\Resources\\Fonts\\QuanticoBold.ttf");
+  ui_system_state->ui_font = LoadFont(rs_path("QuanticoBold.ttf"));
 
   b_user_interface_system_initialized = true;
 
-  register_button("Play", SCREEN_WIDTH_DIV2,
-                  SCREEN_HEIGHT_DIV2 + BTN_SPACE_BTW(0),
-                  BTN_TYPE_MAINMENU_BUTTON_PLAY, SCENE_MAIN_MENU,
-                  BUTTON_TEXTURE, (Vector2){80, 16});
-  register_button("Option", SCREEN_WIDTH_DIV2,
-                  SCREEN_HEIGHT_DIV2 + BTN_SPACE_BTW(1),
-                  BTN_TYPE_MAINMENU_BUTTON_OPTIONS, SCENE_MAIN_MENU,
-                  BUTTON_TEXTURE, (Vector2){80, 16});
-  register_button("Extras", SCREEN_WIDTH_DIV2,
-                  SCREEN_HEIGHT_DIV2 + BTN_SPACE_BTW(2),
-                  BTN_TYPE_MAINMENU_BUTTON_EXTRAS, SCENE_MAIN_MENU,
-                  BUTTON_TEXTURE, (Vector2){80, 16});
-  register_button("Exit", SCREEN_WIDTH_DIV2,
-                  SCREEN_HEIGHT_DIV2 + BTN_SPACE_BTW(3),
-                  BTN_TYPE_MAINMENU_BUTTON_EXIT, SCENE_MAIN_MENU,
-                  BUTTON_TEXTURE, (Vector2){80, 16});
+  register_button("Play", 
+  SCREEN_WIDTH_DIV2,SCREEN_HEIGHT_DIV2 + BTN_SPACE_BTW(0),
+  BTN_TYPE_MAINMENU_BUTTON_PLAY, SCENE_MAIN_MENU,BUTTON_TEXTURE, 
+  (Vector2){80, 16}
+  );
+  register_button("Settings", 
+  SCREEN_WIDTH_DIV2,SCREEN_HEIGHT_DIV2 + BTN_SPACE_BTW(1),
+  BTN_TYPE_MAINMENU_BUTTON_SETTINGS, SCENE_MAIN_MENU,BUTTON_TEXTURE, 
+  (Vector2){80, 16}
+  );
+  register_button("Extras", 
+  SCREEN_WIDTH_DIV2,SCREEN_HEIGHT_DIV2 + BTN_SPACE_BTW(2),
+  BTN_TYPE_MAINMENU_BUTTON_EXTRAS, SCENE_MAIN_MENU,BUTTON_TEXTURE, 
+  (Vector2){80, 16}
+  );
+  register_button("Exit", 
+  SCREEN_WIDTH_DIV2,SCREEN_HEIGHT_DIV2 + BTN_SPACE_BTW(3),
+  BTN_TYPE_MAINMENU_BUTTON_EXIT, SCENE_MAIN_MENU,BUTTON_TEXTURE, 
+  (Vector2){80, 16}
+  );
+  register_button("Resume",
+  SCREEN_WIDTH_DIV2,SCREEN_HEIGHT_DIV2 + BTN_SPACE_BTW(0),
+  BTN_TYPE_INGAME_PAUSEMENU_BUTTON_RESUME, SCENE_IN_GAME,BUTTON_TEXTURE, 
+  (Vector2){80, 16}
+  );
+  register_button("Settings", 
+  SCREEN_WIDTH_DIV2,SCREEN_HEIGHT_DIV2 + BTN_SPACE_BTW(1),
+  BTN_TYPE_INGAME_PAUSEMENU_BUTTON_SETTINGS, SCENE_IN_GAME,BUTTON_TEXTURE, 
+  (Vector2){80, 16}
+  );
+  register_button("Main Menu", 
+  SCREEN_WIDTH_DIV2,SCREEN_HEIGHT_DIV2 + BTN_SPACE_BTW(2),
+  BTN_TYPE_INGAME_PAUSEMENU_BUTTON_MAINMENU, SCENE_IN_GAME,BUTTON_TEXTURE, 
+  (Vector2){80, 16}
+  );
+  register_button("Exit", 
+  SCREEN_WIDTH_DIV2,SCREEN_HEIGHT_DIV2 + BTN_SPACE_BTW(3),
+  BTN_TYPE_INGAME_PAUSEMENU_BUTTON_EXIT, SCENE_IN_GAME,BUTTON_TEXTURE, 
+  (Vector2){80, 16}
+  );
 
   event_register(EVENT_CODE_UI_SHOW_PAUSE_SCREEN, 0, user_interface_on_event);
   event_register(EVENT_CODE_UI_SHOW_UNPAUSE_SCREEN, 0, user_interface_on_event);
@@ -141,7 +145,7 @@ void render_user_interface() {
     if (gui_button(BTN_TYPE_MAINMENU_BUTTON_PLAY)) {
       event_fire(EVENT_CODE_SCENE_IN_GAME, 0, (event_context){0});
     };
-    if (gui_button(BTN_TYPE_MAINMENU_BUTTON_OPTIONS)) {
+    if (gui_button(BTN_TYPE_MAINMENU_BUTTON_SETTINGS)) {
       // TODO: Settings
     };
     if (gui_button(BTN_TYPE_MAINMENU_BUTTON_EXTRAS)) {
@@ -189,22 +193,19 @@ void render_user_interface() {
 void show_pause_screen() {
 
   DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(),
-                (Color){53, 59, 72, 255}); // rgba()
+                (Color){53, 59, 72, 200}); // rgba()
 
-  if (gui_button(BTN_TYPE_UNDEFINED)) {
+  if (gui_button(BTN_TYPE_INGAME_PAUSEMENU_BUTTON_RESUME)) {
     event_fire(EVENT_CODE_UNPAUSE_GAME, 0, (event_context){0});
   }
-  if (gui_button(BTN_TYPE_UNDEFINED)) {
-    event_fire(EVENT_CODE_APPLICATION_QUIT, 0, (event_context){0});
-  }
-  if (gui_button(BTN_TYPE_UNDEFINED)) {
+  if (gui_button(BTN_TYPE_INGAME_PAUSEMENU_BUTTON_SETTINGS)) {
     // TODO: Settings
   }
-  if (gui_button(BTN_TYPE_UNDEFINED)) {
+  if (gui_button(BTN_TYPE_INGAME_PAUSEMENU_BUTTON_MAINMENU)) {
     ui_system_state->b_show_pause_screen = false;
     event_fire(EVENT_CODE_RETURN_MAIN_MENU_GAME, 0, (event_context){0});
   }
-  if (gui_button(BTN_TYPE_UNDEFINED)) {
+  if (gui_button(BTN_TYPE_INGAME_PAUSEMENU_BUTTON_EXIT)) {
     event_fire(EVENT_CODE_APPLICATION_QUIT, 0, (event_context){0});
   }
 }
@@ -214,7 +215,7 @@ bool gui_button(button_type _type) {
     return false;
   }
   button _btn = ui_system_state->buttons[_type];
-  DrawTexturePro(get_texture_by_enum(BUTTON_TEXTURE), _btn.source, _btn.dest,
+  DrawTexturePro(*get_texture_by_enum(BUTTON_TEXTURE), _btn.source, _btn.dest,
                  (Vector2){0}, 0, WHITE);
   if (!is_sprite_playing(_btn.crt_render_index)) {
     play_sprite_on_site(_btn.crt_render_index, _btn.dest);
@@ -257,8 +258,8 @@ void register_button(const char *_text, u16 _x, u16 _y, button_type _btn_type,
       .btn_type = _btn_type,
       .text = _text,
       .render_on_scene = render_scene,
-      .crt_render_index = register_sprite(BUTTON_CRT_SHEET, SCENE_MAIN_MENU, false, false),
-      .reflection_render_index = register_sprite(BUTTON_REFLECTION_SHEET, SCENE_MAIN_MENU, true, false),
+      .crt_render_index = register_sprite(BUTTON_CRT_SHEET, render_scene, false, false),
+      .reflection_render_index = register_sprite(BUTTON_REFLECTION_SHEET, render_scene, true, false),
       .is_reflection_played = false,
       .text_spacing = UI_FONT_SPACING,
       .tex_type = _tex_type,

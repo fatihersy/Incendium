@@ -5,7 +5,6 @@
 
 #include "game/ability.h"
 #include "game/resource.h"
-#include <stdbool.h>
 
 // To avoid dublicate symbol errors. Implementation in defines.h
 extern const u32 level_curve[MAX_PLAYER_LEVEL+1];
@@ -208,8 +207,8 @@ void move(spritesheet_type player_anim_sheet) {
             break;
         }
         case PLAYER_ANIMATION_IDLERIGHT:  {
-            play_sprite_on_player(player->idle_left_sprite_queue_index);
-            player->last_played_sprite_id = player->idle_left_sprite_queue_index;
+            play_sprite_on_player(player->idle_right_sprite_queue_index);
+            player->last_played_sprite_id = player->idle_right_sprite_queue_index;
             break;
         }
     }

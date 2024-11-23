@@ -7,7 +7,6 @@
 
 #include "game/camera.h"
 #include "game/game_manager.h"
-
 #include "game/user_interface.h"
 
 bool application_on_event(u16 code, void* sender, void* listener_inst, event_context context);
@@ -30,6 +29,7 @@ bool app_initialize() {
         TraceLog(LOG_ERROR, "game_manager() initialization failed");
         return false;
     }
+    user_interface_system_initialize();
 
     event_register(EVENT_CODE_APPLICATION_QUIT, 0, application_on_event);
 

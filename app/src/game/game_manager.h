@@ -17,7 +17,7 @@ Character2D* get_actor_by_id(u16 ID);
 float get_time_elapsed(elapse_time_type type);
 scene_type get_current_scene_type();
 
-bool damage_any_collade(Character2D* _character);
+void damage_collide_by_actor_type(Character2D* _character, actor_type _type);
 
 void update_game_manager();
 void render_game_manager();

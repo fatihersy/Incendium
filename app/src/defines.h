@@ -5,6 +5,7 @@
 
 #include "raylib.h"
 
+#define RESOURCE_PATH "/run/media/fatihersy/HDD/Workspace/Resources/"
 #define TOTAL_ALLOCATED_MEMORY 128 * 1024 * 1024
 #define TARGET_FPS 60
 
@@ -22,7 +23,7 @@
 #define MAX_SPRITESHEET_SLOTS 50
 #define MAX_RENDER_SPRITEQUEUE 50
 
-#define DEBUG_COLLISIONS 0
+#define DEBUG_COLLISIONS 1
 
 // Unsigned int types.
 typedef unsigned char u8;
@@ -107,9 +108,13 @@ typedef enum button_type
 { 
 	BTN_TYPE_UNDEFINED, 
 	BTN_TYPE_MAINMENU_BUTTON_PLAY, 
-	BTN_TYPE_MAINMENU_BUTTON_OPTIONS, 
+	BTN_TYPE_MAINMENU_BUTTON_SETTINGS, 
 	BTN_TYPE_MAINMENU_BUTTON_EXTRAS, 
 	BTN_TYPE_MAINMENU_BUTTON_EXIT, 
+	BTN_TYPE_INGAME_PAUSEMENU_BUTTON_RESUME, 
+	BTN_TYPE_INGAME_PAUSEMENU_BUTTON_SETTINGS, 
+	BTN_TYPE_INGAME_PAUSEMENU_BUTTON_MAINMENU, 
+	BTN_TYPE_INGAME_PAUSEMENU_BUTTON_EXIT, 
 	BTN_TYPE_SQUARE,
 
 	BTN_TYPE_MAX
@@ -118,6 +123,13 @@ typedef enum resource_type {
   RESOURCE_TYPE_SPRITESHEET,
   RESOURCE_TYPE_TEXTURE
 } resource_type;
+
+typedef struct rectangle_collision {
+	u16 owner_id;
+	actor_type owner_type;
+	Rectangle rect;
+	bool is_active;
+} rectangle_collision;
 
 typedef struct button {
 	u16 id;
@@ -162,16 +174,16 @@ typedef struct spritesheet {
 
 typedef struct Character2D {
     u16 character_id;
-    texture_type res_type;
+    Texture2D* tex;
     bool initialized;
 
-    Rectangle collision_rect;
+    Rectangle collision;
     Vector2 position;
 	world_direction w_direction;
     actor_type type;
 
     u16 rotation;
-    i16 health;
+    u16 health;
     i16 damage;
     f32 speed;
 } Character2D;
@@ -201,6 +213,27 @@ typedef struct ability_system_state {
 
     ability abilities[MAX_ABILITY_AMOUNT];
     i16 ability_amount;
+
+	u16 fire_ball_ball_count;
+	u16 fire_ball_ball_radius;
+	u16 fire_ball_ball_diameter;
+	u16 fire_ball_circle_radius;
+	u16 fire_ball_circle_radius_div_2;
+	u16 fire_ball_circle_radius_div_4;
+
+	u16 radiation_circle_radius;
+	u16 radiation_circle_diameter;
+	u16 radiation_circle_radius_div_2;
+	u16 radiation_circle_radius_div_4;
+
+	u16 direct_fire_square_width;
+	u16 direct_fire_square_height;
+	u16 direct_fire_square_height_div_2;
+
+	u16 salvo_projectile_at_a_time;
+	u16 salvo_fire_count;
+	u16 salvo_projectile_count;
+	u16 salvo_fire_rate;
 } ability_system_state;
 
 typedef struct player_state {
@@ -255,6 +288,19 @@ typedef struct spawn_system_state {
     Character2D spawns[MAX_SPAWN_COUNT];
     u16 current_spawn_count;
 } spawn_system_state;
+
+typedef struct game_manager_system_state {
+	Vector2 screen_size;
+	Vector2 screen_half_size;
+	u16 gridsize;
+	u16 map_size;
+	rectangle_collision spawn_collisions[MAX_SPAWN_COUNT];
+	u16 spawn_collision_count;
+
+	scene_type current_scene_type;
+
+	bool is_game_paused;
+} game_manager_system_state;
 
 typedef struct memory_system_state {
     u64 linear_memory_total_size;
