@@ -21,7 +21,7 @@
 #define MAX_TEXTURE_SLOTS 10
 #define MAX_ABILITY_AMOUNT 10
 #define MAX_SPRITESHEET_SLOTS 50
-#define MAX_RENDER_SPRITEQUEUE 50
+#define MAX_SPRITE_RENDERQUEUE 50
 
 #define DEBUG_COLLISIONS 1
 
@@ -96,6 +96,7 @@ typedef enum spritesheet_type {
 	BUTTON_CRT_SHEET,
 	LEVEL_UP_SHEET,
 
+	SPRITESHEET_TYPE_MAX
 } spritesheet_type;
 
 typedef enum button_state {
@@ -104,8 +105,7 @@ typedef enum button_state {
 	BTN_STATE_PRESSED
 } button_state;
 
-typedef enum button_type 
-{ 
+typedef enum button_type { 
 	BTN_TYPE_UNDEFINED, 
 	BTN_TYPE_MAINMENU_BUTTON_PLAY, 
 	BTN_TYPE_MAINMENU_BUTTON_SETTINGS, 
@@ -131,23 +131,6 @@ typedef struct rectangle_collision {
 	bool is_active;
 } rectangle_collision;
 
-typedef struct button {
-	u16 id;
-	const char* text;
-  	scene_type render_on_scene;
-	Vector2 text_pos;
-	u16 text_spacing;
-    button_type btn_type;
-	texture_type tex_type;
-    button_state state;
-	u16 crt_render_index;
-	u16 reflection_render_index;
-	bool is_reflection_played;
-    
-    Rectangle source;
-    Rectangle dest;
-} button;
-
 typedef struct spritesheet {
 	spritesheet_type type;
 	u16 col_total;
@@ -171,6 +154,28 @@ typedef struct spritesheet {
 	bool is_started;
 	bool play_once;
 } spritesheet;
+
+typedef struct spritesheet_play_system {
+	spritesheet renderqueue[MAX_SPRITE_RENDERQUEUE];
+	u16 renderqueue_count;
+} spritesheet_play_system;
+
+typedef struct button {
+	u16 id;
+	const char* text;
+  	scene_type render_on_scene;
+	Vector2 text_pos;
+	u16 text_spacing;
+    button_type btn_type;
+	texture_type tex_type;
+    button_state state;
+	u16 crt_render_index;
+	u16 reflection_render_index;
+	bool is_reflection_played;
+    
+    Rectangle source;
+    Rectangle dest;
+} button;
 
 typedef struct Character2D {
     u16 character_id;
@@ -255,31 +260,17 @@ typedef struct player_state {
     bool player_have_skill_points;
 	bool is_moving;
 
+	scene_type scene_data;
     Rectangle collision;
     ability_system_state ability_system;
+	spritesheet_play_system spritesheet_system;
 } player_state;
-
-typedef struct user_interface_system_state {
-	Vector2 screen_center;
-	Vector2 offset;
-	Vector2 mouse_pos;
-	button buttons[BTN_TYPE_MAX];
-	Font ui_font;
-	player_state* p_player;
-	float p_player_health;
-	float p_player_exp;
-
-	scene_type gm_current_scene_type;
-	bool b_show_pause_screen;
-} user_interface_system_state;
 
 typedef struct resource_system_state {
     i16 texture_amouth;
 	i16 sprite_amouth;
-	i16 render_queue_amouth;
     Texture2D textures[MAX_TEXTURE_SLOTS];
 	spritesheet sprites[MAX_SPRITESHEET_SLOTS];
-	spritesheet render_sprite_queue[MAX_RENDER_SPRITEQUEUE];
 
     scene_type game_on_scene;
 } resource_system_state;
@@ -289,17 +280,32 @@ typedef struct spawn_system_state {
     u16 current_spawn_count;
 } spawn_system_state;
 
+typedef struct user_interface_system_state {
+	spritesheet_play_system spritesheet_system;
+	Vector2 screen_center;
+	Vector2 offset;
+	Vector2 mouse_pos;
+	button buttons[BTN_TYPE_MAX];
+	Font ui_font;
+	player_state* p_player;
+	float p_player_health;
+	float p_player_exp;
+
+	scene_type scene_data;
+	bool b_show_pause_screen;
+} user_interface_system_state;
+
 typedef struct game_manager_system_state {
+	spritesheet_play_system spritesheet_system;
+	rectangle_collision spawn_collisions[MAX_SPAWN_COUNT];
 	Vector2 screen_size;
 	Vector2 screen_half_size;
 	u16 gridsize;
 	u16 map_size;
-	rectangle_collision spawn_collisions[MAX_SPAWN_COUNT];
 	u16 spawn_collision_count;
-
 	scene_type current_scene_type;
-
 	bool is_game_paused;
+	scene_type scene_data;
 } game_manager_system_state;
 
 typedef struct memory_system_state {

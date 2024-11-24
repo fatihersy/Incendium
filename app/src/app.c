@@ -6,6 +6,7 @@
 #include "core/fmemory.h"
 
 #include "game/camera.h"
+#include "game/resource.h"
 #include "game/game_manager.h"
 #include "game/user_interface.h"
 
@@ -23,7 +24,8 @@ bool app_initialize() {
     memory_system_initialize();
     event_system_initialize();
     time_system_initialize();
-
+    resource_system_initialize();
+    
     // Game
     if (!game_manager_initialize(get_screen_size())) {
         TraceLog(LOG_ERROR, "game_manager() initialization failed");

@@ -5,10 +5,7 @@
 #include "core/fmemory.h"
 #include "core/ftime.h"
 
-#include "defines.h"
 #include "player.h"
-#include "raylib.h"
-#include "resource.h"
 #include "spawn.h"
 
 void draw_background();
@@ -17,11 +14,13 @@ void clean_up();
 
 static game_manager_system_state *game_manager_state;
 
+#define PSPRITESHEET_SYSTEM game_manager_state
+#define IMPLEMENT_SPRITESHEET_FUNCTIONS
+#include "game/spritesheet.h"
+
 bool game_manager_initialized = false;
-
-bool game_manager_on_event(u16 code, void *sender, void *listener_inst,
-                           event_context context);
-
+bool game_manager_on_event(u16 code, void *sender, void *listener_inst, event_context context);
+          
 bool game_manager_initialize(Vector2 _screen_size) {
   if (game_manager_initialized)
     return false;
@@ -37,16 +36,11 @@ bool game_manager_initialize(Vector2 _screen_size) {
   game_manager_initialized = true;
   game_manager_state->is_game_paused = false;
 
-  if (!resource_system_initialize())
-    return false;
-  if (!player_system_initialize())
-    return false;
-  if (!spawn_system_initialize())
-    return false;
+  if (!player_system_initialize()) return false;
+  if (!spawn_system_initialize()) return false;
 
   game_manager_state->screen_size = _screen_size;
-  game_manager_state->screen_half_size =
-      (Vector2){_screen_size.x / 2, _screen_size.y / 2};
+  game_manager_state->screen_half_size = (Vector2){_screen_size.x / 2, _screen_size.y / 2};
   game_manager_state->current_scene_type = SCENE_MAIN_MENU;
   load_scene();
 
@@ -108,7 +102,7 @@ void update_game_manager() {
 
   switch (game_manager_state->current_scene_type) {
   case SCENE_MAIN_MENU: {
-    update_resource_system();
+    //update_resource_system();
     break;
   }
   case SCENE_IN_GAME: {
@@ -124,7 +118,7 @@ void update_game_manager() {
       update_player();
       update_spawns(get_player_position());
     }
-    update_resource_system();
+    //update_resource_system();
 
     break;
   }
@@ -142,13 +136,13 @@ void render_game_manager() {
 
   switch (game_manager_state->current_scene_type) {
   case SCENE_MAIN_MENU: {
-    render_resource_system();
+    //render_resource_system();
     break;
   }
   case SCENE_IN_GAME: {
     render_player();
     render_spawns();
-    render_resource_system();
+    //render_resource_system();
     break;
   }
   default:
@@ -326,3 +320,5 @@ bool game_manager_on_event(u16 code, void *sender, void *listener_inst,
 }
 
 void clean_up() { clean_up_spawn_system(); }
+
+#undef IMPLEMENT_SPRITESHEET_FUNCTIONS

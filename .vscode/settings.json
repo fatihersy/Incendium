@@ -1,5 +1,5 @@
 {
-    "workbench.colorTheme": "Starfall Ocean",
+    "workbench.colorTheme": "Dracula Theme",
     "editor.minimap.enabled": false,
     "files.autoSave": "onFocusChange",
     "terminal.integrated.defaultProfile.windows": "pwsh7",

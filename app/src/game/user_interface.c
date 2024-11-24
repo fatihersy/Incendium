@@ -3,9 +3,7 @@
 #include "core/event.h"
 #include "core/fmemory.h"
 
-#include "defines.h"
-#include "game/player.h"
-#include "game/resource.h"
+#include "player.h"
 
 #define BTN_MENU_DIM_X 250
 #define BTN_MENU_DIM_Y 50
@@ -20,10 +18,14 @@
 
 static user_interface_system_state *ui_system_state;
 
+#define PSPRITESHEET_SYSTEM ui_system_state
+#define IMPLEMENT_SPRITESHEET_FUNCTIONS
+#include "game/spritesheet.h"
+
+
 Color theme_color_yellow = {237, 213, 0, 255};
 bool b_user_interface_system_initialized = false;
-bool user_interface_on_event(u16 code, void *sender, void *listener_inst,
-                             event_context context);
+bool user_interface_on_event(u16 code, void *sender, void *listener_inst,event_context context);
 bool gui_button(button_type _type);
 void register_button(const char *_text, u16 _x, u16 _y, button_type _btn_type,
                      scene_type render_scene, texture_type _tex_type,
@@ -93,12 +95,12 @@ void user_interface_system_initialize() {
 void update_user_interface(Vector2 _offset, Vector2 _screen_half_size,
                            scene_type _current_scene_type, Camera2D _camera) {
   ui_system_state->screen_center = _screen_half_size;
-  ui_system_state->p_player_health =
-      (float)ui_system_state->p_player->health_current;
+  ui_system_state->p_player_health = (float)ui_system_state->p_player->health_current;
   ui_system_state->p_player_exp = (float)ui_system_state->p_player->exp_current;
   ui_system_state->mouse_pos = GetMousePosition();
   ui_system_state->offset = _offset;
-  ui_system_state->gm_current_scene_type = _current_scene_type;
+  ui_system_state->scene_data = _current_scene_type;
+  update_sprite_renderqueue();
 
   for (int i = 0; i < BTN_TYPE_MAX; ++i) {
     if (ui_system_state->buttons[i].btn_type == BTN_TYPE_UNDEFINED) {
@@ -109,7 +111,7 @@ void update_user_interface(Vector2 _offset, Vector2 _screen_half_size,
       continue;
     }
     if (ui_system_state->buttons[i].render_on_scene !=
-        ui_system_state->gm_current_scene_type) {
+        ui_system_state->scene_data) {
       continue;
     }
     button btn = ui_system_state->buttons[i];
@@ -139,9 +141,9 @@ void update_user_interface(Vector2 _offset, Vector2 _screen_half_size,
 }
 
 void render_user_interface() {
-  switch (ui_system_state->gm_current_scene_type) {
+  switch (ui_system_state->scene_data) {
   case SCENE_MAIN_MENU: {
-
+    render_sprite_renderqueue();
     if (gui_button(BTN_TYPE_MAINMENU_BUTTON_PLAY)) {
       event_fire(EVENT_CODE_SCENE_IN_GAME, 0, (event_context){0});
     };
@@ -158,27 +160,9 @@ void render_user_interface() {
     break;
   }
   case SCENE_IN_GAME: {
-
-    /*     GuiProgressBar(
-          (Rectangle) {20, 20, 200, 12},
-          "",
-          TextFormat("%d", p_player->health_current),
-          &p_player_health,
-          0,
-          p_player->health_max);
-
-        GuiProgressBar(
-          (Rectangle) {screen_center.x - 250, 20, 500, 12},
-          "",
-          "",
-          &p_player_exp,
-          0,
-          p_player->exp_to_next_level); */
-
     if (ui_system_state->p_player->player_have_skill_points) {
       show_skill_up();
     }
-
     break;
   }
   default:
@@ -186,6 +170,7 @@ void render_user_interface() {
   }
 
   if (ui_system_state->b_show_pause_screen) {
+    render_sprite_renderqueue();
     show_pause_screen();
   }
 }
@@ -258,7 +243,7 @@ void register_button(const char *_text, u16 _x, u16 _y, button_type _btn_type,
       .btn_type = _btn_type,
       .text = _text,
       .render_on_scene = render_scene,
-      .crt_render_index = register_sprite(BUTTON_CRT_SHEET, render_scene, false, false),
+      .crt_render_index = register_sprite(BUTTON_CRT_SHEET, render_scene, true, false),
       .reflection_render_index = register_sprite(BUTTON_REFLECTION_SHEET, render_scene, true, false),
       .is_reflection_played = false,
       .text_spacing = UI_FONT_SPACING,
@@ -306,3 +291,6 @@ bool user_interface_on_event(u16 code, void *sender, void *listener_inst,
 
   return false;
 }
+
+#undef IMPLEMENT_SPRITESHEET_FUNCTIONS
+

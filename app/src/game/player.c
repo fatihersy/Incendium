@@ -3,19 +3,24 @@
 #include "core/event.h"
 #include "core/fmemory.h"
 
+#include "defines.h"
 #include "game/ability.h"
-#include "game/resource.h"
+#include "game/game_manager.h"
+#include "raylib.h"
+
 
 // To avoid dublicate symbol errors. Implementation in defines.h
 extern const u32 level_curve[MAX_PLAYER_LEVEL+1];
 
-bool player_system_initialized = false;
-
 static player_state* player;
-
-bool player_system_on_event(u16 code, void* sender, void* listener_inst, event_context context);
+#define PSPRITESHEET_SYSTEM player
+#define IMPLEMENT_SPRITESHEET_FUNCTIONS
+#include "game/spritesheet.h"
 
 void move(spritesheet_type player_anim_sheet);
+
+bool player_system_initialized = false;
+bool player_system_on_event(u16 code, void* sender, void* listener_inst, event_context context);
 
 bool player_system_initialize() {
     if (player_system_initialized) return false;
@@ -94,6 +99,8 @@ void add_exp_to_player(u32 exp) {
 bool update_player() {
     if (!player_system_initialized) return false;
 
+    player->scene_data = get_current_scene_type();
+
     if (IsKeyDown(KEY_W)) {
         player->position.y -= 2;
         player->is_moving = true;
@@ -116,12 +123,14 @@ bool update_player() {
         player->is_moving = false;
     }
 
-    update_abilities(&player->ability_system, player->position);
-
     player->collision.x = player->position.x - player->dimentions.x / 2.f;
     player->collision.y = player->position.y - player->dimentions.y / 2.f;
     player->collision.width = player->dimentions.x;
     player->collision.height = player->dimentions.y;
+
+    update_abilities(&player->ability_system, player->position);
+    update_sprite_renderqueue();
+
     return true;
 }
 
@@ -146,6 +155,7 @@ bool render_player() {
     }
 
     render_abilities(&player->ability_system);
+    render_sprite_renderqueue();
 
 #if DEBUG_COLLISIONS
     DrawRectangleLines(
@@ -155,7 +165,6 @@ bool render_player() {
         player->collision.height,
         WHITE);
 #endif
-
     return true;
 }
 
@@ -179,8 +188,13 @@ bool player_system_on_event(u16 code, void* sender, void* listener_inst, event_c
 }
 
 void move(spritesheet_type player_anim_sheet) {
-
     stop_sprite(player->last_played_sprite_id, false);
+    Rectangle dest = (Rectangle) {
+        .x = player->position.x,
+        .y = player->position.y,
+        .width = player->dimentions.x,
+        .height = player->dimentions.y
+    };
     switch (player_anim_sheet) {
         case SPRITESHEET_UNSPECIFIED: TraceLog(LOG_ERROR, "ERROR::player::move()::move function called with unspecified value.");
         break;
@@ -190,26 +204,30 @@ void move(spritesheet_type player_anim_sheet) {
         break;
         case LEVEL_UP_SHEET: TraceLog(LOG_ERROR, "ERROR::player::move()::move function called with wrong value.");
         break;
+        case SPRITESHEET_TYPE_MAX: TraceLog(LOG_ERROR, "ERROR::player::move()::move function called with wrong value.");
+        break;
 
         case PLAYER_ANIMATION_MOVELEFT: {
-            play_sprite_on_player(player->move_left_sprite_queue_index);
+            play_sprite_on_site(player->move_left_sprite_queue_index, dest);
             player->last_played_sprite_id = player->move_left_sprite_queue_index;
             break;
         }
         case PLAYER_ANIMATION_MOVERIGHT: {
-            play_sprite_on_player(player->move_right_sprite_queue_index);
+            play_sprite_on_site(player->move_right_sprite_queue_index, dest);
             player->last_played_sprite_id = player->move_right_sprite_queue_index;
             break;
         }
         case PLAYER_ANIMATION_IDLELEFT:  {
-            play_sprite_on_player(player->idle_left_sprite_queue_index);
+            play_sprite_on_site(player->idle_left_sprite_queue_index, dest);
             player->last_played_sprite_id = player->idle_left_sprite_queue_index;
             break;
         }
         case PLAYER_ANIMATION_IDLERIGHT:  {
-            play_sprite_on_player(player->idle_right_sprite_queue_index);
+            play_sprite_on_site(player->idle_right_sprite_queue_index, dest);
             player->last_played_sprite_id = player->idle_right_sprite_queue_index;
             break;
         }
     }
 }
+
+#undef IMPLEMENT_SPRITESHEET_FUNCTIONS
