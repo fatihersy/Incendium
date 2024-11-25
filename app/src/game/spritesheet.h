@@ -4,7 +4,7 @@
 
 #include "defines.h"
 
-#if defined(IMPLEMENT_SPRITESHEET_FUNCTIONS) 
+#if defined(PSPRITESHEET_SYSTEM) 
 #define register_sprite(_type, _scene, _play_once, center_sprite) \
     _register_sprite(&PSPRITESHEET_SYSTEM->spritesheet_system, _type, _scene, _play_once, center_sprite)
 #define update_sprite_renderqueue() \

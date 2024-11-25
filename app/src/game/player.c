@@ -8,13 +8,11 @@
 #include "game/game_manager.h"
 #include "raylib.h"
 
-
 // To avoid dublicate symbol errors. Implementation in defines.h
 extern const u32 level_curve[MAX_PLAYER_LEVEL+1];
-
 static player_state* player;
+
 #define PSPRITESHEET_SYSTEM player
-#define IMPLEMENT_SPRITESHEET_FUNCTIONS
 #include "game/spritesheet.h"
 
 void move(spritesheet_type player_anim_sheet);
@@ -67,7 +65,7 @@ bool player_system_initialize() {
     player->move_right_sprite_queue_index = register_sprite(PLAYER_ANIMATION_MOVERIGHT, SCENE_IN_GAME, false, true);
     player->idle_left_sprite_queue_index = register_sprite(PLAYER_ANIMATION_IDLELEFT, SCENE_IN_GAME, false, true);
     player->idle_right_sprite_queue_index = register_sprite(PLAYER_ANIMATION_IDLERIGHT, SCENE_IN_GAME, false, true);
-    
+    player->last_played_sprite_id = player->idle_left_sprite_queue_index; // The position player starts. To avoid from the error when move firstly called
     return true;
 }
 
@@ -230,4 +228,4 @@ void move(spritesheet_type player_anim_sheet) {
     }
 }
 
-#undef IMPLEMENT_SPRITESHEET_FUNCTIONS
+#undef PSPRITESHEET_SYSTEM

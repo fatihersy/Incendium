@@ -23,7 +23,7 @@
 #define MAX_SPRITESHEET_SLOTS 50
 #define MAX_SPRITE_RENDERQUEUE 50
 
-#define DEBUG_COLLISIONS 1
+#define DEBUG_COLLISIONS 0
 
 // Unsigned int types.
 typedef unsigned char u8;
@@ -73,6 +73,8 @@ typedef enum texture_type {
     ENEMY_TEXTURE,
     BACKGROUND,
 	BUTTON_TEXTURE,
+	HEALTHBAR_TEXTURE,
+	HEALTH_PERC_TEXTURE, 
 } texture_type;
 
 typedef enum spritesheet_playmod {

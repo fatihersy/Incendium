@@ -5,6 +5,7 @@
 #include "core/fmemory.h"
 #include "core/ftime.h"
 
+#include "defines.h"
 #include "player.h"
 #include "spawn.h"
 
@@ -15,7 +16,6 @@ void clean_up();
 static game_manager_system_state *game_manager_state;
 
 #define PSPRITESHEET_SYSTEM game_manager_state
-#define IMPLEMENT_SPRITESHEET_FUNCTIONS
 #include "game/spritesheet.h"
 
 bool game_manager_initialized = false;
@@ -33,8 +33,8 @@ bool game_manager_initialize(Vector2 _screen_size) {
   game_manager_state->screen_size = (Vector2){0};
   game_manager_state->screen_half_size = (Vector2){0};
   game_manager_state->current_scene_type = 0;
-  game_manager_initialized = true;
   game_manager_state->is_game_paused = false;
+  game_manager_initialized = true;
 
   if (!player_system_initialize()) return false;
   if (!spawn_system_initialize()) return false;
@@ -94,37 +94,22 @@ scene_type get_current_scene_type() {
 Vector2 get_player_dimentions() { return get_player_state()->dimentions; }
 
 void update_game_manager() {
+  if (GetFPS() > TARGET_FPS) {return;}
 
-  if (GetFPS() > TARGET_FPS)
-    return;
-  // TraceLog(LOG_INFO, "player.position {x:%d, y:%d}", get_player_position().x,
-  // get_player_position().y);
-
-  switch (game_manager_state->current_scene_type) {
-  case SCENE_MAIN_MENU: {
-    //update_resource_system();
-    break;
-  }
-  case SCENE_IN_GAME: {
+  if (game_manager_state->current_scene_type == SCENE_IN_GAME) {
     if (IsKeyPressed(KEY_ESCAPE)) {
       game_manager_state->is_game_paused = !game_manager_state->is_game_paused;
       (game_manager_state->is_game_paused)
           ? event_fire(EVENT_CODE_PAUSE_GAME, 0, (event_context){0})
           : event_fire(EVENT_CODE_UNPAUSE_GAME, 0, (event_context){0});
-      break;
     }
-
     if (!game_manager_state->is_game_paused) {
       update_player();
       update_spawns(get_player_position());
     }
-    //update_resource_system();
 
-    break;
-  }
+    
 
-  default:
-    break;
   }
 }
 
@@ -321,4 +306,4 @@ bool game_manager_on_event(u16 code, void *sender, void *listener_inst,
 
 void clean_up() { clean_up_spawn_system(); }
 
-#undef IMPLEMENT_SPRITESHEET_FUNCTIONS
+#undef PSPRITESHEET_SYSTEM

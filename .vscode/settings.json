@@ -1,5 +1,5 @@
 {
-    "workbench.colorTheme": "Dracula Theme",
+    "workbench.colorTheme": "Monokai++ Unified",
     "editor.minimap.enabled": false,
     "files.autoSave": "onFocusChange",
     "terminal.integrated.defaultProfile.windows": "pwsh7",
