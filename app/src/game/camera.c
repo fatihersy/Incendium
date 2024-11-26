@@ -6,7 +6,7 @@
 static Camera2D camera;
 static float camera_min_speed = 30;
 static float camera_min_effect_lenght = 10;
-static float camera_fraction_speed = 3.f;
+static float camera_fraction_speed = 5.f;
 
 Camera2D create_camera(Vector2 position, u8 rotation) {
     
@@ -39,7 +39,5 @@ bool update_camera(Vector2 position)
         camera.target = vec2_add(camera.target, vec2_scale(diff, speed*GetFrameTime()/length));
     }
 
-    camera.target = (Vector2) {position.x, position.y};
-    
     return true;
 }

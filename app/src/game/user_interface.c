@@ -28,7 +28,7 @@ bool b_user_interface_system_initialized = false;
 bool user_interface_on_event(u16 code, void *sender, void *listener_inst,
                              event_context context);
 bool gui_button(button_type _type);
-void gui_healthbar(i16 percent);
+void gui_healthbar(f32 percent);
 void register_button(const char *_text, u16 _x, u16 _y, button_type _btn_type,
                      scene_type render_scene, texture_type _tex_type,
                      Vector2 source_dim);
@@ -89,9 +89,14 @@ void user_interface_system_initialize() {
 void update_user_interface(Vector2 _offset, Vector2 _screen_half_size,
                            scene_type _current_scene_type, Camera2D _camera) {
   ui_system_state->screen_center = _screen_half_size;
-  ui_system_state->p_player_health =
-      (float)ui_system_state->p_player->health_current;
+  ui_system_state->p_player_health = (float)ui_system_state->p_player->health_current;
+  ui_system_state->p_player_health_max = (float)ui_system_state->p_player->health_max;
+  ui_system_state->p_player_health_perc = ((float)
+    (float)ui_system_state->p_player->health_current / (float)ui_system_state->p_player->health_max);
   ui_system_state->p_player_exp = (float)ui_system_state->p_player->exp_current;
+  ui_system_state->p_player_exp_max = (float)ui_system_state->p_player->exp_to_next_level;
+  ui_system_state->p_player_exp_perc = 
+    (float)ui_system_state->p_player->exp_current / (float)ui_system_state->p_player->exp_to_next_level;
   ui_system_state->mouse_pos = GetMousePosition();
   ui_system_state->offset = _offset;
   ui_system_state->scene_data = _current_scene_type;
@@ -139,6 +144,21 @@ void update_user_interface(Vector2 _offset, Vector2 _screen_half_size,
 void render_user_interface() {
   switch (ui_system_state->scene_data) {
   case SCENE_MAIN_MENU: {
+    DrawTexturePro(
+    *get_texture_by_enum(BACKGROUND),
+    (Rectangle){
+      .x = 0,
+      .y = 0,
+      .width = get_texture_by_enum(BACKGROUND)->width,
+      .height = get_texture_by_enum(BACKGROUND)->height},
+    (Rectangle){
+      .x = 0,
+      .y = 0,
+      .width = GetScreenWidth(),
+      .height = GetScreenHeight()},
+    (Vector2){.x = 0, .y = 0}, 0,
+    WHITE); // Draws the background to main menu
+
     render_sprite_renderqueue();
 
     if (gui_button(BTN_TYPE_MAINMENU_BUTTON_PLAY)) {
@@ -153,11 +173,10 @@ void render_user_interface() {
     if (gui_button(BTN_TYPE_MAINMENU_BUTTON_EXIT)) {
       event_fire(EVENT_CODE_APPLICATION_QUIT, 0, (event_context){0});
     };
-
     break;
   }
   case SCENE_IN_GAME: {
-    gui_healthbar(50);
+    gui_healthbar(ui_system_state->p_player_health_perc);
 
     if (ui_system_state->p_player->player_have_skill_points) {
       show_skill_up();
@@ -225,8 +244,8 @@ bool gui_button(button_type _type) {
   ui_system_state->buttons[_type] = _btn;
   return _btn.state == BTN_STATE_PRESSED;
 }
-void gui_healthbar(i16 percent) {
-  const u16 iter = 10*(percent/100.f);
+void gui_healthbar(f32 percent) {
+  const u16 iter = 10*percent;
   DrawTexturePro(
     *get_texture_by_enum(HEALTHBAR_TEXTURE),
     (Rectangle){.x = 0, .y = 0, .width = 72, .height = 12},

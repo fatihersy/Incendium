@@ -47,20 +47,19 @@ void add_ability(ability_system_state *system, ability_type type) {
     _ability->position = system->owner_position;
 
     for (u32 i = 1; i <= system->fire_ball_ball_count; i++) {
-      _ability->projectiles[i - 1].initialized = true;
       _ability->projectiles[i - 1].position = get_a_point_of_a_circle(
           _ability->position, system->fire_ball_circle_radius,
           (((360 / system->fire_ball_ball_count) * i) + _ability->rotation) %
               360);
 
-      _ability->projectiles[i - 1].collision.x =
-          _ability->projectiles[i - 1].position.x;
-      _ability->projectiles[i - 1].collision.y =
-          _ability->projectiles[i - 1].position.y;
-      _ability->projectiles[i - 1].collision.width =
-          system->fire_ball_ball_diameter;
-      _ability->projectiles[i - 1].collision.height =
-          system->fire_ball_ball_diameter;
+      _ability->projectiles[i - 1].collision.x = _ability->projectiles[i - 1].position.x;
+      _ability->projectiles[i - 1].collision.y = _ability->projectiles[i - 1].position.y;
+      _ability->projectiles[i - 1].collision.width = system->fire_ball_ball_diameter;
+      _ability->projectiles[i - 1].collision.height = system->fire_ball_ball_diameter;
+
+      _ability->projectiles[i - 1].damage = 22;
+
+      _ability->projectiles[i - 1].initialized = true;
     }
     break;
   }
@@ -143,7 +142,7 @@ bool update_abilities(ability_system_state *system, Vector2 position) {
         _ability->projectiles[j - 1].collision.x = _ability->projectiles[j - 1].position.x - system->fire_ball_ball_radius;
         _ability->projectiles[j - 1].collision.y = _ability->projectiles[j - 1].position.y - system->fire_ball_ball_radius;
 
-        damage_collide_by_actor_type(&_ability->projectiles[j - 1], ENEMY);
+        damage_any_spawn(&_ability->projectiles[j - 1]);
       }
 
       break;

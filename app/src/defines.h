@@ -4,6 +4,7 @@
 #define DEFINES_H
 
 #include "raylib.h"
+#include <stdbool.h>
 
 #define RESOURCE_PATH "/run/media/fatihersy/HDD/Workspace/Resources/"
 #define TOTAL_ALLOCATED_MEMORY 128 * 1024 * 1024
@@ -90,10 +91,14 @@ typedef enum world_direction {
 
 typedef enum spritesheet_type {
 	SPRITESHEET_UNSPECIFIED,
-	PLAYER_ANIMATION_IDLELEFT,
-	PLAYER_ANIMATION_IDLERIGHT,
-	PLAYER_ANIMATION_MOVELEFT,
-	PLAYER_ANIMATION_MOVERIGHT,
+	PLAYER_ANIMATION_IDLE_LEFT,
+	PLAYER_ANIMATION_IDLE_RIGHT,
+	PLAYER_ANIMATION_MOVE_LEFT,
+	PLAYER_ANIMATION_MOVE_RIGHT,
+	PLAYER_ANIMATION_TAKE_DAMAGE_LEFT,
+	PLAYER_ANIMATION_TAKE_DAMAGE_RIGHT,
+	PLAYER_ANIMATION_WRECK_LEFT,
+	PLAYER_ANIMATION_WRECK_RIGHT,
 	BUTTON_REFLECTION_SHEET,
 	BUTTON_CRT_SHEET,
 	LEVEL_UP_SHEET,
@@ -245,22 +250,32 @@ typedef struct ability_system_state {
 
 typedef struct player_state {
     bool initialized;
+	bool player_have_skill_points;
+	bool is_moving;
+	bool is_dead;
+	bool is_damagable;
+
     Vector2 position;
 	Vector2 dimentions;
+    Vector2 dimentions_div2;
 	world_direction w_direction;
 	u16 move_left_sprite_queue_index;
 	u16 move_right_sprite_queue_index;
 	u16 idle_left_sprite_queue_index;
 	u16 idle_right_sprite_queue_index;
+	u16 take_damage_left_sprite_queue_index;
+	u16 take_damage_right_sprite_queue_index;
+	u16 wreck_left_sprite_queue_index;
+	u16 wreck_right_sprite_queue_index;
 	u16 last_played_sprite_id;
 
-    u8 health_max;
-    u8 health_current;
-    u8 level;
+    u16 level;
+    u16 health_max;
+    u16 health_current;
     u32 exp_to_next_level;
     u32 exp_current; 
-    bool player_have_skill_points;
-	bool is_moving;
+	float damage_break_time;
+	float damage_break_current;
 
 	scene_type scene_data;
     Rectangle collision;
@@ -291,7 +306,11 @@ typedef struct user_interface_system_state {
 	Font ui_font;
 	player_state* p_player;
 	float p_player_health;
+	float p_player_health_max;
+	float p_player_health_perc;
 	float p_player_exp;
+	float p_player_exp_max;
+	float p_player_exp_perc;
 
 	scene_type scene_data;
 	bool b_show_pause_screen;

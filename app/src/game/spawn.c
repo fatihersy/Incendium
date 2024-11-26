@@ -4,6 +4,8 @@
 #include "core/fmath.h"
 #include "core/fmemory.h"
 #include "defines.h"
+#include "game/game_manager.h"
+#include "raylib.h"
 
 static spawn_system_state *spawn_system;
 
@@ -86,6 +88,7 @@ bool update_spawns(Vector2 player_position) {
         .data.u16[1] = spawn_system->spawns[i].position.x,
         .data.u16[2] = spawn_system->spawns[i].position.y,
     });
+    damage_any_collider_by_type(&spawn_system->spawns[i], PLAYER);
   }
 
   return true;

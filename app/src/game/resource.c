@@ -1,6 +1,7 @@
 #include "resource.h"
 
 #include "core/fmemory.h"
+#include "defines.h"
 
 static resource_system_state *resource_system;
 
@@ -24,10 +25,14 @@ bool resource_system_initialize() {
   load_texture("healthbar_edited.png", false, (Vector2){0, 0}, HEALTHBAR_TEXTURE);
   load_texture("health_perc.png", false, (Vector2){0, 0}, HEALTH_PERC_TEXTURE);
   load_spritesheet("level_up_sheet.png", LEVEL_UP_SHEET, 60, 150, 150, 8, 8);
-  load_spritesheet("IdleLeft.png", PLAYER_ANIMATION_IDLELEFT, 15, 86, 86, 1, 4);
-  load_spritesheet("IdleRight.png", PLAYER_ANIMATION_IDLERIGHT, 15, 86, 86, 1, 4);
-  load_spritesheet("MoveLeft.png", PLAYER_ANIMATION_MOVELEFT, 10, 86, 86, 1, 6);
-  load_spritesheet("MoveRight.png", PLAYER_ANIMATION_MOVERIGHT, 10, 86, 86, 1, 6);
+  load_spritesheet("IdleLeft.png", PLAYER_ANIMATION_IDLE_LEFT, 15, 86, 86, 1, 4);
+  load_spritesheet("IdleRight.png", PLAYER_ANIMATION_IDLE_RIGHT, 15, 86, 86, 1, 4);
+  load_spritesheet("MoveLeft.png", PLAYER_ANIMATION_MOVE_LEFT, 10, 86, 86, 1, 6);
+  load_spritesheet("MoveRight.png", PLAYER_ANIMATION_MOVE_RIGHT, 10, 86, 86, 1, 6);
+  load_spritesheet("take_damage_left.png", PLAYER_ANIMATION_TAKE_DAMAGE_LEFT, 15, 86, 86, 1, 4);
+  load_spritesheet("take_damage_right.png", PLAYER_ANIMATION_TAKE_DAMAGE_RIGHT, 15, 86, 86, 1, 4);
+  load_spritesheet("wreck_left.png", PLAYER_ANIMATION_WRECK_LEFT, 15, 90, 110, 1, 4);
+  load_spritesheet("wreck_right.png", PLAYER_ANIMATION_WRECK_RIGHT, 15, 90, 110, 1, 4);
   load_spritesheet("ButtonReflection.png", BUTTON_REFLECTION_SHEET, 30, 80, 16, 1, 9);
   load_spritesheet("ButtonCRT.png", BUTTON_CRT_SHEET, 8, 78, 12, 1, 4);
 
