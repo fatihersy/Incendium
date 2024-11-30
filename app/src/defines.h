@@ -6,7 +6,7 @@
 #include "raylib.h"
 #include <stdbool.h>
 
-#define RESOURCE_PATH "/run/media/fatihersy/HDD/Workspace/Resources/"
+#define RESOURCE_PATH "/mnt/HDD/Workspace/Resources/"
 #define TOTAL_ALLOCATED_MEMORY 128 * 1024 * 1024
 #define TARGET_FPS 60
 

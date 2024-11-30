@@ -1,5 +1,5 @@
 {
-    "workbench.colorTheme": "Monokai++ Unified",
+    "workbench.colorTheme": "Monokai Pro",
     "editor.minimap.enabled": false,
     "files.autoSave": "onFocusChange",
     "terminal.integrated.defaultProfile.windows": "pwsh7",
@@ -25,8 +25,8 @@
         }
     },
     "editor.fontFamily": "Fira Code Retina",
-    "editor.fontSize": 15,
-    "editor.fontLigatures": "'ss01', 'ss02', 'ss03', 'ss04', 'ss05', 'ss06', 'zero', 'cv14', 'cv01', 'cv30', 'cv31'",
+    "editor.fontSize": 14,
+    "editor.fontLigatures": "'cv01', 'cv04', 'cv08', 'ss01', 'zero', 'cv14', 'cv17', 'ss05', 'ss04', 'cv18', 'ss03', 'cv30', 'ss02'",
     "terminal.integrated.fontFamily": "IBM Plex Mono",
     "workbench.editor.showTabs": "multiple",
     "workbench.colorCustomizations": {},
