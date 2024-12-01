@@ -1,27 +1,17 @@
 #include "game_manager.h"
 
 #include "core/event.h"
-#include "core/fmath.h"
 #include "core/fmemory.h"
 #include "core/ftime.h"
 
-#include "defines.h"
-#include "player.h"
-#include "raylib.h"
-#include "spawn.h"
-
-void draw_background();
-void show_pause_screen();
-void clean_up();
+#include "game/player.h"
+#include "game/spawn.h"
+#include "game/scene_manager.h"
 
 static game_manager_system_state *game_manager_state;
 
-#define PSPRITESHEET_SYSTEM game_manager_state
-#include "game/spritesheet.h"
-
 bool game_manager_initialized = false;
-bool game_manager_on_event(u16 code, void *sender, void *listener_inst,
-                           event_context context);
+bool game_manager_on_event(u16 code, void *sender, void *listener_inst, event_context context);
 
 bool game_manager_initialize(Vector2 _screen_size) {
   if (game_manager_initialized)
@@ -30,62 +20,85 @@ bool game_manager_initialize(Vector2 _screen_size) {
   game_manager_state = (game_manager_system_state *)allocate_memory_linear(
       sizeof(game_manager_system_state), true);
 
-  game_manager_state->gridsize = 33;
-  game_manager_state->map_size = game_manager_state->gridsize * 100;
   game_manager_state->screen_size = (Vector2){0};
   game_manager_state->screen_half_size = (Vector2){0};
-  game_manager_state->current_scene_type = 0;
   game_manager_state->is_game_paused = false;
   game_manager_initialized = true;
-
-  if (!player_system_initialize())
-    return false;
-  if (!spawn_system_initialize())
-    return false;
 
   game_manager_state->screen_size = _screen_size;
   game_manager_state->screen_half_size =
       (Vector2){_screen_size.x / 2, _screen_size.y / 2};
-  game_manager_state->current_scene_type = SCENE_MAIN_MENU;
-  load_scene();
 
-  event_register(EVENT_CODE_SCENE_IN_GAME, 0, game_manager_on_event);
+  if (!scene_manager_initialize(game_manager_state)) {
+    return false;
+  }
+  set_current_scene_type(SCENE_MAIN_MENU);
+
   event_register(EVENT_CODE_PAUSE_GAME, 0, game_manager_on_event);
   event_register(EVENT_CODE_UNPAUSE_GAME, 0, game_manager_on_event);
-  event_register(EVENT_CODE_RETURN_MAIN_MENU_GAME, 0, game_manager_on_event);
   event_register(EVENT_CODE_RELOCATE_SPAWN_COLLISION, 0, game_manager_on_event);
 
   return true;
 }
 
-void set_player_position(i16 x, i16 y) {
-  event_fire(EVENT_CODE_PLAYER_SET_POSITION, 0,
-             (event_context){
-                 .data.f32[0] = x,
-                 .data.f32[1] = y,
-             });
+void update_game_manager() {
+  if (GetFPS() > TARGET_FPS) return;
+ 
+  update_scene_manager();
+
+  switch (get_current_scene_type()) {
+    case SCENE_IN_GAME: update_scene_in_game(); break;
+    case SCENE_MAIN_MENU: update_scene_main_menu();  break;
+    case SCENE_IN_GAME_EDIT: update_scene_in_game_edit(); break;
+  default: break;
+  }
 }
 
-void set_current_scene_type(scene_type type) {
-  game_manager_state->current_scene_type = type;
-}
-Vector2 get_player_position(bool centered) {
-  return centered 
-  ? (Vector2) {
-        .x = get_player_state()->position.x - get_player_state()->dimentions_div2.x,
-        .y = get_player_state()->position.y - get_player_state()->dimentions_div2.y,}
-  : get_player_state()->position;
+void render_game_manager() {
+  if (GetFPS() > TARGET_FPS) return;
+
+  switch (get_current_scene_type()) {
+  case SCENE_MAIN_MENU: { render_scene_main_menu(); break;}
+  case SCENE_IN_GAME: { render_scene_in_game(); break;}
+  case SCENE_IN_GAME_EDIT: { render_scene_in_game_edit(); break;}
+  default: break;
+  }
 }
 
-Character2D *get_actor_by_id(u16 ID) {
-  spawn_system_state *spawn_data = get_spawn_system();
+bool game_manager_on_event(u16 code, void *sender, void *listener_inst,
+                           event_context context) {
+  switch (code) {
+  case EVENT_CODE_PAUSE_GAME: {
+    game_manager_state->is_game_paused = true;
+    event_fire(EVENT_CODE_UI_SHOW_PAUSE_SCREEN, 0, (event_context){0});
 
-  for (i32 i = 0; i < MAX_SPAWN_COUNT; i++) {
-    if (spawn_data->spawns[i].character_id == ID)
-      return &spawn_data->spawns[i];
+    return true;
+    break;
+  }
+  case EVENT_CODE_UNPAUSE_GAME: {
+    game_manager_state->is_game_paused = false;
+    event_fire(EVENT_CODE_UI_SHOW_UNPAUSE_SCREEN, 0, (event_context){0});
+
+    return true;
+    break;
   }
 
-  return (Character2D *){0};
+  case EVENT_CODE_RELOCATE_SPAWN_COLLISION: {
+    for (int i = 1; i <= game_manager_state->spawn_collision_count; ++i) {
+      if (game_manager_state->spawn_collisions[i].owner_id ==
+          context.data.u16[0]) {
+        game_manager_state->spawn_collisions[i].rect.x = context.data.u16[1];
+        game_manager_state->spawn_collisions[i].rect.y = context.data.u16[2];
+        return true;
+      }
+    }
+    break;
+  }
+  default:
+    break;
+  }
+
+  return false;
 }
 
 float get_time_elapsed(elapse_time_type type) {
@@ -97,101 +110,6 @@ float get_time_elapsed(elapse_time_type type) {
   };
 
   return time->remaining;
-}
-scene_type get_current_scene_type() {
-  return game_manager_state->current_scene_type;
-}
-
-Vector2 get_player_dimentions() { return get_player_state()->dimentions; }
-
-void update_game_manager() {
-  if (GetFPS() > TARGET_FPS) {
-    return;
-  }
-
-  if (game_manager_state->current_scene_type == SCENE_IN_GAME) {
-    if (IsKeyPressed(KEY_ESCAPE)) {
-      game_manager_state->is_game_paused = !game_manager_state->is_game_paused;
-      (game_manager_state->is_game_paused)
-          ? event_fire(EVENT_CODE_PAUSE_GAME, 0, (event_context){0})
-          : event_fire(EVENT_CODE_UNPAUSE_GAME, 0, (event_context){0});
-    }
-    if (!game_manager_state->is_game_paused) {
-      update_player();
-      update_spawns(get_player_position(true));
-    }
-  }
-}
-
-void render_game_manager() {
-
-  if (GetFPS() > TARGET_FPS)
-    return;
-  draw_background();
-
-  switch (game_manager_state->current_scene_type) {
-  case SCENE_MAIN_MENU: {
-    // render_resource_system();
-    break;
-  }
-  case SCENE_IN_GAME: {
-    render_player();
-    render_spawns();
-    // render_resource_system();
-    break;
-  }
-  default:
-    break;
-  }
-}
-
-void load_scene() {
-  set_player_position(game_manager_state->screen_size.x / 2,
-                      game_manager_state->screen_size.y / 2);
-
-  switch (game_manager_state->current_scene_type) {
-  case SCENE_MAIN_MENU: {
-    break;
-  }
-  case SCENE_IN_GAME: {
-    for (u32 i = 0; i < 360; i += 20) {
-      Vector2 position = get_a_point_of_a_circle(get_player_position(false), 500, i);
-      Texture2D *tex = get_texture_by_enum(ENEMY_TEXTURE);
-      rectangle_collision rect_col =
-          (rectangle_collision){.rect = (Rectangle){.x = position.x,
-                                                    .y = position.y,
-                                                    .width = tex->width,
-                                                    .height = tex->height},
-                                .owner_type = ENEMY};
-      rect_col.owner_id = spawn_character((Character2D){
-          .character_id = 0,
-          .tex = tex,
-          .initialized = false,
-
-          .collision = rect_col.rect,
-          .position = position,
-          .w_direction = LEFT,
-          .type = ENEMY,
-
-          .rotation = 0,
-          .health = 100,
-          .damage = 10,
-          .speed = 1,
-      });
-      game_manager_state->spawn_collision_count++;
-      game_manager_state
-          ->spawn_collisions[game_manager_state->spawn_collision_count] =
-          rect_col;
-      game_manager_state
-          ->spawn_collisions[game_manager_state->spawn_collision_count]
-          .is_active = true;
-    }
-    break;
-  }
-
-  default:
-    break;
-  }
 }
 
 void damage_any_spawn(Character2D *projectile) {
@@ -235,84 +153,20 @@ void damage_any_collider_by_type(Character2D *from_actor, actor_type to_type) {
   }
 }
 
-void draw_background() {
-  u16 ms = game_manager_state->map_size;
-
-  switch (game_manager_state->current_scene_type) {
-  case SCENE_MAIN_MENU: {
-  break;
-  }
-  case SCENE_IN_GAME: {
-    for (i16 i = -ms + 13; i < ms; i += ms) { // X Axis
-      DrawLine(i, -ms, i, i + (ms), (Color){21, 17, 71, 255});
-    }
-    for (i16 i = -ms - 3; i < ms; i += ms) { // Y Axis
-      DrawLine(-ms, i, i + (ms), i, (Color){21, 17, 71, 255});
-    }
-    break;
+Vector2 focus_at() {
+  switch (get_current_scene_type()) {
+  case SCENE_MAIN_MENU:
+    return (Vector2) {0, 0};
+  case SCENE_IN_GAME:
+    return get_player_position(false);
+  case SCENE_IN_GAME_EDIT:
+    return get_spectator_position();
+  default: break;
   }
 
-  default:
-    break;
-  }
+  TraceLog(LOG_WARNING, "WARNING::game_manager::focus_at()::Scene type:%d cannot handling correctly", get_current_scene_type());
+  return (Vector2) {SCREEN_WIDTH_DIV2, SCREEN_HEIGHT_DIV2};
 }
-
-bool game_manager_on_event(u16 code, void *sender, void *listener_inst,
-                           event_context context) {
-  switch (code) {
-  case EVENT_CODE_SCENE_IN_GAME: {
-    game_manager_state->current_scene_type = SCENE_IN_GAME;
-    load_scene();
-    return true;
-    break;
-  }
-  case EVENT_CODE_SCENE_MAIN_MENU: {
-    game_manager_state->current_scene_type = SCENE_MAIN_MENU;
-    load_scene();
-    return true;
-    break;
-  }
-  case EVENT_CODE_PAUSE_GAME: {
-    game_manager_state->is_game_paused = true;
-    event_fire(EVENT_CODE_UI_SHOW_PAUSE_SCREEN, 0, (event_context){0});
-
-    return true;
-    break;
-  }
-  case EVENT_CODE_UNPAUSE_GAME: {
-    game_manager_state->is_game_paused = false;
-    event_fire(EVENT_CODE_UI_SHOW_UNPAUSE_SCREEN, 0, (event_context){0});
-
-    return true;
-    break;
-  }
-  case EVENT_CODE_RETURN_MAIN_MENU_GAME: {
-    game_manager_state->is_game_paused = false;
-    game_manager_state->current_scene_type = SCENE_MAIN_MENU;
-    clean_up();
-    load_scene();
-
-    return true;
-    break;
-  }
-  case EVENT_CODE_RELOCATE_SPAWN_COLLISION: {
-    for (int i = 1; i <= game_manager_state->spawn_collision_count; ++i) {
-      if (game_manager_state->spawn_collisions[i].owner_id ==
-          context.data.u16[0]) {
-        game_manager_state->spawn_collisions[i].rect.x = context.data.u16[1];
-        game_manager_state->spawn_collisions[i].rect.y = context.data.u16[2];
-        return true;
-      }
-    }
-    break;
-  }
-  default:
-    break;
-  }
-
-  return false;
+scene_type get_active_scene() {
+  return get_current_scene_type();
 }
-
-void clean_up() { clean_up_spawn_system(); }
-
-#undef PSPRITESHEET_SYSTEM

@@ -6,6 +6,8 @@
 #include "defines.h"
 #include "player.h"
 #include "raylib.h"
+#include "tilemap.h"
+#include <stdbool.h>
 
 #define BTN_MENU_DIM_X 250
 #define BTN_MENU_DIM_Y 50
@@ -42,10 +44,15 @@ void user_interface_system_initialize() {
   ui_system_state = (user_interface_system_state *)allocate_memory_linear(
       sizeof(user_interface_system_state), true);
 
+  if(!tilemap_system_initialize()) {
+    TraceLog(LOG_ERROR, "ERROR::user_interface::user_interface_system_initialize()::tilemap initialization failed");
+  }
+
   ui_system_state->p_player = get_player_state();
   ui_system_state->p_player_exp = ui_system_state->p_player->exp_current;
   ui_system_state->p_player_health = ui_system_state->p_player->health_current;
   ui_system_state->ui_font = LoadFont(rs_path("QuanticoBold.ttf"));
+  ui_system_state->b_show_pause_screen = false;
 
   b_user_interface_system_initialized = true;
 
@@ -53,16 +60,20 @@ void user_interface_system_initialize() {
                   SCREEN_HEIGHT_DIV2 + BTN_SPACE_BTW(0),
                   BTN_TYPE_MAINMENU_BUTTON_PLAY, SCENE_MAIN_MENU,
                   BUTTON_TEXTURE, (Vector2){80, 16});
-  register_button("Settings", SCREEN_WIDTH_DIV2,
+  register_button("Edit", SCREEN_WIDTH_DIV2,
                   SCREEN_HEIGHT_DIV2 + BTN_SPACE_BTW(1),
+                  BTN_TYPE_MAINMENU_BUTTON_EDIT, SCENE_MAIN_MENU,
+                  BUTTON_TEXTURE, (Vector2){80, 16});
+  register_button("Settings", SCREEN_WIDTH_DIV2,
+                  SCREEN_HEIGHT_DIV2 + BTN_SPACE_BTW(2),
                   BTN_TYPE_MAINMENU_BUTTON_SETTINGS, SCENE_MAIN_MENU,
                   BUTTON_TEXTURE, (Vector2){80, 16});
   register_button("Extras", SCREEN_WIDTH_DIV2,
-                  SCREEN_HEIGHT_DIV2 + BTN_SPACE_BTW(2),
+                  SCREEN_HEIGHT_DIV2 + BTN_SPACE_BTW(3),
                   BTN_TYPE_MAINMENU_BUTTON_EXTRAS, SCENE_MAIN_MENU,
                   BUTTON_TEXTURE, (Vector2){80, 16});
   register_button("Exit", SCREEN_WIDTH_DIV2,
-                  SCREEN_HEIGHT_DIV2 + BTN_SPACE_BTW(3),
+                  SCREEN_HEIGHT_DIV2 + BTN_SPACE_BTW(4),
                   BTN_TYPE_MAINMENU_BUTTON_EXIT, SCENE_MAIN_MENU,
                   BUTTON_TEXTURE, (Vector2){80, 16});
   register_button("Resume", SCREEN_WIDTH_DIV2,
@@ -86,8 +97,7 @@ void user_interface_system_initialize() {
   event_register(EVENT_CODE_UI_SHOW_UNPAUSE_SCREEN, 0, user_interface_on_event);
 }
 
-void update_user_interface(Vector2 _offset, Vector2 _screen_half_size,
-                           scene_type _current_scene_type, Camera2D _camera) {
+void update_user_interface(Vector2 _offset, Vector2 _screen_half_size, scene_type _current_scene_type, Camera2D _camera) {
   ui_system_state->screen_center = _screen_half_size;
   ui_system_state->p_player_health = (float)ui_system_state->p_player->health_current;
   ui_system_state->p_player_health_max = (float)ui_system_state->p_player->health_max;
@@ -101,6 +111,10 @@ void update_user_interface(Vector2 _offset, Vector2 _screen_half_size,
   ui_system_state->offset = _offset;
   ui_system_state->scene_data = _current_scene_type;
   update_sprite_renderqueue();
+  
+  if (IsKeyReleased(KEY_K)) {
+    ui_system_state->b_show_tilemap_screen = !ui_system_state->b_show_tilemap_screen;
+  }
 
   for (int i = 0; i < BTN_TYPE_MAX; ++i) {
     if (ui_system_state->buttons[i].btn_type == BTN_TYPE_UNDEFINED) {
@@ -114,8 +128,8 @@ void update_user_interface(Vector2 _offset, Vector2 _screen_half_size,
         ui_system_state->scene_data) {
       continue;
     }
-    button btn = ui_system_state->buttons[i];
 
+    button btn = ui_system_state->buttons[i];
     if (CheckCollisionPointRec(ui_system_state->mouse_pos, btn.dest)) {
 
       if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
@@ -164,6 +178,9 @@ void render_user_interface() {
     if (gui_button(BTN_TYPE_MAINMENU_BUTTON_PLAY)) {
       event_fire(EVENT_CODE_SCENE_IN_GAME, 0, (event_context){0});
     };
+    if (gui_button(BTN_TYPE_MAINMENU_BUTTON_EDIT)) {
+      event_fire(EVENT_CODE_SCENE_IN_GAME_EDIT, 0, (event_context){0});
+    };
     if (gui_button(BTN_TYPE_MAINMENU_BUTTON_SETTINGS)) {
       // TODO: Settings
     };
@@ -181,6 +198,13 @@ void render_user_interface() {
     if (ui_system_state->p_player->player_have_skill_points) {
       show_skill_up();
     }
+    
+    #ifdef _DEBUG
+    if (ui_system_state->b_show_tilemap_screen) {
+      render_tilemap();
+    }
+    #endif
+
     break;
   }
   default:

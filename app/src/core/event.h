@@ -42,6 +42,7 @@ typedef enum system_event_code {
 
     // game_manager.c
     EVENT_CODE_SCENE_IN_GAME,
+    EVENT_CODE_SCENE_IN_GAME_EDIT,
     EVENT_CODE_SCENE_MAIN_MENU,
     EVENT_CODE_RETURN_MAIN_MENU_GAME,
     EVENT_CODE_PAUSE_GAME,

@@ -24,6 +24,7 @@ bool resource_system_initialize() {
   load_texture("MenuButton.png", false, (Vector2){0, 0}, BUTTON_TEXTURE);
   load_texture("healthbar_edited.png", false, (Vector2){0, 0}, HEALTHBAR_TEXTURE);
   load_texture("health_perc.png", false, (Vector2){0, 0}, HEALTH_PERC_TEXTURE);
+  load_texture("map_tileset.png", false, (Vector2){0, 0}, MAP_TILESET_TEXTURE);
   load_spritesheet("level_up_sheet.png", LEVEL_UP_SHEET, 60, 150, 150, 8, 8);
   load_spritesheet("IdleLeft.png", PLAYER_ANIMATION_IDLE_LEFT, 15, 86, 86, 1, 4);
   load_spritesheet("IdleRight.png", PLAYER_ANIMATION_IDLE_RIGHT, 15, 86, 86, 1, 4);

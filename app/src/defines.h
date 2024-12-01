@@ -23,6 +23,7 @@
 #define MAX_ABILITY_AMOUNT 10
 #define MAX_SPRITESHEET_SLOTS 50
 #define MAX_SPRITE_RENDERQUEUE 50
+#define MAX_TILEMAP_TILESLOT 255
 
 #define DEBUG_COLLISIONS 0
 
@@ -54,7 +55,8 @@ typedef enum actor_type {
 
 typedef enum scene_type {
     SCENE_MAIN_MENU,
-    SCENE_IN_GAME
+    SCENE_IN_GAME,
+    SCENE_IN_GAME_EDIT
 } scene_type;
 
 typedef enum ability_type {
@@ -75,7 +77,8 @@ typedef enum texture_type {
     BACKGROUND,
 	BUTTON_TEXTURE,
 	HEALTHBAR_TEXTURE,
-	HEALTH_PERC_TEXTURE, 
+	HEALTH_PERC_TEXTURE,
+	MAP_TILESET_TEXTURE,
 } texture_type;
 
 typedef enum spritesheet_playmod {
@@ -115,6 +118,7 @@ typedef enum button_state {
 typedef enum button_type { 
 	BTN_TYPE_UNDEFINED, 
 	BTN_TYPE_MAINMENU_BUTTON_PLAY, 
+	BTN_TYPE_MAINMENU_BUTTON_EDIT, 
 	BTN_TYPE_MAINMENU_BUTTON_SETTINGS, 
 	BTN_TYPE_MAINMENU_BUTTON_EXTRAS, 
 	BTN_TYPE_MAINMENU_BUTTON_EXIT, 
@@ -216,6 +220,11 @@ typedef struct ability {
     f32 overall_process;
 } ability;
 
+typedef struct tilemap_system_state {
+	Texture2D* tilemap;
+	Texture2D tileset[MAX_TILEMAP_TILESLOT];
+} tilemap_system_state;
+
 typedef struct ability_system_state {
     actor_type owner_type;
     Vector2 owner_position;
@@ -314,20 +323,28 @@ typedef struct user_interface_system_state {
 
 	scene_type scene_data;
 	bool b_show_pause_screen;
+	bool b_show_tilemap_screen;
 } user_interface_system_state;
 
 typedef struct game_manager_system_state {
-	spritesheet_play_system spritesheet_system;
 	rectangle_collision spawn_collisions[MAX_SPAWN_COUNT];
+	u16 spawn_collision_count;
 	Vector2 screen_size;
 	Vector2 screen_half_size;
+
+	bool is_game_paused;
+} game_manager_system_state;
+
+typedef struct scene_manager_system_state {
+	spritesheet_play_system spritesheet_system;
+	scene_type scene_data;
+	scene_type current_scene_type;
+	game_manager_system_state* p_game_manager;
+	Vector2 spectator_location;
+
 	u16 gridsize;
 	u16 map_size;
-	u16 spawn_collision_count;
-	scene_type current_scene_type;
-	bool is_game_paused;
-	scene_type scene_data;
-} game_manager_system_state;
+} scene_manager_system_state;
 
 typedef struct memory_system_state {
     u64 linear_memory_total_size;

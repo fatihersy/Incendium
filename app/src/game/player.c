@@ -111,7 +111,7 @@ bool update_player() {
     if (player->is_dead) {
         event_fire(EVENT_CODE_PAUSE_GAME, 0, (event_context){0});
     }
-    player->scene_data = get_current_scene_type();
+    player->scene_data = get_active_scene();
     if(!player->is_damagable) {
         if(player->damage_break_current - GetFrameTime() > 0) player->damage_break_current -= GetFrameTime();
         else

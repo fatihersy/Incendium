@@ -5,7 +5,6 @@
 #include "core/ftime.h"
 #include "core/fmemory.h"
 
-#include "defines.h"
 #include "game/camera.h"
 #include "game/resource.h"
 #include "game/game_manager.h"
@@ -46,12 +45,11 @@ bool window_should_close() {
 }
 
 bool app_update() {
-    if (get_current_scene_type() == SCENE_IN_GAME) 
-        update_camera(get_player_position(false));
-    else update_camera((Vector2) {SCREEN_HEIGHT_DIV2, SCREEN_WIDTH_DIV2 });
+
+    update_camera(focus_at());
 
     update_game_manager();
-    update_user_interface((Vector2){5, 5}, get_screen_half_size(), get_current_scene_type(), get_active_camera());
+    update_user_interface((Vector2){5, 5}, get_screen_half_size(), get_active_scene(), get_active_camera());
 
     update_time();
 
