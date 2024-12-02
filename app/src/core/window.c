@@ -1,8 +1,6 @@
 #include "window.h"
 
-#include "defines.h"
 #include "game/camera.h"
-#include "raylib.h"
 
 bool create_window(const char* title) {
     if (IsWindowReady()) return false;
@@ -22,17 +20,4 @@ Vector2 get_screen_size() {
 }
 Vector2 get_screen_half_size() {
     return (Vector2) { SCREEN_WIDTH_DIV2, SCREEN_HEIGHT_DIV2};
-}
-
-void pre_draw() 
-{
-    BeginDrawing();
-
-    ClearBackground((Color){19, 15, 64, 1.f});
-    BeginMode2D(get_active_camera());
-}
-
-void post_draw() 
-{
-    EndMode2D();
 }

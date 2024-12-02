@@ -135,6 +135,14 @@ typedef enum resource_type {
   RESOURCE_TYPE_TEXTURE
 } resource_type;
 
+typedef enum dialog_type {
+	DIALOG_TYPE_IN_GAME_UI,
+	DIALOG_TYPE_MAIN_MENU_UI,
+	DIALOG_TYPE_PAUSE_MENU,
+	DIALOG_TYPE_SKILL_UP,
+	DIALOG_TYPE_TILE_SELECTION
+} dialog_type;
+
 typedef struct rectangle_collision {
 	u16 owner_id;
 	actor_type owner_type;
@@ -329,21 +337,26 @@ typedef struct user_interface_system_state {
 typedef struct game_manager_system_state {
 	rectangle_collision spawn_collisions[MAX_SPAWN_COUNT];
 	u16 spawn_collision_count;
+	scene_type scene_data;
 	Vector2 screen_size;
 	Vector2 screen_half_size;
 
 	bool is_game_paused;
+	bool game_manager_initialized;
 } game_manager_system_state;
 
 typedef struct scene_manager_system_state {
 	spritesheet_play_system spritesheet_system;
-	scene_type scene_data;
-	scene_type current_scene_type;
 	game_manager_system_state* p_game_manager;
-	Vector2 spectator_location;
-
+	
+	scene_type scene_data;
+	Vector2 screen_size;
+	Vector2 screen_half_size;
+	Vector2 target;
 	u16 gridsize;
 	u16 map_size;
+
+	bool is_scene_manager_initialized;
 } scene_manager_system_state;
 
 typedef struct memory_system_state {

@@ -38,11 +38,9 @@ void show_pause_screen();
 void show_skill_up();
 
 void user_interface_system_initialize() {
-  if (b_user_interface_system_initialized)
-    return;
+  if (b_user_interface_system_initialized) return;
 
-  ui_system_state = (user_interface_system_state *)allocate_memory_linear(
-      sizeof(user_interface_system_state), true);
+  ui_system_state = (user_interface_system_state *)allocate_memory_linear(sizeof(user_interface_system_state), true);
 
   if(!tilemap_system_initialize()) {
     TraceLog(LOG_ERROR, "ERROR::user_interface::user_interface_system_initialize()::tilemap initialization failed");
@@ -230,7 +228,6 @@ void show_pause_screen() {
   }
   if (gui_button(BTN_TYPE_INGAME_PAUSEMENU_BUTTON_MAINMENU)) {
     ui_system_state->b_show_pause_screen = false;
-    event_fire(EVENT_CODE_RETURN_MAIN_MENU_GAME, 0, (event_context){0});
   }
   if (gui_button(BTN_TYPE_INGAME_PAUSEMENU_BUTTON_EXIT)) {
     event_fire(EVENT_CODE_APPLICATION_QUIT, 0, (event_context){0});

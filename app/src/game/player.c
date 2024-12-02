@@ -3,8 +3,8 @@
 #include "core/event.h"
 #include "core/fmemory.h"
 
+#include "defines.h"
 #include "game/ability.h"
-#include "game/game_manager.h"
 
 
 // To avoid dublicate symbol errors. Implementation in defines.h
@@ -89,6 +89,14 @@ player_state* get_player_state() {
     return player;
 }
 
+Vector2 get_player_position(bool centered) {
+  return centered 
+  ? (Vector2) {
+        .x = player->position.x - player->dimentions_div2.x,
+        .y = player->position.y - player->dimentions_div2.y,}
+  : player->position;
+}
+
 void add_exp_to_player(u32 exp) {
     u32 curr = player->exp_current;
     u32 to_next = player->exp_to_next_level;
@@ -106,12 +114,13 @@ void add_exp_to_player(u32 exp) {
     }
 }
 
-bool update_player() {
+bool update_player(scene_type _scene_data) {
     if (!player_system_initialized) return false;
     if (player->is_dead) {
         event_fire(EVENT_CODE_PAUSE_GAME, 0, (event_context){0});
     }
-    player->scene_data = get_active_scene();
+    player->scene_data = _scene_data;
+
     if(!player->is_damagable) {
         if(player->damage_break_current - GetFrameTime() > 0) player->damage_break_current -= GetFrameTime();
         else

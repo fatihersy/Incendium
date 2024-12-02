@@ -3,9 +3,9 @@
 #include "core/event.h"
 #include "core/fmath.h"
 #include "core/fmemory.h"
-#include "defines.h"
+
 #include "game/game_manager.h"
-#include "raylib.h"
+
 
 static spawn_system_state *spawn_system;
 
@@ -18,8 +18,7 @@ bool spawn_system_initialize() {
   if (spawn_system_initialized)
     return false;
 
-  spawn_system = (spawn_system_state *)allocate_memory_linear(
-      sizeof(spawn_system_state), true);
+  spawn_system = (spawn_system_state *)allocate_memory_linear(sizeof(spawn_system_state), true);
 
   spawn_system->current_spawn_count = 0;
 

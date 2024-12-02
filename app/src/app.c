@@ -7,8 +7,7 @@
 
 #include "game/camera.h"
 #include "game/resource.h"
-#include "game/game_manager.h"
-#include "game/user_interface.h"
+#include "game/scenes/scene_manager.h"
 
 bool application_on_event(u16 code, void* sender, void* listener_inst, event_context context);
 
@@ -27,11 +26,10 @@ bool app_initialize() {
     resource_system_initialize();
     
     // Game
-    if (!game_manager_initialize(get_screen_size())) {
-        TraceLog(LOG_ERROR, "game_manager() initialization failed");
+    if (!scene_manager_initialize(get_screen_size(), get_screen_half_size())) {
+        TraceLog(LOG_ERROR, "scene_manager() initialization failed");
         return false;
     }
-    user_interface_system_initialize();
 
     event_register(EVENT_CODE_APPLICATION_QUIT, 0, application_on_event);
 
@@ -45,11 +43,9 @@ bool window_should_close() {
 }
 
 bool app_update() {
+    if (GetFPS() > TARGET_FPS) return true;
 
-    update_camera(focus_at());
-
-    update_game_manager();
-    update_user_interface((Vector2){5, 5}, get_screen_half_size(), get_active_scene(), get_active_camera());
+    update_scene_manager();
 
     update_time();
 
@@ -57,13 +53,17 @@ bool app_update() {
 }
 
 bool app_render() {
-    pre_draw();
+    if (GetFPS() > TARGET_FPS) return true;
 
-    render_game_manager();
+    BeginDrawing();
+    ClearBackground(GRAY);
+    BeginMode2D(get_active_camera());
 
-    post_draw();
+    render_scene_world();
 
-    render_user_interface();
+    EndMode2D();
+
+    render_scene_interface();
 
     EndDrawing();
 
