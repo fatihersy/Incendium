@@ -8,6 +8,7 @@
 #include "game/camera.h"
 #include "game/resource.h"
 #include "game/scenes/scene_manager.h"
+#include "raylib.h"
 
 bool application_on_event(u16 code, void* sender, void* listener_inst, event_context context);
 
@@ -45,7 +46,7 @@ bool window_should_close() {
 bool app_update() {
     if (GetFPS() > TARGET_FPS) return true;
 
-    update_scene_manager();
+    update_scene_scene();
 
     update_time();
 
@@ -56,7 +57,7 @@ bool app_render() {
     if (GetFPS() > TARGET_FPS) return true;
 
     BeginDrawing();
-    ClearBackground(GRAY);
+    ClearBackground(F_BACKGROUND_COLOR);
     BeginMode2D(get_active_camera());
 
     render_scene_world();

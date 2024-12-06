@@ -6,13 +6,14 @@
 #include "raylib.h"
 #include <stdbool.h>
 
-#define RESOURCE_PATH "/mnt/HDD/Workspace/Resources/"
+#define RESOURCE_PATH "D:/Workspace/resources/"
 #define TOTAL_ALLOCATED_MEMORY 128 * 1024 * 1024
 #define TARGET_FPS 60
 
 #define UI_FONT_SPACING 1
 #define SCREEN_WIDTH 1280    
 #define SCREEN_HEIGHT 720
+#define SCREEN_OFFSET 5
 #define SCREEN_WIDTH_DIV2 SCREEN_WIDTH / 2.f
 #define SCREEN_HEIGHT_DIV2 SCREEN_HEIGHT / 2.f
 
@@ -20,6 +21,7 @@
 #define MAX_SPAWN_COUNT 100
 #define MAX_PROJECTILE_COUNT 50
 #define MAX_TEXTURE_SLOTS 10
+#define MAX_IMAGE_SLOTS 10
 #define MAX_ABILITY_AMOUNT 10
 #define MAX_SPRITESHEET_SLOTS 50
 #define MAX_SPRITE_RENDERQUEUE 50
@@ -80,6 +82,10 @@ typedef enum texture_type {
 	HEALTH_PERC_TEXTURE,
 	MAP_TILESET_TEXTURE,
 } texture_type;
+
+typedef enum image_type {
+    IMG_UNSPECIFIED,
+} image_type;
 
 typedef enum spritesheet_playmod {
 	SPRITESHEET_PLAYMOD_UNSPECIFIED,
@@ -166,7 +172,6 @@ typedef struct spritesheet {
 	i16 counter;
 	u16 render_queue_index;
 	u16 attached_spawn;
-  	scene_type render_on_scene;
 	world_direction w_direction;
 	spritesheet_playmod playmod;
 	bool should_center;
@@ -182,7 +187,7 @@ typedef struct spritesheet_play_system {
 typedef struct button {
 	u16 id;
 	const char* text;
-  	scene_type render_on_scene;
+  	bool show;
 	Vector2 text_pos;
 	u16 text_spacing;
     button_type btn_type;
@@ -230,7 +235,6 @@ typedef struct ability {
 
 typedef struct tilemap_system_state {
 	Texture2D* tilemap;
-	Texture2D tileset[MAX_TILEMAP_TILESLOT];
 } tilemap_system_state;
 
 typedef struct ability_system_state {
@@ -276,6 +280,7 @@ typedef struct player_state {
 	Vector2 dimentions;
     Vector2 dimentions_div2;
 	world_direction w_direction;
+
 	u16 move_left_sprite_queue_index;
 	u16 move_right_sprite_queue_index;
 	u16 idle_left_sprite_queue_index;
@@ -289,12 +294,13 @@ typedef struct player_state {
     u16 level;
     u16 health_max;
     u16 health_current;
+    f32 health_perc;
     u32 exp_to_next_level;
     u32 exp_current; 
+    f32 exp_perc;
 	float damage_break_time;
 	float damage_break_current;
 
-	scene_type scene_data;
     Rectangle collision;
     ability_system_state ability_system;
 	spritesheet_play_system spritesheet_system;
@@ -303,8 +309,10 @@ typedef struct player_state {
 typedef struct resource_system_state {
     i16 texture_amouth;
 	i16 sprite_amouth;
+	i16 image_amouth;
     Texture2D textures[MAX_TEXTURE_SLOTS];
 	spritesheet sprites[MAX_SPRITESHEET_SLOTS];
+	Image images[MAX_IMAGE_SLOTS];
 
     scene_type game_on_scene;
 } resource_system_state;
@@ -316,30 +324,22 @@ typedef struct spawn_system_state {
 
 typedef struct user_interface_system_state {
 	spritesheet_play_system spritesheet_system;
-	Vector2 screen_center;
+	player_state* p_player;
 	Vector2 offset;
 	Vector2 mouse_pos;
 	button buttons[BTN_TYPE_MAX];
 	Font ui_font;
-	player_state* p_player;
-	float p_player_health;
-	float p_player_health_max;
-	float p_player_health_perc;
-	float p_player_exp;
-	float p_player_exp_max;
-	float p_player_exp_perc;
 
 	scene_type scene_data;
 	bool b_show_pause_screen;
 	bool b_show_tilemap_screen;
+	bool b_user_interface_system_initialized;
 } user_interface_system_state;
 
 typedef struct game_manager_system_state {
 	rectangle_collision spawn_collisions[MAX_SPAWN_COUNT];
 	u16 spawn_collision_count;
 	scene_type scene_data;
-	Vector2 screen_size;
-	Vector2 screen_half_size;
 
 	bool is_game_paused;
 	bool game_manager_initialized;

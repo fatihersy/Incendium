@@ -4,14 +4,13 @@
 
 void update_sprite(spritesheet_play_system *system, u16 queue_index);
 
-void _update_sprite_renderqueue(spritesheet_play_system *system,
-                               scene_type scene_data) {
+void _update_sprite_renderqueue(spritesheet_play_system *system) {
 
   for (int i = 1; i <= system->renderqueue_count; ++i) {
-    if (!system->renderqueue[i].is_started ||
-        system->renderqueue[i].render_on_scene != scene_data) {
+    if (!system->renderqueue[i].is_started) {
       continue;
     }
+
     update_sprite(system, i);
   }
 }
@@ -23,16 +22,18 @@ void _render_sprite_renderqueue(spritesheet_play_system *system) {
       continue;
     }
     DrawTexturePro(sheet.handle,
-                   (Rectangle){.x = sheet.current_frame_rect.x,
-                               .y = sheet.current_frame_rect.y,
-                               .width = sheet.current_frame_rect.width,
-                               .height = sheet.current_frame_rect.height},
-                   (Rectangle){.x = sheet.coord.x,
-                               .y = sheet.coord.y,
-                               .width = sheet.coord.width,
-                               .height = sheet.coord.height},
-                   (Vector2){.x = 0, .y = 0}, 0, WHITE);
-
+    (Rectangle){
+      .x = sheet.current_frame_rect.x,
+      .y = sheet.current_frame_rect.y,
+      .width = sheet.current_frame_rect.width,
+      .height = sheet.current_frame_rect.height},
+    (Rectangle){
+      .x = sheet.coord.x,
+      .y = sheet.coord.y,
+      .width = sheet.coord.width,
+      .height = sheet.coord.height},
+    (Vector2){.x = 0, .y = 0}, 0, WHITE
+    );
 #if DEBUG_COLLISIONS
     DrawRectangleLines(sheet.coord.x, sheet.coord.y, sheet.coord.width,
                        sheet.coord.height, WHITE);
@@ -40,12 +41,10 @@ void _render_sprite_renderqueue(spritesheet_play_system *system) {
   }
 }
 
-u16 _register_sprite(spritesheet_play_system *system, spritesheet_type _type,
-                    scene_type _scene, bool _play_once, bool center_sprite) {
+u16 _register_sprite(spritesheet_play_system *system, spritesheet_type _type, bool _play_once, bool center_sprite) {
   spritesheet ss = get_spritesheet_by_enum(_type);
   system->renderqueue_count++;
 
-  ss.render_on_scene = _scene;
   ss.play_once = _play_once;
   ss.is_started = false;
   ss.should_center = center_sprite;
@@ -54,18 +53,17 @@ u16 _register_sprite(spritesheet_play_system *system, spritesheet_type _type,
   return system->renderqueue_count;
 }
 
-void _play_sprite_on_site(spritesheet_play_system *system, u16 _id,
-                         Rectangle dest) {
-  spritesheet ss = system->renderqueue[_id];
-  ss.playmod = ON_SITE;
-  ss.is_started = true;
-  ss.coord = dest;
-  if (ss.should_center) {
-    ss.coord.x -= ss.coord.width / 2.f;
-    ss.coord.y -= ss.coord.height / 2.f;
+void _play_sprite_on_site(spritesheet_play_system *system, u16 _id, Rectangle dest) {
+  spritesheet* ss = &system->renderqueue[_id];
+  if(ss->is_started) return;
+  
+  ss->playmod = ON_SITE;
+  ss->is_started = true;
+  ss->coord = dest;
+  if (ss->should_center) {
+    ss->coord.x -= ss->coord.width / 2.f;
+    ss->coord.y -= ss->coord.height / 2.f;
   }
-
-  system->renderqueue[_id] = ss;
 }
 
 void update_sprite(spritesheet_play_system *system, u16 queue_index) {

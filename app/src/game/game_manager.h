@@ -4,15 +4,15 @@
 #define GAME_MANAGER_H
 
 #include "defines.h"
-#include "raylib.h"
 
-bool game_manager_initialize(Vector2 screen_size);
+bool game_manager_initialize(Vector2 screen_size, scene_type _scene_data);
 
 void update_game_manager(scene_type _scene_data);
 
 game_manager_system_state* get_game_manager();
 float get_time_elapsed(elapse_time_type type);
 
+player_state* get_player_state_if_available();
 void _set_player_position(Vector2 position);
 Vector2 _get_player_position(bool centered);
 u16 _spawn_character(Character2D _character);

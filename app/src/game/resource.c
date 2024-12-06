@@ -21,21 +21,21 @@ bool resource_system_initialize() {
   //NOTE: _path = "%s%s", RESOURCE_PATH, _path
   load_texture("fudesumi.png", true, (Vector2){64, 64}, ENEMY_TEXTURE);
   load_texture("space_bg.png", true, (Vector2){3840, 2160}, BACKGROUND);
-  load_texture("MenuButton.png", false, (Vector2){0, 0}, BUTTON_TEXTURE);
+  load_texture("menu_button.png", false, (Vector2){0, 0}, BUTTON_TEXTURE);
   load_texture("healthbar_edited.png", false, (Vector2){0, 0}, HEALTHBAR_TEXTURE);
   load_texture("health_perc.png", false, (Vector2){0, 0}, HEALTH_PERC_TEXTURE);
   load_texture("map_tileset.png", false, (Vector2){0, 0}, MAP_TILESET_TEXTURE);
   load_spritesheet("level_up_sheet.png", LEVEL_UP_SHEET, 60, 150, 150, 8, 8);
-  load_spritesheet("IdleLeft.png", PLAYER_ANIMATION_IDLE_LEFT, 15, 86, 86, 1, 4);
-  load_spritesheet("IdleRight.png", PLAYER_ANIMATION_IDLE_RIGHT, 15, 86, 86, 1, 4);
-  load_spritesheet("MoveLeft.png", PLAYER_ANIMATION_MOVE_LEFT, 10, 86, 86, 1, 6);
-  load_spritesheet("MoveRight.png", PLAYER_ANIMATION_MOVE_RIGHT, 10, 86, 86, 1, 6);
+  load_spritesheet("idle_left.png", PLAYER_ANIMATION_IDLE_LEFT, 15, 86, 86, 1, 4);
+  load_spritesheet("idle_right.png", PLAYER_ANIMATION_IDLE_RIGHT, 15, 86, 86, 1, 4);
+  load_spritesheet("move_left.png", PLAYER_ANIMATION_MOVE_LEFT, 10, 86, 86, 1, 6);
+  load_spritesheet("move_right.png", PLAYER_ANIMATION_MOVE_RIGHT, 10, 86, 86, 1, 6);
   load_spritesheet("take_damage_left.png", PLAYER_ANIMATION_TAKE_DAMAGE_LEFT, 15, 86, 86, 1, 4);
   load_spritesheet("take_damage_right.png", PLAYER_ANIMATION_TAKE_DAMAGE_RIGHT, 15, 86, 86, 1, 4);
   load_spritesheet("wreck_left.png", PLAYER_ANIMATION_WRECK_LEFT, 15, 90, 110, 1, 4);
   load_spritesheet("wreck_right.png", PLAYER_ANIMATION_WRECK_RIGHT, 15, 90, 110, 1, 4);
-  load_spritesheet("ButtonReflection.png", BUTTON_REFLECTION_SHEET, 30, 80, 16, 1, 9);
-  load_spritesheet("ButtonCRT.png", BUTTON_CRT_SHEET, 8, 78, 12, 1, 4);
+  load_spritesheet("button_reflection.png", BUTTON_REFLECTION_SHEET, 30, 80, 16, 1, 9);
+  load_spritesheet("button_crt.png", BUTTON_CRT_SHEET, 8, 78, 12, 1, 4);
 
   resource_system_initialized = true;
 
@@ -58,6 +58,13 @@ Texture2D* get_texture_by_enum(texture_type type) {
     return (Texture2D*){0};
 
   return &resource_system->textures[type];
+}
+Image* get_image_by_enum(image_type type) {
+
+  if (type > MAX_IMAGE_SLOTS || type == IMG_UNSPECIFIED)
+    return (Image*){0};
+
+  return &resource_system->images[type];
 }
 
 spritesheet get_spritesheet_by_enum(spritesheet_type type) {
@@ -95,6 +102,25 @@ unsigned int load_texture(const char *_path, bool resize, Vector2 new_size, text
 
   resource_system->textures[type] = tex;
   return resource_system->textures[type].id;
+}
+
+bool load_image(const char *_path, bool resize, Vector2 new_size, image_type type) {
+  const char *path = rs_path(_path);
+  if (!FileExists(path) || type == IMG_UNSPECIFIED)
+    return false;
+
+  Image img;
+  if (resize) {
+    img = LoadImage(path);
+    ImageResize(&img, new_size.x, new_size.y);
+  } else {
+    img = LoadImage(path);
+  }
+
+  resource_system->image_amouth++;
+
+  resource_system->images[type] = img;
+  return true;
 }
 
 

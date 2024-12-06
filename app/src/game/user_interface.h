@@ -6,8 +6,15 @@
 
 void user_interface_system_initialize();
 
-void update_user_interface(Vector2 offset, Vector2 _screen_half_size,
-                           scene_type _current_scene_type, Camera2D _camera);
+void update_user_interface(scene_type _current_scene_type);
 void render_user_interface();
+
+bool set_player_user_interface(player_state* player);
+
+void draw_to_background(texture_type _type);
+bool gui_button(button_type _type);
+void gui_healthbar(f32 percent);
+
+void clear_interface_state();
 
 #endif

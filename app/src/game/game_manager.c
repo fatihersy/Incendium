@@ -4,19 +4,20 @@
 #include "core/fmemory.h"
 #include "core/ftime.h"
 
+#include "defines.h"
 #include "game/player.h"
 #include "game/spawn.h"
-#include "raylib.h"
 
 static game_manager_system_state *game_manager_state;
 
 bool game_manager_on_event(u16 code, void *sender, void *listener_inst, event_context context);
 
-bool game_manager_initialize(Vector2 _screen_size) {
+bool game_manager_initialize(Vector2 _screen_size, scene_type _scene_data) {
   if (game_manager_state) return false;
 
   game_manager_state = (game_manager_system_state *)allocate_memory_linear(sizeof(game_manager_system_state), true);
   game_manager_state->is_game_paused = true;
+  game_manager_state->scene_data = _scene_data;
 
   if (!player_system_initialize()) {
     TraceLog(LOG_ERROR, "player_system_initialize() failed");
@@ -93,6 +94,14 @@ Vector2 _get_player_position(bool centered) {
   return get_player_position(centered);
 }
 
+player_state* get_player_state_if_available() {
+  if (get_player_state()) {
+    return get_player_state();
+  }
+
+  return (player_state*) {0};
+}
+
 void _set_player_position(Vector2 position) {
   get_player_state()->position = position;
 }
@@ -101,7 +110,11 @@ u16 _spawn_character(Character2D _character) {
 }
 
 game_manager_system_state* get_game_manager() {
-  return game_manager_state;
+  if (game_manager_state) {
+    return game_manager_state;
+  }
+
+  return (game_manager_system_state*){0};
 }
 
 float get_time_elapsed(elapse_time_type type) {

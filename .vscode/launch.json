@@ -1,0 +1,34 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": 
+    [
+        {
+            "name": "Launch (Windows)",
+            "request": "launch",
+            "type": "lldb",
+            "program": "${workspaceFolder}/bin/app.exe",
+            "stopOnEntry": false,
+            "console":"integratedTerminal",
+            "cwd": "${workspaceFolder}/bin/",
+        },
+        {
+            "name": "Launch (lldb)",
+            "request": "launch",
+            "type": "lldb",
+            "program": "${workspaceFolder}/bin/app",
+            "linux": {
+                "console":"integratedTerminal",
+                "cwd": "${workspaceFolder}/bin/",
+                "stopOnEntry": false,
+            },
+            "osx": {
+                "stopOnEntry": false,
+                "console": "externalTerminal",
+                "cwd": "${workspaceFolder}/bin/",
+            }
+        }
+    ]
+}

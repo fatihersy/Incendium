@@ -35,7 +35,7 @@ bool player_system_initialize() {
 
     player->position.x = 0;
     player->position.y = 0;
-    player->dimentions = (Vector2) {86, 86};
+    player->dimentions = (Vector2) {86, 86}; // TODO: Hardcoded dimentions
     player->dimentions_div2 = (Vector2) {player->dimentions.x/2, player->dimentions.y/2};
 
     player->ability_system = ability_system_initialize(PLAYER, player->dimentions);
@@ -66,14 +66,14 @@ bool player_system_initialize() {
     player->health_max = 255;
     player->health_current = player->health_max;
 
-    player->move_left_sprite_queue_index = register_sprite(PLAYER_ANIMATION_MOVE_LEFT, SCENE_IN_GAME, false, true);
-    player->move_right_sprite_queue_index = register_sprite(PLAYER_ANIMATION_MOVE_RIGHT, SCENE_IN_GAME, false, true);
-    player->idle_left_sprite_queue_index = register_sprite(PLAYER_ANIMATION_IDLE_LEFT, SCENE_IN_GAME, false, true);
-    player->idle_right_sprite_queue_index = register_sprite(PLAYER_ANIMATION_IDLE_RIGHT, SCENE_IN_GAME, false, true);
-    player->take_damage_left_sprite_queue_index = register_sprite(PLAYER_ANIMATION_TAKE_DAMAGE_LEFT, SCENE_IN_GAME, false, true);
-    player->take_damage_right_sprite_queue_index = register_sprite(PLAYER_ANIMATION_TAKE_DAMAGE_RIGHT, SCENE_IN_GAME, false, true);
-    player->wreck_left_sprite_queue_index = register_sprite(PLAYER_ANIMATION_WRECK_LEFT, SCENE_IN_GAME, false, true);
-    player->wreck_right_sprite_queue_index = register_sprite(PLAYER_ANIMATION_WRECK_RIGHT, SCENE_IN_GAME, false, true);
+    player->move_left_sprite_queue_index = register_sprite(PLAYER_ANIMATION_MOVE_LEFT, false, true);
+    player->move_right_sprite_queue_index = register_sprite(PLAYER_ANIMATION_MOVE_RIGHT, false, true);
+    player->idle_left_sprite_queue_index = register_sprite(PLAYER_ANIMATION_IDLE_LEFT, false, true);
+    player->idle_right_sprite_queue_index = register_sprite(PLAYER_ANIMATION_IDLE_RIGHT, false, true);
+    player->take_damage_left_sprite_queue_index = register_sprite(PLAYER_ANIMATION_TAKE_DAMAGE_LEFT, false, true);
+    player->take_damage_right_sprite_queue_index = register_sprite(PLAYER_ANIMATION_TAKE_DAMAGE_RIGHT, false, true);
+    player->wreck_left_sprite_queue_index = register_sprite(PLAYER_ANIMATION_WRECK_LEFT, false, true);
+    player->wreck_right_sprite_queue_index = register_sprite(PLAYER_ANIMATION_WRECK_RIGHT, false, true);
     player->last_played_sprite_id = player->idle_left_sprite_queue_index; // The position player starts. To avoid from the error when move firstly called
     
     player->initialized = true;
@@ -116,10 +116,13 @@ void add_exp_to_player(u32 exp) {
 
 bool update_player(scene_type _scene_data) {
     if (!player_system_initialized) return false;
+
+    player->health_perc = (float) player->health_current / player->health_max;
+    player->exp_perc = (float) player->exp_current / player->exp_to_next_level;
+
     if (player->is_dead) {
         event_fire(EVENT_CODE_PAUSE_GAME, 0, (event_context){0});
     }
-    player->scene_data = _scene_data;
 
     if(!player->is_damagable) {
         if(player->damage_break_current - GetFrameTime() > 0) player->damage_break_current -= GetFrameTime();
@@ -203,7 +206,7 @@ bool render_player() {
             player->collision.y,
             player->collision.width,
             player->collision.height,
-            HITE);
+            WHITE);
     #endif
 
     return true;

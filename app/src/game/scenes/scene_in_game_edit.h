@@ -6,5 +6,6 @@ void initialize_scene_in_game_edit();
 
 void update_scene_in_game_edit();
 void render_scene_in_game_edit();
+void render_interface_in_game_edit();
 
 #endif
