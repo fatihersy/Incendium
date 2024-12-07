@@ -149,6 +149,15 @@ typedef enum dialog_type {
 	DIALOG_TYPE_TILE_SELECTION
 } dialog_type;
 
+typedef struct tilemap {
+	Texture2D* tex;
+	Vector2 position;
+	u16 grid_size;
+	u16 cell_size;
+
+	Color grid_color;
+} tilemap;
+
 typedef struct rectangle_collision {
 	u16 owner_id;
 	actor_type owner_type;
@@ -232,10 +241,6 @@ typedef struct ability {
 
     f32 overall_process;
 } ability;
-
-typedef struct tilemap_system_state {
-	Texture2D* tilemap;
-} tilemap_system_state;
 
 typedef struct ability_system_state {
     actor_type owner_type;

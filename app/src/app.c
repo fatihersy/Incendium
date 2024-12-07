@@ -58,7 +58,7 @@ bool app_render() {
 
     BeginDrawing();
     ClearBackground(F_BACKGROUND_COLOR);
-    BeginMode2D(get_active_camera());
+    BeginMode2D(*get_active_camera());
 
     render_scene_world();
 

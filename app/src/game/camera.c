@@ -22,8 +22,8 @@ Camera2D create_camera(Vector2 position, u8 rotation) {
     return camera;
 } 
 
-Camera2D get_active_camera() {
-    return camera;
+Camera2D* get_active_camera() {
+    return &camera;
 }
 
 bool update_camera(Vector2 position) 
