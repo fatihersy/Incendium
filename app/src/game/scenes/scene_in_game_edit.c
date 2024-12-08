@@ -18,7 +18,7 @@ static scene_in_game_edit_state *state;
 void update_bindings();
 
 void initialize_scene_in_game_edit() {
-  if(!create_tilemap((Vector2) {0, 0}, 500, 16*3, WHITE)) {
+  if(!create_tilemap(16, (Vector2) {0, 0}, 255, 16*3, WHITE)) {
     TraceLog(LOG_ERROR, "ERROR::scene_in_game_edit::initialize_scene_in_game_edit()::tilemap initialization failed");
   }
   user_interface_system_initialize();

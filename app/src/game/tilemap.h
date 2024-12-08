@@ -4,7 +4,7 @@
 
 #include <defines.h>
 
-bool create_tilemap(Vector2 position, u16 grid_size, u16 cell_size, Color grid_color);
+bool create_tilemap(u16 _origin_tilesize, Vector2 _position, u16 _grid_size, u16 _cell_size, Color _grid_color);
 
 void FDrawGrid();
 

@@ -7,7 +7,7 @@
 #include <stdbool.h>
 
 #define RESOURCE_PATH "D:/Workspace/resources/"
-#define TOTAL_ALLOCATED_MEMORY 128 * 1024 * 1024
+#define TOTAL_ALLOCATED_MEMORY 64 * 1024 * 1024
 #define TARGET_FPS 60
 
 #define UI_FONT_SPACING 1
@@ -25,7 +25,9 @@
 #define MAX_ABILITY_AMOUNT 10
 #define MAX_SPRITESHEET_SLOTS 50
 #define MAX_SPRITE_RENDERQUEUE 50
-#define MAX_TILEMAP_TILESLOT 255
+#define MAX_TILEMAP_TILESLOT_X 255
+#define MAX_TILEMAP_TILESLOT_Y 255
+#define MAX_TILEMAP_TILESLOT MAX_TILEMAP_TILESLOT_X * MAX_TILEMAP_TILESLOT_Y
 
 #define DEBUG_COLLISIONS 0
 
@@ -151,11 +153,13 @@ typedef enum dialog_type {
 
 typedef struct tilemap {
 	Texture2D* tex;
+	u16 origin_tilesize;
+	
 	Vector2 position;
 	u16 grid_size;
 	u16 cell_size;
-
 	Color grid_color;
+	Vector2 tiles[MAX_TILEMAP_TILESLOT_X][MAX_TILEMAP_TILESLOT_Y];
 } tilemap;
 
 typedef struct rectangle_collision {
