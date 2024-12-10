@@ -1,57 +1,63 @@
 #include "tilemap.h"
 
 #include "defines.h"
-#include "core/fmemory.h"
-
-#include "raylib.h"
 #include "resource.h"
 
-static tilemap* state;
+void FDrawGrid(tilemap* _tilemap);
 
-bool create_tilemap(u16 _origin_tilesize, Vector2 _position, u16 _grid_size, u16 _cell_size, Color _grid_color) {
+void create_tilemap(tilesheet_type _type, Vector2 _position, u16 _grid_size, u16 _tile_size, Color _grid_color, tilemap* out_tilemap) {
   if (_grid_size * _grid_size > MAX_TILEMAP_TILESLOT) {
     TraceLog(LOG_ERROR, "grid_size out of bound");
-    return false;
+    return;
   }
-  
-  state = (tilemap*)allocate_memory_linear(sizeof(tilemap), true);
-    
-  state->tex = get_texture_by_enum(MAP_TILESET_TEXTURE);
-  state->origin_tilesize = _origin_tilesize;
-  state->cell_size = _cell_size;
-  state->grid_size = _grid_size;
-  state->position = _position;
-  state->grid_color = _grid_color;
 
-  state->position = (Vector2){
-    .x = state->position.x - (state->grid_size * state->cell_size) / 2.f,
-    .y = state->position.y - (state->grid_size * state->cell_size) / 2.f,
+  out_tilemap->render_grid = true;
+  out_tilemap->position = _position;
+  out_tilemap->tile_size = _tile_size;
+  out_tilemap->grid_size = _grid_size;
+  out_tilemap->grid_color = _grid_color;
+
+  out_tilemap->position = (Vector2){
+    .x = out_tilemap->position.x - (out_tilemap->grid_size * out_tilemap->tile_size) / 2.f,
+    .y = out_tilemap->position.y - (out_tilemap->grid_size * out_tilemap->tile_size) / 2.f,
   };
 
-  return true;
+  for (u16 i = 0; i < out_tilemap->grid_size * out_tilemap->grid_size; ++i) {
+    u16 x = i % out_tilemap->grid_size;  
+    u16 y = i / out_tilemap->grid_size;  
+
+    out_tilemap->tiles[x][y].origin_tilesize = 16;
+    out_tilemap->tiles[x][y].sheet_tex = MAP_TILESET_TEXTURE;
+    out_tilemap->tiles[x][y].type = TILESHEET_TYPE_MAP;
+  }
+
+  out_tilemap->is_initialized = true;
+  return;
 }
 
 void update_tilemap() {}
 
-void render_tilemap() {
-  FDrawGrid();
+void render_tilemap(tilemap* _tilemap) {
 
-  for (u16 i = 0; i < MAX_TILEMAP_TILESLOT; ++i) {
+  for (u16 i = 0; i < _tilemap->grid_size * _tilemap->grid_size; ++i) {
 
-    u16 x = i % MAX_TILEMAP_TILESLOT_X;  
-    u16 y = i / MAX_TILEMAP_TILESLOT_X;  
-    i16 x_pos = state->position.x + x * state->cell_size; 
-    i16 y_pos = state->position.y + y * state->cell_size; 
+    u16 x = i % _tilemap->grid_size;  
+    u16 y = i / _tilemap->grid_size;  
+    i16 x_pos = _tilemap->position.x + x * _tilemap->tile_size; 
+    i16 y_pos = _tilemap->position.y + y * _tilemap->tile_size; 
+    
+    Texture2D tex = *get_texture_by_enum(_tilemap->tiles[x][y].sheet_tex);
+
 
     DrawTexturePro(
-    *state->tex, 
+    tex, 
     (Rectangle) {
-        state->tiles[x][y].x,        state->tiles[x][y].y, 
-    state->origin_tilesize, state->origin_tilesize 
+        _tilemap->tiles[x][y].x,        _tilemap->tiles[x][y].y, 
+    _tilemap->tiles[x][y].origin_tilesize, _tilemap->tiles[x][y].origin_tilesize
     },
     (Rectangle) {
         x_pos, y_pos, 
-    state->cell_size, state->cell_size 
+    _tilemap->tile_size, _tilemap->tile_size 
     },
     (Vector2){ 0, 0 },
     0.0f, 
@@ -59,31 +65,33 @@ void render_tilemap() {
     );
   }
 
-  DrawPixel(0, 0, RED);
+  
+  if(_tilemap->render_grid) FDrawGrid(_tilemap);
 }
 
 
-void FDrawGrid() {
+void FDrawGrid(tilemap* _tilemap) {
 
-  for (int i = 0; i <= state->grid_size; i++) {
+  for (int i = 0; i <= _tilemap->grid_size; i++) {
     // Draw vertical lines
     DrawLineV(
     (Vector2) {
-      state->position.x + i * state->cell_size, 
-      state->position.y }, 
+      _tilemap->position.x + i * _tilemap->tile_size, 
+      _tilemap->position.y }, 
     (Vector2) {
-      state->position.x + i * state->cell_size, 
-      state->position.y + state->grid_size * state->cell_size
-    }, state->grid_color);
+     _tilemap->position.x + i * _tilemap->tile_size, 
+      _tilemap->position.y + _tilemap->grid_size * _tilemap->tile_size
+    }, _tilemap->grid_color);
 
     // Draw horizontal lines
     DrawLineV(
     (Vector2) {
-      state->position.x, 
-      state->position.y + i * state->cell_size }, 
+      _tilemap->position.x, 
+      _tilemap->position.y + i * _tilemap->tile_size }, 
     (Vector2) {
-      state->position.x + state->grid_size * state->cell_size, 
-      state->position.y + i * state->cell_size
-    }, state->grid_color);
+      _tilemap->position.x + _tilemap->grid_size * _tilemap->tile_size, 
+      _tilemap->position.y + i * _tilemap->tile_size
+    }, _tilemap->grid_color);
   }
 }
+

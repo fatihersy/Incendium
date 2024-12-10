@@ -4,11 +4,9 @@
 
 #include <defines.h>
 
-bool create_tilemap(u16 _origin_tilesize, Vector2 _position, u16 _grid_size, u16 _cell_size, Color _grid_color);
-
-void FDrawGrid();
+void create_tilemap(tilesheet_type _type, Vector2 _position, u16 _grid_size, u16 _tile_size, Color _grid_color, tilemap* out_tilemap);
 
 void update_tilemap();
-void render_tilemap();
+void render_tilemap(tilemap* _tilemap);
 
 #endif

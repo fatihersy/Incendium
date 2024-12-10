@@ -5,7 +5,6 @@
 
 #include "defines.h"
 #include "raylib.h"
-//#include "tilemap.h"
 
 #define BTN_MENU_DIM_X 250
 #define BTN_MENU_DIM_Y 50

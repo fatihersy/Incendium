@@ -5,34 +5,27 @@
 
 #include "game/camera.h"
 #include "game/tilemap.h"
-#include "game/game_manager.h"
+//#include "game/game_manager.h"
 #include "game/user_interface.h"
-#include "raylib.h"
-
-typedef struct scene_in_game_edit_state {
-  Vector2 target;
-} scene_in_game_edit_state;
 
 static scene_in_game_edit_state *state;
 
 void update_bindings();
 
 void initialize_scene_in_game_edit() {
-  if(!create_tilemap(16, (Vector2) {0, 0}, 255, 16*3, WHITE)) {
+  if (state) {
+    TraceLog(LOG_ERROR, "ERROR::scene_in_game_edit::initialize_scene_in_game_edit()::initialize function called multiple times");
+    return;
+  }
+
+  state = (scene_in_game_edit_state*)allocate_memory_linear(sizeof(scene_in_game_edit_state), true);
+  
+  create_tilemap(TILESHEET_TYPE_MAP, (Vector2) {0, 0}, 100, 16*3, WHITE, &state->map);
+  if(!state->map.is_initialized) {
     TraceLog(LOG_ERROR, "ERROR::scene_in_game_edit::initialize_scene_in_game_edit()::tilemap initialization failed");
   }
   user_interface_system_initialize();
-
-  state = (scene_in_game_edit_state*)allocate_memory_linear(sizeof(scene_in_game_edit_state), true);
-
-  event_fire(EVENT_CODE_SCENE_MANAGER_SET_TARGET, 0, (event_context) 
-  {
-    .data.i16[0] = _get_screen_half_size().x,
-    .data.i16[1] = _get_screen_half_size().y,
-  });
-
-
-
+  
 }
 
 void update_scene_in_game_edit() {
@@ -40,16 +33,31 @@ void update_scene_in_game_edit() {
 }
 
 void render_scene_in_game_edit() {
-  render_tilemap();
+  render_tilemap(&state->map);
 
+  DrawPixel(0, 0, RED);
 }
 
 void render_interface_in_game_edit() {
 
+/*   for (u16 i = 0; i < ; inc-expression) {
+  
+  } */
+
+
+/*   DrawTexturePro(
+    *state->tilemap_texture, 
+    (Rectangle) {0, 0, state->tilemap_texture->width, state->tilemap_texture->height}, 
+    (Rectangle) {0, 0, state->tilemap_texture->width, state->tilemap_texture->height}, 
+    (Vector2) {0, 0}, 
+    0, WHITE
+  ); */
+
+
 }
 
 void update_bindings() {
-  f32 speed = 3;
+  f32 speed = 10;
 
   if (IsKeyDown(KEY_W)) {
     state->target.y -= speed;

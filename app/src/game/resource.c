@@ -2,20 +2,21 @@
 
 #include "core/fmemory.h"
 #include "defines.h"
+#include "raylib.h"
+
+extern const unsigned char default_tile_png[146];
 
 static resource_system_state *resource_system;
 
-bool resource_system_initialized = false;
-
-const char *resource_path = RESOURCE_PATH;
+unsigned int load_texture(const char* _path, bool resize, Vector2 new_size, texture_type type);
+bool load_image(const char *_path, bool resize, Vector2 new_size, image_type type);
+void load_spritesheet(const char* _path, spritesheet_type _type, u8 _fps, u8 _frame_width, u8 _frame_height, u8 _total_row, u8 _total_col);
+void load_tilesheet(texture_type _tilesheet_tex, tilesheet_type _type, u16 _tile_count, u16 _tile_size);
 
 bool resource_system_initialize() {
-  if (resource_system_initialized)
-    return false;
+  if (resource_system) return false;
 
-  resource_system = (resource_system_state *)allocate_memory_linear(
-      sizeof(resource_system_state), true);
-
+  resource_system = (resource_system_state *)allocate_memory_linear(sizeof(resource_system_state), true);
   resource_system->texture_amouth = -1;
 
   //NOTE: _path = "%s%s", RESOURCE_PATH, _path
@@ -36,8 +37,8 @@ bool resource_system_initialize() {
   load_spritesheet("wreck_right.png", PLAYER_ANIMATION_WRECK_RIGHT, 15, 90, 110, 1, 4);
   load_spritesheet("button_reflection.png", BUTTON_REFLECTION_SHEET, 30, 80, 16, 1, 9);
   load_spritesheet("button_crt.png", BUTTON_CRT_SHEET, 8, 78, 12, 1, 4);
-
-  resource_system_initialized = true;
+  
+  load_tilesheet(MAP_TILESET_TEXTURE, TILESHEET_TYPE_MAP, 16 * 16, 16);
 
   return true;
 }
@@ -76,8 +77,16 @@ spritesheet get_spritesheet_by_enum(spritesheet_type type) {
   return resource_system->sprites[type];
 }
 
+tilesheet* get_tilesheet_by_enum(tilesheet_type type) {
+  if (type == TILESHEET_TYPE_UNSPECIFIED || type > MAX_TILESHEET_SLOTS) {
+    return (tilesheet*){0};
+  }
+
+  return &resource_system->tilesheets[type];
+}
+
 const char *rs_path(const char *_path) {
-  return TextFormat("%s%s", resource_path, _path);
+  return TextFormat("%s%s", RESOURCE_PATH, _path);
 }
 
 unsigned int load_texture(const char *_path, bool resize, Vector2 new_size, texture_type type) {
@@ -135,7 +144,7 @@ void load_spritesheet(const char *_path, spritesheet_type _type, u8 _fps,
     return;
   } else if (_type > MAX_SPRITESHEET_SLOTS) {
     TraceLog(LOG_ERROR,
-             "ERROR::resource::load_spritesheet()::Spritesheet slots full");
+             "ERROR::resource::load_spritesheet()::Unknown spritesheet slot");
     return;
   }
 
@@ -169,21 +178,25 @@ void load_spritesheet(const char *_path, spritesheet_type _type, u8 _fps,
   resource_system->sprites[_type] = _sheet;
 }
 
-/* 
-void flip_texture_spritesheet(spritesheet_type _type,
-                              world_direction _w_direction) {
-  spritesheet sheet = get_spritesheet_by_enum(_type);
-  if (sheet.w_direction == _w_direction)
+void load_tilesheet(texture_type _tilesheet_tex, tilesheet_type _type, u16 _tile_count, u16 _tile_size) {
+  if (_type > MAX_TILESHEET_SLOTS) {
+    TraceLog(LOG_ERROR,
+             "ERROR::resource::load_tilesheet()::Unknown tilesheet slot");
     return;
+  }
+  else if (_type == TILESHEET_TYPE_UNSPECIFIED) {
+    TraceLog(
+        LOG_ERROR,
+        "ERROR::resource::load_tilesheet()::Tilesheet type was not set");
+  }
 
-  Image img = LoadImageFromTexture(sheet.handle);
-  ImageFlipHorizontal(&img);
+  tilesheet _tilesheet = {0};
+  resource_system->tilesheet_amouth++;
 
-  const Color *color = LoadImageColors(img);
-  UpdateTexture(sheet.handle, color);
-  sheet.w_direction = _w_direction;
+  _tilesheet.tex = get_texture_by_enum(_tilesheet_tex);
+  _tilesheet.type = _type;
+  _tilesheet.tile_size = _tile_size;
 
-  resource_system->sprites[_type] = sheet;
-  UnloadImage(img);
-} */
+  resource_system->tilesheets[_type] = _tilesheet;
+}
 
