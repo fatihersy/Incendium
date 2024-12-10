@@ -4,6 +4,7 @@
 #define GAME_MANAGER_H
 
 #include "defines.h"
+#include "raylib.h"
 
 bool game_manager_initialize(Vector2 screen_size, scene_type _scene_data);
 

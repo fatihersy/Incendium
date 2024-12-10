@@ -11,7 +11,7 @@ static resource_system_state *resource_system;
 unsigned int load_texture(const char* _path, bool resize, Vector2 new_size, texture_type type);
 bool load_image(const char *_path, bool resize, Vector2 new_size, image_type type);
 void load_spritesheet(const char* _path, spritesheet_type _type, u8 _fps, u8 _frame_width, u8 _frame_height, u8 _total_row, u8 _total_col);
-void load_tilesheet(texture_type _tilesheet_tex, tilesheet_type _type, u16 _tile_count, u16 _tile_size);
+void load_tilesheet(tilesheet_type _sheet_sheet_type, texture_type _sheet_tex_type, u16 _tile_count_x, u16 _tile_count_y, u16 _tile_size) ;
 
 bool resource_system_initialize() {
   if (resource_system) return false;
@@ -38,7 +38,7 @@ bool resource_system_initialize() {
   load_spritesheet("button_reflection.png", BUTTON_REFLECTION_SHEET, 30, 80, 16, 1, 9);
   load_spritesheet("button_crt.png", BUTTON_CRT_SHEET, 8, 78, 12, 1, 4);
   
-  load_tilesheet(MAP_TILESET_TEXTURE, TILESHEET_TYPE_MAP, 16 * 16, 16);
+  load_tilesheet(TILESHEET_TYPE_MAP, MAP_TILESET_TEXTURE, 16, 16, 16);
 
   return true;
 }
@@ -178,25 +178,29 @@ void load_spritesheet(const char *_path, spritesheet_type _type, u8 _fps,
   resource_system->sprites[_type] = _sheet;
 }
 
-void load_tilesheet(texture_type _tilesheet_tex, tilesheet_type _type, u16 _tile_count, u16 _tile_size) {
-  if (_type > MAX_TILESHEET_SLOTS) {
+void load_tilesheet(tilesheet_type _sheet_sheet_type, texture_type _sheet_tex_type, u16 _tile_count_x, u16 _tile_count_y, u16 _tile_size) {
+  if (_sheet_sheet_type >= MAX_TILESHEET_SLOTS || _sheet_sheet_type <= 0) {
     TraceLog(LOG_ERROR,
-             "ERROR::resource::load_tilesheet()::Unknown tilesheet slot");
+             "ERROR::resource::load_tilesheet()::Sheet type out of bound");
     return;
   }
-  else if (_type == TILESHEET_TYPE_UNSPECIFIED) {
+  else if (_sheet_tex_type >= MAX_TEXTURE_SLOTS || _sheet_tex_type <= 0) {
     TraceLog(
         LOG_ERROR,
-        "ERROR::resource::load_tilesheet()::Tilesheet type was not set");
+        "ERROR::resource::load_tilesheet()::Texture type out of bound");
   }
 
   tilesheet _tilesheet = {0};
   resource_system->tilesheet_amouth++;
 
-  _tilesheet.tex = get_texture_by_enum(_tilesheet_tex);
-  _tilesheet.type = _type;
+  _tilesheet.tex = get_texture_by_enum(_sheet_tex_type);
+  _tilesheet.sheet_type = _sheet_sheet_type;
+  _tilesheet.tex_type = _sheet_tex_type;
+  _tilesheet.tile_count_x = _tile_count_x;
+  _tilesheet.tile_count_y = _tile_count_y;
+  _tilesheet.tile_count = _tilesheet.tile_count_x * _tilesheet.tile_count_y;
   _tilesheet.tile_size = _tile_size;
 
-  resource_system->tilesheets[_type] = _tilesheet;
+  resource_system->tilesheets[_sheet_sheet_type] = _tilesheet;
 }
 

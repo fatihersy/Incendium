@@ -3,10 +3,11 @@
 #include "core/event.h"
 #include "core/fmemory.h"
 
+#include "defines.h"
 #include "game/camera.h"
 #include "game/tilemap.h"
-//#include "game/game_manager.h"
 #include "game/user_interface.h"
+#include "raylib.h"
 
 static scene_in_game_edit_state *state;
 
@@ -21,8 +22,12 @@ void initialize_scene_in_game_edit() {
   state = (scene_in_game_edit_state*)allocate_memory_linear(sizeof(scene_in_game_edit_state), true);
   
   create_tilemap(TILESHEET_TYPE_MAP, (Vector2) {0, 0}, 100, 16*3, WHITE, &state->map);
+  create_tilemap(TILESHEET_TYPE_MAP, (Vector2) {0, 0}, 15, 16*3, WHITE, &state->palette);
   if(!state->map.is_initialized) {
     TraceLog(LOG_ERROR, "ERROR::scene_in_game_edit::initialize_scene_in_game_edit()::tilemap initialization failed");
+  }
+  if(!state->palette.is_initialized) {
+    TraceLog(LOG_ERROR, "ERROR::scene_in_game_edit::initialize_scene_in_game_edit()::palette initialization failed");
   }
   user_interface_system_initialize();
   
@@ -39,20 +44,21 @@ void render_scene_in_game_edit() {
 }
 
 void render_interface_in_game_edit() {
-
-/*   for (u16 i = 0; i < ; inc-expression) {
   
-  } */
+  if(state->b_show_tilemap_screen) 
+  { 
+    Vector2 position = (Vector2) {5, 5};
+    u16 dest_tile_size = 16 * 2;
+    f32 offset = 1.1;
 
-
-/*   DrawTexturePro(
-    *state->tilemap_texture, 
-    (Rectangle) {0, 0, state->tilemap_texture->width, state->tilemap_texture->height}, 
-    (Rectangle) {0, 0, state->tilemap_texture->width, state->tilemap_texture->height}, 
-    (Vector2) {0, 0}, 
-    0, WHITE
-  ); */
-
+    DrawRectangle(
+      0, 0, 
+      get_tilesheet_dim(TILESHEET_TYPE_MAP, dest_tile_size, offset).x + position.x + offset, 
+      SCREEN_HEIGHT, 
+      WHITE
+    );
+    render_tilesheet(TILESHEET_TYPE_MAP, position, dest_tile_size, offset);
+  }
 
 }
 
@@ -97,7 +103,7 @@ void update_bindings() {
   }
 
   if (IsKeyReleased(KEY_K)) {
-
+    state->b_show_tilemap_screen = !state->b_show_tilemap_screen;
   }
 
   if (IsKeyReleased(KEY_ESCAPE)) {

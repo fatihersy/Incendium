@@ -157,13 +157,17 @@ typedef enum dialog_type {
 
 typedef enum tilesheet_type {
   TILESHEET_TYPE_UNSPECIFIED,
-  TILESHEET_TYPE_MAP
+  TILESHEET_TYPE_MAP,
+
+  TILESHEET_TYPE_MAX
 } tilesheet_type;
 
 typedef struct tilesheet {
-  tilesheet_type type;
+  tilesheet_type sheet_type;
+  texture_type tex_type;
   Texture2D *tex;
-
+  u16 tile_count_x;
+  u16 tile_count_y;
   u16 tile_count;
   u16 tile_size;
 } tilesheet;
@@ -190,6 +194,9 @@ typedef struct tilemap {
 typedef struct scene_in_game_edit_state {
   Vector2 target;
   tilemap map;
+  tilemap palette;
+
+  bool b_show_tilemap_screen;
 } scene_in_game_edit_state;
 
 typedef struct rectangle_collision {
@@ -375,7 +382,6 @@ typedef struct user_interface_system_state {
 
   scene_type scene_data;
   bool b_show_pause_screen;
-  bool b_show_tilemap_screen;
   bool b_user_interface_system_initialized;
 } user_interface_system_state;
 
