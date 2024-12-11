@@ -223,7 +223,6 @@ void clear_interface_state() {
   }
 
   ui_system_state->b_show_pause_screen = false;
-  ui_system_state->b_show_tilemap_screen = false;
 }
 
 bool user_interface_on_event(u16 code, void *sender, void *listener_inst,

@@ -9,9 +9,21 @@
 #include "game/user_interface.h"
 #include "raylib.h"
 
+typedef struct scene_in_game_edit_state {
+  Vector2 target;
+  tilemap map;
+  tilesheet palette;
+
+  bool b_show_tilemap_screen;
+  bool b_is_a_tile_selected;
+  tilemap_tile selected_tile;
+} scene_in_game_edit_state;
+
 static scene_in_game_edit_state *state;
 
 void update_bindings();
+void update_movement();
+void update_zoom_controls();
 
 void initialize_scene_in_game_edit() {
   if (state) {
@@ -22,15 +34,16 @@ void initialize_scene_in_game_edit() {
   state = (scene_in_game_edit_state*)allocate_memory_linear(sizeof(scene_in_game_edit_state), true);
   
   create_tilemap(TILESHEET_TYPE_MAP, (Vector2) {0, 0}, 100, 16*3, WHITE, &state->map);
-  create_tilemap(TILESHEET_TYPE_MAP, (Vector2) {0, 0}, 15, 16*3, WHITE, &state->palette);
+  create_tilesheet(TILESHEET_TYPE_MAP, 16*2, 1.1, &state->palette);
   if(!state->map.is_initialized) {
-    TraceLog(LOG_ERROR, "ERROR::scene_in_game_edit::initialize_scene_in_game_edit()::tilemap initialization failed");
+    TraceLog(LOG_WARNING, "WARNING::scene_in_game_edit::initialize_scene_in_game_edit()::tilemap initialization failed");
   }
   if(!state->palette.is_initialized) {
-    TraceLog(LOG_ERROR, "ERROR::scene_in_game_edit::initialize_scene_in_game_edit()::palette initialization failed");
+    TraceLog(LOG_WARNING, "WARNING::scene_in_game_edit::initialize_scene_in_game_edit()::palette initialization failed");
   }
   user_interface_system_initialize();
-  
+
+  state->palette.position = (Vector2) {5, 5};
 }
 
 void update_scene_in_game_edit() {
@@ -39,7 +52,6 @@ void update_scene_in_game_edit() {
 
 void render_scene_in_game_edit() {
   render_tilemap(&state->map);
-
   DrawPixel(0, 0, RED);
 }
 
@@ -47,22 +59,62 @@ void render_interface_in_game_edit() {
   
   if(state->b_show_tilemap_screen) 
   { 
-    Vector2 position = (Vector2) {5, 5};
-    u16 dest_tile_size = 16 * 2;
-    f32 offset = 1.1;
-
     DrawRectangle(
       0, 0, 
-      get_tilesheet_dim(TILESHEET_TYPE_MAP, dest_tile_size, offset).x + position.x + offset, 
+      get_tilesheet_dim(&state->palette).x + state->palette.position.x + state->palette.offset, 
       SCREEN_HEIGHT, 
       WHITE
     );
-    render_tilesheet(TILESHEET_TYPE_MAP, position, dest_tile_size, offset);
+    render_tilesheet(&state->palette);
+  }
+
+  if (state->b_is_a_tile_selected) {
+    render_tile(state->selected_tile, 
+    (tilemap_tile) 
+    {
+      .x = GetMousePosition().x,
+      .y = GetMousePosition().y,
+      .tile_size = state->map.tile_size
+    });
   }
 
 }
 
 void update_bindings() {
+  update_movement();
+  update_zoom_controls();
+
+  if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON) && state->b_show_tilemap_screen && !state->b_is_a_tile_selected) {
+    tilemap_tile tile = get_tile_from_mouse_pos(&state->palette, GetMousePosition());
+    if (tile.is_initialized) {
+      state->selected_tile = tile;
+      state->b_is_a_tile_selected = true;
+    }
+  }
+  
+  if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON) && !state->b_show_tilemap_screen && state->b_is_a_tile_selected) {
+    state->selected_tile = (tilemap_tile){0};
+    state->b_is_a_tile_selected = false;
+  }
+
+
+  if (IsKeyReleased(KEY_K)) {
+    state->b_show_tilemap_screen = !state->b_show_tilemap_screen;
+  }
+
+  if (IsKeyReleased(KEY_ESCAPE)) {
+    event_fire(EVENT_CODE_APPLICATION_QUIT, 0, (event_context) {0});
+  }
+}
+
+void update_zoom_controls() {
+  // Camera zoom controls
+  get_active_camera()->zoom += ((float)GetMouseWheelMove()*0.05f);
+
+  if (get_active_camera()->zoom > 3.0f) get_active_camera()->zoom = 3.0f;
+  else if (get_active_camera()->zoom < 0.1f) get_active_camera()->zoom = 0.1f;
+}
+void update_movement() {
   f32 speed = 10;
 
   if (IsKeyDown(KEY_W)) {
@@ -101,19 +153,9 @@ void update_bindings() {
     };
     event_fire(EVENT_CODE_SCENE_MANAGER_SET_TARGET, 0, context);
   }
-
-  if (IsKeyReleased(KEY_K)) {
-    state->b_show_tilemap_screen = !state->b_show_tilemap_screen;
-  }
-
-  if (IsKeyReleased(KEY_ESCAPE)) {
-    event_fire(EVENT_CODE_APPLICATION_QUIT, 0, (event_context) {0});
-  }
-
-  // Camera zoom controls
-  get_active_camera()->zoom += ((float)GetMouseWheelMove()*0.05f);
-
-  if (get_active_camera()->zoom > 3.0f) get_active_camera()->zoom = 3.0f;
-  else if (get_active_camera()->zoom < 0.1f) get_active_camera()->zoom = 0.1f;
 }
 
+/* void update_zoom_controls() {
+  
+}
+*/

@@ -166,38 +166,39 @@ typedef struct tilesheet {
   tilesheet_type sheet_type;
   texture_type tex_type;
   Texture2D *tex;
+
   u16 tile_count_x;
   u16 tile_count_y;
   u16 tile_count;
   u16 tile_size;
+  u16 dest_tile_size;
+
+  Vector2 position;
+  f32 offset;
+  bool is_initialized;
 } tilesheet;
 
 typedef struct tilemap_tile {
-	tilesheet_type type;
-	texture_type sheet_tex;
+	tilesheet_type sheet_type;
+	texture_type tex_type;
+
 	u16 x;
 	u16 y;
-	u16 origin_tilesize;
+	u16 tile_size;
+
+  bool is_initialized;
 } tilemap_tile;
 
 typedef struct tilemap {
   tilemap_tile tiles[MAX_TILEMAP_TILESLOT_X][MAX_TILEMAP_TILESLOT_Y];
+  bool is_initialized;
 
   Vector2 position;
   u16 tile_size;
   u16 grid_size;
   Color grid_color;
   bool render_grid;
-  bool is_initialized;
 } tilemap;
-
-typedef struct scene_in_game_edit_state {
-  Vector2 target;
-  tilemap map;
-  tilemap palette;
-
-  bool b_show_tilemap_screen;
-} scene_in_game_edit_state;
 
 typedef struct rectangle_collision {
   u16 owner_id;
@@ -361,8 +362,6 @@ typedef struct resource_system_state {
   spritesheet sprites[MAX_SPRITESHEET_SLOTS];
   Image images[MAX_IMAGE_SLOTS];
   tilesheet tilesheets[MAX_TILESHEET_SLOTS];
-
-
 
   scene_type game_on_scene;
 } resource_system_state;
