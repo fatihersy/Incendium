@@ -14,7 +14,7 @@ void create_tilemap(tilesheet_type _type, Vector2 _position, u16 _grid_size, u16
 
   tilesheet* sheet = get_tilesheet_by_enum(_type);
 
-  out_tilemap->render_grid = true;
+  out_tilemap->render_grid = false;
   out_tilemap->position = _position;
   out_tilemap->tile_size = _tile_size;
   out_tilemap->grid_size = _grid_size;
@@ -184,26 +184,24 @@ Vector2 get_tilesheet_dim(tilesheet* sheet) {
   };
 }
 
-tilemap_tile get_tile_from_mouse_pos(tilesheet* sheet, Vector2 mouse_pos) {
+tilemap_tile get_tile_from_sheet_by_mouse_pos(tilesheet* sheet, Vector2 mouse_pos) {
   if (!sheet) {
     TraceLog(LOG_ERROR, "ERROR::tilemap::get_tile_from_mouse_pos()::Provided sheet was null");
     return (tilemap_tile) { .is_initialized = false };
   }
   tilemap_tile tile = {0};
 
-  i16 relative_x = mouse_pos.x - sheet->position.x - sheet->offset;
-  i16 relative_y = mouse_pos.y - sheet->position.y - sheet->offset;
+  i16 x_pos    = mouse_pos.x - sheet->offset          - sheet->position.x; 
+  i16 y_pos    = mouse_pos.y - sheet->offset          - sheet->position.y; 
+  i16 dest_x   = x_pos       / (sheet->dest_tile_size * sheet->offset);  
+  i16 dest_y   = y_pos       / (sheet->dest_tile_size * sheet->offset);  
 
-  i16 x = relative_x / (sheet->offset * sheet->dest_tile_size);
-  i16 y = relative_y / (sheet->offset * sheet->dest_tile_size);
-
-  if (x < 0 && x > sheet->tile_count_x && y < 0 && y > sheet->tile_count_y) {
-    TraceLog(LOG_WARNING, "WARNING::tilemap::get_tile_from_mouse_pos()::No tile found");
+  if (dest_x < 0 || dest_x > sheet->tile_count_x || dest_y < 0 || dest_y > sheet->tile_count_y) {
     return (tilemap_tile) { .is_initialized = false };
   }
 
-  tile.x = x;
-  tile.y = y;
+  tile.x = dest_x * sheet->tile_size;
+  tile.y = dest_y * sheet->tile_size;
   tile.tile_size = sheet->tile_size;
   tile.sheet_type = sheet->sheet_type;
   tile.tex_type = sheet->tex_type;
@@ -212,4 +210,25 @@ tilemap_tile get_tile_from_mouse_pos(tilesheet* sheet, Vector2 mouse_pos) {
   return tile;
 }
 
+tilemap_tile get_tile_from_map_by_mouse_pos(tilemap* map, Vector2 mouse_pos) {
+  if (!map) {
+    TraceLog(LOG_ERROR, "ERROR::tilemap::get_tile_from_mouse_pos()::Provided sheet was null");
+    return (tilemap_tile) { .is_initialized = false };
+  }
+  tilemap_tile tile = {0};
+
+  tile.x = (mouse_pos.x - map->position.x) / map->tile_size;
+  tile.y = (mouse_pos.y - map->position.y) / map->tile_size;
+
+  if (tile.x < 0 || tile.x > map->grid_size || tile.y < 0 || tile.y > map->grid_size) {
+    return (tilemap_tile) { .is_initialized = false };
+  }
+
+  tile.tile_size = map->tile_size;
+  tile.sheet_type = map->tiles[tile.x][tile.y].sheet_type;
+  tile.tex_type = map->tiles[tile.x][tile.y].tex_type;
+  tile.is_initialized = true;
+
+  return tile;
+}
 

@@ -84,7 +84,7 @@ bool scene_manager_on_event(u16 code, void *sender, void *listener_inst, event_c
   }
   case EVENT_CODE_SCENE_IN_GAME_EDIT: {
     scene_manager_state->scene_data = SCENE_IN_GAME_EDIT;
-    initialize_scene_in_game_edit();
+    initialize_scene_in_game_edit(get_active_camera());
     return true;
     break;
   }

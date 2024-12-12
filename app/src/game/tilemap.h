@@ -14,6 +14,7 @@ void render_tilesheet(tilesheet* sheet);
 void render_tile(tilemap_tile origin, tilemap_tile dest);
 
 Vector2 get_tilesheet_dim(tilesheet* sheet);
-tilemap_tile get_tile_from_mouse_pos(tilesheet* sheet, Vector2 mouse_pos);
+tilemap_tile get_tile_from_sheet_by_mouse_pos(tilesheet* sheet, Vector2 mouse_pos);
+tilemap_tile get_tile_from_map_by_mouse_pos(tilemap* sheet, Vector2 mouse_pos);
 
 #endif

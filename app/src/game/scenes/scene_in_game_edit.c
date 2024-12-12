@@ -4,10 +4,8 @@
 #include "core/fmemory.h"
 
 #include "defines.h"
-#include "game/camera.h"
 #include "game/tilemap.h"
 #include "game/user_interface.h"
-#include "raylib.h"
 
 typedef struct scene_in_game_edit_state {
   Vector2 target;
@@ -17,6 +15,7 @@ typedef struct scene_in_game_edit_state {
   bool b_show_tilemap_screen;
   bool b_is_a_tile_selected;
   tilemap_tile selected_tile;
+  Camera2D* camera;
 } scene_in_game_edit_state;
 
 static scene_in_game_edit_state *state;
@@ -25,7 +24,7 @@ void update_bindings();
 void update_movement();
 void update_zoom_controls();
 
-void initialize_scene_in_game_edit() {
+void initialize_scene_in_game_edit(Camera2D* _camera) {
   if (state) {
     TraceLog(LOG_ERROR, "ERROR::scene_in_game_edit::initialize_scene_in_game_edit()::initialize function called multiple times");
     return;
@@ -42,6 +41,7 @@ void initialize_scene_in_game_edit() {
     TraceLog(LOG_WARNING, "WARNING::scene_in_game_edit::initialize_scene_in_game_edit()::palette initialization failed");
   }
   user_interface_system_initialize();
+  state->camera = _camera;
 
   state->palette.position = (Vector2) {5, 5};
 }
@@ -85,7 +85,7 @@ void update_bindings() {
   update_zoom_controls();
 
   if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON) && state->b_show_tilemap_screen && !state->b_is_a_tile_selected) {
-    tilemap_tile tile = get_tile_from_mouse_pos(&state->palette, GetMousePosition());
+    tilemap_tile tile = get_tile_from_sheet_by_mouse_pos(&state->palette, GetMousePosition());
     if (tile.is_initialized) {
       state->selected_tile = tile;
       state->b_is_a_tile_selected = true;
@@ -93,7 +93,12 @@ void update_bindings() {
   }
   
   if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON) && !state->b_show_tilemap_screen && state->b_is_a_tile_selected) {
-    state->selected_tile = (tilemap_tile){0};
+    tilemap_tile tile = get_tile_from_map_by_mouse_pos(&state->map, GetScreenToWorld2D(GetMousePosition(), *state->camera));
+    state->map.tiles[tile.x][tile.y] = state->selected_tile;
+  }
+  
+  if (IsMouseButtonReleased(MOUSE_RIGHT_BUTTON) && state->b_is_a_tile_selected) {
+    tilemap_tile tile = (tilemap_tile) {0};
     state->b_is_a_tile_selected = false;
   }
 
@@ -108,11 +113,11 @@ void update_bindings() {
 }
 
 void update_zoom_controls() {
-  // Camera zoom controls
-  get_active_camera()->zoom += ((float)GetMouseWheelMove()*0.05f);
 
-  if (get_active_camera()->zoom > 3.0f) get_active_camera()->zoom = 3.0f;
-  else if (get_active_camera()->zoom < 0.1f) get_active_camera()->zoom = 0.1f;
+  state->camera->zoom += ((float)GetMouseWheelMove()*0.05f);
+
+  if (state->camera->zoom > 3.0f) state->camera->zoom = 3.0f;
+  else if (state->camera->zoom < 0.1f) state->camera->zoom = 0.1f;
 }
 void update_movement() {
   f32 speed = 10;
