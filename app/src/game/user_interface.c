@@ -197,7 +197,7 @@ void register_button(const char *_text, u16 _x, u16 _y, button_type _btn_type, t
       .btn_type = _btn_type,
       .text = _text,
       .show = false,
-      .crt_render_index = register_sprite(BUTTON_CRT_SHEET, true, false),
+      .crt_render_index = register_sprite(BUTTON_CRT_SHEET, false, false),
       .reflection_render_index = register_sprite(BUTTON_REFLECTION_SHEET, true, false),
       .is_reflection_played = false,
       .text_spacing = UI_FONT_SPACING,

@@ -201,6 +201,13 @@ void load_tilesheet(tilesheet_type _sheet_sheet_type, texture_type _sheet_tex_ty
   _tilesheet.tile_count = _tilesheet.tile_count_x * _tilesheet.tile_count_y;
   _tilesheet.tile_size = _tile_size;
 
+  for (u16 i = 0; i < _tilesheet.tile_count; ++i) {
+    u16 x = i % _tilesheet.tile_count_x;
+    u16 y = i / _tilesheet.tile_count_y;  
+
+    _tilesheet.tile_symbols[x][y] = TILEMAP_TILE_START_SYMBOL + i;
+  }
+
   resource_system->tilesheets[_sheet_sheet_type] = _tilesheet;
 }
 

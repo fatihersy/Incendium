@@ -5,6 +5,7 @@
 #include "raylib.h"
 
 void FDrawGrid(tilemap* _tilemap);
+void map_to_str(tilemap* map, tilemap_stringtify_package* out_package);
 
 void create_tilemap(tilesheet_type _type, Vector2 _position, u16 _grid_size, u16 _tile_size, Color _grid_color, tilemap* out_tilemap) {
   if (_grid_size * _grid_size > MAX_TILEMAP_TILESLOT && (_type >= TILESHEET_TYPE_MAX || _type <= 0)) {
@@ -17,21 +18,24 @@ void create_tilemap(tilesheet_type _type, Vector2 _position, u16 _grid_size, u16
   out_tilemap->render_grid = false;
   out_tilemap->position = _position;
   out_tilemap->tile_size = _tile_size;
-  out_tilemap->grid_size = _grid_size;
+  out_tilemap->map_dim = _grid_size;
+  out_tilemap->map_dim_total = _grid_size * _grid_size;
   out_tilemap->grid_color = _grid_color;
 
   out_tilemap->position = (Vector2){
-    .x = out_tilemap->position.x - (out_tilemap->grid_size * out_tilemap->tile_size) / 2.f,
-    .y = out_tilemap->position.y - (out_tilemap->grid_size * out_tilemap->tile_size) / 2.f,
+    .x = out_tilemap->position.x - (out_tilemap->map_dim * out_tilemap->tile_size) / 2.f,
+    .y = out_tilemap->position.y - (out_tilemap->map_dim * out_tilemap->tile_size) / 2.f,
   };
 
-  for (u16 i = 0; i < out_tilemap->grid_size * out_tilemap->grid_size; ++i) {
-    u16 x = i % out_tilemap->grid_size;  
-    u16 y = i / out_tilemap->grid_size;  
+  for (u16 i = 0; i < out_tilemap->map_dim_total; ++i) {
+    u16 x = i % out_tilemap->map_dim;  
+    u16 y = i / out_tilemap->map_dim;  
 
     out_tilemap->tiles[x][y].tile_size = sheet->tile_size;
     out_tilemap->tiles[x][y].tex_type = sheet->tex_type;
     out_tilemap->tiles[x][y].sheet_type = _type;
+    out_tilemap->tiles[x][y].tile_symbol = sheet->tile_symbols[0 / _tile_size][0 / _tile_size];
+
     out_tilemap->tiles[x][y].is_initialized = true;
   }
 
@@ -51,6 +55,7 @@ void create_tilesheet(tilesheet_type _type, u16 _dest_tile_size, f32 _offset, ti
   *out_tilesheet = sheet;
   out_tilesheet->dest_tile_size = _dest_tile_size;
   out_tilesheet->offset = _offset;
+
   out_tilesheet->is_initialized = true;
 }
 
@@ -62,10 +67,10 @@ void render_tilemap(tilemap* _tilemap) {
     return;
   }
 
-  for (u16 i = 0; i < _tilemap->grid_size * _tilemap->grid_size; ++i) {
+  for (u16 i = 0; i < _tilemap->map_dim_total; ++i) {
 
-    u16 x = i % _tilemap->grid_size;  
-    u16 y = i / _tilemap->grid_size;  
+    u16 x = i % _tilemap->map_dim;  
+    u16 y = i / _tilemap->map_dim;  
     i16 x_pos = _tilemap->position.x + x * _tilemap->tile_size; 
     i16 y_pos = _tilemap->position.y + y * _tilemap->tile_size; 
 
@@ -132,7 +137,7 @@ void FDrawGrid(tilemap* _tilemap) {
     return;
   }
 
-  for (int i = 0; i <= _tilemap->grid_size; i++) {
+  for (int i = 0; i <= _tilemap->map_dim; i++) {
     // Draw vertical lines
     DrawLineV(
     (Vector2) {
@@ -140,7 +145,7 @@ void FDrawGrid(tilemap* _tilemap) {
       _tilemap->position.y }, 
     (Vector2) {
      _tilemap->position.x + i * _tilemap->tile_size, 
-      _tilemap->position.y + _tilemap->grid_size * _tilemap->tile_size
+      _tilemap->position.y + _tilemap->map_dim * _tilemap->tile_size
     }, _tilemap->grid_color);
 
     // Draw horizontal lines
@@ -149,7 +154,7 @@ void FDrawGrid(tilemap* _tilemap) {
       _tilemap->position.x, 
       _tilemap->position.y + i * _tilemap->tile_size }, 
     (Vector2) {
-      _tilemap->position.x + _tilemap->grid_size * _tilemap->tile_size, 
+      _tilemap->position.x + _tilemap->map_dim * _tilemap->tile_size, 
       _tilemap->position.y + i * _tilemap->tile_size
     }, _tilemap->grid_color);
   }
@@ -200,13 +205,14 @@ tilemap_tile get_tile_from_sheet_by_mouse_pos(tilesheet* sheet, Vector2 mouse_po
     return (tilemap_tile) { .is_initialized = false };
   }
 
-  tile.x = dest_x * sheet->tile_size;
-  tile.y = dest_y * sheet->tile_size;
-  tile.tile_size = sheet->tile_size;
-  tile.sheet_type = sheet->sheet_type;
-  tile.tex_type = sheet->tex_type;
-  tile.is_initialized = true;
+  tile.x           = dest_x  * sheet->tile_size;
+  tile.y           = dest_y  * sheet->tile_size;
+  tile.tile_size   = sheet->tile_size;
+  tile.sheet_type  = sheet->sheet_type;
+  tile.tex_type    = sheet->tex_type;
+  tile.tile_symbol = get_tilesheet_by_enum(tile.sheet_type)->tile_symbols[dest_x][dest_y];
 
+  tile.is_initialized = true;
   return tile;
 }
 
@@ -220,15 +226,52 @@ tilemap_tile get_tile_from_map_by_mouse_pos(tilemap* map, Vector2 mouse_pos) {
   tile.x = (mouse_pos.x - map->position.x) / map->tile_size;
   tile.y = (mouse_pos.y - map->position.y) / map->tile_size;
 
-  if (tile.x < 0 || tile.x > map->grid_size || tile.y < 0 || tile.y > map->grid_size) {
+  if (tile.x < 0 || tile.x > map->map_dim || tile.y < 0 || tile.y > map->map_dim) {
     return (tilemap_tile) { .is_initialized = false };
   }
 
   tile.tile_size = map->tile_size;
   tile.sheet_type = map->tiles[tile.x][tile.y].sheet_type;
   tile.tex_type = map->tiles[tile.x][tile.y].tex_type;
-  tile.is_initialized = true;
+  tile.tile_symbol = get_tilesheet_by_enum(tile.sheet_type)->tile_symbols[tile.x / tile.tile_size][tile.y/ tile.tile_size];
 
+  tile.is_initialized = true;
   return tile;
+}
+
+void map_to_str(tilemap* map, tilemap_stringtify_package* out_package) {
+  if (!map) {
+    TraceLog(LOG_ERROR, "Recieved a NULL pointer");
+    return;
+  }
+  out_package->size = sizeof(u16) * map->map_dim_total;
+
+  for (u16 i=0; i < map->map_dim_total; ++i) {
+    u16 map_x   = i % map->map_dim;
+    u16 map_y   = i / map->map_dim;  
+    tilesheet* sheet = get_tilesheet_by_enum(map->tiles[map_x][map_y].sheet_type);
+
+    u16 origin_x = map->tiles[map_x][map_y].x;
+    u16 origin_y = map->tiles[map_x][map_y].y;  
+    u16 sheet_x = origin_x / sheet->tile_size;
+    u16 sheet_y = origin_y / sheet->tile_size;
+
+    u16 symbol = get_tilesheet_by_enum(map->tiles[map_x][map_y].sheet_type)->tile_symbols[sheet_x][sheet_y];  
+
+    out_package->data[i] = symbol;
+  }
+
+  out_package->is_success = true;
+}
+
+bool save_map_data(tilemap* map, tilemap_stringtify_package* out_package) {
+  map_to_str(map, out_package);
+  if (out_package->is_success) {
+    return SaveFileData(rs_path("map.txt"), out_package->data, out_package->size);
+  }
+  else {
+    TraceLog(LOG_ERROR, "ERROR::tilemap::save_map_data()::Recieving package data returned with failure");
+    return false;
+  }
 }
 

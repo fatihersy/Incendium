@@ -122,6 +122,8 @@ void _stop_sprite(spritesheet_play_system *system, u16 index, bool reset) {
     system->renderqueue[index].counter = 0;
     system->renderqueue[index].current_col = 0;
     system->renderqueue[index].current_row = 0;
+    system->renderqueue[index].current_frame_rect.x = 0;
+    system->renderqueue[index].current_frame_rect.y = 0;
   }
 
   system->renderqueue[index].is_started = false;

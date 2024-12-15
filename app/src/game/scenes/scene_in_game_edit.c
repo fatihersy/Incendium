@@ -6,16 +6,19 @@
 #include "defines.h"
 #include "game/tilemap.h"
 #include "game/user_interface.h"
+#include "raylib.h"
 
 typedef struct scene_in_game_edit_state {
+  Camera2D* camera;
   Vector2 target;
   tilemap map;
   tilesheet palette;
-
-  bool b_show_tilemap_screen;
-  bool b_is_a_tile_selected;
   tilemap_tile selected_tile;
-  Camera2D* camera;
+  tilemap_stringtify_package package;
+  
+  bool b_show_pause_menu;
+  bool b_show_tilesheet_tile_selection_screen;
+  bool b_is_a_tile_selected;
 } scene_in_game_edit_state;
 
 static scene_in_game_edit_state *state;
@@ -57,7 +60,7 @@ void render_scene_in_game_edit() {
 
 void render_interface_in_game_edit() {
   
-  if(state->b_show_tilemap_screen) 
+  if(state->b_show_tilesheet_tile_selection_screen) 
   { 
     DrawRectangle(
       0, 0, 
@@ -84,7 +87,7 @@ void update_bindings() {
   update_movement();
   update_zoom_controls();
 
-  if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON) && state->b_show_tilemap_screen && !state->b_is_a_tile_selected) {
+  if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON) && state->b_show_tilesheet_tile_selection_screen && !state->b_is_a_tile_selected) {
     tilemap_tile tile = get_tile_from_sheet_by_mouse_pos(&state->palette, GetMousePosition());
     if (tile.is_initialized) {
       state->selected_tile = tile;
@@ -92,19 +95,23 @@ void update_bindings() {
     }
   }
   
-  if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON) && !state->b_show_tilemap_screen && state->b_is_a_tile_selected) {
+  if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON) && !state->b_show_tilesheet_tile_selection_screen && state->b_is_a_tile_selected) {
     tilemap_tile tile = get_tile_from_map_by_mouse_pos(&state->map, GetScreenToWorld2D(GetMousePosition(), *state->camera));
     state->map.tiles[tile.x][tile.y] = state->selected_tile;
-  }
+    TraceLog(LOG_INFO, "tile.%d,tile.%d is %d", tile.x, tile.y, state->selected_tile.tile_symbol);
+  };
   
   if (IsMouseButtonReleased(MOUSE_RIGHT_BUTTON) && state->b_is_a_tile_selected) {
     tilemap_tile tile = (tilemap_tile) {0};
     state->b_is_a_tile_selected = false;
   }
 
-
   if (IsKeyReleased(KEY_K)) {
-    state->b_show_tilemap_screen = !state->b_show_tilemap_screen;
+    state->b_show_tilesheet_tile_selection_screen = !state->b_show_tilesheet_tile_selection_screen;
+  }
+
+  if (IsKeyReleased(KEY_F5)) {
+    save_map_data(&state->map, &state->package);
   }
 
   if (IsKeyReleased(KEY_ESCAPE)) {
@@ -159,8 +166,3 @@ void update_movement() {
     event_fire(EVENT_CODE_SCENE_MANAGER_SET_TARGET, 0, context);
   }
 }
-
-/* void update_zoom_controls() {
-  
-}
-*/

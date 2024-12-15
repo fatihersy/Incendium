@@ -18,6 +18,9 @@
 #define SCREEN_HEIGHT_DIV2 SCREEN_HEIGHT / 2.f
 
 #define MAX_TILESHEET_SLOTS 50
+#define MAX_TILESHEET_UNIQUE_TILESLOTS_X 32
+#define MAX_TILESHEET_UNIQUE_TILESLOTS_Y 32
+#define MAX_TILESHEET_UNIQUE_TILESLOTS MAX_TILESHEET_UNIQUE_TILESLOTS_X * MAX_TILESHEET_UNIQUE_TILESLOTS_Y
 #define MAX_TILEMAP_SLOTS 10
 #define MAX_TILEMAP_TILESHEETSLOT 10
 #define MAX_TEXTURE_SLOTS 10
@@ -27,6 +30,7 @@
 #define MAX_TILEMAP_TILESLOT_X 255
 #define MAX_TILEMAP_TILESLOT_Y 255
 #define MAX_TILEMAP_TILESLOT MAX_TILEMAP_TILESLOT_X * MAX_TILEMAP_TILESLOT_Y
+#define TILEMAP_TILE_START_SYMBOL 0x21 // Refers to ASCII exclamation mark. First visible character on the chart. To debug.
 
 #define UI_FONT_SPACING 1
 
@@ -167,6 +171,7 @@ typedef struct tilesheet {
   texture_type tex_type;
   Texture2D *tex;
 
+  u16 tile_symbols[MAX_TILESHEET_UNIQUE_TILESLOTS_X][MAX_TILESHEET_UNIQUE_TILESLOTS_Y];
   u16 tile_count_x;
   u16 tile_count_y;
   u16 tile_count;
@@ -185,20 +190,31 @@ typedef struct tilemap_tile {
 	u16 x;
 	u16 y;
 	u16 tile_size;
+  u16 tile_symbol;
 
   bool is_initialized;
 } tilemap_tile;
 
 typedef struct tilemap {
-  tilemap_tile tiles[MAX_TILEMAP_TILESLOT_X][MAX_TILEMAP_TILESLOT_Y];
-  bool is_initialized;
-
   Vector2 position;
+  u16 map_dim_total;
+  u16 map_dim;
+
+  tilemap_tile tiles[MAX_TILEMAP_TILESLOT_X][MAX_TILEMAP_TILESLOT_Y];
   u16 tile_size;
-  u16 grid_size;
+
   Color grid_color;
   bool render_grid;
+
+  bool is_initialized;
 } tilemap;
+
+typedef struct tilemap_stringtify_package {
+  u16 data[MAX_TILEMAP_TILESLOT];
+  u64 size;
+
+  bool is_success;
+}tilemap_stringtify_package;
 
 typedef struct rectangle_collision {
   u16 owner_id;
