@@ -1,11 +1,15 @@
 #include "tilemap.h"
 
+#include "core/fmemory.h"
+
 #include "defines.h"
 #include "game/resource.h"
 #include "raylib.h"
 
+
 void FDrawGrid(tilemap* _tilemap);
 void map_to_str(tilemap* map, tilemap_stringtify_package* out_package);
+void str_to_map(tilemap* map, tilemap_stringtify_package* out_package);
 
 void create_tilemap(tilesheet_type _type, Vector2 _position, u16 _grid_size, u16 _tile_size, Color _grid_color, tilemap* out_tilemap) {
   if (_grid_size * _grid_size > MAX_TILEMAP_TILESLOT && (_type >= TILESHEET_TYPE_MAX || _type <= 0)) {
@@ -105,13 +109,14 @@ void render_tilesheet(tilesheet* sheet) {
   }
 
   for (u16 i = 0; i < sheet->tile_count; ++i) {
-
-    u16 origin_x = i % sheet->tile_count_x * sheet->tile_size;  
-    u16 origin_y = i / sheet->tile_count_y * sheet->tile_size;  
-    f32 dest_x = (i % sheet->tile_count_x) * sheet->offset * sheet->dest_tile_size;  
-    f32 dest_y = (i / sheet->tile_count_y) * sheet->offset * sheet->dest_tile_size; 
-    i16 x_pos = sheet->offset + sheet->position.x + dest_x; 
-    i16 y_pos = sheet->offset + sheet->position.y + dest_y; 
+    u16 x        = i % sheet->tile_count_x;
+    u16 y        = i / sheet->tile_count_x;
+    u16 origin_x = x * sheet->tile_size;  
+    u16 origin_y = y * sheet->tile_size;  
+    f32 dest_x   = x * sheet->offset * sheet->dest_tile_size;  
+    f32 dest_y   = y * sheet->offset * sheet->dest_tile_size; 
+    i16 x_pos    = sheet->offset     + sheet->position.x + dest_x; 
+    i16 y_pos    = sheet->offset     + sheet->position.y + dest_y; 
     
     DrawTexturePro(
     *sheet->tex, 
@@ -244,7 +249,7 @@ void map_to_str(tilemap* map, tilemap_stringtify_package* out_package) {
     TraceLog(LOG_ERROR, "Recieved a NULL pointer");
     return;
   }
-  out_package->size = sizeof(u16) * map->map_dim_total;
+  out_package->size = sizeof(tile_symbol) * map->map_dim_total;
 
   for (u16 i=0; i < map->map_dim_total; ++i) {
     u16 map_x   = i % map->map_dim;
@@ -256,9 +261,37 @@ void map_to_str(tilemap* map, tilemap_stringtify_package* out_package) {
     u16 sheet_x = origin_x / sheet->tile_size;
     u16 sheet_y = origin_y / sheet->tile_size;
 
-    u16 symbol = get_tilesheet_by_enum(map->tiles[map_x][map_y].sheet_type)->tile_symbols[sheet_x][sheet_y];  
+    tile_symbol symbol = sheet->tile_symbols[sheet_x][sheet_y];  
 
-    out_package->data[i] = symbol;
+    copy_memory(out_package->str + (sizeof(tile_symbol) * i), symbol.c, sizeof(symbol));
+  }
+
+  out_package->is_success = true;
+}
+
+void str_to_map(tilemap* map, tilemap_stringtify_package* out_package) {
+  if (!*out_package->str) {
+    TraceLog(LOG_ERROR, "Recieved a NULL pointer");
+    return;
+  }
+
+  for (u16 i=0; i < map->map_dim_total; ++i) {
+    tile_symbol symbol = {0};
+
+    u16 map_x   = i % map->map_dim;
+    u16 map_y   = i / map->map_dim;  
+    copy_memory(symbol.c, out_package->str + (sizeof(tile_symbol) * i), sizeof(symbol));
+
+    map->tiles[map_x][map_y].x = symbol.c[0] - TILEMAP_TILE_START_SYMBOL;
+    map->tiles[map_x][map_y].y = symbol.c[1] - TILEMAP_TILE_START_SYMBOL;
+    map->tiles[map_x][map_y].sheet_type = symbol.c[2];
+
+    tilesheet* sheet = get_tilesheet_by_enum(map->tiles[map_x][map_y].sheet_type);
+
+    u16 origin_x = map->tiles[map_x][map_y].x;
+    u16 origin_y = map->tiles[map_x][map_y].y;  
+    u16 sheet_x = origin_x / sheet->tile_size;
+    u16 sheet_y = origin_y / sheet->tile_size;
   }
 
   out_package->is_success = true;
@@ -267,11 +300,23 @@ void map_to_str(tilemap* map, tilemap_stringtify_package* out_package) {
 bool save_map_data(tilemap* map, tilemap_stringtify_package* out_package) {
   map_to_str(map, out_package);
   if (out_package->is_success) {
-    return SaveFileData(rs_path("map.txt"), out_package->data, out_package->size);
+    return SaveFileData(rs_path("map.txt"), out_package->str, out_package->size);
   }
   else {
     TraceLog(LOG_ERROR, "ERROR::tilemap::save_map_data()::Recieving package data returned with failure");
     return false;
   }
+}
+
+bool load_map_data(tilemap* map, tilemap_stringtify_package* out_package) {
+  int size = (int)sizeof(out_package->str);
+  const u8* _str = LoadFileData(rs_path("map.txt"), &size);
+  if (!_str) {
+    TraceLog(LOG_ERROR, "ERROR::tilemap::load_map_data()::Reading data returned null");
+  }
+  copy_memory(out_package->str, _str, size);
+  str_to_map(map, out_package);
+  
+  return out_package->is_success;
 }
 

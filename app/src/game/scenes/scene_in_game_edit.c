@@ -98,7 +98,7 @@ void update_bindings() {
   if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON) && !state->b_show_tilesheet_tile_selection_screen && state->b_is_a_tile_selected) {
     tilemap_tile tile = get_tile_from_map_by_mouse_pos(&state->map, GetScreenToWorld2D(GetMousePosition(), *state->camera));
     state->map.tiles[tile.x][tile.y] = state->selected_tile;
-    TraceLog(LOG_INFO, "tile.%d,tile.%d is %d", tile.x, tile.y, state->selected_tile.tile_symbol);
+    TraceLog(LOG_INFO, "tile.%d,tile.%d is %d:%d", tile.x, tile.y, state->selected_tile.tile_symbol.c[0], state->selected_tile.tile_symbol.c[1]);
   };
   
   if (IsMouseButtonReleased(MOUSE_RIGHT_BUTTON) && state->b_is_a_tile_selected) {
@@ -112,6 +112,9 @@ void update_bindings() {
 
   if (IsKeyReleased(KEY_F5)) {
     save_map_data(&state->map, &state->package);
+  }
+  if (IsKeyReleased(KEY_F6)) {
+    load_map_data(&state->map, &state->package);
   }
 
   if (IsKeyReleased(KEY_ESCAPE)) {

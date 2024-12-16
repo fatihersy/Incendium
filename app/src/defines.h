@@ -166,12 +166,16 @@ typedef enum tilesheet_type {
   TILESHEET_TYPE_MAX
 } tilesheet_type;
 
+typedef struct tile_symbol {
+  u8 c[3];
+}tile_symbol;
+
 typedef struct tilesheet {
   tilesheet_type sheet_type;
   texture_type tex_type;
   Texture2D *tex;
 
-  u16 tile_symbols[MAX_TILESHEET_UNIQUE_TILESLOTS_X][MAX_TILESHEET_UNIQUE_TILESLOTS_Y];
+  tile_symbol tile_symbols[MAX_TILESHEET_UNIQUE_TILESLOTS_X][MAX_TILESHEET_UNIQUE_TILESLOTS_Y];
   u16 tile_count_x;
   u16 tile_count_y;
   u16 tile_count;
@@ -190,7 +194,7 @@ typedef struct tilemap_tile {
 	u16 x;
 	u16 y;
 	u16 tile_size;
-  u16 tile_symbol;
+  tile_symbol tile_symbol;
 
   bool is_initialized;
 } tilemap_tile;
@@ -210,9 +214,8 @@ typedef struct tilemap {
 } tilemap;
 
 typedef struct tilemap_stringtify_package {
-  u16 data[MAX_TILEMAP_TILESLOT];
+  u8 str[MAX_TILEMAP_TILESLOT*(sizeof(tile_symbol)/sizeof(u8))];
   u64 size;
-
   bool is_success;
 }tilemap_stringtify_package;
 
