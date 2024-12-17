@@ -282,11 +282,12 @@ void str_to_map(tilemap* map, tilemap_stringtify_package* out_package) {
     u16 map_y   = i / map->map_dim;  
     copy_memory(symbol.c, out_package->str + (sizeof(tile_symbol) * i), sizeof(symbol));
 
-    map->tiles[map_x][map_y].x = symbol.c[0] - TILEMAP_TILE_START_SYMBOL;
-    map->tiles[map_x][map_y].y = symbol.c[1] - TILEMAP_TILE_START_SYMBOL;
     map->tiles[map_x][map_y].sheet_type = symbol.c[2];
 
     tilesheet* sheet = get_tilesheet_by_enum(map->tiles[map_x][map_y].sheet_type);
+
+    map->tiles[map_x][map_y].x = (symbol.c[0] - TILEMAP_TILE_START_SYMBOL) * sheet->tile_size;
+    map->tiles[map_x][map_y].y = (symbol.c[1] - TILEMAP_TILE_START_SYMBOL) * sheet->tile_size;
 
     u16 origin_x = map->tiles[map_x][map_y].x;
     u16 origin_y = map->tiles[map_x][map_y].y;  

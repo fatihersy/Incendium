@@ -203,11 +203,13 @@ void load_tilesheet(tilesheet_type _sheet_sheet_type, texture_type _sheet_tex_ty
 
   for (u16 i = 0; i < _tilesheet.tile_count; ++i) {
     u8 x = i % _tilesheet.tile_count_x;
-    u8 y = i / _tilesheet.tile_count_x;  
+    u8 y = i / _tilesheet.tile_count_x;
+    u8 x_symbol = TILEMAP_TILE_START_SYMBOL + x;
+    u8 y_symbol = TILEMAP_TILE_START_SYMBOL + y;
 
     _tilesheet.tile_symbols[x][y] = (tile_symbol) {
-      TILEMAP_TILE_START_SYMBOL + x,
-      TILEMAP_TILE_START_SYMBOL + y,
+      x_symbol,
+      y_symbol,
       _sheet_sheet_type
     };
   }
