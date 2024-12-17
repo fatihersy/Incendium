@@ -70,7 +70,7 @@ typedef enum actor_type {
 typedef enum scene_type {
   SCENE_MAIN_MENU,
   SCENE_IN_GAME,
-  SCENE_IN_GAME_EDIT
+  SCENE_EDITOR
 } scene_type;
 
 typedef enum ability_type {
@@ -133,16 +133,23 @@ typedef enum button_state {
 
 typedef enum button_type {
   BTN_TYPE_UNDEFINED,
+
   BTN_TYPE_MAINMENU_BUTTON_PLAY,
-  BTN_TYPE_MAINMENU_BUTTON_EDIT,
+  BTN_TYPE_MAINMENU_BUTTON_EDITOR,
   BTN_TYPE_MAINMENU_BUTTON_SETTINGS,
   BTN_TYPE_MAINMENU_BUTTON_EXTRAS,
   BTN_TYPE_MAINMENU_BUTTON_EXIT,
+
   BTN_TYPE_INGAME_PAUSEMENU_BUTTON_RESUME,
   BTN_TYPE_INGAME_PAUSEMENU_BUTTON_SETTINGS,
   BTN_TYPE_INGAME_PAUSEMENU_BUTTON_MAINMENU,
   BTN_TYPE_INGAME_PAUSEMENU_BUTTON_EXIT,
-  BTN_TYPE_SQUARE,
+
+  BTN_TYPE_EDITOR_BUTTON_SAVE_MAP,
+  BTN_TYPE_EDITOR_BUTTON_LOAD_MAP,
+  BTN_TYPE_EDITOR_BUTTON_SETTINGS,
+  BTN_TYPE_EDITOR_BUTTON_MAIN_MENU,
+  BTN_TYPE_EDITOR_BUTTON_EXIT,
 
   BTN_TYPE_MAX
 } button_type;
@@ -246,6 +253,8 @@ typedef struct spritesheet {
   spritesheet_playmod playmod;
   bool should_center;
   bool is_started;
+  bool is_played;
+  bool play_looped;
   bool play_once;
 } spritesheet;
 
@@ -265,7 +274,6 @@ typedef struct button {
   button_state state;
   u16 crt_render_index;
   u16 reflection_render_index;
-  bool is_reflection_played;
 
   Rectangle source;
   Rectangle dest;
@@ -398,7 +406,6 @@ typedef struct user_interface_system_state {
   button buttons[BTN_TYPE_MAX];
   Font ui_font;
 
-  scene_type scene_data;
   bool b_show_pause_screen;
   bool b_user_interface_system_initialized;
 } user_interface_system_state;

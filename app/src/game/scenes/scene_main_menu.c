@@ -10,20 +10,18 @@ void initialize_scene_main_menu() {
 }
 
 void update_scene_main_menu() {
-  update_user_interface(SCENE_MAIN_MENU);
+  update_user_interface();
 
 }
 
 void render_interface_main_menu() {
-  clear_interface_state();
-
   draw_to_background(BACKGROUND);
 
   if (gui_button(BTN_TYPE_MAINMENU_BUTTON_PLAY)) {
     event_fire(EVENT_CODE_SCENE_IN_GAME, 0, (event_context){0});
   };
-  if (gui_button(BTN_TYPE_MAINMENU_BUTTON_EDIT)) {
-    event_fire(EVENT_CODE_SCENE_IN_GAME_EDIT, 0, (event_context){0});
+  if (gui_button(BTN_TYPE_MAINMENU_BUTTON_EDITOR)) {
+    event_fire(EVENT_CODE_SCENE_EDITOR, 0, (event_context){0});
   };
   if (gui_button(BTN_TYPE_MAINMENU_BUTTON_SETTINGS)) {
     // TODO: Settings
@@ -34,6 +32,4 @@ void render_interface_main_menu() {
   if (gui_button(BTN_TYPE_MAINMENU_BUTTON_EXIT)) {
     event_fire(EVENT_CODE_APPLICATION_QUIT, 0, (event_context){0});
   };
-
-  render_user_interface();
 }

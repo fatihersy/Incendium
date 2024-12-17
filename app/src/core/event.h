@@ -47,7 +47,7 @@ typedef enum system_event_code {
 
     // scene_manager
     EVENT_CODE_SCENE_IN_GAME,
-    EVENT_CODE_SCENE_IN_GAME_EDIT,
+    EVENT_CODE_SCENE_EDITOR,
     EVENT_CODE_SCENE_MAIN_MENU,
     EVENT_CODE_SCENE_MANAGER_SET_TARGET,
 

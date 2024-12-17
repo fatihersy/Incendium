@@ -69,7 +69,7 @@ bool initialize_scene_in_game(Vector2 _screen_size) {
 
 void update_scene_in_game() {
   _update_player();
-  _update_spawns();
+  //_update_spawns();
 
   event_fire(EVENT_CODE_SCENE_MANAGER_SET_TARGET, 0, (event_context) {
     .data.i16[0] = _get_player_position(false).x,
@@ -78,16 +78,6 @@ void update_scene_in_game() {
 }
 
 void render_scene_in_game() {
-  i32 ms = 1000;
-  for (i16 i = -ms; i < ms; i += 16)
-  { // X Axis
-    DrawLine(i, -ms, i, i + (ms), (Color){21, 17, 71, 255});
-  }
-  for (i16 i = -ms; i < ms; i += 16) 
-  { // Y Axis
-    DrawLine(-ms, i, i + (ms), i, (Color){21, 17, 71, 255});
-  }
-
   _render_player();
   _render_spawns();
 }

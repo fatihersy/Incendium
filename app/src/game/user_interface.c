@@ -17,26 +17,28 @@
 #define PAUSE_MENU_TOTAL_WIDTH 850
 #define PAUSE_MENU_TOTAL_HEIGHT 480
 
-static user_interface_system_state *ui_system_state;
+static user_interface_system_state *state;
 
-#define PSPRITESHEET_SYSTEM ui_system_state
+#define PSPRITESHEET_SYSTEM state
 #include "game/spritesheet.h"
 
 bool user_interface_on_event(u16 code, void *sender, void *listener_inst, event_context context);
 void register_button(const char *_text, u16 _x, u16 _y, button_type _btn_type, texture_type _tex_type, Vector2 source_dim);
 
 void user_interface_system_initialize() {
-  if (ui_system_state) return;
+  if (state) return;
 
-  ui_system_state = (user_interface_system_state *)allocate_memory_linear(sizeof(user_interface_system_state), true);
-  ui_system_state->ui_font = LoadFont(rs_path("quantico_bold.ttf"));
-  ui_system_state->b_user_interface_system_initialized = true;
+  state = (user_interface_system_state *)allocate_memory_linear(sizeof(user_interface_system_state), true);
+  state->ui_font = LoadFont(rs_path("quantico_bold.ttf"));
+  state->b_user_interface_system_initialized = true;
 
+
+  // MAIN MENU
   register_button("Play", SCREEN_WIDTH_DIV2, SCREEN_HEIGHT_DIV2 + BTN_SPACE_BTW(0),
                   BTN_TYPE_MAINMENU_BUTTON_PLAY, BUTTON_TEXTURE, 
                   (Vector2){80, 16});
-  register_button("Edit", SCREEN_WIDTH_DIV2, SCREEN_HEIGHT_DIV2 + BTN_SPACE_BTW(1),
-                  BTN_TYPE_MAINMENU_BUTTON_EDIT, BUTTON_TEXTURE, 
+  register_button("Editor", SCREEN_WIDTH_DIV2, SCREEN_HEIGHT_DIV2 + BTN_SPACE_BTW(1),
+                  BTN_TYPE_MAINMENU_BUTTON_EDITOR, BUTTON_TEXTURE, 
                   (Vector2){80, 16});
   register_button("Settings", SCREEN_WIDTH_DIV2, SCREEN_HEIGHT_DIV2 + BTN_SPACE_BTW(2),
                   BTN_TYPE_MAINMENU_BUTTON_SETTINGS, BUTTON_TEXTURE, 
@@ -47,6 +49,10 @@ void user_interface_system_initialize() {
   register_button("Exit", SCREEN_WIDTH_DIV2, SCREEN_HEIGHT_DIV2 + BTN_SPACE_BTW(4),
                   BTN_TYPE_MAINMENU_BUTTON_EXIT, BUTTON_TEXTURE, 
                   (Vector2){80, 16});
+  // MAIN MENU
+
+
+  // IN GAME -- PAUSE
   register_button("Resume", SCREEN_WIDTH_DIV2, SCREEN_HEIGHT_DIV2 + BTN_SPACE_BTW(0),
                   BTN_TYPE_INGAME_PAUSEMENU_BUTTON_RESUME, BUTTON_TEXTURE, 
                   (Vector2){80, 16});
@@ -59,6 +65,27 @@ void user_interface_system_initialize() {
   register_button("Exit", SCREEN_WIDTH_DIV2, SCREEN_HEIGHT_DIV2 + BTN_SPACE_BTW(3),
                   BTN_TYPE_INGAME_PAUSEMENU_BUTTON_EXIT, BUTTON_TEXTURE, 
                   (Vector2){80, 16});
+  // IN GAME -- PAUSE
+
+
+  // EDITOR
+  register_button("Save Map", SCREEN_WIDTH_DIV2, SCREEN_HEIGHT_DIV2 + BTN_SPACE_BTW(0),
+                  BTN_TYPE_EDITOR_BUTTON_SAVE_MAP, BUTTON_TEXTURE, 
+                  (Vector2){80, 16});
+  register_button("Load Map", SCREEN_WIDTH_DIV2, SCREEN_HEIGHT_DIV2 + BTN_SPACE_BTW(1),
+                  BTN_TYPE_EDITOR_BUTTON_LOAD_MAP, BUTTON_TEXTURE, 
+                  (Vector2){80, 16});
+  register_button("Settings", SCREEN_WIDTH_DIV2, SCREEN_HEIGHT_DIV2 + BTN_SPACE_BTW(2),
+                  BTN_TYPE_EDITOR_BUTTON_SETTINGS, BUTTON_TEXTURE, 
+                  (Vector2){80, 16});
+  register_button("Main Menu", SCREEN_WIDTH_DIV2, SCREEN_HEIGHT_DIV2 + BTN_SPACE_BTW(3),
+                  BTN_TYPE_EDITOR_BUTTON_MAIN_MENU, BUTTON_TEXTURE, 
+                  (Vector2){80, 16});
+  register_button("Exit", SCREEN_WIDTH_DIV2, SCREEN_HEIGHT_DIV2 + BTN_SPACE_BTW(4),
+                  BTN_TYPE_EDITOR_BUTTON_EXIT, BUTTON_TEXTURE, 
+                  (Vector2){80, 16});
+  // EDITOR
+
 
   event_register(EVENT_CODE_UI_SHOW_PAUSE_SCREEN, 0, user_interface_on_event);
   event_register(EVENT_CODE_UI_SHOW_UNPAUSE_SCREEN, 0, user_interface_on_event);
@@ -66,33 +93,31 @@ void user_interface_system_initialize() {
 
 bool set_player_user_interface(player_state* player) {
   if (player->initialized) {
-    ui_system_state->p_player = player;
+    state->p_player = player;
     return true;
   }
 
   return false;
 }
 
-void update_user_interface(scene_type _current_scene_type) {
-  ui_system_state->mouse_pos = GetMousePosition();
-  ui_system_state->offset = (Vector2) { SCREEN_OFFSET, SCREEN_OFFSET};
-  ui_system_state->scene_data = _current_scene_type;
+void update_user_interface() {
+  state->mouse_pos = GetMousePosition();
+  state->offset = (Vector2) { SCREEN_OFFSET, SCREEN_OFFSET};
   update_sprite_renderqueue();
 
   for (int i = 0; i < BTN_TYPE_MAX; ++i) {
-    if (ui_system_state->buttons[i].btn_type == BTN_TYPE_UNDEFINED) {
-      // TODO: Log trace
+    if (state->buttons[i].btn_type == BTN_TYPE_UNDEFINED) {
       continue;
     }
-    if (!ui_system_state->buttons[i].show) { continue; }
+    if (!state->buttons[i].show) { continue; }
 
-    button btn = ui_system_state->buttons[i];
-    if (CheckCollisionPointRec(ui_system_state->mouse_pos, btn.dest)) {
+    button btn = state->buttons[i];
+    if (CheckCollisionPointRec(state->mouse_pos, btn.dest)) {
 
       if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
         btn.state = BTN_STATE_PRESSED;
         btn.source.x = btn.source.width;
-        stop_sprite(ui_system_state->buttons[btn.btn_type].reflection_render_index, true);
+        stop_sprite(state->buttons[btn.btn_type].reflection_render_index, true);
       } else {
         if (btn.state != BTN_STATE_HOVER) {
           btn.state = BTN_STATE_HOVER;
@@ -101,19 +126,17 @@ void update_user_interface(scene_type _current_scene_type) {
       }
     } else {
       if (btn.state != BTN_STATE_UP) {
-        stop_sprite(btn.reflection_render_index, true);
-        btn.is_reflection_played = false;
+        reset_sprite(btn.reflection_render_index, true);
         btn.state = BTN_STATE_UP;
         btn.source.x = 0;
       }
     }
 
-    ui_system_state->buttons[i] = btn;
+    state->buttons[i] = btn;
   }
 }
 
 void render_user_interface() {
-  render_sprite_renderqueue();
 
 }
 
@@ -139,7 +162,7 @@ bool gui_button(button_type _type) {
   if (_type == BTN_TYPE_UNDEFINED) {
     return false;
   }
-  button _btn = ui_system_state->buttons[_type];
+  button _btn = state->buttons[_type];
   _btn.show = true;
 
   DrawTexturePro(*get_texture_by_enum(BUTTON_TEXTURE), _btn.source, _btn.dest,
@@ -148,23 +171,21 @@ bool gui_button(button_type _type) {
   play_sprite_on_site(_btn.crt_render_index, _btn.dest);
 
   if (_btn.state == BTN_STATE_PRESSED) {
-    DrawTextEx(ui_system_state->ui_font, _btn.text,
+    DrawTextEx(state->ui_font, _btn.text,
                (Vector2){.x = _btn.text_pos.x, .y = _btn.text_pos.y + 3},
-               ui_system_state->ui_font.baseSize, _btn.text_spacing,
+               state->ui_font.baseSize, _btn.text_spacing,
                MYYELLOW);
   } else {
     if (_btn.state == BTN_STATE_HOVER) {
-      if (_btn.is_reflection_played == false) {
-        play_sprite_on_site(_btn.reflection_render_index, _btn.dest);
-        _btn.is_reflection_played = true;
-      }
+      play_sprite_on_site(_btn.reflection_render_index, _btn.dest);
     }
-    DrawTextEx(ui_system_state->ui_font, _btn.text,
+    DrawTextEx(state->ui_font, _btn.text,
                (Vector2){.x = _btn.text_pos.x, .y = _btn.text_pos.y - 3},
-               ui_system_state->ui_font.baseSize, _btn.text_spacing,
+               state->ui_font.baseSize, _btn.text_spacing,
                MYYELLOW);
   }
-  ui_system_state->buttons[_type] = _btn;
+  state->buttons[_type] = _btn;
+
   return _btn.state == BTN_STATE_PRESSED;
 }
 
@@ -187,19 +208,18 @@ void gui_healthbar(f32 percent) {
 }
 
 void register_button(const char *_text, u16 _x, u16 _y, button_type _btn_type, texture_type _tex_type, Vector2 source_dim) {
-  if (_btn_type == BTN_TYPE_UNDEFINED || !ui_system_state->b_user_interface_system_initialized)
+  if (_btn_type == BTN_TYPE_UNDEFINED || !state->b_user_interface_system_initialized)
     return;
   Vector2 text_measure =
-      MeasureTextEx(ui_system_state->ui_font, _text,
-                    ui_system_state->ui_font.baseSize, UI_FONT_SPACING);
+      MeasureTextEx(state->ui_font, _text,
+                    state->ui_font.baseSize, UI_FONT_SPACING);
   button btn = {
       .id = _btn_type,
       .btn_type = _btn_type,
       .text = _text,
       .show = false,
-      .crt_render_index = register_sprite(BUTTON_CRT_SHEET, false, false),
-      .reflection_render_index = register_sprite(BUTTON_REFLECTION_SHEET, true, false),
-      .is_reflection_played = false,
+      .crt_render_index = register_sprite(BUTTON_CRT_SHEET, true, false, false),
+      .reflection_render_index = register_sprite(BUTTON_REFLECTION_SHEET, false, true, false),
       .text_spacing = UI_FONT_SPACING,
       .tex_type = _tex_type,
       .text_pos.x = _x - text_measure.x / 2.f,
@@ -214,29 +234,27 @@ void register_button(const char *_text, u16 _x, u16 _y, button_type _btn_type, t
               .x = 0, .y = 0, .width = source_dim.x, .height = source_dim.y},
   };
 
-  ui_system_state->buttons[_btn_type] = btn;
+  state->buttons[_btn_type] = btn;
 }
 
 void clear_interface_state() {
   for (int i = 0; i < BTN_TYPE_MAX; ++i) {
-    ui_system_state->buttons[i].show = false;
+    state->buttons[i].show = false;
   }
 
-  ui_system_state->b_show_pause_screen = false;
+  state->b_show_pause_screen = false;
 }
 
 bool user_interface_on_event(u16 code, void *sender, void *listener_inst,
                              event_context context) {
   switch (code) {
-  case EVENT_CODE_UI_SHOW_PAUSE_SCREEN: { // DON'T FIRE GAME_ENGINE PAUSE EVENTS
-                                          // HERE
-    ui_system_state->b_show_pause_screen = true;
+  case EVENT_CODE_UI_SHOW_PAUSE_SCREEN: { // DON'T FIRE GAME_ENGINE PAUSE EVENTS HERE
+    state->b_show_pause_screen = true;
     return true;
     break;
   }
-  case EVENT_CODE_UI_SHOW_UNPAUSE_SCREEN: { // DON'T FIRE GAME_ENGINE PAUSE
-                                            // EVENTS HERE
-    ui_system_state->b_show_pause_screen = false;
+  case EVENT_CODE_UI_SHOW_UNPAUSE_SCREEN: { // DON'T FIRE GAME_ENGINE PAUSE EVENTS HERE
+    state->b_show_pause_screen = false;
     return true;
     break;
   }

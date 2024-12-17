@@ -8,7 +8,7 @@
 #include "game/camera.h"
 #include "game/scenes/scene_in_game.h"
 #include "game/scenes/scene_main_menu.h"
-#include "game/scenes/scene_in_game_edit.h"
+#include "game/scenes/scene_editor.h"
 
 static scene_manager_system_state *scene_manager_state;
 
@@ -23,7 +23,7 @@ bool scene_manager_initialize(Vector2 _screen_size, Vector2 _screen_half_size) {
   scene_manager_state->map_size = scene_manager_state->gridsize * 100;
 
   event_register(EVENT_CODE_SCENE_IN_GAME, 0, scene_manager_on_event);
-  event_register(EVENT_CODE_SCENE_IN_GAME_EDIT, 0, scene_manager_on_event);
+  event_register(EVENT_CODE_SCENE_EDITOR, 0, scene_manager_on_event);
   event_register(EVENT_CODE_SCENE_MAIN_MENU, 0, scene_manager_on_event);
   event_register(EVENT_CODE_SCENE_MANAGER_SET_TARGET, 0, scene_manager_on_event);
 
@@ -34,15 +34,13 @@ bool scene_manager_initialize(Vector2 _screen_size, Vector2 _screen_half_size) {
 }
 
 void update_scene_scene() {
-  //TraceLog(LOG_INFO, "(pos) {%f, %f}", scene_manager_state->target.x, scene_manager_state->target.y);
-
   update_camera(scene_manager_state->target);
 
   switch (scene_manager_state->scene_data) {
     case SCENE_MAIN_MENU: update_scene_main_menu(); break;
 
     case SCENE_IN_GAME: update_scene_in_game(); break;
-    case SCENE_IN_GAME_EDIT: update_scene_in_game_edit(); break;
+    case SCENE_EDITOR: update_scene_editor(); break;
   default: break;
   }
 }
@@ -50,15 +48,15 @@ void render_scene_world() {
   switch (scene_manager_state->scene_data) {
     case SCENE_MAIN_MENU: break;
     case SCENE_IN_GAME: render_scene_in_game(); break;
-    case SCENE_IN_GAME_EDIT: render_scene_in_game_edit(); break;
+    case SCENE_EDITOR: render_scene_editor(); break;
   default: break;
   }
 }
 void render_scene_interface() {
   switch (scene_manager_state->scene_data) {
     case SCENE_IN_GAME: break;
-    case SCENE_IN_GAME_EDIT: render_interface_in_game_edit(); break;
     case SCENE_MAIN_MENU: render_interface_main_menu();  break;
+    case SCENE_EDITOR: render_interface_editor(); break;
   default: break;
   }
 }
@@ -82,9 +80,9 @@ bool scene_manager_on_event(u16 code, void *sender, void *listener_inst, event_c
     return true;
     break;
   }
-  case EVENT_CODE_SCENE_IN_GAME_EDIT: {
-    scene_manager_state->scene_data = SCENE_IN_GAME_EDIT;
-    initialize_scene_in_game_edit(get_active_camera());
+  case EVENT_CODE_SCENE_EDITOR: {
+    scene_manager_state->scene_data = SCENE_EDITOR;
+    initialize_scene_editor(get_active_camera());
     return true;
     break;
   }

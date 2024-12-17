@@ -1,4 +1,4 @@
-#include "scene_in_game_edit.h"
+#include "scene_editor.h"
 
 #include "core/event.h"
 #include "core/fmemory.h"
@@ -8,7 +8,7 @@
 #include "game/user_interface.h"
 #include "raylib.h"
 
-typedef struct scene_in_game_edit_state {
+typedef struct scene_editor_state {
   Camera2D* camera;
   Vector2 target;
   tilemap map;
@@ -19,46 +19,49 @@ typedef struct scene_in_game_edit_state {
   bool b_show_pause_menu;
   bool b_show_tilesheet_tile_selection_screen;
   bool b_is_a_tile_selected;
-} scene_in_game_edit_state;
+} scene_editor_state;
 
-static scene_in_game_edit_state *state;
+static scene_editor_state *state;
 
 void update_bindings();
 void update_movement();
 void update_zoom_controls();
+void update_mouse_bindings();
+void update_keyboard_bindings();
 
-void initialize_scene_in_game_edit(Camera2D* _camera) {
+void initialize_scene_editor(Camera2D* _camera) {
   if (state) {
-    TraceLog(LOG_ERROR, "ERROR::scene_in_game_edit::initialize_scene_in_game_edit()::initialize function called multiple times");
+    TraceLog(LOG_ERROR, "ERROR::scene_in_game_edit::initialize_scene_editor()::initialize function called multiple times");
     return;
   }
-
-  state = (scene_in_game_edit_state*)allocate_memory_linear(sizeof(scene_in_game_edit_state), true);
+  state = (scene_editor_state*)allocate_memory_linear(sizeof(scene_editor_state), true);
   
   create_tilemap(TILESHEET_TYPE_MAP, (Vector2) {0, 0}, 100, 16*3, WHITE, &state->map);
-  create_tilesheet(TILESHEET_TYPE_MAP, 16*2, 1.1, &state->palette);
   if(!state->map.is_initialized) {
     TraceLog(LOG_WARNING, "WARNING::scene_in_game_edit::initialize_scene_in_game_edit()::tilemap initialization failed");
   }
+  create_tilesheet(TILESHEET_TYPE_MAP, 16*2, 1.1, &state->palette);
   if(!state->palette.is_initialized) {
     TraceLog(LOG_WARNING, "WARNING::scene_in_game_edit::initialize_scene_in_game_edit()::palette initialization failed");
   }
+
   user_interface_system_initialize();
   state->camera = _camera;
-
   state->palette.position = (Vector2) {5, 5};
+
 }
 
-void update_scene_in_game_edit() {
+void update_scene_editor() {
   update_bindings();
+  update_user_interface();
 }
 
-void render_scene_in_game_edit() {
+void render_scene_editor() {
   render_tilemap(&state->map);
   DrawPixel(0, 0, RED);
 }
 
-void render_interface_in_game_edit() {
+void render_interface_editor() {
   
   if(state->b_show_tilesheet_tile_selection_screen) 
   { 
@@ -81,10 +84,38 @@ void render_interface_in_game_edit() {
     });
   }
 
+  if (state->b_show_pause_menu) {
+    DrawRectangle(
+      SCREEN_WIDTH/3, 0, 
+      SCREEN_WIDTH/3, 
+      SCREEN_HEIGHT, 
+      WHITE
+    );
+
+    if (gui_button(BTN_TYPE_EDITOR_BUTTON_SAVE_MAP)) {
+      save_map_data(&state->map, &state->package);
+    }
+    if (gui_button(BTN_TYPE_EDITOR_BUTTON_LOAD_MAP)) {
+      load_map_data(&state->map, &state->package);
+    }
+    if (gui_button(BTN_TYPE_EDITOR_BUTTON_SETTINGS)) {
+      
+    }
+    if (gui_button(BTN_TYPE_EDITOR_BUTTON_MAIN_MENU)) {
+      
+    }
+    if (gui_button(BTN_TYPE_EDITOR_BUTTON_EXIT)) {
+      event_fire(EVENT_CODE_APPLICATION_QUIT, 0, (event_context) {0});
+    }
+  }
 }
 
 void update_bindings() {
-  update_movement();
+  update_mouse_bindings();
+  update_keyboard_bindings();
+}
+
+void update_mouse_bindings() { 
   update_zoom_controls();
 
   if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON) && state->b_show_tilesheet_tile_selection_screen && !state->b_is_a_tile_selected) {
@@ -105,21 +136,18 @@ void update_bindings() {
     tilemap_tile tile = (tilemap_tile) {0};
     state->b_is_a_tile_selected = false;
   }
+}
+void update_keyboard_bindings() {
+  update_movement();
 
-  if (IsKeyReleased(KEY_K)) {
+  if (IsKeyReleased(KEY_TAB)) {
     state->b_show_tilesheet_tile_selection_screen = !state->b_show_tilesheet_tile_selection_screen;
   }
-
-  if (IsKeyReleased(KEY_F5)) {
-    save_map_data(&state->map, &state->package);
-  }
-  if (IsKeyReleased(KEY_F6)) {
-    load_map_data(&state->map, &state->package);
-  }
-
   if (IsKeyReleased(KEY_ESCAPE)) {
-    event_fire(EVENT_CODE_APPLICATION_QUIT, 0, (event_context) {0});
+    state->b_show_pause_menu = !state->b_show_pause_menu;
   }
+
+
 }
 
 void update_zoom_controls() {

@@ -169,8 +169,8 @@ void damage_any_collider_by_type(Character2D *from_actor, actor_type to_type) {
     }
     break;
   }
-  case PROJECTILE_ENEMY: break; // TODO: Warn
-  case PROJECTILE_PLAYER: break; // TODO: Warn
+  case PROJECTILE_ENEMY: break; 
+  case PROJECTILE_PLAYER: break; 
   }
 }
 

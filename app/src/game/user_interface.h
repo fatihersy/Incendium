@@ -6,7 +6,7 @@
 
 void user_interface_system_initialize();
 
-void update_user_interface(scene_type _current_scene_type);
+void update_user_interface();
 void render_user_interface();
 
 bool set_player_user_interface(player_state* player);

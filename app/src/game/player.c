@@ -5,6 +5,7 @@
 
 #include "defines.h"
 #include "game/ability.h"
+#include "raylib.h"
 
 
 // To avoid dublicate symbol errors. Implementation in defines.h
@@ -16,11 +17,10 @@ static player_state* player;
 
 void play_anim(spritesheet_type player_anim_sheet);
 
-bool player_system_initialized = false;
 bool player_system_on_event(u16 code, void* sender, void* listener_inst, event_context context);
 
 bool player_system_initialize() {
-    if (player_system_initialized) return false;
+    if (player) return false;
 
     player = (player_state*)allocate_memory_linear(sizeof(player_state), true);
 
@@ -66,23 +66,22 @@ bool player_system_initialize() {
     player->health_max = 255;
     player->health_current = player->health_max;
 
-    player->move_left_sprite_queue_index = register_sprite(PLAYER_ANIMATION_MOVE_LEFT, false, true);
-    player->move_right_sprite_queue_index = register_sprite(PLAYER_ANIMATION_MOVE_RIGHT, false, true);
-    player->idle_left_sprite_queue_index = register_sprite(PLAYER_ANIMATION_IDLE_LEFT, false, true);
-    player->idle_right_sprite_queue_index = register_sprite(PLAYER_ANIMATION_IDLE_RIGHT, false, true);
-    player->take_damage_left_sprite_queue_index = register_sprite(PLAYER_ANIMATION_TAKE_DAMAGE_LEFT, false, true);
-    player->take_damage_right_sprite_queue_index = register_sprite(PLAYER_ANIMATION_TAKE_DAMAGE_RIGHT, false, true);
-    player->wreck_left_sprite_queue_index = register_sprite(PLAYER_ANIMATION_WRECK_LEFT, false, true);
-    player->wreck_right_sprite_queue_index = register_sprite(PLAYER_ANIMATION_WRECK_RIGHT, false, true);
+    player->move_left_sprite_queue_index = register_sprite(PLAYER_ANIMATION_MOVE_LEFT, true, false, true);
+    player->move_right_sprite_queue_index = register_sprite(PLAYER_ANIMATION_MOVE_RIGHT, true, false, true);
+    player->idle_left_sprite_queue_index = register_sprite(PLAYER_ANIMATION_IDLE_LEFT, true, false, true);
+    player->idle_right_sprite_queue_index = register_sprite(PLAYER_ANIMATION_IDLE_RIGHT, true, false, true);
+    player->take_damage_left_sprite_queue_index = register_sprite(PLAYER_ANIMATION_TAKE_DAMAGE_LEFT, true, false, true);
+    player->take_damage_right_sprite_queue_index = register_sprite(PLAYER_ANIMATION_TAKE_DAMAGE_RIGHT, true, false, true);
+    player->wreck_left_sprite_queue_index = register_sprite(PLAYER_ANIMATION_WRECK_LEFT, true, false, true);
+    player->wreck_right_sprite_queue_index = register_sprite(PLAYER_ANIMATION_WRECK_RIGHT, true, false, true);
     player->last_played_sprite_id = player->idle_left_sprite_queue_index; // The position player starts. To avoid from the error when move firstly called
     
     player->initialized = true;
-    player_system_initialized = true;
     return true;
 }
 
 player_state* get_player_state() {
-    if (!player_system_initialized) {
+    if (!player) {
         return (player_state*)0;
     }
     //TraceLog(LOG_INFO, "player.position {x:%d, y:%d}", player->position.x, player->position.y);
@@ -90,11 +89,19 @@ player_state* get_player_state() {
 }
 
 Vector2 get_player_position(bool centered) {
-  return centered 
-  ? (Vector2) {
-        .x = player->position.x - player->dimentions_div2.x,
-        .y = player->position.y - player->dimentions_div2.y,}
-  : player->position;
+    Vector2 pos = {0};
+    if(centered) {
+        pos = (Vector2) {
+            .x = player->position.x - player->dimentions_div2.x,
+            .y = player->position.y - player->dimentions_div2.y
+        };
+    }
+    else { 
+        pos = player->position;
+    }
+
+    //TraceLog(LOG_INFO, "get_player_position() -> centered: {%f, %f}", pos.x, pos.y);
+    return pos;
 }
 
 void add_exp_to_player(u32 exp) {
@@ -115,7 +122,7 @@ void add_exp_to_player(u32 exp) {
 }
 
 bool update_player(scene_type _scene_data) {
-    if (!player_system_initialized) return false;
+    if (!player) return false;
 
     player->health_perc = (float) player->health_current / player->health_max;
     player->exp_perc = (float) player->exp_current / player->exp_to_next_level;
@@ -155,8 +162,8 @@ bool update_player(scene_type _scene_data) {
         player->is_moving = false;
     }
 
-    player->collision.x = player->position.x - player->dimentions.x / 2.f;
-    player->collision.y = player->position.y - player->dimentions.y / 2.f;
+    player->collision.x = player->position.x - player->dimentions_div2.x;
+    player->collision.y = player->position.y - player->dimentions_div2.y;
     player->collision.width = player->dimentions.x;
     player->collision.height = player->dimentions.y;
 
@@ -167,7 +174,7 @@ bool update_player(scene_type _scene_data) {
 }
 
 bool render_player() {
-    if (!player_system_initialized) { return false; }
+    if (!player) { return false; }
 
     if(!player->is_dead) {
         if(player->is_damagable){
@@ -180,7 +187,7 @@ bool render_player() {
             }
             else switch (player->w_direction) 
             {
-                case LEFT:play_anim(PLAYER_ANIMATION_IDLE_LEFT);
+                case LEFT: play_anim(PLAYER_ANIMATION_IDLE_LEFT);
                 break;
                 case RIGHT:play_anim(PLAYER_ANIMATION_IDLE_RIGHT);
                 break;
@@ -188,18 +195,17 @@ bool render_player() {
         }
         else{
             (player->w_direction == LEFT) 
-                ? play_anim(player->take_damage_left_sprite_queue_index)
-                : play_anim(player->take_damage_right_sprite_queue_index);
+                ? play_anim(PLAYER_ANIMATION_TAKE_DAMAGE_LEFT)
+                : play_anim(PLAYER_ANIMATION_TAKE_DAMAGE_RIGHT);
         }
     }
     else {
         (player->w_direction == LEFT) 
-            ? play_anim(player->wreck_left_sprite_queue_index)
-            : play_anim(player->wreck_right_sprite_queue_index);
+            ? play_anim(PLAYER_ANIMATION_WRECK_LEFT)
+            : play_anim(PLAYER_ANIMATION_WRECK_RIGHT);
     }
     
     render_abilities(&player->ability_system);
-    render_sprite_renderqueue();
     #if DEBUG_COLLISIONS
         DrawRectangleLines(
             player->collision.x,
@@ -213,7 +219,6 @@ bool render_player() {
 }
 
 void play_anim(spritesheet_type player_anim_sheet) {
-    stop_sprite(player->last_played_sprite_id, false);
     Rectangle dest = (Rectangle) {
         .x = player->position.x,
         .y = player->position.y,
