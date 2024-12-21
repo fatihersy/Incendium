@@ -3,19 +3,24 @@
 #ifndef DEFINES_H
 #define DEFINES_H
 
-#include "raylib.h"
+#include <raylib.h>
 #include <stdbool.h>
 
 #define RESOURCE_PATH "D:/Workspace/resources/"
 #define TOTAL_ALLOCATED_MEMORY 64 * 1024 * 1024
 #define TARGET_FPS 60
 #define MAX_SPRITE_RENDERQUEUE 50
+#define CLEAR_BACKGROUND_COLOR BLACK
 
 #define SCREEN_WIDTH 1280
 #define SCREEN_HEIGHT 720
 #define SCREEN_OFFSET 5
-#define SCREEN_WIDTH_DIV2 SCREEN_WIDTH / 2.f
-#define SCREEN_HEIGHT_DIV2 SCREEN_HEIGHT / 2.f
+#define SCREEN_WIDTH_DIV2  SCREEN_WIDTH       / 2.f
+#define SCREEN_HEIGHT_DIV2 SCREEN_HEIGHT      / 2.f
+#define SCREEN_WIDTH_DIV3  SCREEN_WIDTH       / 3.f
+#define SCREEN_HEIGHT_DIV3 SCREEN_HEIGHT      / 3.f
+#define SCREEN_WIDTH_DIV4  SCREEN_WIDTH       / 4.f
+#define SCREEN_HEIGHT_DIV4 SCREEN_HEIGHT      / 4.f
 
 #define MAX_TILESHEET_SLOTS 50
 #define MAX_TILESHEET_UNIQUE_TILESLOTS_X 32
@@ -23,7 +28,6 @@
 #define MAX_TILESHEET_UNIQUE_TILESLOTS MAX_TILESHEET_UNIQUE_TILESLOTS_X * MAX_TILESHEET_UNIQUE_TILESLOTS_Y
 #define MAX_TILEMAP_SLOTS 10
 #define MAX_TILEMAP_TILESHEETSLOT 10
-#define MAX_TEXTURE_SLOTS 10
 #define MAX_IMAGE_SLOTS 10
 #define MAX_SPRITESHEET_SLOTS 50
 
@@ -84,13 +88,17 @@ typedef enum elapse_time_type { SALVO_ETA } elapse_time_type;
 
 typedef enum texture_type {
   TEX_UNSPECIFIED,
-  PLAYER_TEXTURE,
-  ENEMY_TEXTURE,
-  BACKGROUND,
-  BUTTON_TEXTURE,
-  HEALTHBAR_TEXTURE,
-  HEALTH_PERC_TEXTURE,
-  MAP_TILESET_TEXTURE,
+  TEX_PLAYER_TEXTURE,
+  TEX_ENEMY_TEXTURE,
+  TEX_BACKGROUND,
+  TEX_BUTTON_TEXTURE,
+  TEX_HEALTHBAR_TEXTURE,
+  TEX_HEALTH_PERC_TEXTURE,
+  TEX_MAP_TILESET_TEXTURE,
+  TEX_PANEL,
+  TEX_PANEL_SCALED,
+
+  TEXTURE_TYPE_MAX,
 } texture_type;
 
 typedef enum image_type {
@@ -120,6 +128,7 @@ typedef enum spritesheet_type {
   PLAYER_ANIMATION_WRECK_RIGHT,
   BUTTON_REFLECTION_SHEET,
   BUTTON_CRT_SHEET,
+  SCREEN_CRT_SHEET,
   LEVEL_UP_SHEET,
 
   SPRITESHEET_TYPE_MAX
@@ -131,28 +140,32 @@ typedef enum button_state {
   BTN_STATE_PRESSED
 } button_state;
 
-typedef enum button_type {
+typedef enum button_id {
+  BTN_ID_UNDEFINED,
+
+  BTN_ID_MAINMENU_BUTTON_PLAY,
+  BTN_ID_MAINMENU_BUTTON_EDITOR,
+  BTN_ID_MAINMENU_BUTTON_SETTINGS,
+  BTN_ID_MAINMENU_BUTTON_EXTRAS,
+  BTN_ID_MAINMENU_BUTTON_EXIT,
+
+  BTN_ID_PAUSEMENU_BUTTON_RESUME,
+  BTN_ID_PAUSEMENU_BUTTON_SETTINGS,
+  BTN_ID_PAUSEMENU_BUTTON_MAIN_MENU,
+  BTN_ID_PAUSEMENU_BUTTON_EXIT,
+
+  BTN_ID_EDITOR_BUTTON_SAVE_MAP,
+  BTN_ID_EDITOR_BUTTON_LOAD_MAP,
+
+  BTN_ID_MAX
+} button_id;
+
+typedef enum button_type_id {
   BTN_TYPE_UNDEFINED,
-
-  BTN_TYPE_MAINMENU_BUTTON_PLAY,
-  BTN_TYPE_MAINMENU_BUTTON_EDITOR,
-  BTN_TYPE_MAINMENU_BUTTON_SETTINGS,
-  BTN_TYPE_MAINMENU_BUTTON_EXTRAS,
-  BTN_TYPE_MAINMENU_BUTTON_EXIT,
-
-  BTN_TYPE_INGAME_PAUSEMENU_BUTTON_RESUME,
-  BTN_TYPE_INGAME_PAUSEMENU_BUTTON_SETTINGS,
-  BTN_TYPE_INGAME_PAUSEMENU_BUTTON_MAINMENU,
-  BTN_TYPE_INGAME_PAUSEMENU_BUTTON_EXIT,
-
-  BTN_TYPE_EDITOR_BUTTON_SAVE_MAP,
-  BTN_TYPE_EDITOR_BUTTON_LOAD_MAP,
-  BTN_TYPE_EDITOR_BUTTON_SETTINGS,
-  BTN_TYPE_EDITOR_BUTTON_MAIN_MENU,
-  BTN_TYPE_EDITOR_BUTTON_EXIT,
-
+  BTN_TYPE_MENU_BUTTON,
   BTN_TYPE_MAX
-} button_type;
+} button_type_id;
+
 typedef enum resource_type {
   RESOURCE_TYPE_SPRITESHEET,
   RESOURCE_TYPE_TEXTURE
@@ -216,7 +229,6 @@ typedef struct tilemap {
 
   Color grid_color;
   bool render_grid;
-
   bool is_initialized;
 } tilemap;
 
@@ -245,6 +257,7 @@ typedef struct spritesheet {
   Rectangle coord;
 
   Texture2D handle;
+  Color tint;
   i16 fps;
   i16 counter;
   u16 render_queue_index;
@@ -263,20 +276,27 @@ typedef struct spritesheet_play_system {
   u16 renderqueue_count;
 } spritesheet_play_system;
 
-typedef struct button {
-  u16 id;
-  const char *text;
-  bool show;
-  Vector2 text_pos;
-  u16 text_spacing;
-  button_type btn_type;
+typedef struct button_type {
+  button_type_id id;
   texture_type tex_type;
+  u16 text_spacing;
+  Rectangle source_rect;
+  Vector2 scaled_dim_default;
+} button_type;
+
+typedef struct button {
+  button_id id;
+  button_type* btn_type;
+  const char *text;
+  Vector2 text_pos;
+  Rectangle dest;
+
   button_state state;
   u16 crt_render_index;
   u16 reflection_render_index;
 
-  Rectangle source;
-  Rectangle dest;
+  bool show;
+  bool is_registered;
 } button;
 
 typedef struct Character2D {
@@ -385,7 +405,7 @@ typedef struct resource_system_state {
   i16 sprite_amouth;
   i16 image_amouth;
   i16 tilesheet_amouth;
-  Texture2D textures[MAX_TEXTURE_SLOTS];
+  Texture2D textures[TEXTURE_TYPE_MAX];
   spritesheet sprites[MAX_SPRITESHEET_SLOTS];
   Image images[MAX_IMAGE_SLOTS];
   tilesheet tilesheets[MAX_TILESHEET_SLOTS];
@@ -397,18 +417,6 @@ typedef struct spawn_system_state {
   Character2D spawns[MAX_SPAWN_COUNT];
   u16 current_spawn_count;
 } spawn_system_state;
-
-typedef struct user_interface_system_state {
-  spritesheet_play_system spritesheet_system;
-  player_state *p_player;
-  Vector2 offset;
-  Vector2 mouse_pos;
-  button buttons[BTN_TYPE_MAX];
-  Font ui_font;
-
-  bool b_show_pause_screen;
-  bool b_user_interface_system_initialized;
-} user_interface_system_state;
 
 typedef struct game_manager_system_state {
   rectangle_collision spawn_collisions[MAX_SPAWN_COUNT];

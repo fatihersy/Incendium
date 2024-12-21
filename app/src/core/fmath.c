@@ -13,10 +13,10 @@ Vector2 move_towards(Vector2 position, Vector2 target, f32 speed) {
   return Vector2MoveTowards(position, target, (float)speed);
 }
 
-bool vec2_equals(Vector2 v1, Vector2 v2, i8 tolerans) {
+bool vec2_equals(Vector2 v1, Vector2 v2, f32 tolerans) {
 
-  int tolerans1 = fabsf(v1.x - v2.x);
-  int tolerans2 = fabsf(v1.y - v2.y);
+  f32 tolerans1 = fabsf(v1.x - v2.x);
+  f32 tolerans2 = fabsf(v1.y - v2.y);
   return 
   (
     tolerans1 <= tolerans && 

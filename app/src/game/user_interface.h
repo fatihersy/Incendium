@@ -11,10 +11,13 @@ void render_user_interface();
 
 bool set_player_user_interface(player_state* player);
 
-void draw_to_background(texture_type _type);
-bool gui_button(button_type _type);
+bool gui_button(button_id _id, bool play_crt);
+void gui_draw_texture_to_background(texture_type _type);
+void gui_draw_spritesheet_to_background(spritesheet_type _type);
 void gui_healthbar(f32 percent);
+void gui_draw_pause_screen();
 
-void clear_interface_state();
+
+void user_interface_system_destroy();
 
 #endif

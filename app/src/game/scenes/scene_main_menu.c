@@ -15,21 +15,21 @@ void update_scene_main_menu() {
 }
 
 void render_interface_main_menu() {
-  draw_to_background(BACKGROUND);
+  gui_draw_spritesheet_to_background(SCREEN_CRT_SHEET);
 
-  if (gui_button(BTN_TYPE_MAINMENU_BUTTON_PLAY)) {
+  if (gui_button(BTN_ID_MAINMENU_BUTTON_PLAY, false)) {
     event_fire(EVENT_CODE_SCENE_IN_GAME, 0, (event_context){0});
   };
-  if (gui_button(BTN_TYPE_MAINMENU_BUTTON_EDITOR)) {
+  if (gui_button(BTN_ID_MAINMENU_BUTTON_EDITOR, false)) {
     event_fire(EVENT_CODE_SCENE_EDITOR, 0, (event_context){0});
   };
-  if (gui_button(BTN_TYPE_MAINMENU_BUTTON_SETTINGS)) {
+  if (gui_button(BTN_ID_MAINMENU_BUTTON_SETTINGS, false)) {
     // TODO: Settings
   };
-  if (gui_button(BTN_TYPE_MAINMENU_BUTTON_EXTRAS)) {
+  if (gui_button(BTN_ID_MAINMENU_BUTTON_EXTRAS, false)) {
       
   };
-  if (gui_button(BTN_TYPE_MAINMENU_BUTTON_EXIT)) {
+  if (gui_button(BTN_ID_MAINMENU_BUTTON_EXIT, false)) {
     event_fire(EVENT_CODE_APPLICATION_QUIT, 0, (event_context){0});
   };
 }

@@ -52,8 +52,7 @@ typedef enum system_event_code {
     EVENT_CODE_SCENE_MANAGER_SET_TARGET,
 
     // user_interface
-    EVENT_CODE_UI_SHOW_PAUSE_SCREEN,
-    EVENT_CODE_UI_SHOW_UNPAUSE_SCREEN,
+    EVENT_CODE_UI_SHOW_PAUSE_MENU,
 
     // player
     EVENT_CODE_PLAYER_ADD_EXP,

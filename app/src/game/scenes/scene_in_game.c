@@ -35,7 +35,7 @@ bool initialize_scene_in_game(Vector2 _screen_size) {
 
   for (u32 i = 0; i < 360; i += 20) {
     Vector2 position = get_a_point_of_a_circle(_get_player_position(false), 500, i);
-    Texture2D *tex = get_texture_by_enum(ENEMY_TEXTURE);
+    Texture2D *tex = get_texture_by_enum(TEX_ENEMY_TEXTURE);
 
     rectangle_collision rect_col = (rectangle_collision){.rect = (Rectangle)
     {

@@ -16,7 +16,6 @@ typedef struct scene_editor_state {
   tilemap_tile selected_tile;
   tilemap_stringtify_package package;
   
-  bool b_show_pause_menu;
   bool b_show_tilesheet_tile_selection_screen;
   bool b_is_a_tile_selected;
 } scene_editor_state;
@@ -84,30 +83,7 @@ void render_interface_editor() {
     });
   }
 
-  if (state->b_show_pause_menu) {
-    DrawRectangle(
-      SCREEN_WIDTH/3, 0, 
-      SCREEN_WIDTH/3, 
-      SCREEN_HEIGHT, 
-      WHITE
-    );
-
-    if (gui_button(BTN_TYPE_EDITOR_BUTTON_SAVE_MAP)) {
-      save_map_data(&state->map, &state->package);
-    }
-    if (gui_button(BTN_TYPE_EDITOR_BUTTON_LOAD_MAP)) {
-      load_map_data(&state->map, &state->package);
-    }
-    if (gui_button(BTN_TYPE_EDITOR_BUTTON_SETTINGS)) {
-      
-    }
-    if (gui_button(BTN_TYPE_EDITOR_BUTTON_MAIN_MENU)) {
-      
-    }
-    if (gui_button(BTN_TYPE_EDITOR_BUTTON_EXIT)) {
-      event_fire(EVENT_CODE_APPLICATION_QUIT, 0, (event_context) {0});
-    }
-  }
+  render_user_interface();
 }
 
 void update_bindings() {
@@ -144,7 +120,7 @@ void update_keyboard_bindings() {
     state->b_show_tilesheet_tile_selection_screen = !state->b_show_tilesheet_tile_selection_screen;
   }
   if (IsKeyReleased(KEY_ESCAPE)) {
-    state->b_show_pause_menu = !state->b_show_pause_menu;
+    event_fire(EVENT_CODE_UI_SHOW_PAUSE_MENU, 0, (event_context){0});
   }
 
 

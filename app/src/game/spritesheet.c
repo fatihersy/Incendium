@@ -38,7 +38,7 @@ void render_sprite_renderqueue(spritesheet_play_system *system, u16 queue_index)
     .y = sheet->coord.y,
     .width = sheet->coord.width,
     .height = sheet->coord.height},
-  (Vector2){.x = 0, .y = 0}, 0, WHITE
+  (Vector2){.x = 0, .y = 0}, 0, sheet->tint
   );
   #if DEBUG_COLLISIONS
     DrawRectangleLines(sheet.coord.x, sheet.coord.y, sheet.coord.width,
@@ -59,13 +59,14 @@ u16 _register_sprite(spritesheet_play_system *system, spritesheet_type _type, bo
   return system->renderqueue_count;
 }
 
-void _play_sprite_on_site(spritesheet_play_system *system, u16 _id, Rectangle dest) {
+void _play_sprite_on_site(spritesheet_play_system *system, u16 _id, Color _tint, Rectangle dest) {
   spritesheet* ss = &system->renderqueue[_id];
   if (ss->play_once && ss->is_played && !ss->is_started) { return; }
   ss->playmod = ON_SITE;
   ss->is_started = true;
   ss->is_played = true;
   ss->coord = dest;
+  ss->tint = _tint;
   if (ss->should_center) {
     ss->coord.x -= ss->coord.width / 2.f;
     ss->coord.y -= ss->coord.height / 2.f;

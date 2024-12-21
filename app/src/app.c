@@ -5,6 +5,7 @@
 #include "core/ftime.h"
 #include "core/fmemory.h"
 
+#include "defines.h"
 #include "game/camera.h"
 #include "game/resource.h"
 #include "game/scenes/scene_manager.h"
@@ -57,7 +58,7 @@ bool app_render() {
     if (GetFPS() > TARGET_FPS) return true;
 
     BeginDrawing();
-    ClearBackground(F_BACKGROUND_COLOR);
+    ClearBackground(CLEAR_BACKGROUND_COLOR);
     BeginMode2D(*get_active_camera());
 
     render_scene_world();

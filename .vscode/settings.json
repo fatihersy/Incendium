@@ -69,7 +69,6 @@
         "camera.h": "c",
         "game_manager.h": "c",
         "player.h": "c",
-        "resource_manager.h": "c",
         "resource.h": "c",
         "spawn.h": "c",
         "user_interface.h": "c",

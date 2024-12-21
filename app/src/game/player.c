@@ -236,44 +236,46 @@ void play_anim(spritesheet_type player_anim_sheet) {
         break;
         case SPRITESHEET_TYPE_MAX: TraceLog(LOG_ERROR, "ERROR::player::move()::move function called with wrong value.");
         break;
+        case SCREEN_CRT_SHEET: TraceLog(LOG_ERROR, "ERROR::player::move()::move function called with wrong value.");
+        break;
 
         case PLAYER_ANIMATION_MOVE_LEFT: {
-            play_sprite_on_site(player->move_left_sprite_queue_index, dest);
+            play_sprite_on_site(player->move_left_sprite_queue_index, WHITE, dest);
             player->last_played_sprite_id = player->move_left_sprite_queue_index;
             break;
         }
         case PLAYER_ANIMATION_MOVE_RIGHT: {
-            play_sprite_on_site(player->move_right_sprite_queue_index, dest);
+            play_sprite_on_site(player->move_right_sprite_queue_index, WHITE, dest);
             player->last_played_sprite_id = player->move_right_sprite_queue_index;
             break;
         }
         case PLAYER_ANIMATION_IDLE_LEFT:  {
-            play_sprite_on_site(player->idle_left_sprite_queue_index, dest);
+            play_sprite_on_site(player->idle_left_sprite_queue_index, WHITE, dest);
             player->last_played_sprite_id = player->idle_left_sprite_queue_index;
             break;
         }
         case PLAYER_ANIMATION_IDLE_RIGHT:  {
-            play_sprite_on_site(player->idle_right_sprite_queue_index, dest);
+            play_sprite_on_site(player->idle_right_sprite_queue_index, WHITE, dest);
             player->last_played_sprite_id = player->idle_right_sprite_queue_index;
             break;
         }
         case PLAYER_ANIMATION_TAKE_DAMAGE_LEFT:  {
-            play_sprite_on_site(player->take_damage_left_sprite_queue_index, dest);
+            play_sprite_on_site(player->take_damage_left_sprite_queue_index, WHITE, dest);
             player->last_played_sprite_id = player->take_damage_left_sprite_queue_index;
             break;
         }
         case PLAYER_ANIMATION_TAKE_DAMAGE_RIGHT:  {
-            play_sprite_on_site(player->take_damage_right_sprite_queue_index, dest);
+            play_sprite_on_site(player->take_damage_right_sprite_queue_index, WHITE, dest);
             player->last_played_sprite_id = player->take_damage_right_sprite_queue_index;
             break;
         }
         case PLAYER_ANIMATION_WRECK_LEFT:  {
-            play_sprite_on_site(player->wreck_left_sprite_queue_index, dest);
+            play_sprite_on_site(player->wreck_left_sprite_queue_index, WHITE, dest);
             player->last_played_sprite_id = player->wreck_left_sprite_queue_index;
             break;
         }
         case PLAYER_ANIMATION_WRECK_RIGHT:  {
-            play_sprite_on_site(player->wreck_right_sprite_queue_index, dest);
+            play_sprite_on_site(player->wreck_right_sprite_queue_index, WHITE, dest);
             player->last_played_sprite_id = player->wreck_right_sprite_queue_index;
             break;
         }

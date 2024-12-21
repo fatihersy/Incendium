@@ -1,10 +1,10 @@
 #include "game_manager.h"
 
+#include "core/window.h"
 #include "core/event.h"
 #include "core/fmemory.h"
 #include "core/ftime.h"
 
-#include "core/window.h"
 #include "defines.h"
 #include "game/player.h"
 #include "game/spawn.h"
@@ -39,42 +39,6 @@ bool game_manager_initialize(Vector2 _screen_size, scene_type _scene_data) {
 
 void update_game_manager(scene_type _scene_data) {
   game_manager_state->scene_data = _scene_data;
-}
-
-bool game_manager_on_event(u16 code, void *sender, void *listener_inst,
-                           event_context context) {
-  switch (code) {
-  case EVENT_CODE_PAUSE_GAME: {
-    game_manager_state->is_game_paused = true;
-    event_fire(EVENT_CODE_UI_SHOW_PAUSE_SCREEN, 0, (event_context){0});
-
-    return true;
-    break;
-  }
-  case EVENT_CODE_UNPAUSE_GAME: {
-    game_manager_state->is_game_paused = false;
-    event_fire(EVENT_CODE_UI_SHOW_UNPAUSE_SCREEN, 0, (event_context){0});
-
-    return true;
-    break;
-  }
-
-  case EVENT_CODE_RELOCATE_SPAWN_COLLISION: {
-    for (int i = 1; i <= game_manager_state->spawn_collision_count; ++i) {
-      if (game_manager_state->spawn_collisions[i].owner_id ==
-          context.data.u16[0]) {
-        game_manager_state->spawn_collisions[i].rect.x = context.data.u16[1];
-        game_manager_state->spawn_collisions[i].rect.y = context.data.u16[2];
-        return true;
-      }
-    }
-    break;
-  }
-  default:
-    break;
-  }
-
-  return false;
 }
 
 void _update_spawns() {
@@ -173,4 +137,38 @@ void damage_any_collider_by_type(Character2D *from_actor, actor_type to_type) {
   case PROJECTILE_PLAYER: break; 
   }
 }
+
+bool game_manager_on_event(u16 code, void *sender, void *listener_inst, event_context context) {
+  switch (code) {
+  case EVENT_CODE_PAUSE_GAME: {
+    game_manager_state->is_game_paused = true;
+
+    return true;
+    break;
+  }
+  case EVENT_CODE_UNPAUSE_GAME: {
+    game_manager_state->is_game_paused = false;
+
+    return true;
+    break;
+  }
+
+  case EVENT_CODE_RELOCATE_SPAWN_COLLISION: {
+    for (int i = 1; i <= game_manager_state->spawn_collision_count; ++i) {
+      if (game_manager_state->spawn_collisions[i].owner_id ==
+          context.data.u16[0]) {
+        game_manager_state->spawn_collisions[i].rect.x = context.data.u16[1];
+        game_manager_state->spawn_collisions[i].rect.y = context.data.u16[2];
+        return true;
+      }
+    }
+    break;
+  }
+  default:
+    break;
+  }
+
+  return false;
+}
+
 
