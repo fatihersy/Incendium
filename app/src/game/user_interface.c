@@ -120,7 +120,7 @@ void update_user_interface() {
   update_sprite_renderqueue();
 
   for (int i = 0; i < BTN_ID_MAX; ++i) {
-    if (state->buttons[i].btn_type == BTN_TYPE_UNDEFINED) {
+    if (state->buttons[i].id == BTN_ID_UNDEFINED) {
       continue;
     }
     if (!state->buttons[i].show) { continue; }
@@ -130,19 +130,19 @@ void update_user_interface() {
 
       if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
         btn.state = BTN_STATE_PRESSED;
-        btn.btn_type->source_rect.x = btn.btn_type->source_rect.width;
+        btn.btn_type.source_rect.x = btn.btn_type.source_rect.width;
         stop_sprite(state->buttons[btn.id].reflection_render_index, true);
       } else {
         if (btn.state != BTN_STATE_HOVER) {
           btn.state = BTN_STATE_HOVER;
-          btn.btn_type->source_rect.x = 0;
+          btn.btn_type.source_rect.x = 0;
         }
       }
     } else {
       if (btn.state != BTN_STATE_UP) {
         reset_sprite(btn.reflection_render_index, true);
         btn.state = BTN_STATE_UP;
-        btn.btn_type->source_rect.x = 0;
+        btn.btn_type.source_rect.x = 0;
       }
     }
 
@@ -168,7 +168,7 @@ bool gui_button(button_id _id, bool play_crt) {
     TraceLog(LOG_WARNING, "WARNING::user_interface::gui_button()::The button is not registered");
     return false;
   }
-  button_type* _btn_type = &state->button_types[_btn->btn_type->id];
+  button_type* _btn_type = &_btn->btn_type;
   _btn->show = true;
 
   DrawTexturePro(
@@ -312,7 +312,7 @@ void register_button(const char *_text, Vector2 _attached_position, Vector2 offs
 
   button btn = {
       .id = _btn_id,
-      .btn_type = &state->button_types[_btn_type_id],
+      .btn_type = state->button_types[_btn_type_id],
       .text = _text,
       .text_pos = (Vector2) {pos_x + width_div2  - text_measure.x / 2.f, pos_y + height_div2  - text_measure.y / 2.f},
       .dest = (Rectangle) {
@@ -335,7 +335,7 @@ void gui_draw_texture_to_background(texture_type _type) {
   });
 }
 
-void gui_draw_spritesheet_to_background(spritesheet_type _type) {
+void gui_draw_spritesheet_to_background(spritesheet_type _type, Color _tint) {
   if (_type >= SPRITESHEET_TYPE_MAX || _type <= SPRITESHEET_UNSPECIFIED || !state) {
     TraceLog(LOG_WARNING, "WARNING::user_interface::gui_draw_spritesheet_to_background()::Sprite type out of bound");
     return;
@@ -345,8 +345,7 @@ void gui_draw_spritesheet_to_background(spritesheet_type _type) {
     state->ss_to_draw_bg.render_queue_index = register_sprite(_type, true, false, false);
   }
   Rectangle dest = (Rectangle) {0, 0, GetScreenWidth(), GetScreenHeight()};
-  Color tint = (Color) {255, 255, 255, 200};
-  play_sprite_on_site(state->ss_to_draw_bg.render_queue_index, tint, dest);
+  play_sprite_on_site(state->ss_to_draw_bg.render_queue_index, _tint, dest);
 }
 
 /**
@@ -377,7 +376,7 @@ inline void draw_texture_regular(Texture2D* tex, Rectangle dest) {
 inline void draw_texture_type_regular(texture_type _type, Rectangle dest) {
   Texture2D* tex = get_texture_by_enum(_type);
 
-  if (!tex) { TraceLog(
+  if (!tex || tex->id == 0) { TraceLog(
   LOG_WARNING, "WARNING::user_interface::draw_texture_regular()::Tex was null");
     return; }
 

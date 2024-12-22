@@ -286,7 +286,7 @@ typedef struct button_type {
 
 typedef struct button {
   button_id id;
-  button_type* btn_type;
+  button_type btn_type;
   const char *text;
   Vector2 text_pos;
   Rectangle dest;

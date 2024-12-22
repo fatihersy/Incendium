@@ -20,7 +20,7 @@ bool resource_system_initialize() {
   resource_system->texture_amouth = -1;
 
   //NOTE: _path = "%s%s", RESOURCE_PATH, _path
-  //load_texture("space_bg.png",         true,  (Vector2){3840, 2160}, TEX_BACKGROUND);
+  load_texture("space_bg.png",         false, (Vector2){0,  0}, TEX_BACKGROUND);
   load_texture("fudesumi.png",         true,  (Vector2){64, 64},TEX_ENEMY_TEXTURE);
   load_texture("menu_button.png",      false, (Vector2){0,  0}, TEX_BUTTON_TEXTURE);
   load_texture("health_bar_edited.png",false, (Vector2){0,  0}, TEX_HEALTHBAR_TEXTURE);
@@ -56,22 +56,27 @@ Texture2D* get_texture_by_id(unsigned int id) {
 }
 
 Texture2D* get_texture_by_enum(texture_type type) {
-  if (type >= TEXTURE_TYPE_MAX || type <= TEX_UNSPECIFIED)
+  if (type >= TEXTURE_TYPE_MAX || type <= TEX_UNSPECIFIED){
+    TraceLog(LOG_WARNING, "WARNING::resource::get_texture_by_enum()::Texture type out of bound");
     return (Texture2D*){0};
+  }
 
   return &resource_system->textures[type];
 }
 Image* get_image_by_enum(image_type type) {
 
-  if (type > MAX_IMAGE_SLOTS || type == IMG_UNSPECIFIED)
+  if (type > MAX_IMAGE_SLOTS || type == IMG_UNSPECIFIED){
+    TraceLog(LOG_WARNING, "WARNING::resource::get_image_by_enum()::Image type out of bound");
     return (Image*){0};
+  }
 
   return &resource_system->images[type];
 }
 
 spritesheet get_spritesheet_by_enum(spritesheet_type type) {
 
-  if (type == SPRITESHEET_UNSPECIFIED || type > MAX_SPRITESHEET_SLOTS) {
+  if (type == SPRITESHEET_UNSPECIFIED || type > MAX_SPRITESHEET_SLOTS){
+    TraceLog(LOG_WARNING, "WARNING::resource::get_spritesheet_by_enum()::Spritesheet type out of bound");
     return (spritesheet){0};
   }
 
@@ -79,7 +84,8 @@ spritesheet get_spritesheet_by_enum(spritesheet_type type) {
 }
 
 tilesheet* get_tilesheet_by_enum(tilesheet_type type) {
-  if (type == TILESHEET_TYPE_UNSPECIFIED || type > MAX_TILESHEET_SLOTS) {
+  if (type == TILESHEET_TYPE_UNSPECIFIED || type > MAX_TILESHEET_SLOTS){
+    TraceLog(LOG_WARNING, "WARNING::resource::get_tilesheet_by_enum()::Tilesheet type out of bound");
     return (tilesheet*){0};
   }
 
