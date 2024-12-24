@@ -22,7 +22,6 @@ bool resource_system_initialize() {
   //NOTE: _path = "%s%s", RESOURCE_PATH, _path
   load_texture("space_bg.png",         false, (Vector2){0,  0}, TEX_BACKGROUND);
   load_texture("fudesumi.png",         true,  (Vector2){64, 64},TEX_ENEMY_TEXTURE);
-  load_texture("menu_button.png",      false, (Vector2){0,  0}, TEX_BUTTON_TEXTURE);
   load_texture("health_bar_edited.png",false, (Vector2){0,  0}, TEX_HEALTHBAR_TEXTURE);
   load_texture("health_perc.png",      false, (Vector2){0,  0}, TEX_HEALTH_PERC_TEXTURE);
   load_texture("map_tileset.png",      false, (Vector2){0,  0}, TEX_MAP_TILESET_TEXTURE);
@@ -40,6 +39,10 @@ bool resource_system_initialize() {
   load_spritesheet("button_reflection.png", BUTTON_REFLECTION_SHEET, 30, 80, 16, 1, 9);
   load_spritesheet("button_crt.png", BUTTON_CRT_SHEET, 8, 78, 12, 1, 4);
   load_spritesheet("screen_crt_sheet.png", SCREEN_CRT_SHEET, 8, 1280, 720, 1, 4);
+  load_spritesheet("settings_slider_percent.png", SETTINGS_SLIDER_PERCENT, 0, 21, 10, 1, 10);
+  load_spritesheet("slider_left_button.png", SETTINGS_SLIDER_LEFT_BUTTON, 0, 10, 10, 1, 2);
+  load_spritesheet("slider_right_button.png", SETTINGS_SLIDER_RIGHT_BUTTON, 0, 10, 10, 1, 2);
+  load_spritesheet("menu_button.png", MENU_BUTTON, 0, 80, 16, 1, 2);
   load_tilesheet(TILESHEET_TYPE_MAP, TEX_MAP_TILESET_TEXTURE, 16, 14, 16);
 
   return true;

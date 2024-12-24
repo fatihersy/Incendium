@@ -8,7 +8,6 @@ void update_sprite(spritesheet_play_system *system, u16 queue_index);
 void render_sprite_renderqueue(spritesheet_play_system *system, u16 queue_index);
 
 void _update_sprite_renderqueue(spritesheet_play_system *system) {
-
   for (int i = 1; i <= system->renderqueue_count; ++i) {
     if (!system->renderqueue[i].is_started) {
       continue;
@@ -17,65 +16,12 @@ void _update_sprite_renderqueue(spritesheet_play_system *system) {
     update_sprite(system, i);
   }
 }
-
-void render_sprite_renderqueue(spritesheet_play_system *system, u16 queue_index) {
-  if (queue_index > system->renderqueue_count || queue_index <= 0) {
-    TraceLog(LOG_ERROR, "ERROR::resource::stop_sprite()::invalid index: %d",
-             queue_index);
-    return;
-  }
-  spritesheet* sheet = &system->renderqueue[queue_index];
-
-  DrawTexturePro(
-  sheet->handle,
-  (Rectangle){
-    .x = sheet->current_frame_rect.x,
-    .y = sheet->current_frame_rect.y,
-    .width = sheet->current_frame_rect.width,
-    .height = sheet->current_frame_rect.height},
-  (Rectangle){
-    .x = sheet->coord.x,
-    .y = sheet->coord.y,
-    .width = sheet->coord.width,
-    .height = sheet->coord.height},
-  (Vector2){.x = 0, .y = 0}, 0, sheet->tint
-  );
-  #if DEBUG_COLLISIONS
-    DrawRectangleLines(sheet.coord.x, sheet.coord.y, sheet.coord.width,
-                       sheet.coord.height, WHITE);
-  #endif
-}
-
-u16 _register_sprite(spritesheet_play_system *system, spritesheet_type _type, bool _play_looped, bool _play_once, bool _center_sprite) {
-  spritesheet ss = get_spritesheet_by_enum(_type);
-  system->renderqueue_count++;
-
-  ss.play_looped = _play_looped;
-  ss.play_once = _play_once;
-  ss.should_center = _center_sprite;
-  ss.is_started = false;
-  system->renderqueue[system->renderqueue_count] = ss;
-
-  return system->renderqueue_count;
-}
-
-void _play_sprite_on_site(spritesheet_play_system *system, u16 _id, Color _tint, Rectangle dest) {
-  spritesheet* ss = &system->renderqueue[_id];
-  if (ss->play_once && ss->is_played && !ss->is_started) { return; }
-  ss->playmod = ON_SITE;
-  ss->is_started = true;
-  ss->is_played = true;
-  ss->coord = dest;
-  ss->tint = _tint;
-  if (ss->should_center) {
-    ss->coord.x -= ss->coord.width / 2.f;
-    ss->coord.y -= ss->coord.height / 2.f;
-  }
-  render_sprite_renderqueue(system, _id);
-}
-
 void update_sprite(spritesheet_play_system *system, u16 queue_index) {
   spritesheet sheet = system->renderqueue[queue_index];
+  if (sheet.fps == 0) {
+    TraceLog(LOG_ERROR, "ERROR::spritesheet::update_sprite()::Sheet not meant to be playable");
+    return;
+  }
   sheet.counter++;
 
   if (sheet.counter >= 60 / sheet.fps) {
@@ -105,6 +51,95 @@ void update_sprite(spritesheet_play_system *system, u16 queue_index) {
       sheet.current_row * sheet.current_frame_rect.height;
 
   system->renderqueue[queue_index] = sheet;
+}
+void render_sprite_renderqueue(spritesheet_play_system *system, u16 queue_index) {
+  if (queue_index > system->renderqueue_count || queue_index <= 0) {
+    TraceLog(LOG_ERROR, "ERROR::spritesheet::render_sprite_renderqueue()::invalid queue index: %d", queue_index);
+    return;
+  }
+  spritesheet* sheet = &system->renderqueue[queue_index];
+
+  DrawTexturePro(
+  sheet->handle,
+  (Rectangle){
+    .x = sheet->current_frame_rect.x, .y = sheet->current_frame_rect.y,
+    .width = sheet->current_frame_rect.width, .height = sheet->current_frame_rect.height},
+  (Rectangle){
+    .x = sheet->coord.x, .y = sheet->coord.y,
+    .width = sheet->coord.width, .height = sheet->coord.height},
+  (Vector2){.x = 0, .y = 0}, 0, sheet->tint
+  );
+  #if DEBUG_COLLISIONS
+    DrawRectangleLines(
+      sheet.coord.x, sheet.coord.y, 
+      sheet.coord.width,sheet.coord.height, 
+      WHITE);
+  #endif
+}
+
+u16 _register_sprite(spritesheet_play_system *system, spritesheet_type _type, bool _play_looped, bool _play_once, bool _center_sprite) {
+  if (_type > SPRITESHEET_TYPE_MAX || _type <= SPRITESHEET_UNSPECIFIED) {
+    TraceLog(LOG_ERROR, "ERROR::spritesheet::play_sprite_on_site()::sprite type out of bound");
+    return INVALID_ID16;
+  }
+  spritesheet sheet = get_spritesheet_by_enum(_type);
+
+  system->renderqueue_count++;
+
+  sheet.play_looped = _play_looped;
+  sheet.play_once = _play_once;
+  sheet.should_center = _center_sprite;
+  sheet.is_started = false;
+  system->renderqueue[system->renderqueue_count] = sheet;
+
+  return system->renderqueue_count;
+}
+
+void _play_sprite_on_site(spritesheet_play_system *system, u16 _id, Color _tint, Rectangle dest) {
+  if (_id > system->renderqueue_count || _id <= 0) {
+    TraceLog(LOG_ERROR, "ERROR::spritesheet::play_sprite_on_site()::invalid queue id: %d", _id);
+    return;
+  }
+  spritesheet* sheet = &system->renderqueue[_id];
+
+  if (sheet->play_once && sheet->is_played && !sheet->is_started) { return; }
+  sheet->playmod = ON_SITE;
+  sheet->is_started = true;
+  sheet->is_played = true;
+  sheet->coord = dest;
+  sheet->tint = _tint;
+  if (sheet->should_center) {
+    sheet->coord.x -= sheet->coord.width / 2.f;
+    sheet->coord.y -= sheet->coord.height / 2.f;
+  }
+
+  render_sprite_renderqueue(system, _id);
+}
+
+void _draw_sprite_on_site(spritesheet_play_system *system, spritesheet_type _type, Color _tint, Vector2 pos, f32 scale, u16 frame, bool _should_center) {
+  if (_type > SPRITESHEET_TYPE_MAX || _type <= SPRITESHEET_UNSPECIFIED) {
+    TraceLog(LOG_ERROR, "ERROR::spritesheet::draw_sprite_on_site()::invalid sprite type");
+    return;
+  }
+  spritesheet sheet = get_spritesheet_by_enum(_type);
+
+  u16 col = frame % sheet.col_total;
+  u16 row = frame / sheet.row_total;
+
+  if (_should_center) {
+    pos.x -= sheet.current_frame_rect.width/2.f;
+    pos.y -= sheet.current_frame_rect.height/2.f;
+  }
+
+  DrawTexturePro(
+  sheet.handle,
+  (Rectangle){
+    .x = sheet.current_frame_rect.width * col, .y = sheet.current_frame_rect.height * row,
+    .width = sheet.current_frame_rect.width, .height = sheet.current_frame_rect.height},
+  (Rectangle){
+    .x = pos.x, .y = pos.y,
+    .width = sheet.current_frame_rect.width * scale, .height = sheet.current_frame_rect.height * scale},
+  (Vector2){.x = 0, .y = 0}, 0, _tint);
 }
 
 void _queue_sprite_change_location(spritesheet_play_system *system, u16 queue_index, Rectangle _location) {

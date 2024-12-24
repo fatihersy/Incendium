@@ -9,8 +9,8 @@
 #include <stdbool.h>
 
 #define DEFAULT_MENU_BUTTON_SCALE 3
-#define BTN_SPACE_BTW_Y(i, DIM_Y) (DIM_Y + DIM_Y/3) * i
-#define BTN_SPACE_BTW_X(i, DIM_X) (DIM_X + DIM_X/3) * i
+#define BTN_SPACE_BTW_Y(i, DIM_Y) (DIM_Y + DIM_Y/3.f) * i
+#define BTN_SPACE_BTW_X(i, DIM_X) (DIM_X + DIM_X/3.f) * i
 
 typedef struct user_interface_system_state {
   spritesheet_play_system spritesheet_system;
@@ -22,6 +22,8 @@ typedef struct user_interface_system_state {
   Font ui_font;
   spritesheet ss_to_draw_bg;
   bool b_show_pause_menu;
+
+  u16 ssq_settings_slider_id;
 } user_interface_system_state;
 
 static user_interface_system_state *state;
@@ -29,14 +31,13 @@ static user_interface_system_state *state;
 #define PSPRITESHEET_SYSTEM state // Don't forget to undef very bottom of the file
 #include "game/spritesheet.h"
 
-bool user_interface_on_event(u16 code, void *sender, void *listener_inst, event_context context);
-void register_button(const char *_text, Vector2 _attached_position, Vector2 offset, button_id _btn_id, button_type_id _btn_type_id);
-void register_button_type(button_type_id _btn_type_id, texture_type _tex_type, Vector2 source_dim);
-Vector2 get_button_dim_by_type(button_type_id _btn_type_id);
+bool      user_interface_on_event(u16 code, void *sender, void *listener_inst, event_context context);
+void      register_button(const char *_text, Vector2 _attached_position, Vector2 offset, button_id _btn_id, button_type_id _btn_type_id);
+void      register_button_type(button_type_id _btn_type_id, spritesheet_type _ss_type, Vector2 frame_dim, f32 _scale);
+void      draw_texture_regular(Texture2D* tex, Rectangle dest);
+void      draw_texture_type_regular(texture_type _type, Rectangle dest);
+void      gui_draw_panel(Rectangle dest, bool should_center);
 Rectangle get_texture_source_rect(texture_type _type);
-void draw_texture_regular(Texture2D* tex, Rectangle dest);
-void draw_texture_type_regular(texture_type _type, Rectangle dest);
-void gui_draw_panel(Rectangle dest, bool should_center);
 
 void user_interface_system_initialize() {
   if (state) return;
@@ -44,7 +45,9 @@ void user_interface_system_initialize() {
   state = (user_interface_system_state *)allocate_memory_linear(sizeof(user_interface_system_state), true);
   state->ui_font = LoadFont(rs_path("quantico_bold.ttf"));
 
-  register_button_type(BTN_TYPE_MENU_BUTTON, TEX_BUTTON_TEXTURE, (Vector2){80, 16});
+  register_button_type(BTN_TYPE_MENU_BUTTON, MENU_BUTTON, (Vector2){80, 16}, DEFAULT_MENU_BUTTON_SCALE);
+  register_button_type(BTN_TYPE_SLIDER_LEFT_BUTTON, SETTINGS_SLIDER_LEFT_BUTTON, (Vector2){10, 10}, DEFAULT_MENU_BUTTON_SCALE);
+  register_button_type(BTN_TYPE_SLIDER_RIGHT_BUTTON, SETTINGS_SLIDER_RIGHT_BUTTON, (Vector2){10, 10}, DEFAULT_MENU_BUTTON_SCALE);
 
   // MAIN MENU
   register_button(
@@ -67,11 +70,6 @@ void user_interface_system_initialize() {
     "Exit", (Vector2) {SCREEN_WIDTH_DIV2, SCREEN_HEIGHT_DIV2}, (Vector2) {0,4 },
     BTN_ID_MAINMENU_BUTTON_EXIT, BTN_TYPE_MENU_BUTTON);
   // MAIN MENU
-
-  // IN GAME
-
-
-  // IN GAME
 
   // EDITOR
   register_button(
@@ -101,6 +99,15 @@ void user_interface_system_initialize() {
     BTN_ID_PAUSEMENU_BUTTON_EXIT, BTN_TYPE_MENU_BUTTON);
   // USER INTERFACE
 
+  state->ssq_settings_slider_id = register_sprite(SETTINGS_SLIDER_PERCENT, false, false, false);
+
+  register_button(
+    "Main Menu", (Vector2) {SCREEN_WIDTH_DIV2, SCREEN_HEIGHT_DIV2}, (Vector2) {-1,0 },
+    BTN_ID_SETTINGS_SLIDER_LEFT_BUTTON, BTN_TYPE_SLIDER_LEFT_BUTTON);
+
+  register_button(
+    "Exit", (Vector2) {SCREEN_WIDTH_DIV2, SCREEN_HEIGHT_DIV2}, (Vector2) {1,0 },
+    BTN_ID_SETTINGS_SLIDER_RIGHT_BUTTON, BTN_TYPE_SLIDER_RIGHT_BUTTON);
 
   event_register(EVENT_CODE_UI_SHOW_PAUSE_MENU, 0, user_interface_on_event);
 }
@@ -130,19 +137,19 @@ void update_user_interface() {
 
       if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
         btn.state = BTN_STATE_PRESSED;
-        btn.btn_type.source_rect.x = btn.btn_type.source_rect.width;
+        //btn.btn_type.source_rect.x = btn.btn_type.source_rect.width;
         stop_sprite(state->buttons[btn.id].reflection_render_index, true);
       } else {
         if (btn.state != BTN_STATE_HOVER) {
           btn.state = BTN_STATE_HOVER;
-          btn.btn_type.source_rect.x = 0;
+          //btn.btn_type.source_rect.x = 0;
         }
       }
     } else {
       if (btn.state != BTN_STATE_UP) {
         reset_sprite(btn.reflection_render_index, true);
         btn.state = BTN_STATE_UP;
-        btn.btn_type.source_rect.x = 0;
+        //btn.btn_type.source_rect.x = 0;
       }
     }
 
@@ -157,7 +164,7 @@ void render_user_interface() {
   }
 }
 
-bool gui_button(button_id _id, bool play_crt) {
+bool gui_button(const char* text, button_id _id, bool play_crt) {
   if (_id >= BTN_ID_MAX || _id <= BTN_ID_UNDEFINED) {
     TraceLog(LOG_WARNING, "WARNING::user_interface::gui_button()::Recieved button type out of bound");
     return false;
@@ -171,32 +178,40 @@ bool gui_button(button_id _id, bool play_crt) {
   button_type* _btn_type = &_btn->btn_type;
   _btn->show = true;
 
-  DrawTexturePro(
-  *get_texture_by_enum(_btn_type->tex_type), 
-  _btn_type->source_rect, _btn->dest, 
-  (Vector2){0}, 
-  0, 
-  WHITE
-  );
+  Vector2 text_measure;
+  Vector2 text_pos;
+
+  if (!TextIsEqual(text, "")) {
+    text_measure = MeasureTextEx(state->ui_font, text, state->ui_font.baseSize, UI_FONT_SPACING);
+    text_pos = (Vector2) {
+    _btn->dest.x + _btn->dest.width /2.f - text_measure.x / 2.f, 
+    _btn->dest.y + _btn->dest.height/2.f - text_measure.y / 2.f
+    };
+  }
 
   if(play_crt) play_sprite_on_site(_btn->crt_render_index, WHITE, _btn->dest);
+  Vector2 pos = (Vector2) {_btn->dest.x, _btn->dest.y};
 
   if (_btn->state == BTN_STATE_PRESSED) {
-    DrawTextEx(state->ui_font, _btn->text,
-               (Vector2){.x = _btn->text_pos.x, .y = _btn->text_pos.y + 3},
-               state->ui_font.baseSize, _btn_type->text_spacing,
-               MYYELLOW);
+    draw_sprite_on_site(_btn->btn_type.ss_type, WHITE, pos, _btn->btn_type.scale, 1, false);
+    if (!TextIsEqual(text, "")) {
+      DrawTextEx(state->ui_font, text,
+        (Vector2){.x = text_pos.x, .y = text_pos.y + 3},
+        state->ui_font.baseSize, UI_FONT_SPACING,
+        MYYELLOW);
+    }
   } else {
+    draw_sprite_on_site(_btn->btn_type.ss_type, WHITE, pos, _btn->btn_type.scale, 0, false);
     if (_btn->state == BTN_STATE_HOVER) {
       play_sprite_on_site(_btn->reflection_render_index, WHITE, _btn->dest);
     }
-    DrawTextEx(state->ui_font, _btn->text,
-               (Vector2){.x = _btn->text_pos.x, .y = _btn->text_pos.y - 3},
-               state->ui_font.baseSize, _btn_type->text_spacing,
-               MYYELLOW);
+    if (!TextIsEqual(text, "")) {
+      DrawTextEx(state->ui_font, text,
+        (Vector2){.x = text_pos.x, .y = text_pos.y - 3},
+        state->ui_font.baseSize, UI_FONT_SPACING,
+        MYYELLOW);
+    }
   }
-  state->buttons[_id] = *_btn;
-
   return _btn->state == BTN_STATE_PRESSED;
 }
 
@@ -239,21 +254,34 @@ void gui_draw_pause_screen() {
     .width = SCREEN_WIDTH - SCREEN_OFFSET, .height = SCREEN_HEIGHT - SCREEN_OFFSET}, false
   );
 
-  if (gui_button(BTN_ID_PAUSEMENU_BUTTON_RESUME, true)) {
+  if (gui_button("Resume", BTN_ID_PAUSEMENU_BUTTON_RESUME, true)) {
     state->b_show_pause_menu = !state->b_show_pause_menu;
   }
-  if (gui_button(BTN_ID_PAUSEMENU_BUTTON_SETTINGS, true)) {
+  if (gui_button("Settings", BTN_ID_PAUSEMENU_BUTTON_SETTINGS, true)) {
     
   }
-  if (gui_button(BTN_ID_PAUSEMENU_BUTTON_MAIN_MENU, true)) {
+  if (gui_button("Main Menu", BTN_ID_PAUSEMENU_BUTTON_MAIN_MENU, true)) {
     event_fire(EVENT_CODE_SCENE_MAIN_MENU, 0, (event_context) {0});
   }
-  if (gui_button(BTN_ID_PAUSEMENU_BUTTON_EXIT, true)) {
+  if (gui_button("Exit", BTN_ID_PAUSEMENU_BUTTON_EXIT, true)) {
     event_fire(EVENT_CODE_APPLICATION_QUIT, 0, (event_context) {0});
   }
 }
 
-void register_button_type(button_type_id _btn_type_id, texture_type _tex_type, Vector2 source_dim) {
+void gui_draw_options_screen() {
+  if (gui_button("", BTN_ID_SETTINGS_SLIDER_LEFT_BUTTON, true)) {
+    
+  }
+  Vector2 pos = (Vector2) {SCREEN_WIDTH_DIV2, SCREEN_HEIGHT_DIV2};
+  
+  draw_sprite_on_site(SETTINGS_SLIDER_PERCENT, WHITE, pos, DEFAULT_MENU_BUTTON_SCALE, 0, false);
+
+  if (gui_button("", BTN_ID_SETTINGS_SLIDER_RIGHT_BUTTON, true)) {
+    
+  }
+}
+
+void register_button_type(button_type_id _btn_type_id, spritesheet_type _ss_type, Vector2 frame_dim, f32 _scale) {
   if (_btn_type_id >= BTN_TYPE_MAX || _btn_type_id <= BTN_TYPE_UNDEFINED ||
       !state) {
     TraceLog(LOG_WARNING, "WARNING::user_interface::register_button_type()::Recieved id was out of bound");
@@ -262,32 +290,14 @@ void register_button_type(button_type_id _btn_type_id, texture_type _tex_type, V
 
   button_type btn_type = {
       .id = _btn_type_id,
-      .text_spacing = UI_FONT_SPACING,
-      .tex_type = _tex_type,
-      .source_rect = (Rectangle)
-      {
-        .x = 0, .y = 0, 
-        .width = source_dim.x, .height = source_dim.y
+      .scale = _scale,
+      .ss_type = _ss_type,
+      .source_frame_dim = (Vector2) {
+        .x = frame_dim.x, .y = frame_dim.y
       },
-      .scaled_dim_default.x = source_dim.x * DEFAULT_MENU_BUTTON_SCALE,
-      .scaled_dim_default.y = source_dim.y * DEFAULT_MENU_BUTTON_SCALE,
   };
 
   state->button_types[_btn_type_id] = btn_type;
-}
-
-Vector2 get_button_dim_by_type(button_type_id _btn_type_id) {
-  if (_btn_type_id >= BTN_TYPE_MAX || _btn_type_id <= BTN_TYPE_UNDEFINED || !state) {
-    TraceLog(LOG_WARNING, "WARNING::user_interface::get_button_dim_by_type()::Recieved id was out of bound");
-    return (Vector2) {0};
-  }
-
-  button_type* type = &state->button_types[_btn_type_id];
-
-  return (Vector2) {
-    .x = type->scaled_dim_default.x,
-    .y = type->scaled_dim_default.y,
-  };
 }
 
 void register_button(const char *_text, Vector2 _attached_position, Vector2 offset, button_id _btn_id, button_type_id _btn_type_id) {
@@ -301,20 +311,14 @@ void register_button(const char *_text, Vector2 _attached_position, Vector2 offs
   //+ 
   button_type* _btn_type = &state->button_types[_btn_type_id];
 
-  Vector2 text_measure = MeasureTextEx(state->ui_font, _text, state->ui_font.baseSize, _btn_type->text_spacing);
-
-  f32 width  = _btn_type->scaled_dim_default.x;
-  f32 height = _btn_type->scaled_dim_default.y;
-  f32 width_div2 = width/2.f;
-  f32 height_div2 = height/2.f;
-  f32 pos_x = _attached_position.x + BTN_SPACE_BTW_X(offset.x, get_button_dim_by_type(BTN_TYPE_MENU_BUTTON).x) - width_div2;
-  f32 pos_y = _attached_position.y + BTN_SPACE_BTW_Y(offset.y, get_button_dim_by_type(BTN_TYPE_MENU_BUTTON).y) - height_div2;
+  u16 width = _btn_type->source_frame_dim.x * _btn_type->scale;
+  u16 height = _btn_type->source_frame_dim.y * _btn_type->scale;
+  f32 pos_x = _attached_position.x + BTN_SPACE_BTW_X(offset.x, width) - width/2.f;
+  f32 pos_y = _attached_position.y + BTN_SPACE_BTW_Y(offset.y, height) - height/2.f;
 
   button btn = {
       .id = _btn_id,
       .btn_type = state->button_types[_btn_type_id],
-      .text = _text,
-      .text_pos = (Vector2) {pos_x + width_div2  - text_measure.x / 2.f, pos_y + height_div2  - text_measure.y / 2.f},
       .dest = (Rectangle) {
         .x = pos_x, .y = pos_y,
         .width = width, .height = height

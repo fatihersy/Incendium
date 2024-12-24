@@ -91,7 +91,6 @@ typedef enum texture_type {
   TEX_PLAYER_TEXTURE,
   TEX_ENEMY_TEXTURE,
   TEX_BACKGROUND,
-  TEX_BUTTON_TEXTURE,
   TEX_HEALTHBAR_TEXTURE,
   TEX_HEALTH_PERC_TEXTURE,
   TEX_MAP_TILESET_TEXTURE,
@@ -127,8 +126,12 @@ typedef enum spritesheet_type {
   PLAYER_ANIMATION_WRECK_LEFT,
   PLAYER_ANIMATION_WRECK_RIGHT,
   BUTTON_REFLECTION_SHEET,
+  MENU_BUTTON,
   BUTTON_CRT_SHEET,
   SCREEN_CRT_SHEET,
+  SETTINGS_SLIDER_PERCENT,
+  SETTINGS_SLIDER_LEFT_BUTTON,
+  SETTINGS_SLIDER_RIGHT_BUTTON,
   LEVEL_UP_SHEET,
 
   SPRITESHEET_TYPE_MAX
@@ -157,12 +160,17 @@ typedef enum button_id {
   BTN_ID_EDITOR_BUTTON_SAVE_MAP,
   BTN_ID_EDITOR_BUTTON_LOAD_MAP,
 
+  BTN_ID_SETTINGS_SLIDER_LEFT_BUTTON,
+  BTN_ID_SETTINGS_SLIDER_RIGHT_BUTTON,
+
   BTN_ID_MAX
 } button_id;
 
 typedef enum button_type_id {
   BTN_TYPE_UNDEFINED,
   BTN_TYPE_MENU_BUTTON,
+  BTN_TYPE_SLIDER_LEFT_BUTTON,
+  BTN_TYPE_SLIDER_RIGHT_BUTTON,
   BTN_TYPE_MAX
 } button_type_id;
 
@@ -278,20 +286,17 @@ typedef struct spritesheet_play_system {
 
 typedef struct button_type {
   button_type_id id;
-  texture_type tex_type;
-  u16 text_spacing;
-  Rectangle source_rect;
-  Vector2 scaled_dim_default;
+  spritesheet_type ss_type;
+  Vector2 source_frame_dim;
+  f32 scale;
 } button_type;
 
 typedef struct button {
   button_id id;
   button_type btn_type;
-  const char *text;
-  Vector2 text_pos;
+  button_state state;
   Rectangle dest;
 
-  button_state state;
   u16 crt_render_index;
   u16 reflection_render_index;
 
