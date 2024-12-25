@@ -53,6 +53,7 @@ typedef enum system_event_code {
 
     // user_interface
     EVENT_CODE_UI_SHOW_PAUSE_MENU,
+    EVENT_CODE_UI_SHOW_SETTINGS_MENU,
 
     // player
     EVENT_CODE_PLAYER_ADD_EXP,

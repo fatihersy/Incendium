@@ -37,6 +37,7 @@
 #define TILEMAP_TILE_START_SYMBOL 0x21 // Refers to ASCII exclamation mark. First visible character on the chart. To debug.
 
 #define UI_FONT_SPACING 1
+#define MAX_SLIDER_OPTION_SLOT 10
 
 #define MAX_PLAYER_LEVEL 100
 #define MAX_SPAWN_COUNT 100
@@ -63,6 +64,20 @@ typedef double f64;
 
 // Boolean types
 typedef int b32;
+
+typedef enum data_type {
+  DATA_TYPE_I64,
+  DATA_TYPE_U64,
+  DATA_TYPE_F64,
+  DATA_TYPE_I32,
+  DATA_TYPE_U32,
+  DATA_TYPE_F32,
+  DATA_TYPE_I16,
+  DATA_TYPE_U16,
+  DATA_TYPE_I8,
+  DATA_TYPE_U8,
+  DATA_TYPE_C,
+}data_type;
 
 typedef enum actor_type {
   ENEMY,
@@ -140,7 +155,8 @@ typedef enum spritesheet_type {
 typedef enum button_state {
   BTN_STATE_UP,
   BTN_STATE_HOVER,
-  BTN_STATE_PRESSED
+  BTN_STATE_PRESSED,
+  BTN_STATE_RELEASED,
 } button_state;
 
 typedef enum button_id {
@@ -166,9 +182,25 @@ typedef enum button_id {
   BTN_ID_MAX
 } button_id;
 
+typedef enum slider_type_id {
+  SDR_TYPE_UNDEFINED,
+  SDR_TYPE_PERCENT,
+  SDR_TYPE_OPTION,
+  SDR_TYPE_MAX
+} slider_type_id;
+
+typedef enum slider_id {
+  SDR_ID_UNDEFINED,
+
+  SDR_ID_SETTINGS_SLIDER,
+
+  SDR_ID_MAX
+} slider_id;
+
 typedef enum button_type_id {
   BTN_TYPE_UNDEFINED,
   BTN_TYPE_MENU_BUTTON,
+  BTN_TYPE_MENU_BUTTON_NO_CRT,
   BTN_TYPE_SLIDER_LEFT_BUTTON,
   BTN_TYPE_SLIDER_RIGHT_BUTTON,
   BTN_TYPE_MAX
@@ -289,6 +321,9 @@ typedef struct button_type {
   spritesheet_type ss_type;
   Vector2 source_frame_dim;
   f32 scale;
+  bool play_reflection;
+  bool play_crt;
+  bool should_center;
 } button_type;
 
 typedef struct button {
@@ -303,6 +338,56 @@ typedef struct button {
   bool show;
   bool is_registered;
 } button;
+
+typedef struct slider_type {
+  slider_type_id id;
+  spritesheet_type ss_sdr_body;
+  Vector2 ss_sdr_body_pos;
+  Vector2 source_frame_dim;
+  f32 scale;
+  button_id left_btn_id;
+  button_id right_btn_id;
+  button_type_id left_btn_type_id;
+  button_type_id right_btn_type_id;
+  u16 left_btn_width;
+  u16 right_btn_width;
+} slider_type;
+
+
+typedef struct slider_option {
+  data_type type_flag;
+
+  union {
+    i64 i64[2];
+    u64 u64[2];
+    f64 f64[2];
+
+    i32 i32[4];
+    u32 u32[4];
+    f32 f32[4];
+
+    i16 i16[8];
+    u16 u16[8];
+
+    i8 i8[16];
+    u8 u8[16];
+
+    char c[16];
+  } data;
+} slider_option;
+
+typedef struct slider {
+  slider_id id;
+  slider_type sdr_type;
+  Rectangle dest;
+
+  slider_option options[MAX_SLIDER_OPTION_SLOT];
+  u16 current_value;
+  u16 max_value;
+
+  bool show;
+  bool is_registered;  
+} slider;
 
 typedef struct Character2D {
   u16 character_id;

@@ -9,8 +9,8 @@
 #include <stdbool.h>
 
 #define DEFAULT_MENU_BUTTON_SCALE 3
-#define BTN_SPACE_BTW_Y(i, DIM_Y) (DIM_Y + DIM_Y/3.f) * i
-#define BTN_SPACE_BTW_X(i, DIM_X) (DIM_X + DIM_X/3.f) * i
+#define SPACE_BTW_Y(i, DIM_Y) (DIM_Y + DIM_Y/3.f) * i
+#define SPACE_BTW_X(i, DIM_X) (DIM_X + DIM_X/3.f) * i
 
 typedef struct user_interface_system_state {
   spritesheet_play_system spritesheet_system;
@@ -19,11 +19,12 @@ typedef struct user_interface_system_state {
   Vector2 mouse_pos;
   button buttons[BTN_ID_MAX];
   button_type button_types[BTN_TYPE_MAX];
+  slider sliders[SDR_ID_MAX];
+  slider_type slider_types[SDR_TYPE_MAX];
   Font ui_font;
   spritesheet ss_to_draw_bg;
   bool b_show_pause_menu;
-
-  u16 ssq_settings_slider_id;
+  bool b_show_settings_menu;
 } user_interface_system_state;
 
 static user_interface_system_state *state;
@@ -31,12 +32,15 @@ static user_interface_system_state *state;
 #define PSPRITESHEET_SYSTEM state // Don't forget to undef very bottom of the file
 #include "game/spritesheet.h"
 
-bool      user_interface_on_event(u16 code, void *sender, void *listener_inst, event_context context);
-void      register_button(const char *_text, Vector2 _attached_position, Vector2 offset, button_id _btn_id, button_type_id _btn_type_id);
-void      register_button_type(button_type_id _btn_type_id, spritesheet_type _ss_type, Vector2 frame_dim, f32 _scale);
-void      draw_texture_regular(Texture2D* tex, Rectangle dest);
-void      draw_texture_type_regular(texture_type _type, Rectangle dest);
-void      gui_draw_panel(Rectangle dest, bool should_center);
+bool user_interface_on_event(u16 code, void *sender, void *listener_inst, event_context context);
+void register_button(Vector2 _attached_position, Vector2 offset, button_id _btn_id, button_type_id _btn_type_id);
+void register_button_type(button_type_id _btn_type_id, spritesheet_type _ss_type, Vector2 frame_dim, f32 _scale, bool _play_reflection, bool _play_crt, bool _should_center);
+void register_slider(Vector2 _pos, Vector2 offset, slider_id _sdr_id, slider_type_id _sdr_type_id);
+void register_slider_type(slider_type_id _sdr_type_id, spritesheet_type _ss_sdr_body_type, f32 _scale, button_id _left_btn_id, button_id _right_btn_id, button_type_id _left_btn_type_id, button_type_id _right_btn_type_id);
+void draw_texture_regular(Texture2D* tex, Rectangle dest);
+void draw_texture_type_regular(texture_type _type, Rectangle dest);
+void gui_draw_panel(Rectangle dest, bool should_center);
+void gui_draw_settings_screen();
 Rectangle get_texture_source_rect(texture_type _type);
 
 void user_interface_system_initialize() {
@@ -45,71 +49,89 @@ void user_interface_system_initialize() {
   state = (user_interface_system_state *)allocate_memory_linear(sizeof(user_interface_system_state), true);
   state->ui_font = LoadFont(rs_path("quantico_bold.ttf"));
 
-  register_button_type(BTN_TYPE_MENU_BUTTON, MENU_BUTTON, (Vector2){80, 16}, DEFAULT_MENU_BUTTON_SCALE);
-  register_button_type(BTN_TYPE_SLIDER_LEFT_BUTTON, SETTINGS_SLIDER_LEFT_BUTTON, (Vector2){10, 10}, DEFAULT_MENU_BUTTON_SCALE);
-  register_button_type(BTN_TYPE_SLIDER_RIGHT_BUTTON, SETTINGS_SLIDER_RIGHT_BUTTON, (Vector2){10, 10}, DEFAULT_MENU_BUTTON_SCALE);
+  register_button_type(
+    BTN_TYPE_MENU_BUTTON, MENU_BUTTON, 
+    (Vector2){80, 16}, DEFAULT_MENU_BUTTON_SCALE, 
+    true, true, true
+  );
+  register_button_type(
+    BTN_TYPE_MENU_BUTTON_NO_CRT, MENU_BUTTON, 
+    (Vector2){80, 16}, DEFAULT_MENU_BUTTON_SCALE, 
+    true, false, true
+  );
+  register_button_type(
+    BTN_TYPE_SLIDER_LEFT_BUTTON, SETTINGS_SLIDER_LEFT_BUTTON, 
+    (Vector2){10, 10}, DEFAULT_MENU_BUTTON_SCALE, 
+    false, false, false
+  );
+  register_button_type(
+    BTN_TYPE_SLIDER_RIGHT_BUTTON, SETTINGS_SLIDER_RIGHT_BUTTON, 
+    (Vector2){10, 10}, DEFAULT_MENU_BUTTON_SCALE, 
+    false, false, false
+  );
+  register_slider_type(
+    SDR_TYPE_PERCENT, SETTINGS_SLIDER_PERCENT, DEFAULT_MENU_BUTTON_SCALE, 
+    BTN_ID_SETTINGS_SLIDER_LEFT_BUTTON, BTN_ID_SETTINGS_SLIDER_RIGHT_BUTTON, 
+    BTN_TYPE_SLIDER_LEFT_BUTTON, BTN_TYPE_SLIDER_RIGHT_BUTTON
+  );
 
   // MAIN MENU
   register_button(
-    "Play", (Vector2) { SCREEN_WIDTH_DIV2, SCREEN_HEIGHT_DIV2 }, (Vector2) {0,0 },
-    BTN_ID_MAINMENU_BUTTON_PLAY, BTN_TYPE_MENU_BUTTON);
+    (Vector2) { SCREEN_WIDTH_DIV2, SCREEN_HEIGHT_DIV2 }, (Vector2) {0,0 },
+    BTN_ID_MAINMENU_BUTTON_PLAY, BTN_TYPE_MENU_BUTTON_NO_CRT);
 
   register_button(
-    "Editor", (Vector2) {SCREEN_WIDTH_DIV2, SCREEN_HEIGHT_DIV2}, (Vector2) {0,1 },
-    BTN_ID_MAINMENU_BUTTON_EDITOR, BTN_TYPE_MENU_BUTTON);
+    (Vector2) {SCREEN_WIDTH_DIV2, SCREEN_HEIGHT_DIV2}, (Vector2) {0,1 },
+    BTN_ID_MAINMENU_BUTTON_EDITOR, BTN_TYPE_MENU_BUTTON_NO_CRT);
 
   register_button(
-    "Settings", (Vector2) {SCREEN_WIDTH_DIV2, SCREEN_HEIGHT_DIV2}, (Vector2) {0,2 },
-    BTN_ID_MAINMENU_BUTTON_SETTINGS, BTN_TYPE_MENU_BUTTON);
+    (Vector2) {SCREEN_WIDTH_DIV2, SCREEN_HEIGHT_DIV2}, (Vector2) {0,2 },
+    BTN_ID_MAINMENU_BUTTON_SETTINGS, BTN_TYPE_MENU_BUTTON_NO_CRT);
 
   register_button(
-    "Extras", (Vector2) {SCREEN_WIDTH_DIV2, SCREEN_HEIGHT_DIV2}, (Vector2) {0,3 },
-    BTN_ID_MAINMENU_BUTTON_EXTRAS, BTN_TYPE_MENU_BUTTON);
+    (Vector2) {SCREEN_WIDTH_DIV2, SCREEN_HEIGHT_DIV2}, (Vector2) {0,3 },
+    BTN_ID_MAINMENU_BUTTON_EXTRAS, BTN_TYPE_MENU_BUTTON_NO_CRT);
 
   register_button(
-    "Exit", (Vector2) {SCREEN_WIDTH_DIV2, SCREEN_HEIGHT_DIV2}, (Vector2) {0,4 },
-    BTN_ID_MAINMENU_BUTTON_EXIT, BTN_TYPE_MENU_BUTTON);
+    (Vector2) {SCREEN_WIDTH_DIV2, SCREEN_HEIGHT_DIV2}, (Vector2) {0,4 },
+    BTN_ID_MAINMENU_BUTTON_EXIT, BTN_TYPE_MENU_BUTTON_NO_CRT);
   // MAIN MENU
 
   // EDITOR
   register_button(
-    "Load Map", (Vector2) {SCREEN_WIDTH_DIV2, SCREEN_HEIGHT_DIV2}, (Vector2) {0,1 },
+    (Vector2) {SCREEN_WIDTH_DIV2, SCREEN_HEIGHT_DIV2}, (Vector2) {0,1 },
     BTN_ID_EDITOR_BUTTON_LOAD_MAP, BTN_TYPE_MENU_BUTTON);
 
   register_button(
-    "Save Map", (Vector2) {SCREEN_WIDTH_DIV2, SCREEN_HEIGHT_DIV2}, (Vector2) {0,2 },
+    (Vector2) {SCREEN_WIDTH_DIV2, SCREEN_HEIGHT_DIV2}, (Vector2) {0,2 },
     BTN_ID_EDITOR_BUTTON_SAVE_MAP, BTN_TYPE_MENU_BUTTON);
   // EDITOR
   
   // USER INTERFACE
   register_button(
-    "Resume", (Vector2) {SCREEN_WIDTH_DIV2, SCREEN_HEIGHT_DIV2}, (Vector2) {0,1 },
+    (Vector2) {SCREEN_WIDTH_DIV2, SCREEN_HEIGHT_DIV2}, (Vector2) {0,1 },
     BTN_ID_PAUSEMENU_BUTTON_RESUME, BTN_TYPE_MENU_BUTTON);
 
   register_button(
-    "Settings", (Vector2) {SCREEN_WIDTH_DIV2, SCREEN_HEIGHT_DIV2}, (Vector2) {0,2 },
+    (Vector2) {SCREEN_WIDTH_DIV2, SCREEN_HEIGHT_DIV2}, (Vector2) {0,2 },
     BTN_ID_PAUSEMENU_BUTTON_SETTINGS, BTN_TYPE_MENU_BUTTON);
 
   register_button(
-    "Main Menu", (Vector2) {SCREEN_WIDTH_DIV2, SCREEN_HEIGHT_DIV2}, (Vector2) {0,3 },
+    (Vector2) {SCREEN_WIDTH_DIV2, SCREEN_HEIGHT_DIV2}, (Vector2) {0,3 },
     BTN_ID_PAUSEMENU_BUTTON_MAIN_MENU, BTN_TYPE_MENU_BUTTON);
 
   register_button(
-    "Exit", (Vector2) {SCREEN_WIDTH_DIV2, SCREEN_HEIGHT_DIV2}, (Vector2) {0,4 },
+    (Vector2) {SCREEN_WIDTH_DIV2, SCREEN_HEIGHT_DIV2}, (Vector2) {0,4 },
     BTN_ID_PAUSEMENU_BUTTON_EXIT, BTN_TYPE_MENU_BUTTON);
   // USER INTERFACE
 
-  state->ssq_settings_slider_id = register_sprite(SETTINGS_SLIDER_PERCENT, false, false, false);
-
-  register_button(
-    "Main Menu", (Vector2) {SCREEN_WIDTH_DIV2, SCREEN_HEIGHT_DIV2}, (Vector2) {-1,0 },
-    BTN_ID_SETTINGS_SLIDER_LEFT_BUTTON, BTN_TYPE_SLIDER_LEFT_BUTTON);
-
-  register_button(
-    "Exit", (Vector2) {SCREEN_WIDTH_DIV2, SCREEN_HEIGHT_DIV2}, (Vector2) {1,0 },
-    BTN_ID_SETTINGS_SLIDER_RIGHT_BUTTON, BTN_TYPE_SLIDER_RIGHT_BUTTON);
+  register_slider(
+    (Vector2) {SCREEN_WIDTH_DIV2, SCREEN_WIDTH_DIV2}, (Vector2) {0}, 
+    SDR_ID_SETTINGS_SLIDER,  SDR_TYPE_PERCENT
+  );
 
   event_register(EVENT_CODE_UI_SHOW_PAUSE_MENU, 0, user_interface_on_event);
+  event_register(EVENT_CODE_UI_SHOW_SETTINGS_MENU, 0, user_interface_on_event);
 }
 
 bool set_player_user_interface(player_state* player) {
@@ -119,6 +141,25 @@ bool set_player_user_interface(player_state* player) {
   }
 
   return false;
+}
+
+bool gui_slider_add_option(slider_id _id, slider_option option) {
+  if (_id >= SDR_ID_MAX || _id <= SDR_ID_UNDEFINED || !state) {
+    TraceLog(LOG_WARNING, "WARNING::user_interface::gui_slider_add_option()::Slider ids was out of bound");
+    return false;
+  }
+
+  slider* sdr = &state->sliders[_id];
+
+  if (!sdr->is_registered) {
+    TraceLog(LOG_WARNING, "WARNING::user_interface::gui_slider_add_option()::Given slider didn't registered");
+    return false;
+  }
+
+  sdr->max_value++;
+  sdr->options[sdr->max_value] = option;
+
+  return true;
 }
 
 void update_user_interface() {
@@ -132,28 +173,29 @@ void update_user_interface() {
     }
     if (!state->buttons[i].show) { continue; }
 
-    button btn = state->buttons[i];
-    if (CheckCollisionPointRec(state->mouse_pos, btn.dest)) {
-
+    button* btn = &state->buttons[i];
+    if (CheckCollisionPointRec(state->mouse_pos, btn->dest)) {
       if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
-        btn.state = BTN_STATE_PRESSED;
-        //btn.btn_type.source_rect.x = btn.btn_type.source_rect.width;
-        stop_sprite(state->buttons[btn.id].reflection_render_index, true);
+        btn->state = BTN_STATE_PRESSED;
+        if(state->buttons[btn->id].btn_type.play_reflection)  {
+          stop_sprite(state->buttons[btn->id].reflection_render_index, true);
+        }
       } else {
-        if (btn.state != BTN_STATE_HOVER) {
-          btn.state = BTN_STATE_HOVER;
-          //btn.btn_type.source_rect.x = 0;
+        if (btn->state == BTN_STATE_PRESSED) { 
+          btn->state = BTN_STATE_RELEASED;
+        }
+        else if (btn->state != BTN_STATE_HOVER) {
+          btn->state = BTN_STATE_HOVER;
         }
       }
     } else {
-      if (btn.state != BTN_STATE_UP) {
-        reset_sprite(btn.reflection_render_index, true);
-        btn.state = BTN_STATE_UP;
-        //btn.btn_type.source_rect.x = 0;
+      if (btn->state != BTN_STATE_UP) { 
+        if(state->buttons[btn->id].btn_type.play_reflection)  {
+          reset_sprite(btn->reflection_render_index, true);
+        }
+        btn->state = BTN_STATE_UP;
       }
     }
-
-    state->buttons[i] = btn;
   }
 }
 
@@ -162,9 +204,13 @@ void render_user_interface() {
   if (state->b_show_pause_menu) {
     gui_draw_pause_screen();
   }
+
+  if (state->b_show_settings_menu) {
+    gui_draw_settings_screen();
+  }
 }
 
-bool gui_button(const char* text, button_id _id, bool play_crt) {
+bool gui_button(const char* text, button_id _id) {
   if (_id >= BTN_ID_MAX || _id <= BTN_ID_UNDEFINED) {
     TraceLog(LOG_WARNING, "WARNING::user_interface::gui_button()::Recieved button type out of bound");
     return false;
@@ -189,7 +235,8 @@ bool gui_button(const char* text, button_id _id, bool play_crt) {
     };
   }
 
-  if(play_crt) play_sprite_on_site(_btn->crt_render_index, WHITE, _btn->dest);
+  _btn_type->play_crt ? play_sprite_on_site(_btn->crt_render_index, WHITE, _btn->dest) : 0;
+
   Vector2 pos = (Vector2) {_btn->dest.x, _btn->dest.y};
 
   if (_btn->state == BTN_STATE_PRESSED) {
@@ -203,7 +250,7 @@ bool gui_button(const char* text, button_id _id, bool play_crt) {
   } else {
     draw_sprite_on_site(_btn->btn_type.ss_type, WHITE, pos, _btn->btn_type.scale, 0, false);
     if (_btn->state == BTN_STATE_HOVER) {
-      play_sprite_on_site(_btn->reflection_render_index, WHITE, _btn->dest);
+      _btn_type->play_reflection ? play_sprite_on_site(_btn->reflection_render_index, WHITE, _btn->dest) : 0;
     }
     if (!TextIsEqual(text, "")) {
       DrawTextEx(state->ui_font, text,
@@ -212,7 +259,7 @@ bool gui_button(const char* text, button_id _id, bool play_crt) {
         MYYELLOW);
     }
   }
-  return _btn->state == BTN_STATE_PRESSED;
+  return _btn->state == BTN_STATE_RELEASED;
 }
 
 void gui_healthbar(f32 percent) {
@@ -233,6 +280,39 @@ void gui_healthbar(f32 percent) {
   }
 }
 
+void gui_slider(slider_id _id) {
+  if (_id >= SDR_ID_MAX || _id <= SDR_ID_UNDEFINED || !state) {
+    TraceLog(LOG_WARNING, "WARNING::user_interface::gui_slider()::One of recieved ids was out of bound");
+    return;
+  }
+
+  slider* sdr = &state->sliders[_id];
+  slider_type sdr_type = sdr->sdr_type;
+
+  if (!sdr->is_registered) {    
+    TraceLog(LOG_WARNING, "WARNING::user_interface::gui_slider()::slider was not registered");
+    return;
+  }
+
+  draw_sprite_on_site(
+    sdr_type.ss_sdr_body, WHITE, sdr_type.ss_sdr_body_pos, sdr_type.scale, 
+    sdr->current_value, false
+  );
+
+  if (gui_button("", sdr_type.left_btn_id)) {
+    if (sdr->current_value > 0) {
+      sdr->current_value--;
+    }
+  }
+  if (gui_button("", sdr_type.right_btn_id)) {
+    if (sdr->current_value < sdr->max_value) {
+      sdr->current_value++;
+    }
+  }
+
+
+}
+
 void gui_draw_panel(Rectangle dest, bool should_center) {
   Texture2D* tex_panel = get_texture_by_enum(TEX_PANEL);
   if (!tex_panel) {
@@ -250,88 +330,171 @@ void gui_draw_panel(Rectangle dest, bool should_center) {
 
 void gui_draw_pause_screen() {
   gui_draw_panel((Rectangle) {
-    .x = SCREEN_OFFSET,     .y = SCREEN_OFFSET, 
+    .x = SCREEN_OFFSET, .y = SCREEN_OFFSET, 
     .width = SCREEN_WIDTH - SCREEN_OFFSET, .height = SCREEN_HEIGHT - SCREEN_OFFSET}, false
   );
 
-  if (gui_button("Resume", BTN_ID_PAUSEMENU_BUTTON_RESUME, true)) {
+  if (gui_button("Resume", BTN_ID_PAUSEMENU_BUTTON_RESUME)) {
     state->b_show_pause_menu = !state->b_show_pause_menu;
   }
-  if (gui_button("Settings", BTN_ID_PAUSEMENU_BUTTON_SETTINGS, true)) {
+  if (gui_button("Settings", BTN_ID_PAUSEMENU_BUTTON_SETTINGS)) {
     
   }
-  if (gui_button("Main Menu", BTN_ID_PAUSEMENU_BUTTON_MAIN_MENU, true)) {
+  if (gui_button("Main Menu", BTN_ID_PAUSEMENU_BUTTON_MAIN_MENU)) {
+    state->b_show_pause_menu = false;
     event_fire(EVENT_CODE_SCENE_MAIN_MENU, 0, (event_context) {0});
   }
-  if (gui_button("Exit", BTN_ID_PAUSEMENU_BUTTON_EXIT, true)) {
+  if (gui_button("Exit", BTN_ID_PAUSEMENU_BUTTON_EXIT)) {
     event_fire(EVENT_CODE_APPLICATION_QUIT, 0, (event_context) {0});
   }
 }
 
-void gui_draw_options_screen() {
-  if (gui_button("", BTN_ID_SETTINGS_SLIDER_LEFT_BUTTON, true)) {
-    
-  }
-  Vector2 pos = (Vector2) {SCREEN_WIDTH_DIV2, SCREEN_HEIGHT_DIV2};
-  
-  draw_sprite_on_site(SETTINGS_SLIDER_PERCENT, WHITE, pos, DEFAULT_MENU_BUTTON_SCALE, 0, false);
+void gui_draw_settings_screen() {
 
-  if (gui_button("", BTN_ID_SETTINGS_SLIDER_RIGHT_BUTTON, true)) {
-    
-  }
+  gui_slider(SDR_ID_SETTINGS_SLIDER);
 }
 
-void register_button_type(button_type_id _btn_type_id, spritesheet_type _ss_type, Vector2 frame_dim, f32 _scale) {
-  if (_btn_type_id >= BTN_TYPE_MAX || _btn_type_id <= BTN_TYPE_UNDEFINED ||
+void register_button_type(button_type_id _btn_type_id, spritesheet_type _ss_type, Vector2 frame_dim, f32 _scale, bool _play_reflection, bool _play_crt, bool _should_center) {
+  if (_ss_type     >= SPRITESHEET_TYPE_MAX || _ss_type <= SPRITESHEET_UNSPECIFIED || 
+      _btn_type_id >= BTN_TYPE_MAX         || _btn_type_id <= BTN_TYPE_UNDEFINED  ||
       !state) {
     TraceLog(LOG_WARNING, "WARNING::user_interface::register_button_type()::Recieved id was out of bound");
     return;
   }
 
   button_type btn_type = {
-      .id = _btn_type_id,
-      .scale = _scale,
-      .ss_type = _ss_type,
-      .source_frame_dim = (Vector2) {
-        .x = frame_dim.x, .y = frame_dim.y
-      },
+    .id = _btn_type_id,
+    .scale = _scale,
+    .ss_type = _ss_type,
+    .source_frame_dim = (Vector2) {
+      .x = frame_dim.x, .y = frame_dim.y
+    },
+    .play_crt = _play_crt,
+    .play_reflection = _play_reflection,
+    .should_center = _should_center
   };
 
   state->button_types[_btn_type_id] = btn_type;
 }
 
-void register_button(const char *_text, Vector2 _attached_position, Vector2 offset, button_id _btn_id, button_type_id _btn_type_id) {
+void register_button(Vector2 _attached_position, Vector2 offset, button_id _btn_id, button_type_id _btn_type_id) {
   if (_btn_id      >= BTN_ID_MAX   || _btn_id      <= BTN_ID_UNDEFINED   || 
-      _btn_type_id >= BTN_TYPE_MAX || _btn_type_id <= BTN_TYPE_UNDEFINED ||
-      !state) 
+      _btn_type_id >= BTN_TYPE_MAX || _btn_type_id <= BTN_TYPE_UNDEFINED || !state) 
   {
     TraceLog(LOG_WARNING, "WARNING::user_interface::register_button()::One of recieved ids was out of bound");
     return;
   }
-  //+ 
+
   button_type* _btn_type = &state->button_types[_btn_type_id];
 
   u16 width = _btn_type->source_frame_dim.x * _btn_type->scale;
   u16 height = _btn_type->source_frame_dim.y * _btn_type->scale;
-  f32 pos_x = _attached_position.x + BTN_SPACE_BTW_X(offset.x, width) - width/2.f;
-  f32 pos_y = _attached_position.y + BTN_SPACE_BTW_Y(offset.y, height) - height/2.f;
+  f32 pos_x = _attached_position.x + SPACE_BTW_X(offset.x, width);
+  f32 pos_y = _attached_position.y + SPACE_BTW_Y(offset.y, height);
+  if (_btn_type->should_center) {
+    pos_x -= width/2.f;
+    pos_y -= height/2.f;
+  }
 
   button btn = {
-      .id = _btn_id,
-      .btn_type = state->button_types[_btn_type_id],
-      .dest = (Rectangle) {
-        .x = pos_x, .y = pos_y,
-        .width = width, .height = height
-      },
-      .state = BTN_STATE_UP,
-      .crt_render_index = register_sprite(BUTTON_CRT_SHEET, true, false, false),
-      .reflection_render_index = register_sprite(BUTTON_REFLECTION_SHEET, false, true, false),
-      .show = false,
-      .is_registered = true,
+    .id = _btn_id,
+    .btn_type = state->button_types[_btn_type_id],
+    .dest = (Rectangle) {
+      .x = pos_x, .y = pos_y,
+      .width = width, .height = height
+    },
+    .state = BTN_STATE_UP,
+    .crt_render_index = _btn_type->play_crt 
+      ? register_sprite(BUTTON_CRT_SHEET, true, false, false)
+      : 0,
+    .reflection_render_index = _btn_type->play_reflection 
+      ? register_sprite(BUTTON_REFLECTION_SHEET, false, true, false)
+      : 0,
+    .show = false,
+    .is_registered = true,
   };
 
   state->buttons[_btn_id] = btn;
 }
+
+void register_slider_type(
+  slider_type_id _sdr_type_id, spritesheet_type _ss_sdr_body_type, f32 _scale,
+  button_id _left_btn_id, button_id _right_btn_id, button_type_id _left_btn_type_id, button_type_id _right_btn_type_id) {
+    if (_ss_sdr_body_type >= SPRITESHEET_TYPE_MAX || _ss_sdr_body_type <= SPRITESHEET_UNSPECIFIED || 
+        _sdr_type_id      >= SDR_TYPE_MAX         || _sdr_type_id      <= SDR_TYPE_UNDEFINED      ||
+        _left_btn_id      >= BTN_ID_MAX           || _left_btn_id      <= BTN_ID_UNDEFINED        ||
+        _right_btn_id     >= BTN_ID_MAX           || _right_btn_id     <= BTN_ID_UNDEFINED        ||
+        _left_btn_type_id >= BTN_TYPE_MAX         || _left_btn_type_id <= BTN_TYPE_UNDEFINED      ||
+        _right_btn_type_id>= BTN_TYPE_MAX         || _right_btn_type_id<= BTN_TYPE_UNDEFINED      ||
+        !state) {
+      TraceLog(LOG_WARNING, "WARNING::user_interface::register_slider_type()::One of recieved ids was out of bound");
+      return;
+    }
+
+  spritesheet ss_body = get_spritesheet_by_enum(_ss_sdr_body_type);
+  button_type* left_btn_type = &state->button_types[_left_btn_type_id]; 
+  button_type* right_btn_type = &state->button_types[_right_btn_type_id]; 
+
+  slider_type sdr_type = {
+    .id = _sdr_type_id,
+    .scale = _scale,
+    .ss_sdr_body = _ss_sdr_body_type,
+    .source_frame_dim = (Vector2) {
+      .x = ss_body.current_frame_rect.width, .y = ss_body.current_frame_rect.height
+    },
+    .left_btn_id = _left_btn_id,
+    .right_btn_id = _right_btn_id,
+    .left_btn_type_id = _left_btn_type_id,
+    .right_btn_type_id = _right_btn_type_id,
+    .left_btn_width = left_btn_type->source_frame_dim.x * left_btn_type->scale,
+    .right_btn_width = right_btn_type->source_frame_dim.x * right_btn_type->scale,
+  };
+
+  state->slider_types[_sdr_type_id] = sdr_type;
+}
+
+void register_slider(Vector2 _pos, Vector2 offset, slider_id _sdr_id, slider_type_id _sdr_type_id) {
+  if (_sdr_id      >= SDR_ID_MAX   || _sdr_id      <= SDR_ID_UNDEFINED   || 
+      _sdr_type_id >= SDR_TYPE_MAX || _sdr_type_id <= SDR_TYPE_UNDEFINED ||
+      !state) 
+  {
+    TraceLog(LOG_WARNING, "WARNING::user_interface::register_slider()::One of recieved ids was out of bound");
+    return;
+  }
+
+  slider_type* _sdr_type = &state->slider_types[_sdr_type_id];
+
+  u16 width = _sdr_type->source_frame_dim.x * _sdr_type->scale;
+  u16 height = _sdr_type->source_frame_dim.y * _sdr_type->scale;
+  _sdr_type->ss_sdr_body_pos = (Vector2) {
+    .x = _pos.x,
+    .y = _pos.y,
+  };
+
+  register_button(
+    (Vector2) { _sdr_type->ss_sdr_body_pos.x - _sdr_type->left_btn_width, _pos.y}, (Vector2) {0},
+    _sdr_type->left_btn_id, _sdr_type->left_btn_type_id);
+
+  register_button(
+    (Vector2) { _sdr_type->ss_sdr_body_pos.x + width, _pos.y}, (Vector2) {0},
+    _sdr_type->right_btn_id, _sdr_type->right_btn_type_id);
+
+  slider sdr = {
+    .id = _sdr_id,
+    .sdr_type = state->slider_types[_sdr_type_id],
+    .dest = (Rectangle) {
+      .x = _pos.x, .y = _pos.x,
+      .width = width + _sdr_type->left_btn_width + _sdr_type->right_btn_width, .height = height
+    },
+    .current_value = 0,
+    .max_value = _sdr_type_id == SDR_TYPE_PERCENT ? 10 : 0,
+    .show = false,
+    .is_registered = true,
+  };
+
+  state->sliders[_sdr_id] = sdr;
+}
+
 
 void gui_draw_texture_to_background(texture_type _type) {
   draw_texture_type_regular(_type, (Rectangle) {
@@ -399,6 +562,11 @@ bool user_interface_on_event(u16 code, void *sender, void *listener_inst, event_
   switch (code) {
     case EVENT_CODE_UI_SHOW_PAUSE_MENU: {
       state->b_show_pause_menu = !state->b_show_pause_menu;
+      break;
+    }
+    case EVENT_CODE_UI_SHOW_SETTINGS_MENU: {
+      state->b_show_settings_menu = !state->b_show_settings_menu;
+      break;
     }
   };
 
