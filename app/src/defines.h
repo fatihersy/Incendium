@@ -144,9 +144,10 @@ typedef enum spritesheet_type {
   MENU_BUTTON,
   BUTTON_CRT_SHEET,
   SCREEN_CRT_SHEET,
-  SETTINGS_SLIDER_PERCENT,
-  SETTINGS_SLIDER_LEFT_BUTTON,
-  SETTINGS_SLIDER_RIGHT_BUTTON,
+  SLIDER_PERCENT,
+  SLIDER_OPTION,
+  SLIDER_LEFT_BUTTON,
+  SLIDER_RIGHT_BUTTON,
   LEVEL_UP_SHEET,
 
   SPRITESHEET_TYPE_MAX
@@ -176,8 +177,10 @@ typedef enum button_id {
   BTN_ID_EDITOR_BUTTON_SAVE_MAP,
   BTN_ID_EDITOR_BUTTON_LOAD_MAP,
 
-  BTN_ID_SETTINGS_SLIDER_LEFT_BUTTON,
-  BTN_ID_SETTINGS_SLIDER_RIGHT_BUTTON,
+  BTN_ID_SETTINGS_SLIDER_SOUND_LEFT_BUTTON,
+  BTN_ID_SETTINGS_SLIDER_SOUND_RIGHT_BUTTON,
+  BTN_ID_SETTINGS_SLIDER_RES_LEFT_BUTTON,
+  BTN_ID_SETTINGS_SLIDER_RES_RIGHT_BUTTON,
 
   BTN_ID_MAX
 } button_id;
@@ -192,7 +195,8 @@ typedef enum slider_type_id {
 typedef enum slider_id {
   SDR_ID_UNDEFINED,
 
-  SDR_ID_SETTINGS_SLIDER,
+  SDR_ID_SETTINGS_SOUND_SLIDER,
+  SDR_ID_SETTINGS_RES_SLIDER,
 
   SDR_ID_MAX
 } slider_id;
@@ -335,24 +339,9 @@ typedef struct button {
   u16 crt_render_index;
   u16 reflection_render_index;
 
-  bool show;
+  bool on_screen;
   bool is_registered;
 } button;
-
-typedef struct slider_type {
-  slider_type_id id;
-  spritesheet_type ss_sdr_body;
-  Vector2 ss_sdr_body_pos;
-  Vector2 source_frame_dim;
-  f32 scale;
-  button_id left_btn_id;
-  button_id right_btn_id;
-  button_type_id left_btn_type_id;
-  button_type_id right_btn_type_id;
-  u16 left_btn_width;
-  u16 right_btn_width;
-} slider_type;
-
 
 typedef struct slider_option {
   data_type type_flag;
@@ -376,16 +365,35 @@ typedef struct slider_option {
   } data;
 } slider_option;
 
+typedef struct slider_type {
+  slider_type_id id;
+  spritesheet_type ss_sdr_body;
+  Vector2 source_frame_dim;
+  f32 scale;
+  u16 width_multiply;
+  button_id left_btn_id;
+  button_id right_btn_id;
+  button_type_id left_btn_type_id;
+  button_type_id right_btn_type_id;
+  u16 left_btn_width;
+  u16 right_btn_width;
+  u16 body_width;
+  u16 body_height;
+
+  bool should_center;
+} slider_type;
+
 typedef struct slider {
   slider_id id;
   slider_type sdr_type;
-  Rectangle dest;
+  Vector2 position;
 
   slider_option options[MAX_SLIDER_OPTION_SLOT];
   u16 current_value;
   u16 max_value;
+  u16 min_value;
 
-  bool show;
+  bool on_screen;
   bool is_registered;  
 } slider;
 

@@ -39,9 +39,10 @@ bool resource_system_initialize() {
   load_spritesheet("button_reflection.png", BUTTON_REFLECTION_SHEET, 30, 80, 16, 1, 9);
   load_spritesheet("button_crt.png", BUTTON_CRT_SHEET, 8, 78, 12, 1, 4);
   load_spritesheet("screen_crt_sheet.png", SCREEN_CRT_SHEET, 8, 1280, 720, 1, 4);
-  load_spritesheet("settings_slider_percent.png", SETTINGS_SLIDER_PERCENT, 0, 21, 10, 1, 11);
-  load_spritesheet("slider_left_button.png", SETTINGS_SLIDER_LEFT_BUTTON, 0, 10, 10, 1, 2);
-  load_spritesheet("slider_right_button.png", SETTINGS_SLIDER_RIGHT_BUTTON, 0, 10, 10, 1, 2);
+  load_spritesheet("slider_percent.png", SLIDER_PERCENT, 0, 21, 10, 1, 11);
+  load_spritesheet("slider_option.png", SLIDER_OPTION, 0, 21, 10, 1, 1);
+  load_spritesheet("slider_left_button.png", SLIDER_LEFT_BUTTON, 0, 10, 10, 1, 2);
+  load_spritesheet("slider_right_button.png", SLIDER_RIGHT_BUTTON, 0, 10, 10, 1, 2);
   load_spritesheet("menu_button.png", MENU_BUTTON, 0, 80, 16, 1, 2);
   load_tilesheet(TILESHEET_TYPE_MAP, TEX_MAP_TILESET_TEXTURE, 16, 14, 16);
 

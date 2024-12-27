@@ -71,8 +71,8 @@ void render_sprite_renderqueue(spritesheet_play_system *system, u16 queue_index)
   );
   #if DEBUG_COLLISIONS
     DrawRectangleLines(
-      sheet.coord.x, sheet.coord.y, 
-      sheet.coord.width,sheet.coord.height, 
+      sheet->coord.x, sheet->coord.y, 
+      sheet->coord.width,sheet->coord.height, 
       WHITE);
   #endif
 }
@@ -140,6 +140,13 @@ void _draw_sprite_on_site(spritesheet_play_system *system, spritesheet_type _typ
     .x = pos.x, .y = pos.y,
     .width = sheet.current_frame_rect.width * scale, .height = sheet.current_frame_rect.height * scale},
   (Vector2){.x = 0, .y = 0}, 0, _tint);
+  
+  #if DEBUG_COLLISIONS
+    DrawRectangleLines(
+      pos.x, pos.y, 
+      sheet.current_frame_rect.width * scale,sheet.current_frame_rect.height * scale, 
+      WHITE);
+  #endif
 }
 
 void _queue_sprite_change_location(spritesheet_play_system *system, u16 queue_index, Rectangle _location) {

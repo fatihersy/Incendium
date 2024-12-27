@@ -226,19 +226,6 @@ void play_anim(spritesheet_type player_anim_sheet) {
         .height = player->dimentions.y
     };
     switch (player_anim_sheet) {
-        case SPRITESHEET_UNSPECIFIED: TraceLog(LOG_ERROR, "ERROR::player::move()::move function called with unspecified value.");
-        break;
-        case BUTTON_REFLECTION_SHEET: TraceLog(LOG_ERROR, "ERROR::player::move()::move function called with wrong value.");
-        break;
-        case BUTTON_CRT_SHEET: TraceLog(LOG_ERROR, "ERROR::player::move()::move function called with wrong value.");
-        break;
-        case LEVEL_UP_SHEET: TraceLog(LOG_ERROR, "ERROR::player::move()::move function called with wrong value.");
-        break;
-        case SPRITESHEET_TYPE_MAX: TraceLog(LOG_ERROR, "ERROR::player::move()::move function called with wrong value.");
-        break;
-        case SCREEN_CRT_SHEET: TraceLog(LOG_ERROR, "ERROR::player::move()::move function called with wrong value.");
-        break;
-
         case PLAYER_ANIMATION_MOVE_LEFT: {
             play_sprite_on_site(player->move_left_sprite_queue_index, WHITE, dest);
             player->last_played_sprite_id = player->move_left_sprite_queue_index;
@@ -279,6 +266,9 @@ void play_anim(spritesheet_type player_anim_sheet) {
             player->last_played_sprite_id = player->wreck_right_sprite_queue_index;
             break;
         }
+        
+        default: TraceLog(LOG_ERROR, "ERROR::player::move()::move function called with unspecified value.");
+        break;
     }
 }
 
