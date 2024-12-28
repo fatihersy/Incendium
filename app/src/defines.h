@@ -377,6 +377,7 @@ typedef struct slider_type {
   button_type_id right_btn_type_id;
   u16 left_btn_width;
   u16 right_btn_width;
+  u16 origin_body_width;
   u16 body_width;
   u16 body_height;
 

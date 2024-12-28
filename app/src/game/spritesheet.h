@@ -36,7 +36,7 @@ Texture2D* _get_texture_by_enum(texture_type _type);
 spritesheet _get_spritesheet_by_enum(spritesheet_type _type);
 const char *_rs_path(const char *_path);
 void _play_sprite_on_site(spritesheet_play_system *system, u16 _id, Color _tint, Rectangle dest);
-void _draw_sprite_on_site(spritesheet_play_system *system, spritesheet_type _type, Color _tint, Vector2 pos, f32 scale, u16 frame, bool _should_center);
+void _draw_sprite_on_site(spritesheet_play_system *system, spritesheet_type _type, Color _tint, Vector2 pos, Vector2 scale, u16 frame, bool _should_center);
 void _queue_sprite_change_location(spritesheet_play_system *system, u16 queue_index, Rectangle _location);
 void _stop_sprite(spritesheet_play_system *system, u16 index, bool reset);
 void _reset_sprite(spritesheet_play_system *system, u16 _queue_index, bool _retrospective);
