@@ -12,6 +12,8 @@
 #define MAX_SPRITE_RENDERQUEUE 50
 #define CLEAR_BACKGROUND_COLOR BLACK
 
+#define UI_FONT_SPACING 1
+
 #define SCREEN_WIDTH 1280
 #define SCREEN_HEIGHT 720
 #define SCREEN_OFFSET 5
@@ -21,6 +23,9 @@
 #define SCREEN_HEIGHT_DIV3 SCREEN_HEIGHT      / 3.f
 #define SCREEN_WIDTH_DIV4  SCREEN_WIDTH       / 4.f
 #define SCREEN_HEIGHT_DIV4 SCREEN_HEIGHT      / 4.f
+
+#define MAX_SLIDER_OPTION_SLOT 10
+#define MAX_SLIDER_OPTION_TEXT_SLOT 18
 
 #define MAX_TILESHEET_SLOTS 50
 #define MAX_TILESHEET_UNIQUE_TILESLOTS_X 32
@@ -35,9 +40,6 @@
 #define MAX_TILEMAP_TILESLOT_Y 255
 #define MAX_TILEMAP_TILESLOT MAX_TILEMAP_TILESLOT_X * MAX_TILEMAP_TILESLOT_Y
 #define TILEMAP_TILE_START_SYMBOL 0x21 // Refers to ASCII exclamation mark. First visible character on the chart. To debug.
-
-#define UI_FONT_SPACING 1
-#define MAX_SLIDER_OPTION_SLOT 10
 
 #define MAX_PLAYER_LEVEL 100
 #define MAX_SPAWN_COUNT 100
@@ -66,6 +68,8 @@ typedef double f64;
 typedef int b32;
 
 typedef enum data_type {
+  DATA_TYPE_UNRESERVED,
+  
   DATA_TYPE_I64,
   DATA_TYPE_U64,
   DATA_TYPE_F64,
@@ -77,6 +81,8 @@ typedef enum data_type {
   DATA_TYPE_I8,
   DATA_TYPE_U8,
   DATA_TYPE_C,
+
+  DATA_TYPE_MAX,
 }data_type;
 
 typedef enum actor_type {
@@ -230,6 +236,30 @@ typedef enum tilesheet_type {
   TILESHEET_TYPE_MAX
 } tilesheet_type;
 
+typedef struct data_pack {
+  data_type type_flag;
+  u16 array_lenght;
+
+  // 128 bytes
+  union {
+    i64 i64[2];
+    u64 u64[2];
+    f64 f64[2];
+
+    i32 i32[4];
+    u32 u32[4];
+    f32 f32[4];
+
+    i16 i16[8];
+    u16 u16[8];
+
+    i8 i8[16];
+    u8 u8[16];
+
+    char c[16];
+  } data;
+} data_pack;
+
 typedef struct tile_symbol {
   u8 c[3];
 }tile_symbol;
@@ -345,24 +375,10 @@ typedef struct button {
 
 typedef struct slider_option {
   data_type type_flag;
-
-  union {
-    i64 i64[2];
-    u64 u64[2];
-    f64 f64[2];
-
-    i32 i32[4];
-    u32 u32[4];
-    f32 f32[4];
-
-    i16 i16[8];
-    u16 u16[8];
-
-    i8 i8[16];
-    u8 u8[16];
-
-    char c[16];
-  } data;
+  u16 array_lenght;
+  char text[MAX_SLIDER_OPTION_TEXT_SLOT];
+  char parser;
+  data_pack content;
 } slider_option;
 
 typedef struct slider_type {
@@ -371,6 +387,7 @@ typedef struct slider_type {
   Vector2 source_frame_dim;
   f32 scale;
   u16 width_multiply;
+  u16 char_limit;
   button_id left_btn_id;
   button_id right_btn_id;
   button_type_id left_btn_type_id;

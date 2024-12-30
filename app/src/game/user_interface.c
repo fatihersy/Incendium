@@ -22,6 +22,9 @@ typedef struct user_interface_system_state {
   slider sliders[SDR_ID_MAX];
   slider_type slider_types[SDR_TYPE_MAX];
   Font ui_font;
+  u16 ui_font_size_35div20;
+  u16 ui_font_size_3div2;
+  u16 ui_font_size_div2;
   spritesheet ss_to_draw_bg;
   bool b_show_pause_menu;
   bool b_show_settings_menu;
@@ -44,7 +47,7 @@ void register_button_type(
 void register_slider(Vector2 _pos, Vector2 offset, slider_id _sdr_id, slider_type_id _sdr_type_id, button_id _left_btn_id, button_id _right_btn_id);
 void register_slider_type(
   slider_type_id _sdr_type_id, spritesheet_type _ss_sdr_body_type, f32 _scale, u16 _width_multiply,
-  button_type_id _left_btn_type_id, button_type_id _right_btn_type_id, bool _should_center
+  button_type_id _left_btn_type_id, button_type_id _right_btn_type_id, bool _should_center, u16 _char_limit
 );
 void render_slider_body(slider* sdr);
 void draw_texture_regular(Texture2D* tex, Rectangle dest);
@@ -52,12 +55,19 @@ void draw_texture_type_regular(texture_type _type, Rectangle dest);
 void gui_draw_panel(Rectangle dest, bool should_center);
 void gui_draw_settings_screen();
 Rectangle get_texture_source_rect(texture_type _type);
+const char* stringtify_options(data_pack option, const char* parser, u16 character_limit);
 
 void user_interface_system_initialize() {
   if (state) return;
 
   state = (user_interface_system_state *)allocate_memory_linear(sizeof(user_interface_system_state), true);
   state->ui_font = LoadFont(rs_path("quantico_bold.ttf"));
+  if (state->ui_font.baseSize == 0) { // If custom font load failed
+    state->ui_font = GetFontDefault();
+  }
+  state->ui_font_size_35div20 = state->ui_font.baseSize / 1.75f;
+  state->ui_font_size_3div2 = state->ui_font.baseSize / 1.5f;
+  state->ui_font_size_div2 = state->ui_font.baseSize / 2.f;
 
   register_button_type(
     BTN_TYPE_MENU_BUTTON, MENU_BUTTON, 
@@ -83,13 +93,13 @@ void user_interface_system_initialize() {
     SDR_TYPE_PERCENT, SLIDER_PERCENT, 
     DEFAULT_MENU_BUTTON_SCALE, DEFAULT_MENU_BUTTON_SCALE,
     BTN_TYPE_SLIDER_LEFT_BUTTON, BTN_TYPE_SLIDER_RIGHT_BUTTON,
-    true
+    true, 6
   );
   register_slider_type(
     SDR_TYPE_OPTION, SLIDER_OPTION, 
     DEFAULT_MENU_BUTTON_SCALE, 2,
     BTN_TYPE_SLIDER_LEFT_BUTTON, BTN_TYPE_SLIDER_RIGHT_BUTTON,
-    true
+    true, 6
   );
 
   // MAIN MENU
@@ -155,18 +165,26 @@ void user_interface_system_initialize() {
   );
   // SETTINGS
 
-  gui_slider_add_option(SDR_ID_SETTINGS_RES_SLIDER, (slider_option) {
+  gui_slider_add_option(SDR_ID_SETTINGS_RES_SLIDER, (data_pack) {
     .data.u16[0] = 1920,
     .data.u16[1] = 1080,
-  });
-  gui_slider_add_option(SDR_ID_SETTINGS_RES_SLIDER, (slider_option) {
+    .array_lenght = 2,
+    .type_flag = DATA_TYPE_U16
+  }, "x");
+  gui_slider_add_option(SDR_ID_SETTINGS_RES_SLIDER, (data_pack) {
     .data.u16[0] = 2560,
     .data.u16[1] = 1440,
-  });
-  gui_slider_add_option(SDR_ID_SETTINGS_RES_SLIDER, (slider_option) {
+    .array_lenght = 2,
+    .type_flag = DATA_TYPE_U16
+  }, "x");
+  gui_slider_add_option(SDR_ID_SETTINGS_RES_SLIDER, (data_pack) {
     .data.u16[0] = 3840,
     .data.u16[1] = 2160,
-  });
+    .array_lenght = 2,
+    .type_flag = DATA_TYPE_U16
+  }, "x");
+
+
 
   event_register(EVENT_CODE_UI_SHOW_PAUSE_MENU, 0, user_interface_on_event);
   event_register(EVENT_CODE_UI_SHOW_SETTINGS_MENU, 0, user_interface_on_event);
@@ -340,13 +358,15 @@ void gui_slider(slider_id _id) {
   render_slider_body(sdr);
 
   if (gui_button("", sdr_type.left_btn_id)) {
-    if (sdr->current_value > 0) {
+    if (sdr->current_value > sdr->min_value) {
       sdr->current_value--;
+      TraceLog(LOG_INFO, "Current: %d", sdr->current_value);
     }
   }
   if (gui_button("", sdr_type.right_btn_id)) {
-    if (sdr->current_value < sdr->max_value) {
+    if (sdr->current_value < sdr->max_value-1) {
       sdr->current_value++;
+      TraceLog(LOG_INFO, "Current: %d", sdr->current_value);
     }
   }
 }
@@ -375,14 +395,16 @@ void render_slider_body(slider* sdr) {
     }
     case SDR_TYPE_OPTION: {
       u16 total_body_width = sdr_type.body_width * sdr_type.width_multiply;
-      u16 each_body_width = (total_body_width - ((sdr->max_value + 1) * SCREEN_OFFSET)) / sdr->max_value;
+      u16 each_body_width = (total_body_width - ((sdr->max_value) * SCREEN_OFFSET)) / (sdr->max_value-1);
       f32 each_body_scale = (float)each_body_width / sdr_type.origin_body_width;
       Vector2 draw_sprite_scale = (Vector2) {each_body_scale, sdr_type.scale};
       Vector2 _pos_temp = (Vector2) {sdr->position.x + SCREEN_OFFSET, sdr->position.y};
+      const char* text = TextFormat("%s", sdr->options[sdr->current_value].text);
+      Vector2 text_measure = MeasureTextEx(state->ui_font, text, state->ui_font_size_35div20, UI_FONT_SPACING);
 
-      for (int i = 0; i < sdr->max_value; ++i) {
+      for (int i = 1; i < sdr->max_value; ++i) {
         Vector2 _pos = _pos_temp;
-        _pos.x += (each_body_width + SCREEN_OFFSET) * i; 
+        _pos.x += (each_body_width + SCREEN_OFFSET) * (i-1); 
 
         draw_sprite_on_site(
           sdr_type.ss_sdr_body, WHITE, 
@@ -392,11 +414,11 @@ void render_slider_body(slider* sdr) {
       }
 
       Vector2 text_pos = (Vector2) {
-        sdr->position.x + total_body_width/2.f,
-        sdr->position.y + sdr_type.body_height/2.f
+        sdr->position.x + total_body_width/2.f - text_measure.x / 2.f,
+        sdr->position.y + sdr_type.body_height/2.f - text_measure.y / 2.f
       };
 
-      DrawTextEx(state->ui_font, "FFF", text_pos, state->ui_font.baseSize, UI_FONT_SPACING, MYYELLOW);
+      DrawTextEx(state->ui_font, text, text_pos, state->ui_font_size_35div20, UI_FONT_SPACING, MYYELLOW);
       break;
     }
 
@@ -458,23 +480,113 @@ bool set_player_user_interface(player_state* player) {
   return false;
 }
 
-bool gui_slider_add_option(slider_id _id, slider_option option) {
+bool gui_slider_add_option(slider_id _id, data_pack content, const char* _parser) {
   if (_id >= SDR_ID_MAX || _id <= SDR_ID_UNDEFINED || !state) {
     TraceLog(LOG_WARNING, "WARNING::user_interface::gui_slider_add_option()::Slider ids was out of bound");
     return false;
   }
-
   slider* sdr = &state->sliders[_id];
-
   if (!sdr->is_registered) {
     TraceLog(LOG_WARNING, "WARNING::user_interface::gui_slider_add_option()::Given slider didn't registered");
     return false;
   }
+  sdr->options[sdr->max_value] = (slider_option) {
+    .array_lenght = content.array_lenght,
+    .type_flag = content.type_flag,
+    .parser = *_parser,
+    .text = 0
+  };
+  TextCopy(
+    sdr->options[sdr->max_value].text, 
+    stringtify_options(content, _parser, sdr->sdr_type.width_multiply * sdr->sdr_type.char_limit)
+  );
 
   sdr->max_value++;
-  sdr->options[sdr->max_value] = option;
 
   return true;
+}
+
+const char* stringtify_options(data_pack content, const char* parser, u16 character_limit) {
+  u16 length = content.array_lenght;
+  char _temp[MAX_SLIDER_OPTION_TEXT_SLOT] = "";
+  u64 total_written_size = 0;
+  switch (content.type_flag) {
+    case DATA_TYPE_I32: { 
+      for (int i=0; i<length; ++i) {
+        if(i != length-1) { // Unless the last
+          const char* c = TextFormat("%u", content.data.i32[i]);
+          copy_memory(_temp + total_written_size, c, TextLength(c)); 
+          total_written_size += TextLength(c);
+          copy_memory(_temp + total_written_size, parser, TextLength(parser)); 
+          total_written_size += TextLength(parser);
+        } 
+        else { // Last
+          const char* c = TextFormat("%u", content.data.i32[i]);
+          copy_memory(_temp + total_written_size, c, TextLength(c)); 
+        }
+      }
+      break;
+    }
+    case DATA_TYPE_U64: { 
+      const char* c = TextFormat("%u", content.data.u64);
+      copy_memory(_temp + total_written_size, c, TextLength(c)); 
+    }
+    case DATA_TYPE_U32: { 
+      for (int i=0; i<length; ++i) {
+        if(i != length-1) { // Unless the last
+          const char* c = TextFormat("%u", content.data.u32[i]);
+          copy_memory(_temp + total_written_size, c, TextLength(c)); 
+          total_written_size += TextLength(c);
+          copy_memory(_temp + total_written_size, parser, TextLength(parser)); 
+          total_written_size += TextLength(parser);
+        } 
+        else { // Last
+          const char* c = TextFormat("%u", content.data.u32[i]);
+          copy_memory(_temp + total_written_size, c, TextLength(c)); 
+        }
+      }
+      break;
+    }
+    case DATA_TYPE_U16: { 
+      for (int i=0; i<length; ++i) {
+        if(i != length-1) { // Unless the last
+          const char* c = TextFormat("%u", content.data.u16[i]);
+          copy_memory(_temp + total_written_size, c, TextLength(c)); 
+          total_written_size += TextLength(c);
+          copy_memory(_temp + total_written_size, parser, TextLength(parser)); 
+          total_written_size += TextLength(parser);
+        } 
+        else { // Last
+          const char* c = TextFormat("%u", content.data.u16[i]);
+          copy_memory(_temp + total_written_size, c, TextLength(c)); 
+        }
+      }
+      break;
+    }
+    case DATA_TYPE_F32: { 
+      for (int i=0; i<length; ++i) {
+        if(i != length-1) { // Unless the last
+          const char* c = TextFormat("%u", content.data.f32[i]);
+          copy_memory(_temp + total_written_size, c, TextLength(c)); 
+          total_written_size += TextLength(c);
+          copy_memory(_temp + total_written_size, parser, TextLength(parser)); 
+          total_written_size += TextLength(parser);
+        } 
+        else { // Last
+          const char* c = TextFormat("%u", content.data.f32[i]);
+          copy_memory(_temp + total_written_size, c, TextLength(c)); 
+        }
+      }
+      break;
+    }
+    case DATA_TYPE_C: { 
+      copy_memory(_temp, content.data.c, TextLength(content.data.c)); 
+    }
+    default: TraceLog(
+      LOG_WARNING, "WARNING::user_interface::stringtify_options()::Unsupported data type");
+  }
+  const char* text = _temp;
+  return text;
 }
 
 void register_button_type(button_type_id _btn_type_id, spritesheet_type _ss_type, Vector2 frame_dim, f32 _scale, bool _play_reflection, bool _play_crt, bool _should_center) {
@@ -542,7 +654,7 @@ void register_button(Vector2 _attached_position, Vector2 offset, button_id _btn_
 
 void register_slider_type(
   slider_type_id _sdr_type_id, spritesheet_type _ss_sdr_body_type, f32 _scale, u16 _width_multiply,
-  button_type_id _left_btn_type_id, button_type_id _right_btn_type_id, bool _should_center) {
+  button_type_id _left_btn_type_id, button_type_id _right_btn_type_id, bool _should_center, u16 _char_limit) {
     if (_ss_sdr_body_type >= SPRITESHEET_TYPE_MAX || _ss_sdr_body_type <= SPRITESHEET_UNSPECIFIED || 
         _sdr_type_id      >= SDR_TYPE_MAX         || _sdr_type_id      <= SDR_TYPE_UNDEFINED      ||
         _left_btn_type_id >= BTN_TYPE_MAX         || _left_btn_type_id <= BTN_TYPE_UNDEFINED      ||
@@ -571,6 +683,7 @@ void register_slider_type(
     .body_width = ss_body.current_frame_rect.width * _scale,
     .body_height = ss_body.current_frame_rect.height * _scale,
     .width_multiply = _width_multiply,
+    .char_limit = _scale * _char_limit,
     .should_center = _should_center
   };
 
@@ -605,9 +718,9 @@ void register_slider(Vector2 _pos, Vector2 offset, slider_id _sdr_id, slider_typ
     .position = (Vector2) {
       .x = pos_x, .y = pos_y
     },
-    .current_value = _sdr_type_id == SDR_TYPE_PERCENT ? 7 : 0,
-    .max_value = _sdr_type_id == SDR_TYPE_PERCENT ? 10 : 0,
-    .min_value = 0,
+    .current_value = _sdr_type_id == SDR_TYPE_PERCENT ? 7 : 1,
+    .max_value = _sdr_type_id == SDR_TYPE_PERCENT ? 10 : 1,
+    .min_value = 1,
     .on_screen = false,
     .is_registered = true,
   };
