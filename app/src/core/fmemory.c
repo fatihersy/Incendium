@@ -1,7 +1,7 @@
 #include "fmemory.h"
 
-#include <stdlib.h>  // Required for: malloc(), free()
-#include <string.h>
+#include <stdlib.h> // Required for: malloc(), free()
+#include <string.h> // Required for: memset(), memcpy()
 
 static memory_system_state* memory_system;
 

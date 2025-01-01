@@ -4,6 +4,7 @@
 #include "core/window.h"
 #include "core/ftime.h"
 #include "core/fmemory.h"
+#include "core/lexer.h"
 
 #include "defines.h"
 #include "game/camera.h"
@@ -16,10 +17,12 @@ bool application_on_event(u16 code, void* sender, void* listener_inst, event_con
 bool app_runing = false;
 
 bool app_initialize() {
+    app_settings _settings;
+    parse_app_settings_ini("config.ini", &_settings);
+
     // Essentials
     create_window("title");
-
-    SetExitKey(0);
+    create_camera((Vector2) {SCREEN_WIDTH_DIV2, SCREEN_HEIGHT_DIV2}, 0);
 
     // Subsystems
     memory_system_initialize();

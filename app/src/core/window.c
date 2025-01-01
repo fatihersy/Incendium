@@ -1,17 +1,16 @@
 #include "window.h"
 
-#include "game/camera.h"
+#include "defines.h"
 
 bool create_window(const char* title) {
     if (IsWindowReady()) return false;
 
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, title);
 
-    create_camera((Vector2) {SCREEN_WIDTH_DIV2, SCREEN_HEIGHT_DIV2}, 0);
-
     SetConfigFlags(FLAG_VSYNC_HINT | FLAG_WINDOW_HIGHDPI);
-    SetTargetFPS(TARGET_FPS);  // Set our game to run at 60 frames-per-second
-
+    SetTargetFPS(TARGET_FPS); 
+    SetExitKey(0);
+    
     return true;
 }
 

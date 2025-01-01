@@ -12,6 +12,13 @@
 #define MAX_SPRITE_RENDERQUEUE 50
 #define CLEAR_BACKGROUND_COLOR BLACK
 
+#define INI_FILE_MAX_FILE_SIZE 32000
+#define INI_FILE_MAX_SECTION_NAME_LENGTH 32
+#define INI_FILE_MAX_SECTION_LENGTH 512
+#define INI_FILE_MAX_VARIABLE_NAME_LENGTH 32
+#define INI_FILE_MAX_VARIABLE_STRING_LENGTH 128
+#define INI_FILE_MAX_VARIABLE_I64_LENGTH 19
+
 #define UI_FONT_SPACING 1
 
 #define SCREEN_WIDTH 1280
@@ -66,6 +73,34 @@ typedef double f64;
 
 // Boolean types
 typedef int b32;
+
+// Properly define static assertions.
+#if defined(__clang__) || defined(__gcc__)
+#define STATIC_ASSERT _Static_assert
+#else
+#define STATIC_ASSERT static_assert
+#endif
+
+// Ensure all types are of the correct size.
+STATIC_ASSERT(sizeof(u8) == 1, "Expected u8 to be 1 byte.");
+STATIC_ASSERT(sizeof(u16) == 2, "Expected u16 to be 2 bytes.");
+STATIC_ASSERT(sizeof(u32) == 4, "Expected u32 to be 4 bytes.");
+STATIC_ASSERT(sizeof(u64) == 8, "Expected u64 to be 8 bytes.");
+
+STATIC_ASSERT(sizeof(i8) == 1, "Expected i8 to be 1 byte.");
+STATIC_ASSERT(sizeof(i16) == 2, "Expected i16 to be 2 bytes.");
+STATIC_ASSERT(sizeof(i32) == 4, "Expected i32 to be 4 bytes.");
+STATIC_ASSERT(sizeof(i64) == 8, "Expected i64 to be 8 bytes.");
+
+STATIC_ASSERT(sizeof(f32) == 4, "Expected f32 to be 4 bytes.");
+STATIC_ASSERT(sizeof(f64) == 8, "Expected float to be 8 bytes.");
+
+/**
+ * @brief Any id set to this should be considered invalid,
+ * and not actually pointing to a real object.
+ */
+#define INVALID_ID32 4294967295U
+#define INVALID_ID16 65535U
 
 typedef enum data_type {
   DATA_TYPE_UNRESERVED,
@@ -174,6 +209,7 @@ typedef enum button_id {
   BTN_ID_MAINMENU_BUTTON_SETTINGS,
   BTN_ID_MAINMENU_BUTTON_EXTRAS,
   BTN_ID_MAINMENU_BUTTON_EXIT,
+  BTN_ID_MAIN_MENU_SETTINGS_CANCEL_SETTINGS_BUTTON,
 
   BTN_ID_PAUSEMENU_BUTTON_RESUME,
   BTN_ID_PAUSEMENU_BUTTON_SETTINGS,
@@ -189,6 +225,7 @@ typedef enum button_id {
   BTN_ID_SETTINGS_SLIDER_RES_RIGHT_BUTTON,
   BTN_ID_SETTINGS_SLIDER_WIN_MODE_LEFT_BUTTON,
   BTN_ID_SETTINGS_SLIDER_WIN_MODE_RIGHT_BUTTON,
+  BTN_ID_SETTINGS_APPLY_SETTINGS_BUTTON,
 
   BTN_ID_MAX
 } button_id;
@@ -262,6 +299,12 @@ typedef struct data_pack {
     char c[16];
   } data;
 } data_pack;
+
+typedef struct app_settings {
+  u32 resolution[2];
+  char title[16];
+  u16 master_sound_volume;
+} app_settings;
 
 typedef struct tile_symbol {
   u8 c[3];
@@ -610,34 +653,6 @@ static const u32 level_curve[MAX_PLAYER_LEVEL + 1] = {
     2050000000,  //
     2150000000u, //	100
 };
-
-// Properly define static assertions.
-#if defined(__clang__) || defined(__gcc__)
-#define STATIC_ASSERT _Static_assert
-#else
-#define STATIC_ASSERT static_assert
-#endif
-
-// Ensure all types are of the correct size.
-STATIC_ASSERT(sizeof(u8) == 1, "Expected u8 to be 1 byte.");
-STATIC_ASSERT(sizeof(u16) == 2, "Expected u16 to be 2 bytes.");
-STATIC_ASSERT(sizeof(u32) == 4, "Expected u32 to be 4 bytes.");
-STATIC_ASSERT(sizeof(u64) == 8, "Expected u64 to be 8 bytes.");
-
-STATIC_ASSERT(sizeof(i8) == 1, "Expected i8 to be 1 byte.");
-STATIC_ASSERT(sizeof(i16) == 2, "Expected i16 to be 2 bytes.");
-STATIC_ASSERT(sizeof(i32) == 4, "Expected i32 to be 4 bytes.");
-STATIC_ASSERT(sizeof(i64) == 8, "Expected i64 to be 8 bytes.");
-
-STATIC_ASSERT(sizeof(f32) == 4, "Expected f32 to be 4 bytes.");
-STATIC_ASSERT(sizeof(f64) == 8, "Expected float to be 8 bytes.");
-
-/**
- * @brief Any id set to this should be considered invalid,
- * and not actually pointing to a real object.
- */
-#define INVALID_ID32 4294967295U
-#define INVALID_ID16 65535U
 
 // Platform detection
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)

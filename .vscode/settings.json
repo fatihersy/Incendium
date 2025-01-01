@@ -75,5 +75,6 @@
         "app.h": "c",
         "defines.inl": "c",
         "reasings.h": "c",
+        "lexer.h": "c",
     },
 }

@@ -159,15 +159,12 @@ void user_interface_system_initialize() {
   register_button(
     (Vector2) {SCREEN_WIDTH_DIV2, SCREEN_HEIGHT_DIV2}, (Vector2) {0,1 },
     BTN_ID_PAUSEMENU_BUTTON_RESUME, BTN_TYPE_MENU_BUTTON);
-
   register_button(
     (Vector2) {SCREEN_WIDTH_DIV2, SCREEN_HEIGHT_DIV2}, (Vector2) {0,2 },
     BTN_ID_PAUSEMENU_BUTTON_SETTINGS, BTN_TYPE_MENU_BUTTON);
-
   register_button(
     (Vector2) {SCREEN_WIDTH_DIV2, SCREEN_HEIGHT_DIV2}, (Vector2) {0,3 },
     BTN_ID_PAUSEMENU_BUTTON_MAIN_MENU, BTN_TYPE_MENU_BUTTON);
-
   register_button(
     (Vector2) {SCREEN_WIDTH_DIV2, SCREEN_HEIGHT_DIV2}, (Vector2) {0,4 },
     BTN_ID_PAUSEMENU_BUTTON_EXIT, BTN_TYPE_MENU_BUTTON);
@@ -191,6 +188,13 @@ void user_interface_system_initialize() {
     SDR_ID_SETTINGS_WIN_MODE_SLIDER,  SDR_TYPE_OPTION, 
     BTN_ID_SETTINGS_SLIDER_WIN_MODE_LEFT_BUTTON, BTN_ID_SETTINGS_SLIDER_WIN_MODE_RIGHT_BUTTON
   );
+  register_button(
+    (Vector2) {SCREEN_WIDTH_DIV2, SCREEN_HEIGHT_DIV2}, (Vector2) {-1,5 },
+    BTN_ID_SETTINGS_APPLY_SETTINGS_BUTTON, BTN_TYPE_MENU_BUTTON);
+  
+  register_button(
+    (Vector2) {SCREEN_WIDTH_DIV2, SCREEN_HEIGHT_DIV2}, (Vector2) {1,5 },
+    BTN_ID_MAIN_MENU_SETTINGS_CANCEL_SETTINGS_BUTTON, BTN_TYPE_MENU_BUTTON);
   }
   // SETTINGS
 
@@ -474,6 +478,10 @@ void gui_draw_settings_screen() {
   gui_slider(SDR_ID_SETTINGS_RES_SLIDER);
 
   gui_slider(SDR_ID_SETTINGS_WIN_MODE_SLIDER);
+
+  if(gui_button("Apply", BTN_ID_MAIN_MENU_SETTINGS_CANCEL_SETTINGS_BUTTON)) {
+    
+  }
 }
 
 void gui_draw_panel(Rectangle dest, bool should_center) {
