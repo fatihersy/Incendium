@@ -18,6 +18,15 @@
 #define INI_FILE_MAX_VARIABLE_NAME_LENGTH 32
 #define INI_FILE_MAX_VARIABLE_STRING_LENGTH 128
 #define INI_FILE_MAX_VARIABLE_I64_LENGTH 19
+#define INI_FILE_MAX_VARIABLE_U64_LENGTH 20
+#define INI_FILE_MAX_VARIABLE_F64_LENGTH 20
+#define INI_FILE_MAX_VARIABLE_I32_LENGTH 10
+#define INI_FILE_MAX_VARIABLE_U32_LENGTH 10
+#define INI_FILE_MAX_VARIABLE_F32_LENGTH 20
+#define INI_FILE_MAX_VARIABLE_U16_LENGTH 5
+#define INI_FILE_MAX_VARIABLE_I16_LENGTH 5
+#define INI_FILE_MAX_VARIABLE_U8_LENGTH 3
+#define INI_FILE_MAX_VARIABLE_I8_LENGTH 3
 
 #define UI_FONT_SPACING 1
 
@@ -95,12 +104,23 @@ STATIC_ASSERT(sizeof(i64) == 8, "Expected i64 to be 8 bytes.");
 STATIC_ASSERT(sizeof(f32) == 4, "Expected f32 to be 4 bytes.");
 STATIC_ASSERT(sizeof(f64) == 8, "Expected float to be 8 bytes.");
 
+
+#define I64_MAX 9223372036854775807
+#define U64_MAX 18446744073709551615U
+#define F64_MAX 1.7976931348623157e+308
+#define I32_MAX 2147483647
+#define U32_MAX 4294967295U
+#define F32_MAX 3.402823466e+38F
+#define I16_MAX 32767
+#define U16_MAX 65535
+#define  I8_MAX 127
+#define  U8_MAX 255
 /**
  * @brief Any id set to this should be considered invalid,
  * and not actually pointing to a real object.
  */
-#define INVALID_ID32 4294967295U
-#define INVALID_ID16 65535U
+#define INVALID_ID32 U32_MAX
+#define INVALID_ID16 U16_MAX
 
 typedef enum data_type {
   DATA_TYPE_UNRESERVED,
