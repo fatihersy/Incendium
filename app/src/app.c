@@ -4,7 +4,7 @@
 #include "core/window.h"
 #include "core/ftime.h"
 #include "core/fmemory.h"
-#include "core/lexer.h"
+#include "tools/lexer_ini.h"
 
 #include "defines.h"
 #include "game/camera.h"
@@ -17,7 +17,7 @@ bool application_on_event(u16 code, void* sender, void* listener_inst, event_con
 bool app_runing = false;
 
 bool app_initialize() {
-    app_settings _settings;
+    app_settings _settings = {0};
     parse_app_settings_ini("config.ini", &_settings);
 
     // Essentials
