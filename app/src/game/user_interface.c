@@ -1,12 +1,10 @@
 #include "user_interface.h"
+#include <defines.h>
+#include <settings.h>
 
 #include "core/event.h"
 #include "core/fmemory.h"
-
-#include "defines.h"
-#include "game/user_interface.h"
 #include "raylib.h"
-#include <stdbool.h>
 
 #define DEFAULT_MENU_BUTTON_SCALE 3
 #define SPACE_BTW_Y(i, DIM_Y) (DIM_Y + DIM_Y/3.f) * i
@@ -121,23 +119,23 @@ void user_interface_system_initialize() {
   // MAIN MENU
   {  
   register_button(
-    (Vector2) { SCREEN_WIDTH_DIV2, SCREEN_HEIGHT_DIV2 }, (Vector2) {0,0 },
+    get_resolution_div2(), (Vector2) {0,0 },
     BTN_ID_MAINMENU_BUTTON_PLAY, BTN_TYPE_MENU_BUTTON_NO_CRT);
 
   register_button(
-    (Vector2) {SCREEN_WIDTH_DIV2, SCREEN_HEIGHT_DIV2}, (Vector2) {0,1 },
+    get_resolution_div2(), (Vector2) {0,1 },
     BTN_ID_MAINMENU_BUTTON_EDITOR, BTN_TYPE_MENU_BUTTON_NO_CRT);
 
   register_button(
-    (Vector2) {SCREEN_WIDTH_DIV2, SCREEN_HEIGHT_DIV2}, (Vector2) {0,2 },
+    get_resolution_div2(), (Vector2) {0,2 },
     BTN_ID_MAINMENU_BUTTON_SETTINGS, BTN_TYPE_MENU_BUTTON_NO_CRT);
 
   register_button(
-    (Vector2) {SCREEN_WIDTH_DIV2, SCREEN_HEIGHT_DIV2}, (Vector2) {0,3 },
+    get_resolution_div2(), (Vector2) {0,3 },
     BTN_ID_MAINMENU_BUTTON_EXTRAS, BTN_TYPE_MENU_BUTTON_NO_CRT);
 
   register_button(
-    (Vector2) {SCREEN_WIDTH_DIV2, SCREEN_HEIGHT_DIV2}, (Vector2) {0,4 },
+    get_resolution_div2(), (Vector2) {0,4 },
     BTN_ID_MAINMENU_BUTTON_EXIT, BTN_TYPE_MENU_BUTTON_NO_CRT);
   }
   // MAIN MENU
@@ -145,11 +143,11 @@ void user_interface_system_initialize() {
   // EDITOR
   {
   register_button(
-    (Vector2) {SCREEN_WIDTH_DIV2, SCREEN_HEIGHT_DIV2}, (Vector2) {0,1 },
+    get_resolution_div2(), (Vector2) {0,1 },
     BTN_ID_EDITOR_BUTTON_LOAD_MAP, BTN_TYPE_MENU_BUTTON);
 
   register_button(
-    (Vector2) {SCREEN_WIDTH_DIV2, SCREEN_HEIGHT_DIV2}, (Vector2) {0,2 },
+    get_resolution_div2(), (Vector2) {0,2 },
     BTN_ID_EDITOR_BUTTON_SAVE_MAP, BTN_TYPE_MENU_BUTTON);
   }
   // EDITOR
@@ -157,16 +155,16 @@ void user_interface_system_initialize() {
   // USER INTERFACE
   {  
   register_button(
-    (Vector2) {SCREEN_WIDTH_DIV2, SCREEN_HEIGHT_DIV2}, (Vector2) {0,1 },
+    get_resolution_div2(), (Vector2) {0,1 },
     BTN_ID_PAUSEMENU_BUTTON_RESUME, BTN_TYPE_MENU_BUTTON);
   register_button(
-    (Vector2) {SCREEN_WIDTH_DIV2, SCREEN_HEIGHT_DIV2}, (Vector2) {0,2 },
+    get_resolution_div2(), (Vector2) {0,2 },
     BTN_ID_PAUSEMENU_BUTTON_SETTINGS, BTN_TYPE_MENU_BUTTON);
   register_button(
-    (Vector2) {SCREEN_WIDTH_DIV2, SCREEN_HEIGHT_DIV2}, (Vector2) {0,3 },
+    get_resolution_div2(), (Vector2) {0,3 },
     BTN_ID_PAUSEMENU_BUTTON_MAIN_MENU, BTN_TYPE_MENU_BUTTON);
   register_button(
-    (Vector2) {SCREEN_WIDTH_DIV2, SCREEN_HEIGHT_DIV2}, (Vector2) {0,4 },
+    get_resolution_div2(), (Vector2) {0,4 },
     BTN_ID_PAUSEMENU_BUTTON_EXIT, BTN_TYPE_MENU_BUTTON);
   }
   // USER INTERFACE
@@ -174,63 +172,63 @@ void user_interface_system_initialize() {
   // SETTINGS
   {
   register_slider(
-    (Vector2) {SCREEN_WIDTH_DIV2, SCREEN_HEIGHT_DIV2}, (Vector2) {0}, 
+    get_resolution_div2(), (Vector2) {0}, 
     SDR_ID_SETTINGS_SOUND_SLIDER,  SDR_TYPE_PERCENT, 
     BTN_ID_SETTINGS_SLIDER_SOUND_LEFT_BUTTON, BTN_ID_SETTINGS_SLIDER_SOUND_RIGHT_BUTTON
   );
   register_slider(
-    (Vector2) {SCREEN_WIDTH_DIV2, SCREEN_HEIGHT_DIV2}, (Vector2) {0,1}, 
+    get_resolution_div2(), (Vector2) {0,1}, 
     SDR_ID_SETTINGS_RES_SLIDER,  SDR_TYPE_OPTION, 
     BTN_ID_SETTINGS_SLIDER_RES_LEFT_BUTTON, BTN_ID_SETTINGS_SLIDER_RES_RIGHT_BUTTON
   );
   register_slider(
-    (Vector2) {SCREEN_WIDTH_DIV2, SCREEN_HEIGHT_DIV2}, (Vector2) {0,2}, 
+    get_resolution_div2(), (Vector2) {0,2}, 
     SDR_ID_SETTINGS_WIN_MODE_SLIDER,  SDR_TYPE_OPTION, 
     BTN_ID_SETTINGS_SLIDER_WIN_MODE_LEFT_BUTTON, BTN_ID_SETTINGS_SLIDER_WIN_MODE_RIGHT_BUTTON
   );
   register_button(
-    (Vector2) {SCREEN_WIDTH_DIV2, SCREEN_HEIGHT_DIV2}, (Vector2) {-1,5 },
+    get_resolution_div2(), (Vector2) {-1,5 },
     BTN_ID_SETTINGS_APPLY_SETTINGS_BUTTON, BTN_TYPE_MENU_BUTTON);
   
   register_button(
-    (Vector2) {SCREEN_WIDTH_DIV2, SCREEN_HEIGHT_DIV2}, (Vector2) {1,5 },
+    get_resolution_div2(), (Vector2) {1,5 },
     BTN_ID_MAIN_MENU_SETTINGS_CANCEL_SETTINGS_BUTTON, BTN_TYPE_MENU_BUTTON);
   }
   // SETTINGS
 
-  gui_slider_add_option(SDR_ID_SETTINGS_RES_SLIDER, (data_pack) {
+  gui_slider_add_option(SDR_ID_SETTINGS_RES_SLIDER, "1920x1080", (data_pack) {
     .data.u16[0] = 1920,
     .data.u16[1] = 1080,
     .array_lenght = 2,
     .type_flag = DATA_TYPE_U16
-  }, "x");
-  gui_slider_add_option(SDR_ID_SETTINGS_RES_SLIDER, (data_pack) {
+  });
+  gui_slider_add_option(SDR_ID_SETTINGS_RES_SLIDER, "2560x1440", (data_pack) {
     .data.u16[0] = 2560,
     .data.u16[1] = 1440,
     .array_lenght = 2,
     .type_flag = DATA_TYPE_U16
-  }, "x");
-  gui_slider_add_option(SDR_ID_SETTINGS_RES_SLIDER, (data_pack) {
+  });
+  gui_slider_add_option(SDR_ID_SETTINGS_RES_SLIDER, "3840x2160", (data_pack) {
     .data.u16[0] = 3840,
     .data.u16[1] = 2160,
     .array_lenght = 2,
     .type_flag = DATA_TYPE_U16
-  }, "x");
-  gui_slider_add_option(SDR_ID_SETTINGS_WIN_MODE_SLIDER, (data_pack) {
-    .data.c = "WINDOWED",
+  });
+  gui_slider_add_option(SDR_ID_SETTINGS_WIN_MODE_SLIDER, "WINDOWED", (data_pack) {
+    .data.i32[0] = 0,
     .array_lenght = 0,
     .type_flag = DATA_TYPE_C
-  }, "");
-  gui_slider_add_option(SDR_ID_SETTINGS_WIN_MODE_SLIDER, (data_pack) {
-    .data.c = "BORDERLESS",
+  });
+  gui_slider_add_option(SDR_ID_SETTINGS_WIN_MODE_SLIDER, "BORDERLESS", (data_pack) {
+    .data.i32[0] = FLAG_BORDERLESS_WINDOWED_MODE,
     .array_lenght = 0,
     .type_flag = DATA_TYPE_C
-  }, "");
-  gui_slider_add_option(SDR_ID_SETTINGS_WIN_MODE_SLIDER, (data_pack) {
-    .data.c = "FULL SCREEN",
+  });
+  gui_slider_add_option(SDR_ID_SETTINGS_WIN_MODE_SLIDER, "FULL SCREEN", (data_pack) {
+    .data.i32[0] = FLAG_FULLSCREEN_MODE,
     .array_lenght = 0,
     .type_flag = DATA_TYPE_C
-  }, "");
+  });
 
   event_register(EVENT_CODE_UI_SHOW_PAUSE_MENU, 0, user_interface_on_event);
   event_register(EVENT_CODE_UI_SHOW_SETTINGS_MENU, 0, user_interface_on_event);
@@ -238,7 +236,7 @@ void user_interface_system_initialize() {
 
 void update_user_interface() {
   state->mouse_pos = GetMousePosition();
-  state->offset = (Vector2) { SCREEN_OFFSET, SCREEN_OFFSET};
+  state->offset = (Vector2) { get_screen_offset(), get_screen_offset()};
   update_sprite_renderqueue();
 
   update_buttons();
@@ -439,16 +437,16 @@ void render_slider_body(slider* sdr) {
     }
     case SDR_TYPE_OPTION: {
       u16 total_body_width = sdr_type.body_width * sdr_type.width_multiply;
-      u16 each_body_width = (total_body_width - ((sdr->max_value) * SCREEN_OFFSET)) / (sdr->max_value-1);
+      u16 each_body_width = (total_body_width - ((sdr->max_value) * get_screen_offset())) / (sdr->max_value-1);
       f32 each_body_scale = (float)each_body_width / sdr_type.origin_body_width;
       Vector2 draw_sprite_scale = (Vector2) {each_body_scale, sdr_type.scale};
-      Vector2 _pos_temp = (Vector2) {sdr->position.x + SCREEN_OFFSET, sdr->position.y};
-      const char* text = TextFormat("%s", sdr->options[sdr->current_value].text);
+      Vector2 _pos_temp = (Vector2) {sdr->position.x + get_screen_offset(), sdr->position.y};
+      const char* text = TextFormat("%s", sdr->options[sdr->current_value].display_text);
       Vector2 text_measure = MeasureTextEx(state->ui_font, text, UI_FONT_SIZE, UI_FONT_SPACING);
 
       for (int i = 1; i < sdr->max_value; ++i) {
         Vector2 _pos = _pos_temp;
-        _pos.x += (each_body_width + SCREEN_OFFSET) * (i-1); 
+        _pos.x += (each_body_width + get_screen_offset()) * (i-1); 
 
         draw_sprite_on_site(
           sdr_type.ss_sdr_body, WHITE, 
@@ -480,7 +478,19 @@ void gui_draw_settings_screen() {
   gui_slider(SDR_ID_SETTINGS_WIN_MODE_SLIDER);
 
   if(gui_button("Apply", BTN_ID_MAIN_MENU_SETTINGS_CANCEL_SETTINGS_BUTTON)) {
-    
+    slider sdr_win_mode = state->sliders[SDR_ID_SETTINGS_WIN_MODE_SLIDER];
+    i32 window_mod = sdr_win_mode.options[sdr_win_mode.current_value].content.data.i32[0];
+    u32 res_width = get_app_settings()->resolution[0];
+    u32 res_height = get_app_settings()->resolution[1];
+    i32 monitor = GetCurrentMonitor();
+
+    if (window_mod == FLAG_BORDERLESS_WINDOWED_MODE) {
+      ToggleBorderlessWindowed();
+      SetWindowSize(GetMonitorWidth(monitor), GetMonitorHeight(monitor));
+    }
+    else if (window_mod == FLAG_FULLSCREEN_MODE) {
+      ToggleFullscreen();
+    }
   }
 }
 
@@ -501,8 +511,8 @@ void gui_draw_panel(Rectangle dest, bool should_center) {
 
 void gui_draw_pause_screen() {
   gui_draw_panel((Rectangle) {
-    .x = SCREEN_OFFSET, .y = SCREEN_OFFSET, 
-    .width = SCREEN_WIDTH - SCREEN_OFFSET, .height = SCREEN_HEIGHT - SCREEN_OFFSET}, false
+    .x = get_screen_offset(), .y = get_screen_offset(), 
+    .width = GetScreenWidth() - get_screen_offset(), .height = GetScreenHeight() - get_screen_offset()}, false
   );
 
   if (gui_button("Resume", BTN_ID_PAUSEMENU_BUTTON_RESUME)) {
@@ -530,7 +540,7 @@ bool set_player_user_interface(player_state* player) {
   return false;
 }
 
-bool gui_slider_add_option(slider_id _id, data_pack content, const char* _parser) {
+bool gui_slider_add_option(slider_id _id, const char* _display_text, data_pack content) {
   if (_id >= SDR_ID_MAX || _id <= SDR_ID_UNDEFINED || !state) {
     TraceLog(LOG_WARNING, "WARNING::user_interface::gui_slider_add_option()::Slider ids was out of bound");
     return false;
@@ -541,15 +551,10 @@ bool gui_slider_add_option(slider_id _id, data_pack content, const char* _parser
     return false;
   }
   sdr->options[sdr->max_value] = (slider_option) {
-    .array_lenght = content.array_lenght,
-    .type_flag = content.type_flag,
-    .parser = *_parser,
-    .text = 0
+    .display_text = 0,
+    .content = content
   };
-  TextCopy(
-    sdr->options[sdr->max_value].text, 
-    stringtify_options(content, _parser, sdr->sdr_type.char_limit)
-  );
+  TextCopy(sdr->options[sdr->max_value].display_text, _display_text);
 
   sdr->max_value++;
 

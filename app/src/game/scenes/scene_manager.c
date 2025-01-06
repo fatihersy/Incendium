@@ -1,5 +1,4 @@
 #include "scene_manager.h"
-#include "core/window.h"
 #include "defines.h"
 
 #include "core/event.h"
@@ -9,12 +8,13 @@
 #include "game/scenes/scene_in_game.h"
 #include "game/scenes/scene_main_menu.h"
 #include "game/scenes/scene_editor.h"
+#include "raylib.h"
 
 static scene_manager_system_state *scene_manager_state;
 
 bool scene_manager_on_event(u16 code, void *sender, void *listener_inst, event_context context);
 
-bool scene_manager_initialize(Vector2 _screen_size, Vector2 _screen_half_size) {
+bool scene_manager_initialize() {
   if (scene_manager_state) return false;
 
   scene_manager_state = (scene_manager_system_state *)allocate_memory_linear(sizeof(scene_manager_system_state), true);
@@ -76,7 +76,7 @@ bool scene_manager_on_event(u16 code, void *sender, void *listener_inst, event_c
   switch (code) {
   case EVENT_CODE_SCENE_IN_GAME: {
     scene_manager_state->scene_data = SCENE_IN_GAME;
-    initialize_scene_in_game(get_screen_size());
+    initialize_scene_in_game((Vector2) {GetScreenWidth(), GetScreenHeight()});
     return true;
     break;
   }

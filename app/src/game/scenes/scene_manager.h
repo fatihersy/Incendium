@@ -4,7 +4,7 @@
 
 #include "defines.h"
 
-bool scene_manager_initialize(Vector2 _screen_size, Vector2 _screen_half_size);
+bool scene_manager_initialize();
 
 void update_scene_scene();
 void render_scene_world();

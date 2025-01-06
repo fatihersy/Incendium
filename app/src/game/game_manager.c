@@ -1,11 +1,10 @@
 #include "game_manager.h"
+#include <settings.h>
 
-#include "core/window.h"
 #include "core/event.h"
 #include "core/fmemory.h"
 #include "core/ftime.h"
 
-#include "defines.h"
 #include "game/player.h"
 #include "game/spawn.h"
 
@@ -65,10 +64,6 @@ player_state* get_player_state_if_available() {
   }
 
   return (player_state*) {0};
-}
-
-Vector2 _get_screen_half_size() {
-  return get_screen_half_size();
 }
 
 void _set_player_position(Vector2 position) {

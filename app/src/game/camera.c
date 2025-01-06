@@ -1,7 +1,9 @@
 #include "camera.h"
+#include "raylib.h"
+#include <settings.h>
 
 #include "core/fmath.h"
-#include "raylib.h"
+
 
 static Camera2D camera;
 static float camera_min_speed = 30;
@@ -12,7 +14,7 @@ Camera2D create_camera(Vector2 position, u8 rotation) {
     
     Camera2D cam = {0};
 
-    cam.offset = (Vector2){SCREEN_WIDTH_DIV2, SCREEN_HEIGHT_DIV2};
+    cam.offset = get_resolution_div2();
     cam.target = (Vector2){position.x, position.y};
     cam.rotation = rotation;
     cam.zoom = 1.0f;
@@ -28,7 +30,7 @@ Camera2D* get_active_camera() {
 
 bool update_camera(Vector2 position) 
 {
-    camera.offset = (Vector2){SCREEN_WIDTH_DIV2, SCREEN_HEIGHT_DIV2};
+    camera.offset = get_resolution_div2();
 
     Vector2 diff = vec2_subtract(position, camera.target);
     float length = vec2_lenght(diff);

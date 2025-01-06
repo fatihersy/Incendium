@@ -1,10 +1,7 @@
-
-
 #ifndef DEFINES_H
 #define DEFINES_H
 
 #include <raylib.h>
-#include <stdbool.h>
 
 #define RESOURCE_PATH "D:/Workspace/resources/"
 #define TOTAL_ALLOCATED_MEMORY 64 * 1024 * 1024
@@ -19,16 +16,6 @@
 #define INI_FILE_MAX_VARIABLE_VALUE_LENGTH 32
 
 #define UI_FONT_SPACING 1
-
-#define SCREEN_WIDTH 1280
-#define SCREEN_HEIGHT 720
-#define SCREEN_OFFSET 5
-#define SCREEN_WIDTH_DIV2  SCREEN_WIDTH       / 2.f
-#define SCREEN_HEIGHT_DIV2 SCREEN_HEIGHT      / 2.f
-#define SCREEN_WIDTH_DIV3  SCREEN_WIDTH       / 3.f
-#define SCREEN_HEIGHT_DIV3 SCREEN_HEIGHT      / 3.f
-#define SCREEN_WIDTH_DIV4  SCREEN_WIDTH       / 4.f
-#define SCREEN_HEIGHT_DIV4 SCREEN_HEIGHT      / 4.f
 
 #define MAX_SLIDER_OPTION_SLOT 10
 #define MAX_SLIDER_OPTION_TEXT_SLOT 18
@@ -430,10 +417,7 @@ typedef struct button {
 } button;
 
 typedef struct slider_option {
-  data_type type_flag;
-  u16 array_lenght;
-  char text[MAX_SLIDER_OPTION_TEXT_SLOT];
-  char parser;
+  char display_text[MAX_SLIDER_OPTION_TEXT_SLOT];
   data_pack content;
 } slider_option;
 

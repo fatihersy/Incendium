@@ -144,7 +144,7 @@ void _draw_sprite_on_site(spritesheet_play_system *system, spritesheet_type _typ
   #if DEBUG_COLLISIONS
     DrawRectangleLines(
       pos.x, pos.y, 
-      sheet.current_frame_rect.width * scale,sheet.current_frame_rect.height * scale, 
+      sheet.current_frame_rect.width * scale.x,sheet.current_frame_rect.height * scale.y, 
       WHITE);
   #endif
 }

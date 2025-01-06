@@ -53,6 +53,7 @@ bool parse_app_settings_ini(const char* filename, app_settings* out_settings) {
     char section_title[INI_FILE_MAX_SECTION_LENGTH] = "";
     u8* _str = LoadFileData(filename, &size);
     if (size > INI_FILE_MAX_FILE_SIZE) {
+        TraceLog(LOG_ERROR, "lexer_ini::parse_app_settings_ini()::Ini file size exceeded.");
         return false;
     }
     TextCopy(file_str, (char*)_str);

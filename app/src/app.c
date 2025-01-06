@@ -1,37 +1,43 @@
 #include "app.h"
+#include "raylib.h"
+#include "defines.h"
 
 #include "core/event.h"
-#include "core/window.h"
 #include "core/ftime.h"
 #include "core/fmemory.h"
-#include "tools/lexer_ini.h"
 
-#include "defines.h"
+#include "settings.h"
 #include "game/camera.h"
 #include "game/resource.h"
 #include "game/scenes/scene_manager.h"
-#include "raylib.h"
 
 bool application_on_event(u16 code, void* sender, void* listener_inst, event_context context);
 
 bool app_runing = false;
 
 bool app_initialize() {
-    app_settings _settings = {0};
-    parse_app_settings_ini("config.ini", &_settings);
-
-    // Essentials
-    create_window("title");
-    create_camera((Vector2) {SCREEN_WIDTH_DIV2, SCREEN_HEIGHT_DIV2}, 0);
 
     // Subsystems
     memory_system_initialize();
     event_system_initialize();
     time_system_initialize();
-    resource_system_initialize();
-    
+
+    // Platform    
+    settings_initialize();
+    set_settings_from_ini_file("config.ini");
+    app_settings* settings = get_app_settings();
+    SetConfigFlags(FLAG_VSYNC_HINT | FLAG_WINDOW_HIGHDPI | FLAG_BORDERLESS_WINDOWED_MODE | FLAG_WINDOW_TOPMOST | FLAG_WINDOW_UNDECORATED);
+    InitWindow(
+        settings->resolution[0], 
+        settings->resolution[1], 
+        settings->title);
+    SetTargetFPS(TARGET_FPS); 
+    SetExitKey(0);
+
     // Game
-    if (!scene_manager_initialize(get_screen_size(), get_screen_half_size())) {
+    resource_system_initialize();
+    create_camera(get_resolution_div2(), 0);
+    if (!scene_manager_initialize()) {
         TraceLog(LOG_ERROR, "scene_manager() initialization failed");
         return false;
     }

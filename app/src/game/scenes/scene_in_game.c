@@ -1,14 +1,15 @@
-
 #include "scene_in_game.h"
+#include <defines.h>
+#include <settings.h>
+
 #include <core/fmemory.h>
 #include <core/fmath.h>
-
 #include "core/event.h"
-#include "defines.h"
+
 #include "game/resource.h"
 #include "game/game_manager.h"
 #include "game/user_interface.h"
-#include "raylib.h"
+
 
 typedef struct scene_in_game_state {
   game_manager_system_state *p_game_manager;
@@ -31,7 +32,7 @@ bool initialize_scene_in_game(Vector2 _screen_size) {
 
   in_game_state->p_game_manager = get_game_manager();
 
-  _set_player_position((Vector2) {SCREEN_WIDTH_DIV2, SCREEN_HEIGHT_DIV2});
+  _set_player_position(get_resolution_div2());
 
   for (u32 i = 0; i < 360; i += 20) {
     Vector2 position = get_a_point_of_a_circle(_get_player_position(false), 500, i);

@@ -10,7 +10,7 @@ void update_user_interface();
 void render_user_interface();
 
 bool set_player_user_interface(player_state* player);
-bool gui_slider_add_option(slider_id _id, data_pack _content, const char* _parser);
+bool gui_slider_add_option(slider_id _id, const char* _display_text, data_pack content);
 
 bool gui_button(const char* text, button_id _id);
 void gui_slider(slider_id _id);

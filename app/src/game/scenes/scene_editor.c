@@ -1,12 +1,14 @@
 #include "scene_editor.h"
+#include <defines.h>
+#include <settings.h>
 
 #include "core/event.h"
 #include "core/fmemory.h"
 
-#include "defines.h"
 #include "game/tilemap.h"
 #include "game/user_interface.h"
 #include "raylib.h"
+
 
 typedef struct scene_editor_state {
   Camera2D* camera;
@@ -67,7 +69,7 @@ void render_interface_editor() {
     DrawRectangle(
       0, 0, 
       get_tilesheet_dim(&state->palette).x + state->palette.position.x + state->palette.offset, 
-      SCREEN_HEIGHT, 
+      GetScreenHeight(), 
       WHITE
     );
     render_tilesheet(&state->palette);
