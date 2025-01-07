@@ -51,6 +51,7 @@ bool parse_app_settings_ini(const char* filename, app_settings* out_settings) {
     char section_resolution[INI_FILE_MAX_SECTION_LENGTH] = "";
     char section_sound[INI_FILE_MAX_SECTION_LENGTH] = "";
     char section_title[INI_FILE_MAX_SECTION_LENGTH] = "";
+    char section_window[INI_FILE_MAX_SECTION_LENGTH] = "";
     u8* _str = LoadFileData(filename, &size);
     if (size > INI_FILE_MAX_FILE_SIZE) {
         TraceLog(LOG_ERROR, "lexer_ini::parse_app_settings_ini()::Ini file size exceeded.");
@@ -60,10 +61,22 @@ bool parse_app_settings_ini(const char* filename, app_settings* out_settings) {
     TextCopy(section_resolution, get_section(file_str, "resolution"));
     TextCopy(section_sound,      get_section(file_str, "sound"));
     TextCopy(section_title,      get_section(file_str, "title"));
+    TextCopy(section_window,      get_section(file_str, "window"));
 
     out_settings->resolution[0] = get_variable_I32(section_resolution, "width");
     out_settings->resolution[1] = get_variable_I32(section_resolution, "height");
     out_settings->master_sound_volume = get_variable_U16(section_sound, "master");
+    const char* str_win_mode = get_value_string(section_window, "mode");
+    if (TextIsEqual(str_win_mode, "borderless")) {
+        out_settings->window_state = FLAG_BORDERLESS_WINDOWED_MODE;
+    }
+    else if (TextIsEqual(str_win_mode, "fullscreen")) {
+        out_settings->window_state = FLAG_FULLSCREEN_MODE;
+    }
+    else if (TextIsEqual(str_win_mode, "windowed")) {
+        out_settings->window_state = 0;
+    }
+                                    
 
     TextCopy(out_settings->title, get_value_string(section_title, "title"));
 

@@ -301,6 +301,7 @@ typedef struct app_settings {
   u32 resolution[2];
   char title[16];
   u16 master_sound_volume;
+  i32 window_state;
 } app_settings;
 
 typedef struct tile_symbol {

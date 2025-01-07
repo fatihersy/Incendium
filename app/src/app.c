@@ -11,9 +11,14 @@
 #include "game/resource.h"
 #include "game/scenes/scene_manager.h"
 
-bool application_on_event(u16 code, void* sender, void* listener_inst, event_context context);
+typedef struct app_system_state {
+    app_settings settings;
+    bool app_runing;
+} app_system_state;
 
-bool app_runing = false;
+static app_system_state* state;
+
+bool application_on_event(u16 code, void* sender, void* listener_inst, event_context context);
 
 bool app_initialize() {
 
@@ -22,17 +27,28 @@ bool app_initialize() {
     event_system_initialize();
     time_system_initialize();
 
+    state = (app_system_state*)allocate_memory_linear(sizeof(app_system_state), true);
+
     // Platform    
     settings_initialize();
     set_settings_from_ini_file("config.ini");
-    app_settings* settings = get_app_settings();
-    SetConfigFlags(FLAG_VSYNC_HINT | FLAG_WINDOW_HIGHDPI | FLAG_BORDERLESS_WINDOWED_MODE | FLAG_WINDOW_TOPMOST | FLAG_WINDOW_UNDECORATED);
+    state->settings = *get_app_settings();
+    SetConfigFlags(FLAG_VSYNC_HINT | FLAG_WINDOW_HIGHDPI);
     InitWindow(
-        settings->resolution[0], 
-        settings->resolution[1], 
-        settings->title);
+        state->settings.resolution[0], 
+        state->settings.resolution[1], 
+        state->settings.title);
     SetTargetFPS(TARGET_FPS); 
     SetExitKey(0);
+    if (state->settings.window_state == FLAG_BORDERLESS_WINDOWED_MODE) {
+        i32 monitor = GetCurrentMonitor();
+        ToggleBorderlessWindowed();
+        SetWindowSize(GetMonitorWidth(monitor), GetMonitorHeight(monitor));
+    }
+    else if (state->settings.window_state == FLAG_FULLSCREEN_MODE) {
+        ToggleFullscreen();
+    }
+    SetConfigFlags(FLAG_WINDOW_UNDECORATED | FLAG_WINDOW_TOPMOST);
 
     // Game
     resource_system_initialize();
@@ -43,18 +59,28 @@ bool app_initialize() {
     }
 
     event_register(EVENT_CODE_APPLICATION_QUIT, 0, application_on_event);
+    event_register(EVENT_CODE_TOGGLE_BORDERLESS, 0, application_on_event);
+    event_register(EVENT_CODE_TOGGLE_FULLSCREEN, 0, application_on_event);
+    event_register(EVENT_CODE_TOGGLE_WINDOWED, 0, application_on_event);
 
-    app_runing = true;
+    state->app_runing = true;
 
     return true;
 }
 
 bool window_should_close() {
-    return app_runing;
+    return state->app_runing;
 }
 
 bool app_update() {
     if (GetFPS() > TARGET_FPS) return true;
+    
+    if(IsWindowFocused() && !IsWindowState(FLAG_WINDOW_TOPMOST)) {
+        SetWindowState(FLAG_WINDOW_TOPMOST);
+    }
+    else if(!IsWindowFocused() && IsWindowState(FLAG_WINDOW_TOPMOST)) {
+        ClearWindowState(FLAG_WINDOW_TOPMOST);
+    }
 
     update_scene_scene();
 
@@ -84,9 +110,31 @@ bool app_render() {
 bool application_on_event(u16 code, void* sender, void* listener_inst, event_context context) {
     switch (code)
     {
-    case EVENT_CODE_APPLICATION_QUIT:
-        app_runing = false;
+    case EVENT_CODE_APPLICATION_QUIT:{
+        state->app_runing = false;
         return true;
+    }
+    case EVENT_CODE_TOGGLE_BORDERLESS: { 
+        i32 monitor = GetCurrentMonitor();
+        ToggleBorderlessWindowed();
+        SetWindowSize(GetMonitorWidth(monitor), GetMonitorHeight(monitor));
+        return true;
+    }
+    case EVENT_CODE_TOGGLE_FULLSCREEN: {
+        ToggleFullscreen();
+        return true;
+    }
+    case EVENT_CODE_TOGGLE_WINDOWED: {    
+        if (state->settings.window_state == FLAG_BORDERLESS_WINDOWED_MODE) {
+            ToggleBorderlessWindowed();
+            state->settings.window_state = 0;
+        }
+        else if (state->settings.window_state == FLAG_FULLSCREEN_MODE) {
+            ToggleFullscreen();
+            state->settings.window_state = 0;
+        }
+        return true;
+    }
     default:
         break;
     }

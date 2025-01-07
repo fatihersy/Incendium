@@ -480,16 +480,15 @@ void gui_draw_settings_screen() {
   if(gui_button("Apply", BTN_ID_MAIN_MENU_SETTINGS_CANCEL_SETTINGS_BUTTON)) {
     slider sdr_win_mode = state->sliders[SDR_ID_SETTINGS_WIN_MODE_SLIDER];
     i32 window_mod = sdr_win_mode.options[sdr_win_mode.current_value].content.data.i32[0];
-    u32 res_width = get_app_settings()->resolution[0];
-    u32 res_height = get_app_settings()->resolution[1];
-    i32 monitor = GetCurrentMonitor();
 
     if (window_mod == FLAG_BORDERLESS_WINDOWED_MODE) {
-      ToggleBorderlessWindowed();
-      SetWindowSize(GetMonitorWidth(monitor), GetMonitorHeight(monitor));
+      event_fire(EVENT_CODE_TOGGLE_BORDERLESS, 0, (event_context) {0});
     }
     else if (window_mod == FLAG_FULLSCREEN_MODE) {
-      ToggleFullscreen();
+      event_fire(EVENT_CODE_TOGGLE_FULLSCREEN, 0, (event_context) {0});
+    }
+    else if (window_mod == 0) {
+      event_fire(EVENT_CODE_TOGGLE_WINDOWED, 0, (event_context) {0});
     }
   }
 }

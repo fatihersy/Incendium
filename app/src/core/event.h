@@ -38,7 +38,11 @@ bool event_fire(u16 code, void* sender, event_context context);
 
 typedef enum system_event_code {
     
+    // app
     EVENT_CODE_APPLICATION_QUIT = 0x01,
+    EVENT_CODE_TOGGLE_BORDERLESS,
+    EVENT_CODE_TOGGLE_FULLSCREEN,
+    EVENT_CODE_TOGGLE_WINDOWED,
 
     // game_manager
     EVENT_CODE_PAUSE_GAME,

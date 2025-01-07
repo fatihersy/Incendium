@@ -13,8 +13,6 @@ typedef struct app_settings_system_state {
     Vector2 resolution_div3;
     Vector2 resolution_div4;
     u16 offset;
-
-    i32 window_state;
 } app_settings_system_state;
 
 static app_settings_system_state *state;
@@ -26,7 +24,6 @@ void settings_initialize() {
         return;
     }    
     state = (app_settings_system_state *)allocate_memory_linear(sizeof(app_settings_system_state), true);
-
 }
 
 /**
@@ -91,7 +88,7 @@ i32 get_window_state() {
         return 0;
     }
 
-    return state->window_state;
+    return state->settings.window_state;
 }
 
 Vector2 get_resolution_div2() {
