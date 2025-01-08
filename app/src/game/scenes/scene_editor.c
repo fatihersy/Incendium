@@ -142,8 +142,8 @@ void update_movement() {
     state->target.y -= speed;
     event_context context = (event_context)
     {
-      .data.i16[0] = state->target.x, 
-      .data.i16[1] = state->target.y
+      .data.f32[0] = state->target.x, 
+      .data.f32[1] = state->target.y
     };
     event_fire(EVENT_CODE_SCENE_MANAGER_SET_TARGET, 0, context);
   }
@@ -151,8 +151,8 @@ void update_movement() {
     state->target.x -= speed;
     event_context context = (event_context)
     {
-      .data.i16[0] = state->target.x, 
-      .data.i16[1] = state->target.y
+      .data.f32[0] = state->target.x, 
+      .data.f32[1] = state->target.y
     };
     event_fire(EVENT_CODE_SCENE_MANAGER_SET_TARGET, 0, context);
   }
@@ -160,8 +160,8 @@ void update_movement() {
     state->target.y += speed;
     event_context context = (event_context)
     {
-      .data.i16[0] = state->target.x, 
-      .data.i16[1] = state->target.y
+      .data.f32[0] = state->target.x, 
+      .data.f32[1] = state->target.y
     };
     event_fire(EVENT_CODE_SCENE_MANAGER_SET_TARGET, 0, context);
   }
@@ -169,8 +169,8 @@ void update_movement() {
     state->target.x += speed;
     event_context context = (event_context)
     {
-      .data.i16[0] = state->target.x, 
-      .data.i16[1] = state->target.y
+      .data.f32[0] = state->target.x, 
+      .data.f32[1] = state->target.y
     };
     event_fire(EVENT_CODE_SCENE_MANAGER_SET_TARGET, 0, context);
   }

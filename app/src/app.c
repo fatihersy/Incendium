@@ -52,7 +52,7 @@ bool app_initialize() {
 
     // Game
     resource_system_initialize();
-    create_camera(get_resolution_div2(), 0);
+    create_camera(get_resolution_div2());
     if (!scene_manager_initialize()) {
         TraceLog(LOG_ERROR, "scene_manager() initialization failed");
         return false;

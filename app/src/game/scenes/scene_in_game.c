@@ -13,6 +13,7 @@
 
 typedef struct scene_in_game_state {
   game_manager_system_state *p_game_manager;
+
 } scene_in_game_state;
 
 static scene_in_game_state *in_game_state;
@@ -73,12 +74,16 @@ void update_scene_in_game() {
   //_update_spawns();
 
   event_fire(EVENT_CODE_SCENE_MANAGER_SET_TARGET, 0, (event_context) {
-    .data.i16[0] = _get_player_position(false).x,
-    .data.i16[1] = _get_player_position(false).y,
+    .data.f32[0] = _get_player_position(false).x,
+    .data.f32[1] = _get_player_position(false).y,
   });
 }
 
 void render_scene_in_game() {
   _render_player();
   _render_spawns();
+}
+
+void render_interface_in_game() {
+
 }

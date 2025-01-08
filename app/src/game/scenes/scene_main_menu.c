@@ -1,10 +1,10 @@
 #include "scene_main_menu.h"
-#include "core/event.h"
-
-#include "core/fmemory.h"
-#include "defines.h"
-#include "game/user_interface.h"
 #include "raylib.h"
+#include "defines.h"
+
+#include "core/event.h"
+#include "core/fmemory.h"
+#include "game/user_interface.h"
 
 typedef enum main_menu_scene_type {
   MAIN_MENU_SCENE_DEFAULT,
@@ -24,6 +24,11 @@ void initialize_scene_main_menu() {
   state = (main_menu_scene_state*)allocate_memory_linear(sizeof(main_menu_scene_state), true);
 
   user_interface_system_initialize();
+
+  event_fire(EVENT_CODE_SCENE_MANAGER_SET_CAM_POS, 0, (event_context) {
+    .data.f32[0] = GetScreenWidth()/2.f,
+    .data.f32[1] = GetScreenHeight()/2.f,
+  });
 }
 
 void update_scene_main_menu() {
@@ -31,13 +36,15 @@ void update_scene_main_menu() {
 
 }
 
-void render_interface_main_menu() {
+void render_scene_main_menu() {
   gui_draw_texture_to_background(TEX_BACKGROUND);
   gui_draw_spritesheet_to_background(
     SCREEN_CRT_SHEET, 
     (Color) {218, 165, 32, 100}
   );
+}
 
+void render_interface_main_menu() {
   if (state->type == MAIN_MENU_SCENE_DEFAULT) {
     if (gui_button("Play", BTN_ID_MAINMENU_BUTTON_PLAY)) {
       event_fire(EVENT_CODE_SCENE_IN_GAME, 0, (event_context){0});
@@ -62,8 +69,6 @@ void render_interface_main_menu() {
       event_fire(EVENT_CODE_UI_SHOW_SETTINGS_MENU, 0, (event_context) {0});
     }
   }
-
-
 
   render_user_interface();
 }

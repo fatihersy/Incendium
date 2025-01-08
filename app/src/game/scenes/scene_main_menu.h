@@ -6,6 +6,7 @@
 void initialize_scene_main_menu();
 
 void update_scene_main_menu();
+void render_scene_main_menu();
 void render_interface_main_menu();
 
 #endif
