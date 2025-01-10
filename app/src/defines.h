@@ -144,8 +144,6 @@ typedef enum texture_type {
   TEX_PLAYER_TEXTURE,
   TEX_ENEMY_TEXTURE,
   TEX_BACKGROUND,
-  TEX_HEALTHBAR_TEXTURE,
-  TEX_HEALTH_PERC_TEXTURE,
   TEX_MAP_TILESET_TEXTURE,
   TEX_PANEL,
   TEX_PANEL_SCALED,
@@ -182,6 +180,7 @@ typedef enum spritesheet_type {
   MENU_BUTTON,
   BUTTON_CRT_SHEET,
   SCREEN_CRT_SHEET,
+  HEALTH_BAR_SHEET,
   SLIDER_PERCENT,
   SLIDER_OPTION,
   SLIDER_LEFT_BUTTON,
@@ -236,11 +235,10 @@ typedef enum slider_type_id {
 
 typedef enum slider_id {
   SDR_ID_UNDEFINED,
-
   SDR_ID_SETTINGS_SOUND_SLIDER,
   SDR_ID_SETTINGS_RES_SLIDER,
   SDR_ID_SETTINGS_WIN_MODE_SLIDER,
-
+  SDR_ID_PLAYER_EXPERIANCE_SLIDER,
   SDR_ID_MAX
 } slider_id;
 
@@ -452,6 +450,7 @@ typedef struct slider {
   u16 max_value;
   u16 min_value;
 
+  bool is_clickable;
   bool on_screen;
   bool is_registered;  
 } slider;

@@ -4,11 +4,12 @@
 
 #include <core/fmemory.h>
 #include <core/fmath.h>
-#include "core/event.h"
+#include <core/event.h>
 
 #include "game/resource.h"
 #include "game/game_manager.h"
 #include "game/user_interface.h"
+#include "raylib.h"
 
 
 typedef struct scene_in_game_state {
@@ -77,6 +78,8 @@ void update_scene_in_game() {
     .data.f32[0] = _get_player_position(false).x,
     .data.f32[1] = _get_player_position(false).y,
   });
+
+  update_user_interface();
 }
 
 void render_scene_in_game() {
@@ -85,5 +88,11 @@ void render_scene_in_game() {
 }
 
 void render_interface_in_game() {
+  player_state* player = get_player_state_if_available();
 
+  gui_healthbar(player->health_perc, 15, 15, false);
+
+  gui_player_experiance_process(SDR_ID_PLAYER_EXPERIANCE_SLIDER, 50);
+
+  render_user_interface();
 }

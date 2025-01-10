@@ -1,10 +1,11 @@
 #include "user_interface.h"
+#include <raylib.h>
 #include <defines.h>
 #include <settings.h>
 
 #include "core/event.h"
 #include "core/fmemory.h"
-#include "raylib.h"
+#include "game/user_interface.h"
 
 #define DEFAULT_MENU_BUTTON_SCALE 3
 #define SPACE_BTW_Y(i, DIM_Y) (DIM_Y + DIM_Y/3.f) * i
@@ -32,7 +33,7 @@ typedef struct user_interface_system_state {
 
 static user_interface_system_state *state;
 
-#define PSPRITESHEET_SYSTEM state // Don't forget to undef very bottom of the file
+#define PSPRITESHEET_SYSTEM state // Don't forget to undef at very bottom of the file
 #include "game/spritesheet.h"
 
 #define UI_FONT_SIZE state->ui_font_size_5div4
@@ -44,13 +45,13 @@ void update_sliders();
 void register_button(Vector2 _attached_position, Vector2 offset, button_id _btn_id, button_type_id _btn_type_id);
 void register_button_type(
   button_type_id _btn_type_id, spritesheet_type _ss_type, Vector2 frame_dim, f32 _scale, 
-  bool _play_reflection, bool _play_crt, bool _should_center
-);
-void register_slider(Vector2 _pos, Vector2 offset, slider_id _sdr_id, slider_type_id _sdr_type_id, button_id _left_btn_id, button_id _right_btn_id);
+  bool _play_reflection, bool _play_crt, bool _should_center);
+void register_slider(
+  Vector2 _pos, Vector2 offset, slider_id _sdr_id, slider_type_id _sdr_type_id, 
+  button_id _left_btn_id, button_id _right_btn_id, bool _is_clickable);
 void register_slider_type(
   slider_type_id _sdr_type_id, spritesheet_type _ss_sdr_body_type, f32 _scale, u16 _width_multiply,
-  button_type_id _left_btn_type_id, button_type_id _right_btn_type_id, bool _should_center, u16 _char_limit
-);
+  button_type_id _left_btn_type_id, button_type_id _right_btn_type_id, bool _should_center, u16 _char_limit);
 void render_slider_body(slider* sdr);
 void draw_texture_regular(Texture2D* tex, Rectangle dest);
 void draw_texture_type_regular(texture_type _type, Rectangle dest);
@@ -116,6 +117,15 @@ void user_interface_system_initialize() {
   }
   // SLIDER TYPES
 
+  // IN GAME
+  {
+    register_slider(
+      (Vector2) { get_resolution_div2().x, 15}, (Vector2) {0}, 
+      SDR_ID_PLAYER_EXPERIANCE_SLIDER, SDR_TYPE_PERCENT, 
+      0, 0, false);
+  }
+  // IN GAME
+
   // MAIN MENU
   {  
   register_button(
@@ -174,18 +184,15 @@ void user_interface_system_initialize() {
   register_slider(
     get_resolution_div2(), (Vector2) {0}, 
     SDR_ID_SETTINGS_SOUND_SLIDER,  SDR_TYPE_PERCENT, 
-    BTN_ID_SETTINGS_SLIDER_SOUND_LEFT_BUTTON, BTN_ID_SETTINGS_SLIDER_SOUND_RIGHT_BUTTON
-  );
+    BTN_ID_SETTINGS_SLIDER_SOUND_LEFT_BUTTON, BTN_ID_SETTINGS_SLIDER_SOUND_RIGHT_BUTTON, true);
   register_slider(
     get_resolution_div2(), (Vector2) {0,1}, 
     SDR_ID_SETTINGS_RES_SLIDER,  SDR_TYPE_OPTION, 
-    BTN_ID_SETTINGS_SLIDER_RES_LEFT_BUTTON, BTN_ID_SETTINGS_SLIDER_RES_RIGHT_BUTTON
-  );
+    BTN_ID_SETTINGS_SLIDER_RES_LEFT_BUTTON, BTN_ID_SETTINGS_SLIDER_RES_RIGHT_BUTTON, false);
   register_slider(
     get_resolution_div2(), (Vector2) {0,2}, 
     SDR_ID_SETTINGS_WIN_MODE_SLIDER,  SDR_TYPE_OPTION, 
-    BTN_ID_SETTINGS_SLIDER_WIN_MODE_LEFT_BUTTON, BTN_ID_SETTINGS_SLIDER_WIN_MODE_RIGHT_BUTTON
-  );
+    BTN_ID_SETTINGS_SLIDER_WIN_MODE_LEFT_BUTTON, BTN_ID_SETTINGS_SLIDER_WIN_MODE_RIGHT_BUTTON, false);
   register_button(
     get_resolution_div2(), (Vector2) {-1,5 },
     BTN_ID_SETTINGS_APPLY_SETTINGS_BUTTON, BTN_TYPE_MENU_BUTTON);
@@ -196,6 +203,8 @@ void user_interface_system_initialize() {
   }
   // SETTINGS
 
+  // SLIDER OPTIONS
+  {
   gui_slider_add_option(SDR_ID_SETTINGS_RES_SLIDER, "1920x1080", (data_pack) {
     .data.u16[0] = 1920,
     .data.u16[1] = 1080,
@@ -229,6 +238,8 @@ void user_interface_system_initialize() {
     .array_lenght = 0,
     .type_flag = DATA_TYPE_C
   });
+  }
+  // SLIDER OPTIONS
 
   event_register(EVENT_CODE_UI_SHOW_PAUSE_MENU, 0, user_interface_on_event);
   event_register(EVENT_CODE_UI_SHOW_SETTINGS_MENU, 0, user_interface_on_event);
@@ -285,7 +296,7 @@ void update_sliders() {
         sdr->on_screen = false;
         continue;
       }
-      if (sdr->sdr_type.id != SDR_TYPE_PERCENT) { continue; } // Only percent type sliders needs update every frame
+      if (sdr->sdr_type.id != SDR_TYPE_PERCENT || !sdr->is_clickable) { continue; } // Only percent type sliders needs update every frame
 
       Rectangle sdr_rect = (Rectangle) {
         sdr->position.x, sdr->position.y, 
@@ -370,30 +381,37 @@ bool gui_button(const char* text, button_id _id) {
   return _btn->state == BTN_STATE_RELEASED;
 }
 
-void gui_healthbar(f32 percent) {
+void gui_healthbar(f32 percent, f32 _x, f32 _y, bool _should_center) {
   const u16 iter = 10*percent;
-  DrawTexturePro(
-    *get_texture_by_enum(TEX_HEALTHBAR_TEXTURE),
-    (Rectangle){.x = 0, .y = 0, .width = 72, .height = 12},
-    (Rectangle){.x = 15, .y = 15, .width = 216, .height = 36},
-    (Vector2){0, 0}, 0, WHITE
-  );
-  for (int i=0; i < iter; ++i) {
-    DrawTexturePro(
-    *get_texture_by_enum(TEX_HEALTH_PERC_TEXTURE),
-    (Rectangle){.x = 0, .y = 0, .width = 5, .height = 7},
-    (Rectangle){.x = 33+(15+3)*i, .y = 24, .width = 15, .height = 21},
-    (Vector2){0, 0}, 0, WHITE
-    );
+  Vector2 pos = (Vector2) {_x, _y};
+  Vector2 scale = (Vector2) {DEFAULT_MENU_BUTTON_SCALE, DEFAULT_MENU_BUTTON_SCALE};
+
+  draw_sprite_on_site(HEALTH_BAR_SHEET, WHITE, pos, scale, iter, _should_center);
+}
+
+void gui_player_experiance_process(slider_id _id, u16 percent) {
+  if (_id >= SDR_ID_MAX || _id <= SDR_ID_UNDEFINED) {
+    TraceLog(
+      LOG_WARNING, 
+      "user_interface::gui_player_experiance_process()::Given Slider ID was out of bound");
+    return;
   }
+  slider* sdr_exp = &state->sliders[_id];
+  sdr_exp->current_value = (percent/100.f) * sdr_exp->max_value;
+
+  gui_slider(_id);
 }
 
 void gui_slider(slider_id _id) {
   if (_id >= SDR_ID_MAX || _id <= SDR_ID_UNDEFINED || !state) {
-    TraceLog(LOG_WARNING, "WARNING::user_interface::gui_slider()::One of recieved ids was out of bound");
+    TraceLog(LOG_WARNING, "user_interface::gui_slider()::One of recieved ids was out of bound");
     return;
   }
   slider* sdr = &state->sliders[_id];
+  if (!sdr) {
+    TraceLog(LOG_WARNING, "user_interface::gui_slider()::Slider %d returned NULL", _id);
+    return;
+  }
   slider_type sdr_type = sdr->sdr_type;
   if (!sdr->is_registered || (sdr_type.id == SDR_TYPE_OPTION && sdr->max_value <= 0)) return;
  
@@ -401,12 +419,13 @@ void gui_slider(slider_id _id) {
 
   render_slider_body(sdr);
 
-  if (gui_button("", sdr_type.left_btn_id)) {
+  if(sdr_type.left_btn_id != 0) if (gui_button("", sdr_type.left_btn_id)) {
     if (sdr->current_value > sdr->min_value) {
       sdr->current_value--;
     }
   }
-  if (gui_button("", sdr_type.right_btn_id)) {
+
+  if(sdr_type.right_btn_id != 0) if (gui_button("", sdr_type.right_btn_id)) {
     if (sdr->current_value < sdr->max_value-1) {
       sdr->current_value++;
     }
@@ -746,14 +765,20 @@ void register_slider_type(
 
   state->slider_types[_sdr_type_id] = sdr_type;
 }
-void register_slider(Vector2 _pos, Vector2 offset, slider_id _sdr_id, slider_type_id _sdr_type_id, button_id _left_btn_id, button_id _right_btn_id) {
+
+/**
+ * @param _is_clickable for SDR_TYPE_PERCENT type sliders. Does not affect others
+ */
+void register_slider(
+  Vector2 _pos, Vector2 offset, slider_id _sdr_id, slider_type_id _sdr_type_id, 
+  button_id _left_btn_id, button_id _right_btn_id, bool _is_clickable) {
   if (_sdr_id       >= SDR_ID_MAX   || _sdr_id      <= SDR_ID_UNDEFINED  || 
-      _left_btn_id  >= BTN_ID_MAX   || _left_btn_id <= BTN_ID_UNDEFINED  || 
-      _right_btn_id >= BTN_ID_MAX   || _right_btn_id<= BTN_ID_UNDEFINED  || 
+      _left_btn_id  >= BTN_ID_MAX   || _left_btn_id  < BTN_ID_UNDEFINED  || 
+      _right_btn_id >= BTN_ID_MAX   || _right_btn_id < BTN_ID_UNDEFINED  || 
       _sdr_type_id  >= SDR_TYPE_MAX || _sdr_type_id <= SDR_TYPE_UNDEFINED||
       !state) 
   {
-    TraceLog(LOG_WARNING, "WARNING::user_interface::register_slider()::One of recieved ids was out of bound");
+    TraceLog(LOG_WARNING, "user_interface::register_slider()::One of recieved ids was out of bound");
     return;
   }
 
@@ -764,10 +789,10 @@ void register_slider(Vector2 _pos, Vector2 offset, slider_id _sdr_id, slider_typ
   u16 pos_x = _pos.x + SPACE_BTW_X(offset.x, width);
   u16 pos_y = _pos.y + SPACE_BTW_Y(offset.y, height);
   if (_sdr_type->should_center) {
-    pos_x -= (width*_sdr_type->width_multiply)/2.f;
-    pos_y -= height/2.f;
+    pos_x -= FMAX((width*_sdr_type->width_multiply)/2.f, 0);
+    pos_y -= FMAX(pos_y - height/2.f, 0);
   }
-
+  
   slider sdr = {
     .id = _sdr_id,
     .sdr_type = *_sdr_type,
@@ -777,19 +802,24 @@ void register_slider(Vector2 _pos, Vector2 offset, slider_id _sdr_id, slider_typ
     .current_value = _sdr_type_id == SDR_TYPE_PERCENT ? 7 : 1,
     .max_value = _sdr_type_id == SDR_TYPE_PERCENT ? 10 : 1,
     .min_value = 1,
+    .is_clickable = _is_clickable,
     .on_screen = false,
     .is_registered = true,
   };
-  sdr.sdr_type.left_btn_id = _left_btn_id;
-  sdr.sdr_type.right_btn_id = _right_btn_id;
+  if(_left_btn_id != BTN_ID_UNDEFINED){
+    sdr.sdr_type.left_btn_id = _left_btn_id;
 
-  register_button(
-    (Vector2) { sdr.position.x - sdr.sdr_type.left_btn_width, sdr.position.y}, (Vector2) {0},
-    sdr.sdr_type.left_btn_id, sdr.sdr_type.left_btn_type_id);
+    register_button(
+      (Vector2) { sdr.position.x - sdr.sdr_type.left_btn_width, sdr.position.y}, (Vector2) {0},
+      sdr.sdr_type.left_btn_id, sdr.sdr_type.left_btn_type_id);
+  }
+  if(_right_btn_id != BTN_ID_UNDEFINED){
+    sdr.sdr_type.right_btn_id = _right_btn_id;
 
-  register_button(
-    (Vector2) { sdr.position.x + width * sdr.sdr_type.width_multiply, sdr.position.y}, (Vector2) {0},
-    sdr.sdr_type.right_btn_id, sdr.sdr_type.right_btn_type_id);
+    register_button(
+      (Vector2) { sdr.position.x + width * sdr.sdr_type.width_multiply, sdr.position.y}, (Vector2) {0},
+      sdr.sdr_type.right_btn_id, sdr.sdr_type.right_btn_type_id);
+  }
 
   state->sliders[_sdr_id] = sdr;
 }

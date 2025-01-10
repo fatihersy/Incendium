@@ -22,8 +22,6 @@ bool resource_system_initialize() {
   //NOTE: _path = "%s%s", RESOURCE_PATH, _path
   load_texture("space_bg.png",         false, (Vector2){0,  0}, TEX_BACKGROUND);
   load_texture("fudesumi.png",         true,  (Vector2){64, 64},TEX_ENEMY_TEXTURE);
-  load_texture("health_bar_edited.png",false, (Vector2){0,  0}, TEX_HEALTHBAR_TEXTURE);
-  load_texture("health_perc.png",      false, (Vector2){0,  0}, TEX_HEALTH_PERC_TEXTURE);
   load_texture("map_tileset.png",      false, (Vector2){0,  0}, TEX_MAP_TILESET_TEXTURE);
   load_texture("panel.png",            false, (Vector2){0,  0}, TEX_PANEL);
   load_texture("panel_scaled.png",     false, (Vector2){0,  0}, TEX_PANEL_SCALED);
@@ -39,11 +37,12 @@ bool resource_system_initialize() {
   load_spritesheet("button_reflection.png", BUTTON_REFLECTION_SHEET, 30, 80, 16, 1, 9);
   load_spritesheet("button_crt.png", BUTTON_CRT_SHEET, 8, 78, 12, 1, 4);
   load_spritesheet("screen_crt_sheet.png", SCREEN_CRT_SHEET, 8, 1280, 720, 1, 4);
-  load_spritesheet("slider_percent.png", SLIDER_PERCENT, 0, 21, 10, 1, 11);
+  load_spritesheet("slider_percent_edited.png", SLIDER_PERCENT, 0, 20, 10, 1, 11);
   load_spritesheet("slider_option.png", SLIDER_OPTION, 0, 21, 10, 1, 2);
   load_spritesheet("slider_left_button.png", SLIDER_LEFT_BUTTON, 0, 10, 10, 1, 2);
-  load_spritesheet("slider_right_button.png", SLIDER_RIGHT_BUTTON, 0, 10, 10, 1, 2);
+  load_spritesheet("slider_right_button_edited.png", SLIDER_RIGHT_BUTTON, 0, 11, 10, 1, 2);
   load_spritesheet("menu_button.png", MENU_BUTTON, 0, 80, 16, 1, 2);
+  load_spritesheet("health_bar_edited_as_ss.png", HEALTH_BAR_SHEET, 0, 72, 12, 1, 11);
   load_tilesheet(TILESHEET_TYPE_MAP, TEX_MAP_TILESET_TEXTURE, 16, 14, 16);
 
   return true;
@@ -83,7 +82,6 @@ spritesheet get_spritesheet_by_enum(spritesheet_type type) {
     TraceLog(LOG_WARNING, "WARNING::resource::get_spritesheet_by_enum()::Spritesheet type out of bound");
     return (spritesheet){0};
   }
-
   return resource_system->sprites[type];
 }
 

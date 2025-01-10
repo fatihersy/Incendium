@@ -16,7 +16,8 @@ bool gui_button(const char* text, button_id _id);
 void gui_slider(slider_id _id);
 void gui_draw_texture_to_background(texture_type _type);
 void gui_draw_spritesheet_to_background(spritesheet_type _type, Color _tint);
-void gui_healthbar(f32 percent);
+void gui_healthbar(f32 percent, f32 _x, f32 _y, bool _should_center);
+void gui_player_experiance_process(slider_id _id, u16 percent);
 
 void gui_draw_pause_screen();
 

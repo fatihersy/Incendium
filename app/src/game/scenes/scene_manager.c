@@ -1,4 +1,5 @@
 #include "scene_manager.h"
+#include "raylib.h"
 #include "defines.h"
 
 #include "core/event.h"
@@ -8,7 +9,6 @@
 #include "game/scenes/scene_in_game.h"
 #include "game/scenes/scene_main_menu.h"
 #include "game/scenes/scene_editor.h"
-#include "raylib.h"
 
 static scene_manager_system_state *scene_manager_state;
 
