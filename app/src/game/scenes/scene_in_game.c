@@ -92,7 +92,7 @@ void render_interface_in_game() {
 
   gui_healthbar(player->health_perc, 15, 15, false);
 
-  gui_player_experiance_process(SDR_ID_PLAYER_EXPERIANCE_SLIDER, 50);
+  gui_player_experiance_process(50);
 
   render_user_interface();
 }

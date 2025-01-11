@@ -4,6 +4,7 @@
 #include <raylib.h>
 
 #define RESOURCE_PATH "D:/Workspace/resources/"
+#define SHADER_PATH "../shaders/"
 #define TOTAL_ALLOCATED_MEMORY 64 * 1024 * 1024
 #define TARGET_FPS 60
 #define MAX_SPRITE_RENDERQUEUE 50
@@ -14,6 +15,9 @@
 #define INI_FILE_MAX_SECTION_LENGTH 512
 #define INI_FILE_MAX_VARIABLE_NAME_LENGTH 32
 #define INI_FILE_MAX_VARIABLE_VALUE_LENGTH 32
+
+#define MAX_SHADER_LOCATION_SLOT 16
+#define MAX_SHADER_LOCATION_NAME_LENGHT 16
 
 #define UI_FONT_SPACING 1
 
@@ -113,9 +117,16 @@ typedef enum data_type {
   DATA_TYPE_I8,
   DATA_TYPE_U8,
   DATA_TYPE_C,
+  DATA_TYPE_SAMPLER2D,
 
   DATA_TYPE_MAX,
 }data_type;
+
+typedef enum shader_type {
+  SHADER_TYPE_UNSPECIFIED,
+  SHADER_TYPE_PROGRESS_BAR_MASK,
+  SHADER_TYPE_MAX,
+} shader_type;
 
 typedef enum actor_type {
   ENEMY,
@@ -152,7 +163,9 @@ typedef enum texture_type {
 } texture_type;
 
 typedef enum image_type {
-  IMG_UNSPECIFIED,
+  IMAGE_TYPE_UNSPECIFIED,
+
+  IMAGE_TYPE_MAX
 } image_type;
 
 typedef enum spritesheet_playmod {
@@ -238,7 +251,6 @@ typedef enum slider_id {
   SDR_ID_SETTINGS_SOUND_SLIDER,
   SDR_ID_SETTINGS_RES_SLIDER,
   SDR_ID_SETTINGS_WIN_MODE_SLIDER,
-  SDR_ID_PLAYER_EXPERIANCE_SLIDER,
   SDR_ID_MAX
 } slider_id;
 
@@ -274,6 +286,7 @@ typedef enum tilesheet_type {
 typedef struct data_pack {
   data_type type_flag;
   u16 array_lenght;
+  Texture2D* sampler;
 
   // 128 bytes
   union {
@@ -294,6 +307,19 @@ typedef struct data_pack {
     char c[16];
   } data;
 } data_pack;
+
+typedef struct fshader_location {
+  char name[MAX_SHADER_LOCATION_NAME_LENGHT];
+  u16 index;
+  data_pack data;
+  ShaderUniformDataType uni_data_type;
+} fshader_location;
+
+typedef struct fshader {
+  u16 total_locations;
+  Shader handle;
+  fshader_location locations[MAX_SHADER_LOCATION_SLOT];
+} fshader;
 
 typedef struct app_settings {
   u32 resolution[2];
@@ -555,19 +581,6 @@ typedef struct player_state {
   ability_system_state ability_system;
   spritesheet_play_system spritesheet_system;
 } player_state;
-
-typedef struct resource_system_state {
-  i16 texture_amouth;
-  i16 sprite_amouth;
-  i16 image_amouth;
-  i16 tilesheet_amouth;
-  Texture2D textures[TEXTURE_TYPE_MAX];
-  spritesheet sprites[MAX_SPRITESHEET_SLOTS];
-  Image images[MAX_IMAGE_SLOTS];
-  tilesheet tilesheets[MAX_TILESHEET_SLOTS];
-
-  scene_type game_on_scene;
-} resource_system_state;
 
 typedef struct spawn_system_state {
   Character2D spawns[MAX_SPAWN_COUNT];

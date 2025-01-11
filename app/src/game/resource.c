@@ -1,23 +1,34 @@
 #include "resource.h"
+#include <raylib.h>
+#include <defines.h>
 
 #include "core/fmemory.h"
-#include "defines.h"
-#include "raylib.h"
 
-extern const unsigned char default_tile_png[146];
+typedef struct resource_system_state {
+  u16 texture_amouth;
+  u16 sprite_amouth;
+  u16 image_amouth;
+  u16 tilesheet_amouth;
 
-static resource_system_state *resource_system;
+  Texture2D textures[TEXTURE_TYPE_MAX];
+  spritesheet sprites[SPRITESHEET_TYPE_MAX];
+  Image images[IMAGE_TYPE_MAX];
+  tilesheet tilesheets[TILESHEET_TYPE_MAX];
+
+  scene_type game_on_scene;
+} resource_system_state;
+
+static resource_system_state *state;
 
 unsigned int load_texture(const char* _path, bool resize, Vector2 new_size, texture_type _type);
 bool load_image(const char *_path, bool resize, Vector2 new_size, image_type type);
 void load_spritesheet(const char* _path, spritesheet_type _type, u16 _fps, u16 _frame_width, u16 _frame_height, u16 _total_row, u16 _total_col);
-void load_tilesheet(tilesheet_type _sheet_sheet_type, texture_type _sheet_tex_type, u16 _tile_count_x, u16 _tile_count_y, u16 _tile_size) ;
+void load_tilesheet(tilesheet_type _sheet_sheet_type, texture_type _sheet_tex_type, u16 _tile_count_x, u16 _tile_count_y, u16 _tile_size);
 
 bool resource_system_initialize() {
-  if (resource_system) return false;
+  if (state) return false;
 
-  resource_system = (resource_system_state *)allocate_memory_linear(sizeof(resource_system_state), true);
-  resource_system->texture_amouth = -1;
+  state = (resource_system_state*)allocate_memory_linear(sizeof(resource_system_state), true);
 
   //NOTE: _path = "%s%s", RESOURCE_PATH, _path
   load_texture("space_bg.png",         false, (Vector2){0,  0}, TEX_BACKGROUND);
@@ -50,9 +61,9 @@ bool resource_system_initialize() {
 
 
 Texture2D* get_texture_by_id(unsigned int id) {
-  for (i16 i = 0; i <= resource_system->texture_amouth; ++i) {
-    if (resource_system->textures[i].id == id)
-      return &resource_system->textures[i];
+  for (i16 i = 0; i <= state->texture_amouth; ++i) {
+    if (state->textures[i].id == id)
+      return &state->textures[i];
   }
 
   return (Texture2D*){0};
@@ -60,38 +71,38 @@ Texture2D* get_texture_by_id(unsigned int id) {
 
 Texture2D* get_texture_by_enum(texture_type type) {
   if (type >= TEXTURE_TYPE_MAX || type <= TEX_UNSPECIFIED){
-    TraceLog(LOG_WARNING, "WARNING::resource::get_texture_by_enum()::Texture type out of bound");
+    TraceLog(LOG_WARNING, "resource::get_texture_by_enum()::Texture type out of bound");
     return (Texture2D*){0};
   }
 
-  return &resource_system->textures[type];
+  return &state->textures[type];
 }
 Image* get_image_by_enum(image_type type) {
 
-  if (type > MAX_IMAGE_SLOTS || type == IMG_UNSPECIFIED){
-    TraceLog(LOG_WARNING, "WARNING::resource::get_image_by_enum()::Image type out of bound");
+  if (type >= IMAGE_TYPE_MAX || type <= IMAGE_TYPE_UNSPECIFIED){
+    TraceLog(LOG_WARNING, "resource::get_image_by_enum()::Image type out of bound");
     return (Image*){0};
   }
 
-  return &resource_system->images[type];
+  return &state->images[type];
 }
 
 spritesheet get_spritesheet_by_enum(spritesheet_type type) {
 
-  if (type == SPRITESHEET_UNSPECIFIED || type > MAX_SPRITESHEET_SLOTS){
-    TraceLog(LOG_WARNING, "WARNING::resource::get_spritesheet_by_enum()::Spritesheet type out of bound");
+  if (type >= SPRITESHEET_TYPE_MAX || type <= SPRITESHEET_UNSPECIFIED){
+    TraceLog(LOG_WARNING, "resource::get_spritesheet_by_enum()::Spritesheet type out of bound");
     return (spritesheet){0};
   }
-  return resource_system->sprites[type];
+  return state->sprites[type];
 }
 
 tilesheet* get_tilesheet_by_enum(tilesheet_type type) {
-  if (type == TILESHEET_TYPE_UNSPECIFIED || type > MAX_TILESHEET_SLOTS){
-    TraceLog(LOG_WARNING, "WARNING::resource::get_tilesheet_by_enum()::Tilesheet type out of bound");
+  if (type >= TILESHEET_TYPE_MAX || type <= TILESHEET_TYPE_UNSPECIFIED){
+    TraceLog(LOG_WARNING, "resource::get_tilesheet_by_enum()::Tilesheet type out of bound");
     return (tilesheet*){0};
   }
 
-  return &resource_system->tilesheets[type];
+  return &state->tilesheets[type];
 }
 
 const char *rs_path(const char *_path) {
@@ -104,7 +115,7 @@ unsigned int load_texture(const char *_path, bool resize, Vector2 new_size, text
   LOG_ERROR,"ERROR::resource::load_texture():: Path:'%s' Cannot find", path);
     return INVALID_ID32;
   } 
-  else if (_type >= TEXTURE_TYPE_MAX || _type <= TEX_UNSPECIFIED) { TraceLog(
+  if (_type >= TEXTURE_TYPE_MAX || _type <= TEX_UNSPECIFIED) { TraceLog(
   LOG_ERROR,
   "ERROR::resource::load_texture()::texture type out of bound");
     return INVALID_ID32;
@@ -118,16 +129,23 @@ unsigned int load_texture(const char *_path, bool resize, Vector2 new_size, text
   } else {
     tex = LoadTexture(path);
   }
-  resource_system->texture_amouth++;
 
-  resource_system->textures[_type] = tex;
-  return resource_system->textures[_type].id;
+  state->texture_amouth++;
+  state->textures[_type] = tex;
+  return state->textures[_type].id;
 }
 
 bool load_image(const char *_path, bool resize, Vector2 new_size, image_type type) {
   const char *path = rs_path(_path);
-  if (!FileExists(path) || type == IMG_UNSPECIFIED)
+  if (!FileExists(path)) { TraceLog(
+    LOG_ERROR, "resource::load_image()::Path does not exist");
     return false;
+  }
+  if (type >= IMAGE_TYPE_MAX || type <= IMAGE_TYPE_UNSPECIFIED) { TraceLog(
+  LOG_ERROR,
+  "ERROR::resource::load_image()::Image type out of bound");
+    return false;
+  }
 
   Image img;
   if (resize) {
@@ -137,9 +155,8 @@ bool load_image(const char *_path, bool resize, Vector2 new_size, image_type typ
     img = LoadImage(path);
   }
 
-  resource_system->image_amouth++;
-
-  resource_system->images[type] = img;
+  state->image_amouth++;
+  state->images[type] = img;
   return true;
 }
 
@@ -150,14 +167,13 @@ void load_spritesheet(const char *_path, spritesheet_type _type, u16 _fps, u16 _
   LOG_ERROR,"ERROR::resource::load_spritesheet():: Path:'%s' Cannot find", path);
     return;
   } 
-  else if (_type > MAX_SPRITESHEET_SLOTS) { TraceLog(LOG_ERROR,
-  "ERROR::resource::load_spritesheet()::Unknown spritesheet slot");
+  if (_type >= MAX_SPRITESHEET_SLOTS || _type <= SPRITESHEET_UNSPECIFIED) { TraceLog(
+    LOG_ERROR, "resource::load_spritesheet()::Sheet type out of bound");
     return;
   }
 
   spritesheet _sheet = {0};
   Texture2D tex = LoadTexture(path);
-  resource_system->sprite_amouth++;
 
   _sheet.handle = tex;
   _sheet.type = _type;
@@ -175,14 +191,8 @@ void load_spritesheet(const char *_path, spritesheet_type _type, u16 _fps, u16 _
       .x = 0, .y = 0, .width = _frame_width, .height = _frame_height};
   _sheet.fps = _fps;
 
-  if (_type == SPRITESHEET_UNSPECIFIED) {
-    resource_system->sprites[resource_system->sprite_amouth] = _sheet;
-    TraceLog(
-        LOG_WARNING,
-        "resource::load_spritesheet()::WARNING! Spritesheet type was not set");
-  }
-
-  resource_system->sprites[_type] = _sheet;
+  state->sprite_amouth++;
+  state->sprites[_type] = _sheet;
 }
 
 void load_tilesheet(tilesheet_type _sheet_sheet_type, texture_type _sheet_tex_type, u16 _tile_count_x, u16 _tile_count_y, u16 _tile_size) {
@@ -191,14 +201,13 @@ void load_tilesheet(tilesheet_type _sheet_sheet_type, texture_type _sheet_tex_ty
              "ERROR::resource::load_tilesheet()::Sheet type out of bound");
     return;
   }
-  else if (_sheet_tex_type >= TEXTURE_TYPE_MAX || _sheet_tex_type <= 0) {
+  if (_sheet_tex_type >= TEXTURE_TYPE_MAX || _sheet_tex_type <= 0) {
     TraceLog(
         LOG_ERROR,
         "ERROR::resource::load_tilesheet()::texture type out of bound");
   }
 
   tilesheet _tilesheet = {0};
-  resource_system->tilesheet_amouth++;
 
   _tilesheet.tex = get_texture_by_enum(_sheet_tex_type);
   _tilesheet.sheet_type = _sheet_sheet_type;
@@ -221,6 +230,8 @@ void load_tilesheet(tilesheet_type _sheet_sheet_type, texture_type _sheet_tex_ty
     };
   }
 
-  resource_system->tilesheets[_sheet_sheet_type] = _tilesheet;
+  state->tilesheet_amouth++;
+  state->tilesheets[_sheet_sheet_type] = _tilesheet;
 }
+
 

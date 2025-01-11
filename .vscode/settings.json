@@ -30,7 +30,7 @@
     "terminal.integrated.fontFamily": "IBM Plex Mono",
     "workbench.editor.showTabs": "multiple",
     "workbench.colorCustomizations": {},
-    "workbench.statusBar.visible": false,
+    "workbench.statusBar.visible": true,
     "editor.lineNumbers": "on",
     "editor.cursorStyle": "block",
     "window.zoomLevel": 0,
@@ -83,5 +83,6 @@
         "scene_main_menu.h": "c",
         "scene_in_game.h": "c",
         "scene_editor.h": "c",
+        "fshader.h": "c",
     },
 }

@@ -119,10 +119,6 @@ void user_interface_system_initialize() {
 
   // IN GAME
   {
-    register_slider(
-      (Vector2) { get_resolution_div2().x, 15}, (Vector2) {0}, 
-      SDR_ID_PLAYER_EXPERIANCE_SLIDER, SDR_TYPE_PERCENT, 
-      0, 0, false);
   }
   // IN GAME
 
@@ -389,17 +385,9 @@ void gui_healthbar(f32 percent, f32 _x, f32 _y, bool _should_center) {
   draw_sprite_on_site(HEALTH_BAR_SHEET, WHITE, pos, scale, iter, _should_center);
 }
 
-void gui_player_experiance_process(slider_id _id, u16 percent) {
-  if (_id >= SDR_ID_MAX || _id <= SDR_ID_UNDEFINED) {
-    TraceLog(
-      LOG_WARNING, 
-      "user_interface::gui_player_experiance_process()::Given Slider ID was out of bound");
-    return;
-  }
-  slider* sdr_exp = &state->sliders[_id];
-  sdr_exp->current_value = (percent/100.f) * sdr_exp->max_value;
+void gui_player_experiance_process(u16 percent) {
 
-  gui_slider(_id);
+  
 }
 
 void gui_slider(slider_id _id) {
