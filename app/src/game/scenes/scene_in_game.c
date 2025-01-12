@@ -1,4 +1,5 @@
 #include "scene_in_game.h"
+#include <raylib.h>
 #include <defines.h>
 #include <settings.h>
 
@@ -9,7 +10,6 @@
 #include "game/resource.h"
 #include "game/game_manager.h"
 #include "game/user_interface.h"
-#include "raylib.h"
 
 
 typedef struct scene_in_game_state {
@@ -38,7 +38,7 @@ bool initialize_scene_in_game(Vector2 _screen_size) {
 
   for (u32 i = 0; i < 360; i += 20) {
     Vector2 position = get_a_point_of_a_circle(_get_player_position(false), 500, i);
-    Texture2D *tex = get_texture_by_enum(TEX_ENEMY_TEXTURE);
+    Texture2D *tex = get_texture_by_enum(TEX_ID_ENEMY_TEXTURE);
 
     rectangle_collision rect_col = (rectangle_collision){.rect = (Rectangle)
     {
@@ -92,7 +92,7 @@ void render_interface_in_game() {
 
   gui_healthbar(player->health_perc, 15, 15, false);
 
-  gui_player_experiance_process(50);
+  gui_progress_bar(PRG_BAR_ID_PLAYER_EXPERIANCE, (Vector2) {0});
 
   render_user_interface();
 }

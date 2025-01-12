@@ -5,9 +5,12 @@
 
 #include "core/event.h"
 #include "core/fmemory.h"
-#include "game/user_interface.h"
 
+#include "fshader.h"
+
+#define UI_FONT_SIZE state->ui_font_size_5div4
 #define DEFAULT_MENU_BUTTON_SCALE 3
+
 #define SPACE_BTW_Y(i, DIM_Y) (DIM_Y + DIM_Y/3.f) * i
 #define SPACE_BTW_X(i, DIM_X) (DIM_X + DIM_X/3.f) * i
 
@@ -16,10 +19,12 @@ typedef struct user_interface_system_state {
   player_state *p_player;
   Vector2 offset;
   Vector2 mouse_pos;
-  button buttons[BTN_ID_MAX];
+  button      buttons[BTN_ID_MAX];
   button_type button_types[BTN_TYPE_MAX];
-  slider sliders[SDR_ID_MAX];
+  slider      sliders[SDR_ID_MAX];
   slider_type slider_types[SDR_TYPE_MAX];
+  progress_bar prg_bars[PRG_BAR_ID_MAX];
+  progress_bar_type prg_bar_types[PRG_BAR_TYPE_ID_MAX];
   Font ui_font;
   u16 ui_font_size_div2;
   u16 ui_font_size_38div20;
@@ -36,30 +41,27 @@ static user_interface_system_state *state;
 #define PSPRITESHEET_SYSTEM state // Don't forget to undef at very bottom of the file
 #include "game/spritesheet.h"
 
-#define UI_FONT_SIZE state->ui_font_size_5div4
-
 bool user_interface_on_event(u16 code, void *sender, void *listener_inst, event_context context);
+
 void update_buttons();
 void update_sliders();
 
-void register_button(Vector2 _attached_position, Vector2 offset, button_id _btn_id, button_type_id _btn_type_id);
-void register_button_type(
-  button_type_id _btn_type_id, spritesheet_type _ss_type, Vector2 frame_dim, f32 _scale, 
-  bool _play_reflection, bool _play_crt, bool _should_center);
-void register_slider(
-  Vector2 _pos, Vector2 offset, slider_id _sdr_id, slider_type_id _sdr_type_id, 
-  button_id _left_btn_id, button_id _right_btn_id, bool _is_clickable);
-void register_slider_type(
-  slider_type_id _sdr_type_id, spritesheet_type _ss_sdr_body_type, f32 _scale, u16 _width_multiply,
-  button_type_id _left_btn_type_id, button_type_id _right_btn_type_id, bool _should_center, u16 _char_limit);
 void render_slider_body(slider* sdr);
 void draw_texture_regular(Texture2D* tex, Rectangle dest);
-void draw_texture_type_regular(texture_type _type, Rectangle dest);
+void draw_texture_regular_id(texture_id _id, Rectangle dest);
 void gui_draw_panel(Rectangle dest, bool should_center);
 void gui_draw_settings_screen();
-Rectangle get_texture_source_rect(texture_type _type);
-const char* stringtify_options(data_pack option, const char* parser, u16 character_limit);
+
+void register_button(Vector2 _attached_position, Vector2 offset, button_id _btn_id, button_type_id _btn_type_id);
+void register_button_type(button_type_id _btn_type_id, spritesheet_type _ss_type, Vector2 frame_dim, f32 _scale, bool _play_reflection, bool _play_crt, bool _should_center);
+void register_progress_bar(progress_bar_id _id, progress_bar_type_id _type_id, f32 width_multiply, Vector2 scale);
+void register_progress_bar_type(progress_bar_type_id _type_id, texture_id body_left, texture_id body_right, texture_id body_repetitive, shader_id _mask_shader_id);
+void register_slider(Vector2 _pos, Vector2 offset, slider_id _sdr_id, slider_type_id _sdr_type_id, button_id _left_btn_id, button_id _right_btn_id, bool _is_clickable);
+void register_slider_type(slider_type_id _sdr_type_id, spritesheet_type _ss_sdr_body_type, f32 _scale, u16 _width_multiply, button_type_id _left_btn_type_id, button_type_id _right_btn_type_id, bool _should_center, u16 _char_limit);
+
 bool append_text(const char* src, char* dest, u16 char_limit);
+Rectangle   get_texture_source_rect(texture_id _id);
+const char* stringtify_options(data_pack option, const char* parser, u16 character_limit);
 
 void user_interface_system_initialize() {
   if (state) return;
@@ -74,6 +76,8 @@ void user_interface_system_initialize() {
   state->ui_font_size_35div20 = state->ui_font.baseSize / 1.75f;
   state->ui_font_size_3div2   = state->ui_font.baseSize / 1.50f;
   state->ui_font_size_5div4   = state->ui_font.baseSize / 1.25f;
+
+  initialize_shader_system();
 
   // BUTTON TYPES
   {  
@@ -116,6 +120,27 @@ void user_interface_system_initialize() {
   );
   }
   // SLIDER TYPES
+
+  // PROGRES BAR TYPES
+  {
+    register_progress_bar_type(
+      PRG_BAR_TYPE_ID_CRIMSON_FANT_BAR,
+      TEX_ID_PROGRESS_BAR_LEFT, TEX_ID_PROGRESS_BAR_RIGHT, TEX_ID_PROGRESS_BAR_REPETITIVE,
+      SHADER_ID_PROGRESS_BAR_MASK
+    );
+  }
+  // PROGRES BAR TYPES
+
+  // PROGRES BARS
+  {
+    register_progress_bar(
+      PRG_BAR_ID_PLAYER_EXPERIANCE,
+      PRG_BAR_TYPE_ID_CRIMSON_FANT_BAR,
+      5,
+      (Vector2) {3,3}
+    );
+  }
+  // PROGRES BARS
 
   // IN GAME
   {
@@ -385,9 +410,38 @@ void gui_healthbar(f32 percent, f32 _x, f32 _y, bool _should_center) {
   draw_sprite_on_site(HEALTH_BAR_SHEET, WHITE, pos, scale, iter, _should_center);
 }
 
-void gui_player_experiance_process(u16 percent) {
+void gui_progress_bar(progress_bar_id bar_id, Vector2 pos) {
+  if (!state) {
+    TraceLog(LOG_ERROR, "user_interface::gui_player_experiance_process()::ui system didn't initialized");
+    return;
+  }
+  progress_bar prg_bar = state->prg_bars[PRG_BAR_ID_PLAYER_EXPERIANCE];
+  if (!prg_bar.is_initialized) {
+    TraceLog(LOG_ERROR, "user_interface::gui_player_experiance_process()::Player experiance process bar didn't initialized");
+    return;
+  }
+  Rectangle body_left_dest = (Rectangle){
+    .x = 0, .y = pos.y,
+    .width = prg_bar.type.body_left_src_rect.width * prg_bar.scale.x, .height = prg_bar.type.body_left_src_rect.height * prg_bar.scale.y,
+  };
+  Rectangle body_right_dest = (Rectangle){
+    .x = 0, .y = pos.y,
+    .width = prg_bar.type.body_right_src_rect.width * prg_bar.scale.x, .height = prg_bar.type.body_right_src_rect.height * prg_bar.scale.y,
+  };
+  Rectangle body_repetitive_dest = (Rectangle){
+    .x = 0, .y = pos.y,
+    .width = prg_bar.type.body_repetitive_src_rect.width * prg_bar.scale.x, .height = prg_bar.type.body_repetitive_src_rect.height * prg_bar.scale.y,
+  };
 
-  
+  body_left_dest.x = pos.x;
+  draw_texture_regular_id(prg_bar.type.body_left, body_left_dest);
+  for (int i=0; i<prg_bar.width_multiply; ++i) {
+    body_repetitive_dest.x = pos.x + body_left_dest.width + (i * body_repetitive_dest.width);
+    draw_texture_regular_id(prg_bar.type.body_repetitive, body_repetitive_dest);
+  }
+  body_right_dest.x = pos.x + body_left_dest.width + (prg_bar.width_multiply * body_repetitive_dest.width);
+  draw_texture_regular_id(prg_bar.type.body_right, body_right_dest);
+
 }
 
 void gui_slider(slider_id _id) {
@@ -501,7 +555,7 @@ void gui_draw_settings_screen() {
 }
 
 void gui_draw_panel(Rectangle dest, bool should_center) {
-  Texture2D* tex_panel = get_texture_by_enum(TEX_PANEL);
+  Texture2D* tex_panel = get_texture_by_enum(TEX_ID_PANEL);
   if (!tex_panel) {
     TraceLog(LOG_WARNING, "WARNING::user_interface::gui_draw_panel()::Panel textures return null");
     return;
@@ -716,6 +770,50 @@ void register_button(Vector2 _attached_position, Vector2 offset, button_id _btn_
   state->buttons[_btn_id] = btn;
 }
 
+void register_progress_bar(progress_bar_id _id, progress_bar_type_id _type_id, f32 width_multiply, Vector2 scale) {
+  if (_id     >= PRG_BAR_ID_MAX      || _id      <= PRG_BAR_ID_UNDEFINED      ||
+      _type_id>= PRG_BAR_TYPE_ID_MAX || _type_id <= PRG_BAR_TYPE_ID_UNDEFINED ||
+      !state) {
+    TraceLog(LOG_WARNING, "user_interface::register_progress_bar()::Recieved id was out of bound");
+    return;
+  }
+  progress_bar prg_bar = {0};
+
+  prg_bar.type = state->prg_bar_types[_type_id];
+  prg_bar.id = _id;
+  prg_bar.scale = scale;
+  prg_bar.width_multiply = width_multiply;
+  prg_bar.is_initialized = true;
+
+  state->prg_bars[_id] = prg_bar;
+}
+void register_progress_bar_type(progress_bar_type_id _type_id, texture_id body_left, texture_id body_right, texture_id body_repetitive, shader_id _mask_shader_id) {
+  if (_type_id       >= PRG_BAR_TYPE_ID_MAX || _type_id       <= PRG_BAR_TYPE_ID_UNDEFINED ||
+      body_left      >= TEX_ID_MAX          || body_left      <= TEX_ID_UNSPECIFIED        ||
+      body_right     >= TEX_ID_MAX          || body_right     <= TEX_ID_UNSPECIFIED        ||
+      body_repetitive>= TEX_ID_MAX          || body_repetitive<= TEX_ID_UNSPECIFIED        ||
+      _mask_shader_id>= SHADER_ID_MAX       || _mask_shader_id<= SHADER_ID_UNSPECIFIED     ||
+      !state) {
+    TraceLog(LOG_WARNING, "user_interface::register_progress_bar_type()::Recieved id was out of bound");
+    return;
+  }
+
+  progress_bar_type prg_type = {0};
+
+  prg_type.body_left       = body_left;
+  prg_type.body_right      = body_right;
+  prg_type.body_repetitive = body_repetitive;
+  prg_type.mask_shader_id  = _mask_shader_id;
+  prg_type.body_left_src_rect  = get_texture_source_rect(body_left);
+  prg_type.body_right_src_rect  = get_texture_source_rect(body_right);
+  prg_type.body_repetitive_src_rect  = get_texture_source_rect(body_repetitive);
+  prg_type.min_width       = get_texture_by_enum(body_left      )->width + 
+                             get_texture_by_enum(body_right     )->width +
+                             get_texture_by_enum(body_repetitive)->width;
+
+  state->prg_bar_types[_type_id] = prg_type;
+}
+
 void register_slider_type(
   slider_type_id _sdr_type_id, spritesheet_type _ss_sdr_body_type, f32 _scale, u16 _width_multiply,
   button_type_id _left_btn_type_id, button_type_id _right_btn_type_id, bool _should_center, u16 _char_limit) {
@@ -812,8 +910,8 @@ void register_slider(
   state->sliders[_sdr_id] = sdr;
 }
 
-void gui_draw_texture_to_background(texture_type _type) {
-  draw_texture_type_regular(_type, (Rectangle) {
+void gui_draw_texture_to_background(texture_id _id) {
+  draw_texture_regular_id(_id, (Rectangle) {
     0, 0, GetScreenWidth(), GetScreenHeight()
   });
 }
@@ -835,8 +933,8 @@ void gui_draw_spritesheet_to_background(spritesheet_type _type, Color _tint) {
  * @note inline function, returns "(Rectangle) {0}" if texture type returns null pointer
  * @return (Rectangle) { .x = 0, .y = 0, .width = tex->width, .height = tex->height}; 
  */
-inline Rectangle get_texture_source_rect(texture_type _type) {
-  Texture2D* tex = get_texture_by_enum(_type);
+inline Rectangle get_texture_source_rect(texture_id _id) {
+  Texture2D* tex = get_texture_by_enum(_id);
   if (!tex) { 
     TraceLog(LOG_WARNING, "WARNING::user_interface::get_texture_source_rect()::Requested type was null");
     return (Rectangle) {0}; 
@@ -856,8 +954,8 @@ inline void draw_texture_regular(Texture2D* tex, Rectangle dest) {
   (Vector2) {0}, 0, WHITE);
 }
 
-inline void draw_texture_type_regular(texture_type _type, Rectangle dest) {
-  Texture2D* tex = get_texture_by_enum(_type);
+inline void draw_texture_regular_id(texture_id _id, Rectangle dest) {
+  Texture2D* tex = get_texture_by_enum(_id);
 
   if (!tex || tex->id == 0) { TraceLog(
   LOG_WARNING, "WARNING::user_interface::draw_texture_regular()::Tex was null");
@@ -868,7 +966,6 @@ inline void draw_texture_type_regular(texture_type _type, Rectangle dest) {
   dest, 
   (Vector2) {0}, 0, WHITE); 
 }
-
 
 void user_interface_system_destroy() {
 

@@ -4,7 +4,7 @@
 #include <raylib.h>
 
 #define RESOURCE_PATH "D:/Workspace/resources/"
-#define SHADER_PATH "../shaders/"
+#define SHADER_PATH "../app/src/shaders/"
 #define TOTAL_ALLOCATED_MEMORY 64 * 1024 * 1024
 #define TARGET_FPS 60
 #define MAX_SPRITE_RENDERQUEUE 50
@@ -122,11 +122,11 @@ typedef enum data_type {
   DATA_TYPE_MAX,
 }data_type;
 
-typedef enum shader_type {
-  SHADER_TYPE_UNSPECIFIED,
-  SHADER_TYPE_PROGRESS_BAR_MASK,
-  SHADER_TYPE_MAX,
-} shader_type;
+typedef enum shader_id {
+  SHADER_ID_UNSPECIFIED,
+  SHADER_ID_PROGRESS_BAR_MASK,
+  SHADER_ID_MAX,
+} shader_id;
 
 typedef enum actor_type {
   ENEMY,
@@ -150,17 +150,20 @@ typedef enum ability_type {
 
 typedef enum elapse_time_type { SALVO_ETA } elapse_time_type;
 
-typedef enum texture_type {
-  TEX_UNSPECIFIED,
-  TEX_PLAYER_TEXTURE,
-  TEX_ENEMY_TEXTURE,
-  TEX_BACKGROUND,
-  TEX_MAP_TILESET_TEXTURE,
-  TEX_PANEL,
-  TEX_PANEL_SCALED,
+typedef enum texture_id {
+  TEX_ID_UNSPECIFIED,
+  TEX_ID_PLAYER_TEXTURE,
+  TEX_ID_ENEMY_TEXTURE,
+  TEX_ID_BACKGROUND,
+  TEX_ID_MAP_TILESET_TEXTURE,
+  TEX_ID_PANEL,
+  TEX_ID_PANEL_SCALED,
+  TEX_ID_PROGRESS_BAR_LEFT,
+  TEX_ID_PROGRESS_BAR_RIGHT,
+  TEX_ID_PROGRESS_BAR_REPETITIVE,
 
-  TEXTURE_TYPE_MAX,
-} texture_type;
+  TEX_ID_MAX,
+} texture_id;
 
 typedef enum image_type {
   IMAGE_TYPE_UNSPECIFIED,
@@ -238,6 +241,18 @@ typedef enum button_id {
 
   BTN_ID_MAX
 } button_id;
+
+typedef enum progress_bar_id {
+  PRG_BAR_ID_UNDEFINED,
+  PRG_BAR_ID_PLAYER_EXPERIANCE,
+  PRG_BAR_ID_MAX
+} progress_bar_id;
+
+typedef enum progress_bar_type_id {
+  PRG_BAR_TYPE_ID_UNDEFINED,
+  PRG_BAR_TYPE_ID_CRIMSON_FANT_BAR,
+  PRG_BAR_TYPE_ID_MAX
+} progress_bar_type_id;
 
 typedef enum slider_type_id {
   SDR_TYPE_UNDEFINED,
@@ -334,7 +349,7 @@ typedef struct tile_symbol {
 
 typedef struct tilesheet {
   tilesheet_type sheet_type;
-  texture_type tex_type;
+  texture_id tex_id;
   Texture2D *tex;
 
   tile_symbol tile_symbols[MAX_TILESHEET_UNIQUE_TILESLOTS_X][MAX_TILESHEET_UNIQUE_TILESLOTS_Y];
@@ -351,7 +366,7 @@ typedef struct tilesheet {
 
 typedef struct tilemap_tile {
 	tilesheet_type sheet_type;
-	texture_type tex_type;
+	texture_id tex_id;
 
 	u16 x;
 	u16 y;
@@ -480,6 +495,29 @@ typedef struct slider {
   bool on_screen;
   bool is_registered;  
 } slider;
+
+typedef struct progress_bar_type {
+  texture_id body_left;
+  texture_id body_right;
+  texture_id body_repetitive;
+  Rectangle body_left_src_rect;
+  Rectangle body_right_src_rect;
+  Rectangle body_repetitive_src_rect;
+
+  shader_id mask_shader_id;
+  u16 min_width;
+} progress_bar_type;
+
+typedef struct progress_bar {
+  progress_bar_id id;
+  progress_bar_type type;
+
+  f32 width_multiply;
+  Vector2 scale;
+
+  f32 progress;
+  bool is_initialized;
+} progress_bar;
 
 typedef struct Character2D {
   u16 character_id;

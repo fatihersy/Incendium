@@ -10,7 +10,7 @@ typedef struct resource_system_state {
   u16 image_amouth;
   u16 tilesheet_amouth;
 
-  Texture2D textures[TEXTURE_TYPE_MAX];
+  Texture2D textures[TEX_ID_MAX];
   spritesheet sprites[SPRITESHEET_TYPE_MAX];
   Image images[IMAGE_TYPE_MAX];
   tilesheet tilesheets[TILESHEET_TYPE_MAX];
@@ -20,10 +20,10 @@ typedef struct resource_system_state {
 
 static resource_system_state *state;
 
-unsigned int load_texture(const char* _path, bool resize, Vector2 new_size, texture_type _type);
+unsigned int load_texture(const char* _path, bool resize, Vector2 new_size, texture_id _id);
 bool load_image(const char *_path, bool resize, Vector2 new_size, image_type type);
 void load_spritesheet(const char* _path, spritesheet_type _type, u16 _fps, u16 _frame_width, u16 _frame_height, u16 _total_row, u16 _total_col);
-void load_tilesheet(tilesheet_type _sheet_sheet_type, texture_type _sheet_tex_type, u16 _tile_count_x, u16 _tile_count_y, u16 _tile_size);
+void load_tilesheet(tilesheet_type _sheet_sheet_type, texture_id _sheet_tex_id, u16 _tile_count_x, u16 _tile_count_y, u16 _tile_size);
 
 bool resource_system_initialize() {
   if (state) return false;
@@ -31,11 +31,14 @@ bool resource_system_initialize() {
   state = (resource_system_state*)allocate_memory_linear(sizeof(resource_system_state), true);
 
   //NOTE: _path = "%s%s", RESOURCE_PATH, _path
-  load_texture("space_bg.png",         false, (Vector2){0,  0}, TEX_BACKGROUND);
-  load_texture("fudesumi.png",         true,  (Vector2){64, 64},TEX_ENEMY_TEXTURE);
-  load_texture("map_tileset.png",      false, (Vector2){0,  0}, TEX_MAP_TILESET_TEXTURE);
-  load_texture("panel.png",            false, (Vector2){0,  0}, TEX_PANEL);
-  load_texture("panel_scaled.png",     false, (Vector2){0,  0}, TEX_PANEL_SCALED);
+  load_texture("space_bg.png",               false, (Vector2){0,  0}, TEX_ID_BACKGROUND);
+  load_texture("fudesumi.png",               true,  (Vector2){64, 64},TEX_ID_ENEMY_TEXTURE);
+  load_texture("map_tileset.png",            false, (Vector2){0,  0}, TEX_ID_MAP_TILESET_TEXTURE);
+  load_texture("panel.png",                  false, (Vector2){0,  0}, TEX_ID_PANEL);
+  load_texture("panel_scaled.png",           false, (Vector2){0,  0}, TEX_ID_PANEL_SCALED);
+  load_texture("progress_bar_left.png",      false, (Vector2){0,  0}, TEX_ID_PROGRESS_BAR_LEFT);
+  load_texture("progress_bar_right.png",     false, (Vector2){0,  0}, TEX_ID_PROGRESS_BAR_RIGHT);
+  load_texture("progress_bar_repetitive.png",false, (Vector2){0,  0}, TEX_ID_PROGRESS_BAR_REPETITIVE);
   load_spritesheet("level_up_sheet.png", LEVEL_UP_SHEET, 60, 150, 150, 8, 8);
   load_spritesheet("idle_left.png",      PLAYER_ANIMATION_IDLE_LEFT, 15, 86, 86, 1, 4);
   load_spritesheet("idle_right.png",     PLAYER_ANIMATION_IDLE_RIGHT, 15, 86, 86, 1, 4);
@@ -54,28 +57,18 @@ bool resource_system_initialize() {
   load_spritesheet("slider_right_button_edited.png", SLIDER_RIGHT_BUTTON, 0, 11, 10, 1, 2);
   load_spritesheet("menu_button.png", MENU_BUTTON, 0, 80, 16, 1, 2);
   load_spritesheet("health_bar_edited_as_ss.png", HEALTH_BAR_SHEET, 0, 72, 12, 1, 11);
-  load_tilesheet(TILESHEET_TYPE_MAP, TEX_MAP_TILESET_TEXTURE, 16, 14, 16);
+  load_tilesheet(TILESHEET_TYPE_MAP, TEX_ID_MAP_TILESET_TEXTURE, 16, 14, 16);
 
   return true;
 }
 
-
-Texture2D* get_texture_by_id(unsigned int id) {
-  for (i16 i = 0; i <= state->texture_amouth; ++i) {
-    if (state->textures[i].id == id)
-      return &state->textures[i];
-  }
-
-  return (Texture2D*){0};
-}
-
-Texture2D* get_texture_by_enum(texture_type type) {
-  if (type >= TEXTURE_TYPE_MAX || type <= TEX_UNSPECIFIED){
+Texture2D* get_texture_by_enum(texture_id _id) {
+  if (_id >= TEX_ID_MAX || _id <= TEX_ID_UNSPECIFIED){
     TraceLog(LOG_WARNING, "resource::get_texture_by_enum()::Texture type out of bound");
     return (Texture2D*){0};
   }
 
-  return &state->textures[type];
+  return &state->textures[_id];
 }
 Image* get_image_by_enum(image_type type) {
 
@@ -109,13 +102,13 @@ const char *rs_path(const char *_path) {
   return TextFormat("%s%s", RESOURCE_PATH, _path);
 }
 
-unsigned int load_texture(const char *_path, bool resize, Vector2 new_size, texture_type _type) {
+unsigned int load_texture(const char *_path, bool resize, Vector2 new_size, texture_id _id) {
   const char *path = rs_path(_path);
   if (!FileExists(path)) { TraceLog(
   LOG_ERROR,"ERROR::resource::load_texture():: Path:'%s' Cannot find", path);
     return INVALID_ID32;
   } 
-  if (_type >= TEXTURE_TYPE_MAX || _type <= TEX_UNSPECIFIED) { TraceLog(
+  if (_id >= TEX_ID_MAX || _id <= TEX_ID_UNSPECIFIED) { TraceLog(
   LOG_ERROR,
   "ERROR::resource::load_texture()::texture type out of bound");
     return INVALID_ID32;
@@ -131,8 +124,8 @@ unsigned int load_texture(const char *_path, bool resize, Vector2 new_size, text
   }
 
   state->texture_amouth++;
-  state->textures[_type] = tex;
-  return state->textures[_type].id;
+  state->textures[_id] = tex;
+  return state->textures[_id].id;
 }
 
 bool load_image(const char *_path, bool resize, Vector2 new_size, image_type type) {
@@ -195,13 +188,13 @@ void load_spritesheet(const char *_path, spritesheet_type _type, u16 _fps, u16 _
   state->sprites[_type] = _sheet;
 }
 
-void load_tilesheet(tilesheet_type _sheet_sheet_type, texture_type _sheet_tex_type, u16 _tile_count_x, u16 _tile_count_y, u16 _tile_size) {
+void load_tilesheet(tilesheet_type _sheet_sheet_type, texture_id _sheet_tex_id, u16 _tile_count_x, u16 _tile_count_y, u16 _tile_size) {
   if (_sheet_sheet_type >= MAX_TILESHEET_SLOTS || _sheet_sheet_type <= 0) {
     TraceLog(LOG_ERROR,
              "ERROR::resource::load_tilesheet()::Sheet type out of bound");
     return;
   }
-  if (_sheet_tex_type >= TEXTURE_TYPE_MAX || _sheet_tex_type <= 0) {
+  if (_sheet_tex_id >= TEX_ID_MAX || _sheet_tex_id <= 0) {
     TraceLog(
         LOG_ERROR,
         "ERROR::resource::load_tilesheet()::texture type out of bound");
@@ -209,9 +202,9 @@ void load_tilesheet(tilesheet_type _sheet_sheet_type, texture_type _sheet_tex_ty
 
   tilesheet _tilesheet = {0};
 
-  _tilesheet.tex = get_texture_by_enum(_sheet_tex_type);
+  _tilesheet.tex = get_texture_by_enum(_sheet_tex_id);
   _tilesheet.sheet_type = _sheet_sheet_type;
-  _tilesheet.tex_type = _sheet_tex_type;
+  _tilesheet.tex_id = _sheet_tex_id;
   _tilesheet.tile_count_x = _tile_count_x;
   _tilesheet.tile_count_y = _tile_count_y;
   _tilesheet.tile_count = _tilesheet.tile_count_x * _tilesheet.tile_count_y;

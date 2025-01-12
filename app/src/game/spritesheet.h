@@ -32,7 +32,7 @@
 
 u16 _register_sprite(spritesheet_play_system *system, spritesheet_type _type, bool _play_looped, bool _play_once, bool _center_sprite);
 void _update_sprite_renderqueue(spritesheet_play_system *system);
-Texture2D* _get_texture_by_enum(texture_type _type);
+Texture2D* _get_texture_by_enum(texture_id _id);
 spritesheet _get_spritesheet_by_enum(spritesheet_type _type);
 const char *_rs_path(const char *_path);
 void _play_sprite_on_site(spritesheet_play_system *system, u16 _id, Color _tint, Rectangle dest);

@@ -202,8 +202,8 @@ void _reset_sprite(spritesheet_play_system *system, u16 _queue_index, bool _retr
   }
 }
 
-Texture2D* _get_texture_by_enum(texture_type _type) {
-    return get_texture_by_enum(_type);
+Texture2D* _get_texture_by_enum(texture_id _id) {
+    return get_texture_by_enum(_id);
 }
 spritesheet _get_spritesheet_by_enum(spritesheet_type _type) {
     return get_spritesheet_by_enum(_type);

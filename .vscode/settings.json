@@ -1,5 +1,5 @@
 {
-    "workbench.colorTheme": "Default Dark+",
+    "workbench.colorTheme": "Gruvbox Dark (Hard)",
     "editor.minimap.enabled": false,
     "files.autoSave": "onFocusChange",
     "terminal.integrated.defaultProfile.windows": "pwsh7",

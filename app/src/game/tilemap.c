@@ -36,7 +36,7 @@ void create_tilemap(tilesheet_type _type, Vector2 _position, u16 _grid_size, u16
     u16 y = i / out_tilemap->map_dim;  
 
     out_tilemap->tiles[x][y].tile_size = sheet->tile_size;
-    out_tilemap->tiles[x][y].tex_type = sheet->tex_type;
+    out_tilemap->tiles[x][y].tex_id = sheet->tex_id;
     out_tilemap->tiles[x][y].sheet_type = _type;
     out_tilemap->tiles[x][y].tile_symbol = sheet->tile_symbols[0 / _tile_size][0 / _tile_size];
 
@@ -80,7 +80,7 @@ void render_tilemap(tilemap* _tilemap) {
 
     if (!_tilemap->tiles[x][y].is_initialized) continue;
 
-    Texture2D tex = *get_texture_by_enum(_tilemap->tiles[x][y].tex_type);
+    Texture2D tex = *get_texture_by_enum(_tilemap->tiles[x][y].tex_id);
 
     DrawTexturePro(
     tex, 
@@ -169,7 +169,7 @@ void FDrawGrid(tilemap* _tilemap) {
 void render_tile(tilemap_tile origin, tilemap_tile dest) {
 
   tilesheet* ts = get_tilesheet_by_enum(origin.sheet_type);
-  Texture2D* tx = get_texture_by_enum(origin.tex_type);
+  Texture2D* tx = get_texture_by_enum(origin.tex_id);
 
   DrawTexturePro(
   *tx, 
@@ -214,7 +214,7 @@ tilemap_tile get_tile_from_sheet_by_mouse_pos(tilesheet* sheet, Vector2 mouse_po
   tile.y           = dest_y  * sheet->tile_size;
   tile.tile_size   = sheet->tile_size;
   tile.sheet_type  = sheet->sheet_type;
-  tile.tex_type    = sheet->tex_type;
+  tile.tex_id    = sheet->tex_id;
   tile.tile_symbol = get_tilesheet_by_enum(tile.sheet_type)->tile_symbols[dest_x][dest_y];
 
   tile.is_initialized = true;
@@ -237,7 +237,7 @@ tilemap_tile get_tile_from_map_by_mouse_pos(tilemap* map, Vector2 mouse_pos) {
 
   tile.tile_size = map->tile_size;
   tile.sheet_type = map->tiles[tile.x][tile.y].sheet_type;
-  tile.tex_type = map->tiles[tile.x][tile.y].tex_type;
+  tile.tex_id = map->tiles[tile.x][tile.y].tex_id;
   tile.tile_symbol = get_tilesheet_by_enum(tile.sheet_type)->tile_symbols[tile.x / tile.tile_size][tile.y/ tile.tile_size];
 
   tile.is_initialized = true;
