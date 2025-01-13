@@ -51,54 +51,66 @@ void set_shader_uniform(shader_id _id, i32 index, data_pack _data_pack) {
 
   switch (data_id) {
   case SHADER_UNIFORM_FLOAT: {
-    SetShaderValue(state->shaders[_id].handle, index,
-                   &state->shaders[_id].locations[index].data.data.f32[0],
-                   data_id);
+    shader->locations[index].data = _data_pack;
+    SetShaderValue(
+      state->shaders[_id].handle,
+      state->shaders[_id].locations[index].index,
+      state->shaders[_id].locations[index].data.data.f32,
+      data_id
+    );
     break;
   }
   case SHADER_UNIFORM_VEC2: {
+    shader->locations[index].data = _data_pack;
     SetShaderValue(state->shaders[_id].handle, index,
                    &state->shaders[_id].locations[index].data.data.f32,
                    data_id);
     break;
   }
   case SHADER_UNIFORM_VEC3: {
+    shader->locations[index].data = _data_pack;
     SetShaderValue(state->shaders[_id].handle, index,
                    &state->shaders[_id].locations[index].data.data.f32,
                    data_id);
     break;
   }
   case SHADER_UNIFORM_VEC4: {
+    shader->locations[index].data = _data_pack;
     SetShaderValue(state->shaders[_id].handle, index,
                    &state->shaders[_id].locations[index].data.data.f32,
                    data_id);
     break;
   }
   case SHADER_UNIFORM_INT: {
+    shader->locations[index].data = _data_pack;
     SetShaderValue(state->shaders[_id].handle, index,
                    &state->shaders[_id].locations[index].data.data.i32[0],
                    data_id);
     break;
   }
   case SHADER_UNIFORM_IVEC2: {
+    shader->locations[index].data = _data_pack;
     SetShaderValue(state->shaders[_id].handle, index,
                    &state->shaders[_id].locations[index].data.data.i32,
                    data_id);
     break;
   }
   case SHADER_UNIFORM_IVEC3: {
+    shader->locations[index].data = _data_pack;
     SetShaderValue(state->shaders[_id].handle, index,
                    &state->shaders[_id].locations[index].data.data.i32,
                    data_id);
     break;
   }
   case SHADER_UNIFORM_IVEC4: {
+    shader->locations[index].data = _data_pack;
     SetShaderValue(state->shaders[_id].handle, index,
                    &state->shaders[_id].locations[index].data.data.i32,
                    data_id);
     break;
   }
   case SHADER_UNIFORM_SAMPLER2D: {
+    shader->locations[index].data.sampler = _data_pack.sampler;
     SetShaderValue(state->shaders[_id].handle, index, 
     state->shaders[_id].locations[index].data.sampler,
     data_id);
@@ -110,8 +122,6 @@ void set_shader_uniform(shader_id _id, i32 index, data_pack _data_pack) {
       return;
     }
   }
-
-  shader->locations[index].data = _data_pack;
 }
 
 void load_shader(const char *_vs_path, const char *_fs_path,

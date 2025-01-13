@@ -1,25 +1,24 @@
-#version 330 core
+#version 330
 
-// Input from vertex shader
-in vec2 TexCoords;
+// Input vertex attributes (from vertex shader)
+in vec2 fragTexCoord;
+in vec4 fragColor;
 
-// Output to the framebuffer
-out vec4 FragColor;
+// Input uniform values
+uniform sampler2D texture0;
 
-// Texture sampler
-uniform sampler2D texture1;
+out vec4 finalColor;
 
-// Percentage value (0.0 to 1.0) to mask the texture
-uniform float progress;
+uniform float progress = 0.0;
 
 void main()
 {
-    // Sample the texture
-    vec4 texColor = texture(texture1, TexCoords);
+    vec4 source = texture(texture0, fragTexCoord);
     
-    // Determine the alpha value based on the progress
-    float maskValue = step(TexCoords.x, progress);
-    
-    // Apply the mask value to the texture alpha
-    FragColor = vec4(texColor.rgb, texColor.a * maskValue);
+    if(fragTexCoord.x < progress) {
+        finalColor = source;
+    }
+    else {
+        finalColor = vec4(0.0, 0.0, 0.0, 0.0);
+    }
 }

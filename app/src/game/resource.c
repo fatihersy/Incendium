@@ -36,9 +36,8 @@ bool resource_system_initialize() {
   load_texture("map_tileset.png",            false, (Vector2){0,  0}, TEX_ID_MAP_TILESET_TEXTURE);
   load_texture("panel.png",                  false, (Vector2){0,  0}, TEX_ID_PANEL);
   load_texture("panel_scaled.png",           false, (Vector2){0,  0}, TEX_ID_PANEL_SCALED);
-  load_texture("progress_bar_left.png",      false, (Vector2){0,  0}, TEX_ID_PROGRESS_BAR_LEFT);
-  load_texture("progress_bar_right.png",     false, (Vector2){0,  0}, TEX_ID_PROGRESS_BAR_RIGHT);
-  load_texture("progress_bar_repetitive.png",false, (Vector2){0,  0}, TEX_ID_PROGRESS_BAR_REPETITIVE);
+  load_texture("progress_bar_inside_full.png", false, (Vector2){0,  0}, TEX_ID_PROGRESS_BAR_INSIDE_FULL);
+  load_texture("progress_bar_outside_full.png",false, (Vector2){0,  0}, TEX_ID_PROGRESS_BAR_OUTSIDE_FULL);
   load_spritesheet("level_up_sheet.png", LEVEL_UP_SHEET, 60, 150, 150, 8, 8);
   load_spritesheet("idle_left.png",      PLAYER_ANIMATION_IDLE_LEFT, 15, 86, 86, 1, 4);
   load_spritesheet("idle_right.png",     PLAYER_ANIMATION_IDLE_RIGHT, 15, 86, 86, 1, 4);

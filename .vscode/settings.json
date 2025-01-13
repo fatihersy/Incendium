@@ -59,6 +59,10 @@
         "overviewRulerColor": "rgba(0,0,0,0)",
         "isWholeLine": false,
     },
+    "clangd.arguments": [
+        "--header-insertion=never",
+        "--function-arg-placeholders=0"
+    ],
     "files.associations": {
         "event.h": "c",
         "fmath.h": "c",

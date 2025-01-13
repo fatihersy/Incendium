@@ -46,7 +46,8 @@ bool user_interface_on_event(u16 code, void *sender, void *listener_inst, event_
 void update_buttons();
 void update_sliders();
 
-void render_slider_body(slider* sdr);
+void draw_slider_body(slider* sdr);
+void draw_texture_stretch(texture_id body, Vector2 pos, Vector2 scale, Rectangle stretch_part, u16 stretch_part_mltp);
 void draw_texture_regular(Texture2D* tex, Rectangle dest);
 void draw_texture_regular_id(texture_id _id, Rectangle dest);
 void gui_draw_panel(Rectangle dest, bool should_center);
@@ -55,7 +56,7 @@ void gui_draw_settings_screen();
 void register_button(Vector2 _attached_position, Vector2 offset, button_id _btn_id, button_type_id _btn_type_id);
 void register_button_type(button_type_id _btn_type_id, spritesheet_type _ss_type, Vector2 frame_dim, f32 _scale, bool _play_reflection, bool _play_crt, bool _should_center);
 void register_progress_bar(progress_bar_id _id, progress_bar_type_id _type_id, f32 width_multiply, Vector2 scale);
-void register_progress_bar_type(progress_bar_type_id _type_id, texture_id body_left, texture_id body_right, texture_id body_repetitive, shader_id _mask_shader_id);
+void register_progress_bar_type(progress_bar_type_id _type_id, texture_id _body_inside, texture_id _body_outside, shader_id _mask_shader_id);
 void register_slider(Vector2 _pos, Vector2 offset, slider_id _sdr_id, slider_type_id _sdr_type_id, button_id _left_btn_id, button_id _right_btn_id, bool _is_clickable);
 void register_slider_type(slider_type_id _sdr_type_id, spritesheet_type _ss_sdr_body_type, f32 _scale, u16 _width_multiply, button_type_id _left_btn_type_id, button_type_id _right_btn_type_id, bool _should_center, u16 _char_limit);
 
@@ -71,11 +72,11 @@ void user_interface_system_initialize() {
   if (state->ui_font.baseSize == 0) { // If custom font load failed
     state->ui_font = GetFontDefault();
   }
-  state->ui_font_size_div2    = state->ui_font.baseSize / 2.00f;
-  state->ui_font_size_38div20 = state->ui_font.baseSize / 1.90f;
-  state->ui_font_size_35div20 = state->ui_font.baseSize / 1.75f;
-  state->ui_font_size_3div2   = state->ui_font.baseSize / 1.50f;
-  state->ui_font_size_5div4   = state->ui_font.baseSize / 1.25f;
+  state->ui_font_size_div2     = state->ui_font.baseSize / 2.00f;
+  state->ui_font_size_38div20  = state->ui_font.baseSize / 1.90f;
+  state->ui_font_size_35div20  = state->ui_font.baseSize / 1.75f;
+  state->ui_font_size_3div2    = state->ui_font.baseSize / 1.50f;
+  state->ui_font_size_5div4    = state->ui_font.baseSize / 1.25f;
 
   initialize_shader_system();
 
@@ -125,7 +126,7 @@ void user_interface_system_initialize() {
   {
     register_progress_bar_type(
       PRG_BAR_TYPE_ID_CRIMSON_FANT_BAR,
-      TEX_ID_PROGRESS_BAR_LEFT, TEX_ID_PROGRESS_BAR_RIGHT, TEX_ID_PROGRESS_BAR_REPETITIVE,
+      TEX_ID_PROGRESS_BAR_INSIDE_FULL, TEX_ID_PROGRESS_BAR_OUTSIDE_FULL,
       SHADER_ID_PROGRESS_BAR_MASK
     );
   }
@@ -420,28 +421,65 @@ void gui_progress_bar(progress_bar_id bar_id, Vector2 pos) {
     TraceLog(LOG_ERROR, "user_interface::gui_player_experiance_process()::Player experiance process bar didn't initialized");
     return;
   }
-  Rectangle body_left_dest = (Rectangle){
-    .x = 0, .y = pos.y,
-    .width = prg_bar.type.body_left_src_rect.width * prg_bar.scale.x, .height = prg_bar.type.body_left_src_rect.height * prg_bar.scale.y,
-  };
-  Rectangle body_right_dest = (Rectangle){
-    .x = 0, .y = pos.y,
-    .width = prg_bar.type.body_right_src_rect.width * prg_bar.scale.x, .height = prg_bar.type.body_right_src_rect.height * prg_bar.scale.y,
-  };
-  Rectangle body_repetitive_dest = (Rectangle){
-    .x = 0, .y = pos.y,
-    .width = prg_bar.type.body_repetitive_src_rect.width * prg_bar.scale.x, .height = prg_bar.type.body_repetitive_src_rect.height * prg_bar.scale.y,
-  };
+  BeginShaderMode(get_shader_by_enum(prg_bar.type.mask_shader_id)->handle);
+  set_shader_uniform(prg_bar.type.mask_shader_id, 0, (data_pack) {.data.f32[0] = 1.f});
+  draw_texture_stretch(
+    prg_bar.type.body_outside, 
+    pos, 
+    prg_bar.scale, 
+    (Rectangle) {.x = 27, .y = 0, .width = 10, .height = 9},
+    prg_bar.width_multiply
+  );
+  EndShaderMode();
+  BeginShaderMode(get_shader_by_enum(prg_bar.type.mask_shader_id)->handle);
+  set_shader_uniform(prg_bar.type.mask_shader_id, 0, (data_pack) {.data.f32[0] = .2f});
+  draw_texture_stretch(
+    prg_bar.type.body_inside, 
+    pos, 
+    prg_bar.scale, 
+    (Rectangle) {.x = 27, .y = 0, .width = 10, .height = 9},
+    prg_bar.width_multiply
+  );
+  EndShaderMode();
+}
 
-  body_left_dest.x = pos.x;
-  draw_texture_regular_id(prg_bar.type.body_left, body_left_dest);
-  for (int i=0; i<prg_bar.width_multiply; ++i) {
-    body_repetitive_dest.x = pos.x + body_left_dest.width + (i * body_repetitive_dest.width);
-    draw_texture_regular_id(prg_bar.type.body_repetitive, body_repetitive_dest);
+void draw_texture_stretch(texture_id body, Vector2 pos, Vector2 scale, Rectangle stretch_part, u16 stretch_part_mltp) {
+  if (body>= TEX_ID_MAX || body<= TEX_ID_UNSPECIFIED) {
+    TraceLog(LOG_ERROR, "user_interface::draw_repetitive_body_tex()::Recieved texture out of bound");
+    return;
   }
-  body_right_dest.x = pos.x + body_left_dest.width + (prg_bar.width_multiply * body_repetitive_dest.width);
-  draw_texture_regular_id(prg_bar.type.body_right, body_right_dest);
+  Texture2D* body_tex    = get_texture_by_enum(body);
+  if (!body_tex) {
+    TraceLog(LOG_ERROR, "user_interface::draw_repetitive_body_tex()::Recieved texture returned NULL");
+    return;
+  }
 
+  Rectangle first_source = (Rectangle){
+    .x = pos.x, .y = pos.y,
+    .width = stretch_part.x, .height = stretch_part.height,
+  };
+  Rectangle first_dest = (Rectangle){
+    .x = 0, .y = pos.y,
+    .width = first_source.width * scale.x, .height = first_source.height * scale.y,
+  };
+  Rectangle second_dest = (Rectangle){
+    .x = pos.x + first_dest.width, .y = pos.y,
+    .width = stretch_part.width * scale.x * stretch_part_mltp, .height = stretch_part.height * scale.y,
+  };
+  Rectangle third_source = (Rectangle){
+    .x = stretch_part.x + stretch_part.width, .y = pos.y,
+    .width = body_tex->width - (stretch_part.x + stretch_part.width), .height = stretch_part.height,
+  };
+  Rectangle third_dest = (Rectangle){
+    .x = pos.x + first_dest.width + second_dest.width, .y = pos.y,
+    .width = third_source.width * scale.x, .height = third_source.height * scale.y,
+  };
+
+  DrawTexturePro(*body_tex, first_source, first_dest, (Vector2) {0}, 0, WHITE);
+
+  DrawTexturePro(*body_tex, stretch_part, second_dest, (Vector2) {0}, 0, WHITE);
+  
+  DrawTexturePro(*body_tex, third_source, third_dest, (Vector2) {0}, 0, WHITE);
 }
 
 void gui_slider(slider_id _id) {
@@ -459,7 +497,7 @@ void gui_slider(slider_id _id) {
  
   sdr->on_screen = true;
 
-  render_slider_body(sdr);
+  draw_slider_body(sdr);
 
   if(sdr_type.left_btn_id != 0) if (gui_button("", sdr_type.left_btn_id)) {
     if (sdr->current_value > sdr->min_value) {
@@ -474,7 +512,7 @@ void gui_slider(slider_id _id) {
   }
 }
 
-void render_slider_body(slider* sdr) {
+void draw_slider_body(slider* sdr) {
   slider_type sdr_type = sdr->sdr_type;
 
   switch (sdr->sdr_type.id) {
@@ -787,11 +825,10 @@ void register_progress_bar(progress_bar_id _id, progress_bar_type_id _type_id, f
 
   state->prg_bars[_id] = prg_bar;
 }
-void register_progress_bar_type(progress_bar_type_id _type_id, texture_id body_left, texture_id body_right, texture_id body_repetitive, shader_id _mask_shader_id) {
+void register_progress_bar_type(progress_bar_type_id _type_id, texture_id _body_inside, texture_id _body_outside, shader_id _mask_shader_id) {
   if (_type_id       >= PRG_BAR_TYPE_ID_MAX || _type_id       <= PRG_BAR_TYPE_ID_UNDEFINED ||
-      body_left      >= TEX_ID_MAX          || body_left      <= TEX_ID_UNSPECIFIED        ||
-      body_right     >= TEX_ID_MAX          || body_right     <= TEX_ID_UNSPECIFIED        ||
-      body_repetitive>= TEX_ID_MAX          || body_repetitive<= TEX_ID_UNSPECIFIED        ||
+      _body_inside   >= TEX_ID_MAX          || _body_inside   <= TEX_ID_UNSPECIFIED        ||
+      _body_outside  >= TEX_ID_MAX          || _body_outside  <= TEX_ID_UNSPECIFIED        ||
       _mask_shader_id>= SHADER_ID_MAX       || _mask_shader_id<= SHADER_ID_UNSPECIFIED     ||
       !state) {
     TraceLog(LOG_WARNING, "user_interface::register_progress_bar_type()::Recieved id was out of bound");
@@ -800,16 +837,9 @@ void register_progress_bar_type(progress_bar_type_id _type_id, texture_id body_l
 
   progress_bar_type prg_type = {0};
 
-  prg_type.body_left       = body_left;
-  prg_type.body_right      = body_right;
-  prg_type.body_repetitive = body_repetitive;
+  prg_type.body_inside     = _body_inside;
+  prg_type.body_outside    = _body_outside;
   prg_type.mask_shader_id  = _mask_shader_id;
-  prg_type.body_left_src_rect  = get_texture_source_rect(body_left);
-  prg_type.body_right_src_rect  = get_texture_source_rect(body_right);
-  prg_type.body_repetitive_src_rect  = get_texture_source_rect(body_repetitive);
-  prg_type.min_width       = get_texture_by_enum(body_left      )->width + 
-                             get_texture_by_enum(body_right     )->width +
-                             get_texture_by_enum(body_repetitive)->width;
 
   state->prg_bar_types[_type_id] = prg_type;
 }

@@ -8,7 +8,7 @@
 #define TOTAL_ALLOCATED_MEMORY 64 * 1024 * 1024
 #define TARGET_FPS 60
 #define MAX_SPRITE_RENDERQUEUE 50
-#define CLEAR_BACKGROUND_COLOR BLACK
+#define CLEAR_BACKGROUND_COLOR BROWN
 
 #define INI_FILE_MAX_FILE_SIZE 32000
 #define INI_FILE_MAX_SECTION_NAME_LENGTH 32
@@ -158,9 +158,8 @@ typedef enum texture_id {
   TEX_ID_MAP_TILESET_TEXTURE,
   TEX_ID_PANEL,
   TEX_ID_PANEL_SCALED,
-  TEX_ID_PROGRESS_BAR_LEFT,
-  TEX_ID_PROGRESS_BAR_RIGHT,
-  TEX_ID_PROGRESS_BAR_REPETITIVE,
+  TEX_ID_PROGRESS_BAR_OUTSIDE_FULL,
+  TEX_ID_PROGRESS_BAR_INSIDE_FULL,
 
   TEX_ID_MAX,
 } texture_id;
@@ -497,15 +496,12 @@ typedef struct slider {
 } slider;
 
 typedef struct progress_bar_type {
-  texture_id body_left;
-  texture_id body_right;
-  texture_id body_repetitive;
-  Rectangle body_left_src_rect;
-  Rectangle body_right_src_rect;
-  Rectangle body_repetitive_src_rect;
+  //texture_id body_repetitive;
+  texture_id body_inside;
+  texture_id body_outside;
+
 
   shader_id mask_shader_id;
-  u16 min_width;
 } progress_bar_type;
 
 typedef struct progress_bar {
