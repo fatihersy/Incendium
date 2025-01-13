@@ -1005,11 +1005,11 @@ bool user_interface_on_event(u16 code, void *sender, void *listener_inst, event_
   switch (code) {
     case EVENT_CODE_UI_SHOW_PAUSE_MENU: {
       state->b_show_pause_menu = !state->b_show_pause_menu;
-      break;
+      return true;
     }
     case EVENT_CODE_UI_SHOW_SETTINGS_MENU: {
       state->b_show_settings_menu = !state->b_show_settings_menu;
-      break;
+      return true;
     }
   };
 
