@@ -8,15 +8,11 @@
 
 #include "fshader.h"
 
-#define UI_FONT_SIZE state->ui_font_size_5div4
-#define DEFAULT_MENU_BUTTON_SCALE 3
-
 #define SPACE_BTW_Y(i, DIM_Y) (DIM_Y + DIM_Y/3.f) * i
 #define SPACE_BTW_X(i, DIM_X) (DIM_X + DIM_X/3.f) * i
 
 typedef struct user_interface_system_state {
   spritesheet_play_system spritesheet_system;
-  player_state *p_player;
   Vector2 offset;
   Vector2 mouse_pos;
   button      buttons[BTN_ID_MAX];
@@ -38,6 +34,9 @@ typedef struct user_interface_system_state {
 
 static user_interface_system_state *state;
 
+#define UI_FONT_SIZE state->ui_font_size_5div4
+#define DEFAULT_MENU_BUTTON_SCALE 3
+
 #define PSPRITESHEET_SYSTEM state // Don't forget to undef at very bottom of the file
 #include "game/spritesheet.h"
 
@@ -47,10 +46,10 @@ void update_buttons();
 void update_sliders();
 
 void draw_slider_body(slider* sdr);
-void draw_texture_stretch(texture_id body, Vector2 pos, Vector2 scale, Rectangle stretch_part, u16 stretch_part_mltp);
+void draw_texture_stretch(texture_id body, Vector2 pos, Vector2 scale, Rectangle stretch_part, u16 stretch_part_mltp, bool should_center);
 void draw_texture_regular(Texture2D* tex, Rectangle dest);
 void draw_texture_regular_id(texture_id _id, Rectangle dest);
-void gui_draw_panel(Rectangle dest, bool should_center);
+void gui_draw_panel(texture_id _id, Rectangle dest, bool should_center);
 void gui_draw_settings_screen();
 
 void register_button(Vector2 _attached_position, Vector2 offset, button_id _btn_id, button_type_id _btn_type_id);
@@ -60,9 +59,7 @@ void register_progress_bar_type(progress_bar_type_id _type_id, texture_id _body_
 void register_slider(Vector2 _pos, Vector2 offset, slider_id _sdr_id, slider_type_id _sdr_type_id, button_id _left_btn_id, button_id _right_btn_id, bool _is_clickable);
 void register_slider_type(slider_type_id _sdr_type_id, spritesheet_type _ss_sdr_body_type, f32 _scale, u16 _width_multiply, button_type_id _left_btn_type_id, button_type_id _right_btn_type_id, bool _should_center, u16 _char_limit);
 
-bool append_text(const char* src, char* dest, u16 char_limit);
 Rectangle   get_texture_source_rect(texture_id _id);
-const char* stringtify_options(data_pack option, const char* parser, u16 character_limit);
 
 void user_interface_system_initialize() {
   if (state) return;
@@ -138,6 +135,12 @@ void user_interface_system_initialize() {
       PRG_BAR_ID_PLAYER_EXPERIANCE,
       PRG_BAR_TYPE_ID_CRIMSON_FANT_BAR,
       5,
+      (Vector2) {3,3}
+    );
+    register_progress_bar(
+      PRG_BAR_ID_PLAYER_HEALTH,
+      PRG_BAR_TYPE_ID_CRIMSON_FANT_BAR,
+      3,
       (Vector2) {3,3}
     );
   }
@@ -265,6 +268,7 @@ void user_interface_system_initialize() {
 
   event_register(EVENT_CODE_UI_SHOW_PAUSE_MENU, 0, user_interface_on_event);
   event_register(EVENT_CODE_UI_SHOW_SETTINGS_MENU, 0, user_interface_on_event);
+  event_register(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, 0, user_interface_on_event);
 }
 
 void update_user_interface() {
@@ -403,47 +407,40 @@ bool gui_button(const char* text, button_id _id) {
   return _btn->state == BTN_STATE_RELEASED;
 }
 
-void gui_healthbar(f32 percent, f32 _x, f32 _y, bool _should_center) {
-  const u16 iter = 10*percent;
-  Vector2 pos = (Vector2) {_x, _y};
-  Vector2 scale = (Vector2) {DEFAULT_MENU_BUTTON_SCALE, DEFAULT_MENU_BUTTON_SCALE};
-
-  draw_sprite_on_site(HEALTH_BAR_SHEET, WHITE, pos, scale, iter, _should_center);
-}
-
-void gui_progress_bar(progress_bar_id bar_id, Vector2 pos) {
+void gui_progress_bar(progress_bar_id bar_id, Vector2 pos, bool _should_center) {
   if (!state) {
     TraceLog(LOG_ERROR, "user_interface::gui_player_experiance_process()::ui system didn't initialized");
     return;
   }
-  progress_bar prg_bar = state->prg_bars[PRG_BAR_ID_PLAYER_EXPERIANCE];
+  progress_bar prg_bar = state->prg_bars[bar_id];
   if (!prg_bar.is_initialized) {
     TraceLog(LOG_ERROR, "user_interface::gui_player_experiance_process()::Player experiance process bar didn't initialized");
     return;
   }
-  BeginShaderMode(get_shader_by_enum(prg_bar.type.mask_shader_id)->handle);
-  set_shader_uniform(prg_bar.type.mask_shader_id, 0, (data_pack) {.data.f32[0] = 1.f});
+
   draw_texture_stretch(
     prg_bar.type.body_outside, 
     pos, 
     prg_bar.scale, 
     (Rectangle) {.x = 27, .y = 0, .width = 10, .height = 9},
-    prg_bar.width_multiply
+    prg_bar.width_multiply,
+    _should_center
   );
-  EndShaderMode();
+
   BeginShaderMode(get_shader_by_enum(prg_bar.type.mask_shader_id)->handle);
-  set_shader_uniform(prg_bar.type.mask_shader_id, 0, (data_pack) {.data.f32[0] = .2f});
+  set_shader_uniform(prg_bar.type.mask_shader_id, 0, (data_pack) {.data.f32[0] = prg_bar.progress});
   draw_texture_stretch(
     prg_bar.type.body_inside, 
     pos, 
     prg_bar.scale, 
     (Rectangle) {.x = 27, .y = 0, .width = 10, .height = 9},
-    prg_bar.width_multiply
+    prg_bar.width_multiply,
+    _should_center
   );
   EndShaderMode();
 }
 
-void draw_texture_stretch(texture_id body, Vector2 pos, Vector2 scale, Rectangle stretch_part, u16 stretch_part_mltp) {
+void draw_texture_stretch(texture_id body, Vector2 pos, Vector2 scale, Rectangle stretch_part, u16 stretch_part_mltp, bool should_center) {
   if (body>= TEX_ID_MAX || body<= TEX_ID_UNSPECIFIED) {
     TraceLog(LOG_ERROR, "user_interface::draw_repetitive_body_tex()::Recieved texture out of bound");
     return;
@@ -455,11 +452,11 @@ void draw_texture_stretch(texture_id body, Vector2 pos, Vector2 scale, Rectangle
   }
 
   Rectangle first_source = (Rectangle){
-    .x = pos.x, .y = pos.y,
+    .x = 0, .y = 0,
     .width = stretch_part.x, .height = stretch_part.height,
   };
   Rectangle first_dest = (Rectangle){
-    .x = 0, .y = pos.y,
+    .x = pos.x, .y = pos.y,
     .width = first_source.width * scale.x, .height = first_source.height * scale.y,
   };
   Rectangle second_dest = (Rectangle){
@@ -467,14 +464,18 @@ void draw_texture_stretch(texture_id body, Vector2 pos, Vector2 scale, Rectangle
     .width = stretch_part.width * scale.x * stretch_part_mltp, .height = stretch_part.height * scale.y,
   };
   Rectangle third_source = (Rectangle){
-    .x = stretch_part.x + stretch_part.width, .y = pos.y,
+    .x = stretch_part.x + stretch_part.width, .y = 0,
     .width = body_tex->width - (stretch_part.x + stretch_part.width), .height = stretch_part.height,
   };
   Rectangle third_dest = (Rectangle){
     .x = pos.x + first_dest.width + second_dest.width, .y = pos.y,
     .width = third_source.width * scale.x, .height = third_source.height * scale.y,
   };
-
+  if (should_center) {
+    first_dest.x  -= first_dest.width + (second_dest.width / 2.f);
+    second_dest.x -= first_dest.width + (second_dest.width / 2.f);
+    third_dest.x  -= first_dest.width + (second_dest.width / 2.f);
+  }
   DrawTexturePro(*body_tex, first_source, first_dest, (Vector2) {0}, 0, WHITE);
 
   DrawTexturePro(*body_tex, stretch_part, second_dest, (Vector2) {0}, 0, WHITE);
@@ -592,8 +593,8 @@ void gui_draw_settings_screen() {
   }
 }
 
-void gui_draw_panel(Rectangle dest, bool should_center) {
-  Texture2D* tex_panel = get_texture_by_enum(TEX_ID_PANEL);
+void gui_draw_panel(texture_id _id, Rectangle dest, bool should_center) {
+  Texture2D* tex_panel = get_texture_by_enum(_id);
   if (!tex_panel) {
     TraceLog(LOG_WARNING, "WARNING::user_interface::gui_draw_panel()::Panel textures return null");
     return;
@@ -608,9 +609,11 @@ void gui_draw_panel(Rectangle dest, bool should_center) {
 }
 
 void gui_draw_pause_screen() {
-  gui_draw_panel((Rectangle) {
-    .x = get_screen_offset(), .y = get_screen_offset(), 
-    .width = GetScreenWidth() - get_screen_offset(), .height = GetScreenHeight() - get_screen_offset()}, false
+  gui_draw_panel(TEX_ID_PANEL, (Rectangle) {
+      .x = get_resolution_div2().x, .y = get_resolution_div2().y, 
+      .width = get_resolution_div2().x, .height = get_resolution_div2().y
+    }, 
+    true
   );
 
   if (gui_button("Resume", BTN_ID_PAUSEMENU_BUTTON_RESUME)) {
@@ -626,16 +629,6 @@ void gui_draw_pause_screen() {
   if (gui_button("Exit", BTN_ID_PAUSEMENU_BUTTON_EXIT)) {
     event_fire(EVENT_CODE_APPLICATION_QUIT, 0, (event_context) {0});
   }
-}
-
-
-bool set_player_user_interface(player_state* player) {
-  if (player->initialized) {
-    state->p_player = player;
-    return true;
-  }
-
-  return false;
 }
 
 bool gui_slider_add_option(slider_id _id, const char* _display_text, data_pack content) {
@@ -656,93 +649,6 @@ bool gui_slider_add_option(slider_id _id, const char* _display_text, data_pack c
 
   sdr->max_value++;
 
-  return true;
-}
-
-const char* stringtify_options(data_pack content, const char* parser, u16 character_limit) {
-  u16 length = content.array_lenght;
-  char _temp[MAX_SLIDER_OPTION_TEXT_SLOT+1] = "";
-
-  switch (content.type_flag) {
-    case DATA_TYPE_I32: { 
-      for (int i=0; i<length; ++i) {
-        if(i != length-1) { // Unless the last
-          const char* c = TextFormat("%u", content.data.i32[i]);
-          if(!append_text(c, _temp, character_limit)) break;
-          if(!append_text(parser, _temp, character_limit)) break;
-        } 
-        else { // Last
-          const char* c = TextFormat("%u", content.data.i32[i]);
-          append_text(c, _temp, character_limit);
-        }
-      }
-      break;
-    }
-    case DATA_TYPE_U64: { 
-      const char* c = TextFormat("%u", content.data.u64);
-      append_text(c, _temp, character_limit);
-      break;
-    }
-    case DATA_TYPE_U32: { 
-      for (int i=0; i<length; ++i) {
-        if(i != length-1) { // Unless the last
-          const char* c = TextFormat("%u", content.data.u32[i]);
-          if(!append_text(c, _temp, character_limit)) break;
-          if(!append_text(parser, _temp, character_limit)) break;
-        } 
-        else { // Last
-          const char* c = TextFormat("%u", content.data.u32[i]);
-          append_text(c, _temp, character_limit);
-        }
-      }
-      break;
-    }
-    case DATA_TYPE_U16: { 
-      for (int i=0; i<length; ++i) {
-        if(i != length-1) { // Unless the last
-          const char* c = TextFormat("%u", content.data.u16[i]);
-          if(!append_text(c, _temp, character_limit)) break;
-          if(!append_text(parser, _temp, character_limit)) break;
-        } 
-        else { // Last
-          const char* c = TextFormat("%u", content.data.u16[i]);
-          append_text(c, _temp, character_limit);
-        }
-      }
-      break;
-    }
-    case DATA_TYPE_F32: { 
-      for (int i=0; i<length; ++i) {
-        if(i != length-1) { // Unless the last
-          const char* c = TextFormat("%u", content.data.f32[i]);
-          if(!append_text(c, _temp, character_limit)) break;
-          if(!append_text(parser, _temp, character_limit)) break;
-        } 
-        else { // Last
-          const char* c = TextFormat("%u", content.data.f32[i]);
-          append_text(c, _temp, character_limit);
-        }
-      }
-      break;
-    }
-    case DATA_TYPE_C: { 
-      append_text(content.data.c, _temp, character_limit);
-      break;
-    }
-    default: TraceLog(
-      LOG_WARNING, "WARNING::user_interface::stringtify_options()::Unsupported data type");
-  }
-  const char* text = _temp;
-  return text;
-}
-bool append_text(const char* src, char* dest, u16 char_limit) {
-  if(TextLength(src) + TextLength(dest) > char_limit || char_limit == INVALID_ID16) {
-    TraceLog(LOG_WARNING, 
-    "WARNING::user_interface::stringtify_options()::Array length exceed. ArrLen:%d, Needed:%d", 
-        MAX_SLIDER_OPTION_TEXT_SLOT, TextLength(src) + TextLength(dest));
-    return false;
-  }
-  copy_memory(dest + TextLength(dest), src, TextLength(src)); 
   return true;
 }
 
@@ -1009,6 +915,10 @@ bool user_interface_on_event(u16 code, void *sender, void *listener_inst, event_
     }
     case EVENT_CODE_UI_SHOW_SETTINGS_MENU: {
       state->b_show_settings_menu = !state->b_show_settings_menu;
+      return true;
+    }
+    case EVENT_CODE_UI_UPDATE_PROGRESS_BAR: {
+      state->prg_bars[(i32)context.data.f32[0]].progress = context.data.f32[1];
       return true;
     }
   };

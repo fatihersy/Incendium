@@ -60,11 +60,12 @@ typedef enum system_event_code {
     // user_interface
     EVENT_CODE_UI_SHOW_PAUSE_MENU,
     EVENT_CODE_UI_SHOW_SETTINGS_MENU,
+    EVENT_CODE_UI_UPDATE_PROGRESS_BAR,
 
     // player
     EVENT_CODE_PLAYER_ADD_EXP,
     EVENT_CODE_PLAYER_SET_POSITION,
-    EVENT_CODE_PLAYER_DEAL_DAMAGE,
+    EVENT_CODE_PLAYER_TAKE_DAMAGE,
 
     MAX_EVENT_CODE = 0xFF
 } system_event_code;

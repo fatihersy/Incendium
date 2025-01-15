@@ -24,5 +24,6 @@ void _update_spawns();
 void _update_player();
 void _render_player();
 void _render_spawns();
+void _render_map();
 
 #endif

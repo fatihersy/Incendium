@@ -1,21 +1,22 @@
 #include "player.h"
+#include <defines.h>
 
 #include "core/event.h"
 #include "core/fmemory.h"
 
-#include "defines.h"
 #include "game/ability.h"
-#include "raylib.h"
 
 
 // To avoid dublicate symbol errors. Implementation in defines.h
 extern const u32 level_curve[MAX_PLAYER_LEVEL+1];
 static player_state* player;
 
-#define PSPRITESHEET_SYSTEM player
+#define PSPRITESHEET_SYSTEM player // Don't forget undef at the bottom of the file
 #include "game/spritesheet.h"
 
 void play_anim(spritesheet_type player_anim_sheet);
+void add_exp_to_player(u32 exp);
+void take_damage(u16 damage);
 
 bool player_system_on_event(u16 code, void* sender, void* listener_inst, event_context context);
 
@@ -31,7 +32,7 @@ bool player_system_initialize() {
 
     event_register(EVENT_CODE_PLAYER_ADD_EXP, 0, player_system_on_event);
     event_register(EVENT_CODE_PLAYER_SET_POSITION, 0, player_system_on_event);
-    event_register(EVENT_CODE_PLAYER_DEAL_DAMAGE, 0, player_system_on_event);
+    event_register(EVENT_CODE_PLAYER_TAKE_DAMAGE, 0, player_system_on_event);
 
     player->position.x = 0;
     player->position.y = 0;
@@ -65,6 +66,7 @@ bool player_system_initialize() {
     player->exp_current = 0;
     player->health_max = 255;
     player->health_current = player->health_max;
+    player->health_perc = (float) player->health_current / player->health_max;
 
     player->move_left_sprite_queue_index = register_sprite(PLAYER_ANIMATION_MOVE_LEFT, true, false, true);
     player->move_right_sprite_queue_index = register_sprite(PLAYER_ANIMATION_MOVE_RIGHT, true, false, true);
@@ -76,7 +78,7 @@ bool player_system_initialize() {
     player->wreck_right_sprite_queue_index = register_sprite(PLAYER_ANIMATION_WRECK_RIGHT, true, false, true);
     player->last_played_sprite_id = player->idle_left_sprite_queue_index; // The position player starts. To avoid from the error when move firstly called
     
-    player->initialized = true;
+    player->is_initialized = true;
     return true;
 }
 
@@ -113,19 +115,31 @@ void add_exp_to_player(u32 exp) {
         player->exp_current = (curr + exp) - to_next;
         player->level++;
         player->exp_to_next_level = level_curve[player->level];
-        player->player_have_skill_points = true;
+        player->is_player_have_skill_points = true;
         //play_sprite_on_player(player->);
     }
     else {
         player->exp_current += exp;
     }
+
+    player->exp_perc = (float) player->exp_current / player->exp_to_next_level;
+}
+void take_damage(u16 damage) {
+    if(!player->is_damagable) return;
+    if(player->health_current - damage > 0) {
+        player->health_current -= damage;
+        player->is_damagable = false;
+    }
+    else {
+        player->health_current = 0;
+        player->is_dead = true;
+    }
+
+    player->health_perc = (float) player->health_current / player->health_max;
 }
 
 bool update_player(scene_type _scene_data) {
     if (!player) return false;
-
-    player->health_perc = (float) player->health_current / player->health_max;
-    player->exp_perc = (float) player->exp_current / player->exp_to_next_level;
 
     if (player->is_dead) {
         event_fire(EVENT_CODE_PAUSE_GAME, 0, (event_context){0});
@@ -276,6 +290,10 @@ bool player_system_on_event(u16 code, void* sender, void* listener_inst, event_c
     switch (code) {
         case EVENT_CODE_PLAYER_ADD_EXP: {
             add_exp_to_player(context.data.u32[0]);
+            event_fire(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, 0, (event_context){
+                .data.f32[0] = PRG_BAR_ID_PLAYER_EXPERIANCE,
+                .data.f32[1] = player->exp_perc,
+            });
             return true;
         }
         case EVENT_CODE_PLAYER_SET_POSITION: {
@@ -285,17 +303,12 @@ bool player_system_on_event(u16 code, void* sender, void* listener_inst, event_c
             player->collision.y = player->position.y; 
             return true;
         }
-        case EVENT_CODE_PLAYER_DEAL_DAMAGE: {
-            if(!player->is_damagable) return true;
-            if(player->health_current - context.data.u8[0] > 0)
-            {
-                player->health_current -= context.data.u8[0];
-                player->is_damagable = false;
-
-                return true;
-            }
-            player->health_current = 0;
-            player->is_dead = true;
+        case EVENT_CODE_PLAYER_TAKE_DAMAGE: {
+            take_damage(context.data.u8[0]);
+            event_fire(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, 0, (event_context){
+                .data.f32[0] = PRG_BAR_ID_PLAYER_HEALTH,
+                .data.f32[1] = player->health_perc,
+            });
             return true;
         }
         default: return false; // TODO: Warn
@@ -303,8 +316,6 @@ bool player_system_on_event(u16 code, void* sender, void* listener_inst, event_c
 
     return false;
 }
-
-
 
 #undef PSPRITESHEET_SYSTEM
 

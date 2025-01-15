@@ -7,7 +7,6 @@
 
 #include "game/tilemap.h"
 #include "game/user_interface.h"
-#include "raylib.h"
 
 
 typedef struct scene_editor_state {
@@ -24,11 +23,11 @@ typedef struct scene_editor_state {
 
 static scene_editor_state *state;
 
-void update_bindings();
-void update_movement();
-void update_zoom_controls();
-void update_mouse_bindings();
-void update_keyboard_bindings();
+void editor_update_bindings();
+void editor_update_movement();
+void editor_update_zoom_controls();
+void editor_update_mouse_bindings();
+void editor_update_keyboard_bindings();
 
 void initialize_scene_editor(Camera2D* _camera) {
   if (state) {
@@ -53,7 +52,7 @@ void initialize_scene_editor(Camera2D* _camera) {
 }
 
 void update_scene_editor() {
-  update_bindings();
+  editor_update_bindings();
   update_user_interface();
 }
 
@@ -88,13 +87,13 @@ void render_interface_editor() {
   render_user_interface();
 }
 
-void update_bindings() {
-  update_mouse_bindings();
-  update_keyboard_bindings();
+void editor_update_bindings() {
+  editor_update_mouse_bindings();
+  editor_update_keyboard_bindings();
 }
 
-void update_mouse_bindings() { 
-  update_zoom_controls();
+void editor_update_mouse_bindings() { 
+  editor_update_zoom_controls();
 
   if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON) && state->b_show_tilesheet_tile_selection_screen && !state->b_is_a_tile_selected) {
     tilemap_tile tile = get_tile_from_sheet_by_mouse_pos(&state->palette, GetMousePosition());
@@ -115,8 +114,8 @@ void update_mouse_bindings() {
     state->b_is_a_tile_selected = false;
   }
 }
-void update_keyboard_bindings() {
-  update_movement();
+void editor_update_keyboard_bindings() {
+  editor_update_movement();
 
   if (IsKeyReleased(KEY_TAB)) {
     state->b_show_tilesheet_tile_selection_screen = !state->b_show_tilesheet_tile_selection_screen;
@@ -128,14 +127,14 @@ void update_keyboard_bindings() {
 
 }
 
-void update_zoom_controls() {
+void editor_update_zoom_controls() {
 
   state->camera->zoom += ((float)GetMouseWheelMove()*0.05f);
 
   if (state->camera->zoom > 3.0f) state->camera->zoom = 3.0f;
   else if (state->camera->zoom < 0.1f) state->camera->zoom = 0.1f;
 }
-void update_movement() {
+void editor_update_movement() {
   f32 speed = 10;
 
   if (IsKeyDown(KEY_W)) {

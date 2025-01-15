@@ -1,10 +1,10 @@
 #include "tilemap.h"
+#include "defines.h"
 
 #include "core/fmemory.h"
 
-#include "defines.h"
 #include "game/resource.h"
-#include "raylib.h"
+
 
 
 void FDrawGrid(tilemap* _tilemap);
@@ -298,6 +298,12 @@ void str_to_map(tilemap* map, tilemap_stringtify_package* out_package) {
   out_package->is_success = true;
 }
 
+/**
+ * @brief Saves at "%s%s", RESOURCE_PATH, "map.txt"
+ * 
+ * @param map in_map
+ * @param out_package Needed because of the local variable array limit. Array must be defined at initialization. Also extracts map data and operation results.
+ */
 bool save_map_data(tilemap* map, tilemap_stringtify_package* out_package) {
   map_to_str(map, out_package);
   if (out_package->is_success) {
@@ -309,6 +315,12 @@ bool save_map_data(tilemap* map, tilemap_stringtify_package* out_package) {
   }
 }
 
+/**
+ * @brief Loads from "%s%s", RESOURCE_PATH, "map.txt"
+ * 
+ * @param map out_map
+ * @param out_package Needed because of the local variable array limit. Array must be defined at initialization. Also extracts map data and operation results.
+ */
 bool load_map_data(tilemap* map, tilemap_stringtify_package* out_package) {
   int size = (int)sizeof(out_package->str);
   const u8* _str = LoadFileData(rs_path("map.txt"), &size);

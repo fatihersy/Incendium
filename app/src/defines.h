@@ -8,7 +8,7 @@
 #define TOTAL_ALLOCATED_MEMORY 64 * 1024 * 1024
 #define TARGET_FPS 60
 #define MAX_SPRITE_RENDERQUEUE 50
-#define CLEAR_BACKGROUND_COLOR BROWN
+#define CLEAR_BACKGROUND_COLOR BLACK
 
 #define INI_FILE_MAX_FILE_SIZE 32000
 #define INI_FILE_MAX_SECTION_NAME_LENGTH 32
@@ -37,6 +37,9 @@
 #define MAX_TILEMAP_TILESLOT_Y 255
 #define MAX_TILEMAP_TILESLOT MAX_TILEMAP_TILESLOT_X * MAX_TILEMAP_TILESLOT_Y
 #define TILEMAP_TILE_START_SYMBOL 0x21 // Refers to ASCII exclamation mark. First visible character on the chart. To debug.
+
+#define MAX_ITEM_ACTOR_NAME_LENGHT 10
+#define MAX_INVENTORY_SLOTS 50
 
 #define MAX_PLAYER_LEVEL 100
 #define MAX_SPAWN_COUNT 100
@@ -243,6 +246,7 @@ typedef enum button_id {
 
 typedef enum progress_bar_id {
   PRG_BAR_ID_UNDEFINED,
+  PRG_BAR_ID_PLAYER_HEALTH,
   PRG_BAR_ID_PLAYER_EXPERIANCE,
   PRG_BAR_ID_MAX
 } progress_bar_id;
@@ -579,12 +583,21 @@ typedef struct ability_system_state {
   u16 salvo_fire_rate;
 } ability_system_state;
 
+typedef struct item_actor {
+  i8 name[MAX_ITEM_ACTOR_NAME_LENGHT];
+  texture_id icon_texture_id;
+} item_actor;
+
+typedef struct inventory_state {
+  item_actor content[MAX_INVENTORY_SLOTS];
+  u16 item_count;
+} inventory_state;
+
 typedef struct player_state {
-  bool initialized;
-  bool player_have_skill_points;
-  bool is_moving;
-  bool is_dead;
-  bool is_damagable;
+  Rectangle collision;
+  ability_system_state ability_system;
+  spritesheet_play_system spritesheet_system;
+  inventory_state inventory;
 
   Vector2 position;
   Vector2 dimentions;
@@ -611,9 +624,11 @@ typedef struct player_state {
   float damage_break_time;
   float damage_break_current;
 
-  Rectangle collision;
-  ability_system_state ability_system;
-  spritesheet_play_system spritesheet_system;
+  bool is_player_have_skill_points;
+  bool is_initialized;
+  bool is_moving;
+  bool is_dead;
+  bool is_damagable;
 } player_state;
 
 typedef struct spawn_system_state {
@@ -625,6 +640,8 @@ typedef struct game_manager_system_state {
   rectangle_collision spawn_collisions[MAX_SPAWN_COUNT];
   u16 spawn_collision_count;
   scene_type scene_data;
+  tilemap_stringtify_package map_str_package;
+  tilemap map;
 
   bool is_game_paused;
   bool game_manager_initialized;
