@@ -45,26 +45,28 @@ void render_scene_main_menu() {
 }
 
 void render_interface_main_menu() {
+  Font* ui_font = user_interface_state_get_font();
+
   if (state->type == MAIN_MENU_SCENE_DEFAULT) {
-    if (gui_button("Play", BTN_ID_MAINMENU_BUTTON_PLAY)) {
+    if (gui_button("Play", BTN_ID_MAINMENU_BUTTON_PLAY, ui_font->baseSize)) {
       event_fire(EVENT_CODE_SCENE_IN_GAME, 0, (event_context){0});
     }
-    if (gui_button("Editor", BTN_ID_MAINMENU_BUTTON_EDITOR)) {
+    if (gui_button("Editor", BTN_ID_MAINMENU_BUTTON_EDITOR, ui_font->baseSize)) {
       event_fire(EVENT_CODE_SCENE_EDITOR, 0, (event_context){0});
     }
-    if (gui_button("Settings", BTN_ID_MAINMENU_BUTTON_SETTINGS)) {
+    if (gui_button("Settings", BTN_ID_MAINMENU_BUTTON_SETTINGS, ui_font->baseSize)) {
       state->type = MAIN_MENU_SCENE_SETTINGS;
       event_fire(EVENT_CODE_UI_SHOW_SETTINGS_MENU, 0, (event_context) {0});
     }
-    if (gui_button("Extras", BTN_ID_MAINMENU_BUTTON_EXTRAS)) {
+    if (gui_button("Extras", BTN_ID_MAINMENU_BUTTON_EXTRAS, ui_font->baseSize)) {
     
     }
-    if (gui_button("Exit", BTN_ID_MAINMENU_BUTTON_EXIT)) {
+    if (gui_button("Exit", BTN_ID_MAINMENU_BUTTON_EXIT, ui_font->baseSize)) {
       event_fire(EVENT_CODE_APPLICATION_QUIT, 0, (event_context){0});
     }
   }
   if (state->type == MAIN_MENU_SCENE_SETTINGS) {
-    if(gui_button("Cancel", BTN_ID_SETTINGS_APPLY_SETTINGS_BUTTON)) {
+    if(gui_button("Cancel", BTN_ID_SETTINGS_APPLY_SETTINGS_BUTTON, ui_font->baseSize)) {
       state->type = MAIN_MENU_SCENE_DEFAULT;
       event_fire(EVENT_CODE_UI_SHOW_SETTINGS_MENU, 0, (event_context) {0});
     }

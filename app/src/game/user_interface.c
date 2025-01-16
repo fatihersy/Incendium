@@ -7,8 +7,10 @@
 
 #include "fshader.h"
 
-#define SPACE_BTW_Y(i, DIM_Y) (DIM_Y + DIM_Y/3.f) * i
-#define SPACE_BTW_X(i, DIM_X) (DIM_X + DIM_X/3.f) * i
+#define SPACE_BTW_V(OFFSET_X, OFFSET_Y, POS, DIM, f) ((Vector2){ \
+    .x = (POS).x - ((DIM).x / 2.0f) + (((DIM).x / (f)) * (OFFSET_X)), \
+    .y = (POS).y - ((DIM).y / 2.0f) + (((DIM).y / (f)) * (OFFSET_Y)) \
+})
 
 typedef struct user_interface_system_state {
   spritesheet_play_system spritesheet_system;
@@ -50,14 +52,20 @@ void draw_texture_regular(texture_id _id, Rectangle dest, Color tint, bool shoul
 void draw_texture_npatch(texture_id _id, Rectangle dest, Vector4 offsets, bool should_center);
 void gui_draw_settings_screen();
 
-void register_button(Vector2 _attached_position, Vector2 offset, button_id _btn_id, button_type_id _btn_type_id);
-void register_button_type(button_type_id _btn_type_id, spritesheet_type _ss_type, Vector2 frame_dim, f32 _scale, bool _play_reflection, bool _play_crt, bool _should_center);
+void _register_button(Vector2 _attached_position, button_id _btn_id, button_type_id _btn_type_id);
+void register_button_type(button_type_id _btn_type_id, spritesheet_type _ss_type, Vector2 frame_dim, Vector2 on_click_text_offset, f32 _scale, bool _play_reflection, bool _play_crt, bool _should_center);
 void register_progress_bar(progress_bar_id _id, progress_bar_type_id _type_id, f32 width_multiply, Vector2 scale);
 void register_progress_bar_type(progress_bar_type_id _type_id, texture_id _body_inside, texture_id _body_outside, shader_id _mask_shader_id);
-void register_slider(Vector2 _pos, Vector2 offset, slider_id _sdr_id, slider_type_id _sdr_type_id, button_id _left_btn_id, button_id _right_btn_id, bool _is_clickable);
-void register_slider_type(slider_type_id _sdr_type_id, spritesheet_type _ss_sdr_body_type, f32 _scale, u16 _width_multiply, button_type_id _left_btn_type_id, button_type_id _right_btn_type_id, bool _should_center, u16 _char_limit);
+void _register_slider(Vector2 _pos, slider_id _sdr_id, slider_type_id _sdr_type_id, button_id _left_btn_id, button_id _right_btn_id, bool _is_clickable);
+void register_slider_type(slider_type_id _sdr_type_id, spritesheet_type _ss_sdr_body_type, f32 _scale, u16 _width_multiply, button_type_id _left_btn_type_id, button_type_id _right_btn_type_id, u16 _char_limit);
 
-Rectangle   get_texture_source_rect(texture_id _id);
+#define register_button(BTN_ID, BTN_TYPE_ID, POS, OFFSET_X, OFFSET_Y, F) \
+  _register_button( SPACE_BTW_V( OFFSET_X, OFFSET_Y, POS, state->button_types[BTN_TYPE_ID].dest_frame_dim, F), BTN_ID, BTN_TYPE_ID) 
+
+#define register_slider(SDR_ID, SDR_TYPE_ID, POS, OFFSET, F, LEFT_BTN_ID, RIGHT_BTN_ID, IS_CLICKABLE) \
+  _register_slider(SPACE_BTW_V( OFFSET.x, OFFSET.y, POS, state->slider_types[SDR_TYPE_ID].whole_body_width, F), SDR_ID, SDR_TYPE_ID, LEFT_BTN_ID, RIGHT_BTN_ID, IS_CLICKABLE) 
+
+Rectangle get_texture_source_rect(texture_id _id);
 
 void user_interface_system_initialize() {
   if (state) return;
@@ -79,24 +87,24 @@ void user_interface_system_initialize() {
   {  
   register_button_type(
     BTN_TYPE_MENU_BUTTON, MENU_BUTTON, 
-    (Vector2){80, 16}, DEFAULT_MENU_BUTTON_SCALE, 
-    true, true, true
-  );
+    (Vector2){80, 16}, (Vector2){0, 3}, 
+    DEFAULT_MENU_BUTTON_SCALE, true, true, false);
   register_button_type(
     BTN_TYPE_MENU_BUTTON_NO_CRT, MENU_BUTTON, 
-    (Vector2){80, 16}, DEFAULT_MENU_BUTTON_SCALE, 
-    true, false, true
-  );
+    (Vector2){80, 16}, (Vector2){0, 3}, 
+    DEFAULT_MENU_BUTTON_SCALE, true, false, false);
   register_button_type(
     BTN_TYPE_SLIDER_LEFT_BUTTON, SLIDER_LEFT_BUTTON, 
-    (Vector2){10, 10}, DEFAULT_MENU_BUTTON_SCALE, 
-    false, false, false
-  );
+    (Vector2){10, 10}, (Vector2){0, 0}, 
+    DEFAULT_MENU_BUTTON_SCALE, false, false, false);
   register_button_type(
     BTN_TYPE_SLIDER_RIGHT_BUTTON, SLIDER_RIGHT_BUTTON, 
-    (Vector2){10, 10}, DEFAULT_MENU_BUTTON_SCALE, 
-    false, false, false
-  );
+    (Vector2){10, 10}, (Vector2){0, 0}, 
+    DEFAULT_MENU_BUTTON_SCALE, false, false, false);
+  register_button_type(
+    BTN_TYPE_FLAT_BUTTON, FLAT_BUTTON, 
+    (Vector2){44, 14}, (Vector2){0, 0}, 
+    2, false, false, false);
   }
   // BUTTON TYPES
 
@@ -105,14 +113,12 @@ void user_interface_system_initialize() {
   register_slider_type(
     SDR_TYPE_PERCENT, SLIDER_PERCENT, 
     DEFAULT_MENU_BUTTON_SCALE, DEFAULT_MENU_BUTTON_SCALE,
-    BTN_TYPE_SLIDER_LEFT_BUTTON, BTN_TYPE_SLIDER_RIGHT_BUTTON,
-    true, 6
+    BTN_TYPE_SLIDER_LEFT_BUTTON, BTN_TYPE_SLIDER_RIGHT_BUTTON, 6
   );
   register_slider_type(
     SDR_TYPE_OPTION, SLIDER_OPTION, 
     DEFAULT_MENU_BUTTON_SCALE, 2,
-    BTN_TYPE_SLIDER_LEFT_BUTTON, BTN_TYPE_SLIDER_RIGHT_BUTTON,
-    true, 6
+    BTN_TYPE_SLIDER_LEFT_BUTTON, BTN_TYPE_SLIDER_RIGHT_BUTTON, 6
   );
   }
   // SLIDER TYPES
@@ -144,11 +150,6 @@ void user_interface_system_initialize() {
   }
   // PROGRES BARS
 
-  // PANELS
-  {
-  }
-  // PANELS
-
   // IN GAME
   {
   }
@@ -156,78 +157,47 @@ void user_interface_system_initialize() {
 
   // MAIN MENU
   {  
-  register_button(
-    get_resolution_div2(), (Vector2) {0,0 },
-    BTN_ID_MAINMENU_BUTTON_PLAY, BTN_TYPE_MENU_BUTTON_NO_CRT);
-
-  register_button(
-    get_resolution_div2(), (Vector2) {0,1 },
-    BTN_ID_MAINMENU_BUTTON_EDITOR, BTN_TYPE_MENU_BUTTON_NO_CRT);
-
-  register_button(
-    get_resolution_div2(), (Vector2) {0,2 },
-    BTN_ID_MAINMENU_BUTTON_SETTINGS, BTN_TYPE_MENU_BUTTON_NO_CRT);
-
-  register_button(
-    get_resolution_div2(), (Vector2) {0,3 },
-    BTN_ID_MAINMENU_BUTTON_EXTRAS, BTN_TYPE_MENU_BUTTON_NO_CRT);
-
-  register_button(
-    get_resolution_div2(), (Vector2) {0,4 },
-    BTN_ID_MAINMENU_BUTTON_EXIT, BTN_TYPE_MENU_BUTTON_NO_CRT);
+  register_button(BTN_ID_MAINMENU_BUTTON_PLAY,     BTN_TYPE_MENU_BUTTON_NO_CRT, get_resolution_div2(), 0,  0, 3.f);
+  register_button(BTN_ID_MAINMENU_BUTTON_EDITOR,   BTN_TYPE_MENU_BUTTON_NO_CRT, get_resolution_div2(), 0,  4, 3.f);
+  register_button(BTN_ID_MAINMENU_BUTTON_SETTINGS, BTN_TYPE_MENU_BUTTON_NO_CRT, get_resolution_div2(), 0,  8, 3.f);
+  register_button(BTN_ID_MAINMENU_BUTTON_EXTRAS,   BTN_TYPE_MENU_BUTTON_NO_CRT, get_resolution_div2(), 0, 12, 3.f);
+  register_button(BTN_ID_MAINMENU_BUTTON_EXIT,     BTN_TYPE_MENU_BUTTON_NO_CRT, get_resolution_div2(), 0, 16, 3.f);
   }
   // MAIN MENU
 
   // EDITOR
   {
-  register_button(
-    get_resolution_div2(), (Vector2) {0,1 },
-    BTN_ID_EDITOR_BUTTON_LOAD_MAP, BTN_TYPE_MENU_BUTTON);
-
-  register_button(
-    get_resolution_div2(), (Vector2) {0,2 },
-    BTN_ID_EDITOR_BUTTON_SAVE_MAP, BTN_TYPE_MENU_BUTTON);
+  register_button(BTN_ID_EDITOR_BUTTON_LOAD_MAP, BTN_TYPE_MENU_BUTTON, get_resolution_div2(), 0, 1, 3.f);
+  register_button(BTN_ID_EDITOR_BUTTON_SAVE_MAP, BTN_TYPE_MENU_BUTTON, get_resolution_div2(), 0, 3, 3.f);
   }
   // EDITOR
-  
+
   // USER INTERFACE
-  {  
-  register_button(
-    get_resolution_div2(), (Vector2) {0,-1 },
-    BTN_ID_PAUSEMENU_BUTTON_RESUME, BTN_TYPE_MENU_BUTTON);
-  register_button(
-    get_resolution_div2(), (Vector2) {0,0 },
-    BTN_ID_PAUSEMENU_BUTTON_SETTINGS, BTN_TYPE_MENU_BUTTON);
-  register_button(
-    get_resolution_div2(), (Vector2) {0,1 },
-    BTN_ID_PAUSEMENU_BUTTON_MAIN_MENU, BTN_TYPE_MENU_BUTTON);
-  register_button(
-    get_resolution_div2(), (Vector2) {0,2 },
-    BTN_ID_PAUSEMENU_BUTTON_EXIT, BTN_TYPE_MENU_BUTTON);
+  {
+  register_button(BTN_ID_PAUSEMENU_BUTTON_INVENTORY,   BTN_TYPE_FLAT_BUTTON, get_resolution_div2(), -3.00f, -7.5f, 1.f);
+  register_button(BTN_ID_PAUSEMENU_BUTTON_TECHNOLOGIES,BTN_TYPE_FLAT_BUTTON, get_resolution_div2(), -1.50f, -7.5f, 1.f);
+  register_button(BTN_ID_PAUSEMENU_BUTTON_SETTINGS,    BTN_TYPE_FLAT_BUTTON, get_resolution_div2(),  0.00f, -7.5f, 1.f);
+  register_button(BTN_ID_PAUSEMENU_BUTTON_CREDITS,     BTN_TYPE_FLAT_BUTTON, get_resolution_div2(),  1.50f, -7.5f, 1.f);
+  register_button(BTN_ID_PAUSEMENU_BUTTON_EXIT,        BTN_TYPE_FLAT_BUTTON, get_resolution_div2(),  3.00f, -7.5f, 1.f);
   }
   // USER INTERFACE
 
   // SETTINGS
   {
   register_slider(
-    get_resolution_div2(), (Vector2) {0}, 
     SDR_ID_SETTINGS_SOUND_SLIDER,  SDR_TYPE_PERCENT, 
+    get_resolution_div2(), ((Vector2) {0, 0}), 3.f, 
     BTN_ID_SETTINGS_SLIDER_SOUND_LEFT_BUTTON, BTN_ID_SETTINGS_SLIDER_SOUND_RIGHT_BUTTON, true);
   register_slider(
-    get_resolution_div2(), (Vector2) {0,1}, 
     SDR_ID_SETTINGS_RES_SLIDER,  SDR_TYPE_OPTION, 
+    get_resolution_div2(), ((Vector2) {0, 5}), 3.f, 
     BTN_ID_SETTINGS_SLIDER_RES_LEFT_BUTTON, BTN_ID_SETTINGS_SLIDER_RES_RIGHT_BUTTON, false);
   register_slider(
-    get_resolution_div2(), (Vector2) {0,2}, 
     SDR_ID_SETTINGS_WIN_MODE_SLIDER,  SDR_TYPE_OPTION, 
+    get_resolution_div2(), ((Vector2) {0, 10}), 3.f, 
     BTN_ID_SETTINGS_SLIDER_WIN_MODE_LEFT_BUTTON, BTN_ID_SETTINGS_SLIDER_WIN_MODE_RIGHT_BUTTON, false);
-  register_button(
-    get_resolution_div2(), (Vector2) {-1,5 },
-    BTN_ID_SETTINGS_APPLY_SETTINGS_BUTTON, BTN_TYPE_MENU_BUTTON);
-  
-  register_button(
-    get_resolution_div2(), (Vector2) {1,5 },
-    BTN_ID_MAIN_MENU_SETTINGS_CANCEL_SETTINGS_BUTTON, BTN_TYPE_MENU_BUTTON);
+  register_button(BTN_ID_SETTINGS_APPLY_SETTINGS_BUTTON, BTN_TYPE_MENU_BUTTON,            get_resolution_div2(), -2, 15, 3.f);
+  register_button(BTN_ID_MAIN_MENU_SETTINGS_CANCEL_SETTINGS_BUTTON, BTN_TYPE_MENU_BUTTON, get_resolution_div2(),  2, 15, 3.f);
   }
   // SETTINGS
 
@@ -357,7 +327,7 @@ void render_user_interface() {
   }
 }
 
-bool gui_button(const char* text, button_id _id) {
+bool gui_button(const char* text, button_id _id, f32 font_size) {
   if (_id >= BTN_ID_MAX || _id <= BTN_ID_UNDEFINED) {
     TraceLog(LOG_WARNING, "WARNING::user_interface::gui_button()::Recieved button type out of bound");
     return false;
@@ -375,10 +345,10 @@ bool gui_button(const char* text, button_id _id) {
   Vector2 text_pos;
 
   if (!TextIsEqual(text, "")) {
-    text_measure = MeasureTextEx(state->ui_font, text, state->ui_font.baseSize, UI_FONT_SPACING);
+    text_measure = MeasureTextEx(state->ui_font, text, font_size, UI_FONT_SPACING);
     text_pos = (Vector2) {
-    _btn->dest.x + _btn->dest.width /2.f - text_measure.x / 2.f, 
-    _btn->dest.y + _btn->dest.height/2.f - text_measure.y / 2.f
+      .x = _btn->dest.x + (_btn->dest.width / 2.f) - (text_measure.x / 2.f),
+      .y = _btn->dest.y + (_btn->dest.height / 2.f) - (text_measure.y / 2.f)
     };
   }
 
@@ -391,8 +361,8 @@ bool gui_button(const char* text, button_id _id) {
     draw_sprite_on_site(_btn->btn_type.ss_type, WHITE, pos, draw_sprite_scale, 1, false);
     if (!TextIsEqual(text, "")) {
       DrawTextEx(state->ui_font, text,
-        (Vector2){.x = text_pos.x, .y = text_pos.y + 3},
-        state->ui_font.baseSize, UI_FONT_SPACING,
+        (Vector2){.x = text_pos.x + _btn_type->text_offset_on_click.x, .y = text_pos.y + _btn_type->text_offset_on_click.y},
+        font_size, UI_FONT_SPACING,
         MYYELLOW);
     }
   } else {
@@ -401,9 +371,10 @@ bool gui_button(const char* text, button_id _id) {
       _btn_type->play_reflection ? play_sprite_on_site(_btn->reflection_render_index, WHITE, _btn->dest) : 0;
     }
     if (!TextIsEqual(text, "")) {
-      DrawTextEx(state->ui_font, text,
-        (Vector2){.x = text_pos.x, .y = text_pos.y - 3},
-        state->ui_font.baseSize, UI_FONT_SPACING,
+      DrawTextEx(
+        state->ui_font, text,
+        text_pos,
+        font_size, UI_FONT_SPACING,
         MYYELLOW);
     }
   }
@@ -503,13 +474,13 @@ void gui_slider(slider_id _id) {
 
   draw_slider_body(sdr);
 
-  if(sdr_type.left_btn_id != 0) if (gui_button("", sdr_type.left_btn_id)) {
+  if(sdr_type.left_btn_id != 0) if (gui_button("", sdr_type.left_btn_id, state->ui_font.baseSize)) {
     if (sdr->current_value > sdr->min_value) {
       sdr->current_value--;
     }
   }
 
-  if(sdr_type.right_btn_id != 0) if (gui_button("", sdr_type.right_btn_id)) {
+  if(sdr_type.right_btn_id != 0) if (gui_button("", sdr_type.right_btn_id, state->ui_font.baseSize)) {
     if (sdr->current_value < sdr->max_value-1) {
       sdr->current_value++;
     }
@@ -580,7 +551,7 @@ void gui_draw_settings_screen() {
 
   gui_slider(SDR_ID_SETTINGS_WIN_MODE_SLIDER);
 
-  if(gui_button("Apply", BTN_ID_MAIN_MENU_SETTINGS_CANCEL_SETTINGS_BUTTON)) {
+  if(gui_button("Apply", BTN_ID_MAIN_MENU_SETTINGS_CANCEL_SETTINGS_BUTTON, state->ui_font.baseSize)) {
     slider sdr_win_mode = state->sliders[SDR_ID_SETTINGS_WIN_MODE_SLIDER];
     i32 window_mod = sdr_win_mode.options[sdr_win_mode.current_value].content.data.i32[0];
 
@@ -605,17 +576,19 @@ void gui_draw_pause_screen() {
   draw_texture_regular(TEX_ID_CRIMSON_FANTASY_PANEL_BG, dest, (Color) {255, 255, 255, 200}, true);
   draw_texture_npatch(TEX_ID_CRIMSON_FANTASY_PANEL, dest, (Vector4) {6, 6, 6, 6}, true);
 
-  if (gui_button("Resume", BTN_ID_PAUSEMENU_BUTTON_RESUME)) {
+  if (gui_button("Inventory", BTN_ID_PAUSEMENU_BUTTON_INVENTORY, state->ui_font_size_38div20)) {
     state->b_show_pause_menu = !state->b_show_pause_menu;
   }
-  if (gui_button("Settings", BTN_ID_PAUSEMENU_BUTTON_SETTINGS)) {
+  if (gui_button("Technologies", BTN_ID_PAUSEMENU_BUTTON_TECHNOLOGIES, state->ui_font_size_38div20)) {
+
+  }
+  if (gui_button("Settings", BTN_ID_PAUSEMENU_BUTTON_SETTINGS, state->ui_font_size_38div20)) {
     
   }
-  if (gui_button("Main Menu", BTN_ID_PAUSEMENU_BUTTON_MAIN_MENU)) {
-    state->b_show_pause_menu = false;
-    event_fire(EVENT_CODE_SCENE_MAIN_MENU, 0, (event_context) {0});
+  if (gui_button("Credits", BTN_ID_PAUSEMENU_BUTTON_CREDITS, state->ui_font_size_38div20)) {
+    
   }
-  if (gui_button("Exit", BTN_ID_PAUSEMENU_BUTTON_EXIT)) {
+  if (gui_button("Exit", BTN_ID_PAUSEMENU_BUTTON_EXIT, state->ui_font_size_38div20)) {
     event_fire(EVENT_CODE_APPLICATION_QUIT, 0, (event_context) {0});
   }
 }
@@ -639,29 +612,30 @@ bool gui_slider_add_option(slider_id _id, const char* _display_text, data_pack c
 
   return true;
 }
-void register_button_type(button_type_id _btn_type_id, spritesheet_type _ss_type, Vector2 frame_dim, f32 _scale, bool _play_reflection, bool _play_crt, bool _should_center) {
+void register_button_type(button_type_id _btn_type_id, spritesheet_type _ss_type, Vector2 frame_dim, Vector2 on_click_text_offset, f32 _scale, bool _play_reflection, bool _play_crt, bool _should_center) {
   if (_ss_type     >= SPRITESHEET_TYPE_MAX || _ss_type <= SPRITESHEET_UNSPECIFIED || 
       _btn_type_id >= BTN_TYPE_MAX         || _btn_type_id <= BTN_TYPE_UNDEFINED  ||
       !state) {
     TraceLog(LOG_WARNING, "WARNING::user_interface::register_button_type()::Recieved id was out of bound");
     return;
   }
-
   button_type btn_type = {
     .id = _btn_type_id,
     .scale = _scale,
     .ss_type = _ss_type,
-    .source_frame_dim = (Vector2) {
-      .x = frame_dim.x, .y = frame_dim.y
-    },
+    .source_frame_dim = frame_dim,
+    .text_offset_on_click = on_click_text_offset,
     .play_crt = _play_crt,
     .play_reflection = _play_reflection,
-    .should_center = _should_center
+    .should_center = _should_center,
+    .dest_frame_dim = (Vector2) {
+      .x = frame_dim.x * _scale,
+      .y = frame_dim.y * _scale,
+    }
   };
-
   state->button_types[_btn_type_id] = btn_type;
 }
-void register_button(Vector2 _attached_position, Vector2 offset, button_id _btn_id, button_type_id _btn_type_id) {
+void _register_button(Vector2 _attached_position, button_id _btn_id, button_type_id _btn_type_id) {
   if (_btn_id      >= BTN_ID_MAX   || _btn_id      <= BTN_ID_UNDEFINED   || 
       _btn_type_id >= BTN_TYPE_MAX || _btn_type_id <= BTN_TYPE_UNDEFINED || !state) 
   {
@@ -671,21 +645,17 @@ void register_button(Vector2 _attached_position, Vector2 offset, button_id _btn_
 
   button_type* _btn_type = &state->button_types[_btn_type_id];
 
-  u16 width = _btn_type->source_frame_dim.x * _btn_type->scale;
-  u16 height = _btn_type->source_frame_dim.y * _btn_type->scale;
-  f32 pos_x = _attached_position.x + SPACE_BTW_X(offset.x, width);
-  f32 pos_y = _attached_position.y + SPACE_BTW_Y(offset.y, height);
   if (_btn_type->should_center) {
-    pos_x -= width/2.f;
-    pos_y -= height/2.f;
+    _attached_position.x -= _btn_type->dest_frame_dim.x/2.f;
+    _attached_position.y -= _btn_type->dest_frame_dim.y/2.f;
   }
 
   button btn = {
     .id = _btn_id,
     .btn_type = state->button_types[_btn_type_id],
     .dest = (Rectangle) {
-      .x = pos_x, .y = pos_y,
-      .width = width, .height = height
+      .x = _attached_position.x, .y = _attached_position.y,
+      .width = _btn_type->dest_frame_dim.x, .height = _btn_type->dest_frame_dim.y
     },
     .state = BTN_STATE_UP,
     .crt_render_index = _btn_type->play_crt 
@@ -737,7 +707,7 @@ void register_progress_bar_type(progress_bar_type_id _type_id, texture_id _body_
 }
 void register_slider_type(
   slider_type_id _sdr_type_id, spritesheet_type _ss_sdr_body_type, f32 _scale, u16 _width_multiply,
-  button_type_id _left_btn_type_id, button_type_id _right_btn_type_id, bool _should_center, u16 _char_limit) {
+  button_type_id _left_btn_type_id, button_type_id _right_btn_type_id, u16 _char_limit) {
     if (_ss_sdr_body_type >= SPRITESHEET_TYPE_MAX || _ss_sdr_body_type <= SPRITESHEET_UNSPECIFIED || 
         _sdr_type_id      >= SDR_TYPE_MAX         || _sdr_type_id      <= SDR_TYPE_UNDEFINED      ||
         _left_btn_type_id >= BTN_TYPE_MAX         || _left_btn_type_id <= BTN_TYPE_UNDEFINED      ||
@@ -767,16 +737,17 @@ void register_slider_type(
     .body_height = ss_body.current_frame_rect.height * _scale,
     .width_multiply = _width_multiply,
     .char_limit = _scale * _char_limit,
-    .should_center = _should_center
   };
+  sdr_type.whole_body_width.x = (sdr_type.body_width * sdr_type.width_multiply) + sdr_type.left_btn_width + sdr_type.right_btn_width;
+  sdr_type.whole_body_width.y = sdr_type.body_height;
 
   state->slider_types[_sdr_type_id] = sdr_type;
 }
 /**
  * @param _is_clickable for SDR_TYPE_PERCENT type sliders. Does not affect others
  */
-void register_slider(
-  Vector2 _pos, Vector2 offset, slider_id _sdr_id, slider_type_id _sdr_type_id, 
+void _register_slider(
+  Vector2 _pos, slider_id _sdr_id, slider_type_id _sdr_type_id, 
   button_id _left_btn_id, button_id _right_btn_id, bool _is_clickable) {
   if (_sdr_id       >= SDR_ID_MAX   || _sdr_id      <= SDR_ID_UNDEFINED  || 
       _left_btn_id  >= BTN_ID_MAX   || _left_btn_id  < BTN_ID_UNDEFINED  || 
@@ -789,21 +760,12 @@ void register_slider(
   }
 
   slider_type* _sdr_type = &state->slider_types[_sdr_type_id];
-
-  u16 width = _sdr_type->source_frame_dim.x * _sdr_type->scale;
-  u16 height = _sdr_type->source_frame_dim.y * _sdr_type->scale;
-  u16 pos_x = _pos.x + SPACE_BTW_X(offset.x, width);
-  u16 pos_y = _pos.y + SPACE_BTW_Y(offset.y, height);
-  if (_sdr_type->should_center) {
-    pos_x -= FMAX((width*_sdr_type->width_multiply)/2.f, 0);
-    pos_y -= FMAX(pos_y - height/2.f, 0);
-  }
   
   slider sdr = {
     .id = _sdr_id,
     .sdr_type = *_sdr_type,
     .position = (Vector2) {
-      .x = pos_x, .y = pos_y
+      .x = _pos.x, .y = _pos.y
     },
     .current_value = _sdr_type_id == SDR_TYPE_PERCENT ? 7 : 1,
     .max_value = _sdr_type_id == SDR_TYPE_PERCENT ? 10 : 1,
@@ -814,17 +776,19 @@ void register_slider(
   };
   if(_left_btn_id != BTN_ID_UNDEFINED){
     sdr.sdr_type.left_btn_id = _left_btn_id;
-
-    register_button(
-      (Vector2) { sdr.position.x - sdr.sdr_type.left_btn_width, sdr.position.y}, (Vector2) {0},
-      sdr.sdr_type.left_btn_id, sdr.sdr_type.left_btn_type_id);
+    _register_button((Vector2) { 
+        .x = sdr.position.x - state->button_types[_sdr_type->left_btn_type_id].dest_frame_dim.x, 
+        .y = sdr.position.y }, 
+      sdr.sdr_type.left_btn_id, sdr.sdr_type.left_btn_type_id
+    );
   }
   if(_right_btn_id != BTN_ID_UNDEFINED){
     sdr.sdr_type.right_btn_id = _right_btn_id;
-
-    register_button(
-      (Vector2) { sdr.position.x + width * sdr.sdr_type.width_multiply, sdr.position.y}, (Vector2) {0},
-      sdr.sdr_type.right_btn_id, sdr.sdr_type.right_btn_type_id);
+    _register_button((Vector2) { 
+        .x = sdr.position.x + _sdr_type->body_width * _sdr_type->width_multiply, 
+        .y = sdr.position.y },
+      sdr.sdr_type.right_btn_id, sdr.sdr_type.right_btn_type_id
+    );
   }
 
   state->sliders[_sdr_id] = sdr;
@@ -910,6 +874,14 @@ inline void draw_texture_npatch(texture_id _id, Rectangle dest, Vector4 offsets,
   };
 
   DrawTextureNPatch(*tex, npatch, dest, (Vector2) {0}, 0, WHITE);
+}
+Font* user_interface_state_get_font() {
+  if (!state) {
+    TraceLog(LOG_WARNING, "user_interface::user_interface_state_get_font()::user interface didn't initialized. Returning default font");
+    return (Font*) {0};
+  }
+
+  return &state->ui_font;
 }
 void user_interface_system_destroy() {
 

@@ -196,6 +196,7 @@ typedef enum spritesheet_type {
   PLAYER_ANIMATION_WRECK_RIGHT,
   BUTTON_REFLECTION_SHEET,
   MENU_BUTTON,
+  FLAT_BUTTON,
   BUTTON_CRT_SHEET,
   SCREEN_CRT_SHEET,
   SLIDER_PERCENT,
@@ -213,6 +214,16 @@ typedef enum button_state {
   BTN_STATE_RELEASED,
 } button_state;
 
+typedef enum button_type_id {
+  BTN_TYPE_UNDEFINED,
+  BTN_TYPE_MENU_BUTTON,
+  BTN_TYPE_MENU_BUTTON_NO_CRT,
+  BTN_TYPE_FLAT_BUTTON,
+  BTN_TYPE_SLIDER_LEFT_BUTTON,
+  BTN_TYPE_SLIDER_RIGHT_BUTTON,
+  BTN_TYPE_MAX
+} button_type_id;
+
 typedef enum button_id {
   BTN_ID_UNDEFINED,
 
@@ -223,9 +234,10 @@ typedef enum button_id {
   BTN_ID_MAINMENU_BUTTON_EXIT,
   BTN_ID_MAIN_MENU_SETTINGS_CANCEL_SETTINGS_BUTTON,
 
-  BTN_ID_PAUSEMENU_BUTTON_RESUME,
+  BTN_ID_PAUSEMENU_BUTTON_INVENTORY,
+  BTN_ID_PAUSEMENU_BUTTON_TECHNOLOGIES,
+  BTN_ID_PAUSEMENU_BUTTON_CREDITS,
   BTN_ID_PAUSEMENU_BUTTON_SETTINGS,
-  BTN_ID_PAUSEMENU_BUTTON_MAIN_MENU,
   BTN_ID_PAUSEMENU_BUTTON_EXIT,
 
   BTN_ID_EDITOR_BUTTON_SAVE_MAP,
@@ -269,15 +281,6 @@ typedef enum slider_id {
   SDR_ID_SETTINGS_WIN_MODE_SLIDER,
   SDR_ID_MAX
 } slider_id;
-
-typedef enum button_type_id {
-  BTN_TYPE_UNDEFINED,
-  BTN_TYPE_MENU_BUTTON,
-  BTN_TYPE_MENU_BUTTON_NO_CRT,
-  BTN_TYPE_SLIDER_LEFT_BUTTON,
-  BTN_TYPE_SLIDER_RIGHT_BUTTON,
-  BTN_TYPE_MAX
-} button_type_id;
 
 typedef enum resource_type {
   RESOURCE_TYPE_SPRITESHEET,
@@ -438,7 +441,9 @@ typedef struct button_type {
   button_type_id id;
   spritesheet_type ss_type;
   Vector2 source_frame_dim;
+  Vector2 dest_frame_dim;
   f32 scale;
+  Vector2 text_offset_on_click;
   bool play_reflection;
   bool play_crt;
   bool should_center;
@@ -478,8 +483,7 @@ typedef struct slider_type {
   u16 origin_body_width;
   u16 body_width;
   u16 body_height;
-
-  bool should_center;
+  Vector2 whole_body_width;
 } slider_type;
 
 typedef struct slider {
