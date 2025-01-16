@@ -1,5 +1,4 @@
 #include "user_interface.h"
-#include <raylib.h>
 #include <defines.h>
 #include <settings.h>
 
@@ -47,10 +46,8 @@ void update_sliders();
 
 void draw_slider_body(slider* sdr);
 void draw_texture_stretch(texture_id body, Vector2 pos, Vector2 scale, Rectangle stretch_part, u16 stretch_part_mltp, bool should_center);
-void draw_texture_regular(Texture2D* tex, Rectangle dest);
-void draw_texture_regular_id(texture_id _id, Rectangle dest);
-void draw_texture_scale_id(texture_id _id, Vector2 position, f32 scale, bool should_center);
-void draw_texture_pro_id(texture_id _id, Rectangle source, Vector2 pos, f32 scale);
+void draw_texture_regular(texture_id _id, Rectangle dest, Color tint, bool should_center);
+void draw_texture_npatch(texture_id _id, Rectangle dest, Vector4 offsets, bool should_center);
 void gui_draw_settings_screen();
 
 void register_button(Vector2 _attached_position, Vector2 offset, button_id _btn_id, button_type_id _btn_type_id);
@@ -600,9 +597,13 @@ void gui_draw_settings_screen() {
 }
 
 void gui_draw_pause_screen() {
-
-  draw_texture_scale_id(TEX_ID_SCALABLE_PANEL, get_resolution_div2(), 5, true);
-
+  Rectangle dest = (Rectangle) {
+    get_resolution_div2().x,
+    get_resolution_div2().y,
+    854,480 //TODO: Make it responsive based on resolution
+  };
+  draw_texture_regular(TEX_ID_CRIMSON_FANTASY_PANEL_BG, dest, (Color) {255, 255, 255, 200}, true);
+  draw_texture_npatch(TEX_ID_CRIMSON_FANTASY_PANEL, dest, (Vector4) {6, 6, 6, 6}, true);
 
   if (gui_button("Resume", BTN_ID_PAUSEMENU_BUTTON_RESUME)) {
     state->b_show_pause_menu = !state->b_show_pause_menu;
@@ -618,7 +619,6 @@ void gui_draw_pause_screen() {
     event_fire(EVENT_CODE_APPLICATION_QUIT, 0, (event_context) {0});
   }
 }
-
 bool gui_slider_add_option(slider_id _id, const char* _display_text, data_pack content) {
   if (_id >= SDR_ID_MAX || _id <= SDR_ID_UNDEFINED || !state) {
     TraceLog(LOG_WARNING, "WARNING::user_interface::gui_slider_add_option()::Slider ids was out of bound");
@@ -639,7 +639,6 @@ bool gui_slider_add_option(slider_id _id, const char* _display_text, data_pack c
 
   return true;
 }
-
 void register_button_type(button_type_id _btn_type_id, spritesheet_type _ss_type, Vector2 frame_dim, f32 _scale, bool _play_reflection, bool _play_crt, bool _should_center) {
   if (_ss_type     >= SPRITESHEET_TYPE_MAX || _ss_type <= SPRITESHEET_UNSPECIFIED || 
       _btn_type_id >= BTN_TYPE_MAX         || _btn_type_id <= BTN_TYPE_UNDEFINED  ||
@@ -701,7 +700,6 @@ void register_button(Vector2 _attached_position, Vector2 offset, button_id _btn_
 
   state->buttons[_btn_id] = btn;
 }
-
 void register_progress_bar(progress_bar_id _id, progress_bar_type_id _type_id, f32 width_multiply, Vector2 scale) {
   if (_id     >= PRG_BAR_ID_MAX      || _id      <= PRG_BAR_ID_UNDEFINED      ||
       _type_id>= PRG_BAR_TYPE_ID_MAX || _type_id <= PRG_BAR_TYPE_ID_UNDEFINED ||
@@ -737,7 +735,6 @@ void register_progress_bar_type(progress_bar_type_id _type_id, texture_id _body_
 
   state->prg_bar_types[_type_id] = prg_type;
 }
-
 void register_slider_type(
   slider_type_id _sdr_type_id, spritesheet_type _ss_sdr_body_type, f32 _scale, u16 _width_multiply,
   button_type_id _left_btn_type_id, button_type_id _right_btn_type_id, bool _should_center, u16 _char_limit) {
@@ -775,7 +772,6 @@ void register_slider_type(
 
   state->slider_types[_sdr_type_id] = sdr_type;
 }
-
 /**
  * @param _is_clickable for SDR_TYPE_PERCENT type sliders. Does not affect others
  */
@@ -833,11 +829,9 @@ void register_slider(
 
   state->sliders[_sdr_id] = sdr;
 }
-
 void gui_draw_texture_to_background(texture_id _id) {
-  draw_texture_regular_id(_id, (Rectangle) {0, 0, GetScreenWidth(), GetScreenHeight()});
+  draw_texture_regular(_id, (Rectangle) {0, 0, GetScreenWidth(), GetScreenHeight()}, WHITE, false);
 }
-
 void gui_draw_spritesheet_to_background(spritesheet_type _type, Color _tint) {
   if (_type >= SPRITESHEET_TYPE_MAX || _type <= SPRITESHEET_UNSPECIFIED || !state) {
     TraceLog(LOG_WARNING, "WARNING::user_interface::gui_draw_spritesheet_to_background()::Sprite type out of bound");
@@ -850,7 +844,6 @@ void gui_draw_spritesheet_to_background(spritesheet_type _type, Color _tint) {
   Rectangle dest = (Rectangle) {0, 0, GetScreenWidth(), GetScreenHeight()};
   play_sprite_on_site(state->ss_to_draw_bg.render_queue_index, _tint, dest);
 }
-
 /**
  * @note inline function, returns "(Rectangle) {0}" if texture type returns null pointer
  * @return (Rectangle) { .x = 0, .y = 0, .width = tex->width, .height = tex->height}; 
@@ -864,67 +857,59 @@ inline Rectangle get_texture_source_rect(texture_id _id) {
   
   return (Rectangle) { .x = 0, .y = 0, .width = tex->width, .height = tex->height};
 }
-
-inline void draw_texture_regular(Texture2D* tex, Rectangle dest) {
-  if (!tex) { TraceLog(
-  LOG_WARNING, "WARNING::user_interface::draw_texture_regular()::Tex was null");
-    return; }
-
-  DrawTexturePro(*tex, 
-  (Rectangle) { 0, 0, tex->width, tex->height}, 
-  dest, 
-  (Vector2) {0}, 0, WHITE);
-}
-inline void draw_texture_regular_id(texture_id _id, Rectangle dest) {
+/**
+ * @brief Centers over -> dest.x -= dest.width / 2.f; 
+ */
+inline void draw_texture_regular(texture_id _id, Rectangle dest, Color tint, bool should_center) {
   if (_id >= TEX_ID_MAX || _id <= TEX_ID_UNSPECIFIED) {
     TraceLog(LOG_WARNING, 
-    "user_interface::draw_texture_pro_id()::ID was out of bound"); 
+    "user_interface::draw_texture_regular()::ID was out of bound"); 
     return; 
   }
   Texture2D* tex = get_texture_by_enum(_id);
   if (!tex) { TraceLog(
   LOG_WARNING, "WARNING::user_interface::draw_texture_regular()::Tex was null");
-    return; }
-
-  DrawTexturePro(*tex, 
-  (Rectangle) { 0, 0, tex->width, tex->height}, 
-  dest, 
-  (Vector2) {0}, 0, WHITE);
-}
-inline void draw_texture_scale_id(texture_id _id, Vector2 position, f32 scale, bool should_center) {
-  if (_id >= TEX_ID_MAX || _id <= TEX_ID_UNSPECIFIED) {
-    TraceLog(LOG_WARNING, 
-    "user_interface::draw_texture_regular_id()::ID was out of bound"); 
-    return; 
-  }
-  Texture2D* tex = get_texture_by_enum(_id);
-  if (!tex ) { TraceLog(
-    LOG_WARNING, "WARNING::user_interface::draw_texture_regular()::Tex was null");
     return; 
   }
   if (should_center) {
-    position.x -= (tex->width * scale) / 2.f;
-    position.y -= (tex->height * scale) / 2.f;
+    dest.x -= dest.width / 2.f; 
+    dest.y -= dest.height / 2.f; 
   }
-
-  DrawTextureEx(*tex, position, 0, scale, WHITE); 
+  DrawTexturePro(*tex, 
+  (Rectangle) { 0, 0, tex->width, tex->height}, 
+  dest, 
+  (Vector2) {0}, 0, tint);
 }
-inline void draw_texture_pro_id(texture_id _id, Rectangle source, Vector2 pos, f32 scale) {
+/**
+ * @brief Centers over -> dest.x -= dest.width / 2.f; 
+ */
+inline void draw_texture_npatch(texture_id _id, Rectangle dest, Vector4 offsets, bool should_center) {
   if (_id >= TEX_ID_MAX || _id <= TEX_ID_UNSPECIFIED) {
     TraceLog(LOG_WARNING, 
-    "user_interface::draw_texture_pro_id()::ID was out of bound"); 
+    "user_interface::draw_texture_npatch()::ID was out of bound"); 
     return; 
   }
   Texture2D* tex = get_texture_by_enum(_id);
   if (!tex) { TraceLog(LOG_WARNING, 
-    "user_interface::draw_texture_pro_id()::Tex was null"); 
+    "user_interface::draw_texture_npatch()::Tex was null"); 
     return; 
   }
 
-  DrawTexturePro(*tex, 
-  source, 
-  (Rectangle) {pos.x, pos.y, source.width * scale, source.height * scale}, 
-  (Vector2) {0}, 0, WHITE); 
+  if (should_center) {
+    dest.x -= dest.width / 2.f; 
+    dest.y -= dest.height / 2.f; 
+  }
+
+  NPatchInfo npatch = (NPatchInfo){
+    (Rectangle) {0, 0, tex->width, tex->height},
+    offsets.x,
+    offsets.y,
+    offsets.z,
+    offsets.w,
+    NPATCH_NINE_PATCH
+  };
+
+  DrawTextureNPatch(*tex, npatch, dest, (Vector2) {0}, 0, WHITE);
 }
 void user_interface_system_destroy() {
 

@@ -36,8 +36,8 @@ bool resource_system_initialize() {
   load_texture("map_tileset.png",            false, (Vector2){0,  0}, TEX_ID_MAP_TILESET_TEXTURE);
   load_texture("progress_bar_inside_full.png", false, (Vector2){0,  0}, TEX_ID_PROGRESS_BAR_INSIDE_FULL);
   load_texture("progress_bar_outside_full.png",false, (Vector2){0,  0}, TEX_ID_PROGRESS_BAR_OUTSIDE_FULL);
-  load_texture("scalable_panel.png",false, (Vector2){0,  0}, TEX_ID_SCALABLE_PANEL);
-  load_spritesheet("level_up_sheet.png", LEVEL_UP_SHEET, 60, 150, 150, 8, 8);
+  load_texture("crimson_fantasy_panel.png",false, (Vector2){0,  0}, TEX_ID_CRIMSON_FANTASY_PANEL);
+  load_texture("crimson_fantasy_panel_bg.png",false, (Vector2){0,  0}, TEX_ID_CRIMSON_FANTASY_PANEL_BG);
   load_spritesheet("idle_left.png",      PLAYER_ANIMATION_IDLE_LEFT, 15, 86, 86, 1, 4);
   load_spritesheet("idle_right.png",     PLAYER_ANIMATION_IDLE_RIGHT, 15, 86, 86, 1, 4);
   load_spritesheet("move_left.png",      PLAYER_ANIMATION_MOVE_LEFT, 10, 86, 86, 1, 6);
@@ -54,7 +54,6 @@ bool resource_system_initialize() {
   load_spritesheet("slider_left_button.png", SLIDER_LEFT_BUTTON, 0, 10, 10, 1, 2);
   load_spritesheet("slider_right_button_edited.png", SLIDER_RIGHT_BUTTON, 0, 11, 10, 1, 2);
   load_spritesheet("menu_button.png", MENU_BUTTON, 0, 80, 16, 1, 2);
-  load_spritesheet("health_bar_edited_as_ss.png", HEALTH_BAR_SHEET, 0, 72, 12, 1, 11);
   load_tilesheet(TILESHEET_TYPE_MAP, TEX_ID_MAP_TILESET_TEXTURE, 16, 14, 16);
 
   return true;
