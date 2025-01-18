@@ -3,12 +3,21 @@
 
 #include <raylib.h>
 
-#define RESOURCE_PATH "D:/Workspace/resources/"
-#define SHADER_PATH "../app/src/shaders/"
 #define TOTAL_ALLOCATED_MEMORY 64 * 1024 * 1024
 #define TARGET_FPS 60
 #define MAX_SPRITE_RENDERQUEUE 50
+
+#define RESOURCE_PATH "D:/Workspace/resources/"
+#define SHADER_PATH "../app/src/shaders/"
+
+#define MAX_UPDATE_ABILITY_PANEL_COUNT 6
+
 #define CLEAR_BACKGROUND_COLOR BLACK
+#define BUTTON_TEXT_UP_COLOR WHITE_ROCK
+#define BUTTON_TEXT_HOVER_COLOR WHITE
+#define BUTTON_TEXT_PRESSED_COLOR WHITE
+#define BUTTON_TEXT_SHADOW_COLOR BLACK
+#define BUTTON_TEXT_SHADOW_OFFSET CLITERAL(Vector2){ 0, 1}
 
 #define INI_FILE_MAX_FILE_SIZE 32000
 #define INI_FILE_MAX_SECTION_NAME_LENGTH 32
@@ -167,6 +176,15 @@ typedef enum texture_id {
   TEX_ID_MAX,
 } texture_id;
 
+typedef enum font_type {
+  FONT_TYPE_UNDEFINED,
+  FONT_TYPE_MOOD,
+  FONT_TYPE_MOOD_OUTLINE,
+  FONT_TYPE_MINI_MOOD,
+  FONT_TYPE_MINI_MOOD_OUTLINE,
+  FONT_TYPE_MAX
+} font_type;
+
 typedef enum image_type {
   IMAGE_TYPE_UNSPECIFIED,
 
@@ -208,6 +226,7 @@ typedef enum spritesheet_type {
 } spritesheet_type;
 
 typedef enum button_state {
+  BTN_STATE_UNDEFINED,
   BTN_STATE_UP,
   BTN_STATE_HOVER,
   BTN_STATE_PRESSED,
@@ -436,6 +455,15 @@ typedef struct spritesheet_play_system {
   spritesheet renderqueue[MAX_SPRITE_RENDERQUEUE];
   u16 renderqueue_count;
 } spritesheet_play_system;
+
+typedef struct panel {
+  texture_id frame_tex_id;
+  texture_id bg_tex_id;
+  Color bg_tint;
+  Vector4 offsets;
+  button_state current_state;
+  button_state signal_state;
+} panel;
 
 typedef struct button_type {
   button_type_id id;

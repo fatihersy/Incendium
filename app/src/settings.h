@@ -13,9 +13,13 @@ bool set_master_sound(u32 volume);
 
 app_settings* get_app_settings();
 i32 get_window_state();
-Vector2 get_resolution_div2();
-Vector2 get_resolution_div3();
-Vector2 get_resolution_div4();
+Vector2* get_resolution_div2();
+Vector2* get_resolution_div3();
+Vector2* get_resolution_div4();
+Vector2* get_resolution_3div2();
+Vector2* get_resolution_5div4();
+Vector2* get_resolution_35div20();
+Vector2* get_resolution_38div20();
 u16 get_screen_offset();
 
 #endif 

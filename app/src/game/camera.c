@@ -23,7 +23,7 @@ void create_camera(Vector2 position) {
 
   state = (main_camera_system_state *)allocate_memory_linear(sizeof(main_camera_system_state), true);
 
-  state->camera.offset = get_resolution_div2();
+  state->camera.offset = *get_resolution_div2();
   state->camera.target = (Vector2){position.x, position.y};
   state->camera.rotation = 0;
   state->camera.zoom = 1.0f;
@@ -35,7 +35,7 @@ void create_camera(Vector2 position) {
 Camera2D *get_active_camera() { return &state->camera; }
 
 bool update_camera(Vector2 position) {
-  state->camera.offset = get_resolution_div2();
+  state->camera.offset = *get_resolution_div2();
 
   Vector2 diff = vec2_subtract(position, state->camera.target);
   float length = vec2_lenght(diff);

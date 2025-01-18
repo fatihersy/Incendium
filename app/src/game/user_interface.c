@@ -2,6 +2,7 @@
 #include <defines.h>
 #include <settings.h>
 
+#include "core/fmath.h"
 #include "core/event.h"
 #include "core/fmemory.h"
 
@@ -22,20 +23,18 @@ typedef struct user_interface_system_state {
   slider_type slider_types[SDR_TYPE_MAX];
   progress_bar prg_bars[PRG_BAR_ID_MAX];
   progress_bar_type prg_bar_types[PRG_BAR_TYPE_ID_MAX];
-  Font ui_font;
-  u16 ui_font_size_div2;
-  u16 ui_font_size_38div20;
-  u16 ui_font_size_35div20;
-  u16 ui_font_size_3div2;
-  u16 ui_font_size_5div4;
+  Font mood_font;
+  Font mood_outline_font;
+  Font mini_mood_font;
+  Font mini_mood_outline_font;
   spritesheet ss_to_draw_bg;
   bool b_show_pause_menu;
   bool b_show_settings_menu;
+  panel default_panel;
 } user_interface_system_state;
 
 static user_interface_system_state *state;
 
-#define UI_FONT_SIZE state->ui_font_size_5div4
 #define DEFAULT_MENU_BUTTON_SCALE 3
 
 #define PSPRITESHEET_SYSTEM state // Don't forget to undef at very bottom of the file
@@ -51,6 +50,7 @@ void draw_texture_stretch(texture_id body, Vector2 pos, Vector2 scale, Rectangle
 void draw_texture_regular(texture_id _id, Rectangle dest, Color tint, bool should_center);
 void draw_texture_npatch(texture_id _id, Rectangle dest, Vector4 offsets, bool should_center);
 void gui_draw_settings_screen();
+bool gui_button(const char* text, button_id _id, Font font, f32 font_size_scale);
 
 void _register_button(Vector2 _attached_position, button_id _btn_id, button_type_id _btn_type_id);
 void register_button_type(button_type_id _btn_type_id, spritesheet_type _ss_type, Vector2 frame_dim, Vector2 on_click_text_offset, f32 _scale, bool _play_reflection, bool _play_crt, bool _should_center);
@@ -59,11 +59,20 @@ void register_progress_bar_type(progress_bar_type_id _type_id, texture_id _body_
 void _register_slider(Vector2 _pos, slider_id _sdr_id, slider_type_id _sdr_type_id, button_id _left_btn_id, button_id _right_btn_id, bool _is_clickable);
 void register_slider_type(slider_type_id _sdr_type_id, spritesheet_type _ss_sdr_body_type, f32 _scale, u16 _width_multiply, button_type_id _left_btn_type_id, button_type_id _right_btn_type_id, u16 _char_limit);
 
+#define MENU_BUTTON_FONT state->mood_font
+#define MENU_BUTTON_FONT_SIZE state->mood_font.baseSize / 20.f
+
 #define register_button(BTN_ID, BTN_TYPE_ID, POS, OFFSET_X, OFFSET_Y, F) \
   _register_button( SPACE_BTW_V( OFFSET_X, OFFSET_Y, POS, state->button_types[BTN_TYPE_ID].dest_frame_dim, F), BTN_ID, BTN_TYPE_ID) 
 
 #define register_slider(SDR_ID, SDR_TYPE_ID, POS, OFFSET, F, LEFT_BTN_ID, RIGHT_BTN_ID, IS_CLICKABLE) \
   _register_slider(SPACE_BTW_V( OFFSET.x, OFFSET.y, POS, state->slider_types[SDR_TYPE_ID].whole_body_width, F), SDR_ID, SDR_TYPE_ID, LEFT_BTN_ID, RIGHT_BTN_ID, IS_CLICKABLE) 
+
+#define draw_text(TEXT, TEXT_POS, FONT, FONT_SIZE, COLOR)                                                               \
+  DrawTextEx(FONT, TEXT,                                                                                \
+  (Vector2) { .x = TEXT_POS.x + BUTTON_TEXT_SHADOW_OFFSET.x, .y = TEXT_POS.y + BUTTON_TEXT_SHADOW_OFFSET.y, },    \
+  FONT_SIZE, UI_FONT_SPACING, BUTTON_TEXT_SHADOW_COLOR);                                                          \
+  DrawTextEx(FONT, TEXT, TEXT_POS, FONT_SIZE, UI_FONT_SPACING, COLOR);                    
 
 Rectangle get_texture_source_rect(texture_id _id);
 
@@ -71,15 +80,30 @@ void user_interface_system_initialize() {
   if (state) return;
 
   state = (user_interface_system_state *)allocate_memory_linear(sizeof(user_interface_system_state), true);
-  state->ui_font = LoadFont(rs_path("quantico_bold.ttf"));
-  if (state->ui_font.baseSize == 0) { // If custom font load failed
-    state->ui_font = GetFontDefault();
+  state->mood_font = LoadFont(rs_path("mood.ttf"));
+  if (state->mood_font.baseSize == 0) { // If custom font load failed
+    state->mood_font = GetFontDefault();
   }
-  state->ui_font_size_div2     = state->ui_font.baseSize / 2.00f;
-  state->ui_font_size_38div20  = state->ui_font.baseSize / 1.90f;
-  state->ui_font_size_35div20  = state->ui_font.baseSize / 1.75f;
-  state->ui_font_size_3div2    = state->ui_font.baseSize / 1.50f;
-  state->ui_font_size_5div4    = state->ui_font.baseSize / 1.25f;
+  state->mood_outline_font = LoadFont(rs_path("mood_outline.ttf"));
+  if (state->mood_outline_font.baseSize == 0) { // If custom font load failed
+    state->mood_outline_font = GetFontDefault();
+  }
+  state->mini_mood_font = LoadFont(rs_path("mini_mood.ttf"));
+  if (state->mini_mood_font.baseSize == 0) { // If custom font load failed
+    state->mini_mood_font = GetFontDefault();
+  }
+  state->mini_mood_outline_font = LoadFont(rs_path("mini_mood_outline.ttf"));
+  if (state->mini_mood_outline_font.baseSize == 0) { // If custom font load failed
+    state->mini_mood_outline_font = GetFontDefault();
+  }
+
+  state->default_panel = (panel) {
+    .signal_state = BTN_STATE_UNDEFINED,
+    .bg_tex_id    = TEX_ID_CRIMSON_FANTASY_PANEL_BG,
+    .frame_tex_id = TEX_ID_CRIMSON_FANTASY_PANEL,
+    .bg_tint = (Color) {255, 255, 255, 200},
+    .offsets = (Vector4) {6, 6, 6, 6},
+  };
 
   initialize_shader_system();
 
@@ -87,11 +111,11 @@ void user_interface_system_initialize() {
   {  
   register_button_type(
     BTN_TYPE_MENU_BUTTON, MENU_BUTTON, 
-    (Vector2){80, 16}, (Vector2){0, 3}, 
+    (Vector2){80, 16}, (Vector2){0, 2}, 
     DEFAULT_MENU_BUTTON_SCALE, true, true, false);
   register_button_type(
     BTN_TYPE_MENU_BUTTON_NO_CRT, MENU_BUTTON, 
-    (Vector2){80, 16}, (Vector2){0, 3}, 
+    (Vector2){80, 16}, (Vector2){0, 2}, 
     DEFAULT_MENU_BUTTON_SCALE, true, false, false);
   register_button_type(
     BTN_TYPE_SLIDER_LEFT_BUTTON, SLIDER_LEFT_BUTTON, 
@@ -157,28 +181,28 @@ void user_interface_system_initialize() {
 
   // MAIN MENU
   {  
-  register_button(BTN_ID_MAINMENU_BUTTON_PLAY,     BTN_TYPE_MENU_BUTTON_NO_CRT, get_resolution_div2(), 0,  0, 3.f);
-  register_button(BTN_ID_MAINMENU_BUTTON_EDITOR,   BTN_TYPE_MENU_BUTTON_NO_CRT, get_resolution_div2(), 0,  4, 3.f);
-  register_button(BTN_ID_MAINMENU_BUTTON_SETTINGS, BTN_TYPE_MENU_BUTTON_NO_CRT, get_resolution_div2(), 0,  8, 3.f);
-  register_button(BTN_ID_MAINMENU_BUTTON_EXTRAS,   BTN_TYPE_MENU_BUTTON_NO_CRT, get_resolution_div2(), 0, 12, 3.f);
-  register_button(BTN_ID_MAINMENU_BUTTON_EXIT,     BTN_TYPE_MENU_BUTTON_NO_CRT, get_resolution_div2(), 0, 16, 3.f);
+  register_button(BTN_ID_MAINMENU_BUTTON_PLAY,     BTN_TYPE_MENU_BUTTON_NO_CRT, *get_resolution_div2(), 0,  0, 3.f);
+  register_button(BTN_ID_MAINMENU_BUTTON_EDITOR,   BTN_TYPE_MENU_BUTTON_NO_CRT, *get_resolution_div2(), 0,  4, 3.f);
+  register_button(BTN_ID_MAINMENU_BUTTON_SETTINGS, BTN_TYPE_MENU_BUTTON_NO_CRT, *get_resolution_div2(), 0,  8, 3.f);
+  register_button(BTN_ID_MAINMENU_BUTTON_EXTRAS,   BTN_TYPE_MENU_BUTTON_NO_CRT, *get_resolution_div2(), 0, 12, 3.f);
+  register_button(BTN_ID_MAINMENU_BUTTON_EXIT,     BTN_TYPE_MENU_BUTTON_NO_CRT, *get_resolution_div2(), 0, 16, 3.f);
   }
   // MAIN MENU
 
   // EDITOR
   {
-  register_button(BTN_ID_EDITOR_BUTTON_LOAD_MAP, BTN_TYPE_MENU_BUTTON, get_resolution_div2(), 0, 1, 3.f);
-  register_button(BTN_ID_EDITOR_BUTTON_SAVE_MAP, BTN_TYPE_MENU_BUTTON, get_resolution_div2(), 0, 3, 3.f);
+  register_button(BTN_ID_EDITOR_BUTTON_LOAD_MAP, BTN_TYPE_MENU_BUTTON, *get_resolution_div2(), 0, 1, 3.f);
+  register_button(BTN_ID_EDITOR_BUTTON_SAVE_MAP, BTN_TYPE_MENU_BUTTON, *get_resolution_div2(), 0, 3, 3.f);
   }
   // EDITOR
 
   // USER INTERFACE
   {
-  register_button(BTN_ID_PAUSEMENU_BUTTON_INVENTORY,   BTN_TYPE_FLAT_BUTTON, get_resolution_div2(), -3.00f, -7.5f, 1.f);
-  register_button(BTN_ID_PAUSEMENU_BUTTON_TECHNOLOGIES,BTN_TYPE_FLAT_BUTTON, get_resolution_div2(), -1.50f, -7.5f, 1.f);
-  register_button(BTN_ID_PAUSEMENU_BUTTON_SETTINGS,    BTN_TYPE_FLAT_BUTTON, get_resolution_div2(),  0.00f, -7.5f, 1.f);
-  register_button(BTN_ID_PAUSEMENU_BUTTON_CREDITS,     BTN_TYPE_FLAT_BUTTON, get_resolution_div2(),  1.50f, -7.5f, 1.f);
-  register_button(BTN_ID_PAUSEMENU_BUTTON_EXIT,        BTN_TYPE_FLAT_BUTTON, get_resolution_div2(),  3.00f, -7.5f, 1.f);
+  register_button(BTN_ID_PAUSEMENU_BUTTON_INVENTORY,   BTN_TYPE_FLAT_BUTTON, *get_resolution_div2(), -3.00f, -7.5f, 1.f);
+  register_button(BTN_ID_PAUSEMENU_BUTTON_TECHNOLOGIES,BTN_TYPE_FLAT_BUTTON, *get_resolution_div2(), -1.50f, -7.5f, 1.f);
+  register_button(BTN_ID_PAUSEMENU_BUTTON_SETTINGS,    BTN_TYPE_FLAT_BUTTON, *get_resolution_div2(),  0.00f, -7.5f, 1.f);
+  register_button(BTN_ID_PAUSEMENU_BUTTON_CREDITS,     BTN_TYPE_FLAT_BUTTON, *get_resolution_div2(),  1.50f, -7.5f, 1.f);
+  register_button(BTN_ID_PAUSEMENU_BUTTON_EXIT,        BTN_TYPE_FLAT_BUTTON, *get_resolution_div2(),  3.00f, -7.5f, 1.f);
   }
   // USER INTERFACE
 
@@ -186,18 +210,18 @@ void user_interface_system_initialize() {
   {
   register_slider(
     SDR_ID_SETTINGS_SOUND_SLIDER,  SDR_TYPE_PERCENT, 
-    get_resolution_div2(), ((Vector2) {0, 0}), 3.f, 
+    *get_resolution_div2(), ((Vector2) {0, 0}), 3.f, 
     BTN_ID_SETTINGS_SLIDER_SOUND_LEFT_BUTTON, BTN_ID_SETTINGS_SLIDER_SOUND_RIGHT_BUTTON, true);
   register_slider(
     SDR_ID_SETTINGS_RES_SLIDER,  SDR_TYPE_OPTION, 
-    get_resolution_div2(), ((Vector2) {0, 5}), 3.f, 
+    *get_resolution_div2(), ((Vector2) {0, 5}), 3.f, 
     BTN_ID_SETTINGS_SLIDER_RES_LEFT_BUTTON, BTN_ID_SETTINGS_SLIDER_RES_RIGHT_BUTTON, false);
   register_slider(
     SDR_ID_SETTINGS_WIN_MODE_SLIDER,  SDR_TYPE_OPTION, 
-    get_resolution_div2(), ((Vector2) {0, 10}), 3.f, 
+    *get_resolution_div2(), ((Vector2) {0, 10}), 3.f, 
     BTN_ID_SETTINGS_SLIDER_WIN_MODE_LEFT_BUTTON, BTN_ID_SETTINGS_SLIDER_WIN_MODE_RIGHT_BUTTON, false);
-  register_button(BTN_ID_SETTINGS_APPLY_SETTINGS_BUTTON, BTN_TYPE_MENU_BUTTON,            get_resolution_div2(), -2, 15, 3.f);
-  register_button(BTN_ID_MAIN_MENU_SETTINGS_CANCEL_SETTINGS_BUTTON, BTN_TYPE_MENU_BUTTON, get_resolution_div2(),  2, 15, 3.f);
+  register_button(BTN_ID_SETTINGS_APPLY_SETTINGS_BUTTON, BTN_TYPE_MENU_BUTTON,            *get_resolution_div2(), -2, 15, 3.f);
+  register_button(BTN_ID_MAIN_MENU_SETTINGS_CANCEL_SETTINGS_BUTTON, BTN_TYPE_MENU_BUTTON, *get_resolution_div2(),  2, 15, 3.f);
   }
   // SETTINGS
 
@@ -326,8 +350,14 @@ void render_user_interface() {
     gui_draw_settings_screen();
   }
 }
+bool gui_menu_button(const char* text, button_id _id) {
+  return gui_button(text, _id, MENU_BUTTON_FONT, MENU_BUTTON_FONT_SIZE);
+}
+bool gui_slider_button(button_id _id) {
+  return gui_button("", _id, (Font) {0}, 0);
+}
 
-bool gui_button(const char* text, button_id _id, f32 font_size) {
+bool gui_button(const char* text, button_id _id, Font font, f32 font_size_scale) {
   if (_id >= BTN_ID_MAX || _id <= BTN_ID_UNDEFINED) {
     TraceLog(LOG_WARNING, "WARNING::user_interface::gui_button()::Recieved button type out of bound");
     return false;
@@ -345,7 +375,7 @@ bool gui_button(const char* text, button_id _id, f32 font_size) {
   Vector2 text_pos;
 
   if (!TextIsEqual(text, "")) {
-    text_measure = MeasureTextEx(state->ui_font, text, font_size, UI_FONT_SPACING);
+    text_measure = MeasureTextEx(font, text, font.baseSize * font_size_scale, UI_FONT_SPACING);
     text_pos = (Vector2) {
       .x = _btn->dest.x + (_btn->dest.width / 2.f) - (text_measure.x / 2.f),
       .y = _btn->dest.y + (_btn->dest.height / 2.f) - (text_measure.y / 2.f)
@@ -360,22 +390,19 @@ bool gui_button(const char* text, button_id _id, f32 font_size) {
   if (_btn->state == BTN_STATE_PRESSED) {
     draw_sprite_on_site(_btn->btn_type.ss_type, WHITE, pos, draw_sprite_scale, 1, false);
     if (!TextIsEqual(text, "")) {
-      DrawTextEx(state->ui_font, text,
-        (Vector2){.x = text_pos.x + _btn_type->text_offset_on_click.x, .y = text_pos.y + _btn_type->text_offset_on_click.y},
-        font_size, UI_FONT_SPACING,
-        MYYELLOW);
+      Vector2 pressed_text_pos = vec2_add(text_pos, _btn_type->text_offset_on_click);
+      draw_text(text, pressed_text_pos, font, font.baseSize * font_size_scale, BUTTON_TEXT_PRESSED_COLOR);
     }
   } else {
     draw_sprite_on_site(_btn->btn_type.ss_type, WHITE, pos, draw_sprite_scale, 0, false);
     if (_btn->state == BTN_STATE_HOVER) {
       _btn_type->play_reflection ? play_sprite_on_site(_btn->reflection_render_index, WHITE, _btn->dest) : 0;
+      if (!TextIsEqual(text, "")) {
+        draw_text(text, text_pos, font, font.baseSize * font_size_scale, BUTTON_TEXT_HOVER_COLOR);
+      }
     }
-    if (!TextIsEqual(text, "")) {
-      DrawTextEx(
-        state->ui_font, text,
-        text_pos,
-        font_size, UI_FONT_SPACING,
-        MYYELLOW);
+    if (_btn->state != BTN_STATE_HOVER) {
+      draw_text(text, text_pos, font, font.baseSize * font_size_scale, BUTTON_TEXT_UP_COLOR);
     }
   }
   return _btn->state == BTN_STATE_RELEASED;
@@ -474,13 +501,13 @@ void gui_slider(slider_id _id) {
 
   draw_slider_body(sdr);
 
-  if(sdr_type.left_btn_id != 0) if (gui_button("", sdr_type.left_btn_id, state->ui_font.baseSize)) {
+  if(sdr_type.left_btn_id != 0) if (gui_slider_button(sdr_type.left_btn_id)) {
     if (sdr->current_value > sdr->min_value) {
       sdr->current_value--;
     }
   }
 
-  if(sdr_type.right_btn_id != 0) if (gui_button("", sdr_type.right_btn_id, state->ui_font.baseSize)) {
+  if(sdr_type.right_btn_id != 0) if (gui_slider_button(sdr_type.right_btn_id)) {
     if (sdr->current_value < sdr->max_value-1) {
       sdr->current_value++;
     }
@@ -516,7 +543,7 @@ void draw_slider_body(slider* sdr) {
       Vector2 draw_sprite_scale = (Vector2) {each_body_scale, sdr_type.scale};
       Vector2 _pos_temp = (Vector2) {sdr->position.x + get_screen_offset(), sdr->position.y};
       const char* text = TextFormat("%s", sdr->options[sdr->current_value].display_text);
-      Vector2 text_measure = MeasureTextEx(state->ui_font, text, UI_FONT_SIZE, UI_FONT_SPACING);
+      Vector2 text_measure = MeasureTextEx(state->mood_font, text, state->mood_font.baseSize, UI_FONT_SPACING);
 
       for (int i = 1; i < sdr->max_value; ++i) {
         Vector2 _pos = _pos_temp;
@@ -534,13 +561,48 @@ void draw_slider_body(slider* sdr) {
         sdr->position.y + sdr_type.body_height/2.f - text_measure.y / 2.f
       };
 
-      DrawTextEx(state->ui_font, text, text_pos, UI_FONT_SIZE, UI_FONT_SPACING, MYYELLOW);
+      draw_text(text, text_pos, state->mood_font, state->mood_font.baseSize, BUTTON_TEXT_UP_COLOR);
       break;
     }
 
     default: TraceLog(LOG_WARNING, "WARNING::user_interface::render_slider_body()::Unsupported slider type");
     break;
   }
+}
+
+void gui_panel(panel pan, Rectangle dest, bool _should_center) {
+  
+  draw_texture_regular(pan.bg_tex_id, dest, pan.bg_tint, _should_center);
+  draw_texture_npatch(pan.frame_tex_id, dest, pan.offsets, _should_center);
+}
+bool gui_panel_clickable(panel* pan, Rectangle dest, bool _should_center) {
+
+  if (_should_center) {
+    dest.x -= dest.width / 2.f;
+    dest.y -= dest.height / 2.f;
+  }
+
+  if (CheckCollisionPointRec(state->mouse_pos, dest)) {
+    if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
+      pan->current_state = BTN_STATE_PRESSED;
+    } else {
+      if (pan->current_state == BTN_STATE_PRESSED) { 
+        pan->current_state = BTN_STATE_RELEASED;
+      }
+      else if (pan->current_state != BTN_STATE_HOVER) {
+        pan->current_state = BTN_STATE_HOVER;
+      }
+    }
+  } else {
+    if (pan->current_state != BTN_STATE_UP) { 
+      pan->current_state = BTN_STATE_UP;
+    }
+  }
+
+  draw_texture_regular(pan->bg_tex_id, dest, pan->bg_tint, false);
+  draw_texture_npatch(pan->frame_tex_id, dest, pan->offsets, false);
+
+  return pan->current_state == pan->signal_state;
 }
 
 void gui_draw_settings_screen() {
@@ -551,7 +613,7 @@ void gui_draw_settings_screen() {
 
   gui_slider(SDR_ID_SETTINGS_WIN_MODE_SLIDER);
 
-  if(gui_button("Apply", BTN_ID_MAIN_MENU_SETTINGS_CANCEL_SETTINGS_BUTTON, state->ui_font.baseSize)) {
+  if(gui_button("Apply", BTN_ID_MAIN_MENU_SETTINGS_CANCEL_SETTINGS_BUTTON, state->mood_font, state->mood_font.baseSize)) {
     slider sdr_win_mode = state->sliders[SDR_ID_SETTINGS_WIN_MODE_SLIDER];
     i32 window_mod = sdr_win_mode.options[sdr_win_mode.current_value].content.data.i32[0];
 
@@ -569,26 +631,25 @@ void gui_draw_settings_screen() {
 
 void gui_draw_pause_screen() {
   Rectangle dest = (Rectangle) {
-    get_resolution_div2().x,
-    get_resolution_div2().y,
+    get_resolution_div2()->x,
+    get_resolution_div2()->y,
     854,480 //TODO: Make it responsive based on resolution
   };
-  draw_texture_regular(TEX_ID_CRIMSON_FANTASY_PANEL_BG, dest, (Color) {255, 255, 255, 200}, true);
-  draw_texture_npatch(TEX_ID_CRIMSON_FANTASY_PANEL, dest, (Vector4) {6, 6, 6, 6}, true);
+  gui_panel(state->default_panel, dest, true);
 
-  if (gui_button("Inventory", BTN_ID_PAUSEMENU_BUTTON_INVENTORY, state->ui_font_size_38div20)) {
+  if (gui_menu_button("Inventory", BTN_ID_PAUSEMENU_BUTTON_INVENTORY)) {
     state->b_show_pause_menu = !state->b_show_pause_menu;
   }
-  if (gui_button("Technologies", BTN_ID_PAUSEMENU_BUTTON_TECHNOLOGIES, state->ui_font_size_38div20)) {
+  if (gui_menu_button("Technologies", BTN_ID_PAUSEMENU_BUTTON_TECHNOLOGIES)) {
 
   }
-  if (gui_button("Settings", BTN_ID_PAUSEMENU_BUTTON_SETTINGS, state->ui_font_size_38div20)) {
+  if (gui_menu_button("Settings", BTN_ID_PAUSEMENU_BUTTON_SETTINGS)) {
     
   }
-  if (gui_button("Credits", BTN_ID_PAUSEMENU_BUTTON_CREDITS, state->ui_font_size_38div20)) {
+  if (gui_menu_button("Credits", BTN_ID_PAUSEMENU_BUTTON_CREDITS)) {
     
   }
-  if (gui_button("Exit", BTN_ID_PAUSEMENU_BUTTON_EXIT, state->ui_font_size_38div20)) {
+  if (gui_menu_button("Exit", BTN_ID_PAUSEMENU_BUTTON_EXIT)) {
     event_fire(EVENT_CODE_APPLICATION_QUIT, 0, (event_context) {0});
   }
 }
@@ -624,7 +685,7 @@ void register_button_type(button_type_id _btn_type_id, spritesheet_type _ss_type
     .scale = _scale,
     .ss_type = _ss_type,
     .source_frame_dim = frame_dim,
-    .text_offset_on_click = on_click_text_offset,
+    .text_offset_on_click = (Vector2) { .x = on_click_text_offset.x * _scale, .y = on_click_text_offset.y * _scale},
     .play_crt = _play_crt,
     .play_reflection = _play_reflection,
     .should_center = _should_center,
@@ -875,14 +936,22 @@ inline void draw_texture_npatch(texture_id _id, Rectangle dest, Vector4 offsets,
 
   DrawTextureNPatch(*tex, npatch, dest, (Vector2) {0}, 0, WHITE);
 }
-Font* user_interface_state_get_font() {
+Font* ui_get_font(font_type font) {
   if (!state) {
     TraceLog(LOG_WARNING, "user_interface::user_interface_state_get_font()::user interface didn't initialized. Returning default font");
     return (Font*) {0};
   }
+  switch (font) {
+  case FONT_TYPE_MOOD:              return &state->mood_font;
+  case FONT_TYPE_MOOD_OUTLINE:      return &state->mood_outline_font;
+  case FONT_TYPE_MINI_MOOD:         return &state->mini_mood_font;
+  case FONT_TYPE_MINI_MOOD_OUTLINE: return &state->mini_mood_outline_font;
+  default: TraceLog(LOG_WARNING, "user_interface::ui_get_font()::Unknown font type");
+  }
 
-  return &state->ui_font;
+  return (Font*) {0};
 }
+
 void user_interface_system_destroy() {
 
 }

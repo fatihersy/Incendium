@@ -49,7 +49,7 @@ bool player_system_initialize() {
         .height = player->dimentions.y
     };
 
-    //add_ability(&player->ability_system, FIREBALL);
+    add_ability(&player->ability_system, FIREBALL);
     // add_ability(ability_system, salvo);
     // add_ability(ability_system, radiation);
     // add_ability(ability_system, direct_fire);

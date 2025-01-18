@@ -40,33 +40,33 @@ void render_scene_main_menu() {
   gui_draw_texture_to_background(TEX_ID_BACKGROUND);
   gui_draw_spritesheet_to_background(
     SCREEN_CRT_SHEET, 
-    (Color) {218, 165, 32, 100}
+    (Color) {WHITE_ROCK.r, WHITE_ROCK.g, WHITE_ROCK.b, 100} //(Color) {218, 165, 32, 100}
   );
 }
 
 void render_interface_main_menu() {
-  Font* ui_font = user_interface_state_get_font();
+  Font* font = ui_get_font(FONT_TYPE_MOOD);
 
   if (state->type == MAIN_MENU_SCENE_DEFAULT) {
-    if (gui_button("Play", BTN_ID_MAINMENU_BUTTON_PLAY, ui_font->baseSize)) {
+    if (gui_menu_button("Play", BTN_ID_MAINMENU_BUTTON_PLAY)) {
       event_fire(EVENT_CODE_SCENE_IN_GAME, 0, (event_context){0});
     }
-    if (gui_button("Editor", BTN_ID_MAINMENU_BUTTON_EDITOR, ui_font->baseSize)) {
+    if (gui_menu_button("Editor", BTN_ID_MAINMENU_BUTTON_EDITOR)) {
       event_fire(EVENT_CODE_SCENE_EDITOR, 0, (event_context){0});
     }
-    if (gui_button("Settings", BTN_ID_MAINMENU_BUTTON_SETTINGS, ui_font->baseSize)) {
+    if (gui_menu_button("Settings", BTN_ID_MAINMENU_BUTTON_SETTINGS)) {
       state->type = MAIN_MENU_SCENE_SETTINGS;
       event_fire(EVENT_CODE_UI_SHOW_SETTINGS_MENU, 0, (event_context) {0});
     }
-    if (gui_button("Extras", BTN_ID_MAINMENU_BUTTON_EXTRAS, ui_font->baseSize)) {
+    if (gui_menu_button("Extras", BTN_ID_MAINMENU_BUTTON_EXTRAS)) {
     
     }
-    if (gui_button("Exit", BTN_ID_MAINMENU_BUTTON_EXIT, ui_font->baseSize)) {
+    if (gui_menu_button("Exit", BTN_ID_MAINMENU_BUTTON_EXIT)) {
       event_fire(EVENT_CODE_APPLICATION_QUIT, 0, (event_context){0});
     }
   }
   if (state->type == MAIN_MENU_SCENE_SETTINGS) {
-    if(gui_button("Cancel", BTN_ID_SETTINGS_APPLY_SETTINGS_BUTTON, ui_font->baseSize)) {
+    if(gui_menu_button("Cancel", BTN_ID_SETTINGS_APPLY_SETTINGS_BUTTON)) {
       state->type = MAIN_MENU_SCENE_DEFAULT;
       event_fire(EVENT_CODE_UI_SHOW_SETTINGS_MENU, 0, (event_context) {0});
     }
