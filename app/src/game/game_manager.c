@@ -9,6 +9,8 @@
 #include "game/player.h"
 #include "game/spawn.h"
 
+#include "abilities/ability_manager.h"
+
 static game_manager_system_state *state;
 
 bool game_manager_on_event(u16 code, void *sender, void *listener_inst, event_context context);
@@ -24,6 +26,9 @@ bool game_manager_initialize(Vector2 _screen_size, scene_type _scene_data) {
     TraceLog(LOG_ERROR, "player_system_initialize() failed");
     return false;
   }
+  state->p_player = get_player_state();
+  add_ability(ABILITY_TYPE_FIREBALL, &state->p_player->ability_system);
+
   if (!spawn_system_initialize()) {
     TraceLog(LOG_ERROR, "spawn_system_initialize() failed");
     return false;
@@ -56,10 +61,12 @@ void _update_spawns() {
 }
 void _update_player() {
   update_player(state->scene_data);
+  update_abilities(&state->p_player->ability_system, (Character2D) {.position = state->p_player->position});
 }
 
 void _render_player() {
   render_player();
+  render_abilities(&state->p_player->ability_system);
 }
 void _render_spawns() {
   render_spawns();

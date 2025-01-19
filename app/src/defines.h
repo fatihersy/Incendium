@@ -52,8 +52,8 @@
 
 #define MAX_PLAYER_LEVEL 100
 #define MAX_SPAWN_COUNT 100
-#define MAX_PROJECTILE_COUNT 50
-#define MAX_ABILITY_AMOUNT 10
+
+#define MAX_FIREBALL_PROJECTILE_COUNT 6
 
 #define DEBUG_COLLISIONS 0
 
@@ -153,11 +153,12 @@ typedef enum scene_type {
   SCENE_EDITOR
 } scene_type;
 
+// LABEL: Ability types
 typedef enum ability_type {
-  FIREBALL,
-  SALVO,
-  RADIATION,
-  DIRECT_FIRE,
+  ABILITY_TYPE_UNDEFINED,
+  ABILITY_TYPE_FIREBALL,
+  ABILITY_TYPE_RADIATION,
+  ABILITY_TYPE_MAX,
 } ability_type;
 
 typedef enum elapse_time_type { SALVO_ETA } elapse_time_type;
@@ -566,53 +567,43 @@ typedef struct Character2D {
   f32 speed;
 } Character2D;
 
-typedef struct ability {
-  bool is_on_fire;
-
-  ability_type type;
+typedef struct ability_fireball {
   Vector2 position;
-  u16 rotation;
-  i16 fire_rate;
+  f32 rotation;
   u8 level;
-
-  Vector2 projectile_target_position[MAX_PROJECTILE_COUNT];
-  Character2D projectiles[MAX_PROJECTILE_COUNT];
-  f32 projectile_process[MAX_PROJECTILE_COUNT];
-
-  f32 overall_process;
-} ability;
-
-typedef struct ability_system_state {
-  actor_type owner_type;
-  Vector2 owner_position;
-  u16 player_width;
-  u16 player_height;
-  bool is_dirty_ability_system;
-
-  ability abilities[MAX_ABILITY_AMOUNT];
-  i16 ability_amount;
+  bool is_active;
+  Character2D projectiles[MAX_FIREBALL_PROJECTILE_COUNT];
 
   u16 fire_ball_ball_count;
   u16 fire_ball_ball_radius;
-  u16 fire_ball_ball_diameter;
+  u16 fire_ball_ball_diameter; 
   u16 fire_ball_circle_radius;
   u16 fire_ball_circle_radius_div_2;
   u16 fire_ball_circle_radius_div_4;
+} ability_fireball;
 
-  u16 radiation_circle_radius;
-  u16 radiation_circle_diameter;
-  u16 radiation_circle_radius_div_2;
-  u16 radiation_circle_radius_div_4;
+typedef struct ability_radiation {
+  Vector2 position;
+  u8 level;
+  bool is_active;
+  Character2D damage_area;
+} ability_radiation;
 
-  u16 direct_fire_square_width;
-  u16 direct_fire_square_height;
-  u16 direct_fire_square_height_div_2;
+// LABEL: ability package
+typedef struct ability_package {
+  ability_type type;
+  union {
+    ability_fireball fireball;
+    ability_radiation radiation;
+  } data;
 
-  u16 salvo_projectile_at_a_time;
-  u16 salvo_fire_count;
-  u16 salvo_projectile_count;
-  u16 salvo_fire_rate;
-} ability_system_state;
+} ability_package;
+
+typedef struct ability_play_system {
+  Character2D* p_owner;
+  ability_package abilities[ABILITY_TYPE_MAX];
+  i16 ability_amount;
+} ability_play_system;
 
 typedef struct item_actor {
   i8 name[MAX_ITEM_ACTOR_NAME_LENGHT];
@@ -624,9 +615,10 @@ typedef struct inventory_state {
   u16 item_count;
 } inventory_state;
 
+// LABEL: Player State
 typedef struct player_state {
   Rectangle collision;
-  ability_system_state ability_system;
+  ability_play_system ability_system;
   spritesheet_play_system spritesheet_system;
   inventory_state inventory;
 
@@ -667,8 +659,10 @@ typedef struct spawn_system_state {
   u16 current_spawn_count;
 } spawn_system_state;
 
+// LABEL: game_manager_system_state
 typedef struct game_manager_system_state {
   rectangle_collision spawn_collisions[MAX_SPAWN_COUNT];
+  player_state* p_player;
   u16 spawn_collision_count;
   scene_type scene_data;
   tilemap_stringtify_package map_str_package;

@@ -112,7 +112,7 @@ void update_scene_in_game() {
   }
 
   _update_player();
-  _update_spawns();
+  //_update_spawns();
 
   event_fire(EVENT_CODE_SCENE_MANAGER_SET_TARGET, 0, (event_context){
     .data.f32[0] = _get_player_position(false).x,

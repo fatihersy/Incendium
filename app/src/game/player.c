@@ -4,9 +4,6 @@
 #include "core/event.h"
 #include "core/fmemory.h"
 
-#include "game/ability.h"
-
-
 // To avoid dublicate symbol errors. Implementation in defines.h
 extern const u32 level_curve[MAX_PLAYER_LEVEL+1];
 static player_state* player;
@@ -39,7 +36,7 @@ bool player_system_initialize() {
     player->dimentions = (Vector2) {86, 86}; // TODO: Hardcoded dimentions
     player->dimentions_div2 = (Vector2) {player->dimentions.x/2, player->dimentions.y/2};
 
-    player->ability_system = ability_system_initialize(PLAYER, player->dimentions);
+    //player->ability_system = ability_manager_initialize(PLAYER, player->dimentions);
 
     player->collision = (Rectangle)
     {
@@ -49,7 +46,7 @@ bool player_system_initialize() {
         .height = player->dimentions.y
     };
 
-    add_ability(&player->ability_system, FIREBALL);
+    //add_ability(&player->ability_system, FIREBALL);
     // add_ability(ability_system, salvo);
     // add_ability(ability_system, radiation);
     // add_ability(ability_system, direct_fire);
@@ -181,7 +178,7 @@ bool update_player(scene_type _scene_data) {
     player->collision.width = player->dimentions.x;
     player->collision.height = player->dimentions.y;
 
-    update_abilities(&player->ability_system, player->position);
+    //update_abilities(&player->ability_system, player->position);
     update_sprite_renderqueue();
 
     return true;
@@ -219,7 +216,7 @@ bool render_player() {
             : play_anim(PLAYER_ANIMATION_WRECK_RIGHT);
     }
     
-    render_abilities(&player->ability_system);
+    //render_abilities(&player->ability_system);
     #if DEBUG_COLLISIONS
         DrawRectangleLines(
             player->collision.x,

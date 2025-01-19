@@ -5,6 +5,7 @@
 
 #include "defines.h"
 
+
 bool player_system_initialize();
 
 player_state* get_player_state();
