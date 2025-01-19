@@ -1,7 +1,7 @@
 #include "ability.h"
+#include "defines.h"
 
 #include "core/fmath.h"
-#include "defines.h"
 #include "game/game_manager.h"
 
 void update_dirty_ability_system(ability_system_state *system);

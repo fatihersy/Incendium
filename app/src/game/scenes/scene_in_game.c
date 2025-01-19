@@ -14,6 +14,8 @@ typedef struct scene_in_game_state {
   game_manager_system_state *p_game_manager;
   player_state* player;
   panel skill_up_panels[MAX_UPDATE_ABILITY_PANEL_COUNT];
+  
+
 } scene_in_game_state;
 
 static scene_in_game_state *state;
@@ -83,20 +85,16 @@ bool initialize_scene_in_game(Vector2 _screen_size) {
     .data.f32[1] = get_player_state_if_available()->health_perc,
   });
   panel default_panel = (panel) {
-    .signal_state = BTN_STATE_RELEASED,
-    .bg_tex_id    = TEX_ID_CRIMSON_FANTASY_PANEL_BG,
-    .frame_tex_id = TEX_ID_CRIMSON_FANTASY_PANEL,
-    .bg_tint = (Color) {255, 255, 255, 200},
+    .signal_state  = BTN_STATE_RELEASED,
+    .bg_tex_id     = TEX_ID_CRIMSON_FANTASY_PANEL_BG,
+    .frame_tex_id  = TEX_ID_CRIMSON_FANTASY_PANEL,
+    .bg_tint       = (Color) {255, 255, 255, 200},
+    .bg_hover_tint = (Color) {255, 55, 55, 184},
     .offsets = (Vector4) {6, 6, 6, 6},
   };
-  panel default_pan = (panel) {
-    .signal_state = BTN_STATE_RELEASED,
-    .bg_tex_id    = TEX_ID_CRIMSON_FANTASY_PANEL_BG,
-    .frame_tex_id = TEX_ID_CRIMSON_FANTASY_PANEL,
-    .bg_tint = (Color) {255, 255, 255, 200},
-    .offsets = (Vector4) {6, 6, 6, 6},
-  };
-  state->skill_up_panels[0] = default_pan;
+  for (int i=0; i<MAX_UPDATE_ABILITY_PANEL_COUNT; ++i) {
+    state->skill_up_panels[i] = default_panel;
+  }
 
   state->p_game_manager->is_game_paused = false;
 
@@ -107,12 +105,12 @@ void update_scene_in_game() {
   STATE_ASSERT("update_scene_in_game")
 
   update_user_interface();
+  in_game_update_bindings();
 
   if (state->p_game_manager->is_game_paused) {
     return;
   }
 
-  in_game_update_bindings();
   _update_player();
   _update_spawns();
 
@@ -136,13 +134,17 @@ void render_interface_in_game() {
 
   if (state->player->is_player_have_skill_points) {
     state->p_game_manager->is_game_paused = true;
-    Rectangle dest = (Rectangle) { 
-      get_resolution_div2()->x, get_resolution_div2()->y, 
+    Rectangle dest = (Rectangle) { // TODO: Make it responsive
+      get_resolution_div4()->x, get_resolution_div2()->y, 
       get_resolution_div4()->x, get_resolution_3div2()->y 
     };
-    if(gui_panel_clickable(&state->skill_up_panels[0], dest, true)) {
-      state->p_game_manager->is_game_paused = false;
-      state->player->is_player_have_skill_points = false;
+    f32 dest_x_buffer = dest.x;
+    for (int i=0; i<MAX_UPDATE_ABILITY_PANEL_COUNT; ++i) {
+      dest.x = dest_x_buffer + ((dest.width + get_screen_offset()) * i);
+      if(gui_panel_clickable(&state->skill_up_panels[i], dest, true)) {
+        state->p_game_manager->is_game_paused = false;
+        state->player->is_player_have_skill_points = false;
+      }
     }
 
 
@@ -167,9 +169,9 @@ void in_game_update_mouse_bindings() {
 void in_game_update_keyboard_bindings() {
 
   if (IsKeyReleased(KEY_ESCAPE)) {
+    if(!state->player->is_player_have_skill_points) state->p_game_manager->is_game_paused = !state->p_game_manager->is_game_paused;
     event_fire(EVENT_CODE_UI_SHOW_PAUSE_MENU, 0, (event_context){0});
   }
-
 
 }
 

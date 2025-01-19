@@ -14,6 +14,7 @@ Font* ui_get_font(font_type font);
 bool gui_slider_add_option(slider_id _id, const char* _display_text, data_pack content);
 
 bool gui_menu_button(const char* text, button_id _id);
+bool gui_mini_button(const char* text, button_id _id);
 bool gui_slider_button(button_id _id);
 void gui_slider(slider_id _id);
 void gui_draw_texture_to_background(texture_id _id);

@@ -10,7 +10,7 @@
 #define RESOURCE_PATH "D:/Workspace/resources/"
 #define SHADER_PATH "../app/src/shaders/"
 
-#define MAX_UPDATE_ABILITY_PANEL_COUNT 6
+#define MAX_UPDATE_ABILITY_PANEL_COUNT 3
 
 #define CLEAR_BACKGROUND_COLOR BLACK
 #define BUTTON_TEXT_UP_COLOR WHITE_ROCK
@@ -460,6 +460,7 @@ typedef struct panel {
   texture_id frame_tex_id;
   texture_id bg_tex_id;
   Color bg_tint;
+  Color bg_hover_tint;
   Vector4 offsets;
   button_state current_state;
   button_state signal_state;

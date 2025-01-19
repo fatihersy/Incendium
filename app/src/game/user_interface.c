@@ -59,8 +59,10 @@ void register_progress_bar_type(progress_bar_type_id _type_id, texture_id _body_
 void _register_slider(Vector2 _pos, slider_id _sdr_id, slider_type_id _sdr_type_id, button_id _left_btn_id, button_id _right_btn_id, bool _is_clickable);
 void register_slider_type(slider_type_id _sdr_type_id, spritesheet_type _ss_sdr_body_type, f32 _scale, u16 _width_multiply, button_type_id _left_btn_type_id, button_type_id _right_btn_type_id, u16 _char_limit);
 
-#define MENU_BUTTON_FONT state->mood_font
-#define MENU_BUTTON_FONT_SIZE state->mood_font.baseSize / 20.f
+#define MENU_BUTTON_FONT state->mini_mood_font
+#define MENU_BUTTON_FONT_SIZE state->mini_mood_font.baseSize / 30.f
+#define MINI_BUTTON_FONT state->mini_mood_font
+#define MINI_BUTTON_FONT_SIZE state->mini_mood_font.baseSize / 60.f
 
 #define register_button(BTN_ID, BTN_TYPE_ID, POS, OFFSET_X, OFFSET_Y, F) \
   _register_button( SPACE_BTW_V( OFFSET_X, OFFSET_Y, POS, state->button_types[BTN_TYPE_ID].dest_frame_dim, F), BTN_ID, BTN_TYPE_ID) 
@@ -80,23 +82,28 @@ void user_interface_system_initialize() {
   if (state) return;
 
   state = (user_interface_system_state *)allocate_memory_linear(sizeof(user_interface_system_state), true);
-  state->mood_font = LoadFont(rs_path("mood.ttf"));
-  if (state->mood_font.baseSize == 0) { // If custom font load failed
-    state->mood_font = GetFontDefault();
+  
+  // Loading fonts
+  { 
+    state->mood_font = LoadFont(rs_path("mood.ttf"));
+    if (state->mood_font.baseSize == 0) { // If custom font load failed
+      state->mood_font = GetFontDefault();
+    }
+    state->mood_outline_font = LoadFont(rs_path("mood_outline.ttf"));
+    if (state->mood_outline_font.baseSize == 0) { // If custom font load failed
+      state->mood_outline_font = GetFontDefault();
+    }
+    state->mini_mood_font = LoadFont(rs_path("mini_mood.ttf"));
+    if (state->mini_mood_font.baseSize == 0) { // If custom font load failed
+      state->mini_mood_font = GetFontDefault();
+    }
+    state->mini_mood_outline_font = LoadFont(rs_path("mini_mood_outline.ttf"));
+    if (state->mini_mood_outline_font.baseSize == 0) { // If custom font load failed
+      state->mini_mood_outline_font = GetFontDefault();
+    }
   }
-  state->mood_outline_font = LoadFont(rs_path("mood_outline.ttf"));
-  if (state->mood_outline_font.baseSize == 0) { // If custom font load failed
-    state->mood_outline_font = GetFontDefault();
-  }
-  state->mini_mood_font = LoadFont(rs_path("mini_mood.ttf"));
-  if (state->mini_mood_font.baseSize == 0) { // If custom font load failed
-    state->mini_mood_font = GetFontDefault();
-  }
-  state->mini_mood_outline_font = LoadFont(rs_path("mini_mood_outline.ttf"));
-  if (state->mini_mood_outline_font.baseSize == 0) { // If custom font load failed
-    state->mini_mood_outline_font = GetFontDefault();
-  }
-
+  // Loading fonts
+  
   state->default_panel = (panel) {
     .signal_state = BTN_STATE_UNDEFINED,
     .bg_tex_id    = TEX_ID_CRIMSON_FANTASY_PANEL_BG,
@@ -353,6 +360,9 @@ void render_user_interface() {
 bool gui_menu_button(const char* text, button_id _id) {
   return gui_button(text, _id, MENU_BUTTON_FONT, MENU_BUTTON_FONT_SIZE);
 }
+bool gui_mini_button(const char* text, button_id _id) {
+  return gui_button(text, _id, MINI_BUTTON_FONT, MINI_BUTTON_FONT_SIZE);
+}
 bool gui_slider_button(button_id _id) {
   return gui_button("", _id, (Font) {0}, 0);
 }
@@ -599,13 +609,16 @@ bool gui_panel_clickable(panel* pan, Rectangle dest, bool _should_center) {
     }
   }
 
-  draw_texture_regular(pan->bg_tex_id, dest, pan->bg_tint, false);
+  (pan->current_state == BTN_STATE_HOVER) 
+    ? draw_texture_regular(pan->bg_tex_id, dest, pan->bg_hover_tint, false)
+    : draw_texture_regular(pan->bg_tex_id, dest, pan->bg_tint, false);
+
   draw_texture_npatch(pan->frame_tex_id, dest, pan->offsets, false);
 
   return pan->current_state == pan->signal_state;
 }
 
-void gui_draw_settings_screen() {
+void gui_draw_settings_screen() { // TODO: Return to settings later
 
   gui_slider(SDR_ID_SETTINGS_SOUND_SLIDER);
 
@@ -613,7 +626,7 @@ void gui_draw_settings_screen() {
 
   gui_slider(SDR_ID_SETTINGS_WIN_MODE_SLIDER);
 
-  if(gui_button("Apply", BTN_ID_MAIN_MENU_SETTINGS_CANCEL_SETTINGS_BUTTON, state->mood_font, state->mood_font.baseSize)) {
+  if(gui_menu_button("Apply", BTN_ID_MAIN_MENU_SETTINGS_CANCEL_SETTINGS_BUTTON)) {
     slider sdr_win_mode = state->sliders[SDR_ID_SETTINGS_WIN_MODE_SLIDER];
     i32 window_mod = sdr_win_mode.options[sdr_win_mode.current_value].content.data.i32[0];
 
@@ -637,19 +650,19 @@ void gui_draw_pause_screen() {
   };
   gui_panel(state->default_panel, dest, true);
 
-  if (gui_menu_button("Inventory", BTN_ID_PAUSEMENU_BUTTON_INVENTORY)) {
+  if (gui_mini_button("Inventory", BTN_ID_PAUSEMENU_BUTTON_INVENTORY)) {
     state->b_show_pause_menu = !state->b_show_pause_menu;
   }
-  if (gui_menu_button("Technologies", BTN_ID_PAUSEMENU_BUTTON_TECHNOLOGIES)) {
+  if (gui_mini_button("Update", BTN_ID_PAUSEMENU_BUTTON_TECHNOLOGIES)) {
 
   }
-  if (gui_menu_button("Settings", BTN_ID_PAUSEMENU_BUTTON_SETTINGS)) {
+  if (gui_mini_button("Settings", BTN_ID_PAUSEMENU_BUTTON_SETTINGS)) {
     
   }
-  if (gui_menu_button("Credits", BTN_ID_PAUSEMENU_BUTTON_CREDITS)) {
+  if (gui_mini_button("Credits", BTN_ID_PAUSEMENU_BUTTON_CREDITS)) {
     
   }
-  if (gui_menu_button("Exit", BTN_ID_PAUSEMENU_BUTTON_EXIT)) {
+  if (gui_mini_button("Exit", BTN_ID_PAUSEMENU_BUTTON_EXIT)) {
     event_fire(EVENT_CODE_APPLICATION_QUIT, 0, (event_context) {0});
   }
 }
