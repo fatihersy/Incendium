@@ -112,7 +112,8 @@ void update_scene_in_game() {
   }
 
   _update_player();
-  //_update_spawns();
+  _update_spawns();
+  update_game_manager();
 
   event_fire(EVENT_CODE_SCENE_MANAGER_SET_TARGET, 0, (event_context){
     .data.f32[0] = _get_player_position(false).x,
@@ -144,6 +145,8 @@ void render_interface_in_game() {
       if(gui_panel_clickable(&state->skill_up_panels[i], dest, true)) {
         state->p_game_manager->is_game_paused = false;
         state->player->is_player_have_skill_points = false;
+
+
       }
     }
 

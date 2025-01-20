@@ -4,7 +4,7 @@
 
 #include "defines.h"
 
-void add_ability(ability_type _type, ability_play_system* system);
+ability_package get_ability(ability_type _type);
 void upgrade_ability(ability_type _type, ability_play_system* system);
 
 void update_abilities(ability_play_system* system, Character2D owner);

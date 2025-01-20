@@ -135,7 +135,7 @@ void take_damage(u16 damage) {
     player->health_perc = (float) player->health_current / player->health_max;
 }
 
-bool update_player(scene_type _scene_data) {
+bool update_player() {
     if (!player) return false;
 
     if (player->is_dead) {

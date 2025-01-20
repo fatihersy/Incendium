@@ -2,19 +2,20 @@
 
 #include "ability_fireball.h"
 
-void add_ability(ability_type _type, ability_play_system* system) {
-  switch (_type) {
-    case ABILITY_TYPE_FIREBALL: { 
-      system->abilities[ABILITY_TYPE_FIREBALL].data.fireball = get_ability_fireball();
-      system->abilities[ABILITY_TYPE_FIREBALL].type = ABILITY_TYPE_FIREBALL;
+ability_package get_ability(ability_type _type) {
+  ability_package package = {0};
 
-      system->abilities[ABILITY_TYPE_FIREBALL].data.fireball.is_active = true;
+  switch (_type) {
+    case ABILITY_TYPE_FIREBALL: {
+      package.data.fireball = get_ability_fireball();
       break;
     }
-
-
-    default: break;
+    case ABILITY_TYPE_RADIATION: break;
+      
+    default: break; // TODO: Log unknown type of ability
   }
+
+  return package;
 }
 
 void upgrade_ability(ability_type _type, ability_play_system* system) {
@@ -30,7 +31,7 @@ void update_abilities(ability_play_system* system, Character2D owner) {
       }
       case ABILITY_TYPE_RADIATION: break;
       
-      default: break;
+      default: break; // TODO: Log unknown type of ability
     }
   }
 }
@@ -45,7 +46,7 @@ void render_abilities(ability_play_system* system) {
       }
       case ABILITY_TYPE_RADIATION: break;
       
-      default: break;
+      default: break; // TODO: Log unknown type of ability
     }
   }
 }

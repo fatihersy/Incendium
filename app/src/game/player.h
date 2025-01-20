@@ -11,7 +11,7 @@ bool player_system_initialize();
 player_state* get_player_state();
 Vector2 get_player_position(bool centered);
 
-bool update_player(scene_type _scene_data);
+bool update_player();
 bool render_player();
 
 #endif

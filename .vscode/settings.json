@@ -1,5 +1,5 @@
 {
-    "workbench.colorTheme": "Gruvbox Dark Hard",
+    "workbench.colorTheme": "Quiet Light",
     "editor.minimap.enabled": false,
     "files.autoSave": "onFocusChange",
     "terminal.integrated.defaultProfile.windows": "pwsh7",
@@ -54,7 +54,7 @@
         },
         {
             "text": "LABEL:",
-            "color": "#B5F8FE",
+            "color": "#B5B8BE",
             "backgroundColor": "rgba(0,0,0,0)"
         }
     ],
