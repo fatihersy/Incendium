@@ -55,6 +55,7 @@ bool resource_system_initialize() {
   load_spritesheet("slider_right_button_edited.png", SLIDER_RIGHT_BUTTON, 0, 11, 10, 1, 2);
   load_spritesheet("menu_button.png", MENU_BUTTON, 0, 80, 16, 1, 2);
   load_spritesheet("flat_button.png", FLAT_BUTTON, 0, 44, 14, 1, 2);
+  load_spritesheet("fireball.png", FIREBALL_ANIMATION, 15, 32, 32, 1, 4);
   load_tilesheet(TILESHEET_TYPE_MAP, TEX_ID_MAP_TILESET_TEXTURE, 16, 14, 16);
 
   return true;

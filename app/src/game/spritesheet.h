@@ -7,21 +7,21 @@
 
 #if defined(PSPRITESHEET_SYSTEM) 
 #define register_sprite(_type, _play_looped, _play_once, _center_sprite) \
-    _register_sprite(&PSPRITESHEET_SYSTEM->spritesheet_system, _type, _play_looped, _play_once, _center_sprite)
+    _register_sprite(&PSPRITESHEET_SYSTEM, _type, _play_looped, _play_once, _center_sprite)
 #define update_sprite_renderqueue() \
-    _update_sprite_renderqueue(&PSPRITESHEET_SYSTEM->spritesheet_system)
-#define play_sprite_on_site(_id, _tint, dest) \
-    _play_sprite_on_site(&PSPRITESHEET_SYSTEM->spritesheet_system, _id, _tint, dest)
+    _update_sprite_renderqueue(&PSPRITESHEET_SYSTEM)
+#define play_sprite_on_site(_id, dest, _tint) \
+    _play_sprite_on_site(&PSPRITESHEET_SYSTEM, _id, _tint, dest)
 #define draw_sprite_on_site(_type, _tint, pos, scale, frame, _should_center) \
-    _draw_sprite_on_site(&PSPRITESHEET_SYSTEM->spritesheet_system, _type, _tint, pos, scale, frame, _should_center)
+    _draw_sprite_on_site(&PSPRITESHEET_SYSTEM, _type, _tint, pos, scale, frame, _should_center)
 #define queue_sprite_change_location(queue_index, _location) \
-    _queue_sprite_change_location(&PSPRITESHEET_SYSTEM->spritesheet_system, queue_index, _location)
+    _queue_sprite_change_location(&PSPRITESHEET_SYSTEM, queue_index, _location)
 #define stop_sprite(index, reset) \
-    _stop_sprite(&PSPRITESHEET_SYSTEM->spritesheet_system, index, reset)
+    _stop_sprite(&PSPRITESHEET_SYSTEM, index, reset)
 #define reset_sprite(_queue_index, _retrospective) \
-    _reset_sprite(&PSPRITESHEET_SYSTEM->spritesheet_system, _queue_index, _retrospective)
+    _reset_sprite(&PSPRITESHEET_SYSTEM, _queue_index, _retrospective)
 #define is_sprite_playing(index) \
-    _is_sprite_playing(&PSPRITESHEET_SYSTEM->spritesheet_system, index)
+    _is_sprite_playing(&PSPRITESHEET_SYSTEM, index)
 #define get_texture_by_enum(_type) \
     _get_texture_by_enum(_type)
 #define get_spritesheet_by_enum(_type) \

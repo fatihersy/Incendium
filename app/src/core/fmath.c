@@ -4,8 +4,10 @@
 #include "raymath.h"
 
 inline Vector2 get_a_point_of_a_circle(Vector2 position, i16 radius, i16 angle) {
-  return (Vector2){position.x + (radius * cos(angle * 3.1415f / 180.f)),
-                   position.y + (radius * sin(angle * 3.1415f / 180.f))};
+  return (Vector2){
+    position.x + (radius * cos(angle * 3.1415f / 180.f)),
+    position.y + (radius * sin(angle * 3.1415f / 180.f))
+  };
 }
 
 inline Vector2 move_towards(Vector2 position, Vector2 target, f32 speed) {

@@ -6,10 +6,10 @@
 #include "core/ftime.h"
 
 #include "game/tilemap.h"
+#include "game/ability.h"
 #include "game/player.h"
 #include "game/spawn.h"
 
-#include "abilities/ability_manager.h"
 
 static game_manager_system_state *state;
 
@@ -27,7 +27,12 @@ bool game_manager_initialize(Vector2 _screen_size, scene_type _scene_data) {
     TraceLog(LOG_ERROR, "player_system_initialize() failed");
     return false;
   }
+  if (!ability_system_initialize()) {
+    TraceLog(LOG_ERROR, "ability_system_initialize() failed");
+    return false;
+  }
   state->p_player = get_player_state();
+  state->p_player->ability_system.p_owner = get_player_state();
   _add_ability(ABILITY_TYPE_FIREBALL);
 
   if (!spawn_system_initialize()) {
@@ -66,7 +71,9 @@ void update_collisions() {
       if (state->spawn_collisions[j].is_active){ 
         if (CheckCollisionRecs(state->spawn_collisions[j].rect, state->projectiles[i].collision)) {
           u16 result = damage_spawn(state->spawn_collisions[j].owner_id, state->projectiles[i].damage);
-          // TODO: Process result
+          if (result <= 0 || result >= 100) {
+            state->spawn_collisions[j].is_active = false;
+          }
         }
       }
     }
@@ -126,38 +133,27 @@ u16 _spawn_character(Character2D _character) {
   return spawn_character(_character);
 }
 bool _add_ability(ability_type _type) {
-  ability_package package = get_ability(_type);
+  ability abl = get_ability(_type);
+  if (abl.projectile_count >= MAX_ABILITY_PROJECTILE_SLOT || abl.projectile_count <= 0) {
+    TraceLog(LOG_WARNING, "game_manager::_add_ability()::Ability projectile count was out of bound");
+    return false;
+  }
   ability_play_system* system = &state->p_player->ability_system;
-
-  switch (_type) {
-    case ABILITY_TYPE_FIREBALL: {
-      ability_fireball fb = package.data.fireball;
-      if (fb.fire_ball_ball_count > MAX_ABILITY_COLLISION_SLOT || fb.fire_ball_ball_count <= 0) {
-        TraceLog(LOG_WARNING, "ability_manager::add_ability()::Recieved fireball ability ball count is out of bound");
-        return false;
-      }
-      for (int i=0; i<fb.fire_ball_ball_count; ++i) {
-        state->projectiles[i].id = state->projectile_count;
-        fb.projectiles[i].id = state->projectile_count;
-        state->projectiles[i] = fb.projectiles[i];
-        state->projectile_count++;
-      }
-      system->abilities[ABILITY_TYPE_FIREBALL].data.fireball = fb;
-      system->abilities[ABILITY_TYPE_FIREBALL].data.fireball.is_active = true;
-      system->abilities[ABILITY_TYPE_FIREBALL].type = ABILITY_TYPE_FIREBALL;
-
-      return true;
-    }
-
-    default: {
-      TraceLog(LOG_WARNING, "ability_manager::add_ability()::Unknown type of ability");
-      return false;
-    }
+  if (!system) {
+    TraceLog(LOG_WARNING, "game_manager::_add_ability()::Recieved system was NULL");
+    return false;
   }
 
-  TraceLog(LOG_WARNING, "ability_manager::add_ability()::Function has been unexpectedly terminated");
-  return false;
+  for (int i=0; i < abl.projectile_count; ++i) {
+    abl.projectiles[i].id = state->projectile_count;
+    state->projectiles[state->projectile_count] = abl.projectiles[i];
+    state->projectile_count++;
+  }
+  abl.is_active = true;
 
+  system->abilities[ABILITY_TYPE_FIREBALL] = abl;
+
+  return true;
 }
 // Exposed functions
 
@@ -200,7 +196,11 @@ void _update_spawns() {
 }
 void _update_player() {
   update_player();
-  update_abilities(&state->p_player->ability_system, (Character2D) {.position = state->p_player->position});
+  Character2D character = (Character2D) {
+    .position = state->p_player->position,
+    .collision = state->p_player->collision,
+  };
+  update_abilities(&state->p_player->ability_system, character);
 }
 void _render_player() {
   render_player();

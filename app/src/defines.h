@@ -54,8 +54,7 @@
 #define MAX_SPAWN_COUNT 100
 
 #define MAX_ABILITY_SLOT 5
-#define MAX_ABILITY_COLLISION_SLOT 6 // TODO: Set the maximum possible ability collision value
-#define MAX_FIREBALL_PROJECTILE_COUNT 6
+#define MAX_ABILITY_PROJECTILE_SLOT 6
 
 #define DEBUG_COLLISIONS 0
 
@@ -224,6 +223,7 @@ typedef enum spritesheet_type {
   SLIDER_OPTION,
   SLIDER_LEFT_BUTTON,
   SLIDER_RIGHT_BUTTON,
+  FIREBALL_ANIMATION,
 
   SPRITESHEET_TYPE_MAX
 } spritesheet_type;
@@ -571,58 +571,30 @@ typedef struct Character2D {
 
 typedef struct projectile {
   u16 id;
+  spritesheet_type projectile_anim_sprite;
+  u16 animation_sprite_queueindex;
   Vector2 position;
   Rectangle collision;
 
   u16 damage;
   f32 duration;
-  bool will_last;
+  bool is_active;
 } projectile;
 
-typedef struct ability_fireball {
-  Vector2 position;
-  f32 rotation;
-  u8 level;
-  bool is_active;
-  projectile projectiles[MAX_FIREBALL_PROJECTILE_COUNT];
-
-  u16 fire_ball_ball_count;
-  u16 fire_ball_ball_radius;
-  u16 fire_ball_ball_diameter; 
-  u16 fire_ball_circle_radius;
-  u16 fire_ball_circle_radius_div_2;
-  u16 fire_ball_circle_radius_div_4;
-} ability_fireball;
-
-typedef struct ability_radiation {
-  Vector2 position;
-  u8 level;
-  bool is_active;
-  Character2D damage_area;
-} ability_radiation;
-
-// LABEL: ability package
-typedef struct ability_package {
+typedef struct ability {
   ability_type type;
-  union {
-    ability_fireball fireball;
-    ability_radiation radiation;
-  } data;
-
-} ability_package;
-
-// LABEL: Add ability result
-typedef struct add_ability_result {
+  Vector2 position;
+  u16 rotation;
+  projectile projectiles[MAX_ABILITY_PROJECTILE_SLOT];
   u16 projectile_count;
-  projectile projectiles[MAX_ABILITY_COLLISION_SLOT];
 
-  bool is_success;
-}add_ability_result;
+  bool is_static;
+  bool is_active;
+}ability;
 
 typedef struct ability_play_system {
-  Character2D* p_owner;
-  ability_package abilities[MAX_ABILITY_SLOT];
-  i16 ability_amount;
+  void* p_owner;
+  ability abilities[MAX_ABILITY_SLOT];
 } ability_play_system;
 
 typedef struct item_actor {
@@ -682,7 +654,7 @@ typedef struct spawn_system_state {
 // LABEL: game_manager_system_state
 typedef struct game_manager_system_state {
   rectangle_collision spawn_collisions[MAX_SPAWN_COUNT];
-  projectile projectiles[MAX_ABILITY_COLLISION_SLOT * MAX_ABILITY_SLOT];
+  projectile projectiles[MAX_ABILITY_PROJECTILE_SLOT * MAX_ABILITY_SLOT];
   u16 spawn_collision_count;
   u16 projectile_count;
   tilemap_stringtify_package map_str_package;

@@ -37,7 +37,7 @@ static user_interface_system_state *state;
 
 #define DEFAULT_MENU_BUTTON_SCALE 3
 
-#define PSPRITESHEET_SYSTEM state // Don't forget to undef at very bottom of the file
+#define PSPRITESHEET_SYSTEM state->spritesheet_system // Don't forget to undef at very bottom of the file
 #include "game/spritesheet.h"
 
 bool user_interface_on_event(u16 code, void *sender, void *listener_inst, event_context context);
@@ -392,7 +392,7 @@ bool gui_button(const char* text, button_id _id, Font font, f32 font_size_scale)
     };
   }
 
-  _btn_type->play_crt ? play_sprite_on_site(_btn->crt_render_index, WHITE, _btn->dest) : 0;
+  _btn_type->play_crt ? play_sprite_on_site(_btn->crt_render_index, _btn->dest, WHITE) : 0;
 
   Vector2 pos = (Vector2) {_btn->dest.x, _btn->dest.y};
   Vector2 draw_sprite_scale = (Vector2) {_btn->btn_type.scale,_btn->btn_type.scale};
@@ -406,7 +406,7 @@ bool gui_button(const char* text, button_id _id, Font font, f32 font_size_scale)
   } else {
     draw_sprite_on_site(_btn->btn_type.ss_type, WHITE, pos, draw_sprite_scale, 0, false);
     if (_btn->state == BTN_STATE_HOVER) {
-      _btn_type->play_reflection ? play_sprite_on_site(_btn->reflection_render_index, WHITE, _btn->dest) : 0;
+      _btn_type->play_reflection ? play_sprite_on_site(_btn->reflection_render_index, _btn->dest, WHITE) : 0;
       if (!TextIsEqual(text, "")) {
         draw_text(text, text_pos, font, font.baseSize * font_size_scale, BUTTON_TEXT_HOVER_COLOR);
       }
@@ -880,7 +880,7 @@ void gui_draw_spritesheet_to_background(spritesheet_type _type, Color _tint) {
     state->ss_to_draw_bg.render_queue_index = register_sprite(_type, true, false, false);
   }
   Rectangle dest = (Rectangle) {0, 0, GetScreenWidth(), GetScreenHeight()};
-  play_sprite_on_site(state->ss_to_draw_bg.render_queue_index, _tint, dest);
+  play_sprite_on_site(state->ss_to_draw_bg.render_queue_index, dest, _tint);
 }
 /**
  * @note inline function, returns "(Rectangle) {0}" if texture type returns null pointer
