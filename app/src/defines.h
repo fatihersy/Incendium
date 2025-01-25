@@ -19,8 +19,8 @@
 #define BUTTON_TEXT_UP_COLOR WHITE_ROCK
 #define BUTTON_TEXT_HOVER_COLOR WHITE
 #define BUTTON_TEXT_PRESSED_COLOR WHITE
-#define BUTTON_TEXT_SHADOW_COLOR BLACK
-#define BUTTON_TEXT_SHADOW_OFFSET CLITERAL(Vector2){ 0, 1}
+#define TEXT_SHADOW_COLOR BLACK
+#define TEXT_SHADOW_OFFSET CLITERAL(Vector2){ 0, 1}
 
 #define INI_FILE_MAX_FILE_SIZE 32000
 #define INI_FILE_MAX_SECTION_NAME_LENGTH 32
@@ -154,11 +154,22 @@ typedef enum scene_type {
   SCENE_EDITOR
 } scene_type;
 
+// LABEL: Move Type
+typedef enum movement_pattern {
+  MOVE_TYPE_UNDEFINED,
+  MOVE_TYPE_SATELLITE,
+  MOVE_TYPE_BULLET,
+  MOVE_TYPE_COMET,
+  MOVE_TYPE_MAX,
+} movement_pattern;
+
 // LABEL: Ability types
 typedef enum ability_type {
   ABILITY_TYPE_UNDEFINED,
   ABILITY_TYPE_FIREBALL,
+  ABILITY_TYPE_BULLET,
   ABILITY_TYPE_RADIATION,
+  ABILITY_TYPE_COMET,
   ABILITY_TYPE_MAX,
 } ability_type;
 
@@ -200,8 +211,11 @@ typedef enum spritesheet_playmod {
 } spritesheet_playmod;
 
 typedef enum world_direction {
-  LEFT,
-  RIGHT,
+  WORLD_DIRECTION_UNDEFINED,
+  WORLD_DIRECTION_LEFT,
+  WORLD_DIRECTION_RIGHT,
+  WORLD_DIRECTION_UP,
+  WORLD_DIRECTION_DOWN,
 } world_direction;
 
 typedef enum spritesheet_type {
@@ -571,10 +585,29 @@ typedef struct Character2D {
 
 typedef struct projectile {
   u16 id;
-  spritesheet_type projectile_anim_sprite;
   u16 animation_sprite_queueindex;
   Vector2 position;
   Rectangle collision;
+  world_direction direction;
+
+  // 128 byte buffer
+  union {
+    i64 i64[2];
+    u64 u64[2];
+    f64 f64[2];
+
+    i32 i32[4];
+    u32 u32[4];
+    f32 f32[4];
+
+    i16 i16[8];
+    u16 u16[8];
+
+    i8 i8[16];
+    u8 u8[16];
+
+    char c[16];
+  } buffer;
 
   u16 damage;
   f32 duration;
@@ -583,17 +616,24 @@ typedef struct projectile {
 
 typedef struct ability {
   ability_type type;
+  void* p_owner;
   Vector2 position;
+  u16 level;
+  u16 base_damage;
   u16 rotation;
   projectile projectiles[MAX_ABILITY_PROJECTILE_SLOT];
-  u16 projectile_count;
+  spritesheet_type proj_anim_sprite;
+  movement_pattern move_pattern;
+  u16 proj_count;
+  f32 proj_duration;
+  Vector2 proj_dim;
 
-  bool is_static;
+  bool center_proj_anim;
   bool is_active;
+  bool is_initialized;
 }ability;
 
 typedef struct ability_play_system {
-  void* p_owner;
   ability abilities[MAX_ABILITY_SLOT];
 } ability_play_system;
 
@@ -613,6 +653,7 @@ typedef struct player_state {
   ability_play_system ability_system;
   spritesheet_play_system spritesheet_system;
   inventory_state inventory;
+  ability_type starter_ability;
 
   Vector2 position;
   Vector2 dimentions;
@@ -686,9 +727,9 @@ typedef struct memory_system_state {
   void *linear_memory;
 } memory_system_state;
 
-typedef struct game_state {
-  f32 delta_time;
-} game_state;
+typedef struct camera_metrics {
+  Camera2D handle;
+} camera_metrics;
 
 typedef struct timer {
   elapse_time_type type;

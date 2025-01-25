@@ -4,11 +4,13 @@
 #include "core/fmath.h"
 #include "core/fmemory.h"
 
-
 typedef struct ability_system_state {
   spritesheet_play_system spritesheet_system;
   ability abilities[ABILITY_TYPE_MAX];
+  f32 randoms[MAX_ABILITY_PROJECTILE_SLOT];
 
+  camera_metrics* camera_metrics;
+  app_settings* settings;
 } ability_system_state;
 
 static ability_system_state* state;
@@ -16,9 +18,15 @@ static ability_system_state* state;
 #define PSPRITESHEET_SYSTEM state->spritesheet_system
 #include "game/spritesheet.h"
 
-void register_ability(ability_type type, u16 proj_count, u16 _damage, Vector2 proj_size, spritesheet_type proj_anim, bool _is_static, bool _should_center);
+void movement_satellite(ability* abl);
+void movement_bullet(ability* abl);
+void movement_comet(ability* abl);
 
-bool ability_system_initialize() {
+Vector2 p_to_vec2(f32*);
+
+void register_ability(ability_type type, movement_pattern move_pattern, f32 proj_duration, u16 _damage, Vector2 proj_size, spritesheet_type proj_anim, bool _should_center);
+
+bool ability_system_initialize(camera_metrics* _camera_metrics, app_settings* settings) {
   if (state) {
     return false;
   }
@@ -28,48 +36,169 @@ bool ability_system_initialize() {
     TraceLog(LOG_ERROR, "ability::ability_system_initialize()::Failed to allocate memory");
     return false;
   }
+  state->settings = settings;
+  state->camera_metrics = _camera_metrics;
 
-  register_ability(ABILITY_TYPE_FIREBALL, 4, 15, (Vector2) {30, 30}, FIREBALL_ANIMATION, true, true);
+  f32 cache_randoms[MAX_ABILITY_PROJECTILE_SLOT] = {
+    120, -352, -848, 25, 449, -593
+  };
+  for (int i=0; i<MAX_ABILITY_PROJECTILE_SLOT; ++i) {
+    state->randoms[i] = cache_randoms[i];
+  }
+
+  register_ability(ABILITY_TYPE_FIREBALL, MOVE_TYPE_SATELLITE, 0, 15, (Vector2) {30, 30}, FIREBALL_ANIMATION, true);
+  register_ability(ABILITY_TYPE_BULLET, MOVE_TYPE_BULLET, 1.75, 15, (Vector2) {30, 30}, FIREBALL_ANIMATION, true);
+  register_ability(ABILITY_TYPE_COMET, MOVE_TYPE_COMET, 0, 15, (Vector2) {30, 30}, FIREBALL_ANIMATION, true);
   return true;
 }
 
+void upgrade_ability(ability* abl, ability_play_system* system) {
+  ++abl->level;
+  abl->proj_count = abl->level;
 
-void upgrade_ability(ability_type _type, ability_play_system* system) {}
+  for (int i = 0; i < abl->proj_count; ++i) {
+    abl->projectiles[i].animation_sprite_queueindex = register_sprite(abl->proj_anim_sprite, true, false, abl->center_proj_anim);
+    abl->projectiles[i].damage = abl->base_damage + abl->level * 2;
+    abl->projectiles[i].collision = (Rectangle) {0, 0, abl->proj_dim.x, abl->proj_dim.y};
+    abl->projectiles[i].is_active = true;
+  }
+}
 void update_abilities(ability_play_system* system, Character2D owner) {
 
-  ability* _ability = &system->abilities[ABILITY_TYPE_FIREBALL];
+  for (int i=0; i<ABILITY_TYPE_MAX; ++i) {
+    ability* abl = &system->abilities[i];
+    if (!abl->is_active || !abl->is_initialized) continue;
 
-  _ability->position.x  = owner.collision.x + owner.collision.width / 2.f;
-  _ability->position.y  = owner.collision.y + owner.collision.height / 2.f;
+    switch (abl->move_pattern) {
+      case MOVE_TYPE_SATELLITE: movement_satellite(abl); continue;
+      case MOVE_TYPE_BULLET: movement_bullet(abl); continue;
+      case MOVE_TYPE_COMET: movement_comet(abl); continue;
+      default: continue;
+    } 
 
-  _ability->rotation += 1;
-    
-  if (_ability->rotation > 359) _ability->rotation = 0;
-
-  for (i16 i = 0; i < _ability->projectile_count; i++) {
-
-    i16 angle = (i32)(((360.f / _ability->projectile_count) * i) + _ability->rotation) % 360;
-
-    _ability->projectiles[i].position = get_a_point_of_a_circle(_ability->position, 90, angle);
-
-    _ability->projectiles[i].collision.x = _ability->projectiles[i].position.x;
-    _ability->projectiles[i].collision.y = _ability->projectiles[i].position.y;
-        
-    event_fire(EVENT_CODE_RELOCATE_PROJECTILE_COLLISION, 0, (event_context) {
-      .data.u16[0] = _ability->projectiles[i].id,
-      .data.u16[1] = _ability->projectiles[i].collision.x,
-      .data.u16[2] = _ability->projectiles[i].collision.y
-    });
+    // TODO: Handle all situations
   }
 
   update_sprite_renderqueue();
 }
+void movement_satellite(ability* abl) {
+  if (!abl->is_active || !abl->is_initialized) {
+    TraceLog(LOG_WARNING, "ability::movement_satellite()::Ability is not active or not initialized");
+    return;
+  }
+  if (abl->move_pattern >= MOVE_TYPE_MAX || abl->move_pattern <= MOVE_TYPE_UNDEFINED) {
+    TraceLog(LOG_WARNING, "ability::movement_satelite()::Recieved pattern out of bound");
+    return ;
+  }
+  player_state* player = (player_state*)abl->p_owner; // HACK: Hardcoded character state
+
+  abl->position.x  = player->collision.x + player->collision.width / 2.f;
+  abl->position.y  = player->collision.y + player->collision.height / 2.f;
+
+  abl->rotation += 1;
+    
+  if (abl->rotation > 359) abl->rotation = 0;
+
+  for (i16 i = 0; i < abl->proj_count; i++) {
+
+    i16 angle = (i32)(((360.f / abl->proj_count) * i) + abl->rotation) % 360;
+
+    abl->projectiles[i].position = get_a_point_of_a_circle(
+      abl->position, 
+      (abl->level * 3.f) + player->collision.height + 15,  // NOTE: Better radius calculation?
+      angle);
+
+    abl->projectiles[i].collision.x = abl->projectiles[i].position.x;
+    abl->projectiles[i].collision.y = abl->projectiles[i].position.y;
+    
+    event_fire(EVENT_CODE_RELOCATE_PROJECTILE_COLLISION, 0, (event_context) {
+      .data.u16[0] = abl->projectiles[i].id,
+      .data.u16[1] = abl->projectiles[i].collision.x,
+      .data.u16[2] = abl->projectiles[i].collision.y
+    });
+  }
+}
+void movement_bullet(ability* abl) {
+  if (!abl->is_active || !abl->is_initialized) {
+    TraceLog(LOG_WARNING, "ability::movement_bullet()::Ability is not active or not initialized");
+    return;
+  }
+  if (abl->move_pattern >= MOVE_TYPE_MAX || abl->move_pattern <= MOVE_TYPE_UNDEFINED) {
+    TraceLog(LOG_WARNING, "ability::movement_bullet()::Recieved pattern out of bound");
+    return ;
+  }
+  player_state* player = (player_state*)abl->p_owner; // HACK: Hardcoded character state
+
+  abl->position.x  = player->collision.x + player->collision.width / 2.f;
+  abl->position.y  = player->collision.y + player->collision.height / 2.f;
+
+  for (i16 i = 0; i < abl->proj_count; i++) {
+
+    if (abl->projectiles[i].duration <= 0) {
+      abl->projectiles[i].position = player->position;
+      abl->projectiles[i].duration = abl->proj_duration;
+      abl->projectiles[i].direction = player->w_direction;
+    }
+    else {
+      abl->projectiles[i].duration -= GetFrameTime();
+    }
+    
+    abl->projectiles[i].position.x += abl->projectiles[i].direction == WORLD_DIRECTION_RIGHT ? 2.75 : -2.75;
+
+    abl->projectiles[i].collision.x = abl->projectiles[i].position.x;
+    abl->projectiles[i].collision.y = abl->projectiles[i].position.y;
+    
+    event_fire(EVENT_CODE_RELOCATE_PROJECTILE_COLLISION, 0, (event_context) {
+      .data.u16[0] = abl->projectiles[i].id,
+      .data.u16[1] = abl->projectiles[i].collision.x,
+      .data.u16[2] = abl->projectiles[i].collision.y
+    });
+  }
+}
+void movement_comet(ability* abl) {
+  if (!abl->is_active || !abl->is_initialized) {
+    TraceLog(LOG_WARNING, "ability::movement_comet()::Ability is not active or not initialized");
+    return;
+  }
+  if (abl->move_pattern >= MOVE_TYPE_MAX || abl->move_pattern <= MOVE_TYPE_UNDEFINED) {
+    TraceLog(LOG_WARNING, "ability::movement_comet()::Recieved pattern out of bound");
+    return ;
+  }
+  player_state* player = (player_state*)abl->p_owner; // HACK: Hardcoded character state
+
+  abl->position.x  = player->collision.x + player->collision.width / 2.f;
+  abl->position.y  = player->collision.y + player->collision.height / 2.f;
+
+  for (i16 i = 0; i < abl->proj_count; i++) {
+
+    if (vec2_equals(abl->projectiles[i].position, p_to_vec2(abl->projectiles[i].buffer.f32), .1)) {
+      abl->projectiles[i].buffer.f32[0] = player->position.x + state->randoms[(i32)abl->projectiles[i].buffer.f32[2]];
+      abl->projectiles[i].buffer.f32[1] =  + state->randoms[(i32)abl->projectiles[i].buffer.f32[2]];
+      //abl->projectiles[i].position.x = GetScreenToWorld2D((Vector2) {}, );
+      abl->projectiles[i].position.y = player->position.y + state->randoms[(i32)abl->projectiles[i].buffer.f32[2]];
+    }
+    else {
+      abl->projectiles[i].duration -= GetFrameTime();
+    }
+    
+    abl->projectiles[i].position = move_towards(abl->projectiles[i].position, p_to_vec2(abl->projectiles[i].buffer.f32), 3);
+
+    abl->projectiles[i].collision.x = abl->projectiles[i].position.x;
+    abl->projectiles[i].collision.y = abl->projectiles[i].position.y;
+    
+    event_fire(EVENT_CODE_RELOCATE_PROJECTILE_COLLISION, 0, (event_context) {
+      .data.u16[0] = abl->projectiles[i].id,
+      .data.u16[1] = abl->projectiles[i].collision.x,
+      .data.u16[2] = abl->projectiles[i].collision.y
+    });
+  }
+}
 
 void render_abilities(ability_play_system* system) {
   for (int i = 1; i < ABILITY_TYPE_MAX; ++i) {
-    if (!system->abilities[i].is_active) continue;
+    if (!system->abilities[i].is_active || !system->abilities[i].is_initialized) continue;
 
-    for (int j = 0; j < system->abilities[i].projectile_count; ++j) {
+    for (int j = 0; j < system->abilities[i].proj_count; ++j) {
       if (!system->abilities[i].projectiles[j].is_active) continue;
       play_sprite_on_site(
         system->abilities[i].projectiles[j].animation_sprite_queueindex, 
@@ -77,24 +206,24 @@ void render_abilities(ability_play_system* system) {
         WHITE);
     }
   }
-
 }
 
-void register_ability(ability_type type, u16 proj_count, u16 _damage, Vector2 proj_size, spritesheet_type proj_anim, bool _is_static, bool _should_center) {
-  ability abl = (ability){0};
+/**
+ * @param proj_duration in secs. affects not to all abilities like fireball ability
+ * @param _should_center for projectile spritesheet
+ */
+void register_ability(ability_type type, movement_pattern move_pattern, f32 proj_duration, u16 _damage, Vector2 proj_size, spritesheet_type proj_anim, bool _should_center) {
+  ability abl = {0};
 
   abl.type = type;
-  abl.projectile_count = proj_count;
-  abl.is_static = _is_static;
-
-  for (int i = 0; i < proj_count; ++i) {
-    abl.projectiles[i].projectile_anim_sprite = proj_anim;
-    abl.projectiles[i].animation_sprite_queueindex = register_sprite(proj_anim, _is_static, !_is_static, _should_center);
-    abl.projectiles[i].duration = abl.is_static ? 0 : 60;
-    abl.projectiles[i].damage = _damage;
-    abl.projectiles[i].collision = (Rectangle) {0, 0, proj_size.x, proj_size.y};
-    abl.projectiles[i].is_active = true;
-  }
+  abl.level = 0;
+  abl.base_damage = _damage;
+  abl.proj_count = 0;
+  abl.proj_duration = proj_duration;
+  abl.proj_anim_sprite = proj_anim;
+  abl.move_pattern = move_pattern;
+  abl.center_proj_anim = _should_center;
+  abl.proj_dim = proj_size;
 
   state->abilities[type] = abl;
 }
@@ -106,16 +235,13 @@ ability get_ability(ability_type _type) {
   return state->abilities[_type];
 }
 
+Vector2 p_to_vec2(f32* vec1) {
+  return (Vector2) {vec1[0], vec1[1]};
+}
 
 #undef PSPRITESHEET_SYSTEM
 
 /* 
-
-
-
-
-
-
 
 typedef struct ability_fireball {
   Vector2 position;
@@ -139,7 +265,7 @@ typedef struct ability_radiation {
   Character2D damage_area;
 } ability_radiation;
 
-// LABEL: ability package
+
 typedef struct ability_package {
   ability_type type;
 
@@ -149,7 +275,7 @@ typedef struct ability_package {
   } data;
 } ability_package;
 
-// LABEL: Add ability result
+
 typedef struct add_ability_result {
   u16 projectile_count;
   projectile projectiles[MAX_ABILITY_COLLISION_SLOT];

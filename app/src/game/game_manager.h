@@ -5,7 +5,7 @@
 
 #include <defines.h>
 
-bool game_manager_initialize(Vector2 screen_size, scene_type _scene_data);
+bool game_manager_initialize(camera_metrics* _camera_metrics);
 
 void update_game_manager();
 
@@ -20,6 +20,7 @@ void damage_any_collider_by_type(Character2D *from_actor, actor_type to_type);
 
 Vector2 _get_player_position(bool centered);
 bool _add_ability(ability_type _type);
+bool _upgrade_ability(ability* abl);
 void _set_player_position(Vector2 position);
 u16 _spawn_character(Character2D _character);
 void _update_spawns();

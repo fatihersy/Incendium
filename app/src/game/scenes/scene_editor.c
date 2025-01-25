@@ -10,7 +10,7 @@
 
 
 typedef struct scene_editor_state {
-  Camera2D* camera;
+  camera_metrics* in_camera_metrics;
   Vector2 target;
   tilemap map;
   tilesheet palette;
@@ -29,7 +29,7 @@ void editor_update_zoom_controls();
 void editor_update_mouse_bindings();
 void editor_update_keyboard_bindings();
 
-void initialize_scene_editor(Camera2D* _camera) {
+void initialize_scene_editor(camera_metrics* _camera_metrics) {
   if (state) {
     TraceLog(LOG_ERROR, "ERROR::scene_in_game_edit::initialize_scene_editor()::initialize function called multiple times");
     return;
@@ -46,7 +46,7 @@ void initialize_scene_editor(Camera2D* _camera) {
   }
 
   user_interface_system_initialize();
-  state->camera = _camera;
+  state->in_camera_metrics = _camera_metrics;
   state->palette.position = (Vector2) {5, 5};
 
 }
@@ -104,7 +104,7 @@ void editor_update_mouse_bindings() {
   }
   
   if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON) && !state->b_show_tilesheet_tile_selection_screen && state->b_is_a_tile_selected) {
-    tilemap_tile tile = get_tile_from_map_by_mouse_pos(&state->map, GetScreenToWorld2D(GetMousePosition(), *state->camera));
+    tilemap_tile tile = get_tile_from_map_by_mouse_pos(&state->map, GetScreenToWorld2D(GetMousePosition(), state->in_camera_metrics->handle));
     state->map.tiles[tile.x][tile.y] = state->selected_tile;
     TraceLog(LOG_INFO, "tile.%d,tile.%d is %d:%d", tile.x, tile.y, state->selected_tile.tile_symbol.c[0], state->selected_tile.tile_symbol.c[1]);
   };
@@ -129,10 +129,10 @@ void editor_update_keyboard_bindings() {
 
 void editor_update_zoom_controls() {
 
-  state->camera->zoom += ((float)GetMouseWheelMove()*0.05f);
+  state->in_camera_metrics->handle.zoom += ((float)GetMouseWheelMove()*0.05f);
 
-  if (state->camera->zoom > 3.0f) state->camera->zoom = 3.0f;
-  else if (state->camera->zoom < 0.1f) state->camera->zoom = 0.1f;
+  if (state->in_camera_metrics->handle.zoom > 3.0f) state->in_camera_metrics->handle.zoom = 3.0f;
+  else if (state->in_camera_metrics->handle.zoom < 0.1f) state->in_camera_metrics->handle.zoom = 0.1f;
 }
 void editor_update_movement() {
   f32 speed = 10;

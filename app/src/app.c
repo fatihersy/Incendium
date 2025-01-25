@@ -94,7 +94,7 @@ bool app_render() {
 
     BeginDrawing();
     ClearBackground(CLEAR_BACKGROUND_COLOR);
-    BeginMode2D(*get_active_camera());
+    BeginMode2D(get_active_metrics()->handle);
 
     render_scene_world();
 

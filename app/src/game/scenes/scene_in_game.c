@@ -1,5 +1,4 @@
 #include "scene_in_game.h"
-#include <defines.h>
 #include <settings.h>
 
 #include <core/event.h>
@@ -15,7 +14,7 @@ typedef struct scene_in_game_state {
   player_state* player;
   panel skill_up_panels[MAX_UPDATE_ABILITY_PANEL_COUNT];
   
-
+  bool has_game_started;
 } scene_in_game_state;
 
 static scene_in_game_state *state;
@@ -29,13 +28,14 @@ static scene_in_game_state *state;
 void in_game_update_bindings();
 void in_game_update_mouse_bindings();
 void in_game_update_keyboard_bindings();
+void start_game();
 
-bool initialize_scene_in_game(Vector2 _screen_size) {
+bool initialize_scene_in_game(camera_metrics* _camera_metrics) {
 
   state = (scene_in_game_state *)allocate_memory_linear(sizeof(scene_in_game_state), true);
 
   // Game
-  if (!game_manager_initialize(_screen_size, SCENE_IN_GAME)) { // Inits player & spawns
+  if (!game_manager_initialize(_camera_metrics)) { // Inits player & spawns
     TraceLog(LOG_ERROR, "game_manager_initialize() failed");
     return false;
   }
@@ -64,7 +64,7 @@ bool initialize_scene_in_game(Vector2 _screen_size) {
         .initialized = false,
         .collision = rect_col.rect,
         .position = position,
-        .w_direction = LEFT,
+        .w_direction = WORLD_DIRECTION_LEFT,
         .type = ENEMY,
         .rotation = 0,
         .health = 100,
@@ -83,7 +83,12 @@ bool initialize_scene_in_game(Vector2 _screen_size) {
   event_fire(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, 0, (event_context){
     .data.f32[0] = PRG_BAR_ID_PLAYER_HEALTH,
     .data.f32[1] = get_player_state_if_available()->health_perc,
+  });  
+  event_fire(EVENT_CODE_SCENE_MANAGER_SET_CAM_POS, 0, (event_context){
+    .data.f32[0] = get_player_state_if_available()->position.x,
+    .data.f32[1] = get_player_state_if_available()->position.y,
   });
+  
   panel default_panel = (panel) {
     .signal_state  = BTN_STATE_RELEASED,
     .bg_tex_id     = TEX_ID_CRIMSON_FANTASY_PANEL_BG,
@@ -96,7 +101,7 @@ bool initialize_scene_in_game(Vector2 _screen_size) {
     state->skill_up_panels[i] = default_panel;
   }
 
-  state->p_game_manager->is_game_paused = false;
+  state->p_game_manager->is_game_paused = true;
 
   return true;
 }
@@ -104,10 +109,10 @@ bool initialize_scene_in_game(Vector2 _screen_size) {
 void update_scene_in_game() {
   STATE_ASSERT("update_scene_in_game")
 
-  update_user_interface();
   in_game_update_bindings();
+  update_user_interface();
 
-  if (state->p_game_manager->is_game_paused) {
+  if (state->p_game_manager->is_game_paused || !state->has_game_started) {
     return;
   }
 
@@ -133,6 +138,11 @@ void render_scene_in_game() {
 void render_interface_in_game() {
   STATE_ASSERT("render_interface_in_game")
 
+  if (!state->has_game_started) {
+    gui_label("Press Space to Start!", (Vector2) {get_resolution_div2()->x, get_resolution_3div2()->y}, WHITE);
+    return;
+  }
+
   if (state->player->is_player_have_skill_points) {
     state->p_game_manager->is_game_paused = true;
     Rectangle dest = (Rectangle) { // TODO: Make it responsive
@@ -149,8 +159,6 @@ void render_interface_in_game() {
 
       }
     }
-
-
   }
   else {
     gui_progress_bar(PRG_BAR_ID_PLAYER_EXPERIANCE, (Vector2){.x = get_resolution_div2()->x, .y = get_screen_offset()}, true);
@@ -158,6 +166,10 @@ void render_interface_in_game() {
   }
 
   render_user_interface();
+}
+
+void start_game() {
+  _upgrade_ability(&state->player->ability_system.abilities[state->player->starter_ability]);
 }
 
 
@@ -171,11 +183,17 @@ void in_game_update_mouse_bindings() {
 }
 void in_game_update_keyboard_bindings() {
 
+  if (!state->has_game_started && IsKeyPressed(KEY_SPACE)) {
+    start_game();
+    state->has_game_started = true;
+    state->p_game_manager->is_game_paused = false;
+    return;
+  }
+
   if (IsKeyReleased(KEY_ESCAPE)) {
     if(!state->player->is_player_have_skill_points) state->p_game_manager->is_game_paused = !state->p_game_manager->is_game_paused;
     event_fire(EVENT_CODE_UI_SHOW_PAUSE_MENU, 0, (event_context){0});
   }
-
 }
 
 

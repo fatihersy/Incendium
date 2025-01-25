@@ -17,7 +17,7 @@ void update_collisions();
 
 bool game_manager_on_event(u16 code, void *sender, void *listener_inst, event_context context);
 
-bool game_manager_initialize(Vector2 _screen_size, scene_type _scene_data) {
+bool game_manager_initialize(camera_metrics* _camera_metrics) {
   if (state) return false;
 
   state = (game_manager_system_state *)allocate_memory_linear(sizeof(game_manager_system_state), true);
@@ -27,13 +27,12 @@ bool game_manager_initialize(Vector2 _screen_size, scene_type _scene_data) {
     TraceLog(LOG_ERROR, "player_system_initialize() failed");
     return false;
   }
-  if (!ability_system_initialize()) {
+  if (!ability_system_initialize(_camera_metrics, get_app_settings())) {
     TraceLog(LOG_ERROR, "ability_system_initialize() failed");
     return false;
   }
   state->p_player = get_player_state();
-  state->p_player->ability_system.p_owner = get_player_state();
-  _add_ability(ABILITY_TYPE_FIREBALL);
+  _add_ability(state->p_player->starter_ability);
 
   if (!spawn_system_initialize()) {
     TraceLog(LOG_ERROR, "spawn_system_initialize() failed");
@@ -134,8 +133,20 @@ u16 _spawn_character(Character2D _character) {
 }
 bool _add_ability(ability_type _type) {
   ability abl = get_ability(_type);
-  if (abl.projectile_count >= MAX_ABILITY_PROJECTILE_SLOT || abl.projectile_count <= 0) {
-    TraceLog(LOG_WARNING, "game_manager::_add_ability()::Ability projectile count was out of bound");
+  ability_play_system* system = &state->p_player->ability_system;
+  if (!system) {
+    TraceLog(LOG_WARNING, "game_manager::_add_ability()::Recieved system was NULL");
+    return false;
+  }
+  abl.p_owner = state->p_player;
+  abl.is_initialized = true;
+
+  system->abilities[_type] = abl;
+  return true;
+}
+bool _upgrade_ability(ability* abl) {
+  if (!abl->is_initialized) {
+    TraceLog(LOG_WARNING, "game_manager::_upgrade_ability::Recieved ability has not initialized yet");
     return false;
   }
   ability_play_system* system = &state->p_player->ability_system;
@@ -143,16 +154,14 @@ bool _add_ability(ability_type _type) {
     TraceLog(LOG_WARNING, "game_manager::_add_ability()::Recieved system was NULL");
     return false;
   }
+  upgrade_ability(abl, system);
 
-  for (int i=0; i < abl.projectile_count; ++i) {
-    abl.projectiles[i].id = state->projectile_count;
-    state->projectiles[state->projectile_count] = abl.projectiles[i];
+  for (int i=0; i < abl->proj_count; ++i) {
+    abl->projectiles[i].id = state->projectile_count;
+    state->projectiles[state->projectile_count] = abl->projectiles[i];
     state->projectile_count++;
   }
-  abl.is_active = true;
-
-  system->abilities[ABILITY_TYPE_FIREBALL] = abl;
-
+  abl->is_active = true;
   return true;
 }
 // Exposed functions

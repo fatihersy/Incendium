@@ -22,6 +22,7 @@ void gui_draw_spritesheet_to_background(spritesheet_type _type, Color _tint);
 void gui_progress_bar(progress_bar_id bar_id, Vector2 pos, bool _should_center);
 void gui_panel(panel pan, Rectangle dest, bool _should_center);
 bool gui_panel_clickable(panel* panel, Rectangle dest, bool _should_center);
+void gui_label(const char* text, Vector2 position, Color tint);
 
 void gui_draw_pause_screen();
 

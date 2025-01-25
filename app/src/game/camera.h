@@ -2,11 +2,11 @@
 #ifndef CAMERA_H
 #define CAMERA_H
 
-#include <raylib.h>
+#include <defines.h>
 
 void create_camera(Vector2 position);
 
-Camera2D* get_active_camera();
+camera_metrics* get_active_metrics();
 
 void set_camera_position(Vector2 pos);
 

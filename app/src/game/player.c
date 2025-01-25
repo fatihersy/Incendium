@@ -53,7 +53,7 @@ bool player_system_initialize() {
 
     player->is_dead = false;
     player->is_moving = false;
-    player->w_direction = LEFT;
+    player->w_direction = WORLD_DIRECTION_LEFT;
     player->is_damagable = true;
     player->damage_break_time = .2; //ms
     player->damage_break_current = player->damage_break_time;
@@ -75,6 +75,7 @@ bool player_system_initialize() {
     player->wreck_right_sprite_queue_index = register_sprite(PLAYER_ANIMATION_WRECK_RIGHT, true, false, true);
     player->last_played_sprite_id = player->idle_left_sprite_queue_index; // The position player starts. To avoid from the error when move firstly called
     
+    player->starter_ability = ABILITY_TYPE_COMET;
     player->is_initialized = true;
     return true;
 }
@@ -83,7 +84,7 @@ player_state* get_player_state() {
     if (!player) {
         return (player_state*)0;
     }
-    //TraceLog(LOG_INFO, "player.position {x:%d, y:%d}", player->position.x, player->position.y);
+    //TraceLog(LOG_INFO, "player->position:{%f, %f}", player->position.x, player->position.y);
     return player;
 }
 
@@ -99,7 +100,7 @@ Vector2 get_player_position(bool centered) {
         pos = player->position;
     }
 
-    //TraceLog(LOG_INFO, "get_player_position() -> centered: {%f, %f}", pos.x, pos.y);
+    //TraceLog(LOG_INFO, "(Vector2){%f, %f}", pos.x, pos.y);
     return pos;
 }
 
@@ -157,7 +158,7 @@ bool update_player() {
     }
     if (IsKeyDown(KEY_A)) {
         player->position.x -= 2;
-        player->w_direction = LEFT;
+        player->w_direction = WORLD_DIRECTION_LEFT;
         player->is_moving = true;
     }
     if (IsKeyDown(KEY_S)) {
@@ -166,7 +167,7 @@ bool update_player() {
     }
     if (IsKeyDown(KEY_D)) {
         player->position.x += 2;
-        player->w_direction = RIGHT;
+        player->w_direction = WORLD_DIRECTION_RIGHT;
         player->is_moving = true;
     }
     if (IsKeyUp(KEY_W) && IsKeyUp(KEY_A) && IsKeyUp(KEY_S) && IsKeyUp(KEY_D)) {    
@@ -191,27 +192,35 @@ bool render_player() {
         if(player->is_damagable){
             if(player->is_moving) switch (player->w_direction) 
             {
-                case LEFT: play_anim(PLAYER_ANIMATION_MOVE_LEFT);
+                case WORLD_DIRECTION_LEFT: play_anim(PLAYER_ANIMATION_MOVE_LEFT);
                 break;
-                case RIGHT: play_anim(PLAYER_ANIMATION_MOVE_RIGHT);
+                case WORLD_DIRECTION_RIGHT: play_anim(PLAYER_ANIMATION_MOVE_RIGHT);
                 break;
+                default: {
+                    TraceLog(LOG_WARNING, "player::render_player()::Player has no directions");
+                    break;
+                }
             }
             else switch (player->w_direction) 
             {
-                case LEFT: play_anim(PLAYER_ANIMATION_IDLE_LEFT);
+                case WORLD_DIRECTION_LEFT: play_anim(PLAYER_ANIMATION_IDLE_LEFT);
                 break;
-                case RIGHT:play_anim(PLAYER_ANIMATION_IDLE_RIGHT);
+                case WORLD_DIRECTION_RIGHT:play_anim(PLAYER_ANIMATION_IDLE_RIGHT);
                 break;
+                default: {
+                    TraceLog(LOG_WARNING, "player::render_player()::Player has no directions");
+                    break;
+                }
             }
         }
         else{
-            (player->w_direction == LEFT) 
+            (player->w_direction == WORLD_DIRECTION_LEFT) 
                 ? play_anim(PLAYER_ANIMATION_TAKE_DAMAGE_LEFT)
                 : play_anim(PLAYER_ANIMATION_TAKE_DAMAGE_RIGHT);
         }
     }
     else {
-        (player->w_direction == LEFT) 
+        (player->w_direction == WORLD_DIRECTION_LEFT) 
             ? play_anim(PLAYER_ANIMATION_WRECK_LEFT)
             : play_anim(PLAYER_ANIMATION_WRECK_RIGHT);
     }

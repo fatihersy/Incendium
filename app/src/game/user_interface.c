@@ -63,6 +63,10 @@ void register_slider_type(slider_type_id _sdr_type_id, spritesheet_type _ss_sdr_
 #define MENU_BUTTON_FONT_SIZE state->mini_mood_font.baseSize / 30.f
 #define MINI_BUTTON_FONT state->mini_mood_font
 #define MINI_BUTTON_FONT_SIZE state->mini_mood_font.baseSize / 60.f
+#define LABEL_FONT state->mood_font
+#define LABEL_FONT_SIZE state->mood_font.baseSize
+#define LABEL_MINI_FONT state->mini_mood_font
+#define LABEL_MINI_FONT_SIZE state->mini_mood_font.baseSize / 60.f
 
 #define register_button(BTN_ID, BTN_TYPE_ID, POS, OFFSET_X, OFFSET_Y, F) \
   _register_button( SPACE_BTW_V( OFFSET_X, OFFSET_Y, POS, state->button_types[BTN_TYPE_ID].dest_frame_dim, F), BTN_ID, BTN_TYPE_ID) 
@@ -70,10 +74,15 @@ void register_slider_type(slider_type_id _sdr_type_id, spritesheet_type _ss_sdr_
 #define register_slider(SDR_ID, SDR_TYPE_ID, POS, OFFSET, F, LEFT_BTN_ID, RIGHT_BTN_ID, IS_CLICKABLE) \
   _register_slider(SPACE_BTW_V( OFFSET.x, OFFSET.y, POS, state->slider_types[SDR_TYPE_ID].whole_body_width, F), SDR_ID, SDR_TYPE_ID, LEFT_BTN_ID, RIGHT_BTN_ID, IS_CLICKABLE) 
 
-#define draw_text(TEXT, TEXT_POS, FONT, FONT_SIZE, COLOR)                                                               \
-  DrawTextEx(FONT, TEXT,                                                                                \
-  (Vector2) { .x = TEXT_POS.x + BUTTON_TEXT_SHADOW_OFFSET.x, .y = TEXT_POS.y + BUTTON_TEXT_SHADOW_OFFSET.y, },    \
-  FONT_SIZE, UI_FONT_SPACING, BUTTON_TEXT_SHADOW_COLOR);                                                          \
+#define draw_text(TEXT, TEXT_POS, FONT, FONT_SIZE, COLOR, CENTER)                                                 \
+  if (CENTER) {                                                                                                   \
+    Vector2 text_measure = MeasureTextEx(FONT, TEXT, FONT_SIZE, UI_FONT_SPACING);                                 \
+    TEXT_POS.x -= (text_measure.x / 2.f);                                                                         \
+    TEXT_POS.y -= (text_measure.y / 2.f);                                                                         \
+  }                                                                                                               \
+  DrawTextEx(FONT, TEXT,                                                                                          \
+  (Vector2) { .x = TEXT_POS.x + TEXT_SHADOW_OFFSET.x, .y = TEXT_POS.y + TEXT_SHADOW_OFFSET.y, },                  \
+  FONT_SIZE, UI_FONT_SPACING, TEXT_SHADOW_COLOR);                                                                 \
   DrawTextEx(FONT, TEXT, TEXT_POS, FONT_SIZE, UI_FONT_SPACING, COLOR);                    
 
 Rectangle get_texture_source_rect(texture_id _id);
@@ -401,18 +410,18 @@ bool gui_button(const char* text, button_id _id, Font font, f32 font_size_scale)
     draw_sprite_on_site(_btn->btn_type.ss_type, WHITE, pos, draw_sprite_scale, 1, false);
     if (!TextIsEqual(text, "")) {
       Vector2 pressed_text_pos = vec2_add(text_pos, _btn_type->text_offset_on_click);
-      draw_text(text, pressed_text_pos, font, font.baseSize * font_size_scale, BUTTON_TEXT_PRESSED_COLOR);
+      draw_text(text, pressed_text_pos, font, font.baseSize * font_size_scale, BUTTON_TEXT_PRESSED_COLOR, false);
     }
   } else {
     draw_sprite_on_site(_btn->btn_type.ss_type, WHITE, pos, draw_sprite_scale, 0, false);
     if (_btn->state == BTN_STATE_HOVER) {
       _btn_type->play_reflection ? play_sprite_on_site(_btn->reflection_render_index, _btn->dest, WHITE) : 0;
       if (!TextIsEqual(text, "")) {
-        draw_text(text, text_pos, font, font.baseSize * font_size_scale, BUTTON_TEXT_HOVER_COLOR);
+        draw_text(text, text_pos, font, font.baseSize * font_size_scale, BUTTON_TEXT_HOVER_COLOR, false);
       }
     }
     if (_btn->state != BTN_STATE_HOVER) {
-      draw_text(text, text_pos, font, font.baseSize * font_size_scale, BUTTON_TEXT_UP_COLOR);
+      draw_text(text, text_pos, font, font.baseSize * font_size_scale, BUTTON_TEXT_UP_COLOR, false);
     }
   }
   return _btn->state == BTN_STATE_RELEASED;
@@ -571,7 +580,7 @@ void draw_slider_body(slider* sdr) {
         sdr->position.y + sdr_type.body_height/2.f - text_measure.y / 2.f
       };
 
-      draw_text(text, text_pos, state->mood_font, state->mood_font.baseSize, BUTTON_TEXT_UP_COLOR);
+      draw_text(text, text_pos, state->mood_font, state->mood_font.baseSize, BUTTON_TEXT_UP_COLOR, false);
       break;
     }
 
@@ -616,6 +625,10 @@ bool gui_panel_clickable(panel* pan, Rectangle dest, bool _should_center) {
   draw_texture_npatch(pan->frame_tex_id, dest, pan->offsets, false);
 
   return pan->current_state == pan->signal_state;
+}
+
+void gui_label(const char* text, Vector2 position, Color tint) {
+  draw_text(text, position, LABEL_FONT, LABEL_FONT_SIZE, tint, true);
 }
 
 void gui_draw_settings_screen() { // TODO: Return to settings later

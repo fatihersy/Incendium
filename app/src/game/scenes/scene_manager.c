@@ -77,13 +77,13 @@ bool scene_manager_on_event(u16 code, void *sender, void *listener_inst, event_c
   switch (code) {
   case EVENT_CODE_SCENE_IN_GAME: {
     scene_manager_state->scene_data = SCENE_IN_GAME;
-    initialize_scene_in_game((Vector2) {GetScreenWidth(), GetScreenHeight()});
+    initialize_scene_in_game(get_active_metrics());
     return true;
     break;
   }
   case EVENT_CODE_SCENE_EDITOR: {
     scene_manager_state->scene_data = SCENE_EDITOR;
-    initialize_scene_editor(get_active_camera());
+    initialize_scene_editor(get_active_metrics());
     return true;
     break;
   }
@@ -100,15 +100,16 @@ bool scene_manager_on_event(u16 code, void *sender, void *listener_inst, event_c
     break;
   }
   case EVENT_CODE_SCENE_MANAGER_SET_CAM_POS: {
+    //TraceLog(LOG_INFO, "x:%f, y:%f", context.data.f32[0], context.data.f32[1]);
     scene_manager_state->target.x = context.data.f32[0];
     scene_manager_state->target.y = context.data.f32[1];
-    get_active_camera()->target.x = context.data.f32[0];
-    get_active_camera()->target.y = context.data.f32[1];
+    get_active_metrics()->handle.target.x = context.data.f32[0];
+    get_active_metrics()->handle.target.y = context.data.f32[1];
     return true;
     break;
   }
   case EVENT_CODE_SCENE_MANAGER_SET_ZOOM: {
-    get_active_camera()->zoom = context.data.f32[0];
+    get_active_metrics()->handle.zoom = context.data.f32[0];
     return true;
     break;
   }
