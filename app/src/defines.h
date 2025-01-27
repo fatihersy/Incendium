@@ -56,6 +56,8 @@
 #define MAX_ABILITY_SLOT 5
 #define MAX_ABILITY_PROJECTILE_SLOT 6
 
+#define MAX_RAND 6
+
 #define DEBUG_COLLISIONS 0
 
 // Unsigned int types.
@@ -378,6 +380,13 @@ typedef struct fshader {
 
 typedef struct app_settings {
   u32 resolution[2];
+  Vector2 resolution_div4;
+  Vector2 resolution_div3;
+  Vector2 resolution_div2;
+  Vector2 resolution_38div20;
+  Vector2 resolution_35div20;
+  Vector2 resolution_3div2;
+  Vector2 resolution_5div4;
   char title[16];
   u16 master_sound_volume;
   i32 window_state;
@@ -827,7 +836,7 @@ static const u32 level_curve[MAX_PLAYER_LEVEL + 1] = {
 #endif
 
 #define FCLAMP(value, min, max)                                                \
-  (value <= min) ? min : (value >= max) ? max : value;
+  (value <= min) ? min : (value >= max) ? max : value
 
 #define FMAX(v1, v2) (v1 >= v2) ? v1 : v2
 

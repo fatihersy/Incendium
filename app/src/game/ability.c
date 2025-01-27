@@ -7,7 +7,9 @@
 typedef struct ability_system_state {
   spritesheet_play_system spritesheet_system;
   ability abilities[ABILITY_TYPE_MAX];
-  f32 randoms[MAX_ABILITY_PROJECTILE_SLOT];
+  f32 rand_screen_x[MAX_RAND];
+  f32 rand_percent[MAX_RAND];
+  f32 rand_recoil[MAX_RAND];
 
   camera_metrics* camera_metrics;
   app_settings* settings;
@@ -23,6 +25,7 @@ void movement_bullet(ability* abl);
 void movement_comet(ability* abl);
 
 Vector2 p_to_vec2(f32*);
+void set_p_vec2(Vector2 from, f32* to);
 
 void register_ability(ability_type type, movement_pattern move_pattern, f32 proj_duration, u16 _damage, Vector2 proj_size, spritesheet_type proj_anim, bool _should_center);
 
@@ -39,11 +42,19 @@ bool ability_system_initialize(camera_metrics* _camera_metrics, app_settings* se
   state->settings = settings;
   state->camera_metrics = _camera_metrics;
 
-  f32 cache_randoms[MAX_ABILITY_PROJECTILE_SLOT] = {
-    120, -352, -848, 25, 449, -593
+  f32 _rand_screen_x[MAX_ABILITY_PROJECTILE_SLOT] = {
+    1456, 789, 32, 1567, 903, 514
+  };
+  f32 _rand_percent[MAX_ABILITY_PROJECTILE_SLOT] = {
+    0.72, 0.45, 0.89, 0.16, 0.33, 0.58
+  };
+  f32 _rand_recoil[MAX_ABILITY_PROJECTILE_SLOT] = {
+    -0.58, 0.33, 0.16, -0.45, -0.89, 0.72, 
   };
   for (int i=0; i<MAX_ABILITY_PROJECTILE_SLOT; ++i) {
-    state->randoms[i] = cache_randoms[i];
+    state->rand_screen_x[i] = _rand_screen_x[i];
+    state->rand_percent[i] = _rand_percent[i];
+    state->rand_recoil[i] = _rand_recoil[i];
   }
 
   register_ability(ABILITY_TYPE_FIREBALL, MOVE_TYPE_SATELLITE, 0, 15, (Vector2) {30, 30}, FIREBALL_ANIMATION, true);
@@ -172,10 +183,18 @@ void movement_comet(ability* abl) {
   for (i16 i = 0; i < abl->proj_count; i++) {
 
     if (vec2_equals(abl->projectiles[i].position, p_to_vec2(abl->projectiles[i].buffer.f32), .1)) {
-      abl->projectiles[i].buffer.f32[0] = player->position.x + state->randoms[(i32)abl->projectiles[i].buffer.f32[2]];
-      abl->projectiles[i].buffer.f32[1] =  + state->randoms[(i32)abl->projectiles[i].buffer.f32[2]];
-      //abl->projectiles[i].position.x = GetScreenToWorld2D((Vector2) {}, );
-      abl->projectiles[i].position.y = player->position.y + state->randoms[(i32)abl->projectiles[i].buffer.f32[2]];
+      f32* rand_count = &abl->projectiles[i].buffer.f32[2];
+      const f32 rand = state->rand_percent[(i32)*rand_count] * GetScreenWidth();
+      const Vector2 screen_min_world = GetScreenToWorld2D((Vector2) {0}, state->camera_metrics->handle);
+      const Vector2 screen_max_world = GetScreenToWorld2D((Vector2) {GetScreenWidth(), GetScreenHeight()}, state->camera_metrics->handle);
+      abl->projectiles[i].position = GetScreenToWorld2D((Vector2) {rand, -abl->proj_dim.y},state->camera_metrics->handle);
+      const Vector2 new_prj_pos = (Vector2) {
+        .x = FCLAMP(abl->projectiles[i].position.x + (state->settings->resolution_div4.x * state->rand_recoil[(i32)*rand_count]), 
+                      screen_min_world.x, screen_max_world.x),
+        .y = player->position.y
+      };
+      set_p_vec2(new_prj_pos, abl->projectiles[i].buffer.f32);
+      abl->projectiles[i].buffer.f32[2] = (*rand_count) + 1 >= MAX_RAND ? 0 : ++(*rand_count);
     }
     else {
       abl->projectiles[i].duration -= GetFrameTime();
@@ -234,9 +253,12 @@ ability get_ability(ability_type _type) {
 
   return state->abilities[_type];
 }
-
 Vector2 p_to_vec2(f32* vec1) {
   return (Vector2) {vec1[0], vec1[1]};
+}
+void set_p_vec2(Vector2 from, f32* to) {
+  to[0] = from.x;
+  to[1] = from.y;
 }
 
 #undef PSPRITESHEET_SYSTEM

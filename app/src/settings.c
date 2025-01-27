@@ -8,13 +8,6 @@
 typedef struct app_settings_system_state {
   app_settings settings;
 
-  Vector2 resolution_div4;
-  Vector2 resolution_div3;
-  Vector2 resolution_div2;
-  Vector2 resolution_38div20;
-  Vector2 resolution_35div20;
-  Vector2 resolution_3div2;
-  Vector2 resolution_5div4;
   u16 offset;
 } app_settings_system_state;
 
@@ -44,20 +37,20 @@ bool set_settings_from_ini_file(const char *file_name) {
     return false;
   }
 
-  state->resolution_5div4.x   = state->settings.resolution[0] / 1.25f;
-  state->resolution_5div4.y   = state->settings.resolution[1] / 1.25f;
-  state->resolution_3div2.x   = state->settings.resolution[0] / 1.50f;
-  state->resolution_3div2.y   = state->settings.resolution[1] / 1.50f;
-  state->resolution_35div20.x = state->settings.resolution[0] / 1.75f;
-  state->resolution_35div20.y = state->settings.resolution[1] / 1.75f;
-  state->resolution_38div20.x = state->settings.resolution[0] / 1.90f;
-  state->resolution_38div20.y = state->settings.resolution[1] / 1.90f;
-  state->resolution_div2.x    = state->settings.resolution[0] / 2.f;
-  state->resolution_div2.y    = state->settings.resolution[1] / 2.f;
-  state->resolution_div3.x    = state->settings.resolution[0] / 3.f;
-  state->resolution_div3.y    = state->settings.resolution[1] / 3.f;
-  state->resolution_div4.x    = state->settings.resolution[0] / 4.f;
-  state->resolution_div4.y    = state->settings.resolution[1] / 4.f;
+  state->settings.resolution_5div4.x   = state->settings.resolution[0] / 1.25f;
+  state->settings.resolution_5div4.y   = state->settings.resolution[1] / 1.25f;
+  state->settings.resolution_3div2.x   = state->settings.resolution[0] / 1.50f;
+  state->settings.resolution_3div2.y   = state->settings.resolution[1] / 1.50f;
+  state->settings.resolution_35div20.x = state->settings.resolution[0] / 1.75f;
+  state->settings.resolution_35div20.y = state->settings.resolution[1] / 1.75f;
+  state->settings.resolution_38div20.x = state->settings.resolution[0] / 1.90f;
+  state->settings.resolution_38div20.y = state->settings.resolution[1] / 1.90f;
+  state->settings.resolution_div2.x    = state->settings.resolution[0] / 2.f;
+  state->settings.resolution_div2.y    = state->settings.resolution[1] / 2.f;
+  state->settings.resolution_div3.x    = state->settings.resolution[0] / 3.f;
+  state->settings.resolution_div3.y    = state->settings.resolution[1] / 3.f;
+  state->settings.resolution_div4.x    = state->settings.resolution[0] / 4.f;
+  state->settings.resolution_div4.y    = state->settings.resolution[1] / 4.f;
   state->offset = 5;
 
   return true;
@@ -114,7 +107,7 @@ Vector2* get_resolution_div2() {
                           "didn't initialized yet");
     return (Vector2*){0};
   }
-  return &state->resolution_div2;
+  return &state->settings.resolution_div2;
 }
 Vector2* get_resolution_div3() {
   if (!state) {
@@ -122,7 +115,7 @@ Vector2* get_resolution_div3() {
                           "didn't initialized yet");
     return (Vector2*){0};
   }
-  return &state->resolution_div3;
+  return &state->settings.resolution_div3;
 }
 Vector2* get_resolution_div4() {
   if (!state) {
@@ -131,7 +124,7 @@ Vector2* get_resolution_div4() {
     return (Vector2*){0};
   }
 
-  return &state->resolution_div4;
+  return &state->settings.resolution_div4;
 }
 Vector2* get_resolution_3div2() {
   if (!state) {
@@ -139,7 +132,7 @@ Vector2* get_resolution_3div2() {
                           "didn't initialized yet");
     return (Vector2*){0};
   }
-  return &state->resolution_3div2;
+  return &state->settings.resolution_3div2;
 }
 Vector2* get_resolution_5div4() {
   if (!state) {
@@ -147,7 +140,7 @@ Vector2* get_resolution_5div4() {
                           "didn't initialized yet");
     return (Vector2*){0};
   }
-  return &state->resolution_5div4;
+  return &state->settings.resolution_5div4;
 }
 Vector2* get_resolution_35div20() {
   if (!state) {
@@ -156,7 +149,7 @@ Vector2* get_resolution_35div20() {
     return (Vector2*){0};
   }
 
-  return &state->resolution_35div20;
+  return &state->settings.resolution_35div20;
 }
 Vector2* get_resolution_38div20() {
   if (!state) {
@@ -165,7 +158,7 @@ Vector2* get_resolution_38div20() {
     return (Vector2*){0};
   }
 
-  return &state->resolution_38div20;
+  return &state->settings.resolution_38div20;
 }
 u16 get_screen_offset() {
   if (!state) {

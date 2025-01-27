@@ -117,7 +117,7 @@ void update_scene_in_game() {
   }
 
   _update_player();
-  _update_spawns();
+  //_update_spawns();
   update_game_manager();
 
   event_fire(EVENT_CODE_SCENE_MANAGER_SET_TARGET, 0, (event_context){
@@ -137,6 +137,7 @@ void render_scene_in_game() {
 
 void render_interface_in_game() {
   STATE_ASSERT("render_interface_in_game")
+  DrawFPS(get_screen_offset(), get_resolution_div2()->y);
 
   if (!state->has_game_started) {
     gui_label("Press Space to Start!", (Vector2) {get_resolution_div2()->x, get_resolution_3div2()->y}, WHITE);
