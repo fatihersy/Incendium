@@ -594,7 +594,7 @@ void gui_panel(panel pan, Rectangle dest, bool _should_center) {
   draw_texture_regular(pan.bg_tex_id, dest, pan.bg_tint, _should_center);
   draw_texture_npatch(pan.frame_tex_id, dest, pan.offsets, _should_center);
 }
-bool gui_panel_clickable(panel* pan, Rectangle dest, bool _should_center) {
+bool gui_panel_active(panel* pan, Rectangle dest, bool _should_center) {
 
   if (_should_center) {
     dest.x -= dest.width / 2.f;
@@ -626,7 +626,6 @@ bool gui_panel_clickable(panel* pan, Rectangle dest, bool _should_center) {
 
   return pan->current_state == pan->signal_state;
 }
-
 void gui_label(const char* text, Vector2 position, Color tint) {
   draw_text(text, position, LABEL_FONT, LABEL_FONT_SIZE, tint, true);
 }
@@ -962,6 +961,22 @@ inline void draw_texture_npatch(texture_id _id, Rectangle dest, Vector4 offsets,
 
   DrawTextureNPatch(*tex, npatch, dest, (Vector2) {0}, 0, WHITE);
 }
+void gui_draw_texture_id_pro(texture_id _id, Rectangle src, Rectangle dest) {
+  if (_id >= TEX_ID_MAX || _id <= TEX_ID_UNSPECIFIED) {
+    TraceLog(LOG_WARNING, "user_interface::gui_draw_texture_id_pro()::ID was out of bound"); 
+    return; 
+  }
+  Texture2D* tex = get_texture_by_enum(_id);
+  if (!tex) { 
+    TraceLog(LOG_WARNING, "user_interface::gui_draw_texture_id_pro()::Tex was null");
+    return; 
+  }
+  DrawTexturePro(*tex, 
+  src, 
+  dest, 
+  (Vector2) {0}, 0, WHITE);
+}
+
 Font* ui_get_font(font_type font) {
   if (!state) {
     TraceLog(LOG_WARNING, "user_interface::user_interface_state_get_font()::user interface didn't initialized. Returning default font");
@@ -976,6 +991,21 @@ Font* ui_get_font(font_type font) {
   }
 
   return (Font*) {0};
+}
+panel get_default_panel() {
+  return (panel) {
+    .frame_tex_id  = TEX_ID_CRIMSON_FANTASY_PANEL,
+    .bg_tex_id     = TEX_ID_CRIMSON_FANTASY_PANEL_BG,
+    .bg_tint       = WHITE,
+    .bg_hover_tint = WHITE,
+    .offsets       = (Vector4) {6, 6, 6, 6},
+    .zoom          = 1.f,
+    .scroll        = 0,
+    .draggable     = false,
+    .current_state = BTN_STATE_UP,
+    .signal_state  = BTN_STATE_UNDEFINED,
+    .dest          = (Rectangle) {0}
+  };
 }
 
 void user_interface_system_destroy() {

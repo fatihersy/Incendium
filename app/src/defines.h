@@ -6,7 +6,7 @@
 #define RESOURCE_PATH "D:/Workspace/resources/"
 #define SHADER_PATH "../app/src/shaders/"
 
-#define TOTAL_ALLOCATED_MEMORY 64 * 1024 * 1024
+#define TOTAL_ALLOCATED_MEMORY 128 * 1024 * 1024
 #define TARGET_FPS 60
 #define MAX_SPRITE_RENDERQUEUE 50
 
@@ -36,9 +36,9 @@
 #define MAX_SLIDER_OPTION_SLOT 10
 #define MAX_SLIDER_OPTION_TEXT_SLOT 18
 
-#define MAX_TILESHEET_SLOTS 50
-#define MAX_TILESHEET_UNIQUE_TILESLOTS_X 32
-#define MAX_TILESHEET_UNIQUE_TILESLOTS_Y 32
+#define MAX_TILESHEET_SLOTS 10
+#define MAX_TILESHEET_UNIQUE_TILESLOTS_X 64
+#define MAX_TILESHEET_UNIQUE_TILESLOTS_Y 64
 #define MAX_TILESHEET_UNIQUE_TILESLOTS MAX_TILESHEET_UNIQUE_TILESLOTS_X * MAX_TILESHEET_UNIQUE_TILESLOTS_Y
 #define MAX_TILEMAP_SLOTS 10
 #define MAX_TILEMAP_TILESHEETSLOT 10
@@ -46,6 +46,8 @@
 #define MAX_TILEMAP_TILESLOT_Y 255
 #define MAX_TILEMAP_TILESLOT MAX_TILEMAP_TILESLOT_X * MAX_TILEMAP_TILESLOT_Y
 #define TILEMAP_TILE_START_SYMBOL 0x21 // Refers to ASCII exclamation mark. First visible character on the chart. To debug.
+#define TILESHEET_TILE_SYMBOL_STR_LEN 2
+#define MAX_TILEMAP_PROPS 255
 
 #define MAX_ITEM_ACTOR_NAME_LENGHT 10
 #define MAX_INVENTORY_SLOTS 50
@@ -108,7 +110,7 @@ STATIC_ASSERT(sizeof(f64) == 8, "Expected float to be 8 bytes.");
 #define U32_MAX 4294967295U
 #define F32_MAX 3.402823466e+38F
 #define I16_MAX 32767
-#define U16_MAX 65535
+#define U16_MAX 65535U
 #define  I8_MAX 127
 #define  U8_MAX 255
 /**
@@ -187,6 +189,7 @@ typedef enum texture_id {
   TEX_ID_PROGRESS_BAR_INSIDE_FULL,
   TEX_ID_CRIMSON_FANTASY_PANEL,
   TEX_ID_CRIMSON_FANTASY_PANEL_BG,
+  TEX_ID_MAP_PROPS_ATLAS,
 
   TEX_ID_MAX,
 } texture_id;
@@ -393,7 +396,7 @@ typedef struct app_settings {
 } app_settings;
 
 typedef struct tile_symbol {
-  u8 c[3];
+  u8 c[2];
 }tile_symbol;
 
 typedef struct tilesheet {
@@ -425,13 +428,22 @@ typedef struct tilemap_tile {
   bool is_initialized;
 } tilemap_tile;
 
+typedef struct tilemap_prop {
+	texture_id atlas_id;
+  u16 id;
+  Rectangle source;
+  Rectangle dest;
+} tilemap_prop;
+
 typedef struct tilemap {
   Vector2 position;
   u16 map_dim_total;
   u16 map_dim;
 
   tilemap_tile tiles[MAX_TILEMAP_TILESLOT_X][MAX_TILEMAP_TILESLOT_Y];
+  tilemap_prop props[MAX_TILEMAP_PROPS];
   u16 tile_size;
+  u16 prop_count;
 
   Color grid_color;
   bool render_grid;
@@ -439,8 +451,10 @@ typedef struct tilemap {
 } tilemap;
 
 typedef struct tilemap_stringtify_package {
-  u8 str[MAX_TILEMAP_TILESLOT*(sizeof(tile_symbol)/sizeof(u8))];
-  u64 size;
+  u8 str_tilemap[MAX_TILEMAP_TILESLOT * TILESHEET_TILE_SYMBOL_STR_LEN];
+  u8 str_props[MAX_TILEMAP_PROPS];
+  u64 size_tilemap_str;
+  u64 size_props_str;
   bool is_success;
 }tilemap_stringtify_package;
 
@@ -488,8 +502,12 @@ typedef struct panel {
   Color bg_tint;
   Color bg_hover_tint;
   Vector4 offsets;
+  f32 zoom;
+  i32 scroll;
+  Vector2 draggable;
   button_state current_state;
   button_state signal_state;
+  Rectangle dest;
 } panel;
 
 typedef struct button_type {
@@ -686,8 +704,8 @@ typedef struct player_state {
   u32 exp_to_next_level;
   u32 exp_current;
   f32 exp_perc;
-  float damage_break_time;
-  float damage_break_current;
+  f32 damage_break_time;
+  f32 damage_break_current;
 
   bool is_player_have_skill_points;
   bool is_initialized;

@@ -102,7 +102,7 @@ void render_tilemap(tilemap* _tilemap) {
   if(_tilemap->render_grid) FDrawGrid(_tilemap);
 }
 
-void render_tilesheet(tilesheet* sheet) {
+void render_tilesheet(tilesheet* sheet, f32 zoom) {
   if (!sheet) {
     TraceLog(LOG_ERROR, "ERROR::tilemap::render_tilesheet()::Provided sheet was null");
     return;
@@ -113,28 +113,27 @@ void render_tilesheet(tilesheet* sheet) {
     u16 y        = i / sheet->tile_count_x;
     u16 origin_x = x * sheet->tile_size;  
     u16 origin_y = y * sheet->tile_size;  
-    f32 dest_x   = x * sheet->offset * sheet->dest_tile_size;  
-    f32 dest_y   = y * sheet->offset * sheet->dest_tile_size; 
+    f32 dest_x   = x * sheet->offset * sheet->dest_tile_size * zoom;  
+    f32 dest_y   = y * sheet->offset * sheet->dest_tile_size * zoom; 
     i16 x_pos    = sheet->offset     + sheet->position.x + dest_x; 
     i16 y_pos    = sheet->offset     + sheet->position.y + dest_y; 
     
     DrawTexturePro(
-    *sheet->tex, 
-    (Rectangle) {
-      origin_x, origin_y, 
-      sheet->tile_size, sheet->tile_size
-    },
-    (Rectangle) {
-      x_pos, y_pos, 
-      sheet->dest_tile_size, sheet->dest_tile_size 
-    },
-    (Vector2){ 0, 0 },
-    0.0f, 
-    WHITE
+      *sheet->tex, 
+      (Rectangle) {
+        origin_x, origin_y, 
+        sheet->tile_size, sheet->tile_size
+      },
+      (Rectangle) {
+        x_pos, y_pos, 
+        sheet->dest_tile_size * zoom, sheet->dest_tile_size * zoom
+      },
+      (Vector2){ 0, 0 },
+      0.0f, 
+      WHITE
     );
   }
 }
-
 
 void FDrawGrid(tilemap* _tilemap) {
   if (!_tilemap) {
@@ -194,15 +193,15 @@ Vector2 get_tilesheet_dim(tilesheet* sheet) {
   };
 }
 
-tilemap_tile get_tile_from_sheet_by_mouse_pos(tilesheet* sheet, Vector2 mouse_pos) {
+tilemap_tile get_tile_from_sheet_by_mouse_pos(tilesheet* sheet, Vector2 mouse_pos, f32 zoom) {
   if (!sheet) {
     TraceLog(LOG_ERROR, "ERROR::tilemap::get_tile_from_mouse_pos()::Provided sheet was null");
     return (tilemap_tile) { .is_initialized = false };
   }
   tilemap_tile tile = {0};
 
-  i16 x_pos    = mouse_pos.x - sheet->offset          - sheet->position.x; 
-  i16 y_pos    = mouse_pos.y - sheet->offset          - sheet->position.y; 
+  i16 x_pos    = (mouse_pos.x - sheet->offset - sheet->position.x) / zoom; 
+  i16 y_pos    = (mouse_pos.y - sheet->offset - sheet->position.y) / zoom; 
   i16 dest_x   = x_pos       / (sheet->dest_tile_size * sheet->offset);  
   i16 dest_y   = y_pos       / (sheet->dest_tile_size * sheet->offset);  
 
@@ -214,7 +213,7 @@ tilemap_tile get_tile_from_sheet_by_mouse_pos(tilesheet* sheet, Vector2 mouse_po
   tile.y           = dest_y  * sheet->tile_size;
   tile.tile_size   = sheet->tile_size;
   tile.sheet_type  = sheet->sheet_type;
-  tile.tex_id    = sheet->tex_id;
+  tile.tex_id      = sheet->tex_id;
   tile.tile_symbol = get_tilesheet_by_enum(tile.sheet_type)->tile_symbols[dest_x][dest_y];
 
   tile.is_initialized = true;
@@ -249,7 +248,8 @@ void map_to_str(tilemap* map, tilemap_stringtify_package* out_package) {
     TraceLog(LOG_ERROR, "Recieved a NULL pointer");
     return;
   }
-  out_package->size = sizeof(tile_symbol) * map->map_dim_total;
+
+  out_package->size_tilemap_str = sizeof(tile_symbol) * map->map_dim_total;
 
   for (u16 i=0; i < map->map_dim_total; ++i) {
     u16 map_x   = i % map->map_dim;
@@ -261,16 +261,23 @@ void map_to_str(tilemap* map, tilemap_stringtify_package* out_package) {
     u16 sheet_x = origin_x / sheet->tile_size;
     u16 sheet_y = origin_y / sheet->tile_size;
 
-    tile_symbol symbol = sheet->tile_symbols[sheet_x][sheet_y];  
-
-    copy_memory(out_package->str + (sizeof(tile_symbol) * i), symbol.c, sizeof(symbol));
+    copy_memory(
+      out_package->str_tilemap + ((sizeof(sheet->tile_symbols[sheet_x][sheet_y].c) * i)), 
+      sheet->tile_symbols[sheet_x][sheet_y].c, 
+      sizeof(sheet->tile_symbols[sheet_x][sheet_y].c)
+    );
   }
+
+  for (int i=1; i<map->prop_count; ++i) {
+    out_package->str_props[i-1] = map->props[i].id;
+  }
+  out_package->size_tilemap_str = sizeof(out_package->str_props);
 
   out_package->is_success = true;
 }
 
 void str_to_map(tilemap* map, tilemap_stringtify_package* out_package) {
-  if (!*out_package->str) {
+  if (!out_package || !map) {
     TraceLog(LOG_ERROR, "Recieved a NULL pointer");
     return;
   }
@@ -280,7 +287,7 @@ void str_to_map(tilemap* map, tilemap_stringtify_package* out_package) {
 
     u16 map_x   = i % map->map_dim;
     u16 map_y   = i / map->map_dim;  
-    copy_memory(symbol.c, out_package->str + (sizeof(tile_symbol) * i), sizeof(symbol));
+    copy_memory(symbol.c, out_package->str_tilemap + (sizeof(tile_symbol) * i), sizeof(symbol));
 
     map->tiles[map_x][map_y].sheet_type = symbol.c[2];
 
@@ -307,7 +314,10 @@ void str_to_map(tilemap* map, tilemap_stringtify_package* out_package) {
 bool save_map_data(tilemap* map, tilemap_stringtify_package* out_package) {
   map_to_str(map, out_package);
   if (out_package->is_success) {
-    return SaveFileData(rs_path("map.txt"), out_package->str, out_package->size);
+    bool tilemap_save_result = SaveFileData(rs_path("tilemap.txt"), out_package->str_tilemap, out_package->size_tilemap_str);
+    bool props_save_result   = SaveFileData(rs_path("map_props.txt"), out_package->str_props, out_package->size_props_str);
+
+    return tilemap_save_result && props_save_result;
   }
   else {
     TraceLog(LOG_ERROR, "ERROR::tilemap::save_map_data()::Recieving package data returned with failure");
@@ -322,12 +332,12 @@ bool save_map_data(tilemap* map, tilemap_stringtify_package* out_package) {
  * @param out_package Needed because of the local variable array limit. Array must be defined at initialization. Also extracts map data and operation results.
  */
 bool load_map_data(tilemap* map, tilemap_stringtify_package* out_package) {
-  int size = (int)sizeof(out_package->str);
-  const u8* _str = LoadFileData(rs_path("map.txt"), &size);
-  if (!_str) {
+  i32* out_size;
+  const u8* _str = LoadFileData(rs_path("map.txt"), out_size);
+  if (!out_size) {
     TraceLog(LOG_ERROR, "ERROR::tilemap::load_map_data()::Reading data returned null");
   }
-  copy_memory(out_package->str, _str, size);
+  copy_memory(out_package->str_tilemap, _str, *out_size);
   str_to_map(map, out_package);
   
   return out_package->is_success;

@@ -1,5 +1,4 @@
 #include "resource.h"
-#include <raylib.h>
 #include <defines.h>
 
 #include "core/fmemory.h"
@@ -38,6 +37,7 @@ bool resource_system_initialize() {
   load_texture("progress_bar_outside_full.png",false, (Vector2){0,  0}, TEX_ID_PROGRESS_BAR_OUTSIDE_FULL);
   load_texture("crimson_fantasy_panel.png",false, (Vector2){0,  0}, TEX_ID_CRIMSON_FANTASY_PANEL);
   load_texture("crimson_fantasy_panel_bg.png",false, (Vector2){0,  0}, TEX_ID_CRIMSON_FANTASY_PANEL_BG);
+  load_texture("map_props_atlas.png",false, (Vector2){0,  0}, TEX_ID_MAP_PROPS_ATLAS);
   load_spritesheet("idle_left.png",      PLAYER_ANIMATION_IDLE_LEFT, 15, 86, 86, 1, 4);
   load_spritesheet("idle_right.png",     PLAYER_ANIMATION_IDLE_RIGHT, 15, 86, 86, 1, 4);
   load_spritesheet("move_left.png",      PLAYER_ANIMATION_MOVE_LEFT, 10, 86, 86, 1, 6);
@@ -56,7 +56,7 @@ bool resource_system_initialize() {
   load_spritesheet("menu_button.png", MENU_BUTTON, 0, 80, 16, 1, 2);
   load_spritesheet("flat_button.png", FLAT_BUTTON, 0, 44, 14, 1, 2);
   load_spritesheet("fireball.png", FIREBALL_ANIMATION, 15, 32, 32, 1, 4);
-  load_tilesheet(TILESHEET_TYPE_MAP, TEX_ID_MAP_TILESET_TEXTURE, 16, 14, 16);
+  load_tilesheet(TILESHEET_TYPE_MAP, TEX_ID_MAP_TILESET_TEXTURE, 49, 63, 32);
 
   return true;
 }
@@ -198,32 +198,28 @@ void load_tilesheet(tilesheet_type _sheet_sheet_type, texture_id _sheet_tex_id, 
         LOG_ERROR,
         "ERROR::resource::load_tilesheet()::texture type out of bound");
   }
+  tilesheet* _tilesheet = &state->tilesheets[_sheet_sheet_type];
 
-  tilesheet _tilesheet = {0};
+  _tilesheet->tex = get_texture_by_enum(_sheet_tex_id);
+  _tilesheet->sheet_type = _sheet_sheet_type;
+  _tilesheet->tex_id = _sheet_tex_id;
+  _tilesheet->tile_count_x = _tile_count_x;
+  _tilesheet->tile_count_y = _tile_count_y;
+  _tilesheet->tile_count = _tilesheet->tile_count_x * _tilesheet->tile_count_y;
+  _tilesheet->tile_size = _tile_size;
 
-  _tilesheet.tex = get_texture_by_enum(_sheet_tex_id);
-  _tilesheet.sheet_type = _sheet_sheet_type;
-  _tilesheet.tex_id = _sheet_tex_id;
-  _tilesheet.tile_count_x = _tile_count_x;
-  _tilesheet.tile_count_y = _tile_count_y;
-  _tilesheet.tile_count = _tilesheet.tile_count_x * _tilesheet.tile_count_y;
-  _tilesheet.tile_size = _tile_size;
-
-  for (u16 i = 0; i < _tilesheet.tile_count; ++i) {
-    u8 x = i % _tilesheet.tile_count_x;
-    u8 y = i / _tilesheet.tile_count_x;
+  for (u16 i = 0; i < _tilesheet->tile_count; ++i) {
+    u8 x = i % _tilesheet->tile_count_x;
+    u8 y = i / _tilesheet->tile_count_x;
     u8 x_symbol = TILEMAP_TILE_START_SYMBOL + x;
     u8 y_symbol = TILEMAP_TILE_START_SYMBOL + y;
 
-    _tilesheet.tile_symbols[x][y] = (tile_symbol) {
-      x_symbol,
-      y_symbol,
-      _sheet_sheet_type
+    _tilesheet->tile_symbols[x][y] = (tile_symbol) {
+      .c = { x_symbol, y_symbol}
     };
   }
 
   state->tilesheet_amouth++;
-  state->tilesheets[_sheet_sheet_type] = _tilesheet;
 }
 
 

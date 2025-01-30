@@ -153,7 +153,7 @@ void render_interface_in_game() {
     f32 dest_x_buffer = dest.x;
     for (int i=0; i<MAX_UPDATE_ABILITY_PANEL_COUNT; ++i) {
       dest.x = dest_x_buffer + ((dest.width + get_screen_offset()) * i);
-      if(gui_panel_clickable(&state->skill_up_panels[i], dest, true)) {
+      if(gui_panel_active(&state->skill_up_panels[i], dest, true)) {
         state->p_game_manager->is_game_paused = false;
         state->player->is_player_have_skill_points = false;
 

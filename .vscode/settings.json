@@ -34,11 +34,11 @@
     "editor.lineNumbers": "on",
     "editor.cursorStyle": "block",
     "editor.tabCompletion": "on",
-    "editor.hover.enabled": false,
+    "editor.hover.enabled": true,
     "editor.quickSuggestions": {
-        "other": "off",
-        "comments": "off",
-        "strings": "off"
+        "other": "on",
+        "comments": "on",
+        "strings": "on"
     },
     "window.zoomLevel": 0,
     "todohighlight.isEnable": true,
