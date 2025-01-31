@@ -23,11 +23,16 @@ void gui_draw_spritesheet_to_background(spritesheet_type _type, Color _tint);
 void gui_progress_bar(progress_bar_id bar_id, Vector2 pos, bool _should_center);
 void gui_panel(panel pan, Rectangle dest, bool _should_center);
 bool gui_panel_active(panel* panel, Rectangle dest, bool _should_center);
-bool gui_panel_hover(panel* panel, Rectangle dest, bool _should_center);
 void gui_label(const char* text, Vector2 position, Color tint);
 
 void gui_draw_pause_screen();
 void gui_draw_texture_id_pro(texture_id _id, Rectangle src, Rectangle dest);
+
+#define gui_panel_scissored(PANEL, DEST, CENTER, CODE)        \
+    gui_panel(PANEL, DEST, CENTER);                           \
+    BeginScissorMode(DEST.x, DEST.y, DEST.width, DEST.height);\
+    CODE                                                      \
+    EndScissorMode();
 
 void user_interface_system_destroy();
 

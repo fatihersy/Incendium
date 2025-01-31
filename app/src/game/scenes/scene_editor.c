@@ -9,28 +9,35 @@
 #include "game/tilemap.h"
 #include "game/user_interface.h"
 
-typedef enum selection_type {
+typedef enum editor_state_selection_type {
   SLC_TYPE_UNSELECTED,
   SLC_TYPE_TILE,
-  SLC_TYPE_PROP
-} selection_type;
+  SLC_TYPE_PROP,
+} editor_state_selection_type;
+
+typedef enum editor_state_mouse_focus {
+  MOUSE_FOCUS_UNFOCUSED, // While window unfocused or not on the screen
+  MOUSE_FOCUS_MAP,
+  MOUSE_FOCUS_TILE_SELECTION,
+  MOUSE_FOCUS_PROP_SELECTION,
+} editor_state_mouse_focus;
 
 typedef struct scene_editor_state {
   camera_metrics* in_camera_metrics;
   Vector2 target;
   tilemap map;
   tilesheet palette;
-  tilemap_tile selected_tile;
-  tilemap_prop selected_prop;
   tilemap_stringtify_package package;
   
   bool b_show_tilesheet_tile_selection_screen;
   bool b_show_prop_selection_screen;
-  bool b_is_a_tile_selected;
 
   panel prop_selection_panel;
   panel tile_selection_panel;
-  selection_type slc_type;
+  tilemap_tile selected_tile;
+  tilemap_prop selected_prop;
+  editor_state_selection_type selection_type;
+  editor_state_mouse_focus mouse_focus;
 } scene_editor_state;
 
 static scene_editor_state *state;
@@ -79,6 +86,11 @@ void initialize_scene_editor(camera_metrics* _camera_metrics) {
 
 // UPDATE / RENDER
 void update_scene_editor() {
+  if(!IsWindowFocused()) {
+    state->mouse_focus = MOUSE_FOCUS_UNFOCUSED;
+  }
+  state->mouse_focus = MOUSE_FOCUS_MAP;
+
   editor_update_bindings();
   update_user_interface();
 }
@@ -90,43 +102,48 @@ void render_interface_editor() {
   
   if(state->b_show_tilesheet_tile_selection_screen && !state->b_show_prop_selection_screen) 
   { 
-    Rectangle* dest = &state->tile_selection_panel.dest;
-    if(gui_panel_active(&state->tile_selection_panel, *dest, false)) {
-      
-    }
-    BeginScissorMode(dest->x, dest->y, dest->width, dest->height);
-    render_tilesheet(&state->palette, state->tile_selection_panel.zoom);
-    EndScissorMode();
-  }
-  if(state->b_show_prop_selection_screen && !state->b_show_tilesheet_tile_selection_screen) 
-  {     
-    Rectangle* dest = &state->prop_selection_panel.dest;
-    if(gui_panel_active(&state->prop_selection_panel, *dest, false)) {
-      
-    }
-    BeginScissorMode(dest->x, dest->y, dest->width, dest->height);
-    u16 prop_height_count = 0;
-    for (int i=0; i<state->map.prop_count; ++i) {
-      tilemap_prop* prop = &state->map.props[i];
-      Rectangle dest = (Rectangle) {
-        .x = state->prop_selection_panel.scroll, .y = prop_height_count,
-        .width = prop->dest.width, .height = prop->dest.height
-      };
-      gui_draw_texture_id_pro(prop->atlas_id, prop->source, dest);
-      prop_height_count += prop->dest.height;
-    }
-    EndScissorMode();
-  }
-
-  if (state->b_is_a_tile_selected) {
-    render_tile(state->selected_tile, 
-    (tilemap_tile) 
-    {
-      .x = GetMousePosition().x,
-      .y = GetMousePosition().y,
-      .tile_size = state->map.tile_size
+    gui_panel_scissored(state->tile_selection_panel, state->tile_selection_panel.dest, false, {
+      render_tilesheet(&state->palette, state->tile_selection_panel.zoom);
     });
   }
+  else if(state->b_show_prop_selection_screen && !state->b_show_tilesheet_tile_selection_screen) 
+  {     
+    gui_panel_scissored(state->prop_selection_panel, state->prop_selection_panel.dest, false, {
+      u16 prop_height_count = 0;
+      for (int i=0; i<state->map.prop_count; ++i) {
+        tilemap_prop* prop = &state->map.props[i];
+        Rectangle dest = prop->dest;
+        dest.x = state->prop_selection_panel.scroll;
+        dest.y = prop_height_count;
+        gui_draw_texture_id_pro(prop->atlas_id, prop->source, dest);
+        prop_height_count += prop->dest.height;
+      }
+    });
+  }
+
+  switch (state->selection_type) {
+    case SLC_TYPE_TILE: {
+      render_tile(state->selected_tile, 
+      (tilemap_tile) 
+      {
+        .x = GetMousePosition().x, .y = GetMousePosition().y,
+        .tile_size = state->map.tile_size
+      });
+      break;
+    }
+    case SLC_TYPE_PROP: {
+      gui_draw_texture_id_pro(
+        state->selected_prop.atlas_id, 
+        state->selected_prop.source,
+        (Rectangle) 
+        {
+          GetMousePosition().x, GetMousePosition().y, 
+          state->selected_prop.dest.width, state->selected_prop.dest.height
+        });
+      break;
+    }
+    default: break;
+  } 
 
   render_user_interface();
 }
@@ -167,11 +184,11 @@ void editor_update_mouse_bindings() {
 
   if(state->b_show_tilesheet_tile_selection_screen)
   {
-    if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON) && !state->b_is_a_tile_selected) {
+    if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON) && state->selection_type == SLC_TYPE_UNSELECTED) {
       tilemap_tile tile = get_tile_from_sheet_by_mouse_pos(&state->palette, GetMousePosition(), state->tile_selection_panel.zoom);
       if (tile.is_initialized) {
         state->selected_tile = tile;
-        state->b_is_a_tile_selected = true;
+        state->selection_type = SLC_TYPE_TILE;
       }
     }
     if (IsMouseButtonDown(MOUSE_MIDDLE_BUTTON)) {
@@ -184,41 +201,46 @@ void editor_update_mouse_bindings() {
     if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON) && !state->b_show_tilesheet_tile_selection_screen && state->b_show_prop_selection_screen) {
       i32 h = state->prop_selection_panel.scroll + GetMousePosition().y;
       for (int i=0; i<state->map.prop_count; ++i) {
-        if(h - state->map.props[i].source.height > 0) {
-          h -= state->map.props[i].source.height;
+        if(h - state->map.props[i].source.height < 0) {
+          state->selected_prop = state->map.props[i];
+          state->selection_type = SLC_TYPE_PROP;
+          break;
         }
+        h -= state->map.props[i].source.height;
       }
-      
     }
   }
   else 
   {
-    if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON) && !state->b_show_tilesheet_tile_selection_screen && state->b_is_a_tile_selected) {
+    if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON) && state->mouse_focus == MOUSE_FOCUS_MAP) {
       tilemap_tile tile = get_tile_from_map_by_mouse_pos(&state->map, GetScreenToWorld2D(GetMousePosition(), state->in_camera_metrics->handle));
       state->map.tiles[tile.x][tile.y] = state->selected_tile;
       TraceLog(LOG_INFO, "tile.%d,tile.%d is %d:%d", tile.x, tile.y, state->selected_tile.tile_symbol.c[0], state->selected_tile.tile_symbol.c[1]);
     };
   }
-
-  if (IsMouseButtonReleased(MOUSE_RIGHT_BUTTON) && state->b_is_a_tile_selected) {
-    tilemap_tile tile = (tilemap_tile) {0};
-    state->b_is_a_tile_selected = false;
+  
+  if (IsMouseButtonReleased(MOUSE_RIGHT_BUTTON) && state->selection_type != SLC_TYPE_UNSELECTED) {
+    state->selected_tile = (tilemap_tile) {0};
+    state->selected_prop = (tilemap_prop) {0};
+    state->selection_type = SLC_TYPE_UNSELECTED;
   }
 }
 void editor_update_keyboard_bindings() {
   editor_update_movement();
 
-  if (IsKeyReleased(KEY_TAB)) {
-    state->b_show_tilesheet_tile_selection_screen = !state->b_show_tilesheet_tile_selection_screen;
-  }
   if (IsKeyReleased(KEY_ESCAPE)) {
     event_fire(EVENT_CODE_UI_SHOW_PAUSE_MENU, 0, (event_context){0});
   }
   if (IsKeyPressed(KEY_F5)) {
     save_map_data(&state->map, &state->package);
   }
+  if (IsKeyReleased(KEY_TAB)) {
+    state->b_show_tilesheet_tile_selection_screen = !state->b_show_tilesheet_tile_selection_screen;
+    state->b_show_prop_selection_screen = false;
+  }
   if (IsKeyPressed(KEY_I)) {
     state->b_show_prop_selection_screen = !state->b_show_prop_selection_screen;
+    state->b_show_tilesheet_tile_selection_screen = false;
   }
 
 }
