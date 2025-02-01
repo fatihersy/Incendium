@@ -1,13 +1,9 @@
 #include "tilemap.h"
-#include "defines.h"
-
 #include "core/fmemory.h"
 
+#include "tools/fstring.h"
 #include "game/resource.h"
 
-
-
-void FDrawGrid(tilemap* _tilemap);
 void map_to_str(tilemap* map, tilemap_stringtify_package* out_package);
 void str_to_map(tilemap* map, tilemap_stringtify_package* out_package);
 
@@ -19,7 +15,6 @@ void create_tilemap(tilesheet_type _type, Vector2 _position, u16 _grid_size, u16
 
   tilesheet* sheet = get_tilesheet_by_enum(_type);
 
-  out_tilemap->render_grid = false;
   out_tilemap->position = _position;
   out_tilemap->tile_size = _tile_size;
   out_tilemap->map_dim = _grid_size;
@@ -35,7 +30,6 @@ void create_tilemap(tilesheet_type _type, Vector2 _position, u16 _grid_size, u16
     u16 x = i % out_tilemap->map_dim;  
     u16 y = i / out_tilemap->map_dim;  
 
-    out_tilemap->tiles[x][y].tile_size = sheet->tile_size;
     out_tilemap->tiles[x][y].tex_id = sheet->tex_id;
     out_tilemap->tiles[x][y].sheet_type = _type;
     out_tilemap->tiles[x][y].tile_symbol = sheet->tile_symbols[0 / _tile_size][0 / _tile_size];
@@ -72,39 +66,32 @@ void render_tilemap(tilemap* _tilemap) {
   }
 
   for (u16 i = 0; i < _tilemap->map_dim_total; ++i) {
-
     u16 x = i % _tilemap->map_dim;  
     u16 y = i / _tilemap->map_dim;  
     i16 x_pos = _tilemap->position.x + x * _tilemap->tile_size; 
     i16 y_pos = _tilemap->position.y + y * _tilemap->tile_size; 
-
-    if (!_tilemap->tiles[x][y].is_initialized) continue;
-
-    Texture2D tex = *get_texture_by_enum(_tilemap->tiles[x][y].tex_id);
-
-    DrawTexturePro(
-    tex, 
-    (Rectangle) {
-        _tilemap->tiles[x][y].x,                    _tilemap->tiles[x][y].y, 
-    _tilemap->tiles[x][y].tile_size, _tilemap->tiles[x][y].tile_size
-    },
-      (Rectangle) {
-        x_pos,                    y_pos, 
-    _tilemap->tile_size, _tilemap->tile_size 
-    },
-    (Vector2){ 0, 0 },
-    0.0f, 
-    WHITE
-    );
+    if (x >= MAX_TILEMAP_TILESLOT_X || x < 0 || y >= MAX_TILEMAP_TILESLOT_Y || y < 0) {
+      TraceLog(LOG_ERROR, "tilemap::render_tilemap()::Calculated tile's x or y out of bound");
+      return;
+    }
+    if (!_tilemap->tiles[x][y].is_initialized) {
+      TraceLog(LOG_ERROR, "tilemap::render_tilemap()::tile:{%d,%d} is not initialized or corrupted", x, y);
+      return;
+    }
+    render_tile(_tilemap->tiles[x][y], (Rectangle) { x_pos, y_pos, _tilemap->tile_size, _tilemap->tile_size });
   }
-
-  
-  if(_tilemap->render_grid) FDrawGrid(_tilemap);
+  for (int i=0; i < _tilemap->prop_count; ++i) {
+    if (!_tilemap->props[i].is_initialized) continue;
+    
+    tilemap_prop* prop = &_tilemap->props[i];
+    Texture2D* tex = get_texture_by_enum(prop->atlas_id);
+    DrawTexturePro(*tex, prop->source, prop->dest, (Vector2) {0}, 0.f, WHITE); 
+  }
 }
 
 void render_tilesheet(tilesheet* sheet, f32 zoom) {
   if (!sheet) {
-    TraceLog(LOG_ERROR, "ERROR::tilemap::render_tilesheet()::Provided sheet was null");
+    TraceLog(LOG_ERROR, "tilemap::render_tilesheet()::Provided sheet was null");
     return;
   }
 
@@ -118,74 +105,45 @@ void render_tilesheet(tilesheet* sheet, f32 zoom) {
     i16 x_pos    = sheet->offset     + sheet->position.x + dest_x; 
     i16 y_pos    = sheet->offset     + sheet->position.y + dest_y; 
     
-    DrawTexturePro(
-      *sheet->tex, 
-      (Rectangle) {
-        origin_x, origin_y, 
-        sheet->tile_size, sheet->tile_size
-      },
-      (Rectangle) {
-        x_pos, y_pos, 
-        sheet->dest_tile_size * zoom, sheet->dest_tile_size * zoom
-      },
-      (Vector2){ 0, 0 },
-      0.0f, 
-      WHITE
-    );
+    render_tile(
+    (tilemap_tile) {
+      .tex_id = sheet->tex_id,
+      .x = origin_x, .y = origin_y,
+      .sheet_type = sheet->sheet_type
+    }, 
+    (Rectangle) {
+      x_pos, y_pos, 
+      sheet->dest_tile_size * zoom, sheet->dest_tile_size * zoom
+    });
   }
 }
 
-void FDrawGrid(tilemap* _tilemap) {
-  if (!_tilemap) {
-    TraceLog(LOG_ERROR, "ERROR::tilemap::FDrawGrid()::Provided map was null");
+/**
+ * @brief Unsafe!
+ * @param tile Needed for just x, y and tex_id
+ */
+void render_tile(tilemap_tile tile, Rectangle dest) {
+  if (tile.sheet_type >= TILESHEET_TYPE_MAX || tile.sheet_type <= 0) {
+    TraceLog(LOG_ERROR, "tilemap::render_tile()::Sheet type out of bound");
+    return;
+  }
+  tilesheet* ts = get_tilesheet_by_enum(tile.sheet_type); 
+  Texture2D* tx = get_texture_by_enum(tile.tex_id);
+  if (!ts || !tx) {
+    TraceLog(LOG_WARNING, "tilemap::render_tile()::Recieved tilesheet or texture pointer was NULL");
     return;
   }
 
-  for (int i = 0; i <= _tilemap->map_dim; i++) {
-    // Draw vertical lines
-    DrawLineV(
-    (Vector2) {
-      _tilemap->position.x + i * _tilemap->tile_size, 
-      _tilemap->position.y }, 
-    (Vector2) {
-     _tilemap->position.x + i * _tilemap->tile_size, 
-      _tilemap->position.y + _tilemap->map_dim * _tilemap->tile_size
-    }, _tilemap->grid_color);
-
-    // Draw horizontal lines
-    DrawLineV(
-    (Vector2) {
-      _tilemap->position.x, 
-      _tilemap->position.y + i * _tilemap->tile_size }, 
-    (Vector2) {
-      _tilemap->position.x + _tilemap->map_dim * _tilemap->tile_size, 
-      _tilemap->position.y + i * _tilemap->tile_size
-    }, _tilemap->grid_color);
-  }
-}
-
-
-void render_tile(tilemap_tile origin, tilemap_tile dest) {
-
-  tilesheet* ts = get_tilesheet_by_enum(origin.sheet_type);
-  Texture2D* tx = get_texture_by_enum(origin.tex_id);
-
-  DrawTexturePro(
-  *tx, 
-  (Rectangle) {
-    origin.x, origin.y, 
-    origin.tile_size, origin.tile_size
-  },
-  (Rectangle) {
-    dest.x, dest.y, 
-    dest.tile_size, dest.tile_size 
-  },
-  (Vector2){ 0, 0 },
-  0.0f, 
-  WHITE
+  DrawTexturePro(*tx, 
+    (Rectangle) { tile.x, tile.y, ts->tile_size, ts->tile_size},
+    dest,
+    (Vector2){0},0.f, WHITE
   );
 }
 
+/**
+ * @brief Unsafe!
+ */
 Vector2 get_tilesheet_dim(tilesheet* sheet) {
   return (Vector2) {
     (sheet->tile_count_x * sheet->offset) * sheet->dest_tile_size,
@@ -211,7 +169,6 @@ tilemap_tile get_tile_from_sheet_by_mouse_pos(tilesheet* sheet, Vector2 mouse_po
 
   tile.x           = dest_x  * sheet->tile_size;
   tile.y           = dest_y  * sheet->tile_size;
-  tile.tile_size   = sheet->tile_size;
   tile.sheet_type  = sheet->sheet_type;
   tile.tex_id      = sheet->tex_id;
   tile.tile_symbol = get_tilesheet_by_enum(tile.sheet_type)->tile_symbols[dest_x][dest_y];
@@ -234,10 +191,9 @@ tilemap_tile get_tile_from_map_by_mouse_pos(tilemap* map, Vector2 mouse_pos) {
     return (tilemap_tile) { .is_initialized = false };
   }
 
-  tile.tile_size = map->tile_size;
   tile.sheet_type = map->tiles[tile.x][tile.y].sheet_type;
   tile.tex_id = map->tiles[tile.x][tile.y].tex_id;
-  tile.tile_symbol = get_tilesheet_by_enum(tile.sheet_type)->tile_symbols[tile.x / tile.tile_size][tile.y/ tile.tile_size];
+  tile.tile_symbol = get_tilesheet_by_enum(tile.sheet_type)->tile_symbols[tile.x / map->tile_size][tile.y/ map->tile_size];
 
   tile.is_initialized = true;
   return tile;
@@ -268,10 +224,20 @@ void map_to_str(tilemap* map, tilemap_stringtify_package* out_package) {
     );
   }
 
-  for (int i=1; i<map->prop_count; ++i) {
-    out_package->str_props[i-1] = map->props[i].id;
+  for (int i=0; i<map->prop_count; ++i) {
+    if (!map->props[i].is_initialized) break;
+    tilemap_prop* prop = &map->props[i];
+    const char* symbol = TextFormat("%.4d,%.4d,%.4d,%.4d,%.4d,%.4d,%.4d,%.4d,%.4d,%.4d",
+      prop->id, prop->atlas_id, 
+      (i32)prop->source.x, (i32)prop->source.y, (i32)prop->source.width, (i32)prop->source.height, 
+      (i32)prop->dest.x, (i32)prop->dest.y, (i32)prop->dest.width, (i32)prop->dest.height
+    );
+    copy_memory(out_package->str_props[i], symbol, sizeof(char)*TILESHEET_PROP_SYMBOL_STR_LEN);
+    char nl[2] = (char[2]){'\r', '\n'}; // ASCII CRLF to make a new line
+    copy_memory(&out_package->str_props[i][TILESHEET_PROP_SYMBOL_STR_LEN-2], &nl, sizeof(char)*2); // making the new line
   }
-  out_package->size_tilemap_str = sizeof(out_package->str_props);
+  out_package->size_tilemap_str = sizeof(out_package->str_tilemap);
+  out_package->size_props_str = sizeof(out_package->str_props);
 
   out_package->is_success = true;
 }
@@ -289,17 +255,22 @@ void str_to_map(tilemap* map, tilemap_stringtify_package* out_package) {
     u16 map_y   = i / map->map_dim;  
     copy_memory(symbol.c, out_package->str_tilemap + (sizeof(tile_symbol) * i), sizeof(symbol));
 
-    map->tiles[map_x][map_y].sheet_type = symbol.c[2];
-
-    tilesheet* sheet = get_tilesheet_by_enum(map->tiles[map_x][map_y].sheet_type);
+    tilesheet* sheet = get_tilesheet_by_enum(symbol.c[2]);
 
     map->tiles[map_x][map_y].x = (symbol.c[0] - TILEMAP_TILE_START_SYMBOL) * sheet->tile_size;
     map->tiles[map_x][map_y].y = (symbol.c[1] - TILEMAP_TILE_START_SYMBOL) * sheet->tile_size;
+    map->tiles[map_x][map_y].sheet_type = sheet->sheet_type;
+  }
+  
+  for (int i=0; i<MAX_TILEMAP_PROPS; ++i) 
+  {
+    if (out_package->str_props[i][TILESHEET_PROP_SYMBOL_STR_LEN-2] != '\r' && 
+        out_package->str_props[i][TILESHEET_PROP_SYMBOL_STR_LEN-1] != '\n') {
+      break;
+    }
+    tilemap_prop* prop = &map->props[map->prop_count];
 
-    u16 origin_x = map->tiles[map_x][map_y].x;
-    u16 origin_y = map->tiles[map_x][map_y].y;  
-    u16 sheet_x = origin_x / sheet->tile_size;
-    u16 sheet_y = origin_y / sheet->tile_size;
+    prop->id = str_to_U16((const char*)out_package->str_props[i]);
   }
 
   out_package->is_success = true;
@@ -332,12 +303,23 @@ bool save_map_data(tilemap* map, tilemap_stringtify_package* out_package) {
  * @param out_package Needed because of the local variable array limit. Array must be defined at initialization. Also extracts map data and operation results.
  */
 bool load_map_data(tilemap* map, tilemap_stringtify_package* out_package) {
-  i32* out_size;
-  const u8* _str = LoadFileData(rs_path("map.txt"), out_size);
-  if (!out_size) {
-    TraceLog(LOG_ERROR, "ERROR::tilemap::load_map_data()::Reading data returned null");
+  {
+    u8* _str_tile = LoadFileData(rs_path("tilemap.txt"), (i32*)&out_package->size_tilemap_str);
+    if (out_package->size_tilemap_str <= 0 || out_package->size_tilemap_str == U64_MAX) {
+      TraceLog(LOG_ERROR, "ERROR::tilemap::load_map_data()::Reading data returned null");
+    }
+    copy_memory(out_package->str_tilemap, _str_tile, out_package->size_tilemap_str);
+    UnloadFileData(_str_tile);
   }
-  copy_memory(out_package->str_tilemap, _str, *out_size);
+  {
+    u8* _str_prop = LoadFileData(rs_path("map_props.txt"), (i32*)&out_package->size_props_str);
+    if (out_package->size_props_str <= 0 || out_package->size_props_str == U64_MAX) {
+      TraceLog(LOG_ERROR, "ERROR::tilemap::load_map_data()::Reading data returned null");
+    }
+    copy_memory(out_package->str_props, _str_prop, out_package->size_props_str);
+    UnloadFileData(_str_prop);
+  }
+  
   str_to_map(map, out_package);
   
   return out_package->is_success;

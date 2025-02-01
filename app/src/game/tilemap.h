@@ -10,7 +10,7 @@ void create_tilesheet(tilesheet_type _type, u16 _dest_tile_size, f32 _offset, ti
 void update_tilemap();
 void render_tilemap(tilemap* _tilemap);
 void render_tilesheet(tilesheet* sheet, f32 zoom);
-void render_tile(tilemap_tile origin, tilemap_tile dest);
+void render_tile(tilemap_tile tile, Rectangle dest);
 
 Vector2 get_tilesheet_dim(tilesheet* sheet);
 tilemap_tile get_tile_from_sheet_by_mouse_pos(tilesheet* sheet, Vector2 mouse_pos, f32 zoom);

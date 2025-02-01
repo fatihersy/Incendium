@@ -1,4 +1,6 @@
 #include "fstring.h"
+#include "stdlib.h"
+#include "errno.h"
 
 #include "core/fmemory.h"
 
@@ -88,4 +90,98 @@ bool append_text(const char* src, char* dest, u16 char_limit) {
   }
   copy_memory(dest + TextLength(dest), src, TextLength(src)); 
   return true;
+}
+
+
+i64 str_to_I64(const char* str){
+  i16 value = strtoll(str, NULL, 10);
+  if (errno == ERANGE) {
+    TraceLog(LOG_WARNING, "fstring::str_to_I64()::For i64 string:%s value out of range", str);
+    errno = 0;
+    return 0; 
+  }
+
+  return value;
+}
+u64 str_to_U64(const char* str){
+  u64 value = strtoull(str, NULL, 10);
+  if (errno == ERANGE) {
+      TraceLog(LOG_WARNING, "fstring::str_to_U64()::For u64 string:%s value out of range", str);
+      errno = 0;
+      return 0; 
+  }
+
+  return value;
+}
+f64 str_to_F64(const char* str){
+  f64 value = strtod(str, NULL);
+  if (errno == ERANGE) {
+    TraceLog(LOG_WARNING, "fstring::str_to_F64()::For f64 string:%s value out of range", str);
+    errno = 0;
+    return 0; 
+  }
+  return value;
+}
+i32 str_to_I32(const char* str){
+  i32 value = atoi(str);
+  if (errno == ERANGE) {
+    TraceLog(LOG_WARNING, "fstring::str_to_I32()::For i32 string:%s value out of range", str);
+    errno = 0;
+    return 0; 
+  }
+  return value;
+}
+u32 str_to_U32(const char* str){
+  u32 value = atoi(str);
+  if (errno == ERANGE) {
+    TraceLog(LOG_WARNING, "fstring::str_to_U32()::For u32 string:%s value out of range", str);
+    errno = 0;
+    return 0; 
+  }
+  return value;
+}
+f32 str_to_F32(const char* str){
+  f32 value = strtof(str, NULL);
+  if (errno == ERANGE) {
+    TraceLog(LOG_WARNING, "fstring::str_to_U32()::For f32 string:%s value out of range", str);
+    errno = 0;
+    return 0; 
+  }
+  return value;
+}
+i16 str_to_I16(const char* str){
+  i16 value = atoi(str);
+  if (errno == ERANGE || value > I16_MAX) {
+    TraceLog(LOG_WARNING, "fstring::str_to_I16()::For i16 string:%s value out of range", str);
+    errno = 0;
+    return 0; 
+  }
+  return value;
+}
+u16 str_to_U16(const char* str){
+  u16 value = atoi(str);
+  if (errno == ERANGE || value > U16_MAX) {
+    TraceLog(LOG_WARNING, "fstring::str_to_U16()::For u16 string:%s value out of range", str);
+    errno = 0;
+    return 0; 
+  }
+  return value;
+}
+i8  str_to_I8 (const char* str){
+  i8 value = atoi(str);
+  if (errno == ERANGE || value > I8_MAX) {
+    TraceLog(LOG_WARNING, "fstring::str_to_I8()::For i8 string:%s value out of range", str);
+    errno = 0;
+    return 0; 
+  }
+  return value;
+}
+u8  str_to_U8 (const char* str){
+  u8 value = atoi(str);
+  if (errno == ERANGE || value > U8_MAX) {
+    TraceLog(LOG_WARNING, "fstring::str_to_U8()::For u8 string:%s value out of range", str);
+    errno = 0;
+    return 0; 
+  }
+  return value;
 }

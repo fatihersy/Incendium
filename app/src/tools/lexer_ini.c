@@ -1,9 +1,7 @@
 #include "tools/lexer_ini.h"
-#include "stdlib.h"
-#include "errno.h"
-
 #include "defines.h"
-#include "raylib.h"
+
+#include "tools/fstring.h"
 
 #define DATA_TYPE_C_DELIMITER 20
 #define DATA_TYPE_I64_DELIMITER 19
@@ -212,300 +210,217 @@ const char* get_value_string(char _section[INI_FILE_MAX_SECTION_LENGTH], const c
     return "";
 }
 i64 get_variable_I64(char _section[INI_FILE_MAX_SECTION_LENGTH], const char* variable) {
-    char value_str[INI_FILE_MAX_VARIABLE_VALUE_LENGTH] = "";
-    i64 value = 0;
-    TextCopy(value_str, get_value_number(_section, variable, DATA_TYPE_I64));
-    if (TextLength(value_str) == 0) {
-        TraceLog(LOG_WARNING, "lexer::get_value_number()::For variable:%s no value recieved", variable);
-        return 0;
-    }
-    value = strtoll(value_str, NULL, 10);
-    if (errno == ERANGE) {
-        TraceLog(LOG_WARNING, "lexer::get_value_number()::For i64 variable:%s value out of range", variable);
-        errno = 0;
-        return 0; 
-    }
-
-    return value;
+  char value_str[INI_FILE_MAX_VARIABLE_VALUE_LENGTH] = "";
+  i64 value = 0;
+  TextCopy(value_str, get_value_number(_section, variable, DATA_TYPE_I64));
+  if (TextLength(value_str) == 0) {
+    TraceLog(LOG_WARNING, "lexer::get_value_number()::For variable:%s no value recieved", variable);
+    return 0;
+  }
+  return str_to_I64(value_str);
 }
 u64 get_variable_U64(char _section[INI_FILE_MAX_SECTION_LENGTH], const char* variable) {
-    char value_str[INI_FILE_MAX_VARIABLE_VALUE_LENGTH] = "";
-    u64 value = 0;
-    TextCopy(value_str, get_value_number(_section, variable, DATA_TYPE_U64));
-    if (TextLength(value_str) == 0) {
-        TraceLog(LOG_WARNING, "lexer::get_value_number()::For variable:%s no value recieved", variable);
-        return 0;
-    }
-    if(is_unsigned_number(value_str) == false) {
-        TraceLog(LOG_WARNING, "lexer::get_value_number()::For unsigned variable:%s value was minus 0", variable);
-        return 0;
-    }
-    value = strtoull(value_str, NULL, 10);
-    if (errno == ERANGE) {
-        TraceLog(LOG_WARNING, "lexer::get_value_number()::For u64 variable:%s value out of range", variable);
-        errno = 0;
-        return 0; 
-    }
-
-    return value;
+  char value_str[INI_FILE_MAX_VARIABLE_VALUE_LENGTH] = "";
+  u64 value = 0;
+  TextCopy(value_str, get_value_number(_section, variable, DATA_TYPE_U64));
+  if (TextLength(value_str) == 0) {
+    TraceLog(LOG_WARNING, "lexer::get_value_number()::For variable:%s no value recieved", variable);
+    return 0;
+  }
+  if(is_unsigned_number(value_str) == false) {
+    TraceLog(LOG_WARNING, "lexer::get_value_number()::For unsigned variable:%s value was minus 0", variable);
+    return 0;
+  }
+  return str_to_U64(value_str);
 }
 f64 get_variable_F64(char _section[INI_FILE_MAX_SECTION_LENGTH], const char* variable) {
-    char value_str[INI_FILE_MAX_VARIABLE_VALUE_LENGTH] = "";
-    f64 value = 0;
-    TextCopy(value_str, get_value_number(_section, variable, DATA_TYPE_F64));
-    if (TextLength(value_str) == 0) {
-        TraceLog(LOG_WARNING, "lexer::get_value_number()::For variable:%s no value recieved", variable);
-        return 0;
-    }
-    value = strtod(value_str, NULL);
-    if (errno == ERANGE) {
-        TraceLog(LOG_WARNING, "lexer::get_value_number()::For f64 variable:%s value out of range", variable);
-        errno = 0;
-        return 0; 
-    }
-
-    return value;
+  char value_str[INI_FILE_MAX_VARIABLE_VALUE_LENGTH] = "";
+  f64 value = 0;
+  TextCopy(value_str, get_value_number(_section, variable, DATA_TYPE_F64));
+  if (TextLength(value_str) == 0) {
+    TraceLog(LOG_WARNING, "lexer::get_value_number()::For variable:%s no value recieved", variable);
+    return 0;
+  }
+  return str_to_F64(value_str);
 }
 i32 get_variable_I32(char _section[INI_FILE_MAX_SECTION_LENGTH], const char* variable) {
-    char value_str[INI_FILE_MAX_VARIABLE_VALUE_LENGTH] = "";
-    i32 value = 0;
-    TextCopy(value_str, get_value_number(_section, variable, DATA_TYPE_I32));
-    if (TextLength(value_str) == 0) {
-        TraceLog(LOG_WARNING, "lexer::get_value_number()::For variable:%s no value recieved", variable);
-        return 0;
-    }
-    value = atoi(value_str);
-    if (errno == ERANGE) {
-        TraceLog(LOG_WARNING, "lexer::get_value_number()::For i32 variable:%s value out of range", variable);
-        errno = 0;
-        return 0; 
-    }
-
-    return value;
+  char value_str[INI_FILE_MAX_VARIABLE_VALUE_LENGTH] = "";
+  i32 value = 0;
+  TextCopy(value_str, get_value_number(_section, variable, DATA_TYPE_I32));
+  if (TextLength(value_str) == 0) {
+    TraceLog(LOG_WARNING, "lexer::get_value_number()::For variable:%s no value recieved", variable);
+    return 0;
+  }
+  return str_to_I32(value_str);
 }
 u32 get_variable_U32(char _section[INI_FILE_MAX_SECTION_LENGTH], const char* variable) {
-    char value_str[INI_FILE_MAX_VARIABLE_VALUE_LENGTH] = "";
-    u32 value = 0;
-    TextCopy(value_str, get_value_number(_section, variable, DATA_TYPE_U32));
-    if (TextLength(value_str) == 0) {
-        TraceLog(LOG_WARNING, "lexer::get_value_number()::For variable:%s no value recieved", variable);
-        return 0;
-    }
-    if(is_unsigned_number(value_str) == false) {
-        TraceLog(LOG_WARNING, "lexer::get_value_number()::For unsigned variable:%s value was minus 0", variable);
-        return 0;
-    }
-    value = atoi(value_str);
-    if (errno == ERANGE) {
-        TraceLog(LOG_WARNING, "lexer::get_value_number()::For u32 variable:%s value out of range", variable);
-        errno = 0;
-        return 0; 
-    }
-
-    return value;
+  char value_str[INI_FILE_MAX_VARIABLE_VALUE_LENGTH] = "";
+  u32 value = 0;
+  TextCopy(value_str, get_value_number(_section, variable, DATA_TYPE_U32));
+  if (TextLength(value_str) == 0) {
+    TraceLog(LOG_WARNING, "lexer::get_value_number()::For variable:%s no value recieved", variable);
+    return 0;
+  }
+  if(is_unsigned_number(value_str) == false) {
+    TraceLog(LOG_WARNING, "lexer::get_value_number()::For unsigned variable:%s value was minus 0", variable);
+    return 0;
+  }
+  return str_to_U32(value_str);
 }
 f32 get_variable_F32(char _section[INI_FILE_MAX_SECTION_LENGTH], const char* variable) {
-    char value_str[INI_FILE_MAX_VARIABLE_VALUE_LENGTH] = "";
-    f32 value = 0;
-    TextCopy(value_str, get_value_number(_section, variable, DATA_TYPE_F32));
-    if (TextLength(value_str) == 0) {
-        TraceLog(LOG_WARNING, "lexer::get_value_number()::For variable:%s no value recieved", variable);
-        return 0;
-    }
-    value = strtof(value_str, NULL);
-    if (errno == ERANGE) {
-        TraceLog(LOG_WARNING, "lexer::get_value_number()::For f32 variable:%s value out of range", variable);
-        errno = 0;
-        return 0; 
-    }
-
-    return value;
+  char value_str[INI_FILE_MAX_VARIABLE_VALUE_LENGTH] = "";
+  f32 value = 0;
+  TextCopy(value_str, get_value_number(_section, variable, DATA_TYPE_F32));
+  if (TextLength(value_str) == 0) {
+    TraceLog(LOG_WARNING, "lexer::get_value_number()::For variable:%s no value recieved", variable);
+    return 0;
+  }
+  return str_to_F32(value_str);
 }
 i16 get_variable_I16(char _section[INI_FILE_MAX_SECTION_LENGTH], const char* variable) {
-    char value_str[INI_FILE_MAX_VARIABLE_VALUE_LENGTH] = "";
-    i32 value = 0;
-    TextCopy(value_str, get_value_number(_section, variable, DATA_TYPE_I16));
-    if (TextLength(value_str) == 0) {
-        TraceLog(LOG_WARNING, "lexer::get_value_number()::For variable:%s no value recieved", variable);
-        return 0;
-    }
-    value = atoi(value_str);
-    if (errno == ERANGE || value > I16_MAX) {
-        TraceLog(LOG_WARNING, "lexer::get_value_number()::For i16 variable:%s value out of range", variable);
-        errno = 0;
-        return 0; 
-    }
-
-    return value;
+  char value_str[INI_FILE_MAX_VARIABLE_VALUE_LENGTH] = "";
+  i32 value = 0;
+  TextCopy(value_str, get_value_number(_section, variable, DATA_TYPE_I16));
+  if (TextLength(value_str) == 0) {
+    TraceLog(LOG_WARNING, "lexer::get_value_number()::For variable:%s no value recieved", variable);
+    return 0;
+  }
+  return str_to_I16(value_str);
 }
 u16 get_variable_U16(char _section[INI_FILE_MAX_SECTION_LENGTH], const char* variable) {
-    char value_str[INI_FILE_MAX_VARIABLE_VALUE_LENGTH] = "";
-    u32 value = 0;
-    TextCopy(value_str, get_value_number(_section, variable, DATA_TYPE_U16));
-    if (TextLength(value_str) == 0) {
-        TraceLog(LOG_WARNING, "lexer::get_value_number()::For variable:%s no value recieved", variable);
-        return 0;
-    }
-    if(is_unsigned_number(value_str) == false) {
-        TraceLog(LOG_WARNING, "lexer::get_value_number()::For unsigned variable:%s value was minus 0", variable);
-        return 0;
-    }
-    value = atoi(value_str);
-    if (errno == ERANGE || value > U16_MAX) {
-        TraceLog(LOG_WARNING, "lexer::get_value_number()::For u16 variable:%s value out of range", variable);
-        errno = 0;
-        return 0; 
-    }
-
-    return value;
+  char value_str[INI_FILE_MAX_VARIABLE_VALUE_LENGTH] = "";
+  u32 value = 0;
+  TextCopy(value_str, get_value_number(_section, variable, DATA_TYPE_U16));
+  if (TextLength(value_str) == 0) {
+    TraceLog(LOG_WARNING, "lexer::get_value_number()::For variable:%s no value recieved", variable);
+    return 0;
+  }
+  if(is_unsigned_number(value_str) == false) {
+    TraceLog(LOG_WARNING, "lexer::get_value_number()::For unsigned variable:%s value was minus 0", variable);
+    return 0;
+  }
+  return str_to_U16(value_str);
 }
 i8  get_variable_I8 (char _section[INI_FILE_MAX_SECTION_LENGTH], const char* variable) {
-    char value_str[INI_FILE_MAX_VARIABLE_VALUE_LENGTH] = "";
-    i32 value = 0;
-    TextCopy(value_str, get_value_number(_section, variable, DATA_TYPE_I8));
-    if (TextLength(value_str) == 0) {
-        TraceLog(LOG_WARNING, "lexer::get_value_number()::For variable:%s no value recieved", variable);
-        return 0;
-    }
-    value = atoi(value_str);
-    if (errno == ERANGE || value > I8_MAX) {
-        TraceLog(LOG_WARNING, "lexer::get_value_number()::For i8 variable:%s value out of range", variable);
-        errno = 0;
-        return 0; 
-    }
+  char value_str[INI_FILE_MAX_VARIABLE_VALUE_LENGTH] = "";
+  i32 value = 0;
+  TextCopy(value_str, get_value_number(_section, variable, DATA_TYPE_I8));
+  if (TextLength(value_str) == 0) {
+    TraceLog(LOG_WARNING, "lexer::get_value_number()::For variable:%s no value recieved", variable);
+    return 0;
+  }
 
-    return value;
+  return str_to_I8(value_str);
 }
 u8  get_variable_U8 (char _section[INI_FILE_MAX_SECTION_LENGTH], const char* variable) {
-    char value_str[INI_FILE_MAX_VARIABLE_VALUE_LENGTH] = "";
-    u32 value = 0;
-    TextCopy(value_str, get_value_number(_section, variable, DATA_TYPE_U8));
-    if (TextLength(value_str) == 0) {
-        TraceLog(LOG_WARNING, "lexer::get_value_number()::For variable:%s no value recieved", variable);
-        return 0;
-    }
-    if(is_unsigned_number(value_str) == false) {
-        TraceLog(LOG_WARNING, "lexer::get_value_number()::For unsigned variable:%s value was minus 0", variable);
-        return 0;
-    }
-    value = atoi(value_str);
-    if (errno == ERANGE || value > U8_MAX) {
-        TraceLog(LOG_WARNING, "lexer::get_value_number()::For u8 variable:%s value out of range", variable);
-        errno = 0;
-        return 0; 
-    }
-
-    return value;
+  char value_str[INI_FILE_MAX_VARIABLE_VALUE_LENGTH] = "";
+  u32 value = 0;
+  TextCopy(value_str, get_value_number(_section, variable, DATA_TYPE_U8));
+  if (TextLength(value_str) == 0) {
+    TraceLog(LOG_WARNING, "lexer::get_value_number()::For variable:%s no value recieved", variable);
+    return 0;
+  }
+  if(is_unsigned_number(value_str) == false) {
+    TraceLog(LOG_WARNING, "lexer::get_value_number()::For unsigned variable:%s value was minus 0", variable);
+    return 0;
+  }
+  return str_to_U8(value_str);
 }
 
 bool is_alpha(char *c) {
-    
-    if (*c >= '0' && *c <= '9') {
-        return true;
-    }
-   
-    if (*c >= 'A' && *c <= 'Z') {
-        return true;
-    }
-   
-    if (*c >= 'a' && *c <= 'z') {
-        return true;
-    }
-   
-    return false;
+  
+  if (*c >= '0' && *c <= '9') {
+    return true;
+  }
+  
+  if (*c >= 'A' && *c <= 'Z') {
+    return true;
+  }
+  
+  if (*c >= 'a' && *c <= 'z') {
+    return true;
+  }
+  
+  return false;
 }
-bool is_letter(char *c) {
-    
-    if (*c >= 'A' && *c <= 'Z') {
-        return true;
-    }
-   
-    if (*c >= 'a' && *c <= 'z') {
-        return true;
-    }
-   
-    return false;
+bool is_letter(char *c) { 
+  if (*c >= 'A' && *c <= 'Z') {
+    return true;
+  }
+  if (*c >= 'a' && *c <= 'z') {
+    return true;
+  }
+  return false;
 }
 bool is_number(char *c) {
-    
-    if (*c >= '0' && *c <= '9') {
-        return true;
-    }
-    else if (*c == '-' && (*(c+1) >= '0' && *(c+1) <= '9')) {
-        return true;
-    }
-
-    return false;
+  if (*c >= '0' && *c <= '9') {
+    return true;
+  }
+  else if (*c == '-' && (*(c+1) >= '0' && *(c+1) <= '9')) {
+    return true;
+  }
+  return false;
 }
 bool is_unsigned_number(char *c) {
-    
-    if (*c >= '0' && *c <= '9') {
-        return true;
-    }
-    else if (*c == '-' && (*(c+1) >= '0' && *(c+1) <= '9')) {
-        return false;
-    }
-
+  if (*c >= '0' && *c <= '9') {
+    return true;
+  }
+  else if (*c == '-' && (*(c+1) >= '0' && *(c+1) <= '9')) {
     return false;
+  }
+  return false;
 }
 bool is_digit(char *c) {
-    
-    if (*c >= '0' && *c <= '9') {
-        return true;
-    }
-
-    return false;
+  if (*c >= '0' && *c <= '9') {
+    return true;
+  }
+  return false;
 }
 bool is_eol(char *c) {
-    
-    if (*c >= 10 && *(c+1) <= 13) {
-        return true;
-    }
-
-    return false;
+  if (*c >= 10 && *(c+1) <= 13) {
+    return true;
+  }
+  return false;
 }
 bool is_variable_allowed(char *c) {
-    
-    if (is_alpha(c) || *c == '_') return true;
+  if (is_alpha(c) || *c == '_') return true;
 
-    return false;
+  return false;
 }
 bool is_string_allowed(char *c) {
-    
-    if (is_alpha(c) || *c == '_' || *c == ' ') return true;
-
-    return false;
+  if (is_alpha(c) || *c == '_' || *c == ' ') return true;
+  return false;
 }
 
 void move_next_alpha(char _str[INI_FILE_MAX_FILE_SIZE], u16* counter, bool stay_the_line) {
-    while(_str[(*counter)++] != '\0') {
-        if (is_alpha(&_str[*counter])) return;
-        if (stay_the_line && is_eol(&_str[*counter])) break;
-    }
-    *counter = INVALID_ID16;
+  while(_str[(*counter)++] != '\0') {
+    if (is_alpha(&_str[*counter])) return;
+    if (stay_the_line && is_eol(&_str[*counter])) break;
+  }
+  *counter = INVALID_ID16;
 }
 void move_next_letter(char _str[INI_FILE_MAX_FILE_SIZE], u16* counter, bool stay_the_line) {
-    while(_str[(*counter)++] != '\0') {
-        if (is_letter(&_str[*counter])) return;
-        if (stay_the_line && is_eol(&_str[*counter])) break;
-    }
-    *counter = INVALID_ID16;
+  while(_str[(*counter)++] != '\0') {
+    if (is_letter(&_str[*counter])) return;
+    if (stay_the_line && is_eol(&_str[*counter])) break;
+  }
+  *counter = INVALID_ID16;
 }
 void move_next_number(char _str[INI_FILE_MAX_FILE_SIZE], u16* counter, bool stay_the_line) {
-    while(_str[(*counter)++] != '\0') {
-        if (is_number(&_str[*counter])) return;
-        if (stay_the_line && is_eol(&_str[*counter])) break;
-    }
-    *counter = INVALID_ID16;
+  while(_str[(*counter)++] != '\0') {
+    if (is_number(&_str[*counter])) return;
+    if (stay_the_line && is_eol(&_str[*counter])) break;
+  }
+  *counter = INVALID_ID16;
 }
 void move_next_string(char _str[INI_FILE_MAX_FILE_SIZE], u16* counter, bool stay_the_line) {
-    while(_str[(*counter)++] != '\0') {
-        if (_str[*counter] == '"') {
-            ++(*counter);
-            return;
-        }
-        if (stay_the_line && is_eol(&_str[*counter])) break;
+  while(_str[(*counter)++] != '\0') {
+    if (_str[*counter] == '"') {
+      ++(*counter);
+      return;
     }
-    *counter = INVALID_ID16;
+    if (stay_the_line && is_eol(&_str[*counter])) break;
+  }
+  *counter = INVALID_ID16;
 }
 

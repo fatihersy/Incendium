@@ -28,7 +28,9 @@ typedef struct scene_editor_state {
   tilemap map;
   tilesheet palette;
   tilemap_stringtify_package package;
-  
+  tilemap_prop props[MAX_TILESHEET_PROPS];
+  u16 prop_count;
+
   bool b_show_tilesheet_tile_selection_screen;
   bool b_show_prop_selection_screen;
 
@@ -60,11 +62,11 @@ void initialize_scene_editor(camera_metrics* _camera_metrics) {
   
   create_tilemap(TILESHEET_TYPE_MAP, (Vector2) {0, 0}, 100, 16*3, WHITE, &state->map);
   if(!state->map.is_initialized) {
-    TraceLog(LOG_WARNING, "WARNING::scene_in_game_edit::initialize_scene_in_game_edit()::tilemap initialization failed");
+    TraceLog(LOG_WARNING, "scene_in_game_edit::initialize_scene_in_game_edit()::tilemap initialization failed");
   }
   create_tilesheet(TILESHEET_TYPE_MAP, 16*2, 1.1, &state->palette);
   if(!state->palette.is_initialized) {
-    TraceLog(LOG_WARNING, "WARNING::scene_in_game_edit::initialize_scene_in_game_edit()::palette initialization failed");
+    TraceLog(LOG_WARNING, "scene_in_game_edit::initialize_scene_in_game_edit()::palette initialization failed");
   }
 
   user_interface_system_initialize();
@@ -77,6 +79,10 @@ void initialize_scene_editor(camera_metrics* _camera_metrics) {
 
   state->in_camera_metrics = _camera_metrics;
   state->palette.position = (Vector2) {5, 5};
+  event_fire(EVENT_CODE_SCENE_MANAGER_SET_CAM_POS, 0, (event_context){
+    .data.f32[0] = state->target.x,
+    .data.f32[1] = state->target.y
+  });
 
   add_prop_epic_cemetery((Rectangle){ 11,  40,  166, 152}, 1);
   add_prop_epic_cemetery((Rectangle){ 193, 101, 122, 91 }, 1);
@@ -88,8 +94,9 @@ void initialize_scene_editor(camera_metrics* _camera_metrics) {
 void update_scene_editor() {
   if(!IsWindowFocused()) {
     state->mouse_focus = MOUSE_FOCUS_UNFOCUSED;
+    return;
   }
-  state->mouse_focus = MOUSE_FOCUS_MAP;
+  else state->mouse_focus = MOUSE_FOCUS_MAP;
 
   editor_update_bindings();
   update_user_interface();
@@ -102,16 +109,16 @@ void render_interface_editor() {
   
   if(state->b_show_tilesheet_tile_selection_screen && !state->b_show_prop_selection_screen) 
   { 
-    gui_panel_scissored(state->tile_selection_panel, state->tile_selection_panel.dest, false, {
+    gui_panel_scissored(state->tile_selection_panel, false, {
       render_tilesheet(&state->palette, state->tile_selection_panel.zoom);
     });
   }
   else if(state->b_show_prop_selection_screen && !state->b_show_tilesheet_tile_selection_screen) 
   {     
-    gui_panel_scissored(state->prop_selection_panel, state->prop_selection_panel.dest, false, {
+    gui_panel_scissored(state->prop_selection_panel, false, {
       u16 prop_height_count = 0;
-      for (int i=0; i<state->map.prop_count; ++i) {
-        tilemap_prop* prop = &state->map.props[i];
+      for (int i=0; i<state->prop_count; ++i) {
+        tilemap_prop* prop = &state->props[i];
         Rectangle dest = prop->dest;
         dest.x = state->prop_selection_panel.scroll;
         dest.y = prop_height_count;
@@ -124,10 +131,10 @@ void render_interface_editor() {
   switch (state->selection_type) {
     case SLC_TYPE_TILE: {
       render_tile(state->selected_tile, 
-      (tilemap_tile) 
-      {
-        .x = GetMousePosition().x, .y = GetMousePosition().y,
-        .tile_size = state->map.tile_size
+      (Rectangle) {
+        GetMousePosition().x, GetMousePosition().y,
+        state->map.tile_size,
+        state->map.tile_size
       });
       break;
     }
@@ -152,25 +159,26 @@ void render_interface_editor() {
 
 void add_prop(texture_id source_tex, Rectangle source, f32 scale) {
   if (source_tex >= TEX_ID_MAX || source_tex <= TEX_ID_UNSPECIFIED) {
-    TraceLog(LOG_WARNING, "Provided texture id out of bound");
+    TraceLog(LOG_WARNING, "scene_editor::add_prop()::Provided texture id out of bound");
     return;
   }
   Texture2D* tex = get_texture_by_enum(source_tex);
   if (!tex || tex->id == 0 || tex->id == U32_MAX) {
-    TraceLog(LOG_WARNING, "Provided texture uninitialized or corrupted");
+    TraceLog(LOG_WARNING, "scene_editor::add_prop()::Provided texture uninitialized or corrupted");
     return;
   }
   if (tex->width < source.x + source.width || tex->height < source.y + source.height) {
-    TraceLog(LOG_WARNING, "Provided prop dimentions out of bound");
+    TraceLog(LOG_WARNING, "scene_editor::add_prop()::Provided prop dimentions out of bound");
     return;
   }
-  tilemap_prop* prop = &state->map.props[state->map.prop_count];
+  tilemap_prop* prop = &state->props[state->prop_count];
   
   prop->atlas_id = source_tex;
   prop->source = source;
   prop->dest = (Rectangle) {0, 0, source.width * scale, source.height * scale};
-  prop->id = state->map.prop_count;
-  ++state->map.prop_count;
+  prop->id = state->prop_count;
+  prop->is_initialized = true;
+  ++state->prop_count;
 }
 
 
@@ -182,8 +190,9 @@ void editor_update_bindings() {
 void editor_update_mouse_bindings() { 
   editor_update_zoom_controls();
 
-  if(state->b_show_tilesheet_tile_selection_screen)
+  if(state->b_show_tilesheet_tile_selection_screen && CheckCollisionPointRec(GetMousePosition(), state->tile_selection_panel.dest))
   {
+    state->mouse_focus = MOUSE_FOCUS_TILE_SELECTION;
     if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON) && state->selection_type == SLC_TYPE_UNSELECTED) {
       tilemap_tile tile = get_tile_from_sheet_by_mouse_pos(&state->palette, GetMousePosition(), state->tile_selection_panel.zoom);
       if (tile.is_initialized) {
@@ -196,28 +205,45 @@ void editor_update_mouse_bindings() {
       state->palette.position.y += GetMouseDelta().y;
     }
   }
-  else if(state->b_show_prop_selection_screen)
+  if(state->b_show_prop_selection_screen && CheckCollisionPointRec(GetMousePosition(), state->prop_selection_panel.dest))
   {
-    if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON) && !state->b_show_tilesheet_tile_selection_screen && state->b_show_prop_selection_screen) {
+    if (state->mouse_focus == MOUSE_FOCUS_TILE_SELECTION) {
+      TraceLog(LOG_ERROR, "scene_editor::editor_update_mouse_bindings()::tile and prop screen activated at the same time.");
+      return;
+    } 
+    else state->mouse_focus = MOUSE_FOCUS_PROP_SELECTION;
+  
+    if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON) && state->selection_type == SLC_TYPE_UNSELECTED) {
       i32 h = state->prop_selection_panel.scroll + GetMousePosition().y;
-      for (int i=0; i<state->map.prop_count; ++i) {
-        if(h - state->map.props[i].source.height < 0) {
-          state->selected_prop = state->map.props[i];
+      for (int i=0; i<state->prop_count; ++i) {
+        if(h - state->props[i].source.height < 0) {
+          state->selected_prop = state->props[i];
           state->selection_type = SLC_TYPE_PROP;
           break;
         }
-        h -= state->map.props[i].source.height;
+        h -= state->props[i].source.height;
       }
     }
   }
-  else 
-  {
-    if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON) && state->mouse_focus == MOUSE_FOCUS_MAP) {
-      tilemap_tile tile = get_tile_from_map_by_mouse_pos(&state->map, GetScreenToWorld2D(GetMousePosition(), state->in_camera_metrics->handle));
-      state->map.tiles[tile.x][tile.y] = state->selected_tile;
-      TraceLog(LOG_INFO, "tile.%d,tile.%d is %d:%d", tile.x, tile.y, state->selected_tile.tile_symbol.c[0], state->selected_tile.tile_symbol.c[1]);
-    };
-  }
+  if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON) && state->mouse_focus == MOUSE_FOCUS_MAP) {
+    switch (state->selection_type) {
+      case SLC_TYPE_TILE: { 
+        tilemap_tile tile = get_tile_from_map_by_mouse_pos(&state->map, GetScreenToWorld2D(GetMousePosition(), state->in_camera_metrics->handle));
+        state->map.tiles[tile.x][tile.y] = state->selected_tile;
+        TraceLog(LOG_INFO, "tile.%d,tile.%d is %d:%d", tile.x, tile.y, state->selected_tile.tile_symbol.c[0], state->selected_tile.tile_symbol.c[1]);
+        break; 
+      }
+      case SLC_TYPE_PROP: {
+        Vector2 coord = GetScreenToWorld2D(GetMousePosition(), state->in_camera_metrics->handle);
+        state->selected_prop.dest.x = coord.x;
+        state->selected_prop.dest.y = coord.y;
+        state->map.props[state->map.prop_count++] = state->selected_prop;
+        break;
+      }
+      default: break;
+    }
+  };
+  
   
   if (IsMouseButtonReleased(MOUSE_RIGHT_BUTTON) && state->selection_type != SLC_TYPE_UNSELECTED) {
     state->selected_tile = (tilemap_tile) {0};
@@ -233,6 +259,9 @@ void editor_update_keyboard_bindings() {
   }
   if (IsKeyPressed(KEY_F5)) {
     save_map_data(&state->map, &state->package);
+  }
+  if (IsKeyPressed(KEY_F8)) {
+    load_map_data(&state->map, &state->package);
   }
   if (IsKeyReleased(KEY_TAB)) {
     state->b_show_tilesheet_tile_selection_screen = !state->b_show_tilesheet_tile_selection_screen;

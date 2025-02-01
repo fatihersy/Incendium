@@ -215,7 +215,7 @@ void load_tilesheet(tilesheet_type _sheet_sheet_type, texture_id _sheet_tex_id, 
     u8 y_symbol = TILEMAP_TILE_START_SYMBOL + y;
 
     _tilesheet->tile_symbols[x][y] = (tile_symbol) {
-      .c = { x_symbol, y_symbol}
+      .c = { x_symbol, y_symbol, _tilesheet->sheet_type}
     };
   }
 

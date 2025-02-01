@@ -47,6 +47,8 @@
 #define MAX_TILEMAP_TILESLOT MAX_TILEMAP_TILESLOT_X * MAX_TILEMAP_TILESLOT_Y
 #define TILEMAP_TILE_START_SYMBOL 0x21 // Refers to ASCII exclamation mark. First visible character on the chart. To debug.
 #define TILESHEET_TILE_SYMBOL_STR_LEN 2
+#define TILESHEET_PROP_SYMBOL_STR_LEN 60
+#define MAX_TILESHEET_PROPS 1024
 #define MAX_TILEMAP_PROPS 255
 
 #define MAX_ITEM_ACTOR_NAME_LENGHT 10
@@ -396,7 +398,7 @@ typedef struct app_settings {
 } app_settings;
 
 typedef struct tile_symbol {
-  u8 c[2];
+  u8 c[3];
 }tile_symbol;
 
 typedef struct tilesheet {
@@ -422,7 +424,6 @@ typedef struct tilemap_tile {
 
 	u16 x;
 	u16 y;
-	u16 tile_size;
   tile_symbol tile_symbol;
 
   bool is_initialized;
@@ -433,6 +434,7 @@ typedef struct tilemap_prop {
   u16 id;
   Rectangle source;
   Rectangle dest;
+  bool is_initialized;
 } tilemap_prop;
 
 typedef struct tilemap {
@@ -446,13 +448,12 @@ typedef struct tilemap {
   u16 prop_count;
 
   Color grid_color;
-  bool render_grid;
   bool is_initialized;
 } tilemap;
 
 typedef struct tilemap_stringtify_package {
   u8 str_tilemap[MAX_TILEMAP_TILESLOT * TILESHEET_TILE_SYMBOL_STR_LEN];
-  u8 str_props[MAX_TILEMAP_PROPS];
+  u8 str_props[MAX_TILEMAP_PROPS][TILESHEET_PROP_SYMBOL_STR_LEN];
   u64 size_tilemap_str;
   u64 size_props_str;
   bool is_success;
