@@ -27,6 +27,8 @@
 #define INI_FILE_MAX_SECTION_LENGTH 512
 #define INI_FILE_MAX_VARIABLE_NAME_LENGTH 32
 #define INI_FILE_MAX_VARIABLE_VALUE_LENGTH 32
+#define MAX_PARSED_TEXT_ARR_LEN 10
+#define MAX_PARSED_TEXT_TEXT_LEN 10
 
 #define MAX_SHADER_LOCATION_SLOT 16
 #define MAX_SHADER_LOCATION_NAME_LENGHT 16
@@ -344,6 +346,10 @@ typedef enum tilesheet_type {
 
   TILESHEET_TYPE_MAX
 } tilesheet_type;
+
+typedef struct string_parse_result {
+  char buffer[MAX_PARSED_TEXT_ARR_LEN][MAX_PARSED_TEXT_TEXT_LEN];
+} string_parse_result;
 
 typedef struct data_pack {
   data_type type_flag;

@@ -16,6 +16,8 @@ i8  str_to_I8 (const char* str);
 u8  str_to_U8 (const char* str);
 
 const char* stringtify_data(data_pack data, const char* parser, u16 character_limit);
+string_parse_result parse_string(const char* str, const char parser, u16 parse_count, u16 delimiter);
+
 bool append_text(const char* src, char* dest, u16 char_limit);
 
 #endif

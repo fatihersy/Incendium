@@ -81,6 +81,20 @@ const char* stringtify_data(data_pack data, const char* parser, u16 character_li
   return text;
 }
 
+string_parse_result parse_string(const char* str, const char parser, u16 parse_count, u16 delimiter) {
+  string_parse_result result = {0};
+  u16 string_itr_len = 0;
+
+  for (int i=0; i < parse_count; ++i) {
+    for (int j=0; str[string_itr_len] != parser && string_itr_len < delimiter; ++j) {    
+      result.buffer[i][j] = str[string_itr_len++];
+    }
+    string_itr_len++;
+  }
+
+  return result;
+}
+
 bool append_text(const char* src, char* dest, u16 char_limit) {
   if(TextLength(src) + TextLength(dest) > char_limit || char_limit == INVALID_ID16) {
     TraceLog(LOG_WARNING, 
@@ -91,7 +105,6 @@ bool append_text(const char* src, char* dest, u16 char_limit) {
   copy_memory(dest + TextLength(dest), src, TextLength(src)); 
   return true;
 }
-
 
 i64 str_to_I64(const char* str){
   i16 value = strtoll(str, NULL, 10);

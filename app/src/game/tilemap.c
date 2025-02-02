@@ -41,7 +41,6 @@ void create_tilemap(tilesheet_type _type, Vector2 _position, u16 _grid_size, u16
   return;
 }
 
-
 void create_tilesheet(tilesheet_type _type, u16 _dest_tile_size, f32 _offset, tilesheet* out_tilesheet) {
   if (_type >= TILESHEET_TYPE_MAX || _type <= 0) {
     TraceLog(LOG_ERROR, "ERROR::tilemap::create_tilesheet()::Sheet type out of bound");
@@ -120,7 +119,7 @@ void render_tilesheet(tilesheet* sheet, f32 zoom) {
 
 /**
  * @brief Unsafe!
- * @param tile Needed for just x, y and tex_id
+ * @param tile Needed for x, y, tex_id and sheet_type
  */
 void render_tile(tilemap_tile tile, Rectangle dest) {
   if (tile.sheet_type >= TILESHEET_TYPE_MAX || tile.sheet_type <= 0) {
@@ -233,8 +232,6 @@ void map_to_str(tilemap* map, tilemap_stringtify_package* out_package) {
       (i32)prop->dest.x, (i32)prop->dest.y, (i32)prop->dest.width, (i32)prop->dest.height
     );
     copy_memory(out_package->str_props[i], symbol, sizeof(char)*TILESHEET_PROP_SYMBOL_STR_LEN);
-    char nl[2] = (char[2]){'\r', '\n'}; // ASCII CRLF to make a new line
-    copy_memory(&out_package->str_props[i][TILESHEET_PROP_SYMBOL_STR_LEN-2], &nl, sizeof(char)*2); // making the new line
   }
   out_package->size_tilemap_str = sizeof(out_package->str_tilemap);
   out_package->size_props_str = sizeof(out_package->str_props);
@@ -261,16 +258,35 @@ void str_to_map(tilemap* map, tilemap_stringtify_package* out_package) {
     map->tiles[map_x][map_y].y = (symbol.c[1] - TILEMAP_TILE_START_SYMBOL) * sheet->tile_size;
     map->tiles[map_x][map_y].sheet_type = sheet->sheet_type;
   }
-  
   for (int i=0; i<MAX_TILEMAP_PROPS; ++i) 
   {
-    if (out_package->str_props[i][TILESHEET_PROP_SYMBOL_STR_LEN-2] != '\r' && 
-        out_package->str_props[i][TILESHEET_PROP_SYMBOL_STR_LEN-1] != '\n') {
+    u32 len = TextLength((const char*)out_package->str_props[i]);
+    if (len <= 0 || len > TILESHEET_PROP_SYMBOL_STR_LEN) {
+      TraceLog(LOG_INFO, "tilemap::str_to_map()::Loaded prop amount:%d", i);
       break;
     }
     tilemap_prop* prop = &map->props[map->prop_count];
+    string_parse_result str_par = parse_string(
+      (const char*)out_package->str_props[i], ',', 10, 
+      TextLength((const char*)out_package->str_props[i])
+    );
 
-    prop->id = str_to_U16((const char*)out_package->str_props[i]);
+    prop->id = str_to_U16((const char*)&str_par.buffer[0]);
+    prop->atlas_id = str_to_U16((const char*)&str_par.buffer[1]);
+    prop->source = (Rectangle) {
+      str_to_F32((const char*)&str_par.buffer[2]),
+      str_to_F32((const char*)&str_par.buffer[3]),
+      str_to_F32((const char*)&str_par.buffer[4]),
+      str_to_F32((const char*)&str_par.buffer[5]),
+    };
+    prop->dest = (Rectangle) {
+      str_to_F32((const char*)&str_par.buffer[6]),
+      str_to_F32((const char*)&str_par.buffer[7]),
+      str_to_F32((const char*)&str_par.buffer[8]),
+      str_to_F32((const char*)&str_par.buffer[9]),
+    };
+    prop->is_initialized = true;
+    map->prop_count++;
   }
 
   out_package->is_success = true;
