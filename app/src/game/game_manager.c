@@ -38,8 +38,9 @@ bool game_manager_initialize(camera_metrics* _camera_metrics) {
     TraceLog(LOG_ERROR, "spawn_system_initialize() failed");
     return false;
   }
-
-  create_tilemap(TILESHEET_TYPE_MAP, (Vector2) {0, 0}, 100, 16*3, WHITE, &state->map);
+  copy_memory(state->map.filename[0], "map_layer0.txt", sizeof(i8) * MAX_TILEMAP_FILENAME_LEN);
+  copy_memory(state->map.filename[1], "map_layer1.txt", sizeof(i8) * MAX_TILEMAP_FILENAME_LEN);
+  create_tilemap(TILESHEET_TYPE_MAP, (Vector2) {0, 0}, 100, 16*3, &state->map);
   if(!state->map.is_initialized) {
     TraceLog(LOG_WARNING, "WARNING::scene_in_game_edit::initialize_scene_in_game_edit()::tilemap initialization failed");
   }

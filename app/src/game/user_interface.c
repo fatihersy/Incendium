@@ -207,8 +207,8 @@ void user_interface_system_initialize() {
 
   // EDITOR
   {
-  register_button(BTN_ID_EDITOR_BUTTON_LOAD_MAP, BTN_TYPE_MENU_BUTTON, *get_resolution_div2(), 0, 1, 3.f);
-  register_button(BTN_ID_EDITOR_BUTTON_SAVE_MAP, BTN_TYPE_MENU_BUTTON, *get_resolution_div2(), 0, 3, 3.f);
+    register_button(BTN_ID_EDITOR_ACTIVE_TILEMAP_EDIT_LAYER_0, BTN_TYPE_FLAT_BUTTON, (Vector2) {get_screen_offset()}, 2, 2, 3.f);
+    register_button(BTN_ID_EDITOR_ACTIVE_TILEMAP_EDIT_LAYER_1, BTN_TYPE_FLAT_BUTTON, (Vector2) {get_screen_offset()}, 8, 2, 3.f);
   }
   // EDITOR
 

@@ -41,3 +41,5 @@ inline Vector2 vec2_scale(Vector2 v1, float f1) {
 inline float vec2_lenght(Vector2 v1) { 
   return Vector2Length(v1); 
 }
+
+inline Vector2 vec2_zero() { return (Vector2) {0}; }

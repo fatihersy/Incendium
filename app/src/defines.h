@@ -42,7 +42,7 @@
 #define MAX_TILESHEET_UNIQUE_TILESLOTS_X 64
 #define MAX_TILESHEET_UNIQUE_TILESLOTS_Y 64
 #define MAX_TILESHEET_UNIQUE_TILESLOTS MAX_TILESHEET_UNIQUE_TILESLOTS_X * MAX_TILESHEET_UNIQUE_TILESLOTS_Y
-#define MAX_TILEMAP_SLOTS 10
+#define MAX_TILEMAP_LAYERS 2
 #define MAX_TILEMAP_TILESHEETSLOT 10
 #define MAX_TILEMAP_TILESLOT_X 255
 #define MAX_TILEMAP_TILESLOT_Y 255
@@ -52,6 +52,7 @@
 #define TILESHEET_PROP_SYMBOL_STR_LEN 60
 #define MAX_TILESHEET_PROPS 1024
 #define MAX_TILEMAP_PROPS 255
+#define MAX_TILEMAP_FILENAME_LEN 15
 
 #define MAX_ITEM_ACTOR_NAME_LENGHT 10
 #define MAX_INVENTORY_SLOTS 50
@@ -285,8 +286,8 @@ typedef enum button_id {
   BTN_ID_PAUSEMENU_BUTTON_SETTINGS,
   BTN_ID_PAUSEMENU_BUTTON_EXIT,
 
-  BTN_ID_EDITOR_BUTTON_SAVE_MAP,
-  BTN_ID_EDITOR_BUTTON_LOAD_MAP,
+  BTN_ID_EDITOR_ACTIVE_TILEMAP_EDIT_LAYER_0,
+  BTN_ID_EDITOR_ACTIVE_TILEMAP_EDIT_LAYER_1,
 
   BTN_ID_SETTINGS_SLIDER_SOUND_LEFT_BUTTON,
   BTN_ID_SETTINGS_SLIDER_SOUND_RIGHT_BUTTON,
@@ -425,8 +426,7 @@ typedef struct tilesheet {
 } tilesheet;
 
 typedef struct tilemap_tile {
-	tilesheet_type sheet_type;
-	texture_id tex_id;
+	tilesheet* sheet;
 
 	u16 x;
 	u16 y;
@@ -444,23 +444,23 @@ typedef struct tilemap_prop {
 } tilemap_prop;
 
 typedef struct tilemap {
+  i8 filename[MAX_TILEMAP_LAYERS][MAX_TILEMAP_FILENAME_LEN];
   Vector2 position;
   u16 map_dim_total;
   u16 map_dim;
 
-  tilemap_tile tiles[MAX_TILEMAP_TILESLOT_X][MAX_TILEMAP_TILESLOT_Y];
+  tilemap_tile tiles[MAX_TILEMAP_LAYERS][MAX_TILEMAP_TILESLOT_X][MAX_TILEMAP_TILESLOT_Y];
   tilemap_prop props[MAX_TILEMAP_PROPS];
   u16 tile_size;
   u16 prop_count;
 
-  Color grid_color;
   bool is_initialized;
 } tilemap;
 
 typedef struct tilemap_stringtify_package {
-  u8 str_tilemap[MAX_TILEMAP_TILESLOT * TILESHEET_TILE_SYMBOL_STR_LEN];
+  u8 str_tilemap[MAX_TILEMAP_LAYERS][MAX_TILEMAP_TILESLOT * TILESHEET_TILE_SYMBOL_STR_LEN];
   u8 str_props[MAX_TILEMAP_PROPS][TILESHEET_PROP_SYMBOL_STR_LEN];
-  u64 size_tilemap_str;
+  u64 size_tilemap_str[MAX_TILEMAP_LAYERS];
   u64 size_props_str;
   bool is_success;
 }tilemap_stringtify_package;

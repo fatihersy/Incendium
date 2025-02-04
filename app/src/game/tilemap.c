@@ -7,7 +7,7 @@
 void map_to_str(tilemap* map, tilemap_stringtify_package* out_package);
 void str_to_map(tilemap* map, tilemap_stringtify_package* out_package);
 
-void create_tilemap(tilesheet_type _type, Vector2 _position, u16 _grid_size, u16 _tile_size, Color _grid_color, tilemap* out_tilemap) {
+void create_tilemap(tilesheet_type _type, Vector2 _position, u16 _grid_size, u16 _tile_size, tilemap* out_tilemap) {
   if (_grid_size * _grid_size > MAX_TILEMAP_TILESLOT && (_type >= TILESHEET_TYPE_MAX || _type <= 0)) {
     TraceLog(LOG_ERROR, "ERROR::tilemap::create_tilemap()::grid_size out of bound");
     return;
@@ -19,7 +19,6 @@ void create_tilemap(tilesheet_type _type, Vector2 _position, u16 _grid_size, u16
   out_tilemap->tile_size = _tile_size;
   out_tilemap->map_dim = _grid_size;
   out_tilemap->map_dim_total = _grid_size * _grid_size;
-  out_tilemap->grid_color = _grid_color;
 
   out_tilemap->position = (Vector2){
     .x = out_tilemap->position.x - (out_tilemap->map_dim * out_tilemap->tile_size) / 2.f,
@@ -30,11 +29,14 @@ void create_tilemap(tilesheet_type _type, Vector2 _position, u16 _grid_size, u16
     u16 x = i % out_tilemap->map_dim;  
     u16 y = i / out_tilemap->map_dim;  
 
-    out_tilemap->tiles[x][y].tex_id = sheet->tex_id;
-    out_tilemap->tiles[x][y].sheet_type = _type;
-    out_tilemap->tiles[x][y].tile_symbol = sheet->tile_symbols[0 / _tile_size][0 / _tile_size];
-
-    out_tilemap->tiles[x][y].is_initialized = true;
+    out_tilemap->tiles[0][x][y].sheet = sheet;
+    out_tilemap->tiles[0][x][y].tile_symbol = sheet->tile_symbols[0][0];
+    out_tilemap->tiles[0][x][y].is_initialized = true;
+    out_tilemap->tiles[1][x][y].sheet = sheet;
+    out_tilemap->tiles[1][x][y].tile_symbol = sheet->tile_symbols[4][0]; // random invisiable tile
+    out_tilemap->tiles[1][x][y].x = 4 * sheet->tile_size;
+    out_tilemap->tiles[1][x][y].y = 0 * sheet->tile_size;
+    out_tilemap->tiles[1][x][y].is_initialized = true;
   }
 
   out_tilemap->is_initialized = true;
@@ -73,11 +75,13 @@ void render_tilemap(tilemap* _tilemap) {
       TraceLog(LOG_ERROR, "tilemap::render_tilemap()::Calculated tile's x or y out of bound");
       return;
     }
-    if (!_tilemap->tiles[x][y].is_initialized) {
-      TraceLog(LOG_ERROR, "tilemap::render_tilemap()::tile:{%d,%d} is not initialized or corrupted", x, y);
-      return;
+    for (int i=0; i<MAX_TILEMAP_LAYERS; ++i) {
+      if (!_tilemap->tiles[i][x][y].is_initialized) {
+        TraceLog(LOG_ERROR, "tilemap::render_tilemap()::tile:{%d,%d} is not initialized or corrupted", x, y);
+        return;
+      }
+      render_tile(&_tilemap->tiles[i][x][y], (Rectangle) { x_pos, y_pos, _tilemap->tile_size, _tilemap->tile_size});
     }
-    render_tile(_tilemap->tiles[x][y], (Rectangle) { x_pos, y_pos, _tilemap->tile_size, _tilemap->tile_size });
   }
   for (int i=0; i < _tilemap->prop_count; ++i) {
     if (!_tilemap->props[i].is_initialized) continue;
@@ -103,13 +107,10 @@ void render_tilesheet(tilesheet* sheet, f32 zoom) {
     f32 dest_y   = y * sheet->offset * sheet->dest_tile_size * zoom; 
     i16 x_pos    = sheet->offset     + sheet->position.x + dest_x; 
     i16 y_pos    = sheet->offset     + sheet->position.y + dest_y; 
-    
+    tilemap_tile tile = (tilemap_tile) {.sheet = sheet,.x = origin_x, .y = origin_y,};
+
     render_tile(
-    (tilemap_tile) {
-      .tex_id = sheet->tex_id,
-      .x = origin_x, .y = origin_y,
-      .sheet_type = sheet->sheet_type
-    }, 
+    &tile, 
     (Rectangle) {
       x_pos, y_pos, 
       sheet->dest_tile_size * zoom, sheet->dest_tile_size * zoom
@@ -121,20 +122,14 @@ void render_tilesheet(tilesheet* sheet, f32 zoom) {
  * @brief Unsafe!
  * @param tile Needed for x, y, tex_id and sheet_type
  */
-void render_tile(tilemap_tile tile, Rectangle dest) {
-  if (tile.sheet_type >= TILESHEET_TYPE_MAX || tile.sheet_type <= 0) {
-    TraceLog(LOG_ERROR, "tilemap::render_tile()::Sheet type out of bound");
-    return;
-  }
-  tilesheet* ts = get_tilesheet_by_enum(tile.sheet_type); 
-  Texture2D* tx = get_texture_by_enum(tile.tex_id);
-  if (!ts || !tx) {
+void render_tile(tilemap_tile* tile, Rectangle dest) {
+  if (!tile->sheet) {
     TraceLog(LOG_WARNING, "tilemap::render_tile()::Recieved tilesheet or texture pointer was NULL");
     return;
   }
 
-  DrawTexturePro(*tx, 
-    (Rectangle) { tile.x, tile.y, ts->tile_size, ts->tile_size},
+  DrawTexturePro(*tile->sheet->tex, 
+    (Rectangle) { tile->x, tile->y, tile->sheet->tile_size, tile->sheet->tile_size},
     dest,
     (Vector2){0},0.f, WHITE
   );
@@ -159,6 +154,9 @@ tilemap_tile get_tile_from_sheet_by_mouse_pos(tilesheet* sheet, Vector2 mouse_po
 
   i16 x_pos    = (mouse_pos.x - sheet->offset - sheet->position.x) / zoom; 
   i16 y_pos    = (mouse_pos.y - sheet->offset - sheet->position.y) / zoom; 
+  if (x_pos < 0 || y_pos < 0) {
+    return (tilemap_tile) { .is_initialized = false };
+  }
   i16 dest_x   = x_pos       / (sheet->dest_tile_size * sheet->offset);  
   i16 dest_y   = y_pos       / (sheet->dest_tile_size * sheet->offset);  
 
@@ -168,15 +166,14 @@ tilemap_tile get_tile_from_sheet_by_mouse_pos(tilesheet* sheet, Vector2 mouse_po
 
   tile.x           = dest_x  * sheet->tile_size;
   tile.y           = dest_y  * sheet->tile_size;
-  tile.sheet_type  = sheet->sheet_type;
-  tile.tex_id      = sheet->tex_id;
-  tile.tile_symbol = get_tilesheet_by_enum(tile.sheet_type)->tile_symbols[dest_x][dest_y];
+  tile.sheet = sheet;
+  tile.tile_symbol = tile.sheet->tile_symbols[dest_x][dest_y];
 
   tile.is_initialized = true;
   return tile;
 }
 
-tilemap_tile get_tile_from_map_by_mouse_pos(tilemap* map, Vector2 mouse_pos) {
+tilemap_tile get_tile_from_map_by_mouse_pos(tilemap* map, Vector2 mouse_pos, u16 layer) {
   if (!map) {
     TraceLog(LOG_ERROR, "ERROR::tilemap::get_tile_from_mouse_pos()::Provided sheet was null");
     return (tilemap_tile) { .is_initialized = false };
@@ -190,9 +187,8 @@ tilemap_tile get_tile_from_map_by_mouse_pos(tilemap* map, Vector2 mouse_pos) {
     return (tilemap_tile) { .is_initialized = false };
   }
 
-  tile.sheet_type = map->tiles[tile.x][tile.y].sheet_type;
-  tile.tex_id = map->tiles[tile.x][tile.y].tex_id;
-  tile.tile_symbol = get_tilesheet_by_enum(tile.sheet_type)->tile_symbols[tile.x / map->tile_size][tile.y/ map->tile_size];
+  tile.sheet = map->tiles[layer][tile.x][tile.y].sheet;
+  tile.tile_symbol = tile.sheet->tile_symbols[tile.x / map->tile_size][tile.y/ map->tile_size];
 
   tile.is_initialized = true;
   return tile;
@@ -204,23 +200,29 @@ void map_to_str(tilemap* map, tilemap_stringtify_package* out_package) {
     return;
   }
 
-  out_package->size_tilemap_str = sizeof(tile_symbol) * map->map_dim_total;
 
-  for (u16 i=0; i < map->map_dim_total; ++i) {
-    u16 map_x   = i % map->map_dim;
-    u16 map_y   = i / map->map_dim;  
-    tilesheet* sheet = get_tilesheet_by_enum(map->tiles[map_x][map_y].sheet_type);
+  for (int i=0; i<MAX_TILEMAP_LAYERS; ++i) 
+  {
+    out_package->size_tilemap_str[i] = sizeof(tile_symbol) * map->map_dim_total;
 
-    u16 origin_x = map->tiles[map_x][map_y].x;
-    u16 origin_y = map->tiles[map_x][map_y].y;  
-    u16 sheet_x = origin_x / sheet->tile_size;
-    u16 sheet_y = origin_y / sheet->tile_size;
+    for (u16 j=0; j < map->map_dim_total; ++j) {
+      u16 map_x   = j % map->map_dim;
+      u16 map_y   = j / map->map_dim;  
 
-    copy_memory(
-      out_package->str_tilemap + ((sizeof(sheet->tile_symbols[sheet_x][sheet_y].c) * i)), 
-      sheet->tile_symbols[sheet_x][sheet_y].c, 
-      sizeof(sheet->tile_symbols[sheet_x][sheet_y].c)
-    );
+      tilesheet* sheet = map->tiles[i][map_x][map_y].sheet;
+
+      u16 origin_x = map->tiles[i][map_x][map_y].x;
+      u16 origin_y = map->tiles[i][map_x][map_y].y;  
+      u16 sheet_x = origin_x / sheet->tile_size;
+      u16 sheet_y = origin_y / sheet->tile_size;
+
+      copy_memory(
+        out_package->str_tilemap[i] + ((sizeof(sheet->tile_symbols[sheet_x][sheet_y].c) * j)), 
+        sheet->tile_symbols[sheet_x][sheet_y].c, 
+        sizeof(sheet->tile_symbols[sheet_x][sheet_y].c)
+      );
+    }
+  out_package->size_tilemap_str[i] = sizeof(out_package->str_tilemap);
   }
 
   for (int i=0; i<map->prop_count; ++i) {
@@ -233,9 +235,7 @@ void map_to_str(tilemap* map, tilemap_stringtify_package* out_package) {
     );
     copy_memory(out_package->str_props[i], symbol, sizeof(char)*TILESHEET_PROP_SYMBOL_STR_LEN);
   }
-  out_package->size_tilemap_str = sizeof(out_package->str_tilemap);
   out_package->size_props_str = sizeof(out_package->str_props);
-
   out_package->is_success = true;
 }
 
@@ -249,14 +249,15 @@ void str_to_map(tilemap* map, tilemap_stringtify_package* out_package) {
     tile_symbol symbol = {0};
 
     u16 map_x   = i % map->map_dim;
-    u16 map_y   = i / map->map_dim;  
-    copy_memory(symbol.c, out_package->str_tilemap + (sizeof(tile_symbol) * i), sizeof(symbol));
+    u16 map_y   = i / map->map_dim;
 
-    tilesheet* sheet = get_tilesheet_by_enum(symbol.c[2]);
-
-    map->tiles[map_x][map_y].x = (symbol.c[0] - TILEMAP_TILE_START_SYMBOL) * sheet->tile_size;
-    map->tiles[map_x][map_y].y = (symbol.c[1] - TILEMAP_TILE_START_SYMBOL) * sheet->tile_size;
-    map->tiles[map_x][map_y].sheet_type = sheet->sheet_type;
+    for (int i=0; i<MAX_TILEMAP_LAYERS; ++i) {
+      copy_memory(symbol.c, out_package->str_tilemap[i] + (sizeof(tile_symbol) * i), sizeof(symbol));
+      tilesheet* sheet = get_tilesheet_by_enum(symbol.c[2]);
+      map->tiles[i][map_x][map_y].x = (symbol.c[0] - TILEMAP_TILE_START_SYMBOL) * sheet->tile_size;
+      map->tiles[i][map_x][map_y].y = (symbol.c[1] - TILEMAP_TILE_START_SYMBOL) * sheet->tile_size;
+      map->tiles[i][map_x][map_y].sheet = sheet;
+    }
   }
   for (int i=0; i<MAX_TILEMAP_PROPS; ++i) 
   {
@@ -301,15 +302,16 @@ void str_to_map(tilemap* map, tilemap_stringtify_package* out_package) {
 bool save_map_data(tilemap* map, tilemap_stringtify_package* out_package) {
   map_to_str(map, out_package);
   if (out_package->is_success) {
-    bool tilemap_save_result = SaveFileData(rs_path("tilemap.txt"), out_package->str_tilemap, out_package->size_tilemap_str);
-    bool props_save_result   = SaveFileData(rs_path("map_props.txt"), out_package->str_props, out_package->size_props_str);
+    for (int i=0; i<MAX_TILEMAP_LAYERS; ++i) {
+      if (!SaveFileData(rs_path((const char*)map->filename[i]), out_package->str_tilemap[i], out_package->size_tilemap_str[i])) {
+        TraceLog(LOG_ERROR, "ERROR::tilemap::save_map_data()::Recieving package data returned with failure");
+        return false;
+      }
+    }
+    return SaveFileData(rs_path("map_props.txt"), out_package->str_props, out_package->size_props_str);
+  }
 
-    return tilemap_save_result && props_save_result;
-  }
-  else {
-    TraceLog(LOG_ERROR, "ERROR::tilemap::save_map_data()::Recieving package data returned with failure");
-    return false;
-  }
+  return false;
 }
 
 /**
@@ -320,12 +322,14 @@ bool save_map_data(tilemap* map, tilemap_stringtify_package* out_package) {
  */
 bool load_map_data(tilemap* map, tilemap_stringtify_package* out_package) {
   {
-    u8* _str_tile = LoadFileData(rs_path("tilemap.txt"), (i32*)&out_package->size_tilemap_str);
-    if (out_package->size_tilemap_str <= 0 || out_package->size_tilemap_str == U64_MAX) {
-      TraceLog(LOG_ERROR, "ERROR::tilemap::load_map_data()::Reading data returned null");
+    for(int i=0; i<MAX_TILEMAP_LAYERS; ++i){
+      u8* _str_tile = LoadFileData(rs_path((const char*)map->filename[i]), (i32*)&out_package->size_tilemap_str[i]);
+      if (out_package->size_tilemap_str[i] <= 0 || out_package->size_tilemap_str[i] == U64_MAX) {
+        TraceLog(LOG_ERROR, "ERROR::tilemap::load_map_data()::Reading data returned null");
+      }
+      copy_memory(out_package->str_tilemap[i], _str_tile, out_package->size_tilemap_str[i]);
+      UnloadFileData(_str_tile);
     }
-    copy_memory(out_package->str_tilemap, _str_tile, out_package->size_tilemap_str);
-    UnloadFileData(_str_tile);
   }
   {
     u8* _str_prop = LoadFileData(rs_path("map_props.txt"), (i32*)&out_package->size_props_str);
