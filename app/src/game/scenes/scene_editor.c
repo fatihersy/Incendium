@@ -9,6 +9,9 @@
 #include "game/tilemap.h"
 #include "game/user_interface.h"
 
+#define PROP_DRAG_HANDLE_DIM 16
+#define PROP_DRAG_HANDLE_DIM_DIV2 PROP_DRAG_HANDLE_DIM/2.f
+
 typedef enum editor_state_selection_type {
   SLC_TYPE_UNSELECTED,
   SLC_TYPE_TILE,
@@ -34,6 +37,7 @@ typedef struct scene_editor_state {
 
   bool b_show_tilesheet_tile_selection_screen;
   bool b_show_prop_selection_screen;
+  bool b_dragging_prop;
 
   panel prop_selection_panel;
   panel tile_selection_panel;
@@ -52,6 +56,7 @@ void editor_update_movement();
 void editor_update_zoom_controls();
 void editor_update_mouse_bindings();
 void editor_update_keyboard_bindings();
+i32 map_prop_id_to_index(u16 id);
 
 void add_prop(texture_id source_tex, Rectangle source, f32 scale);
 #define add_prop_epic_cemetery(...) add_prop(TEX_ID_MAP_PROPS_ATLAS, __VA_ARGS__)      
@@ -89,10 +94,54 @@ void initialize_scene_editor(camera_metrics* _camera_metrics) {
     .data.f32[1] = state->target.y
   });
 
-  add_prop_epic_cemetery((Rectangle){ 11,  40,  166, 152}, 1);
-  add_prop_epic_cemetery((Rectangle){ 193, 101, 122, 91 }, 1);
-  add_prop_epic_cemetery((Rectangle){ 321, 43,  127, 149}, 1);
-  add_prop_epic_cemetery((Rectangle){ 457, 107, 53 , 85 }, 1);
+  add_prop_epic_cemetery((Rectangle){  11,  40, 166, 152}, 1);
+  add_prop_epic_cemetery((Rectangle){ 193, 101, 122,  91}, 1);
+  add_prop_epic_cemetery((Rectangle){ 321,  43, 127, 149}, 1);
+  add_prop_epic_cemetery((Rectangle){ 457, 107,  53,  85}, 1);
+  add_prop_epic_cemetery((Rectangle){ 523,  40, 166, 152}, 1);
+  add_prop_epic_cemetery((Rectangle){ 705, 101, 122,  91}, 1);
+  add_prop_epic_cemetery((Rectangle){ 833,  43, 127, 149}, 1);
+  add_prop_epic_cemetery((Rectangle){ 969, 107,  53,  85}, 1);
+  add_prop_epic_cemetery((Rectangle){ 197, 192,  84,  62}, 1);
+  add_prop_epic_cemetery((Rectangle){ 289, 193,  64,  64}, 1);
+  add_prop_epic_cemetery((Rectangle){ 353, 193,  64,  64}, 1);
+  add_prop_epic_cemetery((Rectangle){ 864, 192,  64,  64}, 1);
+  add_prop_epic_cemetery((Rectangle){ 288, 256,  32,  32}, 1);
+  add_prop_epic_cemetery((Rectangle){ 320, 256,  64,  32}, 1);
+  add_prop_epic_cemetery((Rectangle){ 384, 256,  32,  32}, 1);
+  add_prop_epic_cemetery((Rectangle){ 416, 256,  32,  32}, 1);
+  add_prop_epic_cemetery((Rectangle){ 289, 288,  32,  32}, 1);
+  add_prop_epic_cemetery((Rectangle){ 336, 288,  32,  32}, 1);
+  add_prop_epic_cemetery((Rectangle){ 384, 288,  32,  32}, 1);
+  add_prop_epic_cemetery((Rectangle){ 416, 288,  32,  32}, 1);
+  add_prop_epic_cemetery((Rectangle){  14, 208, 144, 176}, 1);
+  add_prop_epic_cemetery((Rectangle){ 160, 272, 128, 112}, 1);
+  add_prop_epic_cemetery((Rectangle){ 528, 208, 144, 176}, 1);
+  add_prop_epic_cemetery((Rectangle){1024, 256,  64,  32}, 1);
+  add_prop_epic_cemetery((Rectangle){1088, 256,  32,  32}, 1);
+  add_prop_epic_cemetery((Rectangle){1120, 256,  64,  32}, 1);
+  add_prop_epic_cemetery((Rectangle){1184, 256,  32,  32}, 1);
+  add_prop_epic_cemetery((Rectangle){1216, 256,  32,  32}, 1);
+  add_prop_epic_cemetery((Rectangle){1024, 288,  32,  32}, 1);
+  add_prop_epic_cemetery((Rectangle){1056, 288,  32,  32}, 1);
+  add_prop_epic_cemetery((Rectangle){1088, 288,  32,  32}, 1);
+  add_prop_epic_cemetery((Rectangle){1152, 288,  32,  32}, 1);
+  add_prop_epic_cemetery((Rectangle){1216, 288,  32,  32}, 1);
+  add_prop_epic_cemetery((Rectangle){1056, 320,  64,  48}, 1);
+  add_prop_epic_cemetery((Rectangle){1120, 320,  32,  32}, 1);
+  add_prop_epic_cemetery((Rectangle){1152, 320,  32,  32}, 1);
+  add_prop_epic_cemetery((Rectangle){1184, 320,  32,  32}, 1);
+  add_prop_epic_cemetery((Rectangle){1216, 320,  32,  32}, 1);
+  add_prop_epic_cemetery((Rectangle){1024, 352,  32,  32}, 1);
+  add_prop_epic_cemetery((Rectangle){1120, 352,  32,  32}, 1);
+  add_prop_epic_cemetery((Rectangle){1152, 352,  32,  32}, 1);
+  add_prop_epic_cemetery((Rectangle){1184, 352,  32,  32}, 1);
+  add_prop_epic_cemetery((Rectangle){1216, 352,  32,  32}, 1);
+  add_prop_epic_cemetery((Rectangle){1024, 384,  64,  32}, 1);
+  add_prop_epic_cemetery((Rectangle){1088, 384,  32,  32}, 1);
+  add_prop_epic_cemetery((Rectangle){1120, 384,  64,  32}, 1);
+  add_prop_epic_cemetery((Rectangle){1184, 384,  32,  32}, 1);
+  add_prop_epic_cemetery((Rectangle){1216, 384,  32,  32}, 1);
 }
 
 // UPDATE / RENDER
@@ -164,6 +213,9 @@ void render_interface_editor() {
         state->in_camera_metrics->handle);
 
       DrawRectangleLines(prop_pos.x, prop_pos.y, state->selected_prop.dest.width, state->selected_prop.dest.height, WHITE);
+      prop_pos.x += state->selected_prop.dest.width / 2.f - PROP_DRAG_HANDLE_DIM_DIV2;
+      prop_pos.y += state->selected_prop.dest.height / 2.f - PROP_DRAG_HANDLE_DIM_DIV2;
+      DrawRectangle(prop_pos.x, prop_pos.y, PROP_DRAG_HANDLE_DIM, PROP_DRAG_HANDLE_DIM, WHITE);
       break;
     }
     default: break;
@@ -242,7 +294,8 @@ void editor_update_mouse_bindings() {
       }
     }
   }
-  if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON) && state->mouse_focus == MOUSE_FOCUS_MAP) {
+  if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON) && state->mouse_focus == MOUSE_FOCUS_MAP) 
+  {
     switch (state->selection_type) {
       case SLC_TYPE_UNSELECTED: {
         for (int i=0; i<state->map.prop_count; ++i) {
@@ -267,11 +320,35 @@ void editor_update_mouse_bindings() {
         state->map.props[state->map.prop_count++] = state->selected_prop;
         break;
       }
+      case SLC_TYPE_SLC_PROP: {
+        state->b_dragging_prop = false;
+        break;
+      }     
       default: break;
     }
   };
-  
-  
+  if (IsMouseButtonDown(MOUSE_LEFT_BUTTON) && state->mouse_focus == MOUSE_FOCUS_MAP) 
+  {
+    switch (state->selection_type) {
+      case SLC_TYPE_SLC_PROP: {
+        tilemap_prop* prop = &state->map.props[map_prop_id_to_index(state->selected_prop.id)];
+        Rectangle drag_handle = (Rectangle) {
+          prop->dest.x + prop->dest.width/2.f - PROP_DRAG_HANDLE_DIM_DIV2, prop->dest.y + prop->dest.height/2.f - PROP_DRAG_HANDLE_DIM_DIV2, 
+          PROP_DRAG_HANDLE_DIM, PROP_DRAG_HANDLE_DIM
+        };
+        if(!state->b_dragging_prop && CheckCollisionPointRec(state->mouse_pos_world, drag_handle)) {
+          state->b_dragging_prop = true;
+        }
+        if (state->b_dragging_prop) {
+          prop->dest.x = state->mouse_pos_world.x - prop->dest.width/2.f;
+          prop->dest.y = state->mouse_pos_world.y - prop->dest.height/2.f;
+          state->selected_prop.dest = prop->dest;
+        }
+        break;
+      }
+      default: break;
+    }
+  };
   if (IsMouseButtonReleased(MOUSE_RIGHT_BUTTON) && state->selection_type != SLC_TYPE_UNSELECTED) {
     state->selected_tile = (tilemap_tile) {0};
     state->selected_prop = (tilemap_prop) {0};
@@ -355,3 +432,14 @@ void editor_update_movement() {
   }
 }
 // BINDINGS
+
+
+i32 map_prop_id_to_index(u16 id) {
+  for (int i=0; i<state->map.prop_count; ++i) {
+    if (state->map.props[i].id == id) {
+      return i;
+    }
+  }
+
+  return I32_MAX;
+}
