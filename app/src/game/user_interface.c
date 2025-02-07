@@ -207,8 +207,10 @@ void user_interface_system_initialize() {
 
   // EDITOR
   {
-    register_button(BTN_ID_EDITOR_ACTIVE_TILEMAP_EDIT_LAYER_0, BTN_TYPE_FLAT_BUTTON, (Vector2) {get_screen_offset()}, 2, 2, 3.f);
-    register_button(BTN_ID_EDITOR_ACTIVE_TILEMAP_EDIT_LAYER_1, BTN_TYPE_FLAT_BUTTON, (Vector2) {get_screen_offset()}, 8, 2, 3.f);
+    register_slider(
+      SDR_ID_EDITOR_MAP_LAYER_SLC_SLIDER, SDR_TYPE_OPTION, 
+      (Vector2) {get_screen_offset()}, ((Vector2) {5, 2}), 3.f, 
+      BTN_ID_EDITOR_ACTIVE_TILEMAP_EDIT_LAYER_DEC,BTN_ID_EDITOR_ACTIVE_TILEMAP_EDIT_LAYER_INC, false);
   }
   // EDITOR
 
@@ -1006,6 +1008,15 @@ panel get_default_panel() {
     .signal_state  = BTN_STATE_UNDEFINED,
     .dest          = (Rectangle) {0}
   };
+}
+
+data_pack* get_slider_current_value(slider_id id) {
+  if (id >= SDR_ID_MAX || id <= SDR_ID_UNDEFINED) {
+    TraceLog(LOG_WARNING, "user_interface::gui_draw_texture_id_pro()::ID was out of bound"); 
+    return 0;
+  }
+
+  return &state->sliders[id].options[state->sliders[id].current_value].content;
 }
 
 void user_interface_system_destroy() {

@@ -53,7 +53,6 @@ static scene_editor_state *state;
 
 void editor_update_bindings();
 void editor_update_movement();
-void editor_update_zoom_controls();
 void editor_update_mouse_bindings();
 void editor_update_keyboard_bindings();
 i32 map_prop_id_to_index(u16 id);
@@ -70,6 +69,8 @@ void initialize_scene_editor(camera_metrics* _camera_metrics) {
   
   copy_memory(state->map.filename[0], "map_layer0.txt", sizeof(i8) * MAX_TILEMAP_FILENAME_LEN);
   copy_memory(state->map.filename[1], "map_layer1.txt", sizeof(i8) * MAX_TILEMAP_FILENAME_LEN);
+  copy_memory(state->map.filename[2], "map_layer2.txt", sizeof(i8) * MAX_TILEMAP_FILENAME_LEN);
+  copy_memory(state->map.filename[3], "map_layer3.txt", sizeof(i8) * MAX_TILEMAP_FILENAME_LEN);
   create_tilemap(TILESHEET_TYPE_MAP, (Vector2) {0, 0}, 100, 16*3, &state->map);
   if(!state->map.is_initialized) {
     TraceLog(LOG_WARNING, "scene_in_game_edit::initialize_scene_in_game_edit()::map_layer0 initialization failed");
@@ -469,6 +470,13 @@ void initialize_scene_editor(camera_metrics* _camera_metrics) {
   }
   // Buildings
 
+  for (int i=0; i<MAX_TILEMAP_LAYERS; ++i) {
+    gui_slider_add_option(SDR_ID_EDITOR_MAP_LAYER_SLC_SLIDER, TextFormat("%d",(i+1)), (data_pack) {
+      .type_flag = DATA_TYPE_U16,
+      .data.u16 = (i)
+    });
+  }
+
 }
 
 // UPDATE / RENDER
@@ -479,6 +487,7 @@ void update_scene_editor() {
   }
   else state->mouse_focus = MOUSE_FOCUS_MAP;
   state->mouse_pos_world = GetScreenToWorld2D(GetMousePosition(), state->in_camera_metrics->handle);
+  state->edit_layer = get_slider_current_value(SDR_ID_EDITOR_MAP_LAYER_SLC_SLIDER)->data.u16[0];
 
   editor_update_bindings();
   update_user_interface();
@@ -493,25 +502,19 @@ void render_interface_editor() {
   { 
     gui_panel_scissored(state->tile_selection_panel, false, {
       render_tilesheet(&state->palette, state->tile_selection_panel.zoom);
-      gui_label(TextFormat("%d",state->edit_layer), (Vector2) { 150,25}, WHITE);
-      if(gui_mini_button("Layer:0",BTN_ID_EDITOR_ACTIVE_TILEMAP_EDIT_LAYER_0)) {
-        state->edit_layer = 0;
-      }
-      if(gui_mini_button("Layer:1",BTN_ID_EDITOR_ACTIVE_TILEMAP_EDIT_LAYER_1)) {
-        state->edit_layer = 1;
-      }
+      gui_slider(SDR_ID_EDITOR_MAP_LAYER_SLC_SLIDER);
     });
 
   }
   else if(state->b_show_prop_selection_screen && !state->b_show_tilesheet_tile_selection_screen) 
   {     
     gui_panel_scissored(state->prop_selection_panel, false, {
-      u16 prop_height_count = 0;
+      i32 prop_height_count = 0;
       for (int i=0; i<state->prop_count; ++i) {
         tilemap_prop* prop = &state->props[i];
         Rectangle dest = prop->dest;
-        dest.x = state->prop_selection_panel.scroll;
-        dest.y = prop_height_count;
+        dest.x = 0;
+        dest.y = state->prop_selection_panel.scroll + prop_height_count;
         gui_draw_texture_id_pro(prop->atlas_id, prop->source, dest);
         prop_height_count += prop->dest.height;
       }
@@ -584,11 +587,13 @@ void editor_update_bindings() {
   editor_update_keyboard_bindings();
 }
 void editor_update_mouse_bindings() { 
-  editor_update_zoom_controls();
-
   if(state->b_show_tilesheet_tile_selection_screen && CheckCollisionPointRec(GetMousePosition(), state->tile_selection_panel.dest))
   {
     state->mouse_focus = MOUSE_FOCUS_TILE_SELECTION;
+    state->tile_selection_panel.zoom += ((float)GetMouseWheelMove()*0.05f);
+
+    if (state->tile_selection_panel.zoom > 3.0f) state->tile_selection_panel.zoom = 3.0f;
+    else if (state->tile_selection_panel.zoom < 0.1f) state->tile_selection_panel.zoom = 0.1f;
     if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON) && state->selection_type == SLC_TYPE_UNSELECTED) {
       tilemap_tile tile = get_tile_from_sheet_by_mouse_pos(&state->palette, GetMousePosition(), state->tile_selection_panel.zoom);
       if (tile.is_initialized) {
@@ -601,16 +606,19 @@ void editor_update_mouse_bindings() {
       state->palette.position.y += GetMouseDelta().y;
     }
   }
-  if(state->b_show_prop_selection_screen && CheckCollisionPointRec(GetMousePosition(), state->prop_selection_panel.dest))
+  else if(state->b_show_prop_selection_screen && CheckCollisionPointRec(GetMousePosition(), state->prop_selection_panel.dest))
   {
     if (state->mouse_focus == MOUSE_FOCUS_TILE_SELECTION) {
       TraceLog(LOG_ERROR, "scene_editor::editor_update_mouse_bindings()::tile and prop screen activated at the same time.");
       return;
     } 
     else state->mouse_focus = MOUSE_FOCUS_PROP_SELECTION;
-  
+
+    state->prop_selection_panel.scroll += GetMouseWheelMove() * 20.f;
+    if(state->prop_selection_panel.scroll > 0) state->prop_selection_panel.scroll = 0;
+
     if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON) && state->selection_type == SLC_TYPE_UNSELECTED) {
-      i32 h = state->prop_selection_panel.scroll + GetMousePosition().y;
+      i32 h = (state->prop_selection_panel.scroll*(-1)) + GetMousePosition().y;
       for (int i=0; i<state->prop_count; ++i) {
         if(h - state->props[i].source.height < 0) {
           state->selected_prop = state->props[i];
@@ -621,7 +629,7 @@ void editor_update_mouse_bindings() {
       }
     }
   }
-  if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON) && state->mouse_focus == MOUSE_FOCUS_MAP) 
+  else if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON) && state->mouse_focus == MOUSE_FOCUS_MAP) 
   {
     switch (state->selection_type) {
       case SLC_TYPE_UNSELECTED: {
@@ -653,8 +661,8 @@ void editor_update_mouse_bindings() {
       }     
       default: break;
     }
-  };
-  if (IsMouseButtonDown(MOUSE_LEFT_BUTTON) && state->mouse_focus == MOUSE_FOCUS_MAP) 
+  }
+  else if (IsMouseButtonDown(MOUSE_LEFT_BUTTON) && state->mouse_focus == MOUSE_FOCUS_MAP) 
   {
     switch (state->selection_type) {
       case SLC_TYPE_SLC_PROP: {
@@ -675,11 +683,18 @@ void editor_update_mouse_bindings() {
       }
       default: break;
     }
-  };
+  }
+
   if (IsMouseButtonReleased(MOUSE_RIGHT_BUTTON) && state->selection_type != SLC_TYPE_UNSELECTED) {
     state->selected_tile = (tilemap_tile) {0};
     state->selected_prop = (tilemap_prop) {0};
     state->selection_type = SLC_TYPE_UNSELECTED;
+  }
+  if (state->mouse_focus == MOUSE_FOCUS_MAP) {
+    state->in_camera_metrics->handle.zoom += ((float)GetMouseWheelMove()*0.05f);
+
+    if (state->in_camera_metrics->handle.zoom > 3.0f) state->in_camera_metrics->handle.zoom = 3.0f;
+    else if (state->in_camera_metrics->handle.zoom < 0.1f) state->in_camera_metrics->handle.zoom = 0.1f;
   }
 }
 void editor_update_keyboard_bindings() {
@@ -703,20 +718,6 @@ void editor_update_keyboard_bindings() {
     state->b_show_tilesheet_tile_selection_screen = false;
   }
 
-}
-void editor_update_zoom_controls() {
-  if(!state->b_show_tilesheet_tile_selection_screen){
-    state->in_camera_metrics->handle.zoom += ((float)GetMouseWheelMove()*0.05f);
-
-    if (state->in_camera_metrics->handle.zoom > 3.0f) state->in_camera_metrics->handle.zoom = 3.0f;
-    else if (state->in_camera_metrics->handle.zoom < 0.1f) state->in_camera_metrics->handle.zoom = 0.1f;
-  }
-  else {
-    state->tile_selection_panel.zoom += ((float)GetMouseWheelMove()*0.05f);
-
-    if (state->tile_selection_panel.zoom > 3.0f) state->tile_selection_panel.zoom = 3.0f;
-    else if (state->tile_selection_panel.zoom < 0.1f) state->tile_selection_panel.zoom = 0.1f;
-  }
 }
 void editor_update_movement() {
   f32 speed = 10;

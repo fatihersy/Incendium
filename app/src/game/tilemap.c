@@ -25,20 +25,29 @@ void create_tilemap(tilesheet_type _type, Vector2 _position, u16 _grid_size, u16
     .y = out_tilemap->position.y - (out_tilemap->map_dim * out_tilemap->tile_size) / 2.f,
   };
 
-  for (u16 i = 0; i < out_tilemap->map_dim_total; ++i) {
-    u16 x = i % out_tilemap->map_dim;  
-    u16 y = i / out_tilemap->map_dim;  
-
-    out_tilemap->tiles[0][x][y].sheet = sheet;
-    out_tilemap->tiles[0][x][y].tile_symbol = sheet->tile_symbols[0][0];
-    out_tilemap->tiles[0][x][y].is_initialized = true;
-    out_tilemap->tiles[1][x][y].sheet = sheet;
-    out_tilemap->tiles[1][x][y].tile_symbol = sheet->tile_symbols[4][0]; // random invisiable tile
-    out_tilemap->tiles[1][x][y].x = 4 * sheet->tile_size;
-    out_tilemap->tiles[1][x][y].y = 0 * sheet->tile_size;
-    out_tilemap->tiles[1][x][y].is_initialized = true;
+  for (int j=0; j<MAX_TILEMAP_LAYERS; ++j) {
+    for (u16 i = 0; i < out_tilemap->map_dim_total; ++i) {
+      u16 x = i % out_tilemap->map_dim;  
+      u16 y = i / out_tilemap->map_dim;  
+      out_tilemap->tiles[j][x][y].sheet = sheet;
+      out_tilemap->tiles[j][x][y].is_initialized = true;
+      switch (j) {
+        case 0: { 
+          out_tilemap->tiles[j][x][y].tile_symbol = sheet->tile_symbols[21][17];
+          out_tilemap->tiles[j][x][y].x = 21 * sheet->tile_size;
+          out_tilemap->tiles[j][x][y].y = 17 * sheet->tile_size;
+          break; 
+        }
+        default:{
+          out_tilemap->tiles[j][x][y].tile_symbol = sheet->tile_symbols[0][0];
+          out_tilemap->tiles[j][x][y].x = 0 * sheet->tile_size;
+          out_tilemap->tiles[j][x][y].y = 0 * sheet->tile_size;
+        }
+        break;
+      }
+    }
   }
-
+    
   out_tilemap->is_initialized = true;
   return;
 }
@@ -244,21 +253,22 @@ void str_to_map(tilemap* map, tilemap_stringtify_package* out_package) {
     TraceLog(LOG_ERROR, "Recieved a NULL pointer");
     return;
   }
+  for (int i=0; i<MAX_TILEMAP_LAYERS; ++i) {
+    for (u16 j=0; j < map->map_dim_total; ++j) {
+      tile_symbol symbol = {0};
 
-  for (u16 i=0; i < map->map_dim_total; ++i) {
-    tile_symbol symbol = {0};
+      u16 map_x   = j % map->map_dim;
+      u16 map_y   = j / map->map_dim;
 
-    u16 map_x   = i % map->map_dim;
-    u16 map_y   = i / map->map_dim;
-
-    for (int i=0; i<MAX_TILEMAP_LAYERS; ++i) {
-      copy_memory(symbol.c, out_package->str_tilemap[i] + (sizeof(tile_symbol) * i), sizeof(symbol));
+    
+      copy_memory(symbol.c, out_package->str_tilemap[i] + (sizeof(tile_symbol) * j), sizeof(symbol));
       tilesheet* sheet = get_tilesheet_by_enum(symbol.c[2]);
       map->tiles[i][map_x][map_y].x = (symbol.c[0] - TILEMAP_TILE_START_SYMBOL) * sheet->tile_size;
       map->tiles[i][map_x][map_y].y = (symbol.c[1] - TILEMAP_TILE_START_SYMBOL) * sheet->tile_size;
       map->tiles[i][map_x][map_y].sheet = sheet;
     }
   }
+
   for (int i=0; i<MAX_TILEMAP_PROPS; ++i) 
   {
     u32 len = TextLength((const char*)out_package->str_props[i]);

@@ -11,6 +11,7 @@ void render_user_interface();
 
 Font* ui_get_font(font_type font);
 panel get_default_panel();
+data_pack* get_slider_current_value(slider_id id);
 
 bool gui_slider_add_option(slider_id _id, const char* _display_text, data_pack content);
 
