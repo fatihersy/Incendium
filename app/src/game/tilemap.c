@@ -33,9 +33,27 @@ void create_tilemap(tilesheet_type _type, Vector2 _position, u16 _grid_size, u16
       out_tilemap->tiles[j][x][y].is_initialized = true;
       switch (j) {
         case 0: { 
-          out_tilemap->tiles[j][x][y].tile_symbol = sheet->tile_symbols[21][17];
-          out_tilemap->tiles[j][x][y].x = 21 * sheet->tile_size;
-          out_tilemap->tiles[j][x][y].y = 17 * sheet->tile_size;
+          out_tilemap->tiles[j][x][y].tile_symbol = sheet->tile_symbols[1][0];
+          out_tilemap->tiles[j][x][y].x = 1 * sheet->tile_size;
+          out_tilemap->tiles[j][x][y].y = 0 * sheet->tile_size;
+          break; 
+        }
+        case 1: { 
+          out_tilemap->tiles[j][x][y].tile_symbol = sheet->tile_symbols[2][0];
+          out_tilemap->tiles[j][x][y].x = 2 * sheet->tile_size;
+          out_tilemap->tiles[j][x][y].y = 0 * sheet->tile_size;
+          break; 
+        }
+        case 2: { 
+          out_tilemap->tiles[j][x][y].tile_symbol = sheet->tile_symbols[3][0];
+          out_tilemap->tiles[j][x][y].x = 3 * sheet->tile_size;
+          out_tilemap->tiles[j][x][y].y = 0 * sheet->tile_size;
+          break; 
+        }
+        case 3: { 
+          out_tilemap->tiles[j][x][y].tile_symbol = sheet->tile_symbols[4][0];
+          out_tilemap->tiles[j][x][y].x = 4 * sheet->tile_size;
+          out_tilemap->tiles[j][x][y].y = 0 * sheet->tile_size;
           break; 
         }
         default:{

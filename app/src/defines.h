@@ -42,7 +42,7 @@
 #define MAX_TILESHEET_UNIQUE_TILESLOTS_X 64
 #define MAX_TILESHEET_UNIQUE_TILESLOTS_Y 64
 #define MAX_TILESHEET_UNIQUE_TILESLOTS MAX_TILESHEET_UNIQUE_TILESLOTS_X * MAX_TILESHEET_UNIQUE_TILESLOTS_Y
-#define MAX_TILEMAP_LAYERS 4
+#define MAX_TILEMAP_LAYERS 5
 #define MAX_TILEMAP_TILESHEETSLOT 10
 #define MAX_TILEMAP_TILESLOT_X 255
 #define MAX_TILEMAP_TILESLOT_Y 255
@@ -511,11 +511,14 @@ typedef struct panel {
   Color bg_hover_tint;
   Vector4 offsets;
   f32 zoom;
-  i32 scroll;
+  f32 scroll;
   Vector2 draggable;
   button_state current_state;
   button_state signal_state;
   Rectangle dest;
+  Rectangle scroll_handle;
+  data_pack buffer[2];
+  bool is_dragging_scroll;
 } panel;
 
 typedef struct button_type {
