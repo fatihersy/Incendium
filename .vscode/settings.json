@@ -34,7 +34,7 @@
     "editor.lineNumbers": "on",
     "editor.cursorStyle": "block",
     "editor.tabCompletion": "on",
-    "editor.hover.enabled": true,
+    "editor.hover.enabled": false,
     "editor.quickSuggestions": {
         "other": "on",
         "comments": "on",
