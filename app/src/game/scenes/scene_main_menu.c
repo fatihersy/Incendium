@@ -25,7 +25,7 @@ void initialize_scene_main_menu() {
 
   user_interface_system_initialize();
 
-  event_fire(EVENT_CODE_SCENE_MANAGER_SET_CAM_POS, 0, (event_context) {
+  event_fire(EVENT_CODE_SCENE_MANAGER_SET_CAM_POS, (event_context) {
     .data.f32[0] = GetScreenWidth()/2.f,
     .data.f32[1] = GetScreenHeight()/2.f,
   });
@@ -45,30 +45,29 @@ void render_scene_main_menu() {
 }
 
 void render_interface_main_menu() {
-  Font* font = ui_get_font(FONT_TYPE_MOOD);
 
   if (state->type == MAIN_MENU_SCENE_DEFAULT) {
     if (gui_menu_button("Play", BTN_ID_MAINMENU_BUTTON_PLAY)) {
-      event_fire(EVENT_CODE_SCENE_IN_GAME, 0, (event_context){0});
+      event_fire(EVENT_CODE_SCENE_IN_GAME, (event_context){0});
     }
     if (gui_menu_button("Editor", BTN_ID_MAINMENU_BUTTON_EDITOR)) {
-      event_fire(EVENT_CODE_SCENE_EDITOR, 0, (event_context){0});
+      event_fire(EVENT_CODE_SCENE_EDITOR, (event_context){0});
     }
     if (gui_menu_button("Settings", BTN_ID_MAINMENU_BUTTON_SETTINGS)) {
       state->type = MAIN_MENU_SCENE_SETTINGS;
-      event_fire(EVENT_CODE_UI_SHOW_SETTINGS_MENU, 0, (event_context) {0});
+      event_fire(EVENT_CODE_UI_SHOW_SETTINGS_MENU, (event_context) {0});
     }
     if (gui_menu_button("Extras", BTN_ID_MAINMENU_BUTTON_EXTRAS)) {
     
     }
     if (gui_menu_button("Exit", BTN_ID_MAINMENU_BUTTON_EXIT)) {
-      event_fire(EVENT_CODE_APPLICATION_QUIT, 0, (event_context){0});
+      event_fire(EVENT_CODE_APPLICATION_QUIT, (event_context){0});
     }
   }
   if (state->type == MAIN_MENU_SCENE_SETTINGS) {
     if(gui_menu_button("Cancel", BTN_ID_SETTINGS_APPLY_SETTINGS_BUTTON)) {
       state->type = MAIN_MENU_SCENE_DEFAULT;
-      event_fire(EVENT_CODE_UI_SHOW_SETTINGS_MENU, 0, (event_context) {0});
+      event_fire(EVENT_CODE_UI_SHOW_SETTINGS_MENU, (event_context) {0});
     }
   }
 

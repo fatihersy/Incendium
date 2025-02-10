@@ -25,16 +25,16 @@ typedef struct event_context {
     } data;
 } event_context;
 
-typedef bool (*PFN_on_event)(u16 code, void* sender, void* listener_inst, event_context data);
+typedef bool (*PFN_on_event)(u16 code, event_context data);
 
 void event_system_initialize() ;
-//void event_system_shutdown(); TODO: Essantial
+void event_system_shutdown();
 
-bool event_register(u16 code, void* listener, PFN_on_event on_event);
+bool event_register(u16 code, PFN_on_event on_event);
 
-bool event_unregister(u16 code, void* listener, PFN_on_event on_event);
+bool event_unregister(u16 code, PFN_on_event on_event);
 
-bool event_fire(u16 code, void* sender, event_context context);
+bool event_fire(u16 code, event_context context);
 
 typedef enum system_event_code {
     

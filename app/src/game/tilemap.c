@@ -348,11 +348,11 @@ bool save_map_data(tilemap* map, tilemap_stringtify_package* out_package) {
  * @param map out_map
  * @param out_package Needed because of the local variable array limit. Array must be defined at initialization. Also extracts map data and operation results.
  */
-bool load_map_data(tilemap* map, tilemap_stringtify_package* out_package) {
+bool load_map_data(tilemap *restrict map, tilemap_stringtify_package *restrict out_package) {
   {
     for(int i=0; i<MAX_TILEMAP_LAYERS; ++i){
-      u8* _str_tile = LoadFileData(rs_path((const char*)map->filename[i]), (i32*)&out_package->size_tilemap_str[i]);
-      if (out_package->size_tilemap_str[i] <= 0 || out_package->size_tilemap_str[i] == U64_MAX) {
+      u8* _str_tile = LoadFileData(rs_path((const char*)map->filename[i]), &out_package->size_tilemap_str[i]);
+      if (out_package->size_tilemap_str[i] <= 0 || out_package->size_tilemap_str[i] == I32_MAX) {
         TraceLog(LOG_ERROR, "ERROR::tilemap::load_map_data()::Reading data returned null");
       }
       copy_memory(out_package->str_tilemap[i], _str_tile, out_package->size_tilemap_str[i]);
@@ -360,8 +360,8 @@ bool load_map_data(tilemap* map, tilemap_stringtify_package* out_package) {
     }
   }
   {
-    u8* _str_prop = LoadFileData(rs_path("map_props.txt"), (i32*)&out_package->size_props_str);
-    if (out_package->size_props_str <= 0 || out_package->size_props_str == U64_MAX) {
+    u8* _str_prop = LoadFileData(rs_path("map_props.txt"), &out_package->size_props_str);
+    if (out_package->size_props_str <= 0 || out_package->size_props_str == I32_MAX) {
       TraceLog(LOG_ERROR, "ERROR::tilemap::load_map_data()::Reading data returned null");
     }
     copy_memory(out_package->str_props, _str_prop, out_package->size_props_str);

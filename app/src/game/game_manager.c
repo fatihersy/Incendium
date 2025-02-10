@@ -15,7 +15,7 @@ static game_manager_system_state *state;
 
 void update_collisions();
 
-bool game_manager_on_event(u16 code, void *sender, void *listener_inst, event_context context);
+bool game_manager_on_event(u16 code, event_context context);
 
 bool game_manager_initialize(camera_metrics* _camera_metrics) {
   if (state) return false;
@@ -50,10 +50,10 @@ bool game_manager_initialize(camera_metrics* _camera_metrics) {
     return false;
   }
 
-  event_register(EVENT_CODE_PAUSE_GAME, 0, game_manager_on_event);
-  event_register(EVENT_CODE_UNPAUSE_GAME, 0, game_manager_on_event);
-  event_register(EVENT_CODE_RELOCATE_SPAWN_COLLISION, 0, game_manager_on_event);
-  event_register(EVENT_CODE_RELOCATE_PROJECTILE_COLLISION, 0, game_manager_on_event);
+  event_register(EVENT_CODE_PAUSE_GAME, game_manager_on_event);
+  event_register(EVENT_CODE_UNPAUSE_GAME, game_manager_on_event);
+  event_register(EVENT_CODE_RELOCATE_SPAWN_COLLISION, game_manager_on_event);
+  event_register(EVENT_CODE_RELOCATE_PROJECTILE_COLLISION, game_manager_on_event);
   
   state->game_manager_initialized = true;
   return true;
@@ -94,7 +94,7 @@ void damage_any_spawn(Character2D *projectile) {
   for (u16 i = 1; i <= state->spawn_collision_count; ++i) {
     if (state->spawn_collisions[i].is_active){
       if (CheckCollisionRecs(state->spawn_collisions[i].rect, projectile->collision)) {
-        u16 result = damage_spawn(state->spawn_collisions[i].owner_id, projectile->damage);
+        damage_spawn(state->spawn_collisions[i].owner_id, projectile->damage);
       }
     }
   }
@@ -110,7 +110,7 @@ void damage_any_collider_by_type(Character2D *from_actor, actor_type to_type) {
     for (u16 i = 1; i <= state->spawn_collision_count; ++i) {
       if (state->spawn_collisions[i].is_active){
         if (CheckCollisionRecs(state->spawn_collisions[i].rect, from_actor->collision)) {
-          u16 result = damage_spawn(state->spawn_collisions[i].owner_id, from_actor->damage);
+          damage_spawn(state->spawn_collisions[i].owner_id, from_actor->damage);
         }
       }
     }
@@ -118,7 +118,7 @@ void damage_any_collider_by_type(Character2D *from_actor, actor_type to_type) {
   }
   case PLAYER: {
     if (CheckCollisionRecs(from_actor->collision, state->p_player->collision)) {
-      event_fire(EVENT_CODE_PLAYER_TAKE_DAMAGE, 0, (event_context) { .data.u8[0] = from_actor->damage});
+      event_fire(EVENT_CODE_PLAYER_TAKE_DAMAGE, (event_context) { .data.u8[0] = from_actor->damage});
       return;
     }
     break;
@@ -155,7 +155,7 @@ bool _upgrade_ability(ability* abl) {
     TraceLog(LOG_WARNING, "game_manager::_add_ability()::Recieved system was NULL");
     return false;
   }
-  upgrade_ability(abl, system);
+  upgrade_ability(abl);
 
   for (int i=0; i < abl->proj_count; ++i) {
     abl->projectiles[i].id = state->projectile_count;
@@ -206,11 +206,7 @@ void _update_spawns() {
 }
 void _update_player() {
   update_player();
-  Character2D character = (Character2D) {
-    .position = state->p_player->position,
-    .collision = state->p_player->collision,
-  };
-  update_abilities(&state->p_player->ability_system, character);
+  update_abilities(&state->p_player->ability_system);
 }
 void _render_player() {
   render_player();
@@ -224,7 +220,7 @@ void _render_map() {
 }
 // UPDATE / RENDER
 
-bool game_manager_on_event(u16 code, void *sender, void *listener_inst, event_context context) {
+bool game_manager_on_event(u16 code, event_context context) {
   switch (code) {
   case EVENT_CODE_PAUSE_GAME: {
     state->is_game_paused = true;

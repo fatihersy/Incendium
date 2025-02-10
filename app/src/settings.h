@@ -20,6 +20,6 @@ Vector2* get_resolution_3div2();
 Vector2* get_resolution_5div4();
 Vector2* get_resolution_35div20();
 Vector2* get_resolution_38div20();
-u16 get_screen_offset();
+Vector2 get_screen_offset();
 
 #endif 

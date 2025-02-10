@@ -211,7 +211,6 @@ const char* get_value_string(char _section[INI_FILE_MAX_SECTION_LENGTH], const c
 }
 i64 get_variable_I64(char _section[INI_FILE_MAX_SECTION_LENGTH], const char* variable) {
   char value_str[INI_FILE_MAX_VARIABLE_VALUE_LENGTH] = "";
-  i64 value = 0;
   TextCopy(value_str, get_value_number(_section, variable, DATA_TYPE_I64));
   if (TextLength(value_str) == 0) {
     TraceLog(LOG_WARNING, "lexer::get_value_number()::For variable:%s no value recieved", variable);
@@ -221,7 +220,6 @@ i64 get_variable_I64(char _section[INI_FILE_MAX_SECTION_LENGTH], const char* var
 }
 u64 get_variable_U64(char _section[INI_FILE_MAX_SECTION_LENGTH], const char* variable) {
   char value_str[INI_FILE_MAX_VARIABLE_VALUE_LENGTH] = "";
-  u64 value = 0;
   TextCopy(value_str, get_value_number(_section, variable, DATA_TYPE_U64));
   if (TextLength(value_str) == 0) {
     TraceLog(LOG_WARNING, "lexer::get_value_number()::For variable:%s no value recieved", variable);
@@ -235,7 +233,6 @@ u64 get_variable_U64(char _section[INI_FILE_MAX_SECTION_LENGTH], const char* var
 }
 f64 get_variable_F64(char _section[INI_FILE_MAX_SECTION_LENGTH], const char* variable) {
   char value_str[INI_FILE_MAX_VARIABLE_VALUE_LENGTH] = "";
-  f64 value = 0;
   TextCopy(value_str, get_value_number(_section, variable, DATA_TYPE_F64));
   if (TextLength(value_str) == 0) {
     TraceLog(LOG_WARNING, "lexer::get_value_number()::For variable:%s no value recieved", variable);
@@ -245,7 +242,6 @@ f64 get_variable_F64(char _section[INI_FILE_MAX_SECTION_LENGTH], const char* var
 }
 i32 get_variable_I32(char _section[INI_FILE_MAX_SECTION_LENGTH], const char* variable) {
   char value_str[INI_FILE_MAX_VARIABLE_VALUE_LENGTH] = "";
-  i32 value = 0;
   TextCopy(value_str, get_value_number(_section, variable, DATA_TYPE_I32));
   if (TextLength(value_str) == 0) {
     TraceLog(LOG_WARNING, "lexer::get_value_number()::For variable:%s no value recieved", variable);
@@ -255,7 +251,6 @@ i32 get_variable_I32(char _section[INI_FILE_MAX_SECTION_LENGTH], const char* var
 }
 u32 get_variable_U32(char _section[INI_FILE_MAX_SECTION_LENGTH], const char* variable) {
   char value_str[INI_FILE_MAX_VARIABLE_VALUE_LENGTH] = "";
-  u32 value = 0;
   TextCopy(value_str, get_value_number(_section, variable, DATA_TYPE_U32));
   if (TextLength(value_str) == 0) {
     TraceLog(LOG_WARNING, "lexer::get_value_number()::For variable:%s no value recieved", variable);
@@ -269,7 +264,6 @@ u32 get_variable_U32(char _section[INI_FILE_MAX_SECTION_LENGTH], const char* var
 }
 f32 get_variable_F32(char _section[INI_FILE_MAX_SECTION_LENGTH], const char* variable) {
   char value_str[INI_FILE_MAX_VARIABLE_VALUE_LENGTH] = "";
-  f32 value = 0;
   TextCopy(value_str, get_value_number(_section, variable, DATA_TYPE_F32));
   if (TextLength(value_str) == 0) {
     TraceLog(LOG_WARNING, "lexer::get_value_number()::For variable:%s no value recieved", variable);
@@ -279,7 +273,6 @@ f32 get_variable_F32(char _section[INI_FILE_MAX_SECTION_LENGTH], const char* var
 }
 i16 get_variable_I16(char _section[INI_FILE_MAX_SECTION_LENGTH], const char* variable) {
   char value_str[INI_FILE_MAX_VARIABLE_VALUE_LENGTH] = "";
-  i32 value = 0;
   TextCopy(value_str, get_value_number(_section, variable, DATA_TYPE_I16));
   if (TextLength(value_str) == 0) {
     TraceLog(LOG_WARNING, "lexer::get_value_number()::For variable:%s no value recieved", variable);
@@ -289,7 +282,6 @@ i16 get_variable_I16(char _section[INI_FILE_MAX_SECTION_LENGTH], const char* var
 }
 u16 get_variable_U16(char _section[INI_FILE_MAX_SECTION_LENGTH], const char* variable) {
   char value_str[INI_FILE_MAX_VARIABLE_VALUE_LENGTH] = "";
-  u32 value = 0;
   TextCopy(value_str, get_value_number(_section, variable, DATA_TYPE_U16));
   if (TextLength(value_str) == 0) {
     TraceLog(LOG_WARNING, "lexer::get_value_number()::For variable:%s no value recieved", variable);
@@ -303,7 +295,6 @@ u16 get_variable_U16(char _section[INI_FILE_MAX_SECTION_LENGTH], const char* var
 }
 i8  get_variable_I8 (char _section[INI_FILE_MAX_SECTION_LENGTH], const char* variable) {
   char value_str[INI_FILE_MAX_VARIABLE_VALUE_LENGTH] = "";
-  i32 value = 0;
   TextCopy(value_str, get_value_number(_section, variable, DATA_TYPE_I8));
   if (TextLength(value_str) == 0) {
     TraceLog(LOG_WARNING, "lexer::get_value_number()::For variable:%s no value recieved", variable);
@@ -314,7 +305,6 @@ i8  get_variable_I8 (char _section[INI_FILE_MAX_SECTION_LENGTH], const char* var
 }
 u8  get_variable_U8 (char _section[INI_FILE_MAX_SECTION_LENGTH], const char* variable) {
   char value_str[INI_FILE_MAX_VARIABLE_VALUE_LENGTH] = "";
-  u32 value = 0;
   TextCopy(value_str, get_value_number(_section, variable, DATA_TYPE_U8));
   if (TextLength(value_str) == 0) {
     TraceLog(LOG_WARNING, "lexer::get_value_number()::For variable:%s no value recieved", variable);

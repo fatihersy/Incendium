@@ -12,7 +12,7 @@
 
 static scene_manager_system_state *scene_manager_state;
 
-bool scene_manager_on_event(u16 code, void *sender, void *listener_inst, event_context context);
+bool scene_manager_on_event(u16 code, event_context context);
 
 bool scene_manager_initialize() {
   if (scene_manager_state) return false;
@@ -22,14 +22,14 @@ bool scene_manager_initialize() {
   scene_manager_state->gridsize = 33;
   scene_manager_state->map_size = scene_manager_state->gridsize * 100;
 
-  event_register(EVENT_CODE_SCENE_IN_GAME, 0, scene_manager_on_event);
-  event_register(EVENT_CODE_SCENE_EDITOR, 0, scene_manager_on_event);
-  event_register(EVENT_CODE_SCENE_MAIN_MENU, 0, scene_manager_on_event);
-  event_register(EVENT_CODE_SCENE_MANAGER_SET_TARGET, 0, scene_manager_on_event);
-  event_register(EVENT_CODE_SCENE_MANAGER_SET_CAM_POS, 0, scene_manager_on_event);
-  event_register(EVENT_CODE_SCENE_MANAGER_SET_ZOOM, 0, scene_manager_on_event);
+  event_register(EVENT_CODE_SCENE_IN_GAME, scene_manager_on_event);
+  event_register(EVENT_CODE_SCENE_EDITOR, scene_manager_on_event);
+  event_register(EVENT_CODE_SCENE_MAIN_MENU, scene_manager_on_event);
+  event_register(EVENT_CODE_SCENE_MANAGER_SET_TARGET, scene_manager_on_event);
+  event_register(EVENT_CODE_SCENE_MANAGER_SET_CAM_POS, scene_manager_on_event);
+  event_register(EVENT_CODE_SCENE_MANAGER_SET_ZOOM, scene_manager_on_event);
 
-  event_fire(EVENT_CODE_SCENE_MAIN_MENU, 0, (event_context) {0});
+  event_fire(EVENT_CODE_SCENE_MAIN_MENU, (event_context) {0});
   
   scene_manager_state->is_scene_manager_initialized = true;
   return true;
@@ -73,7 +73,7 @@ Vector2 get_spectator_position() {
 }
 
 
-bool scene_manager_on_event(u16 code, void *sender, void *listener_inst, event_context context) {
+bool scene_manager_on_event(u16 code, event_context context) {
   switch (code) {
   case EVENT_CODE_SCENE_IN_GAME: {
     scene_manager_state->scene_data = SCENE_IN_GAME;

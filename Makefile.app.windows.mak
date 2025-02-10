@@ -5,7 +5,7 @@ OBJ_DIR := obj
 
 ASSEMBLY := app
 EXTENSION := .exe
-COMPILER_FLAGS := -g -Wno-missing-braces -fdeclspec #-fPIC
+COMPILER_FLAGS := -g -MD -Werror=vla -fdeclspec -fno-strict-aliasing -Wall -Wextra -Wstrict-aliasing -fPIC
 INCLUDE_FLAGS := -Ivendor/include -Iapp/src 
 LINKER_FLAGS := -g -L$(OBJ_DIR)/ -L$(VENDOR_DIR)/lib/ -L$(BUILD_DIR) -lraylib -lGdi32 -lWinMM -lUser32 -lShell32  #-Wl,-rpath,.
 DEFINES := -D_DEBUG

@@ -40,7 +40,7 @@ static user_interface_system_state *state;
 #define PSPRITESHEET_SYSTEM state->spritesheet_system // Don't forget to undef at very bottom of the file
 #include "game/spritesheet.h"
 
-bool user_interface_on_event(u16 code, void *sender, void *listener_inst, event_context context);
+bool user_interface_on_event(u16 code, event_context context);
 
 void update_buttons();
 void update_sliders();
@@ -86,6 +86,8 @@ void register_slider_type(slider_type_id _sdr_type_id, spritesheet_type _ss_sdr_
   DrawTextEx(FONT, TEXT, TEXT_POS, FONT_SIZE, UI_FONT_SPACING, COLOR);                    
 
 Rectangle get_texture_source_rect(texture_id _id);
+
+Vector2 make_vector(f32 x, f32 y);
 
 void user_interface_system_initialize() {
   if (state) return;
@@ -209,7 +211,7 @@ void user_interface_system_initialize() {
   {
     register_slider(
       SDR_ID_EDITOR_MAP_LAYER_SLC_SLIDER, SDR_TYPE_OPTION, 
-      (Vector2) {get_screen_offset()}, ((Vector2) {5, 2}), 3.f, 
+      get_screen_offset(), make_vector(5,2), 3.f, 
       BTN_ID_EDITOR_ACTIVE_TILEMAP_EDIT_LAYER_DEC,BTN_ID_EDITOR_ACTIVE_TILEMAP_EDIT_LAYER_INC, false);
   }
   // EDITOR
@@ -281,14 +283,14 @@ void user_interface_system_initialize() {
   }
   // SLIDER OPTIONS
 
-  event_register(EVENT_CODE_UI_SHOW_PAUSE_MENU, 0, user_interface_on_event);
-  event_register(EVENT_CODE_UI_SHOW_SETTINGS_MENU, 0, user_interface_on_event);
-  event_register(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, 0, user_interface_on_event);
+  event_register(EVENT_CODE_UI_SHOW_PAUSE_MENU, user_interface_on_event);
+  event_register(EVENT_CODE_UI_SHOW_SETTINGS_MENU, user_interface_on_event);
+  event_register(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, user_interface_on_event);
 }
 
 void update_user_interface() {
   state->mouse_pos = GetMousePosition();
-  state->offset = (Vector2) { get_screen_offset(), get_screen_offset()};
+  state->offset = get_screen_offset();
   update_sprite_renderqueue();
 
   update_buttons();
@@ -541,7 +543,6 @@ void draw_slider_body(slider* sdr) {
   switch (sdr->sdr_type.id) {
     case SDR_TYPE_PERCENT: {
       u16 scaled_value = sdr->current_value * sdr_type.scale;
-      u16 scaled_max   = sdr->max_value     * sdr_type.scale;
       Vector2 draw_sprite_scale = (Vector2) {sdr_type.scale, sdr_type.scale};
 
       for (int i = 0; i < sdr_type.width_multiply; ++i) {
@@ -559,16 +560,16 @@ void draw_slider_body(slider* sdr) {
     }
     case SDR_TYPE_OPTION: {
       u16 total_body_width = sdr_type.body_width * sdr_type.width_multiply;
-      u16 each_body_width = (total_body_width - ((sdr->max_value) * get_screen_offset())) / (sdr->max_value-1);
+      u16 each_body_width = (total_body_width - ((sdr->max_value) * get_screen_offset().x)) / (sdr->max_value-1);
       f32 each_body_scale = (float)each_body_width / sdr_type.origin_body_width;
       Vector2 draw_sprite_scale = (Vector2) {each_body_scale, sdr_type.scale};
-      Vector2 _pos_temp = (Vector2) {sdr->position.x + get_screen_offset(), sdr->position.y};
+      Vector2 _pos_temp = (Vector2) {sdr->position.x + get_screen_offset().x, sdr->position.y};
       const char* text = TextFormat("%s", sdr->options[sdr->current_value].display_text);
       Vector2 text_measure = MeasureTextEx(state->mood_font, text, state->mood_font.baseSize, UI_FONT_SPACING);
 
       for (int i = 1; i < sdr->max_value; ++i) {
         Vector2 _pos = _pos_temp;
-        _pos.x += (each_body_width + get_screen_offset()) * (i-1); 
+        _pos.x += (each_body_width + get_screen_offset().x) * (i-1); 
 
         draw_sprite_on_site(
           sdr_type.ss_sdr_body, WHITE, 
@@ -645,13 +646,13 @@ void gui_draw_settings_screen() { // TODO: Return to settings later
     i32 window_mod = sdr_win_mode.options[sdr_win_mode.current_value].content.data.i32[0];
 
     if (window_mod == FLAG_BORDERLESS_WINDOWED_MODE) {
-      event_fire(EVENT_CODE_TOGGLE_BORDERLESS, 0, (event_context) {0});
+      event_fire(EVENT_CODE_TOGGLE_BORDERLESS, (event_context) {0});
     }
     else if (window_mod == FLAG_FULLSCREEN_MODE) {
-      event_fire(EVENT_CODE_TOGGLE_FULLSCREEN, 0, (event_context) {0});
+      event_fire(EVENT_CODE_TOGGLE_FULLSCREEN, (event_context) {0});
     }
     else if (window_mod == 0) {
-      event_fire(EVENT_CODE_TOGGLE_WINDOWED, 0, (event_context) {0});
+      event_fire(EVENT_CODE_TOGGLE_WINDOWED, (event_context) {0});
     }
   }
 }
@@ -677,7 +678,7 @@ void gui_draw_pause_screen() {
     
   }
   if (gui_mini_button("Exit", BTN_ID_PAUSEMENU_BUTTON_EXIT)) {
-    event_fire(EVENT_CODE_APPLICATION_QUIT, 0, (event_context) {0});
+    event_fire(EVENT_CODE_APPLICATION_QUIT, (event_context) {0});
   }
 }
 bool gui_slider_add_option(slider_id _id, const char* _display_text, data_pack content) {
@@ -691,7 +692,7 @@ bool gui_slider_add_option(slider_id _id, const char* _display_text, data_pack c
     return false;
   }
   sdr->options[sdr->max_value] = (slider_option) {
-    .display_text = 0,
+    .display_text = {0},
     .content = content
   };
   TextCopy(sdr->options[sdr->max_value].display_text, _display_text);
@@ -963,6 +964,10 @@ inline void draw_texture_npatch(texture_id _id, Rectangle dest, Vector4 offsets,
 
   DrawTextureNPatch(*tex, npatch, dest, (Vector2) {0}, 0, WHITE);
 }
+Vector2 make_vector(f32 x, f32 y) {
+  return (Vector2) {x,y};
+}
+
 void gui_draw_texture_id_pro(texture_id _id, Rectangle src, Rectangle dest) {
   if (_id >= TEX_ID_MAX || _id <= TEX_ID_UNSPECIFIED) {
     TraceLog(LOG_WARNING, "user_interface::gui_draw_texture_id_pro()::ID was out of bound"); 
@@ -1003,7 +1008,7 @@ panel get_default_panel() {
     .offsets       = (Vector4) {6, 6, 6, 6},
     .zoom          = 1.f,
     .scroll        = 0,
-    .draggable     = false,
+    .draggable     = {false},
     .current_state = BTN_STATE_UP,
     .signal_state  = BTN_STATE_UNDEFINED,
     .dest          = (Rectangle) {0}
@@ -1023,7 +1028,7 @@ void user_interface_system_destroy() {
 
 }
 
-bool user_interface_on_event(u16 code, void *sender, void *listener_inst, event_context context) {
+bool user_interface_on_event(u16 code, event_context context) {
   switch (code) {
     case EVENT_CODE_UI_SHOW_PAUSE_MENU: {
       state->b_show_pause_menu = !state->b_show_pause_menu;

@@ -4,7 +4,6 @@
 #include "containers/darray.h"
 
 typedef struct registered_event {
-    void* listener;
     PFN_on_event callback;
 } registered_event;
 
@@ -32,9 +31,8 @@ void event_system_initialize() {
 
 }
 
-void event_system_shutdown(void* state) {
+void event_system_shutdown() {
     if (state_ptr) {
-        
         for (u16 i = 0; i < MAX_MESSAGE_CODES; ++i) {
             if (state_ptr->registered[i].events != 0) {
                 darray_destroy(state_ptr->registered[i].events);
@@ -45,48 +43,31 @@ void event_system_shutdown(void* state) {
     state_ptr = 0;
 }
 
-bool event_register(u16 code, void* listener, PFN_on_event on_event) {
+bool event_register(u16 code, PFN_on_event on_event) {
     if (!state_ptr) {
         return false;
     }
-
     if (state_ptr->registered[code].events == 0) {
         state_ptr->registered[code].events = darray_create(registered_event);
     }
-
-    u64 registered_count = darray_length(state_ptr->registered[code].events);
-    for (u64 i = 0; i < registered_count; ++i) {
-        if (state_ptr->registered[code].events[i].listener == listener) {
-            // TODO: warn
-            return false;
-        }
-    }
-
-    // If at this point, no duplicate was found. Proceed with registration.
     registered_event event;
-    event.listener = listener;
     event.callback = on_event;
     darray_push(state_ptr->registered[code].events, event);
-
     return true;
 }
 
-bool event_unregister(u16 code, void* listener, PFN_on_event on_event) {
+bool event_unregister(u16 code, PFN_on_event on_event) {
     if (!state_ptr) {
         return false;
     }
-
-
     if (state_ptr->registered[code].events == 0) {
         // TODO: warn
         return false;
     }
-
     u64 registered_count = darray_length(state_ptr->registered[code].events);
     for (u64 i = 0; i < registered_count; ++i) {
         registered_event e = state_ptr->registered[code].events[i];
-        if (e.listener == listener && e.callback == on_event) {
-
+        if (e.callback == on_event) {
             registered_event popped_event;
             darray_pop_at(state_ptr->registered[code].events, i, &popped_event);
             return true;
@@ -97,11 +78,10 @@ bool event_unregister(u16 code, void* listener, PFN_on_event on_event) {
     return false;
 }
 
-bool event_fire(u16 code, void* sender, event_context context) {
+bool event_fire(u16 code, event_context context) {
     if (!state_ptr) {
         return false;
     }
-
 
     if (state_ptr->registered[code].events == 0) {
         return false;
@@ -110,13 +90,10 @@ bool event_fire(u16 code, void* sender, event_context context) {
     u64 registered_count = darray_length(state_ptr->registered[code].events);
     for (u64 i = 0; i < registered_count; ++i) {
         registered_event e = state_ptr->registered[code].events[i];
-        if (e.callback(code, sender, e.listener, context)) {
-            
-
+        if (e.callback(code, context)) {
             return true;
         }
     }
-
 
     return false;
 }

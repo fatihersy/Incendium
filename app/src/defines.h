@@ -210,7 +210,7 @@ typedef enum font_type {
 
 typedef enum image_type {
   IMAGE_TYPE_UNSPECIFIED,
-
+  IMAGE_TYPE_A, // To Avoid warning
   IMAGE_TYPE_MAX
 } image_type;
 
@@ -461,8 +461,8 @@ typedef struct tilemap {
 typedef struct tilemap_stringtify_package {
   u8 str_tilemap[MAX_TILEMAP_LAYERS][MAX_TILEMAP_TILESLOT * TILESHEET_TILE_SYMBOL_STR_LEN];
   u8 str_props[MAX_TILEMAP_PROPS][TILESHEET_PROP_SYMBOL_STR_LEN];
-  u64 size_tilemap_str[MAX_TILEMAP_LAYERS];
-  u64 size_props_str;
+  i32 size_tilemap_str[MAX_TILEMAP_LAYERS];
+  i32 size_props_str;
   bool is_success;
 }tilemap_stringtify_package;
 

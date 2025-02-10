@@ -21,7 +21,7 @@ static scene_in_game_state *state;
 
 #define STATE_ASSERT(FUNCTION) if (!state) {                                                          \
     TraceLog(LOG_ERROR, "scene_in_game::" FUNCTION "::In game state was not initialized");            \
-    event_fire(EVENT_CODE_SCENE_MAIN_MENU, 0, (event_context){});                                     \
+    event_fire(EVENT_CODE_SCENE_MAIN_MENU, (event_context){});                                     \
     return;                                                                                           \
   }
 
@@ -76,15 +76,15 @@ bool initialize_scene_in_game(camera_metrics* _camera_metrics) {
     state->p_game_manager->spawn_collisions[state->p_game_manager->spawn_collision_count].is_active = true;
   }
 
-  event_fire(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, 0, (event_context){
+  event_fire(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, (event_context){
     .data.f32[0] = PRG_BAR_ID_PLAYER_EXPERIANCE,
     .data.f32[1] = get_player_state_if_available()->exp_perc,
   });
-  event_fire(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, 0, (event_context){
+  event_fire(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, (event_context){
     .data.f32[0] = PRG_BAR_ID_PLAYER_HEALTH,
     .data.f32[1] = get_player_state_if_available()->health_perc,
   });  
-  event_fire(EVENT_CODE_SCENE_MANAGER_SET_CAM_POS, 0, (event_context){
+  event_fire(EVENT_CODE_SCENE_MANAGER_SET_CAM_POS, (event_context){
     .data.f32[0] = get_player_state_if_available()->position.x,
     .data.f32[1] = get_player_state_if_available()->position.y,
   });
@@ -120,7 +120,7 @@ void update_scene_in_game() {
   //_update_spawns();
   update_game_manager();
 
-  event_fire(EVENT_CODE_SCENE_MANAGER_SET_TARGET, 0, (event_context){
+  event_fire(EVENT_CODE_SCENE_MANAGER_SET_TARGET, (event_context){
     .data.f32[0] = _get_player_position(false).x,
     .data.f32[1] = _get_player_position(false).y,
   });
@@ -137,7 +137,7 @@ void render_scene_in_game() {
 
 void render_interface_in_game() {
   STATE_ASSERT("render_interface_in_game")
-  DrawFPS(get_screen_offset(), get_resolution_div2()->y);
+  DrawFPS(get_screen_offset().x, get_resolution_div2()->y);
 
   if (!state->has_game_started) {
     gui_label("Press Space to Start!", (Vector2) {get_resolution_div2()->x, get_resolution_3div2()->y}, WHITE);
@@ -152,7 +152,7 @@ void render_interface_in_game() {
     };
     f32 dest_x_buffer = dest.x;
     for (int i=0; i<MAX_UPDATE_ABILITY_PANEL_COUNT; ++i) {
-      dest.x = dest_x_buffer + ((dest.width + get_screen_offset()) * i);
+      dest.x = dest_x_buffer + ((dest.width + get_screen_offset().x) * i);
       if(gui_panel_active(&state->skill_up_panels[i], dest, true)) {
         state->p_game_manager->is_game_paused = false;
         state->player->is_player_have_skill_points = false;
@@ -162,8 +162,8 @@ void render_interface_in_game() {
     }
   }
   else {
-    gui_progress_bar(PRG_BAR_ID_PLAYER_EXPERIANCE, (Vector2){.x = get_resolution_div2()->x, .y = get_screen_offset()}, true);
-    gui_progress_bar(PRG_BAR_ID_PLAYER_HEALTH, (Vector2){.x = get_screen_offset(), .y = get_screen_offset()}, false);
+    gui_progress_bar(PRG_BAR_ID_PLAYER_EXPERIANCE, (Vector2){.x = get_resolution_div2()->x, .y = get_screen_offset().x}, true);
+    gui_progress_bar(PRG_BAR_ID_PLAYER_HEALTH, get_screen_offset(), false);
   }
 
   render_user_interface();
@@ -193,7 +193,7 @@ void in_game_update_keyboard_bindings() {
 
   if (IsKeyReleased(KEY_ESCAPE)) {
     if(!state->player->is_player_have_skill_points) state->p_game_manager->is_game_paused = !state->p_game_manager->is_game_paused;
-    event_fire(EVENT_CODE_UI_SHOW_PAUSE_MENU, 0, (event_context){0});
+    event_fire(EVENT_CODE_UI_SHOW_PAUSE_MENU, (event_context){0});
   }
 }
 

@@ -63,7 +63,7 @@ bool ability_system_initialize(camera_metrics* _camera_metrics, app_settings* se
   return true;
 }
 
-void upgrade_ability(ability* abl, ability_play_system* system) {
+void upgrade_ability(ability* abl) {
   ++abl->level;
   abl->proj_count = abl->level;
 
@@ -74,7 +74,7 @@ void upgrade_ability(ability* abl, ability_play_system* system) {
     abl->projectiles[i].is_active = true;
   }
 }
-void update_abilities(ability_play_system* system, Character2D owner) {
+void update_abilities(ability_play_system* system) {
 
   for (int i=0; i<ABILITY_TYPE_MAX; ++i) {
     ability* abl = &system->abilities[i];
@@ -122,7 +122,7 @@ void movement_satellite(ability* abl) {
     abl->projectiles[i].collision.x = abl->projectiles[i].position.x;
     abl->projectiles[i].collision.y = abl->projectiles[i].position.y;
     
-    event_fire(EVENT_CODE_RELOCATE_PROJECTILE_COLLISION, 0, (event_context) {
+    event_fire(EVENT_CODE_RELOCATE_PROJECTILE_COLLISION, (event_context) {
       .data.u16[0] = abl->projectiles[i].id,
       .data.u16[1] = abl->projectiles[i].collision.x,
       .data.u16[2] = abl->projectiles[i].collision.y
@@ -159,7 +159,7 @@ void movement_bullet(ability* abl) {
     abl->projectiles[i].collision.x = abl->projectiles[i].position.x;
     abl->projectiles[i].collision.y = abl->projectiles[i].position.y;
     
-    event_fire(EVENT_CODE_RELOCATE_PROJECTILE_COLLISION, 0, (event_context) {
+    event_fire(EVENT_CODE_RELOCATE_PROJECTILE_COLLISION, (event_context) {
       .data.u16[0] = abl->projectiles[i].id,
       .data.u16[1] = abl->projectiles[i].collision.x,
       .data.u16[2] = abl->projectiles[i].collision.y
@@ -205,7 +205,7 @@ void movement_comet(ability* abl) {
     abl->projectiles[i].collision.x = abl->projectiles[i].position.x;
     abl->projectiles[i].collision.y = abl->projectiles[i].position.y;
     
-    event_fire(EVENT_CODE_RELOCATE_PROJECTILE_COLLISION, 0, (event_context) {
+    event_fire(EVENT_CODE_RELOCATE_PROJECTILE_COLLISION, (event_context) {
       .data.u16[0] = abl->projectiles[i].id,
       .data.u16[1] = abl->projectiles[i].collision.x,
       .data.u16[2] = abl->projectiles[i].collision.y

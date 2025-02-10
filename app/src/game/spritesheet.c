@@ -116,7 +116,7 @@ void _play_sprite_on_site(spritesheet_play_system *system, u16 _id, Color _tint,
   render_sprite_renderqueue(system, _id);
 }
 
-void _draw_sprite_on_site(spritesheet_play_system *system, spritesheet_type _type, Color _tint, Vector2 pos, Vector2 scale, u16 frame, bool _should_center) {
+void _draw_sprite_on_site(spritesheet_type _type, Color _tint, Vector2 pos, Vector2 scale, u16 frame, bool _should_center) {
   if (_type > SPRITESHEET_TYPE_MAX || _type <= SPRITESHEET_UNSPECIFIED) {
     TraceLog(LOG_ERROR, "ERROR::spritesheet::draw_sprite_on_site()::invalid sprite type");
     return;

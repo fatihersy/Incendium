@@ -18,7 +18,7 @@ typedef struct app_system_state {
 
 static app_system_state* state;
 
-bool application_on_event(u16 code, void* sender, void* listener_inst, event_context context);
+bool application_on_event(u16 code, event_context context);
 
 bool app_initialize() {
 
@@ -58,10 +58,10 @@ bool app_initialize() {
         return false;
     }
 
-    event_register(EVENT_CODE_APPLICATION_QUIT, 0, application_on_event);
-    event_register(EVENT_CODE_TOGGLE_BORDERLESS, 0, application_on_event);
-    event_register(EVENT_CODE_TOGGLE_FULLSCREEN, 0, application_on_event);
-    event_register(EVENT_CODE_TOGGLE_WINDOWED, 0, application_on_event);
+    event_register(EVENT_CODE_APPLICATION_QUIT, application_on_event);
+    event_register(EVENT_CODE_TOGGLE_BORDERLESS, application_on_event);
+    event_register(EVENT_CODE_TOGGLE_FULLSCREEN, application_on_event);
+    event_register(EVENT_CODE_TOGGLE_WINDOWED, application_on_event);
 
     state->app_runing = true;
 
@@ -107,10 +107,11 @@ bool app_render() {
     return true;
 }
 
-bool application_on_event(u16 code, void* sender, void* listener_inst, event_context context) {
+bool application_on_event(u16 code, event_context context) {
     switch (code)
     {
     case EVENT_CODE_APPLICATION_QUIT:{
+        state->app_runing = context.data.i32[0];
         state->app_runing = false;
         return true;
     }

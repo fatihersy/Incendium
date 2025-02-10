@@ -160,13 +160,13 @@ Vector2* get_resolution_38div20() {
 
   return &state->settings.resolution_38div20;
 }
-u16 get_screen_offset() {
+Vector2 get_screen_offset() {
   if (!state) {
     TraceLog(
         LOG_WARNING,
         "settings::get_screen_offset()::settings state didn't initialized yet");
-    return 0;
+    return (Vector2) {0, 0};
   }
 
-  return state->offset;
+  return (Vector2) {state->offset, state->offset};
 }

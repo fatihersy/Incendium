@@ -29,9 +29,9 @@ typedef enum editor_state_mouse_focus {
 typedef struct scene_editor_state {
   camera_metrics* in_camera_metrics;
   Vector2 target;
-  tilemap map;
+  tilemap map __attribute__((packed, aligned(8)));
   tilesheet palette;
-  tilemap_stringtify_package package;
+  tilemap_stringtify_package package __attribute__((packed, aligned(8)));
   tilemap_prop props[MAX_TILESHEET_PROPS];
   u16 prop_count;
 
@@ -92,8 +92,8 @@ void initialize_scene_editor(camera_metrics* _camera_metrics) {
     .width = PROP_DRAG_HANDLE_DIM, .height = PROP_DRAG_HANDLE_DIM * 5,
   };
   state->in_camera_metrics = _camera_metrics;
-  state->palette.position = (Vector2) {get_screen_offset(), get_screen_offset() + 50};
-  event_fire(EVENT_CODE_SCENE_MANAGER_SET_CAM_POS, 0, (event_context){
+  state->palette.position = (Vector2) {get_screen_offset().x, get_screen_offset().y + 50};
+  event_fire(EVENT_CODE_SCENE_MANAGER_SET_CAM_POS, (event_context){
     .data.f32[0] = state->target.x,
     .data.f32[1] = state->target.y
   });
@@ -476,7 +476,7 @@ void initialize_scene_editor(camera_metrics* _camera_metrics) {
   for (int i=0; i<MAX_TILEMAP_LAYERS; ++i) {
     gui_slider_add_option(SDR_ID_EDITOR_MAP_LAYER_SLC_SLIDER, TextFormat("%d",(i+1)), (data_pack) {
       .type_flag = DATA_TYPE_U16,
-      .data.u16 = (i)
+      .data.u16 = {i}
     });
   }
 }
@@ -522,9 +522,9 @@ void render_interface_editor() {
           prop_height_count += prop->dest.height;
       }
       pnl->buffer[0].data.f32[0] = prop_height_count;
-      pnl->scroll_handle.y = FMAX(pnl->scroll_handle.y, pnl->dest.y + get_screen_offset());
+      pnl->scroll_handle.y = FMAX(pnl->scroll_handle.y, pnl->dest.y + get_screen_offset().x);
       pnl->scroll_handle.y = FMIN(pnl->scroll_handle.y, pnl->dest.y + pnl->dest.height);
-      pnl->scroll = (pnl->scroll_handle.y - pnl->dest.y - get_screen_offset()) / (pnl->dest.height - pnl->scroll_handle.height) * -1;
+      pnl->scroll = (pnl->scroll_handle.y - pnl->dest.y - get_screen_offset().x) / (pnl->dest.height - pnl->scroll_handle.height) * -1;
       DrawRectangleRec(pnl->scroll_handle, WHITE);
     });
   }
@@ -733,7 +733,7 @@ void editor_update_keyboard_bindings() {
   editor_update_movement();
 
   if (IsKeyReleased(KEY_ESCAPE)) {
-    event_fire(EVENT_CODE_UI_SHOW_PAUSE_MENU, 0, (event_context){0});
+    event_fire(EVENT_CODE_UI_SHOW_PAUSE_MENU, (event_context){0});
   }
   if (IsKeyPressed(KEY_F5)) {
     save_map_data(&state->map, &state->package);
@@ -774,7 +774,7 @@ void editor_update_movement() {
       .data.f32[0] = state->target.x, 
       .data.f32[1] = state->target.y
     };
-    event_fire(EVENT_CODE_SCENE_MANAGER_SET_TARGET, 0, context);
+    event_fire(EVENT_CODE_SCENE_MANAGER_SET_TARGET, context);
   }
   if (IsKeyDown(KEY_A)) {
     state->target.x -= speed;
@@ -783,7 +783,7 @@ void editor_update_movement() {
       .data.f32[0] = state->target.x, 
       .data.f32[1] = state->target.y
     };
-    event_fire(EVENT_CODE_SCENE_MANAGER_SET_TARGET, 0, context);
+    event_fire(EVENT_CODE_SCENE_MANAGER_SET_TARGET, context);
   }
   if (IsKeyDown(KEY_S)) {
     state->target.y += speed;
@@ -792,7 +792,7 @@ void editor_update_movement() {
       .data.f32[0] = state->target.x, 
       .data.f32[1] = state->target.y
     };
-    event_fire(EVENT_CODE_SCENE_MANAGER_SET_TARGET, 0, context);
+    event_fire(EVENT_CODE_SCENE_MANAGER_SET_TARGET, context);
   }
   if (IsKeyDown(KEY_D)) {
     state->target.x += speed;
@@ -801,7 +801,7 @@ void editor_update_movement() {
       .data.f32[0] = state->target.x, 
       .data.f32[1] = state->target.y
     };
-    event_fire(EVENT_CODE_SCENE_MANAGER_SET_TARGET, 0, context);
+    event_fire(EVENT_CODE_SCENE_MANAGER_SET_TARGET, context);
   }
 }
 // BINDINGS

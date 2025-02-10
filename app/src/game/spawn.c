@@ -55,7 +55,7 @@ u16 damage_spawn(u16 _id, u16 damage) {
     *character = (Character2D){0};
     spawn_system->current_spawn_count--;
   }
-  event_fire(EVENT_CODE_PLAYER_ADD_EXP, 0, (event_context){.data.u32[0] = 32});
+  event_fire(EVENT_CODE_PLAYER_ADD_EXP, (event_context){.data.u32[0] = 32});
   return 0;
 }
 
@@ -78,7 +78,7 @@ bool update_spawns(Vector2 player_position) {
     spawn_system->spawns[i].position = new_position;
     spawn_system->spawns[i].collision.x = new_position.x;
     spawn_system->spawns[i].collision.y = new_position.y;
-    event_fire(EVENT_CODE_RELOCATE_SPAWN_COLLISION, 0, (event_context) 
+    event_fire(EVENT_CODE_RELOCATE_SPAWN_COLLISION, (event_context) 
     {
         .data.u16[0] = spawn_system->spawns[i].character_id,
         .data.u16[1] = spawn_system->spawns[i].position.x,

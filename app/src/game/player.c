@@ -15,7 +15,7 @@ void play_anim(spritesheet_type player_anim_sheet);
 void add_exp_to_player(u32 exp);
 void take_damage(u16 damage);
 
-bool player_system_on_event(u16 code, void* sender, void* listener_inst, event_context context);
+bool player_system_on_event(u16 code, event_context context);
 
 bool player_system_initialize() {
     if (player) return false;
@@ -27,9 +27,9 @@ bool player_system_initialize() {
         return false;
     }
 
-    event_register(EVENT_CODE_PLAYER_ADD_EXP, 0, player_system_on_event);
-    event_register(EVENT_CODE_PLAYER_SET_POSITION, 0, player_system_on_event);
-    event_register(EVENT_CODE_PLAYER_TAKE_DAMAGE, 0, player_system_on_event);
+    event_register(EVENT_CODE_PLAYER_ADD_EXP, player_system_on_event);
+    event_register(EVENT_CODE_PLAYER_SET_POSITION, player_system_on_event);
+    event_register(EVENT_CODE_PLAYER_TAKE_DAMAGE, player_system_on_event);
 
     player->position.x = 0;
     player->position.y = 0;
@@ -140,7 +140,7 @@ bool update_player() {
     if (!player) return false;
 
     if (player->is_dead) {
-        event_fire(EVENT_CODE_PAUSE_GAME, 0, (event_context){0});
+        event_fire(EVENT_CODE_PAUSE_GAME, (event_context){0});
     }
 
     if(!player->is_damagable) {
@@ -292,11 +292,11 @@ void play_anim(spritesheet_type player_anim_sheet) {
     }
 }
 
-bool player_system_on_event(u16 code, void* sender, void* listener_inst, event_context context) {
+bool player_system_on_event(u16 code, event_context context) {
     switch (code) {
         case EVENT_CODE_PLAYER_ADD_EXP: {
             add_exp_to_player(context.data.u32[0]);
-            event_fire(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, 0, (event_context){
+            event_fire(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, (event_context){
                 .data.f32[0] = PRG_BAR_ID_PLAYER_EXPERIANCE,
                 .data.f32[1] = player->exp_perc,
             });
@@ -311,7 +311,7 @@ bool player_system_on_event(u16 code, void* sender, void* listener_inst, event_c
         }
         case EVENT_CODE_PLAYER_TAKE_DAMAGE: {
             take_damage(context.data.u8[0]);
-            event_fire(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, 0, (event_context){
+            event_fire(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, (event_context){
                 .data.f32[0] = PRG_BAR_ID_PLAYER_HEALTH,
                 .data.f32[1] = player->health_perc,
             });
