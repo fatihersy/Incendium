@@ -118,11 +118,13 @@ bool application_on_event(u16 code, event_context context) {
     case EVENT_CODE_TOGGLE_BORDERLESS: { 
         i32 monitor = GetCurrentMonitor();
         ToggleBorderlessWindowed();
-        SetWindowSize(GetMonitorWidth(monitor), GetMonitorHeight(monitor));
+        set_resolution(GetMonitorWidth(monitor), GetMonitorHeight(monitor));
+        state->settings.window_state = FLAG_BORDERLESS_WINDOWED_MODE;
         return true;
     }
     case EVENT_CODE_TOGGLE_FULLSCREEN: {
         ToggleFullscreen();
+        state->settings.window_state = FLAG_FULLSCREEN_MODE;
         return true;
     }
     case EVENT_CODE_TOGGLE_WINDOWED: {    

@@ -210,12 +210,11 @@ tilemap_tile get_tile_from_map_by_mouse_pos(tilemap* map, Vector2 mouse_pos, u16
   tile.x = (mouse_pos.x - map->position.x) / map->tile_size;
   tile.y = (mouse_pos.y - map->position.y) / map->tile_size;
 
-  if (tile.x < 0 || tile.x > map->map_dim || tile.y < 0 || tile.y > map->map_dim) {
+  if (tile.x < 0 || tile.x >= map->map_dim || tile.y < 0 || tile.y >= map->map_dim) {
     return (tilemap_tile) { .is_initialized = false };
   }
 
   tile.sheet = map->tiles[layer][tile.x][tile.y].sheet;
-  tile.tile_symbol = tile.sheet->tile_symbols[tile.x / map->tile_size][tile.y/ map->tile_size];
 
   tile.is_initialized = true;
   return tile;

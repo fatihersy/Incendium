@@ -66,6 +66,20 @@ bool set_resolution(u32 width, u32 height) {
 
   state->settings.resolution[0] = width;
   state->settings.resolution[1] = height;
+  state->settings.resolution_5div4.x   = state->settings.resolution[0] / 1.25f;
+  state->settings.resolution_5div4.y   = state->settings.resolution[1] / 1.25f;
+  state->settings.resolution_3div2.x   = state->settings.resolution[0] / 1.50f;
+  state->settings.resolution_3div2.y   = state->settings.resolution[1] / 1.50f;
+  state->settings.resolution_35div20.x = state->settings.resolution[0] / 1.75f;
+  state->settings.resolution_35div20.y = state->settings.resolution[1] / 1.75f;
+  state->settings.resolution_38div20.x = state->settings.resolution[0] / 1.90f;
+  state->settings.resolution_38div20.y = state->settings.resolution[1] / 1.90f;
+  state->settings.resolution_div2.x    = state->settings.resolution[0] / 2.f;
+  state->settings.resolution_div2.y    = state->settings.resolution[1] / 2.f;
+  state->settings.resolution_div3.x    = state->settings.resolution[0] / 3.f;
+  state->settings.resolution_div3.y    = state->settings.resolution[1] / 3.f;
+  state->settings.resolution_div4.x    = state->settings.resolution[0] / 4.f;
+  state->settings.resolution_div4.y    = state->settings.resolution[1] / 4.f;
 
   return true;
 }

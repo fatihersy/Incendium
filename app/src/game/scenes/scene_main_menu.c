@@ -1,5 +1,4 @@
 #include "scene_main_menu.h"
-#include "raylib.h"
 #include "defines.h"
 
 #include "core/event.h"
@@ -24,16 +23,15 @@ void initialize_scene_main_menu() {
   state = (main_menu_scene_state*)allocate_memory_linear(sizeof(main_menu_scene_state), true);
 
   user_interface_system_initialize();
-
-  event_fire(EVENT_CODE_SCENE_MANAGER_SET_CAM_POS, (event_context) {
-    .data.f32[0] = GetScreenWidth()/2.f,
-    .data.f32[1] = GetScreenHeight()/2.f,
-  });
 }
 
 void update_scene_main_menu() {
   update_user_interface();
 
+  event_fire(EVENT_CODE_SCENE_MANAGER_SET_CAM_POS, (event_context) {
+    .data.f32[0] = GetScreenWidth()/2.f,
+    .data.f32[1] = GetScreenHeight()/2.f,
+  });
 }
 
 void render_scene_main_menu() {
@@ -47,25 +45,25 @@ void render_scene_main_menu() {
 void render_interface_main_menu() {
 
   if (state->type == MAIN_MENU_SCENE_DEFAULT) {
-    if (gui_menu_button("Play", BTN_ID_MAINMENU_BUTTON_PLAY)) {
+    if (gui_menu_button("Play", BTN_ID_MAINMENU_BUTTON_PLAY, VECTOR2(0,  0))) {
       event_fire(EVENT_CODE_SCENE_IN_GAME, (event_context){0});
     }
-    if (gui_menu_button("Editor", BTN_ID_MAINMENU_BUTTON_EDITOR)) {
+    if (gui_menu_button("Editor", BTN_ID_MAINMENU_BUTTON_EDITOR, VECTOR2(0,  4))) {
       event_fire(EVENT_CODE_SCENE_EDITOR, (event_context){0});
     }
-    if (gui_menu_button("Settings", BTN_ID_MAINMENU_BUTTON_SETTINGS)) {
+    if (gui_menu_button("Settings", BTN_ID_MAINMENU_BUTTON_SETTINGS, VECTOR2(0,  8))) {
       state->type = MAIN_MENU_SCENE_SETTINGS;
       event_fire(EVENT_CODE_UI_SHOW_SETTINGS_MENU, (event_context) {0});
     }
-    if (gui_menu_button("Extras", BTN_ID_MAINMENU_BUTTON_EXTRAS)) {
+    if (gui_menu_button("Extras", BTN_ID_MAINMENU_BUTTON_EXTRAS, VECTOR2(0,  12))) {
     
     }
-    if (gui_menu_button("Exit", BTN_ID_MAINMENU_BUTTON_EXIT)) {
+    if (gui_menu_button("Exit", BTN_ID_MAINMENU_BUTTON_EXIT, VECTOR2(0,  16))) {
       event_fire(EVENT_CODE_APPLICATION_QUIT, (event_context){0});
     }
   }
   if (state->type == MAIN_MENU_SCENE_SETTINGS) {
-    if(gui_menu_button("Cancel", BTN_ID_SETTINGS_APPLY_SETTINGS_BUTTON)) {
+    if(gui_menu_button("Cancel", BTN_ID_SETTINGS_APPLY_SETTINGS_BUTTON, VECTOR2(2,  15))) {
       state->type = MAIN_MENU_SCENE_DEFAULT;
       event_fire(EVENT_CODE_UI_SHOW_SETTINGS_MENU, (event_context) {0});
     }

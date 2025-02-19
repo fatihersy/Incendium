@@ -873,6 +873,11 @@ static const u32 level_curve[MAX_PLAYER_LEVEL + 1] = {
 
 #define FABS(v1) (v1 < 0) ? v1*(-1) : v1
 
+#define pVECTOR2(X) ((Vector2){X[0], X[1]})
+
+#define VECTOR2(X, Y) ((Vector2){X, Y})
+#define TO_VECTOR2(X) ((Vector2){X, X})
+
 // Inlining
 #if defined(__clang__) || defined(__gcc__)
 #define KINLINE __attribute__((always_inline)) inline

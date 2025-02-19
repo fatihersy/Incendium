@@ -507,7 +507,7 @@ void render_interface_editor() {
   { 
     gui_panel_scissored(state->tile_selection_panel, false, {
       render_tilesheet(&state->palette, state->tile_selection_panel.zoom);
-      gui_slider(SDR_ID_EDITOR_MAP_LAYER_SLC_SLIDER);
+      gui_slider(SDR_ID_EDITOR_MAP_LAYER_SLC_SLIDER, get_screen_offset(), VECTOR2(5,3), 3.f);
     });
 
   }
