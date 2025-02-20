@@ -77,8 +77,11 @@ void update_game_manager() {
   if (!state) {
     return;
   }
-
   update_collisions();
+  update_player();
+  update_abilities(&state->p_player->ability_system);
+  update_spawns(get_player_position(true));
+
 }
 void update_collisions() {
   for (int i=0; i<state->projectile_count; ++i) { for (u16 j = 1; j <= state->spawn_collision_count; ++j) {
@@ -98,6 +101,13 @@ void update_collisions() {
     damage_any_collider_by_type(spawn, PLAYER);
   }}
 }
+void render_game() {
+  render_tilemap(&state->map);
+  render_player();
+  render_spawns();
+  render_abilities(&state->p_player->ability_system);
+}
+
 void damage_any_spawn(Character2D *projectile) {
   if (!projectile) {
     TraceLog(LOG_ERROR, 
@@ -166,7 +176,6 @@ void toggle_is_game_paused() {
 }
 // GET / SET
 
-
 // Exposed functions
 u16 _spawn_character(Character2D _character) {
   return spawn_character(_character);
@@ -209,23 +218,6 @@ void _set_player_position(Vector2 position) {
 }
 Vector2 _get_player_position(bool centered) {
   return get_player_position(centered);
-}
-void _update_spawns() {
-  update_spawns(get_player_position(true));
-}
-void _update_player() {
-  update_player();
-  update_abilities(&state->p_player->ability_system);
-}
-void _render_player() {
-  render_player();
-  render_abilities(&state->p_player->ability_system);
-}
-void _render_spawns() {
-  render_spawns();
-}
-void _render_map() {
-  render_tilemap(&state->map);
 }
 // Exposed functions
 

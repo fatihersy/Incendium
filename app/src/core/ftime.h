@@ -6,13 +6,8 @@
 
 void time_system_initialize();
 
-timer* get_timer();
-void reset_time(elapse_time_type type);
-
 void update_time();
 
-
-
-
+u16 get_random(u16 min, u16 max);
 
 #endif

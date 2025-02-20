@@ -986,6 +986,21 @@ void gui_draw_texture_id_pro(texture_id _id, Rectangle src, Rectangle dest) {
   dest, 
   (Vector2) {0}, 0, WHITE);
 }
+void gui_draw_texture_id(texture_id _id, Rectangle dest) {
+  if (_id >= TEX_ID_MAX || _id <= TEX_ID_UNSPECIFIED) {
+    TraceLog(LOG_WARNING, "user_interface::gui_draw_texture_id_pro()::ID was out of bound"); 
+    return; 
+  }
+  Texture2D* tex = get_texture_by_enum(_id);
+  if (!tex) { 
+    TraceLog(LOG_WARNING, "user_interface::gui_draw_texture_id_pro()::Tex was null");
+    return; 
+  }
+  DrawTexturePro(*tex, 
+  (Rectangle) {0, 0, tex->width, tex->height}, 
+  dest, 
+  (Vector2) {0}, 0, WHITE);
+}
 
 Font* ui_get_font(font_type font) {
   if (!state) {

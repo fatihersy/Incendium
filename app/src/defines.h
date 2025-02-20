@@ -64,6 +64,8 @@
 #define MAX_ABILITY_PROJECTILE_SLOT 6
 
 #define MAX_RAND 6
+#define RANDOM_TABLE_NUMBER_COUNT 507
+#define RANDOM_STACK_COUNT 10
 
 #define DEBUG_COLLISIONS 0
 
@@ -181,8 +183,6 @@ typedef enum ability_type {
   ABILITY_TYPE_COMET,
   ABILITY_TYPE_MAX,
 } ability_type;
-
-typedef enum elapse_time_type { SALVO_ETA } elapse_time_type;
 
 typedef enum texture_id {
   TEX_ID_UNSPECIFIED,
@@ -740,12 +740,6 @@ typedef struct camera_metrics {
   Camera2D handle;
 } camera_metrics;
 
-typedef struct timer {
-  elapse_time_type type;
-  f32 total_delay;
-  f32 remaining;
-} timer;
-
 static const u32 level_curve[MAX_PLAYER_LEVEL + 1] = {
     0, //	0
     300,         800,        1500,       2500,       4300,
@@ -837,15 +831,11 @@ static const u32 level_curve[MAX_PLAYER_LEVEL + 1] = {
 
 #define FCLAMP(value, min, max)                                                \
   (value <= min) ? min : (value >= max) ? max : value
-
 #define FMAX(v1, v2) (v1 >= v2) ? v1 : v2
-
 #define FMIN(v1, v2) (v1 <= v2) ? v1 : v2
-
 #define FABS(v1) (v1 < 0) ? v1*(-1) : v1
 
 #define pVECTOR2(X) ((Vector2){X[0], X[1]})
-
 #define VECTOR2(X, Y) ((Vector2){X, Y})
 #define TO_VECTOR2(X) ((Vector2){X, X})
 

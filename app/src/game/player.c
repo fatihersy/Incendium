@@ -75,7 +75,7 @@ bool player_system_initialize() {
     player->wreck_right_sprite_queue_index = register_sprite(PLAYER_ANIMATION_WRECK_RIGHT, true, false, true);
     player->last_played_sprite_id = player->idle_left_sprite_queue_index; // The position player starts. To avoid from the error when move firstly called
     
-    player->starter_ability = ABILITY_TYPE_COMET;
+    player->starter_ability = ABILITY_TYPE_FIREBALL;
     player->is_initialized = true;
     return true;
 }

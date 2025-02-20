@@ -19,15 +19,11 @@ void damage_any_collider_by_type(Character2D *from_actor, actor_type to_type);
 void add_collision(rectangle_collision rect);
 
 bool _add_ability(ability_type _type);
-bool _upgrade_ability(ability* abl);
-void _set_player_position(Vector2 position);
-u16 _spawn_character(Character2D _character);
 Vector2 _get_player_position(bool centered);
+bool _upgrade_ability(ability* abl);
+u16 _spawn_character(Character2D _character);
+void _set_player_position(Vector2 position);
 
-void _update_spawns();
-void _update_player();
-void _render_player();
-void _render_spawns();
-void _render_map();
+void render_game();
 
 #endif

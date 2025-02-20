@@ -27,7 +27,8 @@ bool gui_panel_active(panel* panel, Rectangle dest, bool _should_center);
 void gui_label(const char* text, Vector2 position, Color tint);
 
 void gui_draw_pause_screen();
-void gui_draw_texture_id_pro(texture_id _id, Rectangle src, Rectangle dest);
+void gui_draw_texture_id_pro(texture_id _id, Rectangle src, Rectangle dest); 
+void gui_draw_texture_id(texture_id _id, Rectangle dest); 
 
 #define gui_panel_scissored(PANEL, CENTER, CODE)        \
     gui_panel(PANEL, PANEL.dest, CENTER);                           \
