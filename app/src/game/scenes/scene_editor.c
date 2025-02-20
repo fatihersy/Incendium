@@ -31,6 +31,8 @@ typedef struct scene_editor_state {
   Vector2 target;
   tilesheet palette;
   tilemap_prop props[MAX_TILESHEET_PROPS];
+  tilemap map;
+  tilemap_stringtify_package map_stringtify;
   u16 prop_count;
 
   bool b_show_tilesheet_tile_selection_screen;
@@ -47,10 +49,7 @@ typedef struct scene_editor_state {
   Vector2 mouse_pos_world;
 } scene_editor_state;
 
-
-static tilemap *restrict map;
-static tilemap_stringtify_package *restrict map_stringtify;
-static scene_editor_state *restrict state;
+static scene_editor_state * state;
 
 void editor_update_bindings();
 void editor_update_movement();
@@ -67,14 +66,12 @@ void initialize_scene_editor(camera_metrics* _camera_metrics) {
     return;
   }
   state = (scene_editor_state*)allocate_memory_linear(sizeof(scene_editor_state), true);
-  map = (tilemap*)allocate_memory_linear(sizeof(tilemap), true);
-  map_stringtify = (tilemap_stringtify_package*)allocate_memory_linear(sizeof(tilemap_stringtify_package), true);
-  
+
   for (int i=0; i<MAX_TILEMAP_LAYERS; ++i) {
-    copy_memory(map->filename[i], TextFormat("map_layer%d.txt", i), sizeof(i8) * MAX_TILEMAP_FILENAME_LEN);
+    copy_memory(state->map.filename[i], TextFormat("map_layer%d.txt", i), sizeof(i8) * MAX_TILEMAP_FILENAME_LEN);
   }
-  create_tilemap(TILESHEET_TYPE_MAP, (Vector2) {0, 0}, 100, 16*3, map);
-  if(!map->is_initialized) {
+  create_tilemap(TILESHEET_TYPE_MAP, (Vector2) {0, 0}, 100, 16*3, &state->map);
+  if(!state->map.is_initialized) {
     TraceLog(LOG_WARNING, "scene_in_game_edit::initialize_scene_in_game_edit()::map_layer0 initialization failed");
   }
   create_tilesheet(TILESHEET_TYPE_MAP, 16*2, 1.1, &state->palette);
@@ -498,7 +495,7 @@ void update_scene_editor() {
   update_user_interface();
 }
 void render_scene_editor() {
-  render_tilemap(map);
+  render_tilemap(&state->map);
   DrawPixel(0, 0, RED);
 }
 void render_interface_editor() {
@@ -535,7 +532,7 @@ void render_interface_editor() {
   switch (state->selection_type) {
     case SLC_TYPE_TILE: {
       render_tile(&state->selected_tile, 
-      (Rectangle) {GetMousePosition().x, GetMousePosition().y, map->tile_size, map->tile_size});
+      (Rectangle) {GetMousePosition().x, GetMousePosition().y, state->map.tile_size, state->map.tile_size});
       break;
     }
     case SLC_TYPE_DROP_PROP: {
@@ -652,9 +649,9 @@ void editor_update_mouse_bindings() {
   {
     switch (state->selection_type) {
       case SLC_TYPE_UNSELECTED: {
-        for (int i=0; i<map->prop_count; ++i) {
-          if(CheckCollisionPointRec(state->mouse_pos_world, map->props[i].dest)) {
-            state->selected_prop = map->props[i];
+        for (int i=0; i<state->map.prop_count; ++i) {
+          if(CheckCollisionPointRec(state->mouse_pos_world, state->map.props[i].dest)) {
+            state->selected_prop = state->map.props[i];
             state->selection_type = SLC_TYPE_SLC_PROP;
             break;
           }
@@ -662,8 +659,8 @@ void editor_update_mouse_bindings() {
         break;
       }
       case SLC_TYPE_TILE: { 
-        tilemap_tile tile = get_tile_from_map_by_mouse_pos(map, GetScreenToWorld2D(GetMousePosition(), state->in_camera_metrics->handle), state->edit_layer);
-        map->tiles[state->edit_layer][tile.x][tile.y] = state->selected_tile;
+        tilemap_tile tile = get_tile_from_map_by_mouse_pos(&state->map, GetScreenToWorld2D(GetMousePosition(), state->in_camera_metrics->handle), state->edit_layer);
+        state->map.tiles[state->edit_layer][tile.x][tile.y] = state->selected_tile;
         TraceLog(LOG_INFO, "layer:%d tile{%d:%d} is %d:%d now",state->edit_layer, tile.x, tile.y, state->selected_tile.tile_symbol.c[0], state->selected_tile.tile_symbol.c[1]);
         break; 
       }
@@ -671,9 +668,9 @@ void editor_update_mouse_bindings() {
         Vector2 coord = GetScreenToWorld2D(GetMousePosition(), state->in_camera_metrics->handle);
         state->selected_prop.dest.x = coord.x;
         state->selected_prop.dest.y = coord.y;
-        map->props[map->prop_count] = state->selected_prop;
-        map->props[map->prop_count].id = map->prop_count;
-        map->prop_count++;
+        state->map.props[state->map.prop_count] = state->selected_prop;
+        state->map.props[state->map.prop_count].id = state->map.prop_count;
+        state->map.prop_count++;
         break;
       }
       case SLC_TYPE_SLC_PROP: {
@@ -687,7 +684,7 @@ void editor_update_mouse_bindings() {
   {
     switch (state->selection_type) {
       case SLC_TYPE_SLC_PROP: {
-        tilemap_prop* prop = &map->props[map_prop_id_to_index(state->selected_prop.id)];
+        tilemap_prop* prop = &state->map.props[map_prop_id_to_index(state->selected_prop.id)];
         Rectangle drag_handle = (Rectangle) {
           prop->dest.x + prop->dest.width/2.f - PROP_DRAG_HANDLE_DIM_DIV2, prop->dest.y + prop->dest.height/2.f - PROP_DRAG_HANDLE_DIM_DIV2, 
           PROP_DRAG_HANDLE_DIM, PROP_DRAG_HANDLE_DIM
@@ -739,10 +736,10 @@ void editor_update_keyboard_bindings() {
     event_fire(EVENT_CODE_UI_SHOW_PAUSE_MENU, (event_context){0});
   }
   if (IsKeyPressed(KEY_F5)) {
-    save_map_data(map, map_stringtify);
+    save_map_data(&state->map, &state->map_stringtify);
   }
   if (IsKeyPressed(KEY_F8)) {
-    load_map_data(map, map_stringtify);
+    load_map_data(&state->map, &state->map_stringtify);
   }
   if (IsKeyReleased(KEY_TAB)) {
     state->b_show_tilesheet_tile_selection_screen = !state->b_show_tilesheet_tile_selection_screen;
@@ -756,9 +753,9 @@ void editor_update_keyboard_bindings() {
     if (state->mouse_focus == MOUSE_FOCUS_MAP && state->selection_type == SLC_TYPE_SLC_PROP && !state->b_dragging_prop) {
       u16 slc_prop_index = map_prop_id_to_index(state->selected_prop.id);
       if (slc_prop_index >= 0 && slc_prop_index < state->prop_count) {
-        map->prop_count--;
-        map->props[slc_prop_index] = map->props[map->prop_count];
-        map->props[map->prop_count] = (tilemap_prop) {0};
+        state->map.prop_count--;
+        state->map.props[slc_prop_index] = state->map.props[state->map.prop_count];
+        state->map.props[state->map.prop_count] = (tilemap_prop) {0};
         state->selected_prop = (tilemap_prop) {0};
         state->selection_type = SLC_TYPE_UNSELECTED;
       }
@@ -810,14 +807,14 @@ void editor_update_movement() {
 // BINDINGS
 
 /**
- * @brief return i, map->props[i].id == id
+ * @brief return i, state->map.props[i].id == id
  * 
  * @param id == props[i].id
  * @return returns I32_MAX as error
  */
 i32 map_prop_id_to_index(u16 id) {
-  for (int i=0; i<map->prop_count; ++i) {
-    if (map->props[i].id == id) {
+  for (int i=0; i<state->map.prop_count; ++i) {
+    if (state->map.props[i].id == id) {
       return i;
     }
   }

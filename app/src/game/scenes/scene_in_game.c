@@ -10,7 +10,6 @@
 #include "game/user_interface.h"
 
 typedef struct scene_in_game_state {
-  game_manager_system_state *p_game_manager;
   player_state* player;
   panel skill_up_panels[MAX_UPDATE_ABILITY_PANEL_COUNT];
   
@@ -21,7 +20,7 @@ static scene_in_game_state *state;
 
 #define STATE_ASSERT(FUNCTION) if (!state) {                                                          \
     TraceLog(LOG_ERROR, "scene_in_game::" FUNCTION "::In game state was not initialized");            \
-    event_fire(EVENT_CODE_SCENE_MAIN_MENU, (event_context){});                                     \
+    event_fire(EVENT_CODE_SCENE_MAIN_MENU, (event_context){});                                        \
     return;                                                                                           \
   }
 
@@ -39,7 +38,6 @@ bool initialize_scene_in_game(camera_metrics* _camera_metrics) {
     TraceLog(LOG_ERROR, "game_manager_initialize() failed");
     return false;
   }
-  state->p_game_manager = get_game_manager();
   state->player = get_player_state_if_available();
 
   _set_player_position(*get_resolution_div2());
@@ -71,9 +69,7 @@ bool initialize_scene_in_game(camera_metrics* _camera_metrics) {
         .damage = 10,
         .speed = 1,
     });
-    state->p_game_manager->spawn_collision_count++;
-    state->p_game_manager->spawn_collisions[state->p_game_manager->spawn_collision_count] = rect_col;
-    state->p_game_manager->spawn_collisions[state->p_game_manager->spawn_collision_count].is_active = true;
+    add_collision(rect_col);
   }
 
   event_fire(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, (event_context){
@@ -101,7 +97,7 @@ bool initialize_scene_in_game(camera_metrics* _camera_metrics) {
     state->skill_up_panels[i] = default_panel;
   }
 
-  state->p_game_manager->is_game_paused = true;
+  set_is_game_paused(true);
 
   return true;
 }
@@ -112,7 +108,7 @@ void update_scene_in_game() {
   in_game_update_bindings();
   update_user_interface();
 
-  if (state->p_game_manager->is_game_paused || !state->has_game_started) {
+  if (get_is_game_paused() || !state->has_game_started) {
     return;
   }
 
@@ -145,7 +141,7 @@ void render_interface_in_game() {
   }
 
   if (state->player->is_player_have_skill_points) {
-    state->p_game_manager->is_game_paused = true;
+    set_is_game_paused(true);
     Rectangle dest = (Rectangle) { // TODO: Make it responsive
       get_resolution_div4()->x, get_resolution_div2()->y, 
       get_resolution_div4()->x, get_resolution_3div2()->y 
@@ -154,10 +150,8 @@ void render_interface_in_game() {
     for (int i=0; i<MAX_UPDATE_ABILITY_PANEL_COUNT; ++i) {
       dest.x = dest_x_buffer + ((dest.width + get_screen_offset().x) * i);
       if(gui_panel_active(&state->skill_up_panels[i], dest, true)) {
-        state->p_game_manager->is_game_paused = false;
+        set_is_game_paused(false);
         state->player->is_player_have_skill_points = false;
-
-
       }
     }
   }
@@ -187,12 +181,12 @@ void in_game_update_keyboard_bindings() {
   if (!state->has_game_started && IsKeyPressed(KEY_SPACE)) {
     start_game();
     state->has_game_started = true;
-    state->p_game_manager->is_game_paused = false;
+    set_is_game_paused(false);
     return;
   }
 
   if (IsKeyReleased(KEY_ESCAPE)) {
-    if(!state->player->is_player_have_skill_points) state->p_game_manager->is_game_paused = !state->p_game_manager->is_game_paused;
+    if(!state->player->is_player_have_skill_points) toggle_is_game_paused();
     event_fire(EVENT_CODE_UI_SHOW_PAUSE_MENU, (event_context){0});
   }
 }

@@ -350,20 +350,22 @@ bool save_map_data(tilemap* map, tilemap_stringtify_package* out_package) {
 bool load_map_data(tilemap *restrict map, tilemap_stringtify_package *restrict out_package) {
   {
     for(int i=0; i<MAX_TILEMAP_LAYERS; ++i){
-      u8* _str_tile = LoadFileData(rs_path((const char*)map->filename[i]), &out_package->size_tilemap_str[i]);
-      if (out_package->size_tilemap_str[i] <= 0 || out_package->size_tilemap_str[i] == I32_MAX) {
-        TraceLog(LOG_ERROR, "ERROR::tilemap::load_map_data()::Reading data returned null");
+      int dataSize = sizeof(out_package->str_tilemap[i]);
+      u8* _str_tile = LoadFileData(rs_path((const char*)map->filename[i]), &dataSize);
+      if (dataSize <= 0 || dataSize == I32_MAX) {
+        TraceLog(LOG_ERROR, "tilemap::load_map_data()::Reading data returned null");
       }
-      copy_memory(out_package->str_tilemap[i], _str_tile, out_package->size_tilemap_str[i]);
+      copy_memory(&out_package->str_tilemap[i], _str_tile, sizeof(out_package->str_tilemap[i]));
       UnloadFileData(_str_tile);
     }
   }
   {
-    u8* _str_prop = LoadFileData(rs_path("map_props.txt"), &out_package->size_props_str);
-    if (out_package->size_props_str <= 0 || out_package->size_props_str == I32_MAX) {
-      TraceLog(LOG_ERROR, "ERROR::tilemap::load_map_data()::Reading data returned null");
+    int dataSize = sizeof(out_package->str_props);
+    u8* _str_prop = LoadFileData(rs_path("map_props.txt"), &dataSize);
+    if (dataSize <= 0 || dataSize == I32_MAX) {
+      TraceLog(LOG_ERROR, "tilemap::load_map_data()::Reading data returned null");
     }
-    copy_memory(out_package->str_props, _str_prop, out_package->size_props_str);
+    copy_memory(out_package->str_props, _str_prop, sizeof(out_package->str_props));
     UnloadFileData(_str_prop);
   }
   

@@ -1,5 +1,4 @@
 #include "scene_manager.h"
-#include "raylib.h"
 #include "defines.h"
 
 #include "core/event.h"
@@ -9,6 +8,19 @@
 #include "game/scenes/scene_in_game.h"
 #include "game/scenes/scene_main_menu.h"
 #include "game/scenes/scene_editor.h"
+
+typedef struct scene_manager_system_state {
+  spritesheet_play_system spritesheet_system;
+
+  scene_type scene_data;
+  Vector2 screen_size;
+  Vector2 screen_half_size;
+  Vector2 target;
+  u16 gridsize;
+  u16 map_size;
+
+  bool is_scene_manager_initialized;
+} scene_manager_system_state;
 
 static scene_manager_system_state *scene_manager_state;
 

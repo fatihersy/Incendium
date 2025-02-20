@@ -3,15 +3,27 @@
 
 #include "core/event.h"
 #include "core/fmemory.h"
-#include "core/ftime.h"
 
 #include "game/tilemap.h"
 #include "game/ability.h"
 #include "game/player.h"
 #include "game/spawn.h"
 
+typedef struct game_manager_system_state {
+  rectangle_collision spawn_collisions[MAX_SPAWN_COUNT];
+  projectile projectiles[MAX_ABILITY_PROJECTILE_SLOT * MAX_ABILITY_SLOT];
+  tilemap map;
+  tilemap_stringtify_package map_stringtify;
+  u16 spawn_collision_count;
+  u16 projectile_count;
+  player_state* p_player;
 
-static game_manager_system_state *state;
+
+  bool is_game_paused;
+  bool game_manager_initialized;
+} game_manager_system_state;
+
+static game_manager_system_state *restrict state;
 
 void update_collisions();
 
@@ -38,14 +50,16 @@ bool game_manager_initialize(camera_metrics* _camera_metrics) {
     TraceLog(LOG_ERROR, "spawn_system_initialize() failed");
     return false;
   }
-  copy_memory(state->map.filename[0], "map_layer0.txt", sizeof(i8) * MAX_TILEMAP_FILENAME_LEN);
-  copy_memory(state->map.filename[1], "map_layer1.txt", sizeof(i8) * MAX_TILEMAP_FILENAME_LEN);
+
+  for (int i=0; i<MAX_TILEMAP_LAYERS; ++i) {
+    copy_memory(state->map.filename[i], TextFormat("map_layer%d.txt", i), sizeof(i8) * MAX_TILEMAP_FILENAME_LEN);
+  }
   create_tilemap(TILESHEET_TYPE_MAP, (Vector2) {0, 0}, 100, 16*3, &state->map);
   if(!state->map.is_initialized) {
     TraceLog(LOG_WARNING, "WARNING::scene_in_game_edit::initialize_scene_in_game_edit()::tilemap initialization failed");
   }
-  load_map_data(&state->map, &state->map_str_package);
-  if (!state->map_str_package.is_success) {
+  load_map_data(&state->map, &state->map_stringtify);
+  if (!state->map_stringtify.is_success) {
     TraceLog(LOG_ERROR, "game_manager_initialize::game manager unable to load map");
     return false;
   }
@@ -127,6 +141,31 @@ void damage_any_collider_by_type(Character2D *from_actor, actor_type to_type) {
   case PROJECTILE_PLAYER: break; 
   }
 }
+void add_collision(rectangle_collision rect_col) {
+  state->spawn_collision_count++;
+  state->spawn_collisions[state->spawn_collision_count] = rect_col;
+  state->spawn_collisions[state->spawn_collision_count].is_active = true;
+}
+
+// GET / SET
+player_state* get_player_state_if_available() {
+  if (get_player_state()) {
+    return get_player_state();
+  }
+
+  return (player_state*) {0};
+}
+bool get_is_game_paused() {
+  return state->is_game_paused;
+}
+void set_is_game_paused(bool _is_game_paused) {
+  state->is_game_paused = _is_game_paused;
+}
+void toggle_is_game_paused() {
+  state->is_game_paused = !state->is_game_paused;
+}
+// GET / SET
+
 
 // Exposed functions
 u16 _spawn_character(Character2D _character) {
@@ -165,42 +204,12 @@ bool _upgrade_ability(ability* abl) {
   abl->is_active = true;
   return true;
 }
-// Exposed functions
-
-// GET / SET
-Vector2 _get_player_position(bool centered) {
-  return get_player_position(centered);
-}
-player_state* get_player_state_if_available() {
-  if (get_player_state()) {
-    return get_player_state();
-  }
-
-  return (player_state*) {0};
-}
-game_manager_system_state* get_game_manager() {
-  if (state) {
-    return state;
-  }
-
-  return (game_manager_system_state*){0};
-}
-float get_time_elapsed(elapse_time_type type) {
-  timer *time = get_timer();
-
-  if (time->remaining == 0) {
-    reset_time(type);
-    return 0;
-  };
-
-  return time->remaining;
-}
 void _set_player_position(Vector2 position) {
   get_player_state()->position = position;
 }
-// GET / SET
-
-// UPDATE / RENDER
+Vector2 _get_player_position(bool centered) {
+  return get_player_position(centered);
+}
 void _update_spawns() {
   update_spawns(get_player_position(true));
 }
@@ -218,7 +227,7 @@ void _render_spawns() {
 void _render_map() {
   render_tilemap(&state->map);
 }
-// UPDATE / RENDER
+// Exposed functions
 
 bool game_manager_on_event(u16 code, event_context context) {
   switch (code) {

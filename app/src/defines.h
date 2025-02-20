@@ -730,35 +730,6 @@ typedef struct spawn_system_state {
   u16 current_spawn_count;
 } spawn_system_state;
 
-// LABEL: game_manager_system_state
-typedef struct game_manager_system_state {
-  rectangle_collision spawn_collisions[MAX_SPAWN_COUNT];
-  projectile projectiles[MAX_ABILITY_PROJECTILE_SLOT * MAX_ABILITY_SLOT];
-  u16 spawn_collision_count;
-  u16 projectile_count;
-  tilemap_stringtify_package map_str_package;
-  tilemap map;
-  player_state* p_player;
-
-
-  bool is_game_paused;
-  bool game_manager_initialized;
-} game_manager_system_state;
-
-typedef struct scene_manager_system_state {
-  spritesheet_play_system spritesheet_system;
-  game_manager_system_state *p_game_manager;
-
-  scene_type scene_data;
-  Vector2 screen_size;
-  Vector2 screen_half_size;
-  Vector2 target;
-  u16 gridsize;
-  u16 map_size;
-
-  bool is_scene_manager_initialized;
-} scene_manager_system_state;
-
 typedef struct memory_system_state {
   u64 linear_memory_total_size;
   u64 linear_memory_allocated;
