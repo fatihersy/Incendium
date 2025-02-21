@@ -24,7 +24,8 @@ static scene_in_game_state *state;
     TraceLog(LOG_ERROR, "scene_in_game::" FUNCTION "::In game state was not initialized");            \
     event_fire(EVENT_CODE_SCENE_MAIN_MENU, (event_context){});                                        \
     return;                                                                                           \
-  }
+}
+#define SKILL_UP_PANEL_ICON_SIZE get_resolution_div4()->x*.5f
 
 void in_game_update_bindings();
 void in_game_update_mouse_bindings();
@@ -139,7 +140,7 @@ void render_interface_in_game() {
     return;
   }
 
-  if (state->player->is_player_have_skill_points) {
+  if (state->player->is_player_have_skill_points || true) {
     set_is_game_paused(true);
     Rectangle dest = (Rectangle) { // TODO: Make it responsive
       get_resolution_div4()->x, get_resolution_div2()->y, 
@@ -152,36 +153,19 @@ void render_interface_in_game() {
         pnl->buffer[0].data.u16[0] = get_random(1,ABILITY_TYPE_MAX-1);
       }
       dest.x = dest_x_buffer + ((dest.width + get_screen_offset().x) * i);
+      ability* abl = &state->player->ability_system.abilities[pnl->buffer[0].data.u16[0]];
+      // TODO: Get upgradables
       if(gui_panel_active(pnl, dest, true)) {
         set_is_game_paused(false);
         state->player->is_player_have_skill_points = false;
       }
-      switch (pnl->buffer[0].data.u16[0]) {
-        case ABILITY_TYPE_RADIATION: {
-          //gui_draw_texture_id(0, (Rectangle) {0});
-          gui_label("Radiation", VECTOR2(dest.x, dest.y), WHITE);
-          break;
-        }
-        case ABILITY_TYPE_FIREBALL: {
-          gui_label("Fireball", VECTOR2(dest.x, dest.y), WHITE);
-          
-          break;
-        }
-        case ABILITY_TYPE_COMET: {
-          gui_label("Comet", VECTOR2(dest.x, dest.y), WHITE);
-          
-          break;
-        }
-        case ABILITY_TYPE_BULLET: {
-          gui_label("Bullet", VECTOR2(dest.x, dest.y), WHITE);
-          
-          break;
-        }
-        default: {
-          TraceLog(LOG_WARNING, "scene_in_game::render_interface_in_game()::Update panel ability is trying to render an unknown ability: %d", pnl->buffer[0].data.u16[0]);
-          break;
-        }
-      }
+      gui_draw_texture_id_pro(TEX_ID_SKILL_ICON_ATLAS, abl->icon_src, 
+        (Rectangle) {
+          dest.x - SKILL_UP_PANEL_ICON_SIZE/2.f, 
+          dest.y - SKILL_UP_PANEL_ICON_SIZE/2.f - dest.height*.25f, 
+          SKILL_UP_PANEL_ICON_SIZE, 
+          SKILL_UP_PANEL_ICON_SIZE});
+      gui_label(abl->display_name, VECTOR2(dest.x, dest.y), WHITE);
     }
   }
   else {

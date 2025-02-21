@@ -181,6 +181,10 @@ u16 _spawn_character(Character2D _character) {
   return spawn_character(_character);
 }
 bool _add_ability(ability_type _type) {
+  if (_type <= ABILITY_TYPE_UNDEFINED || _type >= ABILITY_TYPE_MAX) {
+    TraceLog(LOG_INFO, "game_manager::_add_ability()::Ability type is out of bound");
+    return false;
+  }
   ability abl = get_ability(_type);
   ability_play_system* system = &state->p_player->ability_system;
   if (!system) {

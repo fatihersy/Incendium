@@ -60,6 +60,7 @@
 #define MAX_PLAYER_LEVEL 100
 #define MAX_SPAWN_COUNT 100
 
+#define MAX_ABILITY_NAME_LENGTH 10
 #define MAX_ABILITY_SLOT 5
 #define MAX_ABILITY_PROJECTILE_SLOT 6
 
@@ -195,6 +196,7 @@ typedef enum texture_id {
   TEX_ID_CRIMSON_FANTASY_PANEL,
   TEX_ID_CRIMSON_FANTASY_PANEL_BG,
   TEX_ID_MAP_PROPS_ATLAS,
+  TEX_ID_SKILL_ICON_ATLAS,
 
   TEX_ID_MAX,
 } texture_id;
@@ -665,6 +667,8 @@ typedef struct ability {
   u16 proj_count;
   f32 proj_duration;
   Vector2 proj_dim;
+  Rectangle icon_src;
+  char display_name[MAX_ABILITY_NAME_LENGTH];
 
   bool center_proj_anim;
   bool is_active;

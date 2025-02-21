@@ -27,7 +27,7 @@ void movement_comet(ability* abl);
 Vector2 p_to_vec2(f32*);
 void set_p_vec2(Vector2 from, f32* to);
 
-void register_ability(ability_type type, movement_pattern move_pattern, f32 proj_duration, u16 _damage, Vector2 proj_size, spritesheet_type proj_anim, bool _should_center);
+void register_ability(char _display_name[MAX_ABILITY_NAME_LENGTH], Rectangle icon_loc, ability_type type, movement_pattern move_pattern, f32 proj_duration, u16 _damage, Vector2 proj_size, spritesheet_type proj_anim, bool _should_center);
 
 bool ability_system_initialize(camera_metrics* _camera_metrics, app_settings* settings) {
   if (state) {
@@ -57,9 +57,9 @@ bool ability_system_initialize(camera_metrics* _camera_metrics, app_settings* se
     state->rand_recoil[i] = _rand_recoil[i];
   }
 
-  register_ability(ABILITY_TYPE_FIREBALL, MOVE_TYPE_SATELLITE, 0, 15, (Vector2) {30, 30}, FIREBALL_ANIMATION, true);
-  register_ability(ABILITY_TYPE_BULLET, MOVE_TYPE_BULLET, 1.75, 15, (Vector2) {30, 30}, FIREBALL_ANIMATION, true);
-  register_ability(ABILITY_TYPE_COMET, MOVE_TYPE_COMET, 0, 15, (Vector2) {30, 30}, FIREBALL_ANIMATION, true);
+  register_ability("Fireball", (Rectangle) {192, 640, 32, 32}, ABILITY_TYPE_FIREBALL, MOVE_TYPE_SATELLITE, 0, 15, (Vector2) {30, 30}, FIREBALL_ANIMATION, true);
+  register_ability("Bullet",   (Rectangle) { 32,   0, 32, 32}, ABILITY_TYPE_BULLET, MOVE_TYPE_BULLET, 1.75, 15, (Vector2) {30, 30}, FIREBALL_ANIMATION, true);
+  register_ability("Comet",    (Rectangle) { 96,   0, 32, 32}, ABILITY_TYPE_COMET, MOVE_TYPE_COMET, 0, 15, (Vector2) {30, 30}, FIREBALL_ANIMATION, true);
   return true;
 }
 
@@ -231,8 +231,12 @@ void render_abilities(ability_play_system* system) {
  * @param proj_duration in secs. affects not to all abilities like fireball ability
  * @param _should_center for projectile spritesheet
  */
-void register_ability(ability_type type, movement_pattern move_pattern, f32 proj_duration, u16 _damage, Vector2 proj_size, spritesheet_type proj_anim, bool _should_center) {
+void register_ability(char _display_name[MAX_ABILITY_NAME_LENGTH], Rectangle icon_loc, ability_type type, movement_pattern move_pattern, f32 proj_duration, u16 _damage, Vector2 proj_size, spritesheet_type proj_anim, bool _should_center) {
   ability abl = {0};
+  if (TextLength(_display_name) >= MAX_ABILITY_NAME_LENGTH) {
+    TraceLog(LOG_WARNING, "ability::register_ability()::Ability:'%s's name length is out of bound!", _display_name);
+    return;
+  }
 
   abl.type = type;
   abl.level = 0;
@@ -243,6 +247,8 @@ void register_ability(ability_type type, movement_pattern move_pattern, f32 proj
   abl.move_pattern = move_pattern;
   abl.center_proj_anim = _should_center;
   abl.proj_dim = proj_size;
+  abl.icon_src = icon_loc;
+  copy_memory(abl.display_name, _display_name, TextLength(_display_name));
 
   state->abilities[type] = abl;
 }
