@@ -5,7 +5,7 @@
 
 static memory_system_state* memory_system;
 
-void memory_system_initialize() {
+void memory_system_initialize(void) {
     memory_system = (memory_system_state*)malloc(sizeof(memory_system_state));
     memory_system->linear_memory_total_size = TOTAL_ALLOCATED_MEMORY;
     memory_system->linear_memory_allocated = 0;

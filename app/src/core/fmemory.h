@@ -4,7 +4,7 @@
 
 #include "defines.h"
 
-void memory_system_initialize();
+void memory_system_initialize(void);
 
 void* allocate_memory(u64 size, bool will_zero_memory);
 void* allocate_memory_linear(u64 size, bool will_zero_memory);

@@ -7,9 +7,9 @@
 
 bool initialize_scene_in_game(camera_metrics* _camera_metrics);
 
-void update_scene_in_game();
-void render_scene_in_game();
-void render_interface_in_game();
+void update_scene_in_game(void);
+void render_scene_in_game(void);
+void render_interface_in_game(void);
 
 #endif
 

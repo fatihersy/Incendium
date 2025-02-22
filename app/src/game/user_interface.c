@@ -42,14 +42,14 @@ static user_interface_system_state *state;
 
 bool user_interface_on_event(u16 code, event_context context);
 
-void update_buttons();
-void update_sliders();
+void update_buttons(void);
+void update_sliders(void);
 
 void draw_slider_body(slider* sdr);
 void draw_texture_stretch(texture_id body, Vector2 pos, Vector2 scale, Rectangle stretch_part, u16 stretch_part_mltp, bool should_center);
 void draw_texture_regular(texture_id _id, Rectangle dest, Color tint, bool should_center);
 void draw_texture_npatch(texture_id _id, Rectangle dest, Vector4 offsets, bool should_center);
-void gui_draw_settings_screen();
+void gui_draw_settings_screen(void);
 bool gui_button(const char* text, button_id _id, Font font, f32 font_size_scale, Vector2 pos);
 
 void register_button(button_id _btn_id, button_type_id _btn_type_id);
@@ -85,7 +85,7 @@ Rectangle get_texture_source_rect(texture_id _id);
 
 Vector2 make_vector(f32 x, f32 y);
 
-void user_interface_system_initialize() {
+void user_interface_system_initialize(void) {
   if (state) return;
 
   state = (user_interface_system_state *)allocate_memory_linear(sizeof(user_interface_system_state), true);
@@ -280,7 +280,7 @@ void user_interface_system_initialize() {
   event_register(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, user_interface_on_event);
 }
 
-void update_user_interface() {
+void update_user_interface(void) {
   state->mouse_pos = GetMousePosition();
   state->offset = get_screen_offset();
   update_sprite_renderqueue();
@@ -289,7 +289,7 @@ void update_user_interface() {
   update_sliders();
 }
 
-void update_buttons() {
+void update_buttons(void) {
   for (int i = 0; i < BTN_ID_MAX; ++i) {
     if (state->buttons[i].id == BTN_ID_UNDEFINED) {
       continue;
@@ -322,7 +322,7 @@ void update_buttons() {
     btn->on_screen = false;
   }
 }
-void update_sliders() {
+void update_sliders(void) {
   for (int i = 0; i < SDR_ID_MAX; ++i) {
     if (state->sliders[i].id == SDR_ID_UNDEFINED || !state->sliders[i].on_screen) continue;
       slider* sdr = &state->sliders[i];
@@ -352,7 +352,7 @@ void update_sliders() {
   }  
 }
 
-void render_user_interface() {
+void render_user_interface(void) {
   
   if (state->b_show_pause_menu) {
     gui_draw_pause_screen();
@@ -405,7 +405,7 @@ bool gui_button(const char* text, button_id _id, Font font, f32 font_size_scale,
     };
   }
 
-  _btn_type->play_crt ? play_sprite_on_site(_btn->crt_render_index, _btn->dest, WHITE) : 0;
+  if(_btn_type->play_crt) {play_sprite_on_site(_btn->crt_render_index, _btn->dest, WHITE); }
 
   Vector2 draw_sprite_scale = (Vector2) {_btn->btn_type.scale,_btn->btn_type.scale};
 
@@ -418,7 +418,7 @@ bool gui_button(const char* text, button_id _id, Font font, f32 font_size_scale,
   } else {
     draw_sprite_on_site(_btn->btn_type.ss_type, WHITE, VECTOR2(_btn->dest.x,_btn->dest.y), draw_sprite_scale, 0, false);
     if (_btn->state == BTN_STATE_HOVER) {
-      _btn_type->play_reflection ? play_sprite_on_site(_btn->reflection_render_index, _btn->dest, WHITE) : 0;
+      if(_btn_type->play_reflection) {play_sprite_on_site(_btn->reflection_render_index, _btn->dest, WHITE);};
       if (!TextIsEqual(text, "")) {
         draw_text(text, text_pos, font, font.baseSize * font_size_scale, BUTTON_TEXT_HOVER_COLOR, false);
       }
@@ -646,7 +646,7 @@ void gui_label(const char* text, Vector2 position, Color tint) {
   draw_text(text, position, LABEL_FONT, LABEL_FONT_SIZE, tint, true);
 }
 
-void gui_draw_settings_screen() { // TODO: Return to settings later
+void gui_draw_settings_screen(void) { // TODO: Return to settings later
 
   gui_slider(SDR_ID_SETTINGS_SOUND_SLIDER, get_app_settings()->resolution_div2, VECTOR2(0,0), 3.f);
 
@@ -675,7 +675,7 @@ void gui_draw_settings_screen() { // TODO: Return to settings later
   }
 }
 
-void gui_draw_pause_screen() {
+void gui_draw_pause_screen(void) {
   Rectangle dest = (Rectangle) {
     get_resolution_div2()->x,
     get_resolution_div2()->y,
@@ -1017,7 +1017,7 @@ Font* ui_get_font(font_type font) {
 
   return (Font*) {0};
 }
-panel get_default_panel() {
+panel get_default_panel(void) {
   return (panel) {
     .frame_tex_id  = TEX_ID_CRIMSON_FANTASY_PANEL,
     .bg_tex_id     = TEX_ID_CRIMSON_FANTASY_PANEL_BG,
@@ -1026,7 +1026,7 @@ panel get_default_panel() {
     .offsets       = (Vector4) {6, 6, 6, 6},
     .zoom          = 1.f,
     .scroll        = 0,
-    .draggable     = {false},
+    .draggable     = false,
     .current_state = BTN_STATE_UP,
     .signal_state  = BTN_STATE_UNDEFINED,
     .dest          = (Rectangle) {0}
@@ -1042,7 +1042,7 @@ data_pack* get_slider_current_value(slider_id id) {
   return &state->sliders[id].options[state->sliders[id].current_value].content;
 }
 
-void user_interface_system_destroy() {
+void user_interface_system_destroy(void) {
 
 }
 

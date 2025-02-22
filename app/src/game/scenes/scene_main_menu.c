@@ -17,7 +17,7 @@ main_menu_scene_type type;
 
 static main_menu_scene_state *state;
 
-void initialize_scene_main_menu() {
+void initialize_scene_main_menu(void) {
   if (state) {return;}
   
   state = (main_menu_scene_state*)allocate_memory_linear(sizeof(main_menu_scene_state), true);
@@ -25,7 +25,7 @@ void initialize_scene_main_menu() {
   user_interface_system_initialize();
 }
 
-void update_scene_main_menu() {
+void update_scene_main_menu(void) {
   update_user_interface();
 
   event_fire(EVENT_CODE_SCENE_MANAGER_SET_CAM_POS, (event_context) {
@@ -34,7 +34,7 @@ void update_scene_main_menu() {
   });
 }
 
-void render_scene_main_menu() {
+void render_scene_main_menu(void) {
   gui_draw_texture_to_background(TEX_ID_BACKGROUND);
   gui_draw_spritesheet_to_background(
     SCREEN_CRT_SHEET, 
@@ -42,7 +42,7 @@ void render_scene_main_menu() {
   );
 }
 
-void render_interface_main_menu() {
+void render_interface_main_menu(void) {
 
   if (state->type == MAIN_MENU_SCENE_DEFAULT) {
     if (gui_menu_button("Play", BTN_ID_MAINMENU_BUTTON_PLAY, VECTOR2(0,  0))) {

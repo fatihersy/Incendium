@@ -5,7 +5,7 @@ OBJ_DIR := obj
 
 ASSEMBLY := app
 EXTENSION := .exe
-COMPILER_FLAGS := -g -MD -Werror=vla -fdeclspec -fno-strict-aliasing -Wall -Wextra -Wstrict-aliasing -fPIC
+COMPILER_FLAGS := -g -MD -Werror=vla -Wall -Wextra -Wpedantic -fPIC -fdeclspec -fno-strict-aliasing -std=c23
 INCLUDE_FLAGS := -Ivendor/include -Iapp/src 
 LINKER_FLAGS := -g -L$(OBJ_DIR)/ -L$(VENDOR_DIR)/lib/ -L$(BUILD_DIR) -lraylib -lGdi32 -lWinMM -lUser32 -lShell32  #-Wl,-rpath,.
 DEFINES := -D_DEBUG
@@ -28,7 +28,7 @@ scaffold: # create build directory
 .PHONY: link
 link: scaffold $(OBJ_FILES) # link
 	@echo Linking $(ASSEMBLY)...
-	@clang $(OBJ_FILES) -o $(BUILD_DIR)/$(ASSEMBLY)$(EXTENSION) $(LINKER_FLAGS)
+	@gcc $(OBJ_FILES) -o $(BUILD_DIR)/$(ASSEMBLY)$(EXTENSION) $(LINKER_FLAGS)
 
 .PHONY: compile
 compile: #compile .c files
@@ -41,4 +41,4 @@ clean: # clean build directory
 
 $(OBJ_DIR)/%.c.o: %.c # compile .c to .c.o object
 	@echo   $<...
-	@clang $< $(COMPILER_FLAGS) -c -o $@ $(DEFINES) $(INCLUDE_FLAGS)
+	@gcc $< $(COMPILER_FLAGS) -c -o $@ $(DEFINES) $(INCLUDE_FLAGS)

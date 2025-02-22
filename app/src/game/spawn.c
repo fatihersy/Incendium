@@ -11,7 +11,7 @@ extern const u32 level_curve[MAX_PLAYER_LEVEL + 1];
 
 bool spawn_system_initialized = false;
 
-bool spawn_system_initialize() {
+bool spawn_system_initialize(void) {
   if (spawn_system_initialized)
     return false;
 
@@ -89,7 +89,7 @@ bool update_spawns(Vector2 player_position) {
   return true;
 }
 
-bool render_spawns() {
+bool render_spawns(void) {
   // Enemies
   for (i32 i = 1; i <= spawn_system->current_spawn_count; ++i) {
     if (spawn_system->spawns[i].initialized) {
@@ -108,9 +108,9 @@ bool render_spawns() {
   return true;
 }
 
-spawn_system_state *get_spawn_system() { return spawn_system; }
+spawn_system_state *get_spawn_system(void) { return spawn_system; }
 
-void clean_up_spawn_system() {
+void clean_up_spawn_system(void) {
   for (u16 i = 0; i < spawn_system->current_spawn_count; i++) {
     spawn_system->spawns[i] = (Character2D){0};
   }

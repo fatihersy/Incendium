@@ -17,7 +17,7 @@ void take_damage(u16 damage);
 
 bool player_system_on_event(u16 code, event_context context);
 
-bool player_system_initialize() {
+bool player_system_initialize(void) {
     if (player) return false;
 
     player = (player_state*)allocate_memory_linear(sizeof(player_state), true);
@@ -80,7 +80,7 @@ bool player_system_initialize() {
     return true;
 }
 
-player_state* get_player_state() {
+player_state* get_player_state(void) {
     if (!player) {
         return (player_state*)0;
     }
@@ -136,7 +136,7 @@ void take_damage(u16 damage) {
     player->health_perc = (float) player->health_current / player->health_max;
 }
 
-bool update_player() {
+bool update_player(void) {
     if (!player) return false;
 
     if (player->is_dead) {
@@ -185,7 +185,7 @@ bool update_player() {
     return true;
 }
 
-bool render_player() {
+bool render_player(void) {
     if (!player) { return false; }
 
     if(!player->is_dead) {

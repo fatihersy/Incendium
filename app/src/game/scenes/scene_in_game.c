@@ -22,16 +22,16 @@ static scene_in_game_state *state;
 
 #define STATE_ASSERT(FUNCTION) if (!state) {                                                          \
     TraceLog(LOG_ERROR, "scene_in_game::" FUNCTION "::In game state was not initialized");            \
-    event_fire(EVENT_CODE_SCENE_MAIN_MENU, (event_context){});                                        \
+    event_fire(EVENT_CODE_SCENE_MAIN_MENU, (event_context){0});                                        \
     return;                                                                                           \
 }
 #define SKILL_UP_PANEL_ICON_SIZE get_resolution_div4()->x*.5f
 
-void in_game_update_bindings();
-void in_game_update_mouse_bindings();
-void in_game_update_keyboard_bindings();
-void start_game();
-u16 get_random(u16 min, u16 max);
+void in_game_update_bindings(void);
+void in_game_update_mouse_bindings(void);
+void in_game_update_keyboard_bindings(void);
+void start_game(void);
+void draw_upgrade_panel(ability* abl, ability upg, Rectangle panel_dest);
 
 bool initialize_scene_in_game(camera_metrics* _camera_metrics) {
 
@@ -107,7 +107,7 @@ bool initialize_scene_in_game(camera_metrics* _camera_metrics) {
   return true;
 }
 
-void update_scene_in_game() {
+void update_scene_in_game(void) {
   STATE_ASSERT("update_scene_in_game")
 
   in_game_update_bindings();
@@ -125,13 +125,13 @@ void update_scene_in_game() {
   });
 }
 
-void render_scene_in_game() {
+void render_scene_in_game(void) {
   STATE_ASSERT("render_scene_in_game")
 
   render_game();
 }
 
-void render_interface_in_game() {
+void render_interface_in_game(void) {
   STATE_ASSERT("render_interface_in_game")
   DrawFPS(get_screen_offset().x, get_resolution_div2()->y);
 
@@ -154,18 +154,12 @@ void render_interface_in_game() {
       }
       dest.x = dest_x_buffer + ((dest.width + get_screen_offset().x) * i);
       ability* abl = &state->player->ability_system.abilities[pnl->buffer[0].data.u16[0]];
-      // TODO: Get upgradables
+      ability pseudo_upg = _get_next_level(*abl);
       if(gui_panel_active(pnl, dest, true)) {
         set_is_game_paused(false);
         state->player->is_player_have_skill_points = false;
       }
-      gui_draw_texture_id_pro(TEX_ID_SKILL_ICON_ATLAS, abl->icon_src, 
-        (Rectangle) {
-          dest.x - SKILL_UP_PANEL_ICON_SIZE/2.f, 
-          dest.y - SKILL_UP_PANEL_ICON_SIZE/2.f - dest.height*.25f, 
-          SKILL_UP_PANEL_ICON_SIZE, 
-          SKILL_UP_PANEL_ICON_SIZE});
-      gui_label(abl->display_name, VECTOR2(dest.x, dest.y), WHITE);
+      draw_upgrade_panel(abl, pseudo_upg, dest);
     }
   }
   else {
@@ -176,20 +170,39 @@ void render_interface_in_game() {
   render_user_interface();
 }
 
-void start_game() {
-  _upgrade_ability(&state->player->ability_system.abilities[state->player->starter_ability]);
+void start_game(void) {
+
+}
+
+void draw_upgrade_panel(ability* abl, ability upg, Rectangle panel_dest) {
+  if (!abl->is_initialized) { return;}
+
+  gui_draw_texture_id_pro(TEX_ID_SKILL_ICON_ATLAS, abl->icon_src, 
+    (Rectangle) {
+      panel_dest.x - SKILL_UP_PANEL_ICON_SIZE/2.f, 
+      panel_dest.y - panel_dest.height*.25f - SKILL_UP_PANEL_ICON_SIZE*.5f, 
+      SKILL_UP_PANEL_ICON_SIZE, 
+      SKILL_UP_PANEL_ICON_SIZE});
+  gui_label(
+    abl->display_name, 
+    VECTOR2(
+      panel_dest.x, 
+      panel_dest.y - panel_dest.height*.25f + SKILL_UP_PANEL_ICON_SIZE*.5f + 15
+    ), WHITE
+  );
+  upg.is_active = true;
 }
 
 
-void in_game_update_bindings() {
+void in_game_update_bindings(void) {
   in_game_update_mouse_bindings();
   in_game_update_keyboard_bindings();
 }
 
-void in_game_update_mouse_bindings() { 
+void in_game_update_mouse_bindings(void) { 
 
 }
-void in_game_update_keyboard_bindings() {
+void in_game_update_keyboard_bindings(void) {
 
   if (!state->has_game_started && IsKeyPressed(KEY_SPACE)) {
     start_game();

@@ -26,7 +26,7 @@ static scene_manager_system_state *scene_manager_state;
 
 bool scene_manager_on_event(u16 code, event_context context);
 
-bool scene_manager_initialize() {
+bool scene_manager_initialize(void) {
   if (scene_manager_state) return false;
 
   scene_manager_state = (scene_manager_system_state *)allocate_memory_linear(sizeof(scene_manager_system_state), true);
@@ -47,7 +47,7 @@ bool scene_manager_initialize() {
   return true;
 }
 
-void update_scene_scene() {
+void update_scene_scene(void) {
   update_camera(scene_manager_state->target);
 
   switch (scene_manager_state->scene_data) {
@@ -57,7 +57,7 @@ void update_scene_scene() {
   default: break;
   }
 }
-void render_scene_world() {
+void render_scene_world(void) {
   switch (scene_manager_state->scene_data) {
     case SCENE_MAIN_MENU: render_scene_main_menu();     break;
     case SCENE_IN_GAME:   render_scene_in_game();       break;
@@ -65,7 +65,7 @@ void render_scene_world() {
   default: break;
   }
 }
-void render_scene_interface() {
+void render_scene_interface(void) {
   switch (scene_manager_state->scene_data) {
     case SCENE_IN_GAME:   render_interface_in_game();   break;
     case SCENE_MAIN_MENU: render_interface_main_menu(); break;
@@ -77,10 +77,10 @@ void render_scene_interface() {
 void set_current_scene_type(scene_type type) {
   scene_manager_state->scene_data = type;
 }
-scene_type get_current_scene_type() {
+scene_type get_current_scene_type(void) {
   return scene_manager_state->scene_data;
 }
-Vector2 get_spectator_position() {
+Vector2 get_spectator_position(void) {
   return scene_manager_state->target;
 }
 

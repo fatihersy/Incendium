@@ -32,7 +32,7 @@ void create_camera(Vector2 position) {
   state->camera_fraction_speed = 5.f;
 }
 
-camera_metrics* get_active_metrics() { return &state->out_camera_metrics; }
+camera_metrics* get_active_metrics(void) { return &state->out_camera_metrics; }
 
 bool update_camera(Vector2 position) {
   state->out_camera_metrics.handle.offset = *get_resolution_div2();

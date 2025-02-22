@@ -20,7 +20,7 @@ static app_system_state* state;
 
 bool application_on_event(u16 code, event_context context);
 
-bool app_initialize() {
+bool app_initialize(void) {
 
     // Subsystems
     memory_system_initialize();
@@ -68,11 +68,11 @@ bool app_initialize() {
     return true;
 }
 
-bool window_should_close() {
+bool window_should_close(void) {
     return state->app_runing;
 }
 
-bool app_update() {
+bool app_update(void) {
     if (GetFPS() > TARGET_FPS) return true;
     
     if(IsWindowFocused() && !IsWindowState(FLAG_WINDOW_TOPMOST)) {
@@ -89,7 +89,7 @@ bool app_update() {
     return true;
 }
 
-bool app_render() {
+bool app_render(void) {
     if (GetFPS() > TARGET_FPS) return true;
 
     BeginDrawing();

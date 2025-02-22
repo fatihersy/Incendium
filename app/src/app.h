@@ -4,11 +4,11 @@
 
 #include <stdbool.h>
 
-bool app_initialize();
+bool app_initialize(void);
 
-bool window_should_close();
+bool window_should_close(void);
 
-bool app_update();
-bool app_render();
+bool app_update(void);
+bool app_render(void);
 
 #endif

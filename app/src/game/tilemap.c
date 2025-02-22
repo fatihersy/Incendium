@@ -85,7 +85,7 @@ void create_tilesheet(tilesheet_type _type, u16 _dest_tile_size, f32 _offset, ti
   out_tilesheet->is_initialized = true;
 }
 
-void update_tilemap() {}
+void update_tilemap(void) {}
 
 void render_tilemap(tilemap* _tilemap) {
   if (!_tilemap) {

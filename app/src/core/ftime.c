@@ -56,7 +56,7 @@ static time_system_state *state;
   return;                                                                                         \
 }
 
-void time_system_initialize() {
+void time_system_initialize(void) {
   if (state) {
     return;
   }
@@ -65,7 +65,7 @@ void time_system_initialize() {
   state->parsed_time = localtime(&state->time);
 
 }
-void update_time() {
+void update_time(void) {
   STATE_ASSERT("update_time")
 
   time(&state->time);

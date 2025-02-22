@@ -4,7 +4,7 @@
 
 #include <defines.h>
 
-void initialize_shader_system();
+void initialize_shader_system(void);
 
 const char* shader_path(const char* _path);
 fshader* get_shader_by_enum(shader_id _id);

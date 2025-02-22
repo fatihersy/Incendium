@@ -4,13 +4,13 @@
 
 #include "defines.h"
 
-void user_interface_system_initialize();
+void user_interface_system_initialize(void);
 
-void update_user_interface();
-void render_user_interface();
+void update_user_interface(void);
+void render_user_interface(void);
 
 Font* ui_get_font(font_type font);
-panel get_default_panel();
+panel get_default_panel(void);
 data_pack* get_slider_current_value(slider_id id);
 
 bool gui_slider_add_option(slider_id _id, const char* _display_text, data_pack content);
@@ -26,7 +26,7 @@ void gui_panel(panel pan, Rectangle dest, bool _should_center);
 bool gui_panel_active(panel* panel, Rectangle dest, bool _should_center);
 void gui_label(const char* text, Vector2 position, Color tint);
 
-void gui_draw_pause_screen();
+void gui_draw_pause_screen(void);
 void gui_draw_texture_id_pro(texture_id _id, Rectangle src, Rectangle dest); 
 void gui_draw_texture_id(texture_id _id, Rectangle dest); 
 
@@ -36,6 +36,6 @@ void gui_draw_texture_id(texture_id _id, Rectangle dest);
     CODE                                                      \
     EndScissorMode();
 
-void user_interface_system_destroy();
+void user_interface_system_destroy(void);
 
 #endif

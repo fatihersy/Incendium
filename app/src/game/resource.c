@@ -24,7 +24,7 @@ bool load_image(const char *_path, bool resize, Vector2 new_size, image_type typ
 void load_spritesheet(const char* _path, spritesheet_type _type, u16 _fps, u16 _frame_width, u16 _frame_height, u16 _total_row, u16 _total_col);
 void load_tilesheet(tilesheet_type _sheet_sheet_type, texture_id _sheet_tex_id, u16 _tile_count_x, u16 _tile_count_y, u16 _tile_size);
 
-bool resource_system_initialize() {
+bool resource_system_initialize(void) {
   if (state) return false;
 
   state = (resource_system_state*)allocate_memory_linear(sizeof(resource_system_state), true);

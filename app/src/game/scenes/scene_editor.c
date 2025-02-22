@@ -51,10 +51,10 @@ typedef struct scene_editor_state {
 
 static scene_editor_state * state;
 
-void editor_update_bindings();
-void editor_update_movement();
-void editor_update_mouse_bindings();
-void editor_update_keyboard_bindings();
+void editor_update_bindings(void);
+void editor_update_movement(void);
+void editor_update_mouse_bindings(void);
+void editor_update_keyboard_bindings(void);
 i32 map_prop_id_to_index(u16 id);
 
 void add_prop(texture_id source_tex, Rectangle source, f32 scale);
@@ -482,7 +482,7 @@ void initialize_scene_editor(camera_metrics* _camera_metrics) {
 }
 
 // UPDATE / RENDER
-void update_scene_editor() {
+void update_scene_editor(void) {
   if(!IsWindowFocused()) {
     state->mouse_focus = MOUSE_FOCUS_UNFOCUSED;
     return;
@@ -494,11 +494,11 @@ void update_scene_editor() {
   editor_update_bindings();
   update_user_interface();
 }
-void render_scene_editor() {
+void render_scene_editor(void) {
   render_tilemap(&state->map);
   DrawPixel(0, 0, RED);
 }
-void render_interface_editor() {
+void render_interface_editor(void) {
   
   if(state->b_show_tilesheet_tile_selection_screen && !state->b_show_prop_selection_screen) 
   { 
@@ -594,11 +594,11 @@ void add_prop(texture_id source_tex, Rectangle source, f32 scale) {
 }
 
 // BINDINGS
-void editor_update_bindings() {
+void editor_update_bindings(void) {
   editor_update_mouse_bindings();
   editor_update_keyboard_bindings();
 }
-void editor_update_mouse_bindings() { 
+void editor_update_mouse_bindings(void) { 
   if(state->b_show_tilesheet_tile_selection_screen && CheckCollisionPointRec(GetMousePosition(), state->tile_selection_panel.dest))
   {
     state->mouse_focus = MOUSE_FOCUS_TILE_SELECTION;
@@ -729,7 +729,7 @@ void editor_update_mouse_bindings() {
     else if (state->in_camera_metrics->handle.zoom < 0.1f) state->in_camera_metrics->handle.zoom = 0.1f;
   }
 }
-void editor_update_keyboard_bindings() {
+void editor_update_keyboard_bindings(void) {
   editor_update_movement();
 
   if (IsKeyReleased(KEY_ESCAPE)) {
@@ -764,7 +764,7 @@ void editor_update_keyboard_bindings() {
   }
 
 }
-void editor_update_movement() {
+void editor_update_movement(void) {
   f32 speed = 10;
 
   if (IsKeyDown(KEY_W)) {

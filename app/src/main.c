@@ -1,7 +1,7 @@
 #include "app.h"
 
 
-int main() 
+int main(void) 
 {
     if(!app_initialize()) return 1;
 

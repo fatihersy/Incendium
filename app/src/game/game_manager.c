@@ -25,7 +25,7 @@ typedef struct game_manager_system_state {
 
 static game_manager_system_state *restrict state;
 
-void update_collisions();
+void update_collisions(void);
 
 bool game_manager_on_event(u16 code, event_context context);
 
@@ -73,7 +73,7 @@ bool game_manager_initialize(camera_metrics* _camera_metrics) {
   return true;
 }
 
-void update_game_manager() {
+void update_game_manager(void) {
   if (!state) {
     return;
   }
@@ -83,7 +83,7 @@ void update_game_manager() {
   update_spawns(get_player_position(true));
 
 }
-void update_collisions() {
+void update_collisions(void) {
   for (int i=0; i<state->projectile_count; ++i) { for (u16 j = 1; j <= state->spawn_collision_count; ++j) {
       if (state->spawn_collisions[j].is_active){ 
         if (CheckCollisionRecs(state->spawn_collisions[j].rect, state->projectiles[i].collision)) {
@@ -101,7 +101,7 @@ void update_collisions() {
     damage_any_collider_by_type(spawn, PLAYER);
   }}
 }
-void render_game() {
+void render_game(void) {
   render_tilemap(&state->map);
   render_player();
   render_spawns();
@@ -158,20 +158,20 @@ void add_collision(rectangle_collision rect_col) {
 }
 
 // GET / SET
-player_state* get_player_state_if_available() {
+player_state* get_player_state_if_available(void) {
   if (get_player_state()) {
     return get_player_state();
   }
 
   return (player_state*) {0};
 }
-bool get_is_game_paused() {
+bool get_is_game_paused(void) {
   return state->is_game_paused;
 }
 void set_is_game_paused(bool _is_game_paused) {
   state->is_game_paused = _is_game_paused;
 }
-void toggle_is_game_paused() {
+void toggle_is_game_paused(void) {
   state->is_game_paused = !state->is_game_paused;
 }
 // GET / SET
@@ -194,7 +194,15 @@ bool _add_ability(ability_type _type) {
   abl.p_owner = state->p_player;
   abl.is_initialized = true;
 
+  for (int i=0; i < abl.proj_count; ++i) {
+    abl.projectiles[i].id = state->projectile_count;
+    state->projectiles[state->projectile_count] = abl.projectiles[i];
+    state->projectile_count++;
+  }
+  abl.is_active = true;
+
   system->abilities[_type] = abl;
+  
   return true;
 }
 bool _upgrade_ability(ability* abl) {
@@ -207,15 +215,18 @@ bool _upgrade_ability(ability* abl) {
     TraceLog(LOG_WARNING, "game_manager::_add_ability()::Recieved system was NULL");
     return false;
   }
+  u16 _proj_count = abl->proj_count;
   upgrade_ability(abl);
-
-  for (int i=0; i < abl->proj_count; ++i) {
+  for (int i=_proj_count; i<abl->proj_count; ++i) {
     abl->projectiles[i].id = state->projectile_count;
     state->projectiles[state->projectile_count] = abl->projectiles[i];
     state->projectile_count++;
   }
-  abl->is_active = true;
+
   return true;
+}
+ability _get_next_level(ability abl) {
+  return get_next_level(abl);
 }
 void _set_player_position(Vector2 position) {
   get_player_state()->position = position;

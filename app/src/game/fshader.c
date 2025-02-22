@@ -14,7 +14,7 @@ static shader_system_state *state;
 void load_shader(const char *_vs_path, const char *_fs_path, shader_id _id);
 void shader_add_uniform(shader_id _id, const char *_name, ShaderUniformDataType _data_id);
 
-void initialize_shader_system() {
+void initialize_shader_system(void) {
   if (state) {
     return;
   }

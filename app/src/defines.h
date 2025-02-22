@@ -175,12 +175,21 @@ typedef enum movement_pattern {
   MOVE_TYPE_MAX,
 } movement_pattern;
 
+typedef enum ability_upgradables {
+  ABILITY_UPG_UNDEFINED,
+  ABILITY_UPG_DAMAGE,
+  ABILITY_UPG_HITBOX,
+  ABILITY_UPG_SPEED,
+  ABILITY_UPG_AMOUNT,
+  ABILITY_UPG_MAX,
+} ability_upgradables;
+
 // LABEL: Ability types
 typedef enum ability_type {
   ABILITY_TYPE_UNDEFINED,
   ABILITY_TYPE_FIREBALL,
   ABILITY_TYPE_BULLET,
-  ABILITY_TYPE_RADIATION,
+  //ABILITY_TYPE_RADIATION,
   ABILITY_TYPE_COMET,
   ABILITY_TYPE_MAX,
 } ability_type;
@@ -514,12 +523,12 @@ typedef struct panel {
   Vector4 offsets;
   f32 zoom;
   f32 scroll;
-  Vector2 draggable;
   button_state current_state;
   button_state signal_state;
   Rectangle dest;
   Rectangle scroll_handle;
   data_pack buffer[2];
+  bool draggable;
   bool is_dragging_scroll;
 } panel;
 
@@ -664,6 +673,7 @@ typedef struct ability {
   projectile projectiles[MAX_ABILITY_PROJECTILE_SLOT];
   spritesheet_type proj_anim_sprite;
   movement_pattern move_pattern;
+  ability_upgradables upgradables[ABILITY_UPG_MAX];
   u16 proj_count;
   f32 proj_duration;
   Vector2 proj_dim;

@@ -4,7 +4,7 @@
 
 #include "defines.h"
 
-bool resource_system_initialize();
+bool resource_system_initialize(void);
 
 const char* rs_path(const char *_path);
 Texture2D* get_texture_by_enum(texture_id _id);

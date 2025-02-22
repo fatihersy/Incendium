@@ -24,14 +24,14 @@ static event_system_state* state_ptr;
 
 bool event_system_initialized = false;
 
-void event_system_initialize() {
+void event_system_initialize(void) {
     if (event_system_initialized) return;
     
     state_ptr = (event_system_state*)allocate_memory_linear(sizeof(event_system_state), true);
 
 }
 
-void event_system_shutdown() {
+void event_system_shutdown(void) {
     if (state_ptr) {
         for (u16 i = 0; i < MAX_MESSAGE_CODES; ++i) {
             if (state_ptr->registered[i].events != 0) {

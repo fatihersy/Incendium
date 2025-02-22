@@ -13,7 +13,7 @@ typedef struct app_settings_system_state {
 
 static app_settings_system_state *state;
 
-void settings_initialize() {
+void settings_initialize(void) {
   if (state) {
     TraceLog(LOG_ERROR,
              "settings::settings_initialize()::Called twice. Aborted");
@@ -95,7 +95,7 @@ bool set_master_sound(u32 volume) {
 
   return true;
 }
-app_settings *get_app_settings() {
+app_settings *get_app_settings(void) {
   if (!state) {
     TraceLog(
         LOG_WARNING,
@@ -105,7 +105,7 @@ app_settings *get_app_settings() {
 
   return &state->settings;
 }
-i32 get_window_state() {
+i32 get_window_state(void) {
   if (!state) {
     TraceLog(
         LOG_WARNING,
@@ -115,7 +115,7 @@ i32 get_window_state() {
 
   return state->settings.window_state;
 }
-Vector2* get_resolution_div2() {
+Vector2* get_resolution_div2(void) {
   if (!state) {
     TraceLog(LOG_WARNING, "settings::get_resolution_div2()::settings state "
                           "didn't initialized yet");
@@ -123,7 +123,7 @@ Vector2* get_resolution_div2() {
   }
   return &state->settings.resolution_div2;
 }
-Vector2* get_resolution_div3() {
+Vector2* get_resolution_div3(void) {
   if (!state) {
     TraceLog(LOG_WARNING, "settings::get_resolution_div3()::settings state "
                           "didn't initialized yet");
@@ -131,7 +131,7 @@ Vector2* get_resolution_div3() {
   }
   return &state->settings.resolution_div3;
 }
-Vector2* get_resolution_div4() {
+Vector2* get_resolution_div4(void) {
   if (!state) {
     TraceLog(LOG_WARNING, "settings::get_resolution_div4()::settings state "
                           "didn't initialized yet");
@@ -140,7 +140,7 @@ Vector2* get_resolution_div4() {
 
   return &state->settings.resolution_div4;
 }
-Vector2* get_resolution_3div2() {
+Vector2* get_resolution_3div2(void) {
   if (!state) {
     TraceLog(LOG_WARNING, "settings::get_resolution_div2()::settings state "
                           "didn't initialized yet");
@@ -148,7 +148,7 @@ Vector2* get_resolution_3div2() {
   }
   return &state->settings.resolution_3div2;
 }
-Vector2* get_resolution_5div4() {
+Vector2* get_resolution_5div4(void) {
   if (!state) {
     TraceLog(LOG_WARNING, "settings::get_resolution_div3()::settings state "
                           "didn't initialized yet");
@@ -156,7 +156,7 @@ Vector2* get_resolution_5div4() {
   }
   return &state->settings.resolution_5div4;
 }
-Vector2* get_resolution_35div20() {
+Vector2* get_resolution_35div20(void) {
   if (!state) {
     TraceLog(LOG_WARNING, "settings::get_resolution_div4()::settings state "
                           "didn't initialized yet");
@@ -165,7 +165,7 @@ Vector2* get_resolution_35div20() {
 
   return &state->settings.resolution_35div20;
 }
-Vector2* get_resolution_38div20() {
+Vector2* get_resolution_38div20(void) {
   if (!state) {
     TraceLog(LOG_WARNING, "settings::get_resolution_div4()::settings state "
                           "didn't initialized yet");
@@ -174,7 +174,7 @@ Vector2* get_resolution_38div20() {
 
   return &state->settings.resolution_38div20;
 }
-Vector2 get_screen_offset() {
+Vector2 get_screen_offset(void) {
   if (!state) {
     TraceLog(
         LOG_WARNING,

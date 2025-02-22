@@ -4,14 +4,14 @@
 
 #include "defines.h"
 
-bool scene_manager_initialize();
+bool scene_manager_initialize(void);
 
-void update_scene_scene();
-void render_scene_world();
-void render_scene_interface();
+void update_scene_scene(void);
+void render_scene_world(void);
+void render_scene_interface(void);
 
 void set_current_scene_type(scene_type type);
-scene_type get_current_scene_type();
-Vector2 get_spectator_position();
+scene_type get_current_scene_type(void);
+Vector2 get_spectator_position(void);
 
 #endif

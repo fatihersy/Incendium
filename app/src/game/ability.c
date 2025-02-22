@@ -7,9 +7,6 @@
 typedef struct ability_system_state {
   spritesheet_play_system spritesheet_system;
   ability abilities[ABILITY_TYPE_MAX];
-  f32 rand_screen_x[MAX_RAND];
-  f32 rand_percent[MAX_RAND];
-  f32 rand_recoil[MAX_RAND];
 
   camera_metrics* camera_metrics;
   app_settings* settings;
@@ -24,10 +21,18 @@ void movement_satellite(ability* abl);
 void movement_bullet(ability* abl);
 void movement_comet(ability* abl);
 
-Vector2 p_to_vec2(f32*);
-void set_p_vec2(Vector2 from, f32* to);
-
-void register_ability(char _display_name[MAX_ABILITY_NAME_LENGTH], Rectangle icon_loc, ability_type type, movement_pattern move_pattern, f32 proj_duration, u16 _damage, Vector2 proj_size, spritesheet_type proj_anim, bool _should_center);
+void register_ability(
+  char _display_name[MAX_ABILITY_NAME_LENGTH], 
+  Rectangle icon_loc, 
+  ability_upgradables _upgradables[ABILITY_UPG_MAX],
+  ability_type type,
+  movement_pattern move_pattern, 
+  f32 proj_duration, 
+  u16 _damage, 
+  Vector2 proj_size, 
+  spritesheet_type proj_anim, 
+  bool _should_center
+);
 
 bool ability_system_initialize(camera_metrics* _camera_metrics, app_settings* settings) {
   if (state) {
@@ -42,37 +47,58 @@ bool ability_system_initialize(camera_metrics* _camera_metrics, app_settings* se
   state->settings = settings;
   state->camera_metrics = _camera_metrics;
 
-  f32 _rand_screen_x[MAX_ABILITY_PROJECTILE_SLOT] = {
-    1456, 789, 32, 1567, 903, 514
-  };
-  f32 _rand_percent[MAX_ABILITY_PROJECTILE_SLOT] = {
-    0.72, 0.45, 0.89, 0.16, 0.33, 0.58
-  };
-  f32 _rand_recoil[MAX_ABILITY_PROJECTILE_SLOT] = {
-    -0.58, 0.33, 0.16, -0.45, -0.89, 0.72, 
-  };
-  for (int i=0; i<MAX_ABILITY_PROJECTILE_SLOT; ++i) {
-    state->rand_screen_x[i] = _rand_screen_x[i];
-    state->rand_percent[i] = _rand_percent[i];
-    state->rand_recoil[i] = _rand_recoil[i];
-  }
-
-  register_ability("Fireball", (Rectangle) {192, 640, 32, 32}, ABILITY_TYPE_FIREBALL, MOVE_TYPE_SATELLITE, 0, 15, (Vector2) {30, 30}, FIREBALL_ANIMATION, true);
-  register_ability("Bullet",   (Rectangle) { 32,   0, 32, 32}, ABILITY_TYPE_BULLET, MOVE_TYPE_BULLET, 1.75, 15, (Vector2) {30, 30}, FIREBALL_ANIMATION, true);
-  register_ability("Comet",    (Rectangle) { 96,   0, 32, 32}, ABILITY_TYPE_COMET, MOVE_TYPE_COMET, 0, 15, (Vector2) {30, 30}, FIREBALL_ANIMATION, true);
+  register_ability("Fireball", (Rectangle) {192, 640, 32, 32}, 
+    (ability_upgradables[ABILITY_UPG_MAX]){ABILITY_UPG_DAMAGE, ABILITY_UPG_SPEED, ABILITY_UPG_AMOUNT, ABILITY_UPG_UNDEFINED, ABILITY_UPG_UNDEFINED},
+    ABILITY_TYPE_FIREBALL, MOVE_TYPE_SATELLITE, 
+    0, 15, (Vector2) {30, 30}, FIREBALL_ANIMATION, true
+  );
+  register_ability("Bullet", (Rectangle) { 32,   0, 32, 32}, 
+    (ability_upgradables[ABILITY_UPG_MAX]){ABILITY_UPG_DAMAGE, ABILITY_UPG_HITBOX, ABILITY_UPG_UNDEFINED, ABILITY_UPG_UNDEFINED, ABILITY_UPG_UNDEFINED},
+    ABILITY_TYPE_BULLET, MOVE_TYPE_BULLET, 
+    1.75, 15, (Vector2) {30, 30}, FIREBALL_ANIMATION, true
+  );
+  register_ability("Comet",  (Rectangle) { 96,   0, 32, 32}, 
+    (ability_upgradables[ABILITY_UPG_MAX]){ABILITY_UPG_DAMAGE, ABILITY_UPG_HITBOX, ABILITY_UPG_AMOUNT, ABILITY_UPG_UNDEFINED, ABILITY_UPG_UNDEFINED},
+    ABILITY_TYPE_COMET, MOVE_TYPE_COMET, 
+    0, 15, (Vector2) {30, 30}, FIREBALL_ANIMATION, true
+  );
   return true;
 }
 
 void upgrade_ability(ability* abl) {
   ++abl->level;
-  abl->proj_count = abl->level;
 
-  for (int i = 0; i < abl->proj_count; ++i) {
-    abl->projectiles[i].animation_sprite_queueindex = register_sprite(abl->proj_anim_sprite, true, false, abl->center_proj_anim);
-    abl->projectiles[i].damage = abl->base_damage + abl->level * 2;
-    abl->projectiles[i].collision = (Rectangle) {0, 0, abl->proj_dim.x, abl->proj_dim.y};
-    abl->projectiles[i].is_active = true;
+  for (int i=0; i<ABILITY_UPG_MAX; ++i) {
+    switch (abl->upgradables[i]) {
+      default: return;
+
+      case ABILITY_UPG_DAMAGE: { 
+        abl->base_damage += abl->level * 2;
+        break;
+      }
+      case ABILITY_UPG_AMOUNT: { 
+        u16 new_proj_count = abl->proj_count + 1;
+        for (int i = abl->proj_count; i < new_proj_count; ++i) {
+          abl->projectiles[i].animation_sprite_queueindex = register_sprite(abl->proj_anim_sprite, true, false, abl->center_proj_anim);
+          abl->projectiles[i].damage = abl->base_damage + abl->level * 2;
+          abl->projectiles[i].collision = (Rectangle) {0, 0, abl->proj_dim.x, abl->proj_dim.y};
+          abl->projectiles[i].is_active = true;
+        }
+        abl->proj_count = new_proj_count;
+        break;
+      }
+      case ABILITY_UPG_HITBOX: { 
+        
+        break;
+      }
+      case ABILITY_UPG_SPEED:  { 
+        
+        break;
+      }
+    }
   }
+
+
 }
 void update_abilities(ability_play_system* system) {
 
@@ -177,30 +203,34 @@ void movement_comet(ability* abl) {
   }
   player_state* player = (player_state*)abl->p_owner; // HACK: Hardcoded character state
 
+  const f32 rand_percent[MAX_ABILITY_PROJECTILE_SLOT] = { 0.72, 0.45, 0.89,  0.16,  0.33, 0.58};
+  const f32 rand_recoil[MAX_ABILITY_PROJECTILE_SLOT]  = {-0.58, 0.33, 0.16, -0.45, -0.89, 0.72};
+
   abl->position.x  = player->collision.x + player->collision.width / 2.f;
   abl->position.y  = player->collision.y + player->collision.height / 2.f;
 
   for (i16 i = 0; i < abl->proj_count; i++) {
 
-    if (vec2_equals(abl->projectiles[i].position, p_to_vec2(abl->projectiles[i].buffer.f32), .1)) {
+    if (vec2_equals(abl->projectiles[i].position, pVECTOR2(abl->projectiles[i].buffer.f32), .1)) {
       f32* rand_count = &abl->projectiles[i].buffer.f32[2];
-      const f32 rand = state->rand_percent[(i32)*rand_count] * GetScreenWidth();
+      const f32 rand = rand_percent[(i32)*rand_count] * GetScreenWidth();
       const Vector2 screen_min_world = GetScreenToWorld2D((Vector2) {0}, state->camera_metrics->handle);
       const Vector2 screen_max_world = GetScreenToWorld2D((Vector2) {GetScreenWidth(), GetScreenHeight()}, state->camera_metrics->handle);
       abl->projectiles[i].position = GetScreenToWorld2D((Vector2) {rand, -abl->proj_dim.y},state->camera_metrics->handle);
       const Vector2 new_prj_pos = (Vector2) {
-        .x = FCLAMP(abl->projectiles[i].position.x + (state->settings->resolution_div4.x * state->rand_recoil[(i32)*rand_count]), 
+        .x = FCLAMP(abl->projectiles[i].position.x + (state->settings->resolution_div4.x * rand_recoil[(i32)*rand_count]), 
                       screen_min_world.x, screen_max_world.x),
         .y = player->position.y
       };
-      set_p_vec2(new_prj_pos, abl->projectiles[i].buffer.f32);
+      abl->projectiles[i].buffer.f32[0] = new_prj_pos.x;
+      abl->projectiles[i].buffer.f32[1] = new_prj_pos.y;
       abl->projectiles[i].buffer.f32[2] = (*rand_count) + 1 >= MAX_RAND ? 0 : ++(*rand_count);
     }
     else {
       abl->projectiles[i].duration -= GetFrameTime();
     }
     
-    abl->projectiles[i].position = move_towards(abl->projectiles[i].position, p_to_vec2(abl->projectiles[i].buffer.f32), 3);
+    abl->projectiles[i].position = move_towards(abl->projectiles[i].position, pVECTOR2(abl->projectiles[i].buffer.f32), 3);
 
     abl->projectiles[i].collision.x = abl->projectiles[i].position.x;
     abl->projectiles[i].collision.y = abl->projectiles[i].position.y;
@@ -231,7 +261,11 @@ void render_abilities(ability_play_system* system) {
  * @param proj_duration in secs. affects not to all abilities like fireball ability
  * @param _should_center for projectile spritesheet
  */
-void register_ability(char _display_name[MAX_ABILITY_NAME_LENGTH], Rectangle icon_loc, ability_type type, movement_pattern move_pattern, f32 proj_duration, u16 _damage, Vector2 proj_size, spritesheet_type proj_anim, bool _should_center) {
+void register_ability(
+  char _display_name[MAX_ABILITY_NAME_LENGTH], Rectangle icon_loc, ability_upgradables _upgradables[ABILITY_UPG_MAX], 
+  ability_type type, movement_pattern move_pattern, f32 proj_duration, u16 _damage, Vector2 proj_size, 
+  spritesheet_type proj_anim, bool _should_center
+) {
   ability abl = {0};
   if (TextLength(_display_name) >= MAX_ABILITY_NAME_LENGTH) {
     TraceLog(LOG_WARNING, "ability::register_ability()::Ability:'%s's name length is out of bound!", _display_name);
@@ -249,6 +283,7 @@ void register_ability(char _display_name[MAX_ABILITY_NAME_LENGTH], Rectangle ico
   abl.proj_dim = proj_size;
   abl.icon_src = icon_loc;
   copy_memory(abl.display_name, _display_name, TextLength(_display_name));
+  copy_memory(abl.upgradables, _upgradables, sizeof(abl.upgradables));
 
   state->abilities[type] = abl;
 }
@@ -256,15 +291,22 @@ ability get_ability(ability_type _type) {
   if (!state) {
     return (ability){0};
   }
+  ability abl = state->abilities[_type];
+  upgrade_ability(&abl);
 
-  return state->abilities[_type];
+  for (int i = 0; i < abl.proj_count; ++i) {
+    abl.projectiles[i].animation_sprite_queueindex = register_sprite(abl.proj_anim_sprite, true, false, abl.center_proj_anim);
+    abl.projectiles[i].damage = abl.base_damage + abl.level * 2;
+    abl.projectiles[i].collision = (Rectangle) {0, 0, abl.proj_dim.x, abl.proj_dim.y};
+    abl.projectiles[i].is_active = true;
+  }
+
+  return abl;
 }
-Vector2 p_to_vec2(f32* vec1) {
-  return (Vector2) {vec1[0], vec1[1]};
-}
-void set_p_vec2(Vector2 from, f32* to) {
-  to[0] = from.x;
-  to[1] = from.y;
+
+ability get_next_level(ability abl) {
+  upgrade_ability(&abl);
+  return abl;
 }
 
 #undef PSPRITESHEET_SYSTEM
@@ -368,7 +410,7 @@ void render_fireball(ability_fireball* _ability) {
 #define fireball_level_one_circle_radius_div_2 fireball_level_one_circle_radius / 2.f
 #define fireball_level_one_circle_radius_div_4 fireball_level_one_circle_radius / 4.f
 
-ability_fireball get_ability_fireball() {
+ability_fireball get_ability_fireball(void) {
   ability_fireball fireball = (ability_fireball){
     .is_active = false,
     .level = 1,

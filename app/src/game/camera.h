@@ -6,7 +6,7 @@
 
 void create_camera(Vector2 position);
 
-camera_metrics* get_active_metrics();
+camera_metrics* get_active_metrics(void);
 
 void set_camera_position(Vector2 pos);
 
