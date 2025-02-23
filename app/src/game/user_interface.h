@@ -24,11 +24,14 @@ void gui_draw_spritesheet_to_background(spritesheet_type _type, Color _tint);
 void gui_progress_bar(progress_bar_id bar_id, Vector2 pos, bool _should_center);
 void gui_panel(panel pan, Rectangle dest, bool _should_center);
 bool gui_panel_active(panel* panel, Rectangle dest, bool _should_center);
-void gui_label(const char* text, Vector2 position, Color tint);
+void gui_label(const char* text, font_type type, i32 font_size, Vector2 position, Color tint, bool _should_center);
 
 void gui_draw_pause_screen(void);
 void gui_draw_texture_id_pro(texture_id _id, Rectangle src, Rectangle dest); 
 void gui_draw_texture_id(texture_id _id, Rectangle dest); 
+
+#define gui_label_format(FONT, FONT_SIZE, X,Y, COLOR, CENTER, TEXT, ...) gui_label(TextFormat(TEXT, __VA_ARGS__), FONT, FONT_SIZE, (Vector2){X,Y}, COLOR, CENTER)
+#define gui_label_format_v(FONT, FONT_SIZE, VEC, COLOR, CENTER, TEXT, ...) gui_label(TextFormat(TEXT, __VA_ARGS__), FONT, FONT_SIZE, VEC, COLOR, CENTER)
 
 #define gui_panel_scissored(PANEL, CENTER, CODE)        \
     gui_panel(PANEL, PANEL.dest, CENTER);                           \

@@ -63,10 +63,10 @@ void register_slider_type(slider_type_id _sdr_type_id, spritesheet_type _ss_sdr_
 #define MENU_BUTTON_FONT_SIZE state->mini_mood_font.baseSize / 30.f
 #define MINI_BUTTON_FONT state->mini_mood_font
 #define MINI_BUTTON_FONT_SIZE state->mini_mood_font.baseSize / 60.f
-#define LABEL_FONT state->mood_font
-#define LABEL_FONT_SIZE state->mood_font.baseSize
-#define LABEL_MINI_FONT state->mini_mood_font
-#define LABEL_MINI_FONT_SIZE state->mini_mood_font.baseSize / 60.f
+#define LABEL_MOOD_FONT_SIZE state->mood_font.baseSize * .1f
+#define LABEL_MOOD_OUTLINE_FONT_SIZE state->mood_outline_font.baseSize * .1f
+#define LABEL_MINI_FONT_SIZE state->mini_mood_font.baseSize * .1f
+#define LABEL_MINI_OUTLINE_FONT_SIZE state->mini_mood_outline_font.baseSize * .1f
 
 #define draw_text(TEXT, TEXT_POS, FONT, FONT_SIZE, COLOR, CENTER)                                                 \
   if (CENTER) {                                                                                                   \
@@ -357,7 +357,6 @@ void render_user_interface(void) {
   if (state->b_show_pause_menu) {
     gui_draw_pause_screen();
   }
-
   if (state->b_show_settings_menu) {
     gui_draw_settings_screen();
   }
@@ -607,7 +606,13 @@ void draw_slider_body(slider* sdr) {
 
 void gui_panel(panel pan, Rectangle dest, bool _should_center) {
   
-  draw_texture_regular(pan.bg_tex_id, dest, pan.bg_tint, _should_center);
+  //draw_texture_regular(pan.bg_tex_id, dest, pan.bg_tint, _should_center);
+  Rectangle bg_dest = dest;
+  if (_should_center) {
+    bg_dest.x -= bg_dest.width / 2.f;
+    bg_dest.y -= bg_dest.height / 2.f;
+  }
+  DrawRectanglePro(bg_dest, (Vector2) {0, 0}, 0, pan.bg_tint);
   draw_texture_npatch(pan.frame_tex_id, dest, pan.offsets, _should_center);
 }
 bool gui_panel_active(panel* pan, Rectangle dest, bool _should_center) {
@@ -635,15 +640,34 @@ bool gui_panel_active(panel* pan, Rectangle dest, bool _should_center) {
   }
 
   (pan->current_state == BTN_STATE_HOVER) 
-    ? draw_texture_regular(pan->bg_tex_id, dest, pan->bg_hover_tint, false)
-    : draw_texture_regular(pan->bg_tex_id, dest, pan->bg_tint, false);
+    ? DrawRectanglePro(dest, (Vector2) {0, 0}, 0, pan->bg_hover_tint)  //draw_texture_regular(pan->bg_tex_id, dest, pan->bg_hover_tint, false)
+    : DrawRectanglePro(dest, (Vector2) {0, 0}, 0, pan->bg_tint); //draw_texture_regular(pan->bg_tex_id, dest, pan->bg_tint, false);
 
   draw_texture_npatch(pan->frame_tex_id, dest, pan->offsets, false);
 
   return pan->current_state == pan->signal_state;
 }
-void gui_label(const char* text, Vector2 position, Color tint) {
-  draw_text(text, position, LABEL_FONT, LABEL_FONT_SIZE, tint, true);
+void gui_label(const char* text, font_type type, i32 font_size, Vector2 position, Color tint, bool _should_center) {
+  switch (type) {
+    case FONT_TYPE_MOOD: {
+      draw_text(text, position, state->mood_font, font_size * LABEL_MOOD_FONT_SIZE, tint, _should_center);
+      break;
+    }
+    case FONT_TYPE_MOOD_OUTLINE: {
+      draw_text(text, position, state->mood_outline_font, font_size * LABEL_MOOD_OUTLINE_FONT_SIZE, tint, _should_center);
+      break;
+    }
+    case FONT_TYPE_MINI_MOOD: {
+      draw_text(text, position, state->mini_mood_font, font_size * LABEL_MINI_FONT_SIZE, tint, _should_center);
+      break;
+    }
+    case FONT_TYPE_MINI_MOOD_OUTLINE: {
+      draw_text(text, position, state->mini_mood_outline_font, font_size * LABEL_MINI_OUTLINE_FONT_SIZE, tint, _should_center);
+      break;
+    }
+    default: TraceLog(LOG_WARNING, "WARNING::user_interface::gui_label()::Unsupported font type");
+    break;
+  }
 }
 
 void gui_draw_settings_screen(void) { // TODO: Return to settings later

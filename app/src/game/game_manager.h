@@ -18,12 +18,14 @@ void damage_any_spawn(Character2D *projectile);
 void damage_any_collider_by_type(Character2D *from_actor, actor_type to_type);
 void add_collision(rectangle_collision rect);
 
+
 bool _add_ability(ability_type _type);
 Vector2 _get_player_position(bool centered);
 bool _upgrade_ability(ability* abl);
 u16 _spawn_character(Character2D _character);
 void _set_player_position(Vector2 position);
 ability _get_next_level(ability abl);
+ability _get_ability(ability_type type);
 
 void render_game(void);
 

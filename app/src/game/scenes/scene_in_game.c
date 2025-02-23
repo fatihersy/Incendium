@@ -94,8 +94,8 @@ bool initialize_scene_in_game(camera_metrics* _camera_metrics) {
     .signal_state  = BTN_STATE_RELEASED,
     .bg_tex_id     = TEX_ID_CRIMSON_FANTASY_PANEL_BG,
     .frame_tex_id  = TEX_ID_CRIMSON_FANTASY_PANEL,
-    .bg_tint       = (Color) {255, 255, 255, 200},
-    .bg_hover_tint = (Color) {255, 55, 55, 184},
+    .bg_tint       = (Color) { 30, 39, 46, 245},
+    .bg_hover_tint = (Color) { 52, 64, 76, 245},
     .offsets = (Vector4) {6, 6, 6, 6},
   };
   for (int i=0; i<MAX_UPDATE_ABILITY_PANEL_COUNT; ++i) {
@@ -136,7 +136,7 @@ void render_interface_in_game(void) {
   DrawFPS(get_screen_offset().x, get_resolution_div2()->y);
 
   if (!state->has_game_started) {
-    gui_label("Press Space to Start!", (Vector2) {get_resolution_div2()->x, get_resolution_3div2()->y}, WHITE);
+    gui_label("Press Space to Start!", FONT_TYPE_MOOD_OUTLINE, 10, (Vector2) {get_resolution_div2()->x, get_resolution_3div2()->y}, WHITE, true);
     return;
   }
 
@@ -154,12 +154,23 @@ void render_interface_in_game(void) {
       }
       dest.x = dest_x_buffer + ((dest.width + get_screen_offset().x) * i);
       ability* abl = &state->player->ability_system.abilities[pnl->buffer[0].data.u16[0]];
-      ability pseudo_upg = _get_next_level(*abl);
+      ability new = {0};
+      if (abl->type <= ABILITY_TYPE_UNDEFINED || abl->type >= ABILITY_TYPE_MAX) {
+        new = _get_ability(pnl->buffer[0].data.u16[0]);
+        *abl = (ability) {0};
+      }
+      else {
+        new = _get_next_level(*abl);
+      }
+      if (new.type <= ABILITY_TYPE_UNDEFINED || new.type >= ABILITY_TYPE_MAX) {
+        TraceLog(LOG_WARNING, "scene_in_game::render_interface_in_game()::Upgraded ability is out of bounds"); 
+        return;
+      }
       if(gui_panel_active(pnl, dest, true)) {
         set_is_game_paused(false);
         state->player->is_player_have_skill_points = false;
       }
-      draw_upgrade_panel(abl, pseudo_upg, dest);
+      draw_upgrade_panel(abl, new, dest);
     }
   }
   else {
@@ -174,23 +185,92 @@ void start_game(void) {
 
 }
 
-void draw_upgrade_panel(ability* abl, ability upg, Rectangle panel_dest) {
-  if (!abl->is_initialized) { return;}
+inline void draw_upgrade_panel(ability* abl, ability upg, Rectangle panel_dest) {
+  if (upg.type <= ABILITY_TYPE_UNDEFINED || upg.type >= ABILITY_TYPE_MAX) {
+    TraceLog(LOG_WARNING, "scene_in_game::draw_upgrade_panel()::Upgraded ability is out of bounds"); 
+    return;
+  }
+  if (upg.level <= 0 || upg.level >= MAX_ABILITY_LEVEL) {
+    TraceLog(LOG_WARNING, "scene_in_game::draw_upgrade_panel()::Upgraded ability level is out of bounds"); 
+    return;
+  }
+  const u16 elm_space_gap = 30;
+  const u16 btw_space_gap = 20;
+  const u16 start_panel_height = panel_dest.y - panel_dest.height*.25f;
+  const Rectangle icon_rect = (Rectangle) {
+    panel_dest.x - SKILL_UP_PANEL_ICON_SIZE/2.f,
+    start_panel_height - SKILL_UP_PANEL_ICON_SIZE*.5f,
+    SKILL_UP_PANEL_ICON_SIZE,SKILL_UP_PANEL_ICON_SIZE
+  };
+  const Vector2 ability_name_pos  = (Vector2) {panel_dest.x, start_panel_height + SKILL_UP_PANEL_ICON_SIZE*.5f + elm_space_gap};
+  const Vector2 ability_level_ind = (Vector2) {panel_dest.x, ability_name_pos.y + btw_space_gap};
 
-  gui_draw_texture_id_pro(TEX_ID_SKILL_ICON_ATLAS, abl->icon_src, 
-    (Rectangle) {
-      panel_dest.x - SKILL_UP_PANEL_ICON_SIZE/2.f, 
-      panel_dest.y - panel_dest.height*.25f - SKILL_UP_PANEL_ICON_SIZE*.5f, 
-      SKILL_UP_PANEL_ICON_SIZE, 
-      SKILL_UP_PANEL_ICON_SIZE});
-  gui_label(
-    abl->display_name, 
-    VECTOR2(
-      panel_dest.x, 
-      panel_dest.y - panel_dest.height*.25f + SKILL_UP_PANEL_ICON_SIZE*.5f + 15
-    ), WHITE
-  );
-  upg.is_active = true;
+  const u16 title_font_size = 10; 
+  const u16 level_ind_font_size = 9; 
+  const u16 upgr_font_size = 6; 
+
+  gui_draw_texture_id_pro(TEX_ID_SKILL_ICON_ATLAS, upg.icon_src, icon_rect);
+  gui_label(upg.display_name, FONT_TYPE_MOOD, title_font_size, ability_name_pos, WHITE, true);
+
+  if (upg.level == 1) {
+    gui_label("NEW!", FONT_TYPE_MOOD_OUTLINE, level_ind_font_size, ability_level_ind, WHITE, true);
+  } else if(upg.level>1 && upg.level <= MAX_ABILITY_LEVEL) {
+    gui_label_format_v(FONT_TYPE_MOOD_OUTLINE, level_ind_font_size, ability_level_ind, WHITE, true, "%d -> %d", abl->level, upg.level);
+  }
+  const u16 start_upgradables_x_exis = panel_dest.x - panel_dest.width*.5f + elm_space_gap;
+  u16 upgradables_height_buffer = ability_level_ind.y + elm_space_gap;
+  for (int i=0; i<ABILITY_UPG_MAX; ++i) {
+    ability_upgradables abl_upg = upg.upgradables[i];
+    if (abl_upg <= ABILITY_UPG_UNDEFINED  || abl_upg >= ABILITY_UPG_MAX) {
+      break;
+    }
+    switch (abl_upg) {
+      case ABILITY_UPG_DAMAGE: {
+        if (upg.level == 1) {
+          gui_label_format(FONT_TYPE_MINI_MOOD, upgr_font_size, start_upgradables_x_exis, upgradables_height_buffer, WHITE, false, "Damage:%d", upg.base_damage);
+          upgradables_height_buffer += btw_space_gap;
+        } else if(upg.level>1 && upg.level <= MAX_ABILITY_LEVEL) {
+          gui_label_format(FONT_TYPE_MINI_MOOD, upgr_font_size, start_upgradables_x_exis, upgradables_height_buffer, WHITE, false, "Damage:%d -> %d", abl->base_damage, upg.base_damage);
+          upgradables_height_buffer += btw_space_gap;
+        }
+        break;
+      }
+      case ABILITY_UPG_AMOUNT: {
+        if (upg.level == 1) {
+          gui_label_format(FONT_TYPE_MINI_MOOD, upgr_font_size, start_upgradables_x_exis, upgradables_height_buffer, WHITE, false, "Amouth:%d", upg.proj_count);
+          upgradables_height_buffer += btw_space_gap;
+        } else if(upg.level>1 && upg.level <= MAX_ABILITY_LEVEL) {
+          gui_label_format(FONT_TYPE_MINI_MOOD, upgr_font_size, start_upgradables_x_exis, upgradables_height_buffer, WHITE, false, "Amouth:%d -> %d", abl->proj_count, upg.proj_count);
+          upgradables_height_buffer += btw_space_gap;
+        }  
+        break;
+      }
+      case ABILITY_UPG_HITBOX: {
+        if (upg.level == 1) {
+          gui_label_format(FONT_TYPE_MINI_MOOD, upgr_font_size, start_upgradables_x_exis, upgradables_height_buffer, WHITE, false, "Hitbox:%.0f", upg.proj_dim.x);
+          upgradables_height_buffer += btw_space_gap;
+        } else if(upg.level>1 && upg.level <= MAX_ABILITY_LEVEL) {
+          gui_label_format(FONT_TYPE_MINI_MOOD, upgr_font_size, start_upgradables_x_exis, upgradables_height_buffer, WHITE, false, "Hitbox:%.0f - > %.0f", abl->proj_dim.x, upg.proj_dim.x);
+          upgradables_height_buffer += btw_space_gap;
+        } 
+        break;
+      }
+      case ABILITY_UPG_SPEED: {
+        if (upg.level == 1) {
+          gui_label_format(FONT_TYPE_MINI_MOOD, upgr_font_size, start_upgradables_x_exis, upgradables_height_buffer, WHITE, false, "Speed:%d", upg.proj_speed);
+          upgradables_height_buffer += btw_space_gap;
+        } else if(upg.level>1 && upg.level <= MAX_ABILITY_LEVEL) {
+          gui_label_format(FONT_TYPE_MINI_MOOD, upgr_font_size, start_upgradables_x_exis, upgradables_height_buffer, WHITE, false, "Speed:%d - > %d", upg.proj_speed, abl->proj_speed);
+          upgradables_height_buffer += btw_space_gap;
+        }
+        break;
+      }
+      default: {
+        TraceLog(LOG_WARNING, "scene_in_game::draw_upgrade_panel()::Unsupported ability upgrade type");
+        break;
+      }
+    }
+  }
 }
 
 

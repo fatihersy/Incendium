@@ -63,6 +63,7 @@
 #define MAX_ABILITY_NAME_LENGTH 10
 #define MAX_ABILITY_SLOT 5
 #define MAX_ABILITY_PROJECTILE_SLOT 6
+#define MAX_ABILITY_LEVEL 7
 
 #define MAX_RAND 6
 #define RANDOM_TABLE_NUMBER_COUNT 507
@@ -675,6 +676,7 @@ typedef struct ability {
   movement_pattern move_pattern;
   ability_upgradables upgradables[ABILITY_UPG_MAX];
   u16 proj_count;
+  u16 proj_speed;
   f32 proj_duration;
   Vector2 proj_dim;
   Rectangle icon_src;
@@ -790,57 +792,42 @@ static const u32 level_curve[MAX_PLAYER_LEVEL + 1] = {
 };
 
 // Platform detection
-#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
-#define KPLATFORM_WINDOWS 1
+#if defined(_WIN32) || defined(__WIN32__)
+#define PLATFORM_WINDOWS 1
 #ifndef _WIN64
 #error "64-bit is required on Windows!"
 #endif
 #elif defined(__linux__) || defined(__gnu_linux__)
 // Linux OS
-#define KPLATFORM_LINUX 1
+#define PLATFORM_LINUX 1
 #if defined(__ANDROID__)
-#define KPLATFORM_ANDROID 1
+#define PLATFORM_ANDROID 1
 #endif
 #elif defined(__unix__)
 // Catch anything not caught by the above.
-#define KPLATFORM_UNIX 1
+#define PLATFORM_UNIX 1
 #elif defined(_POSIX_VERSION)
 // Posix
-#define KPLATFORM_POSIX 1
+#define PLATFORM_POSIX 1
 #elif __APPLE__
 // Apple platforms
-#define KPLATFORM_APPLE 1
+#define PLATFORM_APPLE 1
 #include <TargetConditionals.h>
 #if TARGET_IPHONE_SIMULATOR
 // iOS Simulator
-#define KPLATFORM_IOS 1
-#define KPLATFORM_IOS_SIMULATOR 1
+#define PLATFORM_IOS 1
+#define PLATFORM_IOS_SIMULATOR 1
 #elif TARGET_OS_IPHONE
-#define KPLATFORM_IOS 1
+#define PLATFORM_IOS 1
 // iOS device
 #elif TARGET_OS_MAC
+#define PLATFORM_MAC 1
 // Other kinds of Mac OS
 #else
 #error "Unknown Apple platform"
 #endif
 #else
 #error "Unknown platform!"
-#endif
-
-#ifdef KEXPORT
-// Exports
-#ifdef _MSC_VER
-#define KAPI __declspec(dllexport)
-#else
-#define KAPI __attribute__((visibility("default")))
-#endif
-#else
-// Imports
-#ifdef _MSC_VER
-#define KAPI __declspec(dllimport)
-#else
-#define KAPI
-#endif
 #endif
 
 #define FCLAMP(value, min, max)                                                \
@@ -852,17 +839,5 @@ static const u32 level_curve[MAX_PLAYER_LEVEL + 1] = {
 #define pVECTOR2(X) ((Vector2){X[0], X[1]})
 #define VECTOR2(X, Y) ((Vector2){X, Y})
 #define TO_VECTOR2(X) ((Vector2){X, X})
-
-// Inlining
-#if defined(__clang__) || defined(__gcc__)
-#define KINLINE __attribute__((always_inline)) inline
-#define KNOINLINE __attribute__((noinline))
-#elif defined(_MSC_VER)
-#define KINLINE __forceinline
-#define KNOINLINE __declspec(noinline)
-#else
-#define KINLINE static inline
-#define KNOINLINE
-#endif
 
 #endif

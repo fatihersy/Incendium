@@ -66,12 +66,16 @@ bool ability_system_initialize(camera_metrics* _camera_metrics, app_settings* se
 }
 
 void upgrade_ability(ability* abl) {
+  if (abl->type <= ABILITY_TYPE_UNDEFINED || abl->type >= ABILITY_TYPE_MAX) {
+    TraceLog(LOG_WARNING, "ability::upgrade_ability()::Ability is not initialized");
+    return;
+  }
+
   ++abl->level;
 
   for (int i=0; i<ABILITY_UPG_MAX; ++i) {
     switch (abl->upgradables[i]) {
-      default: return;
-
+      // TODO: Complete all cases
       case ABILITY_UPG_DAMAGE: { 
         abl->base_damage += abl->level * 2;
         break;
@@ -95,6 +99,8 @@ void upgrade_ability(ability* abl) {
         
         break;
       }
+      
+      default: return;
     }
   }
 
@@ -300,7 +306,7 @@ ability get_ability(ability_type _type) {
     abl.projectiles[i].collision = (Rectangle) {0, 0, abl.proj_dim.x, abl.proj_dim.y};
     abl.projectiles[i].is_active = true;
   }
-
+  
   return abl;
 }
 
@@ -310,132 +316,5 @@ ability get_next_level(ability abl) {
 }
 
 #undef PSPRITESHEET_SYSTEM
-
-/* 
-
-typedef struct ability_fireball {
-  Vector2 position;
-  f32 rotation;
-  u8 level;
-  bool is_active;
-  projectile projectiles[MAX_FIREBALL_PROJECTILE_COUNT];
-
-  u16 fireball_ball_count;
-  u16 fireball_ball_radius;
-  u16 fireball_ball_diameter; 
-  u16 fireball_circle_radius;
-  u16 fireball_circle_radius_div_2;
-  u16 fireball_circle_radius_div_4;
-} ability_fireball;
-
-typedef struct ability_radiation {
-  Vector2 position;
-  u8 level;
-  bool is_active;
-  Character2D damage_area;
-} ability_radiation;
-
-
-typedef struct ability_package {
-  ability_type type;
-
-  union {
-    ability_fireball fireball;
-    ability_radiation radiation;
-  } data;
-} ability_package;
-
-
-typedef struct add_ability_result {
-  u16 projectile_count;
-  projectile projectiles[MAX_ABILITY_COLLISION_SLOT];
-
-  bool is_success;
-}add_ability_result;
-
-
-
-
-
-----------------------------------------------------------------------------------------------------
-
-
-
-
-
-void upgrade_fireball(ability_fireball* ability) {
-  // LABEL: Upgrade fireball
-}
-
-void update_fireball(ability_fireball* _ability, Character2D owner) {
-  _ability->rotation += 1;
-
-  if (_ability->rotation > 359) _ability->rotation = 1;
-
-  for (i16 i = 0; i < _ability->fireball_ball_count; i++) {
-    _ability->projectiles[i].position = 
-    get_a_point_of_a_circle(
-      owner.position, 
-      _ability->fireball_circle_radius, 
-      (i32)(((360.f / _ability->fireball_ball_count) * (i+1)) + _ability->rotation) % 360
-    );
-    _ability->projectiles[i].collision.x = _ability->projectiles[i].position.x - _ability->fireball_ball_radius;
-    _ability->projectiles[i].collision.y = _ability->projectiles[i].position.y - _ability->fireball_ball_radius;
-    event_fire(EVENT_CODE_RELOCATE_PROJECTILE_COLLISION, 0, (event_context) {
-      .data.u16[0] = _ability->projectiles[i].id,
-      .data.u16[1] = _ability->projectiles[i].collision.x,
-      .data.u16[2] = _ability->projectiles[i].collision.y
-    });
-  }
-}
-
-void render_fireball(ability_fireball* _ability) {
-  for (i16 i = 0; i < _ability->fireball_ball_count; i++) {
-    DrawCircleV(_ability->projectiles[i].position, _ability->fireball_ball_radius, RED);
-    #if DEBUG_COLLISIONS
-      DrawRectangleLines(_ability->projectiles[i].collision.x,
-        _ability->projectiles[i].collision.y,
-        _ability->projectiles[i].collision.width,
-        _ability->projectiles[i].collision.height,
-        WHITE);
-    #endif
-  }
-}
-
-
-#define fireball_level_one_ball_count 4
-#define fireball_level_one_ball_radius 15
-#define fireball_level_one_ball_diameter fireball_level_one_ball_radius * 2
-#define fireball_level_one_circle_radius 90
-#define fireball_level_one_circle_radius_div_2 fireball_level_one_circle_radius / 2.f
-#define fireball_level_one_circle_radius_div_4 fireball_level_one_circle_radius / 4.f
-
-ability_fireball get_ability_fireball(void) {
-  ability_fireball fireball = (ability_fireball){
-    .is_active = false,
-    .level = 1,
-    .rotation = 0,
-    .fire_ball_ball_count = fireball_level_one_ball_count,
-    .fire_ball_ball_radius = fireball_level_one_ball_radius,
-    .fire_ball_ball_diameter = fireball_level_one_ball_diameter,
-    .fire_ball_circle_radius = fireball_level_one_circle_radius,
-    .fire_ball_circle_radius_div_2 = fireball_level_one_circle_radius_div_2,
-    .fire_ball_circle_radius_div_4 = fireball_level_one_circle_radius_div_4,
-  };
-  for (int i = 0; i<fireball_level_one_ball_count; ++i) {
-    fireball.projectiles[i] = (projectile) {
-      .id = 0,
-      .collision = (Rectangle) { 
-        .x = 0, .y = 0, 
-        .width = fireball_level_one_ball_diameter,
-        .height = fireball_level_one_ball_diameter
-      },
-      .damage = 15,
-    };
-  }
-
-  return fireball;
-}
- */
 
 

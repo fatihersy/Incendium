@@ -180,6 +180,13 @@ void toggle_is_game_paused(void) {
 u16 _spawn_character(Character2D _character) {
   return spawn_character(_character);
 }
+ability _get_ability(ability_type type) {
+  if (type <= ABILITY_TYPE_UNDEFINED || type >= ABILITY_TYPE_MAX) {
+    TraceLog(LOG_INFO, "game_manager::_get_ability()::Ability type is out of bound");
+    return (ability) {0};
+  }
+  return get_ability(type);
+}
 bool _add_ability(ability_type _type) {
   if (_type <= ABILITY_TYPE_UNDEFINED || _type >= ABILITY_TYPE_MAX) {
     TraceLog(LOG_INFO, "game_manager::_add_ability()::Ability type is out of bound");
@@ -226,6 +233,11 @@ bool _upgrade_ability(ability* abl) {
   return true;
 }
 ability _get_next_level(ability abl) {
+  if (!abl.is_initialized || abl.type <= ABILITY_TYPE_UNDEFINED || abl.type >= ABILITY_TYPE_MAX) {
+    TraceLog(LOG_WARNING, "game_manager::_get_next_level()::Recieved ability has not initialized yet");
+    return (ability) {0};
+  
+  }
   return get_next_level(abl);
 }
 void _set_player_position(Vector2 position) {
