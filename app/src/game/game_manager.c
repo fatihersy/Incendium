@@ -1,9 +1,11 @@
 #include "game_manager.h"
 #include <settings.h>
 
+#include "core/ftime.h"
 #include "core/event.h"
 #include "core/fmemory.h"
 
+#include "game/resource.h"
 #include "game/tilemap.h"
 #include "game/ability.h"
 #include "game/player.h"
@@ -17,7 +19,7 @@ typedef struct game_manager_system_state {
   u16 spawn_collision_count;
   u16 projectile_count;
   player_state* p_player;
-
+  Rectangle spawning_areas[MAX_SPAWN_COLLISIONS];
 
   bool is_game_paused;
   bool game_manager_initialized;
@@ -63,11 +65,48 @@ bool game_manager_initialize(camera_metrics* _camera_metrics) {
     TraceLog(LOG_ERROR, "game_manager_initialize::game manager unable to load map");
     return false;
   }
+  state->spawning_areas[0] = (Rectangle) {
+    -100, 
+    -100, 
+    get_resolution_div2()->x,
+    get_resolution_div2()->y
+  };
 
   event_register(EVENT_CODE_PAUSE_GAME, game_manager_on_event);
   event_register(EVENT_CODE_UNPAUSE_GAME, game_manager_on_event);
   event_register(EVENT_CODE_RELOCATE_SPAWN_COLLISION, game_manager_on_event);
   event_register(EVENT_CODE_RELOCATE_PROJECTILE_COLLISION, game_manager_on_event);
+
+  for (u16 i = 0; i < MAX_SPAWN_COUNT; ++i) 
+  {
+    Vector2 position = (Vector2) {
+      get_random((i32)state->spawning_areas[0].x, (i32)state->spawning_areas[0].x + state->spawning_areas[0].width),
+      get_random((i32)state->spawning_areas[0].y, (i32)state->spawning_areas[0].y + state->spawning_areas[0].height)};
+    Texture2D *tex = get_texture_by_enum(TEX_ID_ENEMY_TEXTURE);
+    rectangle_collision rect_col = (rectangle_collision) {
+      .rect = (Rectangle) {
+        .x = position.x,
+        .y = position.y,
+        .width = tex->width,
+        .height = tex->height
+      },
+      .owner_type = ENEMY
+    };
+    rect_col.owner_id = spawn_character((Character2D){
+        .character_id = 0,
+        .tex = tex,
+        .initialized = false,
+        .collision = rect_col.rect,
+        .position = position,
+        .w_direction = WORLD_DIRECTION_LEFT,
+        .type = ENEMY,
+        .rotation = 0,
+        .health = 100,
+        .damage = 10,
+        .speed = 1,
+    });
+    add_collision(rect_col);
+  }
   
   state->game_manager_initialized = true;
   return true;
@@ -84,25 +123,50 @@ void update_game_manager(void) {
 
 }
 void update_collisions(void) {
-  for (int i=0; i<state->projectile_count; ++i) { for (u16 j = 1; j <= state->spawn_collision_count; ++j) {
-      if (state->spawn_collisions[j].is_active){ 
-        if (CheckCollisionRecs(state->spawn_collisions[j].rect, state->projectiles[i].collision)) {
-          u16 result = damage_spawn(state->spawn_collisions[j].owner_id, state->projectiles[i].damage);
-          if (result <= 0 || result >= 100) {
-            state->spawn_collisions[j].is_active = false;
-          }
+
+  for (u16 i = 0; i < state->projectile_count; ++i) {
+    if (!state->projectiles[i].is_active){ 
+      state->projectiles[i] = state->projectiles[state->projectile_count];
+      state->projectiles[state->projectile_count] = (projectile) {0};
+      state->projectile_count--;
+    }
+  }
+
+  for (int i=0; i<state->projectile_count; ++i) { 
+    for (u16 j = 0; j < state->spawn_collision_count; ++j) {
+      if (CheckCollisionRecs(state->spawn_collisions[j].rect, state->projectiles[i].collision)) {
+        u16 result = damage_spawn(state->spawn_collisions[j].owner_id, state->projectiles[i].damage);
+        if (result <= 0 || result >= 100) {
+          state->spawn_collisions[j].is_active = false;
         }
       }
     }
   }
 
-  for (int i=0; i<state->spawn_collision_count; ++i) {if (state->spawn_collisions[i].is_active){ 
-    Character2D* spawn = &get_spawn_system()->spawns[state->spawn_collisions[i].owner_id];
+  for (u16 i = 0; i < state->spawn_collision_count; ++i) {
+    if (!state->spawn_collisions[i].is_active){ 
+      state->spawn_collisions[i] = state->spawn_collisions[state->spawn_collision_count];
+      state->spawn_collisions[state->spawn_collision_count] = (rectangle_collision) {0};
+      state->spawn_collision_count--;
+    }
+  }
+
+  for (int i=0; i<state->spawn_collision_count; ++i) {
+    Character2D* spawn = get_spawn(state->spawn_collisions[i].owner_id);
+    if (!spawn) {
+      state->spawn_collisions[i] = (rectangle_collision){0};
+      continue;
+    }
     damage_any_collider_by_type(spawn, PLAYER);
-  }}
+  }
+
+  
 }
 void render_game(void) {
   render_tilemap(&state->map);
+  
+  DrawRectangleRec(state->spawning_areas[0], RED);
+  
   render_player();
   render_spawns();
   render_abilities(&state->p_player->ability_system);
@@ -115,7 +179,7 @@ void damage_any_spawn(Character2D *projectile) {
     return;
   }
   
-  for (u16 i = 1; i <= state->spawn_collision_count; ++i) {
+  for (u16 i = 0; i <= state->spawn_collision_count; ++i) {
     if (state->spawn_collisions[i].is_active){
       if (CheckCollisionRecs(state->spawn_collisions[i].rect, projectile->collision)) {
         damage_spawn(state->spawn_collisions[i].owner_id, projectile->damage);
@@ -131,7 +195,7 @@ void damage_any_collider_by_type(Character2D *from_actor, actor_type to_type) {
   }
   switch (to_type) {
   case ENEMY: {
-    for (u16 i = 1; i <= state->spawn_collision_count; ++i) {
+    for (u16 i = 0; i <= state->spawn_collision_count; ++i) {
       if (state->spawn_collisions[i].is_active){
         if (CheckCollisionRecs(state->spawn_collisions[i].rect, from_actor->collision)) {
           damage_spawn(state->spawn_collisions[i].owner_id, from_actor->damage);
@@ -152,9 +216,9 @@ void damage_any_collider_by_type(Character2D *from_actor, actor_type to_type) {
   }
 }
 void add_collision(rectangle_collision rect_col) {
-  state->spawn_collision_count++;
   state->spawn_collisions[state->spawn_collision_count] = rect_col;
   state->spawn_collisions[state->spawn_collision_count].is_active = true;
+  state->spawn_collision_count++;
 }
 
 // GET / SET
@@ -173,6 +237,9 @@ void set_is_game_paused(bool _is_game_paused) {
 }
 void toggle_is_game_paused(void) {
   state->is_game_paused = !state->is_game_paused;
+}
+u16 get_remaining_enemies(void) {
+  return state->spawn_collision_count;
 }
 // GET / SET
 
@@ -242,6 +309,8 @@ ability _get_next_level(ability abl) {
 }
 void _set_player_position(Vector2 position) {
   get_player_state()->position = position;
+  get_player_state()->collision.x = position.x;
+  get_player_state()->collision.y = position.y;
 }
 Vector2 _get_player_position(bool centered) {
   return get_player_position(centered);
@@ -261,7 +330,7 @@ bool game_manager_on_event(u16 code, event_context context) {
     return true;
   }
   case EVENT_CODE_RELOCATE_SPAWN_COLLISION: {
-    for (int i = 1; i <= state->spawn_collision_count; ++i) {
+    for (int i = 0; i < state->spawn_collision_count; ++i) {
       if (state->spawn_collisions[i].owner_id == context.data.u16[0]) {
         state->spawn_collisions[i].rect.x = context.data.u16[1];
         state->spawn_collisions[i].rect.y = context.data.u16[2];
@@ -275,6 +344,15 @@ bool game_manager_on_event(u16 code, event_context context) {
       if (state->projectiles[i].id == context.data.u16[0]) {
         state->projectiles[i].collision.x = context.data.u16[1];
         state->projectiles[i].collision.y = context.data.u16[2];
+        return true;
+      }
+    }
+    return false;
+  }
+  case EVENT_CODE_DELETE_SPAWN_COLLISION: {
+    for (int i = 0; i < state->spawn_collision_count; ++i) {
+      if (state->spawn_collisions[i].owner_id == context.data.u16[0]) {
+        state->spawn_collisions[i] = (rectangle_collision) {0};
         return true;
       }
     }

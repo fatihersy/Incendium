@@ -10,6 +10,7 @@ bool game_manager_initialize(camera_metrics* _camera_metrics);
 void update_game_manager(void);
 
 player_state* get_player_state_if_available(void);
+u16 get_remaining_enemies(void);
 bool get_is_game_paused(void);
 void set_is_game_paused(bool _is_game_paused);
 void toggle_is_game_paused(void);

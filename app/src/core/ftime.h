@@ -8,6 +8,6 @@ void time_system_initialize(void);
 
 void update_time(void);
 
-u16 get_random(u16 min, u16 max);
+i32 get_random(i32 min, i32 max);
 
 #endif

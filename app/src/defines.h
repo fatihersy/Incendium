@@ -59,6 +59,7 @@
 
 #define MAX_PLAYER_LEVEL 100
 #define MAX_SPAWN_COUNT 100
+#define MAX_SPAWN_COLLISIONS 10
 
 #define MAX_ABILITY_NAME_LENGTH 10
 #define MAX_ABILITY_SLOT 5
@@ -740,11 +741,6 @@ typedef struct player_state {
   bool is_dead;
   bool is_damagable;
 } player_state;
-
-typedef struct spawn_system_state {
-  Character2D spawns[MAX_SPAWN_COUNT];
-  u16 current_spawn_count;
-} spawn_system_state;
 
 typedef struct memory_system_state {
   u64 linear_memory_total_size;

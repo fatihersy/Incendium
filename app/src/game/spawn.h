@@ -7,8 +7,8 @@
 
 bool spawn_system_initialize(void);
 u16 spawn_character(Character2D _character);
+Character2D *get_spawn(u16 _id);
 
-spawn_system_state* get_spawn_system(void);
 void clean_up_spawn_system(void);
 
 u16 damage_spawn(u16 _id, u16 damage);

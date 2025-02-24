@@ -41,19 +41,15 @@ const u32 random_table[RANDOM_TABLE_NUMBER_COUNT] = {
 typedef struct time_system_state {
   time_t time;
   struct tm * parsed_time;
-  u16 random_stack[RANDOM_STACK_COUNT];
-  u16 random_stack_count;
-  u16 random_stack_iter;
+  u16 rand_start_index;
+  u16 rand_ind;
 } time_system_state;
 
 static time_system_state *state;
 
-#define GET_RANDOM(min, max)  \
-  (((state->parsed_time->tm_hour * state->parsed_time->tm_min) + (state->parsed_time->tm_sec * state->parsed_time->tm_mday)) % max) + min \
-
-#define STATE_ASSERT(FUNCTION_NAME_STR) if (!state) {                                             \
+#define STATE_ASSERT(FUNCTION_NAME_STR, RETURN) if (!state) {                                     \
   TraceLog(LOG_ERROR, "scene_in_game::" FUNCTION_NAME_STR "::In game state was not initialized"); \
-  return;                                                                                         \
+  RETURN;                                                                                         \
 }
 
 void time_system_initialize(void) {
@@ -63,42 +59,33 @@ void time_system_initialize(void) {
   state = (time_system_state *)allocate_memory_linear(sizeof(time_system_state), true);
   time(&state->time);
   state->parsed_time = localtime(&state->time);
-
+  state->rand_start_index = ((
+    (state->parsed_time->tm_hour * state->parsed_time->tm_min) + 
+    (state->parsed_time->tm_sec * state->parsed_time->tm_mday)
+    ) % RANDOM_TABLE_NUMBER_COUNT
+  );
+  
 }
 void update_time(void) {
-  STATE_ASSERT("update_time")
+  STATE_ASSERT("update_time", return;)
 
   time(&state->time);
   state->parsed_time = localtime(&state->time);
-
 }
 
-u16 get_random(u16 min, u16 max) {
-  u16 table_iter = GET_RANDOM(0, RANDOM_TABLE_NUMBER_COUNT);
-  if (table_iter < 0 || table_iter == U16_MAX || table_iter >= RANDOM_TABLE_NUMBER_COUNT) {
-    return 0;
-  }
-  if (state->random_stack_count >= RANDOM_STACK_COUNT-1) {
-    for (int i=0; i<state->random_stack_count; ++i) {
-      state->random_stack[i] = 0;
-    }
-    state->random_stack_count = 0;
-    state->random_stack_iter = 0;
-  }
-  u16 rnd = (random_table[table_iter + state->random_stack_iter] % max) + min;
+i32 get_random(i32 min, i32 max) {
+  STATE_ASSERT("get_random", return I32_MAX)
 
-  for (int i=0; i<state->random_stack_count; ++i) {
-    if(state->random_stack[i] == 0) {
-      break;
-    }
-    if(state->random_stack[i] == rnd ) {
-      state->random_stack_iter++;
-      rnd = (random_table[table_iter + state->random_stack_iter] % max) + min;
-    }
+  if (state->rand_ind >= RANDOM_TABLE_NUMBER_COUNT-1) {
+    state->rand_ind = 0;
   }
-  state->random_stack[state->random_stack_count] = rnd;
-  ++state->random_stack_count;
+  else state->rand_ind++;
 
+  const u16 ind = (state->rand_start_index + state->rand_ind) % RANDOM_TABLE_NUMBER_COUNT;
+  i32 rnd = random_table[ind];
+  rnd = (rnd % (max - min + 1)) + min;
+  
   return rnd;
 }
 
+#undef STATE_ASSERT

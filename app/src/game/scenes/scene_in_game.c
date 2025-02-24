@@ -6,7 +6,6 @@
 #include <core/fmath.h>
 #include <core/fmemory.h>
 
-#include "game/resource.h"
 #include "game/game_manager.h"
 #include "game/user_interface.h"
 
@@ -49,34 +48,6 @@ bool initialize_scene_in_game(camera_metrics* _camera_metrics) {
 
   user_interface_system_initialize();
 
-  for (u32 i = 0; i < 360; i += 20) {
-    Vector2 position = get_a_point_of_a_circle(_get_player_position(false), 500, i);
-    Texture2D *tex = get_texture_by_enum(TEX_ID_ENEMY_TEXTURE);
-    rectangle_collision rect_col = (rectangle_collision) {
-      .rect = (Rectangle) {
-        .x = position.x,
-        .y = position.y,
-        .width = tex->width,
-        .height = tex->height
-      },
-      .owner_type = ENEMY
-    };
-    rect_col.owner_id = _spawn_character((Character2D){
-        .character_id = 0,
-        .tex = tex,
-        .initialized = false,
-        .collision = rect_col.rect,
-        .position = position,
-        .w_direction = WORLD_DIRECTION_LEFT,
-        .type = ENEMY,
-        .rotation = 0,
-        .health = 100,
-        .damage = 10,
-        .speed = 1,
-    });
-    add_collision(rect_col);
-  }
-
   event_fire(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, (event_context){
     .data.f32[0] = PRG_BAR_ID_PLAYER_EXPERIANCE,
     .data.f32[1] = get_player_state_if_available()->exp_perc,
@@ -117,7 +88,6 @@ void update_scene_in_game(void) {
     return;
   }
   update_game_manager();
-  update_time();
 
   event_fire(EVENT_CODE_SCENE_MANAGER_SET_TARGET, (event_context){
     .data.f32[0] = _get_player_position(false).x,
@@ -140,9 +110,9 @@ void render_interface_in_game(void) {
     return;
   }
 
-  if (state->player->is_player_have_skill_points || true) {
+  if (state->player->is_player_have_skill_points) {
     set_is_game_paused(true);
-    Rectangle dest = (Rectangle) { // TODO: Make it responsive
+    Rectangle dest = (Rectangle) {
       get_resolution_div4()->x, get_resolution_div2()->y, 
       get_resolution_div4()->x, get_resolution_3div2()->y 
     };
@@ -169,6 +139,10 @@ void render_interface_in_game(void) {
       if(gui_panel_active(pnl, dest, true)) {
         set_is_game_paused(false);
         state->player->is_player_have_skill_points = false;
+        for (int i=0; i<MAX_UPDATE_ABILITY_PANEL_COUNT; ++i) {
+          state->skill_up_panels[i].buffer[0].data.u16[0] = 0;
+        }
+        // TODO: Upgrade ability
       }
       draw_upgrade_panel(abl, new, dest);
     }
@@ -176,6 +150,7 @@ void render_interface_in_game(void) {
   else {
     gui_progress_bar(PRG_BAR_ID_PLAYER_EXPERIANCE, (Vector2){.x = get_resolution_div2()->x, .y = get_screen_offset().x}, true);
     gui_progress_bar(PRG_BAR_ID_PLAYER_HEALTH, get_screen_offset(), false);
+    gui_label_format(FONT_TYPE_MOOD, 10, get_resolution_div4()->x, get_screen_offset().x, WHITE, false, "Remaining: %d", get_remaining_enemies());
   }
 
   render_user_interface();
@@ -185,7 +160,7 @@ void start_game(void) {
 
 }
 
-inline void draw_upgrade_panel(ability* abl, ability upg, Rectangle panel_dest) {
+void draw_upgrade_panel(ability* abl, ability upg, Rectangle panel_dest) {
   if (upg.type <= ABILITY_TYPE_UNDEFINED || upg.type >= ABILITY_TYPE_MAX) {
     TraceLog(LOG_WARNING, "scene_in_game::draw_upgrade_panel()::Upgraded ability is out of bounds"); 
     return;
@@ -298,6 +273,8 @@ void in_game_update_keyboard_bindings(void) {
 }
 
 
+#undef STATE_ASSERT
+#undef SKILL_UP_PANEL_ICON_SIZE
 
 
 
