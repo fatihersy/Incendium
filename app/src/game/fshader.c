@@ -23,7 +23,10 @@ void initialize_shader_system(void) {
 
   // NOTE: _path = "%s%s", SHADER_PATH, _path
   load_shader(0, "mask.fs", SHADER_ID_PROGRESS_BAR_MASK);
+  load_shader(0, "fade_transition.fs", SHADER_ID_FADE_TRANSITION);
+
   shader_add_uniform(SHADER_ID_PROGRESS_BAR_MASK, "progress", SHADER_UNIFORM_FLOAT);
+  shader_add_uniform(SHADER_ID_FADE_TRANSITION, "process", SHADER_UNIFORM_FLOAT);
 }
 
 const char *shader_path(const char *_path) {
@@ -156,8 +159,7 @@ void shader_add_uniform(shader_id _id, const char *_name, ShaderUniformDataType 
   }
   u16 total_loc = state->shaders[_id].total_locations;
 
-  state->shaders[_id].locations[total_loc].index = GetShaderLocation(
-    state->shaders[_id].handle, _name);
+  state->shaders[_id].locations[total_loc].index = GetShaderLocation(state->shaders[_id].handle, _name);
   TextCopy(state->shaders[_id].locations[total_loc].name, _name);
   state->shaders[_id].locations[total_loc].uni_data_type = _data_id;
 

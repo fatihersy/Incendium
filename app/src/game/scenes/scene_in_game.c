@@ -1,4 +1,5 @@
 #include "scene_in_game.h"
+#include <reasings.h>
 #include <settings.h>
 
 #include <core/ftime.h>
@@ -9,22 +10,34 @@
 #include "game/game_manager.h"
 #include "game/user_interface.h"
 
+#define STATE_ASSERT(FUNCTION) if (!state) {                                                          \
+  TraceLog(LOG_ERROR, "scene_in_game::" FUNCTION "::In game state was not initialized");            \
+  event_fire(EVENT_CODE_SCENE_MAIN_MENU, (event_context){0});                                        \
+  return;                                                                                           \
+}
+#define SKILL_UP_PANEL_ICON_SIZE get_resolution_div4()->x*.5f
+#define CLOUDS_ANIMATION_DURATION TARGET_FPS * 1.5f // second
+
+typedef enum in_game_stages {
+  IN_GAME_STAGE_UNDEFINED,
+  IN_GAME_STAGE_MAP_CHOICE,
+  IN_GAME_STAGE_PASSIVE_CHOICE,
+  IN_GAME_STAGE_PLAY,
+  IN_GAME_STAGE_MAX,
+} in_game_stages;
+
 typedef struct scene_in_game_state {
-  player_state* player;
   panel skill_up_panels[MAX_UPDATE_ABILITY_PANEL_COUNT];
-  
+  player_state* player;
+  in_game_stages stage;
+
+  u16 clouds_animation_timer;
+
   bool has_game_started;
+  bool clouds_animation_playing;
 } scene_in_game_state;
 
 static scene_in_game_state *state;
-
-
-#define STATE_ASSERT(FUNCTION) if (!state) {                                                          \
-    TraceLog(LOG_ERROR, "scene_in_game::" FUNCTION "::In game state was not initialized");            \
-    event_fire(EVENT_CODE_SCENE_MAIN_MENU, (event_context){0});                                        \
-    return;                                                                                           \
-}
-#define SKILL_UP_PANEL_ICON_SIZE get_resolution_div4()->x*.5f
 
 void in_game_update_bindings(void);
 void in_game_update_mouse_bindings(void);
@@ -74,7 +87,9 @@ bool initialize_scene_in_game(camera_metrics* _camera_metrics) {
   }
 
   set_is_game_paused(true);
-
+  state->stage = IN_GAME_STAGE_MAP_CHOICE;
+  state->clouds_animation_playing = true;
+  event_fire(EVENT_CODE_UI_START_FADE_EFFECT, (event_context){0});
   return true;
 }
 
@@ -84,81 +99,216 @@ void update_scene_in_game(void) {
   in_game_update_bindings();
   update_user_interface();
 
-  if (get_is_game_paused() || !state->has_game_started) {
-    return;
-  }
-  update_game_manager();
+  switch (state->stage) {
+    case IN_GAME_STAGE_UNDEFINED: {
 
-  event_fire(EVENT_CODE_SCENE_MANAGER_SET_TARGET, (event_context){
-    .data.f32[0] = _get_player_position(false).x,
-    .data.f32[1] = _get_player_position(false).y,
-  });
+      break;
+    }
+    case IN_GAME_STAGE_MAP_CHOICE: {
+      break;
+    }
+    case IN_GAME_STAGE_PASSIVE_CHOICE: {
+      break;
+    }
+    case IN_GAME_STAGE_PLAY: {
+      if (get_is_game_paused() || !state->has_game_started) {
+        return;
+      }
+      update_game_manager();
+    
+      event_fire(EVENT_CODE_SCENE_MANAGER_SET_TARGET, (event_context){
+        .data.f32[0] = _get_player_position(false).x,
+        .data.f32[1] = _get_player_position(false).y,
+      });
+      break;
+    }
+    default: {
+      TraceLog(LOG_WARNING, "scene_in_game::update_scene_in_game()::Unsupported stage");
+      break;
+    }
+  }
 }
 
 void render_scene_in_game(void) {
   STATE_ASSERT("render_scene_in_game")
 
-  render_game();
+  switch (state->stage) {
+    case IN_GAME_STAGE_UNDEFINED: {
+
+      break;
+    }
+    case IN_GAME_STAGE_MAP_CHOICE: {
+      if (IsKeyReleased(KEY_R)) {
+        state->clouds_animation_playing = true;
+        state->clouds_animation_timer = 0;
+        event_fire(EVENT_CODE_UI_START_FADE_EFFECT, (event_context){0});
+      }
+
+      if (state->clouds_animation_playing && (state->clouds_animation_timer >= 0 && state->clouds_animation_timer <= CLOUDS_ANIMATION_DURATION)) {
+        f32 clouds_mul = EaseQuadIn(state->clouds_animation_timer, 2, -1, CLOUDS_ANIMATION_DURATION);
+        f32 worldmap_mul = EaseQuadIn(state->clouds_animation_timer, 0.75f, 0.25f, CLOUDS_ANIMATION_DURATION);
+        TraceLog(LOG_INFO, "mul: %f", clouds_mul);
+        gui_draw_texture_id_center(TEX_ID_WORLDMAP_WO_CLOUDS, 
+          *get_resolution_div2(), VECTOR2(GetScreenWidth() * worldmap_mul, GetScreenHeight() * worldmap_mul), true);
+        gui_draw_texture_id_center(TEX_ID_WORLDMAP_CLOUDS, 
+          *get_resolution_div2(), VECTOR2(GetScreenWidth() * clouds_mul, GetScreenHeight() * clouds_mul), true);
+        state->clouds_animation_timer++;
+        if (state->clouds_animation_timer > CLOUDS_ANIMATION_DURATION) {
+          state->clouds_animation_playing = false;
+          state->clouds_animation_timer = 0;
+        }
+      }
+      else{
+        gui_draw_texture_id(TEX_ID_WORLDMAP_W_CLOUDS, (Rectangle) {0, 0, GetScreenWidth(), GetScreenHeight()});
+      }
+      break;
+    }
+    case IN_GAME_STAGE_PASSIVE_CHOICE: {
+      break;
+    }
+    case IN_GAME_STAGE_PLAY: {
+      render_game();
+      break;
+    }
+    default: {
+      TraceLog(LOG_WARNING, "scene_in_game::render_scene_in_game()::Unsupported stage");
+      break;
+    }
+  }
+
 }
 
 void render_interface_in_game(void) {
   STATE_ASSERT("render_interface_in_game")
-  DrawFPS(get_screen_offset().x, get_resolution_div2()->y);
+  
+  switch (state->stage) {
+    case IN_GAME_STAGE_UNDEFINED: {
+      break;
+    }
+    case IN_GAME_STAGE_MAP_CHOICE: {
+      break;
+    }
+    case IN_GAME_STAGE_PASSIVE_CHOICE: {
+      break;
+    }
+    case IN_GAME_STAGE_PLAY: {  
+      DrawFPS(get_screen_offset().x, get_resolution_div2()->y);
 
-  if (!state->has_game_started) {
-    gui_label("Press Space to Start!", FONT_TYPE_MOOD_OUTLINE, 10, (Vector2) {get_resolution_div2()->x, get_resolution_3div2()->y}, WHITE, true);
-    return;
-  }
-
-  if (state->player->is_player_have_skill_points) {
-    set_is_game_paused(true);
-    Rectangle dest = (Rectangle) {
-      get_resolution_div4()->x, get_resolution_div2()->y, 
-      get_resolution_div4()->x, get_resolution_3div2()->y 
-    };
-    f32 dest_x_buffer = dest.x;
-    for (int i=0; i<MAX_UPDATE_ABILITY_PANEL_COUNT; ++i) {
-      panel* pnl = &state->skill_up_panels[i];
-      if(pnl->buffer[0].data.u16[0] <= 0 || pnl->buffer[0].data.u16[0] >= ABILITY_TYPE_MAX) {
-        pnl->buffer[0].data.u16[0] = get_random(1,ABILITY_TYPE_MAX-1);
-      }
-      dest.x = dest_x_buffer + ((dest.width + get_screen_offset().x) * i);
-      ability* abl = &state->player->ability_system.abilities[pnl->buffer[0].data.u16[0]];
-      ability new = {0};
-      if (abl->type <= ABILITY_TYPE_UNDEFINED || abl->type >= ABILITY_TYPE_MAX) {
-        new = _get_ability(pnl->buffer[0].data.u16[0]);
-        *abl = (ability) {0};
-      }
-      else {
-        new = _get_next_level(*abl);
-      }
-      if (new.type <= ABILITY_TYPE_UNDEFINED || new.type >= ABILITY_TYPE_MAX) {
-        TraceLog(LOG_WARNING, "scene_in_game::render_interface_in_game()::Upgraded ability is out of bounds"); 
+      if (!state->has_game_started) {
+        gui_label("Press Space to Start!", FONT_TYPE_MOOD_OUTLINE, 10, (Vector2) {get_resolution_div2()->x, get_resolution_3div2()->y}, WHITE, true);
         return;
       }
-      if(gui_panel_active(pnl, dest, true)) {
-        set_is_game_paused(false);
-        state->player->is_player_have_skill_points = false;
+      else if (state->player->is_player_have_skill_points) {
+        set_is_game_paused(true);
+        Rectangle dest = (Rectangle) {
+          get_resolution_div4()->x, get_resolution_div2()->y, 
+          get_resolution_div4()->x, get_resolution_3div2()->y 
+        };
+        f32 dest_x_buffer = dest.x;
         for (int i=0; i<MAX_UPDATE_ABILITY_PANEL_COUNT; ++i) {
-          state->skill_up_panels[i].buffer[0].data.u16[0] = 0;
+          panel* pnl = &state->skill_up_panels[i];
+          if(pnl->buffer[0].data.u16[0] <= 0 || pnl->buffer[0].data.u16[0] >= ABILITY_TYPE_MAX) {
+            pnl->buffer[0].data.u16[0] = get_random(1,ABILITY_TYPE_MAX-1);
+          }
+          dest.x = dest_x_buffer + ((dest.width + get_screen_offset().x) * i);
+          ability* abl = &state->player->ability_system.abilities[pnl->buffer[0].data.u16[0]];
+          ability new = {0};
+          if (abl->type <= ABILITY_TYPE_UNDEFINED || abl->type >= ABILITY_TYPE_MAX) {
+            new = _get_ability(pnl->buffer[0].data.u16[0]);
+            *abl = (ability) {0};
+          }
+          else {
+            new = _get_next_level(*abl);
+          }
+          if (new.type <= ABILITY_TYPE_UNDEFINED || new.type >= ABILITY_TYPE_MAX) {
+            TraceLog(LOG_WARNING, "scene_in_game::render_interface_in_game()::Upgraded ability is out of bounds"); 
+            return;
+          }
+          if(gui_panel_active(pnl, dest, true)) {
+            set_is_game_paused(false);
+            state->player->is_player_have_skill_points = false;
+            for (int i=0; i<MAX_UPDATE_ABILITY_PANEL_COUNT; ++i) {
+              state->skill_up_panels[i].buffer[0].data.u16[0] = 0;
+            }
+            // TODO: Upgrade ability
+          }
+          draw_upgrade_panel(abl, new, dest);
         }
-        // TODO: Upgrade ability
       }
-      draw_upgrade_panel(abl, new, dest);
+      else {
+        gui_progress_bar(PRG_BAR_ID_PLAYER_EXPERIANCE, (Vector2){.x = get_resolution_div2()->x, .y = get_screen_offset().x}, true);
+        gui_progress_bar(PRG_BAR_ID_PLAYER_HEALTH, get_screen_offset(), false);
+        gui_label_format(FONT_TYPE_MOOD, 10, get_screen_offset().x, get_resolution_div4()->y, WHITE, false, "Remaining: %d", get_remaining_enemies());
+      }
+      break;
     }
-  }
-  else {
-    gui_progress_bar(PRG_BAR_ID_PLAYER_EXPERIANCE, (Vector2){.x = get_resolution_div2()->x, .y = get_screen_offset().x}, true);
-    gui_progress_bar(PRG_BAR_ID_PLAYER_HEALTH, get_screen_offset(), false);
-    gui_label_format(FONT_TYPE_MOOD, 10, get_resolution_div4()->x, get_screen_offset().x, WHITE, false, "Remaining: %d", get_remaining_enemies());
+    default: {
+      TraceLog(LOG_WARNING, "scene_in_game::render_interface_in_game()::Unsupported stage");
+      break;
+    }
   }
 
   render_user_interface();
 }
 
-void start_game(void) {
-
+void in_game_update_mouse_bindings(void) { 
+  switch (state->stage) {
+    case IN_GAME_STAGE_UNDEFINED: {
+      break;
+    }
+    case IN_GAME_STAGE_MAP_CHOICE: {
+      break;
+    }
+    case IN_GAME_STAGE_PASSIVE_CHOICE: {
+      break;
+    }
+    case IN_GAME_STAGE_PLAY: {
+      break;
+    }
+    default: {
+      TraceLog(LOG_WARNING, "scene_in_game::update_scene_in_game()::Unsupported stage");
+      break;
+    }
+  }
 }
+
+void in_game_update_keyboard_bindings(void) {
+
+  switch (state->stage) {
+    case IN_GAME_STAGE_UNDEFINED: {
+      break;
+    }
+    case IN_GAME_STAGE_MAP_CHOICE: {
+      break;
+    }
+    case IN_GAME_STAGE_PASSIVE_CHOICE: {
+      break;
+    }
+    case IN_GAME_STAGE_PLAY: {  
+      if (!state->has_game_started && IsKeyPressed(KEY_SPACE)) {
+        start_game();
+        state->has_game_started = true;
+        set_is_game_paused(false);
+      }
+      if (IsKeyReleased(KEY_ESCAPE)) {
+        if(!state->player->is_player_have_skill_points) toggle_is_game_paused();
+        event_fire(EVENT_CODE_UI_SHOW_PAUSE_MENU, (event_context){0});
+      }
+      break;
+    }
+    default: {
+      TraceLog(LOG_WARNING, "scene_in_game::in_game_update_keyboard_bindings()::Unsupported stage");
+      break;
+    }
+  }
+}
+
+void in_game_update_bindings(void) {
+  in_game_update_mouse_bindings();
+  in_game_update_keyboard_bindings();
+}
+
+void start_game(void) {}
 
 void draw_upgrade_panel(ability* abl, ability upg, Rectangle panel_dest) {
   if (upg.type <= ABILITY_TYPE_UNDEFINED || upg.type >= ABILITY_TYPE_MAX) {
@@ -248,33 +398,7 @@ void draw_upgrade_panel(ability* abl, ability upg, Rectangle panel_dest) {
   }
 }
 
-
-void in_game_update_bindings(void) {
-  in_game_update_mouse_bindings();
-  in_game_update_keyboard_bindings();
-}
-
-void in_game_update_mouse_bindings(void) { 
-
-}
-void in_game_update_keyboard_bindings(void) {
-
-  if (!state->has_game_started && IsKeyPressed(KEY_SPACE)) {
-    start_game();
-    state->has_game_started = true;
-    set_is_game_paused(false);
-    return;
-  }
-
-  if (IsKeyReleased(KEY_ESCAPE)) {
-    if(!state->player->is_player_have_skill_points) toggle_is_game_paused();
-    event_fire(EVENT_CODE_UI_SHOW_PAUSE_MENU, (event_context){0});
-  }
-}
-
-
 #undef STATE_ASSERT
 #undef SKILL_UP_PANEL_ICON_SIZE
-
-
-
+#undef CLOUDS_ANIMATION_DURATION
+#undef FADE_ANIMATION_DURATION

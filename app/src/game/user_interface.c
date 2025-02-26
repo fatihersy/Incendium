@@ -1,4 +1,5 @@
 #include "user_interface.h"
+#include <reasings.h>
 #include <defines.h>
 #include <settings.h>
 
@@ -8,34 +9,61 @@
 
 #include "fshader.h"
 
-#define SPACE_BTW_V(OFFSET_X, OFFSET_Y, POS, DIM, f) ((Vector2){ \
-    .x = (POS).x - ((DIM).x / 2.0f) + (((DIM).x / (f)) * (OFFSET_X)), \
-    .y = (POS).y - ((DIM).y / 2.0f) + (((DIM).y / (f)) * (OFFSET_Y)) \
-})
-
 typedef struct user_interface_system_state {
   spritesheet_play_system spritesheet_system;
-  Vector2 offset;
-  Vector2 mouse_pos;
+  
   button      buttons[BTN_ID_MAX];
   button_type button_types[BTN_TYPE_MAX];
   slider      sliders[SDR_ID_MAX];
   slider_type slider_types[SDR_TYPE_MAX];
   progress_bar prg_bars[PRG_BAR_ID_MAX];
   progress_bar_type prg_bar_types[PRG_BAR_TYPE_ID_MAX];
+  
+  panel default_panel;
+  spritesheet ss_to_draw_bg;
+  
+  Vector2 offset;
+  Vector2 mouse_pos;
+
   Font mood_font;
   Font mood_outline_font;
   Font mini_mood_font;
   Font mini_mood_outline_font;
-  spritesheet ss_to_draw_bg;
+
+  f32 fade_animation_timer;
+  bool fade_animation_playing;
   bool b_show_pause_menu;
   bool b_show_settings_menu;
-  panel default_panel;
 } user_interface_system_state;
 
-static user_interface_system_state *state;
+static user_interface_system_state *restrict state;
 
+#define MENU_BUTTON_FONT state->mini_mood_font
+#define MENU_BUTTON_FONT_SIZE state->mini_mood_font.baseSize / 30.f
+#define MINI_BUTTON_FONT state->mini_mood_font
+#define MINI_BUTTON_FONT_SIZE state->mini_mood_font.baseSize / 60.f
+#define LABEL_MOOD_FONT_SIZE state->mood_font.baseSize * .1f
+#define LABEL_MOOD_OUTLINE_FONT_SIZE state->mood_outline_font.baseSize * .1f
+#define LABEL_MINI_FONT_SIZE state->mini_mood_font.baseSize * .1f
+#define LABEL_MINI_OUTLINE_FONT_SIZE state->mini_mood_outline_font.baseSize * .1f
 #define DEFAULT_MENU_BUTTON_SCALE 3
+#define FADE_ANIMATION_DURATION TARGET_FPS * 0.7f // second
+#define SPACE_BTW_V(OFFSET_X, OFFSET_Y, POS, DIM, f) ((Vector2){ \
+  .x = (POS).x - ((DIM).x / 2.0f) + (((DIM).x / (f)) * (OFFSET_X)), \
+  .y = (POS).y - ((DIM).y / 2.0f) + (((DIM).y / (f)) * (OFFSET_Y)) \
+})
+#define draw_text(TEXT, TEXT_POS, FONT, FONT_SIZE, COLOR, CENTER)                                                 \
+  if (CENTER) {                                                                                                   \
+    Vector2 text_measure = MeasureTextEx(FONT, TEXT, FONT_SIZE, UI_FONT_SPACING);                                 \
+    TEXT_POS.x -= (text_measure.x / 2.f);                                                                         \
+    TEXT_POS.y -= (text_measure.y / 2.f);                                                                         \
+  }                                                                                                               \
+  DrawTextEx(FONT, TEXT,                                                                                          \
+  (Vector2) { .x = TEXT_POS.x + TEXT_SHADOW_OFFSET.x, .y = TEXT_POS.y + TEXT_SHADOW_OFFSET.y, },                  \
+  FONT_SIZE, UI_FONT_SPACING, TEXT_SHADOW_COLOR);                                                                 \
+  DrawTextEx(FONT, TEXT, TEXT_POS, FONT_SIZE, UI_FONT_SPACING, COLOR);                    
+
+#define SDR_CURR_VAL(ID) state->sliders[ID].options[state->sliders[ID].current_value]
 
 #define PSPRITESHEET_SYSTEM state->spritesheet_system // Don't forget to undef at very bottom of the file
 #include "game/spritesheet.h"
@@ -45,6 +73,7 @@ bool user_interface_on_event(u16 code, event_context context);
 void update_buttons(void);
 void update_sliders(void);
 
+void draw_fade_effect();
 void draw_slider_body(slider* sdr);
 void draw_texture_stretch(texture_id body, Vector2 pos, Vector2 scale, Rectangle stretch_part, u16 stretch_part_mltp, bool should_center);
 void draw_texture_regular(texture_id _id, Rectangle dest, Color tint, bool should_center);
@@ -58,28 +87,6 @@ void register_progress_bar(progress_bar_id _id, progress_bar_type_id _type_id, f
 void register_progress_bar_type(progress_bar_type_id _type_id, texture_id _body_inside, texture_id _body_outside, shader_id _mask_shader_id);
 void register_slider(slider_id _sdr_id, slider_type_id _sdr_type_id, button_id _left_btn_id, button_id _right_btn_id, bool _is_clickable);
 void register_slider_type(slider_type_id _sdr_type_id, spritesheet_type _ss_sdr_body_type, f32 _scale, u16 _width_multiply, button_type_id _left_btn_type_id, button_type_id _right_btn_type_id, u16 _char_limit);
-
-#define MENU_BUTTON_FONT state->mini_mood_font
-#define MENU_BUTTON_FONT_SIZE state->mini_mood_font.baseSize / 30.f
-#define MINI_BUTTON_FONT state->mini_mood_font
-#define MINI_BUTTON_FONT_SIZE state->mini_mood_font.baseSize / 60.f
-#define LABEL_MOOD_FONT_SIZE state->mood_font.baseSize * .1f
-#define LABEL_MOOD_OUTLINE_FONT_SIZE state->mood_outline_font.baseSize * .1f
-#define LABEL_MINI_FONT_SIZE state->mini_mood_font.baseSize * .1f
-#define LABEL_MINI_OUTLINE_FONT_SIZE state->mini_mood_outline_font.baseSize * .1f
-
-#define draw_text(TEXT, TEXT_POS, FONT, FONT_SIZE, COLOR, CENTER)                                                 \
-  if (CENTER) {                                                                                                   \
-    Vector2 text_measure = MeasureTextEx(FONT, TEXT, FONT_SIZE, UI_FONT_SPACING);                                 \
-    TEXT_POS.x -= (text_measure.x / 2.f);                                                                         \
-    TEXT_POS.y -= (text_measure.y / 2.f);                                                                         \
-  }                                                                                                               \
-  DrawTextEx(FONT, TEXT,                                                                                          \
-  (Vector2) { .x = TEXT_POS.x + TEXT_SHADOW_OFFSET.x, .y = TEXT_POS.y + TEXT_SHADOW_OFFSET.y, },                  \
-  FONT_SIZE, UI_FONT_SPACING, TEXT_SHADOW_COLOR);                                                                 \
-  DrawTextEx(FONT, TEXT, TEXT_POS, FONT_SIZE, UI_FONT_SPACING, COLOR);                    
-
-#define SDR_CURR_VAL(ID) state->sliders[ID].options[state->sliders[ID].current_value]
 
 Rectangle get_texture_source_rect(texture_id _id);
 
@@ -200,6 +207,8 @@ void user_interface_system_initialize(void) {
   register_button(BTN_ID_MAINMENU_BUTTON_SETTINGS, BTN_TYPE_MENU_BUTTON_NO_CRT);
   register_button(BTN_ID_MAINMENU_BUTTON_EXTRAS,   BTN_TYPE_MENU_BUTTON_NO_CRT);
   register_button(BTN_ID_MAINMENU_BUTTON_EXIT,     BTN_TYPE_MENU_BUTTON_NO_CRT);
+  register_button(BTN_ID_MAINMENU_SETTINGS_CANCEL, BTN_TYPE_MENU_BUTTON_NO_CRT);
+  register_button(BTN_ID_MAINMENU_BACK_BUTTON,     BTN_TYPE_MENU_BUTTON_NO_CRT);
   }
   // MAIN MENU
 
@@ -233,7 +242,6 @@ void user_interface_system_initialize(void) {
     SDR_ID_SETTINGS_WIN_MODE_SLIDER,  SDR_TYPE_OPTION, 
     BTN_ID_SETTINGS_SLIDER_WIN_MODE_LEFT_BUTTON, BTN_ID_SETTINGS_SLIDER_WIN_MODE_RIGHT_BUTTON, false);
   register_button(BTN_ID_SETTINGS_APPLY_SETTINGS_BUTTON, BTN_TYPE_MENU_BUTTON);
-  register_button(BTN_ID_MAIN_MENU_SETTINGS_CANCEL_SETTINGS_BUTTON, BTN_TYPE_MENU_BUTTON);
   }
   // SETTINGS
 
@@ -278,6 +286,7 @@ void user_interface_system_initialize(void) {
   event_register(EVENT_CODE_UI_SHOW_PAUSE_MENU, user_interface_on_event);
   event_register(EVENT_CODE_UI_SHOW_SETTINGS_MENU, user_interface_on_event);
   event_register(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, user_interface_on_event);
+  event_register(EVENT_CODE_UI_START_FADE_EFFECT, user_interface_on_event);
 }
 
 void update_user_interface(void) {
@@ -353,7 +362,11 @@ void update_sliders(void) {
 }
 
 void render_user_interface(void) {
-  
+  if (state->fade_animation_playing) {
+    draw_fade_effect();
+    return;
+  }
+
   if (state->b_show_pause_menu) {
     gui_draw_pause_screen();
   }
@@ -678,7 +691,7 @@ void gui_draw_settings_screen(void) { // TODO: Return to settings later
 
   gui_slider(SDR_ID_SETTINGS_WIN_MODE_SLIDER, get_app_settings()->resolution_div2, VECTOR2(0,10), 3.f);
 
-  if(gui_menu_button("Apply", BTN_ID_MAIN_MENU_SETTINGS_CANCEL_SETTINGS_BUTTON, VECTOR2(-2,15))) {
+  if(gui_menu_button("Apply", BTN_ID_SETTINGS_APPLY_SETTINGS_BUTTON, VECTOR2(-2,15))) {
     slider sdr_win_mode = state->sliders[SDR_ID_SETTINGS_WIN_MODE_SLIDER];
     i32 window_mod = sdr_win_mode.options[sdr_win_mode.current_value].content.data.i32[0];
 
@@ -698,7 +711,6 @@ void gui_draw_settings_screen(void) { // TODO: Return to settings later
     }
   }
 }
-
 void gui_draw_pause_screen(void) {
   Rectangle dest = (Rectangle) {
     get_resolution_div2()->x,
@@ -991,8 +1003,33 @@ inline void draw_texture_npatch(texture_id _id, Rectangle dest, Vector4 offsets,
 
   DrawTextureNPatch(*tex, npatch, dest, (Vector2) {0}, 0, WHITE);
 }
-Vector2 make_vector(f32 x, f32 y) {
+inline Vector2 make_vector(f32 x, f32 y) {
   return (Vector2) {x,y};
+}
+void draw_fade_effect() {
+  if (!state) {
+    TraceLog(LOG_WARNING, "user_interface::draw_fade_effect()::User interface didn't initialized");
+    return;
+  }
+  if (!state->fade_animation_playing) {
+    TraceLog(LOG_WARNING, "user_interface::draw_fade_effect()::Funtions called without starting animation");
+    return;
+  }
+  if (state->fade_animation_timer <= FADE_ANIMATION_DURATION && state->fade_animation_timer >= 0 ) 
+  {
+    f32 process = EaseLinearIn(state->fade_animation_timer, 1.f, -1.f, FADE_ANIMATION_DURATION);
+    BeginShaderMode(get_shader_by_enum(SHADER_ID_FADE_TRANSITION)->handle);
+    set_shader_uniform(SHADER_ID_FADE_TRANSITION, 0, (data_pack) {.data.f32[0] = process});
+    draw_texture_regular(TEX_ID_CRIMSON_FANTASY_PANEL_BG, (Rectangle) {0, 0, GetScreenWidth(), GetScreenHeight()}, WHITE, false);
+    EndShaderMode();
+    state->fade_animation_timer++;
+    //if (state->fade_animation_timer >= FADE_ANIMATION_DURATION) state->fade_animation_timer = 0;
+    //TraceLog(LOG_INFO, "process: %f, timer: %f", process, state->fade_animation_timer);
+  }
+  else {
+    state->fade_animation_timer = 0;
+    state->fade_animation_playing = false;
+  }
 }
 
 void gui_draw_texture_id_pro(texture_id _id, Rectangle src, Rectangle dest) {
@@ -1023,6 +1060,26 @@ void gui_draw_texture_id(texture_id _id, Rectangle dest) {
   DrawTexturePro(*tex, 
   (Rectangle) {0, 0, tex->width, tex->height}, 
   dest, 
+  (Vector2) {0}, 0, WHITE);
+}
+void gui_draw_texture_id_center(texture_id _id, Vector2 pos, Vector2 dim, bool should_center) {
+  if (_id >= TEX_ID_MAX || _id <= TEX_ID_UNSPECIFIED) {
+    TraceLog(LOG_WARNING, "user_interface::gui_draw_texture_id_center()::ID was out of bound"); 
+    return; 
+  }
+  Texture2D* tex = get_texture_by_enum(_id);
+  if (!tex) { 
+    TraceLog(LOG_WARNING, "user_interface::gui_draw_texture_id_center()::Tex was null");
+    return; 
+  }
+  if (should_center) {
+    pos.x -= dim.x / 2.f; 
+    pos.y -= dim.y / 2.f; 
+  }
+
+  DrawTexturePro(*tex, 
+  (Rectangle) {0, 0, tex->width, tex->height}, 
+  (Rectangle) {pos.x, pos.y, dim.x, dim.y}, 
   (Vector2) {0}, 0, WHITE);
 }
 
@@ -1084,9 +1141,27 @@ bool user_interface_on_event(u16 code, event_context context) {
       state->prg_bars[(i32)context.data.f32[0]].progress = context.data.f32[1];
       return true;
     }
+    case EVENT_CODE_UI_START_FADE_EFFECT: {
+      state->fade_animation_playing = true;
+      state->fade_animation_timer = 0;
+      return true;
+    }
   };
 
   return false;
 }
 
 #undef PSPRITESHEET_SYSTEM
+#undef SPACE_BTW_V
+#undef DEFAULT_MENU_BUTTON_SCALE
+#undef MENU_BUTTON_FONT
+#undef MENU_BUTTON_FONT_SIZE
+#undef MINI_BUTTON_FONT
+#undef MINI_BUTTON_FONT_SIZE
+#undef LABEL_MOOD_FONT_SIZE
+#undef LABEL_MOOD_OUTLINE_FONT_SIZE
+#undef LABEL_MINI_FONT_SIZE
+#undef LABEL_MINI_OUTLINE_FONT_SIZE
+#undef draw_text
+#undef SDR_CURR_VAL
+#undef FADE_ANIMATION_DURATION

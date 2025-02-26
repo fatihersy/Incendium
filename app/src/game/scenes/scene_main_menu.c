@@ -62,8 +62,8 @@ void render_interface_main_menu(void) {
       event_fire(EVENT_CODE_APPLICATION_QUIT, (event_context){0});
     }
   }
-  if (state->type == MAIN_MENU_SCENE_SETTINGS) {
-    if(gui_menu_button("Cancel", BTN_ID_SETTINGS_APPLY_SETTINGS_BUTTON, VECTOR2(2,  15))) {
+  else if (state->type == MAIN_MENU_SCENE_SETTINGS) {
+    if(gui_menu_button("Cancel", BTN_ID_MAINMENU_SETTINGS_CANCEL, VECTOR2(2,  15))) {
       state->type = MAIN_MENU_SCENE_DEFAULT;
       event_fire(EVENT_CODE_UI_SHOW_SETTINGS_MENU, (event_context) {0});
     }

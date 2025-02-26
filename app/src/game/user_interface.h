@@ -29,6 +29,7 @@ void gui_label(const char* text, font_type type, i32 font_size, Vector2 position
 void gui_draw_pause_screen(void);
 void gui_draw_texture_id_pro(texture_id _id, Rectangle src, Rectangle dest); 
 void gui_draw_texture_id(texture_id _id, Rectangle dest); 
+void gui_draw_texture_id_center(texture_id _id, Vector2 pos, Vector2 dim, bool should_center); 
 
 #define gui_label_format(FONT, FONT_SIZE, X,Y, COLOR, CENTER, TEXT, ...) gui_label(TextFormat(TEXT, __VA_ARGS__), FONT, FONT_SIZE, (Vector2){X,Y}, COLOR, CENTER)
 #define gui_label_format_v(FONT, FONT_SIZE, VEC, COLOR, CENTER, TEXT, ...) gui_label(TextFormat(TEXT, __VA_ARGS__), FONT, FONT_SIZE, VEC, COLOR, CENTER)
