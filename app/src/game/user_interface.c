@@ -30,6 +30,7 @@ typedef struct user_interface_system_state {
   Font mini_mood_font;
   Font mini_mood_outline_font;
 
+  u16 fade_animation_duration;
   f32 fade_animation_timer;
   bool fade_animation_playing;
   bool b_show_pause_menu;
@@ -47,8 +48,7 @@ static user_interface_system_state *restrict state;
 #define LABEL_MINI_FONT_SIZE state->mini_mood_font.baseSize * .1f
 #define LABEL_MINI_OUTLINE_FONT_SIZE state->mini_mood_outline_font.baseSize * .1f
 #define DEFAULT_MENU_BUTTON_SCALE 3
-#define FADE_ANIMATION_DURATION TARGET_FPS * 0.7f // second
-#define SPACE_BTW_V(OFFSET_X, OFFSET_Y, POS, DIM, f) ((Vector2){ \
+#define SPACE_BTW_V(OFFSET_X, OFFSET_Y, POS, DIM, f) ((Vector2){  \
   .x = (POS).x - ((DIM).x / 2.0f) + (((DIM).x / (f)) * (OFFSET_X)), \
   .y = (POS).y - ((DIM).y / 2.0f) + (((DIM).y / (f)) * (OFFSET_Y)) \
 })
@@ -122,7 +122,7 @@ void user_interface_system_initialize(void) {
     .signal_state = BTN_STATE_UNDEFINED,
     .bg_tex_id    = TEX_ID_CRIMSON_FANTASY_PANEL_BG,
     .frame_tex_id = TEX_ID_CRIMSON_FANTASY_PANEL,
-    .bg_tint = (Color) {255, 255, 255, 200},
+    .bg_tint = (Color) { 30, 39, 46, 245},
     .offsets = (Vector4) {6, 6, 6, 6},
   };
 
@@ -1015,16 +1015,14 @@ void draw_fade_effect() {
     TraceLog(LOG_WARNING, "user_interface::draw_fade_effect()::Funtions called without starting animation");
     return;
   }
-  if (state->fade_animation_timer <= FADE_ANIMATION_DURATION && state->fade_animation_timer >= 0 ) 
+  if (state->fade_animation_timer <= state->fade_animation_duration && state->fade_animation_timer >= 0 ) 
   {
-    f32 process = EaseLinearIn(state->fade_animation_timer, 1.f, -1.f, FADE_ANIMATION_DURATION);
+    f32 process = EaseLinearIn(state->fade_animation_timer, 1.f, -1.f, state->fade_animation_duration);
     BeginShaderMode(get_shader_by_enum(SHADER_ID_FADE_TRANSITION)->handle);
     set_shader_uniform(SHADER_ID_FADE_TRANSITION, 0, (data_pack) {.data.f32[0] = process});
     draw_texture_regular(TEX_ID_CRIMSON_FANTASY_PANEL_BG, (Rectangle) {0, 0, GetScreenWidth(), GetScreenHeight()}, WHITE, false);
     EndShaderMode();
     state->fade_animation_timer++;
-    //if (state->fade_animation_timer >= FADE_ANIMATION_DURATION) state->fade_animation_timer = 0;
-    //TraceLog(LOG_INFO, "process: %f, timer: %f", process, state->fade_animation_timer);
   }
   else {
     state->fade_animation_timer = 0;
@@ -1142,6 +1140,7 @@ bool user_interface_on_event(u16 code, event_context context) {
       return true;
     }
     case EVENT_CODE_UI_START_FADE_EFFECT: {
+      state->fade_animation_duration = context.data.u16[0];
       state->fade_animation_playing = true;
       state->fade_animation_timer = 0;
       return true;
@@ -1165,3 +1164,4 @@ bool user_interface_on_event(u16 code, event_context context) {
 #undef draw_text
 #undef SDR_CURR_VAL
 #undef FADE_ANIMATION_DURATION
+#undef SCREEN_POS

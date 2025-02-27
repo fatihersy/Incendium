@@ -31,7 +31,7 @@
 #define MAX_PARSED_TEXT_TEXT_LEN 10
 
 #define MAX_SHADER_LOCATION_SLOT 16
-#define MAX_SHADER_LOCATION_NAME_LENGHT 16
+#define MAX_SHADER_LOCATION_NAME_LENGTH 16
 
 #define UI_FONT_SPACING 1
 
@@ -54,7 +54,7 @@
 #define MAX_TILEMAP_PROPS 255
 #define MAX_TILEMAP_FILENAME_LEN 15
 
-#define MAX_ITEM_ACTOR_NAME_LENGHT 10
+#define MAX_ITEM_ACTOR_NAME_LENGTH 10
 #define MAX_INVENTORY_SLOTS 50
 
 #define MAX_PLAYER_LEVEL 100
@@ -65,6 +65,9 @@
 #define MAX_ABILITY_SLOT 5
 #define MAX_ABILITY_PROJECTILE_SLOT 6
 #define MAX_ABILITY_LEVEL 7
+
+#define MAX_WORLDMAP_LOCATION_NAME_LENGTH 10
+#define MAX_WORLDMAP_LOCATIONS 22
 
 #define MAX_RAND 6
 #define RANDOM_TABLE_NUMBER_COUNT 507
@@ -212,6 +215,7 @@ typedef enum texture_id {
   TEX_ID_WORLDMAP_W_CLOUDS,
   TEX_ID_WORLDMAP_WO_CLOUDS,
   TEX_ID_WORLDMAP_CLOUDS,
+  TEX_ID_GAME_BG_SPACE,
 
   TEX_ID_MAX,
 } texture_id;
@@ -397,7 +401,7 @@ typedef struct data_pack {
 } data_pack;
 
 typedef struct fshader_location {
-  char name[MAX_SHADER_LOCATION_NAME_LENGHT];
+  char name[MAX_SHADER_LOCATION_NAME_LENGTH];
   u16 index;
   data_pack data;
   ShaderUniformDataType uni_data_type;
@@ -443,6 +447,11 @@ typedef struct tilesheet {
   f32 offset;
   bool is_initialized;
 } tilesheet;
+
+typedef struct worldmap_stage {
+  char name[MAX_WORLDMAP_LOCATION_NAME_LENGTH];
+  Rectangle screen_location;
+} worldmap_stage;
 
 typedef struct tilemap_tile {
 	tilesheet* sheet;
@@ -698,7 +707,7 @@ typedef struct ability_play_system {
 } ability_play_system;
 
 typedef struct item_actor {
-  i8 name[MAX_ITEM_ACTOR_NAME_LENGHT];
+  i8 name[MAX_ITEM_ACTOR_NAME_LENGTH];
   texture_id icon_texture_id;
 } item_actor;
 
@@ -840,5 +849,15 @@ static const u32 level_curve[MAX_PLAYER_LEVEL + 1] = {
 #define pVECTOR2(X) ((Vector2){X[0], X[1]})
 #define VECTOR2(X, Y) ((Vector2){X, Y})
 #define TO_VECTOR2(X) ((Vector2){X, X})
+#define SCREEN_POS(X, Y) ((Vector2){  \
+  .x = GetScreenWidth()  * (X / 100), \
+  .y = GetScreenHeight() * (Y / 100)  \
+})
+#define SCREEN_RECT(X, Y, W, H) ((Rectangle){  \
+  .x = GetScreenWidth()  * (X / 120.f), \
+  .y = GetScreenHeight() * (Y / 120.f),  \
+  .width = (GetScreenWidth() / 120.f) * W, \
+  .height = (GetScreenHeight() / 120.f) * H  \
+})
 
 #endif

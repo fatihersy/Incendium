@@ -1,5 +1,5 @@
 {
-    "workbench.colorTheme": "Monokai",
+    "workbench.colorTheme": "Quiet Light",
     "editor.minimap.enabled": false,
     "files.autoSave": "onFocusChange",
     "terminal.integrated.defaultProfile.windows": "pwsh7",
