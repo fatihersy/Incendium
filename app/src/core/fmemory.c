@@ -3,6 +3,12 @@
 #include <stdlib.h> // Required for: malloc(), free()
 #include <string.h> // Required for: memset(), memcpy()
 
+typedef struct memory_system_state {
+    u64 linear_memory_total_size;
+    u64 linear_memory_allocated;
+    void *linear_memory;
+  } memory_system_state;
+
 static memory_system_state* memory_system;
 
 void memory_system_initialize(void) {

@@ -6,7 +6,7 @@
 #define RESOURCE_PATH "D:/Workspace/resources/"
 #define SHADER_PATH "../app/src/shaders/"
 
-#define TOTAL_ALLOCATED_MEMORY 128 * 1024 * 1024
+#define TOTAL_ALLOCATED_MEMORY 256 * 1024 * 1024
 #define TARGET_FPS 60
 #define MAX_SPRITE_RENDERQUEUE 50
 
@@ -52,7 +52,7 @@
 #define TILESHEET_PROP_SYMBOL_STR_LEN 60
 #define MAX_TILESHEET_PROPS 1024
 #define MAX_TILEMAP_PROPS 255
-#define MAX_TILEMAP_FILENAME_LEN 15
+#define MAX_TILEMAP_FILENAME_LEN 20
 
 #define MAX_ITEM_ACTOR_NAME_LENGTH 10
 #define MAX_INVENTORY_SLOTS 50
@@ -211,7 +211,7 @@ typedef enum texture_id {
   TEX_ID_CRIMSON_FANTASY_PANEL,
   TEX_ID_CRIMSON_FANTASY_PANEL_BG,
   TEX_ID_MAP_PROPS_ATLAS,
-  TEX_ID_SKILL_ICON_ATLAS,
+  TEX_ID_ABILITY_ICON_ATLAS,
   TEX_ID_WORLDMAP_W_CLOUDS,
   TEX_ID_WORLDMAP_WO_CLOUDS,
   TEX_ID_WORLDMAP_CLOUDS,
@@ -310,6 +310,8 @@ typedef enum button_id {
 
   BTN_ID_EDITOR_ACTIVE_TILEMAP_EDIT_LAYER_INC,
   BTN_ID_EDITOR_ACTIVE_TILEMAP_EDIT_LAYER_DEC,
+  BTN_ID_EDITOR_BTN_STAGE_MAP_CHANGE_LEFT,
+  BTN_ID_EDITOR_BTN_STAGE_MAP_CHANGE_RIGHT,
 
   BTN_ID_SETTINGS_SLIDER_SOUND_LEFT_BUTTON,
   BTN_ID_SETTINGS_SLIDER_SOUND_RIGHT_BUTTON,
@@ -360,7 +362,7 @@ typedef enum dialog_type {
   DIALOG_TYPE_IN_GAME_UI,
   DIALOG_TYPE_MAIN_MENU_UI,
   DIALOG_TYPE_PAUSE_MENU,
-  DIALOG_TYPE_SKILL_UP,
+  DIALOG_TYPE_ABILITY_UPGRADE,
   DIALOG_TYPE_TILE_SELECTION
 } dialog_type;
 
@@ -449,7 +451,10 @@ typedef struct tilesheet {
 } tilesheet;
 
 typedef struct worldmap_stage {
-  char name[MAX_WORLDMAP_LOCATION_NAME_LENGTH];
+  u16 map_id;
+  char displayname[MAX_WORLDMAP_LOCATION_NAME_LENGTH];
+  char filename[MAX_WORLDMAP_LOCATION_NAME_LENGTH];
+  Rectangle spawning_areas[MAX_SPAWN_COLLISIONS];
   Rectangle screen_location;
 } worldmap_stage;
 
@@ -471,8 +476,10 @@ typedef struct tilemap_prop {
   bool is_initialized;
 } tilemap_prop;
 
+
 typedef struct tilemap {
   i8 filename[MAX_TILEMAP_LAYERS][MAX_TILEMAP_FILENAME_LEN];
+  i8 propfile[MAX_TILEMAP_FILENAME_LEN];
   Vector2 position;
   u16 map_dim_total;
   u16 map_dim;
@@ -706,22 +713,11 @@ typedef struct ability_play_system {
   ability abilities[MAX_ABILITY_SLOT];
 } ability_play_system;
 
-typedef struct item_actor {
-  i8 name[MAX_ITEM_ACTOR_NAME_LENGTH];
-  texture_id icon_texture_id;
-} item_actor;
-
-typedef struct inventory_state {
-  item_actor content[MAX_INVENTORY_SLOTS];
-  u16 item_count;
-} inventory_state;
-
 // LABEL: Player State
 typedef struct player_state {
   Rectangle collision;
   ability_play_system ability_system;
   spritesheet_play_system spritesheet_system;
-  inventory_state inventory;
   ability_type starter_ability;
 
   Vector2 position;
@@ -749,21 +745,16 @@ typedef struct player_state {
   f32 damage_break_time;
   f32 damage_break_current;
 
-  bool is_player_have_skill_points;
+  bool is_player_have_ability_upgrade_points;
   bool is_initialized;
   bool is_moving;
   bool is_dead;
   bool is_damagable;
 } player_state;
 
-typedef struct memory_system_state {
-  u64 linear_memory_total_size;
-  u64 linear_memory_allocated;
-  void *linear_memory;
-} memory_system_state;
-
 typedef struct camera_metrics {
   Camera2D handle;
+  Vector2 screen_offset;
 } camera_metrics;
 
 static const u32 level_curve[MAX_PLAYER_LEVEL + 1] = {

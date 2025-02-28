@@ -6,7 +6,6 @@
 #include "core/fmemory.h"
 
 #include "game/resource.h"
-#include "game/tilemap.h"
 #include "game/ability.h"
 #include "game/player.h"
 #include "game/spawn.h"
@@ -14,12 +13,10 @@
 typedef struct game_manager_system_state {
   rectangle_collision spawn_collisions[MAX_SPAWN_COUNT];
   projectile projectiles[MAX_ABILITY_PROJECTILE_SLOT * MAX_ABILITY_SLOT];
-  tilemap map;
-  tilemap_stringtify_package map_stringtify;
   u16 spawn_collision_count;
   u16 projectile_count;
   player_state* p_player;
-  Rectangle spawning_areas[MAX_SPAWN_COLLISIONS];
+  worldmap_stage stage;
 
   bool is_game_paused;
   bool game_manager_initialized;
@@ -32,82 +29,34 @@ void update_collisions(void);
 bool game_manager_on_event(u16 code, event_context context);
 
 bool game_manager_initialize(camera_metrics* _camera_metrics) {
-  if (state) return false;
+  if (state) {
+    TraceLog(LOG_ERROR, "game_manager::game_manager_initialize()::Initialize called twice");
+    return false;
+  }
 
   state = (game_manager_system_state *)allocate_memory_linear(sizeof(game_manager_system_state), true);
   state->is_game_paused = true;
-
-  if (!player_system_initialize()) {
-    TraceLog(LOG_ERROR, "player_system_initialize() failed");
-    return false;
-  }
-  if (!ability_system_initialize(_camera_metrics, get_app_settings())) {
-    TraceLog(LOG_ERROR, "ability_system_initialize() failed");
-    return false;
-  }
-  state->p_player = get_player_state();
-  _add_ability(state->p_player->starter_ability);
-
-  if (!spawn_system_initialize()) {
-    TraceLog(LOG_ERROR, "spawn_system_initialize() failed");
-    return false;
-  }
-
-  for (int i=0; i<MAX_TILEMAP_LAYERS; ++i) {
-    copy_memory(state->map.filename[i], TextFormat("map_layer%d.txt", i), sizeof(i8) * MAX_TILEMAP_FILENAME_LEN);
-  }
-  create_tilemap(TILESHEET_TYPE_MAP, (Vector2) {0, 0}, 100, 16*3, &state->map);
-  if(!state->map.is_initialized) {
-    TraceLog(LOG_WARNING, "WARNING::scene_in_game_edit::initialize_scene_in_game_edit()::tilemap initialization failed");
-  }
-  load_map_data(&state->map, &state->map_stringtify);
-  if (!state->map_stringtify.is_success) {
-    TraceLog(LOG_ERROR, "game_manager_initialize::game manager unable to load map");
-    return false;
-  }
-  state->spawning_areas[0] = (Rectangle) {
-    -100, 
-    -100, 
-    get_resolution_div2()->x,
-    get_resolution_div2()->y
-  };
 
   event_register(EVENT_CODE_PAUSE_GAME, game_manager_on_event);
   event_register(EVENT_CODE_UNPAUSE_GAME, game_manager_on_event);
   event_register(EVENT_CODE_RELOCATE_SPAWN_COLLISION, game_manager_on_event);
   event_register(EVENT_CODE_RELOCATE_PROJECTILE_COLLISION, game_manager_on_event);
 
-  for (u16 i = 0; i < MAX_SPAWN_COUNT; ++i) 
-  {
-    Vector2 position = (Vector2) {
-      get_random((i32)state->spawning_areas[0].x, (i32)state->spawning_areas[0].x + state->spawning_areas[0].width),
-      get_random((i32)state->spawning_areas[0].y, (i32)state->spawning_areas[0].y + state->spawning_areas[0].height)};
-    Texture2D *tex = get_texture_by_enum(TEX_ID_ENEMY_TEXTURE);
-    rectangle_collision rect_col = (rectangle_collision) {
-      .rect = (Rectangle) {
-        .x = position.x,
-        .y = position.y,
-        .width = tex->width,
-        .height = tex->height
-      },
-      .owner_type = ENEMY
-    };
-    rect_col.owner_id = spawn_character((Character2D){
-        .character_id = 0,
-        .tex = tex,
-        .initialized = false,
-        .collision = rect_col.rect,
-        .position = position,
-        .w_direction = WORLD_DIRECTION_LEFT,
-        .type = ENEMY,
-        .rotation = 0,
-        .health = 100,
-        .damage = 10,
-        .speed = 1,
-    });
-    add_collision(rect_col);
+  if (!player_system_initialize()) {
+    TraceLog(LOG_ERROR, "game_manager::player_system_initialize()::Returned false");
+    return false;
   }
-  
+  state->p_player = get_player_state();
+  if (!ability_system_initialize(_camera_metrics, get_app_settings())) {
+    TraceLog(LOG_ERROR, "game_manager::ability_system_initialize()::Returned false");
+    return false;
+  }
+  _add_ability(state->p_player->starter_ability);
+  if (!spawn_system_initialize()) {
+    TraceLog(LOG_ERROR, "game_manager::spawn_system_initialize()::Returned false");
+    return false;
+  }
+
   state->game_manager_initialized = true;
   return true;
 }
@@ -160,13 +109,10 @@ void update_collisions(void) {
     damage_any_collider_by_type(spawn, PLAYER);
   }
 
-  
 }
 void render_game(void) {
-  render_tilemap(&state->map);
   
-  DrawRectangleRec(state->spawning_areas[0], RED);
-  
+  DrawRectangleRec(state->stage.spawning_areas[0], RED);
   render_player();
   render_spawns();
   render_abilities(&state->p_player->ability_system);
@@ -220,14 +166,63 @@ void add_collision(rectangle_collision rect_col) {
   state->spawn_collisions[state->spawn_collision_count].is_active = true;
   state->spawn_collision_count++;
 }
+void gm_start_game(worldmap_stage stage) {
+  state->stage = stage;
 
-// GET / SET
-player_state* get_player_state_if_available(void) {
-  if (get_player_state()) {
-    return get_player_state();
+  for (u16 i = 0; i < MAX_SPAWN_COUNT; ++i) 
+  {
+    Vector2 position = (Vector2) {
+      get_random((i32)state->stage.spawning_areas[0].x, (i32)state->stage.spawning_areas[0].x + state->stage.spawning_areas[0].width),
+      get_random((i32)state->stage.spawning_areas[0].y, (i32)state->stage.spawning_areas[0].y + state->stage.spawning_areas[0].height)};
+    Texture2D *tex = get_texture_by_enum(TEX_ID_ENEMY_TEXTURE);
+    rectangle_collision rect_col = (rectangle_collision) {
+      .rect = (Rectangle) {
+        .x = position.x,
+        .y = position.y,
+        .width = tex->width,
+        .height = tex->height
+      },
+      .owner_type = ENEMY
+    };
+    rect_col.owner_id = spawn_character((Character2D){
+        .character_id = 0,
+        .tex = tex,
+        .initialized = false,
+        .collision = rect_col.rect,
+        .position = position,
+        .w_direction = WORLD_DIRECTION_LEFT,
+        .type = ENEMY,
+        .rotation = 0,
+        .health = 100,
+        .damage = 10,
+        .speed = 1,
+    });
+    add_collision(rect_col);
   }
 
-  return (player_state*) {0};
+  event_fire(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, (event_context){
+    .data.f32[0] = PRG_BAR_ID_PLAYER_EXPERIANCE,
+    .data.f32[1] = state->p_player->exp_perc,
+  });
+  event_fire(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, (event_context){
+    .data.f32[0] = PRG_BAR_ID_PLAYER_HEALTH,
+    .data.f32[1] = state->p_player->health_perc,
+  });  
+  event_fire(EVENT_CODE_SCENE_MANAGER_SET_CAM_POS, (event_context){
+    .data.f32[0] = state->p_player->position.x,
+    .data.f32[1] = state->p_player->position.y,
+  });
+}
+
+// GET / SET
+bool get_b_player_have_upgrade_points(void) {
+  return state->p_player->is_player_have_ability_upgrade_points;
+}
+void set_player_have_ability_upgrade_points(bool _b) {
+  state->p_player->is_player_have_ability_upgrade_points = _b;
+}
+ability* get_player_ability(ability_type type) {
+  return &state->p_player->ability_system.abilities[type];
 }
 bool get_is_game_paused(void) {
   return state->is_game_paused;
@@ -316,6 +311,7 @@ Vector2 _get_player_position(bool centered) {
   return get_player_position(centered);
 }
 // Exposed functions
+
 
 bool game_manager_on_event(u16 code, event_context context) {
   switch (code) {

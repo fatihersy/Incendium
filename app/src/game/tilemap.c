@@ -114,8 +114,12 @@ void render_tilemap(tilemap* _tilemap) {
     if (!_tilemap->props[i].is_initialized) continue;
     
     tilemap_prop* prop = &_tilemap->props[i];
-    Texture2D* tex = get_texture_by_enum(prop->atlas_id);
-    DrawTexturePro(*tex, prop->source, prop->dest, (Vector2) {0}, 0.f, WHITE); 
+    if (prop) {
+      Texture2D* tex = get_texture_by_enum(prop->atlas_id);
+      if (tex) {
+        DrawTexturePro(*tex, prop->source, prop->dest, (Vector2) {0}, 0.f, WHITE); 
+      }
+    }
   }
 }
 
@@ -335,7 +339,7 @@ bool save_map_data(tilemap* map, tilemap_stringtify_package* out_package) {
         return false;
       }
     }
-    return SaveFileData(rs_path("map_props.txt"), out_package->str_props, out_package->size_props_str);
+    return SaveFileData(rs_path((const char*)map->propfile), out_package->str_props, out_package->size_props_str);
   }
 
   return false;
@@ -361,12 +365,57 @@ bool load_map_data(tilemap *restrict map, tilemap_stringtify_package *restrict o
   }
   {
     int dataSize = sizeof(out_package->str_props);
-    u8* _str_prop = LoadFileData(rs_path("map_props.txt"), &dataSize);
+    u8* _str_prop = LoadFileData(rs_path((const char*)map->propfile), &dataSize);
     if (dataSize <= 0 || dataSize == I32_MAX) {
       TraceLog(LOG_ERROR, "tilemap::load_map_data()::Reading data returned null");
     }
     copy_memory(out_package->str_props, _str_prop, sizeof(out_package->str_props));
     UnloadFileData(_str_prop);
+  }
+  
+  str_to_map(map, out_package);
+  
+  return out_package->is_success;
+}
+bool load_or_create_map_data(tilemap *restrict map, tilemap_stringtify_package *restrict out_package) {
+  map_to_str(map, out_package);
+  {
+    for(int i=0; i<MAX_TILEMAP_LAYERS; ++i){
+      if (FileExists(rs_path((const char*)map->filename[i]))) {
+        int dataSize = sizeof(out_package->str_tilemap[i]);
+        u8* _str_tile = LoadFileData(rs_path((const char*)map->filename[i]), &dataSize);
+        if (dataSize <= 0 || dataSize == I32_MAX) {
+          TraceLog(LOG_ERROR, "tilemap::load_map_data()::Reading data returned null");
+        }
+        copy_memory(&out_package->str_tilemap[i], _str_tile, sizeof(out_package->str_tilemap[i]));
+        UnloadFileData(_str_tile);
+      }
+      else {
+        if (out_package->is_success) {
+          if (!SaveFileData(rs_path((const char*)map->filename[i]), out_package->str_tilemap[i], out_package->size_tilemap_str[i])) {
+            TraceLog(LOG_ERROR, "ERROR::tilemap::save_map_data()::Recieving package data returned with failure");
+          }
+        }
+      }
+    }
+  }
+  {
+    if (FileExists((const char*)map->propfile)) {
+      int dataSize = sizeof(out_package->str_props);
+      u8* _str_prop = LoadFileData(rs_path((const char*)map->propfile), &dataSize);
+      if (dataSize <= 0 || dataSize == I32_MAX) {
+        TraceLog(LOG_ERROR, "tilemap::load_map_data()::Reading data returned null");
+      }
+      copy_memory(out_package->str_props, _str_prop, sizeof(out_package->str_props));
+      UnloadFileData(_str_prop);
+    }
+    else {
+      if (out_package->is_success) {
+        if (!SaveFileData(rs_path((const char*)map->propfile), out_package->str_props, out_package->size_props_str)) {
+          TraceLog(LOG_ERROR, "ERROR::tilemap::save_map_data()::Recieving package data returned with failure");
+        }
+      }
+    }
   }
   
   str_to_map(map, out_package);

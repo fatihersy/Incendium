@@ -217,6 +217,8 @@ void user_interface_system_initialize(void) {
     register_slider(
       SDR_ID_EDITOR_MAP_LAYER_SLC_SLIDER, SDR_TYPE_OPTION, 
       BTN_ID_EDITOR_ACTIVE_TILEMAP_EDIT_LAYER_DEC,BTN_ID_EDITOR_ACTIVE_TILEMAP_EDIT_LAYER_INC, false);
+    register_button(BTN_ID_EDITOR_BTN_STAGE_MAP_CHANGE_LEFT, BTN_TYPE_SLIDER_LEFT_BUTTON);
+    register_button(BTN_ID_EDITOR_BTN_STAGE_MAP_CHANGE_RIGHT, BTN_TYPE_SLIDER_LEFT_BUTTON);
   }
   // EDITOR
 
@@ -732,23 +734,27 @@ void gui_draw_pause_screen(void) {
 }
 bool gui_slider_add_option(slider_id _id, const char* _display_text, data_pack content) {
   if (_id >= SDR_ID_MAX || _id <= SDR_ID_UNDEFINED || !state) {
-    TraceLog(LOG_WARNING, "WARNING::user_interface::gui_slider_add_option()::Slider ids was out of bound");
+    TraceLog(LOG_WARNING, "user_interface::gui_slider_add_option()::Slider ids was out of bound");
     return false;
   }
   slider* sdr = &state->sliders[_id];
   if (!sdr->is_registered) {
-    TraceLog(LOG_WARNING, "WARNING::user_interface::gui_slider_add_option()::Given slider didn't registered");
+    TraceLog(LOG_WARNING, "user_interface::gui_slider_add_option()::Given slider didn't registered");
     return false;
   }
-  sdr->options[sdr->max_value] = (slider_option) {
-    .display_text = {0},
-    .content = content
-  };
-  TextCopy(sdr->options[sdr->max_value].display_text, _display_text);
-
-  sdr->max_value++;
-
-  return true;
+  if (sdr->max_value < MAX_SLIDER_OPTION_SLOT) {
+    sdr->options[sdr->max_value] = (slider_option) {
+      .display_text = {0},
+      .content = content
+    };
+    TextCopy(sdr->options[sdr->max_value].display_text, _display_text);
+    sdr->max_value++;
+    return true;
+  }
+  else {
+    TraceLog(LOG_ERROR, "user_interface::gui_slider_add_option()::You've reached the maximum amouth of option slot");
+    return false;
+  }
 }
 void register_button_type(button_type_id _btn_type_id, spritesheet_type _ss_type, Vector2 frame_dim, Vector2 on_click_text_offset, f32 _scale, bool _play_reflection, bool _play_crt, bool _should_center) {
   if (_ss_type     >= SPRITESHEET_TYPE_MAX || _ss_type <= SPRITESHEET_UNSPECIFIED || 
@@ -1100,8 +1106,8 @@ panel get_default_panel(void) {
   return (panel) {
     .frame_tex_id  = TEX_ID_CRIMSON_FANTASY_PANEL,
     .bg_tex_id     = TEX_ID_CRIMSON_FANTASY_PANEL_BG,
-    .bg_tint       = WHITE,
-    .bg_hover_tint = WHITE,
+    .bg_tint       = (Color) { 30, 39, 46, 245},
+    .bg_hover_tint = (Color) { 52, 64, 76, 245},
     .offsets       = (Vector4) {6, 6, 6, 6},
     .zoom          = 1.f,
     .scroll        = 0,

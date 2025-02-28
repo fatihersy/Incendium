@@ -38,7 +38,7 @@ bool resource_system_initialize(void) {
   load_texture("crimson_fantasy_panel.png",    false, (Vector2){ 0,  0}, TEX_ID_CRIMSON_FANTASY_PANEL);
   load_texture("crimson_fantasy_panel_bg.png", false, (Vector2){ 0,  0}, TEX_ID_CRIMSON_FANTASY_PANEL_BG);
   load_texture("map_props_atlas.png",          false, (Vector2){ 0,  0}, TEX_ID_MAP_PROPS_ATLAS);
-  load_texture("skill_icons.png",              false, (Vector2){ 0,  0}, TEX_ID_SKILL_ICON_ATLAS);
+  load_texture("ability_icons.png.png",              false, (Vector2){ 0,  0}, TEX_ID_ABILITY_ICON_ATLAS);
   load_texture("worldmap_w_clouds.png",        false, (Vector2){ 0,  0}, TEX_ID_WORLDMAP_W_CLOUDS);
   load_texture("worldmap_wo_clouds.png",       false, (Vector2){ 0,  0}, TEX_ID_WORLDMAP_WO_CLOUDS);
   load_texture("worldmap_clouds.png",          false, (Vector2){ 0,  0}, TEX_ID_WORLDMAP_CLOUDS);

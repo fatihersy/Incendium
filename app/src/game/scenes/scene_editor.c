@@ -5,8 +5,8 @@
 #include "core/event.h"
 #include "core/fmemory.h"
 
+#include "game/world.h"
 #include "game/resource.h"
-#include "game/tilemap.h"
 #include "game/user_interface.h"
 
 #define PROP_DRAG_HANDLE_DIM 16
@@ -29,10 +29,9 @@ typedef enum editor_state_mouse_focus {
 typedef struct scene_editor_state {
   camera_metrics * in_camera_metrics;
   Vector2 target;
-  tilesheet palette;
+  //tilemap* map;
+  worldmap_stage worldmap_locations[MAX_WORLDMAP_LOCATIONS];
   tilemap_prop props[MAX_TILESHEET_PROPS];
-  tilemap map;
-  tilemap_stringtify_package map_stringtify;
   u16 prop_count;
 
   bool b_show_tilesheet_tile_selection_screen;
@@ -44,6 +43,7 @@ typedef struct scene_editor_state {
   tilemap_tile selected_tile;
   tilemap_prop selected_prop;
   u16 edit_layer;
+  u16 selected_stage;
   editor_state_selection_type selection_type;
   editor_state_mouse_focus mouse_focus;
   Vector2 mouse_pos_world;
@@ -62,22 +62,17 @@ void add_prop(texture_id source_tex, Rectangle source, f32 scale);
 
 void initialize_scene_editor(camera_metrics* _camera_metrics) {
   if (state) {
-    TraceLog(LOG_ERROR, "ERROR::scene_in_game_edit::initialize_scene_editor()::initialize function called multiple times");
+    TraceLog(LOG_ERROR, "scene_editor::initialize_scene_editor()::initialize function called multiple times");
     return;
   }
   state = (scene_editor_state*)allocate_memory_linear(sizeof(scene_editor_state), true);
 
-  for (int i=0; i<MAX_TILEMAP_LAYERS; ++i) {
-    copy_memory(state->map.filename[i], TextFormat("map_layer%d.txt", i), sizeof(i8) * MAX_TILEMAP_FILENAME_LEN);
+  if (!world_system_initialize(_camera_metrics, *get_resolution_div2())) {
+    TraceLog(LOG_ERROR, "scene_editor::initialize_scene_editor()::world_system_initialize() Returned false");
+    return;
   }
-  create_tilemap(TILESHEET_TYPE_MAP, (Vector2) {0, 0}, 100, 16*3, &state->map);
-  if(!state->map.is_initialized) {
-    TraceLog(LOG_WARNING, "scene_in_game_edit::initialize_scene_in_game_edit()::map_layer0 initialization failed");
-  }
-  create_tilesheet(TILESHEET_TYPE_MAP, 16*2, 1.1, &state->palette);
-  if(!state->palette.is_initialized) {
-    TraceLog(LOG_WARNING, "scene_in_game_edit::initialize_scene_in_game_edit()::palette initialization failed");
-  }
+  copy_memory(&state->worldmap_locations, get_worldmap_locations(), sizeof(state->worldmap_locations));
+  //state->map = get_active_map();
 
   user_interface_system_initialize();
   state->tile_selection_panel = get_default_panel();
@@ -92,7 +87,6 @@ void initialize_scene_editor(camera_metrics* _camera_metrics) {
     .width = PROP_DRAG_HANDLE_DIM, .height = PROP_DRAG_HANDLE_DIM * 5,
   };
   state->in_camera_metrics = _camera_metrics;
-  state->palette.position = (Vector2) {get_screen_offset().x, get_screen_offset().y + 50};
   event_fire(EVENT_CODE_SCENE_MANAGER_SET_CAM_POS, (event_context){
     .data.f32[0] = state->target.x,
     .data.f32[1] = state->target.y
@@ -476,7 +470,7 @@ void initialize_scene_editor(camera_metrics* _camera_metrics) {
   for (int i=0; i<MAX_TILEMAP_LAYERS; ++i) {
     gui_slider_add_option(SDR_ID_EDITOR_MAP_LAYER_SLC_SLIDER, TextFormat("%d",(i+1)), (data_pack) {
       .type_flag = DATA_TYPE_U16,
-      .data.u16 = {i}
+      .data.u16[0] = i
     });
   }
 }
@@ -492,10 +486,11 @@ void update_scene_editor(void) {
   state->edit_layer = get_slider_current_value(SDR_ID_EDITOR_MAP_LAYER_SLC_SLIDER)->data.u16[0]; // HACK: Should not updated every frame
 
   editor_update_bindings();
+  update_map();
   update_user_interface();
 }
 void render_scene_editor(void) {
-  render_tilemap(&state->map);
+  render_map();
   DrawPixel(0, 0, RED);
 }
 void render_interface_editor(void) {
@@ -503,9 +498,25 @@ void render_interface_editor(void) {
   if(state->b_show_tilesheet_tile_selection_screen && !state->b_show_prop_selection_screen) 
   { 
     gui_panel_scissored(state->tile_selection_panel, false, {
-      render_tilesheet(&state->palette, state->tile_selection_panel.zoom);
-      gui_slider(SDR_ID_EDITOR_MAP_LAYER_SLC_SLIDER, get_screen_offset(), VECTOR2(5,3), 3.f);
-    });
+      render_map_palette(state->tile_selection_panel.zoom);
+      gui_slider(SDR_ID_EDITOR_MAP_LAYER_SLC_SLIDER, get_screen_offset(), VECTOR2(4,3), 3.f);
+
+      if(gui_slider_button(BTN_ID_EDITOR_BTN_STAGE_MAP_CHANGE_LEFT, SCREEN_POS(6.5f,9.f))){
+        if (state->selected_stage > 0) {
+          state->selected_stage -= 1;
+          set_worldmap_location(state->selected_stage);
+        }
+      }
+
+      gui_label_format_v(FONT_TYPE_MOOD, 10, SCREEN_POS(14.f,10.f), WHITE, true, "%d", state->selected_stage);
+
+      if(gui_slider_button(BTN_ID_EDITOR_BTN_STAGE_MAP_CHANGE_RIGHT, SCREEN_POS(17.f,9.f))) {
+        if (state->selected_stage < MAX_WORLDMAP_LOCATIONS-1) {
+          state->selected_stage += 1;
+          set_worldmap_location(state->selected_stage);
+        }
+      }
+    }); 
 
   }
   else if(state->b_show_prop_selection_screen && !state->b_show_tilesheet_tile_selection_screen) 
@@ -531,8 +542,7 @@ void render_interface_editor(void) {
 
   switch (state->selection_type) {
     case SLC_TYPE_TILE: {
-      render_tile(&state->selected_tile, 
-      (Rectangle) {GetMousePosition().x, GetMousePosition().y, state->map.tile_size, state->map.tile_size});
+      _render_tile(&state->selected_tile);
       break;
     }
     case SLC_TYPE_DROP_PROP: {
@@ -607,15 +617,14 @@ void editor_update_mouse_bindings(void) {
     if (state->tile_selection_panel.zoom > 3.0f) state->tile_selection_panel.zoom = 3.0f;
     else if (state->tile_selection_panel.zoom < 0.1f) state->tile_selection_panel.zoom = 0.1f;
     if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON) && state->selection_type == SLC_TYPE_UNSELECTED) {
-      tilemap_tile tile = get_tile_from_sheet_by_mouse_pos(&state->palette, GetMousePosition(), state->tile_selection_panel.zoom);
+      tilemap_tile tile = _get_tile_from_sheet_by_mouse_pos();
       if (tile.is_initialized) {
         state->selected_tile = tile;
         state->selection_type = SLC_TYPE_TILE;
       }
     }
     if (IsMouseButtonDown(MOUSE_MIDDLE_BUTTON)) {
-      state->palette.position.x += GetMouseDelta().x;
-      state->palette.position.y += GetMouseDelta().y;
+      drag_tilesheet(GetMouseDelta());
     }
   }
   else if(state->b_show_prop_selection_screen && CheckCollisionPointRec(GetMousePosition(), state->prop_selection_panel.dest))
@@ -649,28 +658,20 @@ void editor_update_mouse_bindings(void) {
   {
     switch (state->selection_type) {
       case SLC_TYPE_UNSELECTED: {
-        for (int i=0; i<state->map.prop_count; ++i) {
-          if(CheckCollisionPointRec(state->mouse_pos_world, state->map.props[i].dest)) {
-            state->selected_prop = state->map.props[i];
-            state->selection_type = SLC_TYPE_SLC_PROP;
-            break;
-          }
-        }
+        state->selected_prop = *get_map_prop_by_pos(state->mouse_pos_world);
+        state->selection_type = SLC_TYPE_SLC_PROP;
         break;
       }
       case SLC_TYPE_TILE: { 
-        tilemap_tile tile = get_tile_from_map_by_mouse_pos(&state->map, GetScreenToWorld2D(GetMousePosition(), state->in_camera_metrics->handle), state->edit_layer);
-        state->map.tiles[state->edit_layer][tile.x][tile.y] = state->selected_tile;
-        TraceLog(LOG_INFO, "layer:%d tile{%d:%d} is %d:%d now",state->edit_layer, tile.x, tile.y, state->selected_tile.tile_symbol.c[0], state->selected_tile.tile_symbol.c[1]);
+        tilemap_tile tile = _get_tile_from_map_by_mouse_pos(state->edit_layer);
+        set_map_tile(state->edit_layer, &tile, &state->selected_tile);
         break; 
       }
       case SLC_TYPE_DROP_PROP: {
         Vector2 coord = GetScreenToWorld2D(GetMousePosition(), state->in_camera_metrics->handle);
         state->selected_prop.dest.x = coord.x;
         state->selected_prop.dest.y = coord.y;
-        state->map.props[state->map.prop_count] = state->selected_prop;
-        state->map.props[state->map.prop_count].id = state->map.prop_count;
-        state->map.prop_count++;
+        add_prop_curr_map(&state->selected_prop);
         break;
       }
       case SLC_TYPE_SLC_PROP: {
@@ -684,7 +685,7 @@ void editor_update_mouse_bindings(void) {
   {
     switch (state->selection_type) {
       case SLC_TYPE_SLC_PROP: {
-        tilemap_prop* prop = &state->map.props[map_prop_id_to_index(state->selected_prop.id)];
+        tilemap_prop* prop = get_map_prop_by_id(state->selected_prop.id);
         Rectangle drag_handle = (Rectangle) {
           prop->dest.x + prop->dest.width/2.f - PROP_DRAG_HANDLE_DIM_DIV2, prop->dest.y + prop->dest.height/2.f - PROP_DRAG_HANDLE_DIM_DIV2, 
           PROP_DRAG_HANDLE_DIM, PROP_DRAG_HANDLE_DIM
@@ -736,10 +737,10 @@ void editor_update_keyboard_bindings(void) {
     event_fire(EVENT_CODE_UI_SHOW_PAUSE_MENU, (event_context){0});
   }
   if (IsKeyPressed(KEY_F5)) {
-    save_map_data(&state->map, &state->map_stringtify);
+    save_current_map();
   }
   if (IsKeyPressed(KEY_F8)) {
-    load_map_data(&state->map, &state->map_stringtify);
+    load_current_map();
   }
   if (IsKeyReleased(KEY_TAB)) {
     state->b_show_tilesheet_tile_selection_screen = !state->b_show_tilesheet_tile_selection_screen;
@@ -751,15 +752,10 @@ void editor_update_keyboard_bindings(void) {
   }
   if (IsKeyReleased(KEY_DELETE)) {
     if (state->mouse_focus == MOUSE_FOCUS_MAP && state->selection_type == SLC_TYPE_SLC_PROP && !state->b_dragging_prop) {
-      u16 slc_prop_index = map_prop_id_to_index(state->selected_prop.id);
-      if (slc_prop_index >= 0 && slc_prop_index < state->prop_count) {
-        state->map.prop_count--;
-        state->map.props[slc_prop_index] = state->map.props[state->map.prop_count];
-        state->map.props[state->map.prop_count] = (tilemap_prop) {0};
+      if(remove_prop_cur_map_by_id(state->selected_prop.id)) {
         state->selected_prop = (tilemap_prop) {0};
         state->selection_type = SLC_TYPE_UNSELECTED;
       }
-      else TraceLog(LOG_WARNING, "scene_editor::editor_update_keyboard_bindings()::Delete prop index out of bound");
     }
   }
 
@@ -805,19 +801,3 @@ void editor_update_movement(void) {
   }
 }
 // BINDINGS
-
-/**
- * @brief return i, state->map.props[i].id == id
- * 
- * @param id == props[i].id
- * @return returns I32_MAX as error
- */
-i32 map_prop_id_to_index(u16 id) {
-  for (int i=0; i<state->map.prop_count; ++i) {
-    if (state->map.props[i].id == id) {
-      return i;
-    }
-  }
-
-  return I32_MAX;
-}

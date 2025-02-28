@@ -9,12 +9,15 @@ bool game_manager_initialize(camera_metrics* _camera_metrics);
 
 void update_game_manager(void);
 
-player_state* get_player_state_if_available(void);
 u16 get_remaining_enemies(void);
+bool get_b_player_have_upgrade_points(void);
+ability* get_player_ability(ability_type type);
+void set_player_have_ability_upgrade_points(bool _b);
 bool get_is_game_paused(void);
 void set_is_game_paused(bool _is_game_paused);
 void toggle_is_game_paused(void);
 
+void gm_start_game(worldmap_stage stage);
 void damage_any_spawn(Character2D *projectile);
 void damage_any_collider_by_type(Character2D *from_actor, actor_type to_type);
 void add_collision(rectangle_collision rect);

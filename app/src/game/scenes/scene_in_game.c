@@ -7,6 +7,7 @@
 #include <core/fmath.h>
 #include <core/fmemory.h>
 
+#include "game/world.h"
 #include "game/game_manager.h"
 #include "game/user_interface.h"
 
@@ -19,11 +20,10 @@ typedef enum in_game_stages {
 } in_game_stages;
 
 typedef struct scene_in_game_state {
-  panel skill_up_panels[MAX_UPDATE_ABILITY_PANEL_COUNT];
-  player_state* player;
-  in_game_stages stage;
+  panel ability_upg_panels[MAX_UPDATE_ABILITY_PANEL_COUNT];
   worldmap_stage worldmap_locations[MAX_WORLDMAP_LOCATIONS];
   panel worldmap_selection_panel;
+  in_game_stages stage;
 
   u16 clouds_animation_timer;
 
@@ -38,7 +38,7 @@ static scene_in_game_state *restrict state;
   event_fire(EVENT_CODE_SCENE_MAIN_MENU, (event_context){0});                             \
   return;                                                                                 \
 }
-#define SKILL_UP_PANEL_ICON_SIZE get_resolution_div4()->x*.5f
+#define ABILITY_UPG_PANEL_ICON_SIZE get_resolution_div4()->x*.5f
 #define CLOUDS_ANIMATION_DURATION TARGET_FPS * 1.5f // second
 
 void in_game_update_bindings(void);
@@ -49,33 +49,27 @@ void start_game(void);
 void draw_upgrade_panel(ability* abl, ability upg, Rectangle panel_dest);
 
 bool initialize_scene_in_game(camera_metrics* _camera_metrics) {
-
-  state = (scene_in_game_state *)allocate_memory_linear(sizeof(scene_in_game_state), true);
-
-  // Game
-  if (!game_manager_initialize(_camera_metrics)) { // Inits player & spawns
-    TraceLog(LOG_ERROR, "game_manager_initialize() failed");
+  if (state) {
+    TraceLog(LOG_ERROR, "scene_in_game::initialize_scene_in_game()::Initialize called twice");
     return false;
   }
 
-  state->player = get_player_state_if_available();
+  state = (scene_in_game_state *)allocate_memory_linear(sizeof(scene_in_game_state), true);
 
+  if (!world_system_initialize(_camera_metrics, *get_resolution_div2())) {
+    TraceLog(LOG_ERROR, "scene_in_game::initialize_scene_in_game()::world_system_initialize() failed");
+    return false;
+  }
+  copy_memory(&state->worldmap_locations, get_worldmap_locations(), sizeof(state->worldmap_locations));
+
+  // Game
+  if (!game_manager_initialize(_camera_metrics)) { // Inits player & spawns
+    TraceLog(LOG_ERROR, "scene_in_game::initialize_scene_in_game()::game_manager_initialize() failed");
+    return false;
+  }
   _set_player_position(*get_resolution_div2());
 
   user_interface_system_initialize();
-
-  event_fire(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, (event_context){
-    .data.f32[0] = PRG_BAR_ID_PLAYER_EXPERIANCE,
-    .data.f32[1] = get_player_state_if_available()->exp_perc,
-  });
-  event_fire(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, (event_context){
-    .data.f32[0] = PRG_BAR_ID_PLAYER_HEALTH,
-    .data.f32[1] = get_player_state_if_available()->health_perc,
-  });  
-  event_fire(EVENT_CODE_SCENE_MANAGER_SET_CAM_POS, (event_context){
-    .data.f32[0] = get_player_state_if_available()->position.x,
-    .data.f32[1] = get_player_state_if_available()->position.y,
-  });
   
   panel default_panel = (panel) {
     .signal_state  = BTN_STATE_RELEASED,
@@ -86,10 +80,10 @@ bool initialize_scene_in_game(camera_metrics* _camera_metrics) {
     .offsets = (Vector4) {6, 6, 6, 6},
   };
   for (int i=0; i<MAX_UPDATE_ABILITY_PANEL_COUNT; ++i) {
-    state->skill_up_panels[i] = default_panel;
+    state->ability_upg_panels[i] = default_panel;
   }
-  initialize_worldmap_locations();
   state->worldmap_selection_panel = default_panel;
+
 
   set_is_game_paused(true);
   state->stage = IN_GAME_STAGE_MAP_CHOICE;
@@ -121,6 +115,7 @@ void update_scene_in_game(void) {
       if (get_is_game_paused() || !state->has_game_started) {
         return;
       }
+      update_map();
       update_game_manager();
     
       event_fire(EVENT_CODE_SCENE_MANAGER_SET_TARGET, (event_context){
@@ -179,6 +174,7 @@ void render_scene_in_game(void) {
       break;
     }
     case IN_GAME_STAGE_PLAY: {
+      render_map();
       render_game();
       break;
     }
@@ -205,11 +201,13 @@ void render_interface_in_game(void) {
             get_resolution_div4()->x, get_resolution_div4()->y
           };
           gui_panel_scissored(state->worldmap_selection_panel, false, {
-            
+            gui_label(state->worldmap_locations[i].displayname, FONT_TYPE_MOOD, 10, (Vector2) {
+              state->worldmap_selection_panel.dest.x + state->worldmap_selection_panel.dest.width *.5f,
+              state->worldmap_selection_panel.dest.y + state->worldmap_selection_panel.dest.height*.5f
+            }, WHITE, true);
           });
         }
       }
-
       break;
     }
     case IN_GAME_STAGE_PASSIVE_CHOICE: {
@@ -222,7 +220,7 @@ void render_interface_in_game(void) {
         gui_label("Press Space to Start!", FONT_TYPE_MOOD_OUTLINE, 10, (Vector2) {get_resolution_div2()->x, get_resolution_3div2()->y}, WHITE, true);
         return;
       }
-      else if (state->player->is_player_have_skill_points) {
+      else if (get_b_player_have_upgrade_points()) {
         set_is_game_paused(true);
         Rectangle dest = (Rectangle) {
           get_resolution_div4()->x, get_resolution_div2()->y, 
@@ -230,12 +228,12 @@ void render_interface_in_game(void) {
         };
         f32 dest_x_buffer = dest.x;
         for (int i=0; i<MAX_UPDATE_ABILITY_PANEL_COUNT; ++i) {
-          panel* pnl = &state->skill_up_panels[i];
+          panel* pnl = &state->ability_upg_panels[i];
           if(pnl->buffer[0].data.u16[0] <= 0 || pnl->buffer[0].data.u16[0] >= ABILITY_TYPE_MAX) {
             pnl->buffer[0].data.u16[0] = get_random(1,ABILITY_TYPE_MAX-1);
           }
           dest.x = dest_x_buffer + ((dest.width + get_screen_offset().x) * i);
-          ability* abl = &state->player->ability_system.abilities[pnl->buffer[0].data.u16[0]];
+          ability* abl = get_player_ability(pnl->buffer[0].data.u16[0]);
           ability new = {0};
           if (abl->type <= ABILITY_TYPE_UNDEFINED || abl->type >= ABILITY_TYPE_MAX) {
             new = _get_ability(pnl->buffer[0].data.u16[0]);
@@ -250,9 +248,9 @@ void render_interface_in_game(void) {
           }
           if(gui_panel_active(pnl, dest, true)) {
             set_is_game_paused(false);
-            state->player->is_player_have_skill_points = false;
+            set_player_have_ability_upgrade_points(false);
             for (int i=0; i<MAX_UPDATE_ABILITY_PANEL_COUNT; ++i) {
-              state->skill_up_panels[i].buffer[0].data.u16[0] = 0;
+              state->ability_upg_panels[i].buffer[0].data.u16[0] = 0;
             }
             // TODO: Upgrade ability
           }
@@ -281,7 +279,7 @@ void in_game_update_mouse_bindings(void) {
       break;
     }
     case IN_GAME_STAGE_MAP_CHOICE: {
-
+      
       break;
     }
     case IN_GAME_STAGE_PASSIVE_CHOICE: {
@@ -320,7 +318,7 @@ void in_game_update_keyboard_bindings(void) {
         set_is_game_paused(false);
       }
       if (IsKeyReleased(KEY_ESCAPE)) {
-        if(!state->player->is_player_have_skill_points) toggle_is_game_paused();
+        if(!get_b_player_have_upgrade_points()) toggle_is_game_paused();
         event_fire(EVENT_CODE_UI_SHOW_PAUSE_MENU, (event_context){0});
       }
       break;
@@ -339,97 +337,6 @@ void in_game_update_bindings(void) {
 
 void start_game(void) {}
 
-void initialize_worldmap_locations(void) {
-  state->worldmap_locations[0] = (worldmap_stage) {
-    .name = "Stage 1",
-    .screen_location = SCREEN_RECT(16, 105, 2, 3),
-  };
-  state->worldmap_locations[1] = (worldmap_stage) {
-    .name = "Stage 2",
-    .screen_location = SCREEN_RECT(31, 96, 2, 2),
-  };
-  state->worldmap_locations[2] = (worldmap_stage) {
-    .name = "Stage 3",
-    .screen_location = SCREEN_RECT(45, 96, 2, 3),
-  };
-  state->worldmap_locations[3] = (worldmap_stage) {
-    .name = "Stage 4",
-    .screen_location = SCREEN_RECT(52, 95, 1, 2),
-  };
-  state->worldmap_locations[4] = (worldmap_stage) {
-    .name = "Stage 5",
-    .screen_location = SCREEN_RECT(67, 89, 2, 2),
-  };
-  state->worldmap_locations[5] = (worldmap_stage) {
-    .name = "Stage 6",
-    .screen_location = SCREEN_RECT(69, 68, 2, 2),
-  };
-  state->worldmap_locations[6] = (worldmap_stage) {
-    .name = "Stage 7",
-    .screen_location = SCREEN_RECT(56, 68, 2, 2),
-  };
-  state->worldmap_locations[7] = (worldmap_stage) {
-    .name = "Stage 8",
-    .screen_location = SCREEN_RECT(82, 66, 2, 2),
-  };
-  state->worldmap_locations[8] = (worldmap_stage) {
-    .name = "Stage 9",
-    .screen_location = SCREEN_RECT(93, 83, 2, 2),
-  };
-  state->worldmap_locations[9] = (worldmap_stage) {
-    .name = "Stage 10",
-    .screen_location = SCREEN_RECT(86, 109, 3, 3),
-  };
-  state->worldmap_locations[10] = (worldmap_stage) {
-    .name = "Stage 11",
-    .screen_location = SCREEN_RECT(99, 78, 3, 3),
-  };
-  state->worldmap_locations[11] = (worldmap_stage) {
-    .name = "Stage 12",
-    .screen_location = SCREEN_RECT(107, 98, 1, 2),
-  };
-  state->worldmap_locations[12] = (worldmap_stage) {
-    .name = "Stage 13",
-    .screen_location = SCREEN_RECT(95, 63, 2, 3),
-  };
-  state->worldmap_locations[13] = (worldmap_stage) {
-    .name = "Stage 14",
-    .screen_location = SCREEN_RECT(110, 70, 3, 3),
-  };
-  state->worldmap_locations[14] = (worldmap_stage) {
-    .name = "Stage 15",
-    .screen_location = SCREEN_RECT(107, 42, 2, 2),
-  };
-  state->worldmap_locations[15] = (worldmap_stage) {
-    .name = "Stage 16",
-    .screen_location = SCREEN_RECT(82, 51, 2, 2),
-  };
-  state->worldmap_locations[16] = (worldmap_stage) {
-    .name = "Stage 17",
-    .screen_location = SCREEN_RECT(110, 53, 2, 2),
-  };
-  state->worldmap_locations[17] = (worldmap_stage) {
-    .name = "Stage 18",
-    .screen_location = SCREEN_RECT(74, 32, 2, 2),
-  };
-  state->worldmap_locations[18] = (worldmap_stage) {
-    .name = "Stage 19",
-    .screen_location = SCREEN_RECT(102, 19, 2, 3),
-  };
-  state->worldmap_locations[19] = (worldmap_stage) {
-    .name = "Stage 20",
-    .screen_location = SCREEN_RECT(107, 12, 1, 2),
-  };
-  state->worldmap_locations[20] = (worldmap_stage) {
-    .name = "Stage 21",
-    .screen_location = SCREEN_RECT(61, 21, 1, 2),
-  };
-  state->worldmap_locations[21] = (worldmap_stage) {
-    .name = "Stage 22",
-    .screen_location = SCREEN_RECT(51, 21, 2, 3),
-  };
-}
-
 void draw_upgrade_panel(ability* abl, ability upg, Rectangle panel_dest) {
   if (upg.type <= ABILITY_TYPE_UNDEFINED || upg.type >= ABILITY_TYPE_MAX) {
     TraceLog(LOG_WARNING, "scene_in_game::draw_upgrade_panel()::Upgraded ability is out of bounds"); 
@@ -443,18 +350,18 @@ void draw_upgrade_panel(ability* abl, ability upg, Rectangle panel_dest) {
   const u16 btw_space_gap = 20;
   const u16 start_panel_height = panel_dest.y - panel_dest.height*.25f;
   const Rectangle icon_rect = (Rectangle) {
-    panel_dest.x - SKILL_UP_PANEL_ICON_SIZE/2.f,
-    start_panel_height - SKILL_UP_PANEL_ICON_SIZE*.5f,
-    SKILL_UP_PANEL_ICON_SIZE,SKILL_UP_PANEL_ICON_SIZE
+    panel_dest.x - ABILITY_UPG_PANEL_ICON_SIZE/2.f,
+    start_panel_height - ABILITY_UPG_PANEL_ICON_SIZE*.5f,
+    ABILITY_UPG_PANEL_ICON_SIZE,ABILITY_UPG_PANEL_ICON_SIZE
   };
-  const Vector2 ability_name_pos  = (Vector2) {panel_dest.x, start_panel_height + SKILL_UP_PANEL_ICON_SIZE*.5f + elm_space_gap};
+  const Vector2 ability_name_pos  = (Vector2) {panel_dest.x, start_panel_height + ABILITY_UPG_PANEL_ICON_SIZE*.5f + elm_space_gap};
   const Vector2 ability_level_ind = (Vector2) {panel_dest.x, ability_name_pos.y + btw_space_gap};
 
   const u16 title_font_size = 10; 
   const u16 level_ind_font_size = 9; 
   const u16 upgr_font_size = 6; 
 
-  gui_draw_texture_id_pro(TEX_ID_SKILL_ICON_ATLAS, upg.icon_src, icon_rect);
+  gui_draw_texture_id_pro(TEX_ID_ABILITY_ICON_ATLAS, upg.icon_src, icon_rect);
   gui_label(upg.display_name, FONT_TYPE_MOOD, title_font_size, ability_name_pos, WHITE, true);
 
   if (upg.level == 1) {
@@ -519,6 +426,6 @@ void draw_upgrade_panel(ability* abl, ability upg, Rectangle panel_dest) {
 }
 
 #undef STATE_ASSERT
-#undef SKILL_UP_PANEL_ICON_SIZE
+#undef ABILITY_UPG_PANEL_ICON_SIZE
 #undef CLOUDS_ANIMATION_DURATION
 #undef FADE_ANIMATION_DURATION

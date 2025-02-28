@@ -17,5 +17,6 @@ tilemap_tile get_tile_from_sheet_by_mouse_pos(tilesheet* sheet, Vector2 mouse_po
 tilemap_tile get_tile_from_map_by_mouse_pos(tilemap* sheet, Vector2 mouse_pos, u16 layer);
 bool save_map_data(tilemap* map, tilemap_stringtify_package* out_package);
 bool load_map_data(tilemap *restrict map, tilemap_stringtify_package *restrict out_package);
+bool load_or_create_map_data(tilemap *restrict map, tilemap_stringtify_package *restrict out_package);
 
 #endif

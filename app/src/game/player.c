@@ -113,7 +113,7 @@ void add_exp_to_player(u32 exp) {
         player->exp_current = (curr + exp) - to_next;
         player->level++;
         player->exp_to_next_level = level_curve[player->level];
-        player->is_player_have_skill_points = true;
+        player->is_player_have_ability_upgrade_points = true;
         //play_sprite_on_player(player->);
     }
     else {
