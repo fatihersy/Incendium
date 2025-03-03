@@ -26,6 +26,7 @@ typedef struct scene_in_game_state {
   in_game_stages stage;
 
   u16 clouds_animation_timer;
+  u16 hovered_stage;
 
   bool has_game_started;
   bool clouds_animation_playing;
@@ -87,7 +88,7 @@ bool initialize_scene_in_game(camera_metrics* _camera_metrics) {
 
   set_is_game_paused(true);
   state->stage = IN_GAME_STAGE_MAP_CHOICE;
-  state->clouds_animation_playing = true;
+  state->clouds_animation_playing = false;
   event_fire(EVENT_CODE_UI_START_FADE_EFFECT, (event_context){ .data.u16[0] = CLOUDS_ANIMATION_DURATION });
   return true;
 }
@@ -147,7 +148,6 @@ void render_scene_in_game(void) {
         state->clouds_animation_timer = 0;
         event_fire(EVENT_CODE_UI_START_FADE_EFFECT, (event_context){ .data.u16[0] = CLOUDS_ANIMATION_DURATION});
       }
-
       if (state->clouds_animation_playing && (state->clouds_animation_timer >= 0 && state->clouds_animation_timer <= CLOUDS_ANIMATION_DURATION)) {
         f32 clouds_mul = EaseQuadIn(state->clouds_animation_timer, 2, -1, CLOUDS_ANIMATION_DURATION);
         f32 worldmap_mul = EaseQuadIn(state->clouds_animation_timer, 0.75f, 0.25f, CLOUDS_ANIMATION_DURATION);
@@ -162,10 +162,13 @@ void render_scene_in_game(void) {
         }
       }
       else{
-        gui_draw_texture_id(TEX_ID_WORLDMAP_W_CLOUDS, (Rectangle) {0, 0, GetScreenWidth(), GetScreenHeight()});
+        gui_draw_texture_id(TEX_ID_WORLDMAP_WO_CLOUDS, (Rectangle) {0, 0, GetScreenWidth(), GetScreenHeight()});
         for (int i=0; i<MAX_WORLDMAP_LOCATIONS; ++i) {
-          DrawRectangle(state->worldmap_locations[i].screen_location.x, state->worldmap_locations[i].screen_location.y, 
-            state->worldmap_locations[i].screen_location.width, state->worldmap_locations[i].screen_location.height, (Color) {255, 0, 0, 100});
+          Vector2 scrloc = (Vector2) {
+            state->worldmap_locations[i].screen_location.x * GetScreenWidth(), 
+            state->worldmap_locations[i].screen_location.y * GetScreenHeight()
+          };
+          gui_draw_spritesheet_id(SHEET_ID_ICON_ATLAS, WHITE, scrloc, VECTOR2(1,1), i == state->hovered_stage ? 2 : 1, true);
         }
       }
       break;
@@ -195,15 +198,18 @@ void render_interface_in_game(void) {
     }
     case IN_GAME_STAGE_MAP_CHOICE: {
       for (int i=0; i<MAX_WORLDMAP_LOCATIONS; ++i) {
-        if (CheckCollisionPointRec(GetMousePosition(), state->worldmap_locations[i].screen_location)) {
-          state->worldmap_selection_panel.dest = (Rectangle) {
-            state->worldmap_locations[i].screen_location.x, state->worldmap_locations[i].screen_location.y,
-            get_resolution_div4()->x, get_resolution_div4()->y
+        if (state->hovered_stage == i) {
+          panel* pnl = &state->worldmap_selection_panel;
+          Rectangle scrloc = (Rectangle){
+            state->worldmap_locations[i].screen_location.x * GetScreenWidth() - WORLDMAP_LOC_PIN_SIZE_DIV2, 
+            state->worldmap_locations[i].screen_location.y * GetScreenHeight() - WORLDMAP_LOC_PIN_SIZE_DIV2,
+            WORLDMAP_LOC_PIN_SIZE, WORLDMAP_LOC_PIN_SIZE
           };
-          gui_panel_scissored(state->worldmap_selection_panel, false, {
+          pnl->dest = (Rectangle) {scrloc.x + WORLDMAP_LOC_PIN_SIZE, scrloc.y + WORLDMAP_LOC_PIN_SIZE_DIV2, get_resolution_div4()->x, get_resolution_div4()->y};
+          DrawCircleGradient(scrloc.x + WORLDMAP_LOC_PIN_SIZE_DIV2, scrloc.y + WORLDMAP_LOC_PIN_SIZE_DIV2, 100, (Color){236,240,241,50}, (Color){0});
+          gui_panel_scissored((*pnl), false, {
             gui_label(state->worldmap_locations[i].displayname, FONT_TYPE_MOOD, 10, (Vector2) {
-              state->worldmap_selection_panel.dest.x + state->worldmap_selection_panel.dest.width *.5f,
-              state->worldmap_selection_panel.dest.y + state->worldmap_selection_panel.dest.height*.5f
+              pnl->dest.x + pnl->dest.width *.5f, pnl->dest.y + pnl->dest.height*.5f
             }, WHITE, true);
           });
         }
@@ -279,7 +285,17 @@ void in_game_update_mouse_bindings(void) {
       break;
     }
     case IN_GAME_STAGE_MAP_CHOICE: {
-      
+      state->hovered_stage = U16_MAX;
+      for (int i=0; i<MAX_WORLDMAP_LOCATIONS; ++i) {
+        Rectangle scrloc = (Rectangle){
+          state->worldmap_locations[i].screen_location.x * GetScreenWidth() - WORLDMAP_LOC_PIN_SIZE_DIV2, 
+          state->worldmap_locations[i].screen_location.y * GetScreenHeight() - WORLDMAP_LOC_PIN_SIZE_DIV2,
+          WORLDMAP_LOC_PIN_SIZE, WORLDMAP_LOC_PIN_SIZE
+        };
+        if (CheckCollisionPointRec(GetMousePosition(), scrloc)) {
+          state->hovered_stage = i;
+        }
+      }
       break;
     }
     case IN_GAME_STAGE_PASSIVE_CHOICE: {

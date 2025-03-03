@@ -30,7 +30,7 @@ bool world_system_initialize(camera_metrics* _in_camera_metrics, Vector2 resolut
     state->worldmap_locations[0] = (worldmap_stage) {
       .displayname = "Stage 1",
       .filename    = "stage1",
-      .screen_location = SCREEN_RECT(16, 105, 2, 3),
+      .screen_location = NORMALIZE_VEC2(548, 1914, 3840.f, 2160.f),
       .spawning_areas[0] = (Rectangle) {
         -100, 
         -100, 
@@ -42,7 +42,7 @@ bool world_system_initialize(camera_metrics* _in_camera_metrics, Vector2 resolut
     state->worldmap_locations[1] = (worldmap_stage) {
       .displayname = "Stage 2",
       .filename    = "stage2",
-      .screen_location = SCREEN_RECT(31, 96, 2, 2),
+      .screen_location = NORMALIZE_VEC2(1024, 1744, 3840.f, 2160.f),
       .spawning_areas[0] = (Rectangle) {
         -100, 
         -100, 
@@ -54,7 +54,7 @@ bool world_system_initialize(camera_metrics* _in_camera_metrics, Vector2 resolut
     state->worldmap_locations[2] = (worldmap_stage) {
       .displayname = "Stage 3",
       .filename    = "stage3",
-      .screen_location = SCREEN_RECT(45, 96, 2, 3),
+      .screen_location = NORMALIZE_VEC2(1467, 1755, 3840.f, 2160.f),
       .spawning_areas[0] = (Rectangle) {
         -100, 
         -100, 
@@ -66,7 +66,7 @@ bool world_system_initialize(camera_metrics* _in_camera_metrics, Vector2 resolut
     state->worldmap_locations[3] = (worldmap_stage) {
       .displayname = "Stage 4",
       .filename    = "stage4",
-      .screen_location = SCREEN_RECT(52, 95, 1, 2),
+      .screen_location = NORMALIZE_VEC2(1674, 1727, 3840.f, 2160.f),
       .spawning_areas[0] = (Rectangle) {
         -100, 
         -100, 
@@ -78,7 +78,7 @@ bool world_system_initialize(camera_metrics* _in_camera_metrics, Vector2 resolut
     state->worldmap_locations[4] = (worldmap_stage) {
       .displayname = "Stage 5",
       .filename    = "stage5",
-      .screen_location = SCREEN_RECT(67, 89, 2, 2),
+      .screen_location = NORMALIZE_VEC2(2179, 1623, 3840.f, 2160.f),
       .spawning_areas[0] = (Rectangle) {
         -100, 
         -100, 
@@ -90,7 +90,7 @@ bool world_system_initialize(camera_metrics* _in_camera_metrics, Vector2 resolut
     state->worldmap_locations[5] = (worldmap_stage) {
       .displayname = "Stage 6",
       .filename    = "stage6",
-      .screen_location = SCREEN_RECT(69, 68, 2, 2),
+      .screen_location = NORMALIZE_VEC2(2233, 1240, 3840.f, 2160.f),
       .spawning_areas[0] = (Rectangle) {
         -100, 
         -100, 
@@ -102,7 +102,7 @@ bool world_system_initialize(camera_metrics* _in_camera_metrics, Vector2 resolut
     state->worldmap_locations[6] = (worldmap_stage) {
       .displayname = "Stage 7",
       .filename    = "stage7",
-      .screen_location = SCREEN_RECT(56, 68, 2, 2),
+      .screen_location = NORMALIZE_VEC2(1811, 1230, 3840.f, 2160.f),
       .spawning_areas[0] = (Rectangle) {
         -100, 
         -100, 
@@ -114,7 +114,7 @@ bool world_system_initialize(camera_metrics* _in_camera_metrics, Vector2 resolut
     state->worldmap_locations[7] = (worldmap_stage) {
       .displayname = "Stage 8",
       .filename    = "stage8",
-      .screen_location = SCREEN_RECT(82, 66, 2, 2),
+      .screen_location = NORMALIZE_VEC2(2658, 1202, 3840.f, 2160.f),
       .spawning_areas[0] = (Rectangle) {
         -100, 
         -100, 
@@ -126,7 +126,7 @@ bool world_system_initialize(camera_metrics* _in_camera_metrics, Vector2 resolut
     state->worldmap_locations[8] = (worldmap_stage) {
       .displayname = "Stage 9",
       .filename    = "stage9",
-      .screen_location = SCREEN_RECT(93, 83, 2, 2),
+      .screen_location = NORMALIZE_VEC2(3009, 1511, 3840.f, 2160.f),
       .spawning_areas[0] = (Rectangle) {
         -100, 
         -100, 
@@ -138,7 +138,7 @@ bool world_system_initialize(camera_metrics* _in_camera_metrics, Vector2 resolut
     state->worldmap_locations[9] = (worldmap_stage) {
       .displayname = "Stage 10",
       .filename    = "stage10",
-      .screen_location = SCREEN_RECT(86, 109, 3, 3),
+      .screen_location = NORMALIZE_VEC2(2767, 1972, 3840.f, 2160.f),
       .spawning_areas[0] = (Rectangle) {
         -100, 
         -100, 
@@ -150,7 +150,7 @@ bool world_system_initialize(camera_metrics* _in_camera_metrics, Vector2 resolut
     state->worldmap_locations[10] = (worldmap_stage) {
       .displayname = "Stage 11",
       .filename    = "stage11",
-      .screen_location = SCREEN_RECT(99, 78, 3, 3),
+      .screen_location = NORMALIZE_VEC2(3188, 1415, 3840.f, 2160.f),
       .spawning_areas[0] = (Rectangle) {
         -100, 
         -100, 
@@ -162,7 +162,7 @@ bool world_system_initialize(camera_metrics* _in_camera_metrics, Vector2 resolut
     state->worldmap_locations[11] = (worldmap_stage) {
       .displayname = "Stage 12",
       .filename    = "stage12",
-      .screen_location = SCREEN_RECT(107, 98, 1, 2),
+      .screen_location = NORMALIZE_VEC2(3449, 1773, 3840.f, 2160.f),
       .spawning_areas[0] = (Rectangle) {
         -100, 
         -100, 
@@ -174,7 +174,7 @@ bool world_system_initialize(camera_metrics* _in_camera_metrics, Vector2 resolut
     state->worldmap_locations[12] = (worldmap_stage) {
       .displayname = "Stage 13",
       .filename    = "stage13",
-      .screen_location = SCREEN_RECT(95, 63, 2, 3),
+      .screen_location = NORMALIZE_VEC2(3073, 1146, 3840.f, 2160.f),
       .spawning_areas[0] = (Rectangle) {
         -100, 
         -100, 
@@ -186,7 +186,7 @@ bool world_system_initialize(camera_metrics* _in_camera_metrics, Vector2 resolut
     state->worldmap_locations[13] = (worldmap_stage) {
       .displayname = "Stage 14",
       .filename    = "stage14",
-      .screen_location = SCREEN_RECT(110, 70, 3, 3),
+      .screen_location = NORMALIZE_VEC2(3574, 1291, 3840.f, 2160.f),
       .spawning_areas[0] = (Rectangle) {
         -100, 
         -100, 
@@ -198,7 +198,7 @@ bool world_system_initialize(camera_metrics* _in_camera_metrics, Vector2 resolut
     state->worldmap_locations[14] = (worldmap_stage) {
       .displayname = "Stage 15",
       .filename    = "stage15",
-      .screen_location = SCREEN_RECT(107, 42, 2, 2),
+      .screen_location = NORMALIZE_VEC2(3462, 773, 3840.f, 2160.f),
       .spawning_areas[0] = (Rectangle) {
         -100, 
         -100, 
@@ -210,7 +210,7 @@ bool world_system_initialize(camera_metrics* _in_camera_metrics, Vector2 resolut
     state->worldmap_locations[15] = (worldmap_stage) {
       .displayname = "Stage 16",
       .filename    = "stage16",
-      .screen_location = SCREEN_RECT(82, 51, 2, 2),
+      .screen_location = NORMALIZE_VEC2(2661, 951, 3840.f, 2160.f),
       .spawning_areas[0] = (Rectangle) {
         -100, 
         -100, 
@@ -222,7 +222,7 @@ bool world_system_initialize(camera_metrics* _in_camera_metrics, Vector2 resolut
     state->worldmap_locations[16] = (worldmap_stage) {
       .displayname = "Stage 17",
       .filename    = "stage17",
-      .screen_location = SCREEN_RECT(110, 53, 2, 2),
+      .screen_location = NORMALIZE_VEC2(3548, 974, 3840.f, 2160.f),
       .spawning_areas[0] = (Rectangle) {
         -100, 
         -100, 
@@ -234,7 +234,7 @@ bool world_system_initialize(camera_metrics* _in_camera_metrics, Vector2 resolut
     state->worldmap_locations[17] = (worldmap_stage) {
       .displayname = "Stage 18",
       .filename    = "stage18",
-      .screen_location = SCREEN_RECT(74, 32, 2, 2),
+      .screen_location = NORMALIZE_VEC2(2400, 596, 3840.f, 2160.f),
       .spawning_areas[0] = (Rectangle) {
         -100, 
         -100, 
@@ -246,7 +246,7 @@ bool world_system_initialize(camera_metrics* _in_camera_metrics, Vector2 resolut
     state->worldmap_locations[18] = (worldmap_stage) {
       .displayname = "Stage 19",
       .filename    = "stage19",
-      .screen_location = SCREEN_RECT(102, 19, 2, 3),
+      .screen_location = NORMALIZE_VEC2(3290, 369, 3840.f, 2160.f),
       .spawning_areas[0] = (Rectangle) {
         -100, 
         -100, 
@@ -258,7 +258,7 @@ bool world_system_initialize(camera_metrics* _in_camera_metrics, Vector2 resolut
     state->worldmap_locations[19] = (worldmap_stage) {
       .displayname = "Stage 20",
       .filename    = "stage20",
-      .screen_location = SCREEN_RECT(107, 12, 1, 2),
+      .screen_location = NORMALIZE_VEC2(3449, 224, 3840.f, 2160.f),
       .spawning_areas[0] = (Rectangle) {
         -100, 
         -100, 
@@ -270,7 +270,7 @@ bool world_system_initialize(camera_metrics* _in_camera_metrics, Vector2 resolut
     state->worldmap_locations[20] = (worldmap_stage) {
       .displayname = "Stage 21",
       .filename    = "stage21",
-      .screen_location = SCREEN_RECT(61, 21, 1, 2),
+      .screen_location = NORMALIZE_VEC2(1977, 385, 3840.f, 2160.f),
       .spawning_areas[0] = (Rectangle) {
         -100, 
         -100, 
@@ -282,7 +282,7 @@ bool world_system_initialize(camera_metrics* _in_camera_metrics, Vector2 resolut
     state->worldmap_locations[21] = (worldmap_stage) {
       .displayname = "Stage 22",
       .filename    = "stage22",
-      .screen_location = SCREEN_RECT(51, 21, 2, 3),
+      .screen_location = NORMALIZE_VEC2(1661, 410, 3840.f, 2160.f),
       .spawning_areas[0] = (Rectangle) {
         -100, 
         -100, 

@@ -82,11 +82,11 @@ void gui_draw_settings_screen(void);
 bool gui_button(const char* text, button_id _id, Font font, f32 font_size_scale, Vector2 pos);
 
 void register_button(button_id _btn_id, button_type_id _btn_type_id);
-void register_button_type(button_type_id _btn_type_id, spritesheet_type _ss_type, Vector2 frame_dim, Vector2 on_click_text_offset, f32 _scale, bool _play_reflection, bool _play_crt, bool _should_center);
+void register_button_type(button_type_id _btn_type_id, spritesheet_id _ss_type, Vector2 frame_dim, Vector2 on_click_text_offset, f32 _scale, bool _play_reflection, bool _play_crt, bool _should_center);
 void register_progress_bar(progress_bar_id _id, progress_bar_type_id _type_id, f32 width_multiply, Vector2 scale);
 void register_progress_bar_type(progress_bar_type_id _type_id, texture_id _body_inside, texture_id _body_outside, shader_id _mask_shader_id);
 void register_slider(slider_id _sdr_id, slider_type_id _sdr_type_id, button_id _left_btn_id, button_id _right_btn_id, bool _is_clickable);
-void register_slider_type(slider_type_id _sdr_type_id, spritesheet_type _ss_sdr_body_type, f32 _scale, u16 _width_multiply, button_type_id _left_btn_type_id, button_type_id _right_btn_type_id, u16 _char_limit);
+void register_slider_type(slider_type_id _sdr_type_id, spritesheet_id _ss_sdr_body_type, f32 _scale, u16 _width_multiply, button_type_id _left_btn_type_id, button_type_id _right_btn_type_id, u16 _char_limit);
 
 Rectangle get_texture_source_rect(texture_id _id);
 
@@ -131,23 +131,23 @@ void user_interface_system_initialize(void) {
   // BUTTON TYPES
   {  
   register_button_type(
-    BTN_TYPE_MENU_BUTTON, MENU_BUTTON, 
+    BTN_TYPE_MENU_BUTTON, SHEET_ID_MENU_BUTTON, 
     (Vector2){80, 16}, (Vector2){0, 2}, 
     DEFAULT_MENU_BUTTON_SCALE, true, true, false);
   register_button_type(
-    BTN_TYPE_MENU_BUTTON_NO_CRT, MENU_BUTTON, 
+    BTN_TYPE_MENU_BUTTON_NO_CRT, SHEET_ID_MENU_BUTTON, 
     (Vector2){80, 16}, (Vector2){0, 2}, 
     DEFAULT_MENU_BUTTON_SCALE, true, false, false);
   register_button_type(
-    BTN_TYPE_SLIDER_LEFT_BUTTON, SLIDER_LEFT_BUTTON, 
+    BTN_TYPE_SLIDER_LEFT_BUTTON, SHEET_ID_SLIDER_LEFT_BUTTON, 
     (Vector2){10, 10}, (Vector2){0, 0}, 
     DEFAULT_MENU_BUTTON_SCALE, false, false, false);
   register_button_type(
-    BTN_TYPE_SLIDER_RIGHT_BUTTON, SLIDER_RIGHT_BUTTON, 
+    BTN_TYPE_SLIDER_RIGHT_BUTTON, SHEET_ID_SLIDER_RIGHT_BUTTON, 
     (Vector2){10, 10}, (Vector2){0, 0}, 
     DEFAULT_MENU_BUTTON_SCALE, false, false, false);
   register_button_type(
-    BTN_TYPE_FLAT_BUTTON, FLAT_BUTTON, 
+    BTN_TYPE_FLAT_BUTTON, SHEET_ID_FLAT_BUTTON, 
     (Vector2){44, 14}, (Vector2){0, 0}, 
     2, false, false, false);
   }
@@ -156,12 +156,12 @@ void user_interface_system_initialize(void) {
   // SLIDER TYPES
   {
   register_slider_type(
-    SDR_TYPE_PERCENT, SLIDER_PERCENT, 
+    SDR_TYPE_PERCENT, SHEET_ID_SLIDER_PERCENT, 
     DEFAULT_MENU_BUTTON_SCALE, DEFAULT_MENU_BUTTON_SCALE,
     BTN_TYPE_SLIDER_LEFT_BUTTON, BTN_TYPE_SLIDER_RIGHT_BUTTON, 6
   );
   register_slider_type(
-    SDR_TYPE_OPTION, SLIDER_OPTION, 
+    SDR_TYPE_OPTION, SHEET_ID_SLIDER_OPTION, 
     DEFAULT_MENU_BUTTON_SCALE, 2,
     BTN_TYPE_SLIDER_LEFT_BUTTON, BTN_TYPE_SLIDER_RIGHT_BUTTON, 6
   );
@@ -756,8 +756,8 @@ bool gui_slider_add_option(slider_id _id, const char* _display_text, data_pack c
     return false;
   }
 }
-void register_button_type(button_type_id _btn_type_id, spritesheet_type _ss_type, Vector2 frame_dim, Vector2 on_click_text_offset, f32 _scale, bool _play_reflection, bool _play_crt, bool _should_center) {
-  if (_ss_type     >= SPRITESHEET_TYPE_MAX || _ss_type <= SPRITESHEET_UNSPECIFIED || 
+void register_button_type(button_type_id _btn_type_id, spritesheet_id _ss_type, Vector2 frame_dim, Vector2 on_click_text_offset, f32 _scale, bool _play_reflection, bool _play_crt, bool _should_center) {
+  if (_ss_type     >= SHEET_ID_SPRITESHEET_TYPE_MAX || _ss_type <= SHEET_ID_SPRITESHEET_UNSPECIFIED || 
       _btn_type_id >= BTN_TYPE_MAX         || _btn_type_id <= BTN_TYPE_UNDEFINED  ||
       !state) {
     TraceLog(LOG_WARNING, "WARNING::user_interface::register_button_type()::Recieved id was out of bound");
@@ -798,10 +798,10 @@ void register_button(button_id _btn_id, button_type_id _btn_type_id) {
     },
     .state = BTN_STATE_UP,
     .crt_render_index = _btn_type->play_crt 
-      ? register_sprite(BUTTON_CRT_SHEET, true, false, false)
+      ? register_sprite(SHEET_ID_BUTTON_CRT_SHEET, true, false, false)
       : 0,
     .reflection_render_index = _btn_type->play_reflection 
-      ? register_sprite(BUTTON_REFLECTION_SHEET, false, true, false)
+      ? register_sprite(SHEET_ID_BUTTON_REFLECTION_SHEET, false, true, false)
       : 0,
     .on_screen = false,
     .is_registered = true,
@@ -845,9 +845,9 @@ void register_progress_bar_type(progress_bar_type_id _type_id, texture_id _body_
   state->prg_bar_types[_type_id] = prg_type;
 }
 void register_slider_type(
-  slider_type_id _sdr_type_id, spritesheet_type _ss_sdr_body_type, f32 _scale, u16 _width_multiply,
+  slider_type_id _sdr_type_id, spritesheet_id _ss_sdr_body_type, f32 _scale, u16 _width_multiply,
   button_type_id _left_btn_type_id, button_type_id _right_btn_type_id, u16 _char_limit) {
-    if (_ss_sdr_body_type >= SPRITESHEET_TYPE_MAX || _ss_sdr_body_type <= SPRITESHEET_UNSPECIFIED || 
+    if (_ss_sdr_body_type >= SHEET_ID_SPRITESHEET_TYPE_MAX || _ss_sdr_body_type <= SHEET_ID_SPRITESHEET_UNSPECIFIED || 
         _sdr_type_id      >= SDR_TYPE_MAX         || _sdr_type_id      <= SDR_TYPE_UNDEFINED      ||
         _left_btn_type_id >= BTN_TYPE_MAX         || _left_btn_type_id <= BTN_TYPE_UNDEFINED      ||
         _right_btn_type_id>= BTN_TYPE_MAX         || _right_btn_type_id<= BTN_TYPE_UNDEFINED      ||
@@ -930,14 +930,14 @@ void register_slider(
 void gui_draw_texture_to_background(texture_id _id) {
   draw_texture_regular(_id, (Rectangle) {0, 0, GetScreenWidth(), GetScreenHeight()}, WHITE, false);
 }
-void gui_draw_spritesheet_to_background(spritesheet_type _type, Color _tint) {
-  if (_type >= SPRITESHEET_TYPE_MAX || _type <= SPRITESHEET_UNSPECIFIED || !state) {
+void gui_draw_spritesheet_to_background(spritesheet_id _id, Color _tint) {
+  if (_id >= SHEET_ID_SPRITESHEET_TYPE_MAX || _id <= SHEET_ID_SPRITESHEET_UNSPECIFIED || !state) {
     TraceLog(LOG_WARNING, "WARNING::user_interface::gui_draw_spritesheet_to_background()::Sprite type out of bound");
     return;
   }
-  if (state->ss_to_draw_bg.type != _type) {
-    state->ss_to_draw_bg = get_spritesheet_by_enum(_type);
-    state->ss_to_draw_bg.render_queue_index = register_sprite(_type, true, false, false);
+  if (state->ss_to_draw_bg.type != _id) {
+    state->ss_to_draw_bg = get_spritesheet_by_enum(_id);
+    state->ss_to_draw_bg.render_queue_index = register_sprite(_id, true, false, false);
   }
   Rectangle dest = (Rectangle) {0, 0, GetScreenWidth(), GetScreenHeight()};
   play_sprite_on_site(state->ss_to_draw_bg.render_queue_index, dest, _tint);
@@ -1065,6 +1065,13 @@ void gui_draw_texture_id(texture_id _id, Rectangle dest) {
   (Rectangle) {0, 0, tex->width, tex->height}, 
   dest, 
   (Vector2) {0}, 0, WHITE);
+}
+void gui_draw_spritesheet_id(spritesheet_id _id, Color _tint, Vector2 pos, Vector2 scale, u16 frame, bool _should_center) {
+  if (_id >= SHEET_ID_SPRITESHEET_TYPE_MAX || _id <= SHEET_ID_SPRITESHEET_UNSPECIFIED) {
+    TraceLog(LOG_WARNING, "user_interface::gui_draw_texture_id_pro()::ID was out of bound"); 
+    return; 
+  }
+  draw_sprite_on_site(_id, _tint, pos, scale, frame, _should_center);
 }
 void gui_draw_texture_id_center(texture_id _id, Vector2 pos, Vector2 dim, bool should_center) {
   if (_id >= TEX_ID_MAX || _id <= TEX_ID_UNSPECIFIED) {

@@ -37,7 +37,7 @@ void update_scene_main_menu(void) {
 void render_scene_main_menu(void) {
   gui_draw_texture_to_background(TEX_ID_BACKGROUND);
   gui_draw_spritesheet_to_background(
-    SCREEN_CRT_SHEET, 
+    SHEET_ID_SCREEN_CRT_SHEET, 
     (Color) {WHITE_ROCK.r, WHITE_ROCK.g, WHITE_ROCK.b, 100} //(Color) {218, 165, 32, 100}
   );
 }

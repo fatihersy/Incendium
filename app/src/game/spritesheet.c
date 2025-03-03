@@ -77,12 +77,12 @@ void render_sprite_renderqueue(spritesheet_play_system *system, u16 queue_index)
   #endif
 }
 
-u16 _register_sprite(spritesheet_play_system *system, spritesheet_type _type, bool _play_looped, bool _play_once, bool _center_sprite) {
-  if (_type > SPRITESHEET_TYPE_MAX || _type <= SPRITESHEET_UNSPECIFIED) {
+u16 _register_sprite(spritesheet_play_system *system, spritesheet_id _id, bool _play_looped, bool _play_once, bool _center_sprite) {
+  if (_id > SHEET_ID_SPRITESHEET_TYPE_MAX || _id <= SHEET_ID_SPRITESHEET_UNSPECIFIED) {
     TraceLog(LOG_ERROR, "ERROR::spritesheet::play_sprite_on_site()::sprite type out of bound");
     return INVALID_ID16;
   }
-  spritesheet sheet = get_spritesheet_by_enum(_type);
+  spritesheet sheet = get_spritesheet_by_enum(_id);
 
   system->renderqueue_count++;
 
@@ -116,12 +116,12 @@ void _play_sprite_on_site(spritesheet_play_system *system, u16 _id, Color _tint,
   render_sprite_renderqueue(system, _id);
 }
 
-void _draw_sprite_on_site(spritesheet_type _type, Color _tint, Vector2 pos, Vector2 scale, u16 frame, bool _should_center) {
-  if (_type > SPRITESHEET_TYPE_MAX || _type <= SPRITESHEET_UNSPECIFIED) {
+void _draw_sprite_on_site(spritesheet_id _id, Color _tint, Vector2 pos, Vector2 scale, u16 frame, bool _should_center) {
+  if (_id > SHEET_ID_SPRITESHEET_TYPE_MAX || _id <= SHEET_ID_SPRITESHEET_UNSPECIFIED) {
     TraceLog(LOG_ERROR, "ERROR::spritesheet::draw_sprite_on_site()::invalid sprite type");
     return;
   }
-  spritesheet sheet = get_spritesheet_by_enum(_type);
+  spritesheet sheet = get_spritesheet_by_enum(_id);
 
   u16 col = frame % sheet.col_total;
   u16 row = frame / sheet.row_total;
@@ -205,8 +205,8 @@ void _reset_sprite(spritesheet_play_system *system, u16 _queue_index, bool _retr
 Texture2D* _get_texture_by_enum(texture_id _id) {
     return get_texture_by_enum(_id);
 }
-spritesheet _get_spritesheet_by_enum(spritesheet_type _type) {
-    return get_spritesheet_by_enum(_type);
+spritesheet _get_spritesheet_by_enum(spritesheet_id _id) {
+    return get_spritesheet_by_enum(_id);
 }
 const char *_rs_path(const char *_path) {
     return rs_path(_path);

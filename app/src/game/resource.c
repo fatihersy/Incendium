@@ -10,7 +10,7 @@ typedef struct resource_system_state {
   u16 tilesheet_amouth;
 
   Texture2D textures[TEX_ID_MAX];
-  spritesheet sprites[SPRITESHEET_TYPE_MAX];
+  spritesheet sprites[SHEET_ID_SPRITESHEET_TYPE_MAX];
   Image images[IMAGE_TYPE_MAX];
   tilesheet tilesheets[TILESHEET_TYPE_MAX];
 
@@ -21,7 +21,7 @@ static resource_system_state *state;
 
 unsigned int load_texture(const char* _path, bool resize, Vector2 new_size, texture_id _id);
 bool load_image(const char *_path, bool resize, Vector2 new_size, image_type type);
-void load_spritesheet(const char* _path, spritesheet_type _type, u16 _fps, u16 _frame_width, u16 _frame_height, u16 _total_row, u16 _total_col);
+void load_spritesheet(const char* _path, spritesheet_id _id, u16 _fps, u16 _frame_width, u16 _frame_height, u16 _total_row, u16 _total_col);
 void load_tilesheet(tilesheet_type _sheet_sheet_type, texture_id _sheet_tex_id, u16 _tile_count_x, u16 _tile_count_y, u16 _tile_size);
 
 bool resource_system_initialize(void) {
@@ -38,29 +38,30 @@ bool resource_system_initialize(void) {
   load_texture("crimson_fantasy_panel.png",    false, (Vector2){ 0,  0}, TEX_ID_CRIMSON_FANTASY_PANEL);
   load_texture("crimson_fantasy_panel_bg.png", false, (Vector2){ 0,  0}, TEX_ID_CRIMSON_FANTASY_PANEL_BG);
   load_texture("map_props_atlas.png",          false, (Vector2){ 0,  0}, TEX_ID_MAP_PROPS_ATLAS);
-  load_texture("ability_icons.png.png",              false, (Vector2){ 0,  0}, TEX_ID_ABILITY_ICON_ATLAS);
+  load_texture("ability_icons.png.png",        false, (Vector2){ 0,  0}, TEX_ID_ABILITY_ICON_ATLAS);
   load_texture("worldmap_w_clouds.png",        false, (Vector2){ 0,  0}, TEX_ID_WORLDMAP_W_CLOUDS);
   load_texture("worldmap_wo_clouds.png",       false, (Vector2){ 0,  0}, TEX_ID_WORLDMAP_WO_CLOUDS);
   load_texture("worldmap_clouds.png",          false, (Vector2){ 0,  0}, TEX_ID_WORLDMAP_CLOUDS);
   load_texture("game_bg_space.png",            false, (Vector2){ 0,  0}, TEX_ID_GAME_BG_SPACE);
-  load_spritesheet("idle_left.png",                  PLAYER_ANIMATION_IDLE_LEFT,         15,   86,  86, 1,  4);
-  load_spritesheet("idle_right.png",                 PLAYER_ANIMATION_IDLE_RIGHT,        15,   86,  86, 1,  4);
-  load_spritesheet("move_left.png",                  PLAYER_ANIMATION_MOVE_LEFT,         10,   86,  86, 1,  6);
-  load_spritesheet("move_right.png",                 PLAYER_ANIMATION_MOVE_RIGHT,        10,   86,  86, 1,  6);
-  load_spritesheet("take_damage_left.png",           PLAYER_ANIMATION_TAKE_DAMAGE_LEFT,  15,   86,  86, 1,  4);
-  load_spritesheet("take_damage_right.png",          PLAYER_ANIMATION_TAKE_DAMAGE_RIGHT, 15,   86,  86, 1,  4);
-  load_spritesheet("wreck_left.png",                 PLAYER_ANIMATION_WRECK_LEFT,        15,   90, 110, 1,  4);
-  load_spritesheet("wreck_right.png",                PLAYER_ANIMATION_WRECK_RIGHT,       15,   90, 110, 1,  4);
-  load_spritesheet("button_reflection.png",          BUTTON_REFLECTION_SHEET,            30,   80,  16, 1,  9);
-  load_spritesheet("button_crt.png",                 BUTTON_CRT_SHEET,                    8,   78,  12, 1,  4);
-  load_spritesheet("screen_crt_sheet.png",           SCREEN_CRT_SHEET,                    8, 1280, 720, 1,  4);
-  load_spritesheet("slider_percent_edited.png",      SLIDER_PERCENT,                      0,   20,  10, 1, 11);
-  load_spritesheet("slider_option.png",              SLIDER_OPTION,                       0,   21,  10, 1,  2);
-  load_spritesheet("slider_left_button.png",         SLIDER_LEFT_BUTTON,                  0,   10,  10, 1,  2);
-  load_spritesheet("slider_right_button_edited.png", SLIDER_RIGHT_BUTTON,                 0,   11,  10, 1,  2);
-  load_spritesheet("menu_button.png",                MENU_BUTTON,                         0,   80,  16, 1,  2);
-  load_spritesheet("flat_button.png",                FLAT_BUTTON,                         0,   44,  14, 1,  2);
-  load_spritesheet("fireball.png",                   FIREBALL_ANIMATION,                 15,   32,  32, 1,  4);
+  load_spritesheet("idle_left.png",                  SHEET_ID_PLAYER_ANIMATION_IDLE_LEFT,         15,   86,  86, 1,  4);
+  load_spritesheet("idle_right.png",                 SHEET_ID_PLAYER_ANIMATION_IDLE_RIGHT,        15,   86,  86, 1,  4);
+  load_spritesheet("move_left.png",                  SHEET_ID_PLAYER_ANIMATION_MOVE_LEFT,         10,   86,  86, 1,  6);
+  load_spritesheet("move_right.png",                 SHEET_ID_PLAYER_ANIMATION_MOVE_RIGHT,        10,   86,  86, 1,  6);
+  load_spritesheet("take_damage_left.png",           SHEET_ID_PLAYER_ANIMATION_TAKE_DAMAGE_LEFT,  15,   86,  86, 1,  4);
+  load_spritesheet("take_damage_right.png",          SHEET_ID_PLAYER_ANIMATION_TAKE_DAMAGE_RIGHT, 15,   86,  86, 1,  4);
+  load_spritesheet("wreck_left.png",                 SHEET_ID_PLAYER_ANIMATION_WRECK_LEFT,        15,   90, 110, 1,  4);
+  load_spritesheet("wreck_right.png",                SHEET_ID_PLAYER_ANIMATION_WRECK_RIGHT,       15,   90, 110, 1,  4);
+  load_spritesheet("button_reflection.png",          SHEET_ID_BUTTON_REFLECTION_SHEET,            30,   80,  16, 1,  9);
+  load_spritesheet("button_crt.png",                 SHEET_ID_BUTTON_CRT_SHEET,                    8,   78,  12, 1,  4);
+  load_spritesheet("screen_crt_sheet.png",           SHEET_ID_SCREEN_CRT_SHEET,                    8, 1280, 720, 1,  4);
+  load_spritesheet("slider_percent_edited.png",      SHEET_ID_SLIDER_PERCENT,                      0,   20,  10, 1, 11);
+  load_spritesheet("slider_option.png",              SHEET_ID_SLIDER_OPTION,                       0,   21,  10, 1,  2);
+  load_spritesheet("slider_left_button.png",         SHEET_ID_SLIDER_LEFT_BUTTON,                  0,   10,  10, 1,  2);
+  load_spritesheet("slider_right_button_edited.png", SHEET_ID_SLIDER_RIGHT_BUTTON,                 0,   11,  10, 1,  2);
+  load_spritesheet("menu_button.png",                SHEET_ID_MENU_BUTTON,                         0,   80,  16, 1,  2);
+  load_spritesheet("flat_button.png",                SHEET_ID_FLAT_BUTTON,                         0,   44,  14, 1,  2);
+  load_spritesheet("fireball.png",                   SHEET_ID_FIREBALL_ANIMATION,                 15,   32,  32, 1,  4);
+  load_spritesheet("icon_atlas.png",                 SHEET_ID_ICON_ATLAS,                          0,   32,  32, 1,  3);
   
   load_tilesheet(TILESHEET_TYPE_MAP, TEX_ID_MAP_TILESET_TEXTURE, 49, 63, 32);
 
@@ -85,9 +86,9 @@ Image* get_image_by_enum(image_type type) {
   return &state->images[type];
 }
 
-spritesheet get_spritesheet_by_enum(spritesheet_type type) {
+spritesheet get_spritesheet_by_enum(spritesheet_id type) {
 
-  if (type >= SPRITESHEET_TYPE_MAX || type <= SPRITESHEET_UNSPECIFIED){
+  if (type >= SHEET_ID_SPRITESHEET_TYPE_MAX || type <= SHEET_ID_SPRITESHEET_UNSPECIFIED){
     TraceLog(LOG_WARNING, "resource::get_spritesheet_by_enum()::Spritesheet type out of bound");
     return (spritesheet){0};
   }
@@ -159,13 +160,13 @@ bool load_image(const char *_path, bool resize, Vector2 new_size, image_type typ
 }
 
 
-void load_spritesheet(const char *_path, spritesheet_type _type, u16 _fps, u16 _frame_width, u16 _frame_height, u16 _total_row, u16 _total_col) {
+void load_spritesheet(const char *_path, spritesheet_id _id, u16 _fps, u16 _frame_width, u16 _frame_height, u16 _total_row, u16 _total_col) {
   const char *path = rs_path(_path);
   if (!FileExists(path)) { TraceLog(
   LOG_ERROR,"ERROR::resource::load_spritesheet():: Path:'%s' Cannot find", path);
     return;
   } 
-  if (_type >= MAX_SPRITESHEET_SLOTS || _type <= SPRITESHEET_UNSPECIFIED) { TraceLog(
+  if (_id >= MAX_SPRITESHEET_SLOTS || _id <= SHEET_ID_SPRITESHEET_UNSPECIFIED) { TraceLog(
     LOG_ERROR, "resource::load_spritesheet()::Sheet type out of bound");
     return;
   }
@@ -174,7 +175,7 @@ void load_spritesheet(const char *_path, spritesheet_type _type, u16 _fps, u16 _
   Texture2D tex = LoadTexture(path);
 
   _sheet.handle = tex;
-  _sheet.type = _type;
+  _sheet.type = _id;
   _sheet.is_started = false;
   _sheet.row_total = _total_row;
   _sheet.col_total = _total_col;
@@ -190,7 +191,7 @@ void load_spritesheet(const char *_path, spritesheet_type _type, u16 _fps, u16 _
   _sheet.fps = _fps;
 
   state->sprite_amouth++;
-  state->sprites[_type] = _sheet;
+  state->sprites[_id] = _sheet;
 }
 
 void load_tilesheet(tilesheet_type _sheet_sheet_type, texture_id _sheet_tex_id, u16 _tile_count_x, u16 _tile_count_y, u16 _tile_size) {

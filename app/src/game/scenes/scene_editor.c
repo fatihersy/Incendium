@@ -29,7 +29,6 @@ typedef enum editor_state_mouse_focus {
 typedef struct scene_editor_state {
   camera_metrics * in_camera_metrics;
   Vector2 target;
-  //tilemap* map;
   worldmap_stage worldmap_locations[MAX_WORLDMAP_LOCATIONS];
   tilemap_prop props[MAX_TILESHEET_PROPS];
   u16 prop_count;
@@ -72,7 +71,6 @@ void initialize_scene_editor(camera_metrics* _camera_metrics) {
     return;
   }
   copy_memory(&state->worldmap_locations, get_worldmap_locations(), sizeof(state->worldmap_locations));
-  //state->map = get_active_map();
 
   user_interface_system_initialize();
   state->tile_selection_panel = get_default_panel();
@@ -517,7 +515,6 @@ void render_interface_editor(void) {
         }
       }
     }); 
-
   }
   else if(state->b_show_prop_selection_screen && !state->b_show_tilesheet_tile_selection_screen) 
   {

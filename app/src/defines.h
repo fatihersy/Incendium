@@ -68,6 +68,8 @@
 
 #define MAX_WORLDMAP_LOCATION_NAME_LENGTH 10
 #define MAX_WORLDMAP_LOCATIONS 22
+#define WORLDMAP_LOC_PIN_SIZE 32 // Also check the SHEET_ID_ICON_ATLAS frame sizes.
+#define WORLDMAP_LOC_PIN_SIZE_DIV2 WORLDMAP_LOC_PIN_SIZE * .5f // Needed?
 
 #define MAX_RAND 6
 #define RANDOM_TABLE_NUMBER_COUNT 507
@@ -249,29 +251,29 @@ typedef enum world_direction {
   WORLD_DIRECTION_DOWN,
 } world_direction;
 
-typedef enum spritesheet_type {
-  SPRITESHEET_UNSPECIFIED,
-  PLAYER_ANIMATION_IDLE_LEFT,
-  PLAYER_ANIMATION_IDLE_RIGHT,
-  PLAYER_ANIMATION_MOVE_LEFT,
-  PLAYER_ANIMATION_MOVE_RIGHT,
-  PLAYER_ANIMATION_TAKE_DAMAGE_LEFT,
-  PLAYER_ANIMATION_TAKE_DAMAGE_RIGHT,
-  PLAYER_ANIMATION_WRECK_LEFT,
-  PLAYER_ANIMATION_WRECK_RIGHT,
-  BUTTON_REFLECTION_SHEET,
-  MENU_BUTTON,
-  FLAT_BUTTON,
-  BUTTON_CRT_SHEET,
-  SCREEN_CRT_SHEET,
-  SLIDER_PERCENT,
-  SLIDER_OPTION,
-  SLIDER_LEFT_BUTTON,
-  SLIDER_RIGHT_BUTTON,
-  FIREBALL_ANIMATION,
-
-  SPRITESHEET_TYPE_MAX
-} spritesheet_type;
+typedef enum spritesheet_id {
+  SHEET_ID_SPRITESHEET_UNSPECIFIED,
+  SHEET_ID_PLAYER_ANIMATION_IDLE_LEFT,
+  SHEET_ID_PLAYER_ANIMATION_IDLE_RIGHT,
+  SHEET_ID_PLAYER_ANIMATION_MOVE_LEFT,
+  SHEET_ID_PLAYER_ANIMATION_MOVE_RIGHT,
+  SHEET_ID_PLAYER_ANIMATION_TAKE_DAMAGE_LEFT,
+  SHEET_ID_PLAYER_ANIMATION_TAKE_DAMAGE_RIGHT,
+  SHEET_ID_PLAYER_ANIMATION_WRECK_LEFT,
+  SHEET_ID_PLAYER_ANIMATION_WRECK_RIGHT,
+  SHEET_ID_BUTTON_REFLECTION_SHEET,
+  SHEET_ID_MENU_BUTTON,
+  SHEET_ID_FLAT_BUTTON,
+  SHEET_ID_BUTTON_CRT_SHEET,
+  SHEET_ID_SCREEN_CRT_SHEET,
+  SHEET_ID_SLIDER_PERCENT,
+  SHEET_ID_SLIDER_OPTION,
+  SHEET_ID_SLIDER_LEFT_BUTTON,
+  SHEET_ID_SLIDER_RIGHT_BUTTON,
+  SHEET_ID_FIREBALL_ANIMATION,
+  SHEET_ID_ICON_ATLAS,
+  SHEET_ID_SPRITESHEET_TYPE_MAX
+} spritesheet_id;
 
 typedef enum button_state {
   BTN_STATE_UNDEFINED,
@@ -455,7 +457,7 @@ typedef struct worldmap_stage {
   char displayname[MAX_WORLDMAP_LOCATION_NAME_LENGTH];
   char filename[MAX_WORLDMAP_LOCATION_NAME_LENGTH];
   Rectangle spawning_areas[MAX_SPAWN_COLLISIONS];
-  Rectangle screen_location;
+  Vector2 screen_location;
 } worldmap_stage;
 
 typedef struct tilemap_tile {
@@ -508,7 +510,7 @@ typedef struct rectangle_collision {
 } rectangle_collision;
 
 typedef struct spritesheet {
-  spritesheet_type type;
+  spritesheet_id type;
   u16 col_total;
   u16 row_total;
   u16 frame_total;
@@ -557,7 +559,7 @@ typedef struct panel {
 
 typedef struct button_type {
   button_type_id id;
-  spritesheet_type ss_type;
+  spritesheet_id ss_type;
   Vector2 source_frame_dim;
   Vector2 dest_frame_dim;
   f32 scale;
@@ -587,7 +589,7 @@ typedef struct slider_option {
 
 typedef struct slider_type {
   slider_type_id id;
-  spritesheet_type ss_sdr_body;
+  spritesheet_id ss_sdr_body;
   Vector2 source_frame_dim;
   f32 scale;
   u16 width_multiply;
@@ -694,7 +696,7 @@ typedef struct ability {
   u16 base_damage;
   u16 rotation;
   projectile projectiles[MAX_ABILITY_PROJECTILE_SLOT];
-  spritesheet_type proj_anim_sprite;
+  spritesheet_id proj_anim_sprite;
   movement_pattern move_pattern;
   ability_upgradables upgradables[ABILITY_UPG_MAX];
   u16 proj_count;
@@ -840,15 +842,6 @@ static const u32 level_curve[MAX_PLAYER_LEVEL + 1] = {
 #define pVECTOR2(X) ((Vector2){X[0], X[1]})
 #define VECTOR2(X, Y) ((Vector2){X, Y})
 #define TO_VECTOR2(X) ((Vector2){X, X})
-#define SCREEN_POS(X, Y) ((Vector2){  \
-  .x = GetScreenWidth()  * (X / 100), \
-  .y = GetScreenHeight() * (Y / 100)  \
-})
-#define SCREEN_RECT(X, Y, W, H) ((Rectangle){  \
-  .x = GetScreenWidth()  * (X / 120.f), \
-  .y = GetScreenHeight() * (Y / 120.f),  \
-  .width = (GetScreenWidth() / 120.f) * W, \
-  .height = (GetScreenHeight() / 120.f) * H  \
-})
-
+#define NORMALIZE_VEC2(X, Y, X_MAX, Y_MAX)  ((Vector2){X / X_MAX, Y / Y_MAX})
+#define CENTER_RECT(RECT) ((Rectangle){RECT.x - RECT.width / 2.f, RECT.y - RECT.height, RECT.width, RECT.height});
 #endif
