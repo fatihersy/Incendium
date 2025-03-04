@@ -12,10 +12,15 @@ typedef enum main_menu_scene_type {
 } main_menu_scene_type;
 
 typedef struct main_menu_scene_state {
-main_menu_scene_type type;
+  main_menu_scene_type type;
+  scene_type next_scene;
+  bool in_scene_changing_process;
+  bool scene_changing_process_complete;
 } main_menu_scene_state;
 
 static main_menu_scene_state *state;
+
+#define MAIN_MENU_FADE_DURATION 1 * TARGET_FPS
 
 void initialize_scene_main_menu(void) {
   if (state) {return;}
@@ -32,42 +37,50 @@ void update_scene_main_menu(void) {
     .data.f32[0] = GetScreenWidth()/2.f,
     .data.f32[1] = GetScreenHeight()/2.f,
   });
+  if (state->in_scene_changing_process && is_ui_fade_anim_about_to_complete()) {
+    state->scene_changing_process_complete = true;
+  }
+  if (state->in_scene_changing_process && is_ui_fade_anim_complete()) {
+    event_fire(EVENT_CODE_SCENE_IN_GAME, (event_context){0});
+  }
 }
 
 void render_scene_main_menu(void) {
-  gui_draw_texture_to_background(TEX_ID_BACKGROUND);
-  gui_draw_spritesheet_to_background(
-    SHEET_ID_SCREEN_CRT_SHEET, 
-    (Color) {WHITE_ROCK.r, WHITE_ROCK.g, WHITE_ROCK.b, 100} //(Color) {218, 165, 32, 100}
-  );
+  if (!state->scene_changing_process_complete) {
+    gui_draw_texture_to_background(TEX_ID_BACKGROUND);
+    gui_draw_spritesheet_to_background(
+      SHEET_ID_SCREEN_CRT_SHEET, 
+      (Color) {WHITE_ROCK.r, WHITE_ROCK.g, WHITE_ROCK.b, 100} //(Color) {218, 165, 32, 100}
+    );
+  }
 }
 
 void render_interface_main_menu(void) {
-
-  if (state->type == MAIN_MENU_SCENE_DEFAULT) {
-    if (gui_menu_button("Play", BTN_ID_MAINMENU_BUTTON_PLAY, VECTOR2(0,  0))) {
-      event_fire(EVENT_CODE_SCENE_IN_GAME, (event_context){0});
+  if (!state->scene_changing_process_complete) {
+    if (state->type == MAIN_MENU_SCENE_DEFAULT) {
+      if (gui_menu_button("Play", BTN_ID_MAINMENU_BUTTON_PLAY, VECTOR2(0,  0))) {
+        state->in_scene_changing_process = true;
+        state->next_scene = SCENE_IN_GAME;
+        event_fire(EVENT_CODE_UI_START_FADEOUT_EFFECT, (event_context){ .data.u16[0] = MAIN_MENU_FADE_DURATION});
+      }
+      if (gui_menu_button("Editor", BTN_ID_MAINMENU_BUTTON_EDITOR, VECTOR2(0,  4))) {
+         event_fire(EVENT_CODE_SCENE_EDITOR, (event_context){0});
+      }
+      if (gui_menu_button("Settings", BTN_ID_MAINMENU_BUTTON_SETTINGS, VECTOR2(0,  8))) {
+        state->type = MAIN_MENU_SCENE_SETTINGS;
+        event_fire(EVENT_CODE_UI_SHOW_SETTINGS_MENU, (event_context) {0});
+      }
+      if (gui_menu_button("Extras", BTN_ID_MAINMENU_BUTTON_EXTRAS, VECTOR2(0,  12))) {}
+      if (gui_menu_button("Exit", BTN_ID_MAINMENU_BUTTON_EXIT, VECTOR2(0,  16))) {
+        event_fire(EVENT_CODE_APPLICATION_QUIT, (event_context){0});
+      }
     }
-    if (gui_menu_button("Editor", BTN_ID_MAINMENU_BUTTON_EDITOR, VECTOR2(0,  4))) {
-      event_fire(EVENT_CODE_SCENE_EDITOR, (event_context){0});
+    else if (state->type == MAIN_MENU_SCENE_SETTINGS) {
+      if(gui_menu_button("Cancel", BTN_ID_MAINMENU_SETTINGS_CANCEL, VECTOR2(2,  15))) {
+         state->type = MAIN_MENU_SCENE_DEFAULT;
+        event_fire(EVENT_CODE_UI_SHOW_SETTINGS_MENU, (event_context) {0});
+      }
     }
-    if (gui_menu_button("Settings", BTN_ID_MAINMENU_BUTTON_SETTINGS, VECTOR2(0,  8))) {
-      state->type = MAIN_MENU_SCENE_SETTINGS;
-      event_fire(EVENT_CODE_UI_SHOW_SETTINGS_MENU, (event_context) {0});
-    }
-    if (gui_menu_button("Extras", BTN_ID_MAINMENU_BUTTON_EXTRAS, VECTOR2(0,  12))) {
-    
-    }
-    if (gui_menu_button("Exit", BTN_ID_MAINMENU_BUTTON_EXIT, VECTOR2(0,  16))) {
-      event_fire(EVENT_CODE_APPLICATION_QUIT, (event_context){0});
-    }
+    render_user_interface();
   }
-  else if (state->type == MAIN_MENU_SCENE_SETTINGS) {
-    if(gui_menu_button("Cancel", BTN_ID_MAINMENU_SETTINGS_CANCEL, VECTOR2(2,  15))) {
-      state->type = MAIN_MENU_SCENE_DEFAULT;
-      event_fire(EVENT_CODE_UI_SHOW_SETTINGS_MENU, (event_context) {0});
-    }
-  }
-
-  render_user_interface();
 }

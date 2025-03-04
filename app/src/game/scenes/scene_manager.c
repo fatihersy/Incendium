@@ -10,16 +10,8 @@
 #include "game/scenes/scene_editor.h"
 
 typedef struct scene_manager_system_state {
-  spritesheet_play_system spritesheet_system;
-
   scene_type scene_data;
-  Vector2 screen_size;
-  Vector2 screen_half_size;
   Vector2 target;
-  u16 gridsize;
-  u16 map_size;
-
-  bool is_scene_manager_initialized;
 } scene_manager_system_state;
 
 static scene_manager_system_state *scene_manager_state;
@@ -31,9 +23,6 @@ bool scene_manager_initialize(void) {
 
   scene_manager_state = (scene_manager_system_state *)allocate_memory_linear(sizeof(scene_manager_system_state), true);
 
-  scene_manager_state->gridsize = 33;
-  scene_manager_state->map_size = scene_manager_state->gridsize * 100;
-
   event_register(EVENT_CODE_SCENE_IN_GAME, scene_manager_on_event);
   event_register(EVENT_CODE_SCENE_EDITOR, scene_manager_on_event);
   event_register(EVENT_CODE_SCENE_MAIN_MENU, scene_manager_on_event);
@@ -43,7 +32,6 @@ bool scene_manager_initialize(void) {
 
   event_fire(EVENT_CODE_SCENE_MAIN_MENU, (event_context) {0});
   
-  scene_manager_state->is_scene_manager_initialized = true;
   return true;
 }
 
@@ -112,7 +100,6 @@ bool scene_manager_on_event(u16 code, event_context context) {
     break;
   }
   case EVENT_CODE_SCENE_MANAGER_SET_CAM_POS: {
-    //TraceLog(LOG_INFO, "x:%f, y:%f", context.data.f32[0], context.data.f32[1]);
     scene_manager_state->target.x = context.data.f32[0];
     scene_manager_state->target.y = context.data.f32[1];
     get_active_metrics()->handle.target.x = context.data.f32[0];

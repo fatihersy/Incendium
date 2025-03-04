@@ -43,6 +43,7 @@ bool resource_system_initialize(void) {
   load_texture("worldmap_wo_clouds.png",       false, (Vector2){ 0,  0}, TEX_ID_WORLDMAP_WO_CLOUDS);
   load_texture("worldmap_clouds.png",          false, (Vector2){ 0,  0}, TEX_ID_WORLDMAP_CLOUDS);
   load_texture("game_bg_space.png",            false, (Vector2){ 0,  0}, TEX_ID_GAME_BG_SPACE);
+  load_texture("bg_black.png",                 false, (Vector2){ 0,  0}, TEX_ID_BG_BLACK);
   load_spritesheet("idle_left.png",                  SHEET_ID_PLAYER_ANIMATION_IDLE_LEFT,         15,   86,  86, 1,  4);
   load_spritesheet("idle_right.png",                 SHEET_ID_PLAYER_ANIMATION_IDLE_RIGHT,        15,   86,  86, 1,  4);
   load_spritesheet("move_left.png",                  SHEET_ID_PLAYER_ANIMATION_MOVE_LEFT,         10,   86,  86, 1,  6);

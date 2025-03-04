@@ -32,6 +32,7 @@ typedef struct user_interface_system_state {
 
   u16 fade_animation_duration;
   f32 fade_animation_timer;
+  bool fadein;
   bool fade_animation_playing;
   bool b_show_pause_menu;
   bool b_show_settings_menu;
@@ -288,16 +289,24 @@ void user_interface_system_initialize(void) {
   event_register(EVENT_CODE_UI_SHOW_PAUSE_MENU, user_interface_on_event);
   event_register(EVENT_CODE_UI_SHOW_SETTINGS_MENU, user_interface_on_event);
   event_register(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, user_interface_on_event);
-  event_register(EVENT_CODE_UI_START_FADE_EFFECT, user_interface_on_event);
+  event_register(EVENT_CODE_UI_START_FADEIN_EFFECT, user_interface_on_event);
+  event_register(EVENT_CODE_UI_START_FADEOUT_EFFECT, user_interface_on_event);
 }
 
 void update_user_interface(void) {
   state->mouse_pos = GetMousePosition();
   state->offset = get_screen_offset();
+  
   update_sprite_renderqueue();
-
   update_buttons();
   update_sliders();
+  if (state->fade_animation_playing) {
+    if(state->fade_animation_timer == state->fade_animation_duration){
+      state->fade_animation_timer = 0;
+      state->fade_animation_playing = false;
+    }
+    else state->fade_animation_timer++; 
+  }
 }
 
 void update_buttons(void) {
@@ -1021,19 +1030,13 @@ void draw_fade_effect() {
     TraceLog(LOG_WARNING, "user_interface::draw_fade_effect()::Funtions called without starting animation");
     return;
   }
-  if (state->fade_animation_timer <= state->fade_animation_duration && state->fade_animation_timer >= 0 ) 
-  {
-    f32 process = EaseLinearIn(state->fade_animation_timer, 1.f, -1.f, state->fade_animation_duration);
-    BeginShaderMode(get_shader_by_enum(SHADER_ID_FADE_TRANSITION)->handle);
-    set_shader_uniform(SHADER_ID_FADE_TRANSITION, 0, (data_pack) {.data.f32[0] = process});
-    draw_texture_regular(TEX_ID_CRIMSON_FANTASY_PANEL_BG, (Rectangle) {0, 0, GetScreenWidth(), GetScreenHeight()}, WHITE, false);
-    EndShaderMode();
-    state->fade_animation_timer++;
-  }
-  else {
-    state->fade_animation_timer = 0;
-    state->fade_animation_playing = false;
-  }
+  f32 process = state->fadein 
+    ? EaseQuadIn(state->fade_animation_timer,  0.f, 1.f, state->fade_animation_duration)
+    : EaseQuadOut(state->fade_animation_timer, 1.f,-1.f, state->fade_animation_duration);
+  BeginShaderMode(get_shader_by_enum(SHADER_ID_FADE_TRANSITION)->handle);
+  set_shader_uniform(SHADER_ID_FADE_TRANSITION, 0, (data_pack) {.data.f32[0] = process});
+  draw_texture_regular(TEX_ID_BG_BLACK, (Rectangle) {0, 0, GetScreenWidth(), GetScreenHeight()}, WHITE, false);
+  EndShaderMode();
 }
 
 void gui_draw_texture_id_pro(texture_id _id, Rectangle src, Rectangle dest) {
@@ -1133,6 +1136,12 @@ data_pack* get_slider_current_value(slider_id id) {
 
   return &state->sliders[id].options[state->sliders[id].current_value].content;
 }
+bool is_ui_fade_anim_complete() {
+  return state->fade_animation_timer == 0;
+}
+bool is_ui_fade_anim_about_to_complete() {
+  return state->fade_animation_timer == state->fade_animation_duration-1;
+}
 
 void user_interface_system_destroy(void) {
 
@@ -1152,10 +1161,18 @@ bool user_interface_on_event(u16 code, event_context context) {
       state->prg_bars[(i32)context.data.f32[0]].progress = context.data.f32[1];
       return true;
     }
-    case EVENT_CODE_UI_START_FADE_EFFECT: {
+    case EVENT_CODE_UI_START_FADEIN_EFFECT: {
       state->fade_animation_duration = context.data.u16[0];
       state->fade_animation_playing = true;
       state->fade_animation_timer = 0;
+      state->fadein = true;
+      return true;
+    }
+    case EVENT_CODE_UI_START_FADEOUT_EFFECT: {
+      state->fade_animation_duration = context.data.u16[0];
+      state->fade_animation_playing = true;
+      state->fade_animation_timer = 0;
+      state->fadein = false;
       return true;
     }
   };

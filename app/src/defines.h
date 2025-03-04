@@ -218,6 +218,7 @@ typedef enum texture_id {
   TEX_ID_WORLDMAP_WO_CLOUDS,
   TEX_ID_WORLDMAP_CLOUDS,
   TEX_ID_GAME_BG_SPACE,
+  TEX_ID_BG_BLACK,
 
   TEX_ID_MAX,
 } texture_id;
@@ -844,4 +845,15 @@ static const u32 level_curve[MAX_PLAYER_LEVEL + 1] = {
 #define TO_VECTOR2(X) ((Vector2){X, X})
 #define NORMALIZE_VEC2(X, Y, X_MAX, Y_MAX)  ((Vector2){X / X_MAX, Y / Y_MAX})
 #define CENTER_RECT(RECT) ((Rectangle){RECT.x - RECT.width / 2.f, RECT.y - RECT.height, RECT.width, RECT.height});
+#define SCREEN_POS(X, Y) ((Vector2){  \
+  .x = GetScreenWidth()  * (X / 100), \
+  .y = GetScreenHeight() * (Y / 100)  \
+})
+#define SCREEN_RECT(X, Y, W, H) ((Rectangle){  \
+  .x = GetScreenWidth()  * (X / 120.f), \
+  .y = GetScreenHeight() * (Y / 120.f),  \
+  .width = (GetScreenWidth() / 120.f) * W, \
+  .height = (GetScreenHeight() / 120.f) * H  \
+})
+
 #endif

@@ -12,6 +12,8 @@ void render_user_interface(void);
 Font* ui_get_font(font_type font);
 panel get_default_panel(void);
 data_pack* get_slider_current_value(slider_id id);
+bool is_ui_fade_anim_complete();
+bool is_ui_fade_anim_about_to_complete();
 
 bool gui_slider_add_option(slider_id _id, const char* _display_text, data_pack content);
 

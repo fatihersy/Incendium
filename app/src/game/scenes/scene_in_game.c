@@ -89,7 +89,8 @@ bool initialize_scene_in_game(camera_metrics* _camera_metrics) {
   set_is_game_paused(true);
   state->stage = IN_GAME_STAGE_MAP_CHOICE;
   state->clouds_animation_playing = false;
-  event_fire(EVENT_CODE_UI_START_FADE_EFFECT, (event_context){ .data.u16[0] = CLOUDS_ANIMATION_DURATION });
+  state->hovered_stage = U16_MAX;
+  event_fire(EVENT_CODE_UI_START_FADEIN_EFFECT, (event_context){ .data.u16[0] = CLOUDS_ANIMATION_DURATION });
   return true;
 }
 
@@ -105,8 +106,9 @@ void update_scene_in_game(void) {
       break;
     }
     case IN_GAME_STAGE_MAP_CHOICE: {
-      
-
+      if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON) && state->hovered_stage <= MAX_WORLDMAP_LOCATIONS) {
+        state->stage = IN_GAME_STAGE_PASSIVE_CHOICE;
+      }
       break;
     }
     case IN_GAME_STAGE_PASSIVE_CHOICE: {
@@ -146,7 +148,7 @@ void render_scene_in_game(void) {
       if (IsKeyReleased(KEY_R)) {
         state->clouds_animation_playing = true;
         state->clouds_animation_timer = 0;
-        event_fire(EVENT_CODE_UI_START_FADE_EFFECT, (event_context){ .data.u16[0] = CLOUDS_ANIMATION_DURATION});
+        event_fire(EVENT_CODE_UI_START_FADEOUT_EFFECT, (event_context){ .data.u16[0] = CLOUDS_ANIMATION_DURATION});
       }
       if (state->clouds_animation_playing && (state->clouds_animation_timer >= 0 && state->clouds_animation_timer <= CLOUDS_ANIMATION_DURATION)) {
         f32 clouds_mul = EaseQuadIn(state->clouds_animation_timer, 2, -1, CLOUDS_ANIMATION_DURATION);
@@ -174,6 +176,7 @@ void render_scene_in_game(void) {
       break;
     }
     case IN_GAME_STAGE_PASSIVE_CHOICE: {
+      render_map();
       break;
     }
     case IN_GAME_STAGE_PLAY: {
