@@ -10,6 +10,7 @@
 #include "game/camera.h"
 #include "game/resource.h"
 #include "game/scenes/scene_manager.h"
+#include "game/world.h"
 
 typedef struct app_system_state {
     app_settings settings;
@@ -50,9 +51,17 @@ bool app_initialize(void) {
     }
     SetConfigFlags(FLAG_WINDOW_UNDECORATED | FLAG_WINDOW_TOPMOST);
 
+
+
     // Game
     resource_system_initialize();
     create_camera(*get_resolution_div2());
+
+    BeginDrawing();
+    ClearBackground(CLEAR_BACKGROUND_COLOR); //TODO: Loading screen
+    EndDrawing();
+
+    world_system_initialize(get_active_metrics(), *get_resolution_div2());
     if (!scene_manager_initialize()) {
         TraceLog(LOG_ERROR, "scene_manager() initialization failed");
         return false;

@@ -4,6 +4,19 @@
 
 #include <defines.h>
 
+typedef struct fshader_location {
+  char name[MAX_SHADER_LOCATION_NAME_LENGTH];
+  u16 index;
+  data_pack data;
+  ShaderUniformDataType uni_data_type;
+} fshader_location;
+
+typedef struct fshader {
+  u16 total_locations;
+  Shader handle;
+  fshader_location locations[MAX_SHADER_LOCATION_SLOT];
+} fshader;
+
 void initialize_shader_system(void);
 
 const char* shader_path(const char* _path);

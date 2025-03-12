@@ -20,7 +20,7 @@ static world_system_state *restrict state;
 
 bool world_system_initialize(camera_metrics* _in_camera_metrics, Vector2 resolution_div2) {
   if (state) {
-    TraceLog(LOG_ERROR, "world::world_system_initialize()::Initialize called twice");
+    TraceLog(LOG_WARNING, "world::world_system_initialize()::Initialize called twice");
     return false;
   }
   state = (world_system_state*)allocate_memory_linear(sizeof(world_system_state), true);
@@ -37,7 +37,8 @@ bool world_system_initialize(camera_metrics* _in_camera_metrics, Vector2 resolut
         resolution_div2.x,
         resolution_div2.y
       },
-      .map_id = 0
+      .map_id = 0,
+      .is_active = true
     };
     state->worldmap_locations[1] = (worldmap_stage) {
       .displayname = "Stage 2",
@@ -49,7 +50,8 @@ bool world_system_initialize(camera_metrics* _in_camera_metrics, Vector2 resolut
         resolution_div2.x,
         resolution_div2.y
       },
-      .map_id = 1
+      .map_id = 1,
+      .is_active = true
     };
     state->worldmap_locations[2] = (worldmap_stage) {
       .displayname = "Stage 3",
@@ -61,7 +63,8 @@ bool world_system_initialize(camera_metrics* _in_camera_metrics, Vector2 resolut
         resolution_div2.x,
         resolution_div2.y
       },
-      .map_id = 2
+      .map_id = 2,
+      .is_active = true
     };
     state->worldmap_locations[3] = (worldmap_stage) {
       .displayname = "Stage 4",
@@ -73,7 +76,8 @@ bool world_system_initialize(camera_metrics* _in_camera_metrics, Vector2 resolut
         resolution_div2.x,
         resolution_div2.y
       },
-      .map_id = 3
+      .map_id = 3,
+      .is_active = true
     };
     state->worldmap_locations[4] = (worldmap_stage) {
       .displayname = "Stage 5",
@@ -85,7 +89,8 @@ bool world_system_initialize(camera_metrics* _in_camera_metrics, Vector2 resolut
         resolution_div2.x,
         resolution_div2.y
       },
-      .map_id = 4
+      .map_id = 4,
+      .is_active = true
     };
     state->worldmap_locations[5] = (worldmap_stage) {
       .displayname = "Stage 6",
@@ -97,7 +102,8 @@ bool world_system_initialize(camera_metrics* _in_camera_metrics, Vector2 resolut
         resolution_div2.x,
         resolution_div2.y
       },
-      .map_id = 5
+      .map_id = 5,
+      .is_active = true
     };
     state->worldmap_locations[6] = (worldmap_stage) {
       .displayname = "Stage 7",
@@ -109,7 +115,8 @@ bool world_system_initialize(camera_metrics* _in_camera_metrics, Vector2 resolut
         resolution_div2.x,
         resolution_div2.y
       },
-      .map_id = 6
+      .map_id = 6,
+      .is_active = true
     };
     state->worldmap_locations[7] = (worldmap_stage) {
       .displayname = "Stage 8",
@@ -121,7 +128,8 @@ bool world_system_initialize(camera_metrics* _in_camera_metrics, Vector2 resolut
         resolution_div2.x,
         resolution_div2.y
       },
-      .map_id = 7
+      .map_id = 7,
+      .is_active = true
     };
     state->worldmap_locations[8] = (worldmap_stage) {
       .displayname = "Stage 9",
@@ -133,7 +141,8 @@ bool world_system_initialize(camera_metrics* _in_camera_metrics, Vector2 resolut
         resolution_div2.x,
         resolution_div2.y
       },
-      .map_id = 8
+      .map_id = 8,
+      .is_active = true
     };
     state->worldmap_locations[9] = (worldmap_stage) {
       .displayname = "Stage 10",
@@ -145,7 +154,8 @@ bool world_system_initialize(camera_metrics* _in_camera_metrics, Vector2 resolut
         resolution_div2.x,
         resolution_div2.y
       },
-      .map_id = 9
+      .map_id = 9,
+      .is_active = true
     };
     state->worldmap_locations[10] = (worldmap_stage) {
       .displayname = "Stage 11",
@@ -157,7 +167,8 @@ bool world_system_initialize(camera_metrics* _in_camera_metrics, Vector2 resolut
         resolution_div2.x,
         resolution_div2.y
       },
-      .map_id = 10
+      .map_id = 10,
+      .is_active = true
     };
     state->worldmap_locations[11] = (worldmap_stage) {
       .displayname = "Stage 12",
@@ -169,7 +180,8 @@ bool world_system_initialize(camera_metrics* _in_camera_metrics, Vector2 resolut
         resolution_div2.x,
         resolution_div2.y
       },
-      .map_id = 11
+      .map_id = 11,
+      .is_active = true
     };
     state->worldmap_locations[12] = (worldmap_stage) {
       .displayname = "Stage 13",
@@ -181,7 +193,8 @@ bool world_system_initialize(camera_metrics* _in_camera_metrics, Vector2 resolut
         resolution_div2.x,
         resolution_div2.y
       },
-      .map_id = 12
+      .map_id = 12,
+      .is_active = true
     };
     state->worldmap_locations[13] = (worldmap_stage) {
       .displayname = "Stage 14",
@@ -193,7 +206,8 @@ bool world_system_initialize(camera_metrics* _in_camera_metrics, Vector2 resolut
         resolution_div2.x,
         resolution_div2.y
       },
-      .map_id = 13
+      .map_id = 13,
+      .is_active = true
     };
     state->worldmap_locations[14] = (worldmap_stage) {
       .displayname = "Stage 15",
@@ -205,7 +219,8 @@ bool world_system_initialize(camera_metrics* _in_camera_metrics, Vector2 resolut
         resolution_div2.x,
         resolution_div2.y
       },
-      .map_id = 14
+      .map_id = 14,
+      .is_active = true
     };
     state->worldmap_locations[15] = (worldmap_stage) {
       .displayname = "Stage 16",
@@ -217,7 +232,8 @@ bool world_system_initialize(camera_metrics* _in_camera_metrics, Vector2 resolut
         resolution_div2.x,
         resolution_div2.y
       },
-      .map_id = 15
+      .map_id = 15,
+      .is_active = true
     };
     state->worldmap_locations[16] = (worldmap_stage) {
       .displayname = "Stage 17",
@@ -229,7 +245,8 @@ bool world_system_initialize(camera_metrics* _in_camera_metrics, Vector2 resolut
         resolution_div2.x,
         resolution_div2.y
       },
-      .map_id = 16
+      .map_id = 16,
+      .is_active = true
     };
     state->worldmap_locations[17] = (worldmap_stage) {
       .displayname = "Stage 18",
@@ -241,7 +258,8 @@ bool world_system_initialize(camera_metrics* _in_camera_metrics, Vector2 resolut
         resolution_div2.x,
         resolution_div2.y
       },
-      .map_id = 17
+      .map_id = 17,
+      .is_active = true
     };
     state->worldmap_locations[18] = (worldmap_stage) {
       .displayname = "Stage 19",
@@ -253,7 +271,8 @@ bool world_system_initialize(camera_metrics* _in_camera_metrics, Vector2 resolut
         resolution_div2.x,
         resolution_div2.y
       },
-      .map_id = 17
+      .map_id = 18,
+      .is_active = true
     };
     state->worldmap_locations[19] = (worldmap_stage) {
       .displayname = "Stage 20",
@@ -265,7 +284,8 @@ bool world_system_initialize(camera_metrics* _in_camera_metrics, Vector2 resolut
         resolution_div2.x,
         resolution_div2.y
       },
-      .map_id = 19
+      .map_id = 19,
+      .is_active = true
     };
     state->worldmap_locations[20] = (worldmap_stage) {
       .displayname = "Stage 21",
@@ -277,7 +297,8 @@ bool world_system_initialize(camera_metrics* _in_camera_metrics, Vector2 resolut
         resolution_div2.x,
         resolution_div2.y
       },
-      .map_id = 20
+      .map_id = 20,
+      .is_active = true
     };
     state->worldmap_locations[21] = (worldmap_stage) {
       .displayname = "Stage 22",
@@ -289,7 +310,8 @@ bool world_system_initialize(camera_metrics* _in_camera_metrics, Vector2 resolut
         resolution_div2.x,
         resolution_div2.y
       },
-      .map_id = 21
+      .map_id = 21,
+      .is_active = true
     };
   }
 

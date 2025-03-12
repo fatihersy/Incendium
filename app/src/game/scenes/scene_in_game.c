@@ -21,6 +21,7 @@ typedef enum in_game_stages {
 
 typedef struct scene_in_game_state {
   panel ability_upg_panels[MAX_UPDATE_ABILITY_PANEL_COUNT];
+  panel passive_selection_panels[MAX_UPDATE_PASSIVE_PANEL_COUNT];
   worldmap_stage worldmap_locations[MAX_WORLDMAP_LOCATIONS];
   panel worldmap_selection_panel;
   in_game_stages stage;
@@ -39,7 +40,17 @@ static scene_in_game_state *restrict state;
   event_fire(EVENT_CODE_SCENE_MAIN_MENU, (event_context){0});                             \
   return;                                                                                 \
 }
+#define DRAW_ABL_UPG_STAT_PNL(ABL, UPG, TEXT, STAT){ \
+if (UPG.level == 1) {\
+  gui_label_format(FONT_TYPE_MINI_MOOD, upgr_font_size, start_upgradables_x_exis, upgradables_height_buffer, WHITE, false, TEXT"%d", UPG.base_damage);\
+  upgradables_height_buffer += btw_space_gap;\
+} else if(UPG.level>1 && UPG.level <= MAX_ABILITY_LEVEL) {\
+  gui_label_format(FONT_TYPE_MINI_MOOD, upgr_font_size, start_upgradables_x_exis, upgradables_height_buffer, WHITE, false, TEXT"%d -> %d", ABL->base_damage, UPG.base_damage);\
+  upgradables_height_buffer += btw_space_gap;\
+}}
+
 #define ABILITY_UPG_PANEL_ICON_SIZE get_resolution_div4()->x*.5f
+#define PASSIVE_SELECTION_PANEL_ICON_SIZE ABILITY_UPG_PANEL_ICON_SIZE
 #define CLOUDS_ANIMATION_DURATION TARGET_FPS * 1.5f // second
 
 void in_game_update_bindings(void);
@@ -48,7 +59,11 @@ void in_game_update_keyboard_bindings(void);
 void initialize_worldmap_locations(void);
 void start_game(void);
 void draw_upgrade_panel(ability* abl, ability upg, Rectangle panel_dest);
+void draw_passive_selection_panel(character_stat* stat, Rectangle panel_dest);
 
+/**
+ * @brief Requires world system, world init moved to app as well as its loading time
+ */
 bool initialize_scene_in_game(camera_metrics* _camera_metrics) {
   if (state) {
     TraceLog(LOG_ERROR, "scene_in_game::initialize_scene_in_game()::Initialize called twice");
@@ -57,20 +72,13 @@ bool initialize_scene_in_game(camera_metrics* _camera_metrics) {
 
   state = (scene_in_game_state *)allocate_memory_linear(sizeof(scene_in_game_state), true);
 
-  if (!world_system_initialize(_camera_metrics, *get_resolution_div2())) {
-    TraceLog(LOG_ERROR, "scene_in_game::initialize_scene_in_game()::world_system_initialize() failed");
-    return false;
-  }
   copy_memory(&state->worldmap_locations, get_worldmap_locations(), sizeof(state->worldmap_locations));
 
-  // Game
   if (!game_manager_initialize(_camera_metrics)) { // Inits player & spawns
     TraceLog(LOG_ERROR, "scene_in_game::initialize_scene_in_game()::game_manager_initialize() failed");
     return false;
   }
   _set_player_position(*get_resolution_div2());
-
-  user_interface_system_initialize();
   
   panel default_panel = (panel) {
     .signal_state  = BTN_STATE_RELEASED,
@@ -84,7 +92,6 @@ bool initialize_scene_in_game(camera_metrics* _camera_metrics) {
     state->ability_upg_panels[i] = default_panel;
   }
   state->worldmap_selection_panel = default_panel;
-
 
   set_is_game_paused(true);
   state->stage = IN_GAME_STAGE_MAP_CHOICE;
@@ -107,6 +114,7 @@ void update_scene_in_game(void) {
     }
     case IN_GAME_STAGE_MAP_CHOICE: {
       if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON) && state->hovered_stage <= MAX_WORLDMAP_LOCATIONS) {
+        set_worldmap_location(state->hovered_stage);
         state->stage = IN_GAME_STAGE_PASSIVE_CHOICE;
       }
       break;
@@ -166,11 +174,13 @@ void render_scene_in_game(void) {
       else{
         gui_draw_texture_id(TEX_ID_WORLDMAP_WO_CLOUDS, (Rectangle) {0, 0, GetScreenWidth(), GetScreenHeight()});
         for (int i=0; i<MAX_WORLDMAP_LOCATIONS; ++i) {
-          Vector2 scrloc = (Vector2) {
-            state->worldmap_locations[i].screen_location.x * GetScreenWidth(), 
-            state->worldmap_locations[i].screen_location.y * GetScreenHeight()
-          };
-          gui_draw_spritesheet_id(SHEET_ID_ICON_ATLAS, WHITE, scrloc, VECTOR2(1,1), i == state->hovered_stage ? 2 : 1, true);
+          if (state->worldmap_locations[i].is_active) {
+            Vector2 scrloc = (Vector2) {
+              state->worldmap_locations[i].screen_location.x * GetScreenWidth(), 
+              state->worldmap_locations[i].screen_location.y * GetScreenHeight()
+            };
+            gui_draw_map_stage_pin(state->hovered_stage == i, scrloc);
+          }
         }
       }
       break;
@@ -220,6 +230,26 @@ void render_interface_in_game(void) {
       break;
     }
     case IN_GAME_STAGE_PASSIVE_CHOICE: {
+      Rectangle dest = (Rectangle) {
+        get_resolution_div4()->x, get_resolution_div2()->y, 
+        get_resolution_div4()->x, get_resolution_3div2()->y 
+      };
+      f32 dest_x_buffer = dest.x;
+      for (int i=0; i<MAX_UPDATE_PASSIVE_PANEL_COUNT; ++i) {
+        panel* pnl = &state->passive_selection_panels[i];
+        if(pnl->buffer[0].data.u16[0] <= 0 || pnl->buffer[0].data.u16[0] >= CHARACTER_STATS_MAX) {
+          pnl->buffer[0].data.u16[0] = get_random(1,CHARACTER_STATS_MAX-1);
+        }
+        dest.x = dest_x_buffer + ((dest.width + get_screen_offset().x) * i);
+        character_stat* stat = get_player_stat(pnl->buffer[0].data.u16[0]);
+        if(gui_panel_active(pnl, dest, true)) {
+          set_is_game_paused(false);
+          for (int i=0; i<MAX_UPDATE_ABILITY_PANEL_COUNT; ++i) {
+            state->passive_selection_panels[i] = (panel){0};
+          }
+        }
+        draw_passive_selection_panel(stat, dest);
+      }
       break;
     }
     case IN_GAME_STAGE_PLAY: {  
@@ -396,46 +426,11 @@ void draw_upgrade_panel(ability* abl, ability upg, Rectangle panel_dest) {
       break;
     }
     switch (abl_upg) {
-      case ABILITY_UPG_DAMAGE: {
-        if (upg.level == 1) {
-          gui_label_format(FONT_TYPE_MINI_MOOD, upgr_font_size, start_upgradables_x_exis, upgradables_height_buffer, WHITE, false, "Damage:%d", upg.base_damage);
-          upgradables_height_buffer += btw_space_gap;
-        } else if(upg.level>1 && upg.level <= MAX_ABILITY_LEVEL) {
-          gui_label_format(FONT_TYPE_MINI_MOOD, upgr_font_size, start_upgradables_x_exis, upgradables_height_buffer, WHITE, false, "Damage:%d -> %d", abl->base_damage, upg.base_damage);
-          upgradables_height_buffer += btw_space_gap;
-        }
-        break;
-      }
-      case ABILITY_UPG_AMOUNT: {
-        if (upg.level == 1) {
-          gui_label_format(FONT_TYPE_MINI_MOOD, upgr_font_size, start_upgradables_x_exis, upgradables_height_buffer, WHITE, false, "Amouth:%d", upg.proj_count);
-          upgradables_height_buffer += btw_space_gap;
-        } else if(upg.level>1 && upg.level <= MAX_ABILITY_LEVEL) {
-          gui_label_format(FONT_TYPE_MINI_MOOD, upgr_font_size, start_upgradables_x_exis, upgradables_height_buffer, WHITE, false, "Amouth:%d -> %d", abl->proj_count, upg.proj_count);
-          upgradables_height_buffer += btw_space_gap;
-        }  
-        break;
-      }
-      case ABILITY_UPG_HITBOX: {
-        if (upg.level == 1) {
-          gui_label_format(FONT_TYPE_MINI_MOOD, upgr_font_size, start_upgradables_x_exis, upgradables_height_buffer, WHITE, false, "Hitbox:%.0f", upg.proj_dim.x);
-          upgradables_height_buffer += btw_space_gap;
-        } else if(upg.level>1 && upg.level <= MAX_ABILITY_LEVEL) {
-          gui_label_format(FONT_TYPE_MINI_MOOD, upgr_font_size, start_upgradables_x_exis, upgradables_height_buffer, WHITE, false, "Hitbox:%.0f - > %.0f", abl->proj_dim.x, upg.proj_dim.x);
-          upgradables_height_buffer += btw_space_gap;
-        } 
-        break;
-      }
-      case ABILITY_UPG_SPEED: {
-        if (upg.level == 1) {
-          gui_label_format(FONT_TYPE_MINI_MOOD, upgr_font_size, start_upgradables_x_exis, upgradables_height_buffer, WHITE, false, "Speed:%d", upg.proj_speed);
-          upgradables_height_buffer += btw_space_gap;
-        } else if(upg.level>1 && upg.level <= MAX_ABILITY_LEVEL) {
-          gui_label_format(FONT_TYPE_MINI_MOOD, upgr_font_size, start_upgradables_x_exis, upgradables_height_buffer, WHITE, false, "Speed:%d - > %d", upg.proj_speed, abl->proj_speed);
-          upgradables_height_buffer += btw_space_gap;
-        }
-        break;
-      }
+      case ABILITY_UPG_DAMAGE: DRAW_ABL_UPG_STAT_PNL(abl, upg, "Damage:", base_damage);break;
+      case ABILITY_UPG_AMOUNT: DRAW_ABL_UPG_STAT_PNL(abl, upg, "Amouth:", proj_count); break;
+      case ABILITY_UPG_HITBOX: DRAW_ABL_UPG_STAT_PNL(abl, upg, "Hitbox:", proj_dim.x); break;
+      case ABILITY_UPG_SPEED:  DRAW_ABL_UPG_STAT_PNL(abl, upg, "Speed:",  proj_speed); break;
+      
       default: {
         TraceLog(LOG_WARNING, "scene_in_game::draw_upgrade_panel()::Unsupported ability upgrade type");
         break;
@@ -443,8 +438,33 @@ void draw_upgrade_panel(ability* abl, ability upg, Rectangle panel_dest) {
     }
   }
 }
+void draw_passive_selection_panel(character_stat* stat, Rectangle panel_dest) {
+  if (stat && (stat->id <= CHARACTER_STATS_UNDEFINED || stat->id >= CHARACTER_STATS_MAX)) {
+    TraceLog(LOG_WARNING, "scene_in_game::draw_passive_selection_panel()::Character stat id is out of bound"); 
+    return;
+  }
+  const u16 elm_space_gap = 30;
+  const u16 start_panel_height = panel_dest.y - panel_dest.height*.25f;
+  const Rectangle icon_rect = (Rectangle) {
+    panel_dest.x - PASSIVE_SELECTION_PANEL_ICON_SIZE/2.f,
+    start_panel_height - PASSIVE_SELECTION_PANEL_ICON_SIZE*.5f,
+    PASSIVE_SELECTION_PANEL_ICON_SIZE,PASSIVE_SELECTION_PANEL_ICON_SIZE
+  };
+  const Vector2 passive_name_pos  = (Vector2) {panel_dest.x, start_panel_height + PASSIVE_SELECTION_PANEL_ICON_SIZE*.5f + elm_space_gap};
+
+  const u16 title_font_size = 10; 
+  
+  gui_draw_texture_id_pro(TEX_ID_ABILITY_ICON_ATLAS, stat->passive_icon_src, icon_rect);
+  gui_label(stat->passive_display_name, FONT_TYPE_MOOD, title_font_size, passive_name_pos, WHITE, true);
+  
+  const u16 desc_x_axis = panel_dest.x - panel_dest.width*.5f + elm_space_gap;
+  const u16 desc_font_size = 6; 
+
+  gui_label(stat->passive_desc, FONT_TYPE_MINI_MOOD, desc_font_size, VECTOR2(desc_x_axis, start_panel_height), WHITE, true);
+}
 
 #undef STATE_ASSERT
 #undef ABILITY_UPG_PANEL_ICON_SIZE
 #undef CLOUDS_ANIMATION_DURATION
 #undef FADE_ANIMATION_DURATION
+#undef DRAW_ABL_UPG_STAT_PNL

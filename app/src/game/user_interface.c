@@ -94,7 +94,10 @@ Rectangle get_texture_source_rect(texture_id _id);
 Vector2 make_vector(f32 x, f32 y);
 
 void user_interface_system_initialize(void) {
-  if (state) return;
+  if (state) {
+    TraceLog(LOG_WARNING, "user_interface::user_interface_system_initialize()::Initialize called twice");
+    return;
+  }
 
   state = (user_interface_system_state *)allocate_memory_linear(sizeof(user_interface_system_state), true);
   
@@ -1020,6 +1023,19 @@ inline void draw_texture_npatch(texture_id _id, Rectangle dest, Vector4 offsets,
 }
 inline Vector2 make_vector(f32 x, f32 y) {
   return (Vector2) {x,y};
+}
+inline void gui_draw_map_stage_pin(bool have_hovered, Vector2 screen_loc) {
+  const Vector2 icon_size = NORMALIZE_VEC2(32.f, 32.f, 1280, 720);
+  Rectangle icon_loc = (Rectangle) {screen_loc.x, screen_loc.y, icon_size.x * GetScreenWidth(), icon_size.y * GetScreenHeight()}; 
+  icon_loc.x -= icon_loc.width  * .5f;
+  icon_loc.y -= icon_loc.height * .5f;
+  
+  if(have_hovered) {
+    gui_draw_texture_id_pro(TEX_ID_ICON_ATLAS, (Rectangle){64, 320, 32, 32}, icon_loc);
+  }
+  else {
+    gui_draw_texture_id_pro(TEX_ID_ICON_ATLAS, (Rectangle){32, 320, 32, 32}, icon_loc);
+  }
 }
 void draw_fade_effect() {
   if (!state) {

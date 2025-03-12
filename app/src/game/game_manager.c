@@ -224,6 +224,9 @@ void set_player_have_ability_upgrade_points(bool _b) {
 ability* get_player_ability(ability_type type) {
   return &state->p_player->ability_system.abilities[type];
 }
+character_stat* get_player_stat(character_stats stat) {
+  return &state->p_player->stats[stat];
+}
 bool get_is_game_paused(void) {
   return state->is_game_paused;
 }

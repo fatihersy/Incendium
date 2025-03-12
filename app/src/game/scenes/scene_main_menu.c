@@ -41,7 +41,14 @@ void update_scene_main_menu(void) {
     state->scene_changing_process_complete = true;
   }
   if (state->in_scene_changing_process && is_ui_fade_anim_complete()) {
-    event_fire(EVENT_CODE_SCENE_IN_GAME, (event_context){0});
+    switch (state->next_scene) {
+      case SCENE_IN_GAME: event_fire(EVENT_CODE_SCENE_IN_GAME, (event_context){0}); break;
+      case SCENE_EDITOR: event_fire(EVENT_CODE_SCENE_EDITOR, (event_context){0}); break;
+      default: {
+        TraceLog(LOG_ERROR, "scene_main_menu::update_scene_main_menu::Unknown scene");
+        break;
+      }
+    }
   }
 }
 
@@ -64,7 +71,9 @@ void render_interface_main_menu(void) {
         event_fire(EVENT_CODE_UI_START_FADEOUT_EFFECT, (event_context){ .data.u16[0] = MAIN_MENU_FADE_DURATION});
       }
       if (gui_menu_button("Editor", BTN_ID_MAINMENU_BUTTON_EDITOR, VECTOR2(0,  4))) {
-         event_fire(EVENT_CODE_SCENE_EDITOR, (event_context){0});
+        state->in_scene_changing_process = true;
+        state->next_scene = SCENE_EDITOR;
+        event_fire(EVENT_CODE_UI_START_FADEOUT_EFFECT, (event_context){ .data.u16[0] = MAIN_MENU_FADE_DURATION});
       }
       if (gui_menu_button("Settings", BTN_ID_MAINMENU_BUTTON_SETTINGS, VECTOR2(0,  8))) {
         state->type = MAIN_MENU_SCENE_SETTINGS;

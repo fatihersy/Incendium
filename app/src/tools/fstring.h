@@ -4,6 +4,10 @@
 
 #include "defines.h"
 
+typedef struct string_parse_result {
+  char buffer[MAX_PARSED_TEXT_ARR_LEN][MAX_PARSED_TEXT_TEXT_LEN];
+} string_parse_result;
+
 i64 str_to_I64(const char* str);
 u64 str_to_U64(const char* str);
 f64 str_to_F64(const char* str);

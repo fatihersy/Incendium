@@ -48,7 +48,7 @@ typedef struct scene_editor_state {
   Vector2 mouse_pos_world;
 } scene_editor_state;
 
-static scene_editor_state * state;
+static scene_editor_state *restrict state;
 
 void editor_update_bindings(void);
 void editor_update_movement(void);
@@ -61,16 +61,18 @@ void add_prop(texture_id source_tex, Rectangle source, f32 scale);
 
 void initialize_scene_editor(camera_metrics* _camera_metrics) {
   if (state) {
-    TraceLog(LOG_ERROR, "scene_editor::initialize_scene_editor()::initialize function called multiple times");
+    TraceLog(LOG_WARNING, "scene_editor::initialize_scene_editor()::Initialize called twice");
     return;
   }
   state = (scene_editor_state*)allocate_memory_linear(sizeof(scene_editor_state), true);
 
-  if (!world_system_initialize(_camera_metrics, *get_resolution_div2())) {
-    TraceLog(LOG_ERROR, "scene_editor::initialize_scene_editor()::world_system_initialize() Returned false");
+  world_system_initialize(_camera_metrics, *get_resolution_div2());
+
+  copy_memory(&state->worldmap_locations, get_worldmap_locations(), sizeof(state->worldmap_locations));
+  if (!_camera_metrics) {
+    TraceLog(LOG_ERROR, "scene_editor::initialize_scene_editor()::Camera metrics recieved NULL");
     return;
   }
-  copy_memory(&state->worldmap_locations, get_worldmap_locations(), sizeof(state->worldmap_locations));
 
   user_interface_system_initialize();
   state->tile_selection_panel = get_default_panel();
@@ -85,6 +87,7 @@ void initialize_scene_editor(camera_metrics* _camera_metrics) {
     .width = PROP_DRAG_HANDLE_DIM, .height = PROP_DRAG_HANDLE_DIM * 5,
   };
   state->in_camera_metrics = _camera_metrics;
+
   event_fire(EVENT_CODE_SCENE_MANAGER_SET_CAM_POS, (event_context){
     .data.f32[0] = state->target.x,
     .data.f32[1] = state->target.y
@@ -655,8 +658,11 @@ void editor_update_mouse_bindings(void) {
   {
     switch (state->selection_type) {
       case SLC_TYPE_UNSELECTED: {
-        state->selected_prop = *get_map_prop_by_pos(state->mouse_pos_world);
-        state->selection_type = SLC_TYPE_SLC_PROP;
+        tilemap_prop* prop = get_map_prop_by_pos(state->mouse_pos_world);
+        if (prop) {
+          state->selected_prop = *prop;
+          state->selection_type = SLC_TYPE_SLC_PROP;
+        }
         break;
       }
       case SLC_TYPE_TILE: { 

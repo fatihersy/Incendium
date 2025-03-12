@@ -75,167 +75,229 @@ bool player_system_initialize(void) {
     player->wreck_right_sprite_queue_index = register_sprite(SHEET_ID_PLAYER_ANIMATION_WRECK_RIGHT, true, false, true);
     player->last_played_sprite_id = player->idle_left_sprite_queue_index; // The position player starts. To avoid from the error when move firstly called
     
+
+		
+		/* typedef enum character_stats {
+		  CHARACTER_STATS_UNDEFINED,
+		  CHARACTER_STATS_HEALTH,
+		  CHARACTER_STATS_HP_REGEN,
+		  CHARACTER_STATS_MOVE_SPEED,
+		  CHARACTER_STATS_AOE,
+		  CHARACTER_STATS_DAMAGE,
+		  CHARACTER_STATS_ABILITY_CD,
+		  CHARACTER_STATS_PROJECTILE_AMOUTH,
+		  CHARACTER_STATS_EXP_GAIN,
+		  CHARACTER_STATS_MAX,
+		} character_stats; */
+    {
+      player->stats[CHARACTER_STATS_UNDEFINED] = (character_stat){0};
+
+      player->stats[CHARACTER_STATS_HEALTH] = (character_stat){
+				.id = CHARACTER_STATS_HEALTH,
+				.level = 1,
+				.buffer.i32 = {0},
+				.passive_display_name = "Life Essance",
+				.passive_desc = "Essential",
+				.passive_icon_src = (Rectangle){512, 320, 32, 32}
+			};
+      player->stats[CHARACTER_STATS_HP_REGEN] = (character_stat){
+				.id = CHARACTER_STATS_HP_REGEN,
+				.level = 1,
+				.buffer.i32 = {0},
+				.passive_display_name = "Bread",
+				.passive_desc = "Keeps you fed",
+				.passive_icon_src = (Rectangle){288, 288, 32, 32}
+			};
+      player->stats[CHARACTER_STATS_MOVE_SPEED] = (character_stat){
+				.id = CHARACTER_STATS_MOVE_SPEED,
+				.level = 1,
+				.buffer.i32 = {0},
+				.passive_display_name = "Cardinal Boots",
+				.passive_desc = "Increases move speed",
+				.passive_icon_src = (Rectangle){64, 352, 32, 32}
+			};
+      player->stats[CHARACTER_STATS_AOE] = (character_stat){
+				.id = CHARACTER_STATS_AOE,
+				.level = 1,
+				.buffer.i32 = {0},
+				.passive_display_name = "Blast Scroll",
+				.passive_desc = "Increase the area",
+				.passive_icon_src = (Rectangle){320, 32, 32, 32}
+			};
+      player->stats[CHARACTER_STATS_DAMAGE] = (character_stat){
+				.id = CHARACTER_STATS_DAMAGE,
+				.level = 1,
+				.buffer.i32 = {0},
+				.passive_display_name = "Heavy Cross",
+				.passive_desc = "Increases Damage",
+				.passive_icon_src = (Rectangle){288, 32, 32, 32}
+			};
+      player->stats[CHARACTER_STATS_ABILITY_CD] = (character_stat){
+				.id = CHARACTER_STATS_ABILITY_CD,
+				.level = 1,
+				.buffer.i32 = {0},
+				.passive_display_name = "Hourglass",
+				.passive_desc = "Reduce CD",
+				.passive_icon_src = (Rectangle){128, 64, 32, 32}
+			};
+    }
+
     player->starter_ability = ABILITY_TYPE_FIREBALL;
     player->is_initialized = true;
     return true;
 }
 
 player_state* get_player_state(void) {
-    if (!player) {
-        return (player_state*)0;
-    }
-    //TraceLog(LOG_INFO, "player->position:{%f, %f}", player->position.x, player->position.y);
-    return player;
+  if (!player) {
+    return (player_state*)0;
+  }
+  //TraceLog(LOG_INFO, "player->position:{%f, %f}", player->position.x, player->position.y);
+  return player;
 }
 
 Vector2 get_player_position(bool centered) {
-    Vector2 pos = {0};
-    if(centered) {
-        pos = (Vector2) {
-            .x = player->position.x - player->dimentions_div2.x,
-            .y = player->position.y - player->dimentions_div2.y
-        };
-    }
-    else { 
-        pos = player->position;
-    }
-
-    //TraceLog(LOG_INFO, "(Vector2){%f, %f}", pos.x, pos.y);
-    return pos;
+  Vector2 pos = {0};
+  if(centered) {
+    pos = (Vector2) {
+      .x = player->position.x - player->dimentions_div2.x,
+      .y = player->position.y - player->dimentions_div2.y
+    };
+  }
+  else { 
+    pos = player->position;
+  }
+  //TraceLog(LOG_INFO, "(Vector2){%f, %f}", pos.x, pos.y);
+  return pos;
 }
 
 void add_exp_to_player(u32 exp) {
-    u32 curr = player->exp_current;
-    u32 to_next = player->exp_to_next_level;
-
-    if ( curr + exp >= to_next) 
-    {
-        player->exp_current = (curr + exp) - to_next;
-        player->level++;
-        player->exp_to_next_level = level_curve[player->level];
-        player->is_player_have_ability_upgrade_points = true;
-        //play_sprite_on_player(player->);
-    }
-    else {
-        player->exp_current += exp;
-    }
-
-    player->exp_perc = (float) player->exp_current / player->exp_to_next_level;
+  u32 curr = player->exp_current;
+  u32 to_next = player->exp_to_next_level;
+  if ( curr + exp >= to_next) 
+  {
+    player->exp_current = (curr + exp) - to_next;
+    player->level++;
+    player->exp_to_next_level = level_curve[player->level];
+    player->is_player_have_ability_upgrade_points = true;
+    //play_sprite_on_player(player->);
+  }
+  else {
+    player->exp_current += exp;
+  }
+  player->exp_perc = (float) player->exp_current / player->exp_to_next_level;
 }
 void take_damage(u16 damage) {
-    if(!player->is_damagable) return;
-    if(player->health_current - damage > 0) {
-        player->health_current -= damage;
-        player->is_damagable = false;
-    }
-    else {
-        player->health_current = 0;
-        player->is_dead = true;
-    }
-
-    player->health_perc = (float) player->health_current / player->health_max;
+  if(!player->is_damagable) return;
+  if(player->health_current - damage > 0) {
+    player->health_current -= damage;
+    player->is_damagable = false;
+  }
+  else {
+    player->health_current = 0;
+    player->is_dead = true;
+  }
+  player->health_perc = (float) player->health_current / player->health_max;
 }
 
 bool update_player(void) {
-    if (!player) return false;
-
-    if (player->is_dead) {
-        event_fire(EVENT_CODE_PAUSE_GAME, (event_context){0});
+  if (!player) return false;
+  if (player->is_dead) {
+    event_fire(EVENT_CODE_PAUSE_GAME, (event_context){0});
+  }
+  if(!player->is_damagable) {
+    if(player->damage_break_current - GetFrameTime() > 0) player->damage_break_current -= GetFrameTime();
+    else
+    {
+      player->damage_break_current = player->damage_break_time;
+      player->is_damagable = true;
     }
-
-    if(!player->is_damagable) {
-        if(player->damage_break_current - GetFrameTime() > 0) player->damage_break_current -= GetFrameTime();
-        else
-        {
-            player->damage_break_current = player->damage_break_time;
-            player->is_damagable = true;
-        }
-    }
-
-    if (IsKeyDown(KEY_W)) {
-        player->position.y -= 2;
-        player->is_moving = true;
-    }
-    if (IsKeyDown(KEY_A)) {
-        player->position.x -= 2;
-        player->w_direction = WORLD_DIRECTION_LEFT;
-        player->is_moving = true;
-    }
-    if (IsKeyDown(KEY_S)) {
-        player->position.y += 2;
-        player->is_moving = true;
-    }
-    if (IsKeyDown(KEY_D)) {
-        player->position.x += 2;
-        player->w_direction = WORLD_DIRECTION_RIGHT;
-        player->is_moving = true;
-    }
-    if (IsKeyUp(KEY_W) && IsKeyUp(KEY_A) && IsKeyUp(KEY_S) && IsKeyUp(KEY_D)) {    
-        player->is_moving = false;
-    }
-
-    player->collision.x = player->position.x - player->dimentions_div2.x;
-    player->collision.y = player->position.y - player->dimentions_div2.y;
-    player->collision.width = player->dimentions.x;
-    player->collision.height = player->dimentions.y;
-
-    //update_abilities(&player->ability_system, player->position);
-    update_sprite_renderqueue();
-
-    return true;
+  }
+  if (IsKeyDown(KEY_W)) {
+    player->position.y -= 2;
+    player->is_moving = true;
+  }
+  if (IsKeyDown(KEY_A)) {
+    player->position.x -= 2;
+    player->w_direction = WORLD_DIRECTION_LEFT;
+    player->is_moving = true;
+  }
+  if (IsKeyDown(KEY_S)) {
+    player->position.y += 2;
+    player->is_moving = true;
+  }
+  if (IsKeyDown(KEY_D)) {
+    player->position.x += 2;
+    player->w_direction = WORLD_DIRECTION_RIGHT;
+    player->is_moving = true;
+  }
+  if (IsKeyUp(KEY_W) && IsKeyUp(KEY_A) && IsKeyUp(KEY_S) && IsKeyUp(KEY_D)) {    
+    player->is_moving = false;
+  }
+  player->collision.x = player->position.x - player->dimentions_div2.x;
+  player->collision.y = player->position.y - player->dimentions_div2.y;
+  player->collision.width = player->dimentions.x;
+  player->collision.height = player->dimentions.y;
+  //update_abilities(&player->ability_system, player->position);
+  update_sprite_renderqueue();
+  return true;
 }
 
 bool render_player(void) {
-    if (!player) { return false; }
+  if (!player) { return false; }
 
-    if(!player->is_dead) {
-        if(player->is_damagable){
-            if(player->is_moving) switch (player->w_direction) 
-            {
-                case WORLD_DIRECTION_LEFT: play_anim(SHEET_ID_PLAYER_ANIMATION_MOVE_LEFT);
-                break;
-                case WORLD_DIRECTION_RIGHT: play_anim(SHEET_ID_PLAYER_ANIMATION_MOVE_RIGHT);
-                break;
-                default: {
-                    TraceLog(LOG_WARNING, "player::render_player()::Player has no directions");
-                    break;
-                }
-            }
-            else switch (player->w_direction) 
-            {
-                case WORLD_DIRECTION_LEFT: play_anim(SHEET_ID_PLAYER_ANIMATION_IDLE_LEFT);
-                break;
-                case WORLD_DIRECTION_RIGHT:play_anim(SHEET_ID_PLAYER_ANIMATION_IDLE_RIGHT);
-                break;
-                default: {
-                    TraceLog(LOG_WARNING, "player::render_player()::Player has no directions");
-                    break;
-                }
-            }
-        }
-        else{
-            (player->w_direction == WORLD_DIRECTION_LEFT) 
-                ? play_anim(SHEET_ID_PLAYER_ANIMATION_TAKE_DAMAGE_LEFT)
-                : play_anim(SHEET_ID_PLAYER_ANIMATION_TAKE_DAMAGE_RIGHT);
-        }
-    }
-    else {
+  if(!player->is_dead) 
+	{
+    if(player->is_damagable)
+		{
+      if(player->is_moving) 
+			{
+				switch (player->w_direction) 
+      	{
+        	case WORLD_DIRECTION_LEFT: play_anim(SHEET_ID_PLAYER_ANIMATION_MOVE_LEFT);
+        	break;
+        	case WORLD_DIRECTION_RIGHT: play_anim(SHEET_ID_PLAYER_ANIMATION_MOVE_RIGHT);
+        	break;
+        	default: {
+            TraceLog(LOG_WARNING, "player::render_player()::Player has no directions");
+            break;
+        	}
+      	}
+			} else 
+				{
+					switch (player->w_direction) {
+        		case WORLD_DIRECTION_LEFT: play_anim(SHEET_ID_PLAYER_ANIMATION_IDLE_LEFT);
+        		break;
+        		case WORLD_DIRECTION_RIGHT:play_anim(SHEET_ID_PLAYER_ANIMATION_IDLE_RIGHT);
+        		break;
+        		default: {
+          		TraceLog(LOG_WARNING, "player::render_player()::Player has no directions");
+          		break;
+        		}
+      		}
+				}
+    }	else 
+			{
         (player->w_direction == WORLD_DIRECTION_LEFT) 
-            ? play_anim(SHEET_ID_PLAYER_ANIMATION_WRECK_LEFT)
-            : play_anim(SHEET_ID_PLAYER_ANIMATION_WRECK_RIGHT);
-    }
-    
-    //render_abilities(&player->ability_system);
-    #if DEBUG_COLLISIONS
-        DrawRectangleLines(
-            player->collision.x,
-            player->collision.y,
-            player->collision.width,
-            player->collision.height,
-            WHITE);
-    #endif
-
-    return true;
+            ? play_anim(SHEET_ID_PLAYER_ANIMATION_TAKE_DAMAGE_LEFT)
+            : play_anim(SHEET_ID_PLAYER_ANIMATION_TAKE_DAMAGE_RIGHT);
+    	}
+  } else 
+		{
+      (player->w_direction == WORLD_DIRECTION_LEFT) 
+          ? play_anim(SHEET_ID_PLAYER_ANIMATION_WRECK_LEFT)
+          : play_anim(SHEET_ID_PLAYER_ANIMATION_WRECK_RIGHT);
+  	}
+  
+  //render_abilities(&player->ability_system);
+  #if DEBUG_COLLISIONS
+      DrawRectangleLines(
+          player->collision.x,
+          player->collision.y,
+          player->collision.width,
+          player->collision.height,
+          WHITE);
+  #endif
+  return true;
 }
 
 void play_anim(spritesheet_id player_anim_sheet) {

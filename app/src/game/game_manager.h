@@ -12,6 +12,7 @@ void update_game_manager(void);
 u16 get_remaining_enemies(void);
 bool get_b_player_have_upgrade_points(void);
 ability* get_player_ability(ability_type type);
+character_stat* get_player_stat(character_stats stat);
 void set_player_have_ability_upgrade_points(bool _b);
 bool get_is_game_paused(void);
 void set_is_game_paused(bool _is_game_paused);

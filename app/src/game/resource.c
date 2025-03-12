@@ -38,12 +38,13 @@ bool resource_system_initialize(void) {
   load_texture("crimson_fantasy_panel.png",    false, (Vector2){ 0,  0}, TEX_ID_CRIMSON_FANTASY_PANEL);
   load_texture("crimson_fantasy_panel_bg.png", false, (Vector2){ 0,  0}, TEX_ID_CRIMSON_FANTASY_PANEL_BG);
   load_texture("map_props_atlas.png",          false, (Vector2){ 0,  0}, TEX_ID_MAP_PROPS_ATLAS);
-  load_texture("ability_icons.png.png",        false, (Vector2){ 0,  0}, TEX_ID_ABILITY_ICON_ATLAS);
+  load_texture("ability_icons.png",            false, (Vector2){ 0,  0}, TEX_ID_ABILITY_ICON_ATLAS);
   load_texture("worldmap_w_clouds.png",        false, (Vector2){ 0,  0}, TEX_ID_WORLDMAP_W_CLOUDS);
   load_texture("worldmap_wo_clouds.png",       false, (Vector2){ 0,  0}, TEX_ID_WORLDMAP_WO_CLOUDS);
   load_texture("worldmap_clouds.png",          false, (Vector2){ 0,  0}, TEX_ID_WORLDMAP_CLOUDS);
   load_texture("game_bg_space.png",            false, (Vector2){ 0,  0}, TEX_ID_GAME_BG_SPACE);
   load_texture("bg_black.png",                 false, (Vector2){ 0,  0}, TEX_ID_BG_BLACK);
+  load_texture("icon_atlas.png",               false, (Vector2){ 0,  0}, TEX_ID_ICON_ATLAS);
   load_spritesheet("idle_left.png",                  SHEET_ID_PLAYER_ANIMATION_IDLE_LEFT,         15,   86,  86, 1,  4);
   load_spritesheet("idle_right.png",                 SHEET_ID_PLAYER_ANIMATION_IDLE_RIGHT,        15,   86,  86, 1,  4);
   load_spritesheet("move_left.png",                  SHEET_ID_PLAYER_ANIMATION_MOVE_LEFT,         10,   86,  86, 1,  6);
@@ -62,7 +63,6 @@ bool resource_system_initialize(void) {
   load_spritesheet("menu_button.png",                SHEET_ID_MENU_BUTTON,                         0,   80,  16, 1,  2);
   load_spritesheet("flat_button.png",                SHEET_ID_FLAT_BUTTON,                         0,   44,  14, 1,  2);
   load_spritesheet("fireball.png",                   SHEET_ID_FIREBALL_ANIMATION,                 15,   32,  32, 1,  4);
-  load_spritesheet("icon_atlas.png",                 SHEET_ID_ICON_ATLAS,                          0,   32,  32, 1,  3);
   
   load_tilesheet(TILESHEET_TYPE_MAP, TEX_ID_MAP_TILESET_TEXTURE, 49, 63, 32);
 
