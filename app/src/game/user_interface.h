@@ -128,6 +128,7 @@ void gui_progress_bar(progress_bar_id bar_id, Vector2 pos, bool _should_center);
 void gui_panel(panel pan, Rectangle dest, bool _should_center);
 bool gui_panel_active(panel* panel, Rectangle dest, bool _should_center);
 void gui_label(const char* text, font_type type, i32 font_size, Vector2 position, Color tint, bool _should_center);
+void gui_label_wrap(const char* text, font_type type, i32 font_size, Rectangle position, Color tint, bool _should_center);
 
 void gui_draw_pause_screen(void);
 void gui_draw_texture_id_pro(texture_id _id, Rectangle src, Rectangle dest); 

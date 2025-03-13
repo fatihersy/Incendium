@@ -91,10 +91,13 @@ bool initialize_scene_in_game(camera_metrics* _camera_metrics) {
   for (int i=0; i<MAX_UPDATE_ABILITY_PANEL_COUNT; ++i) {
     state->ability_upg_panels[i] = default_panel;
   }
+  for (int i=0; i<MAX_UPDATE_PASSIVE_PANEL_COUNT; ++i) {
+    state->passive_selection_panels[i] = default_panel;
+  }
   state->worldmap_selection_panel = default_panel;
 
   set_is_game_paused(true);
-  state->stage = IN_GAME_STAGE_MAP_CHOICE;
+  state->stage = IN_GAME_STAGE_PASSIVE_CHOICE;
   state->clouds_animation_playing = false;
   state->hovered_stage = U16_MAX;
   event_fire(EVENT_CODE_UI_START_FADEIN_EFFECT, (event_context){ .data.u16[0] = CLOUDS_ANIMATION_DURATION });
@@ -358,6 +361,11 @@ void in_game_update_keyboard_bindings(void) {
       break;
     }
     case IN_GAME_STAGE_PASSIVE_CHOICE: {
+      if (IsKeyReleased(KEY_R)) {
+        for (int i=0; i<MAX_UPDATE_PASSIVE_PANEL_COUNT; ++i) {
+          state->passive_selection_panels[i].buffer[0].data.u16[0] = 0;
+        }
+      }
       break;
     }
     case IN_GAME_STAGE_PLAY: {  
@@ -454,13 +462,20 @@ void draw_passive_selection_panel(character_stat* stat, Rectangle panel_dest) {
 
   const u16 title_font_size = 10; 
   
-  gui_draw_texture_id_pro(TEX_ID_ABILITY_ICON_ATLAS, stat->passive_icon_src, icon_rect);
+  gui_draw_texture_id_pro(TEX_ID_ICON_ATLAS, stat->passive_icon_src, icon_rect);
   gui_label(stat->passive_display_name, FONT_TYPE_MOOD, title_font_size, passive_name_pos, WHITE, true);
   
-  const u16 desc_x_axis = panel_dest.x - panel_dest.width*.5f + elm_space_gap;
-  const u16 desc_font_size = 6; 
+  const u16 desc_font_size = 6;
+  const f32 desc_box_height = panel_dest.y + (panel_dest.height * .5f) - passive_name_pos.y - elm_space_gap;
+  const Vector2 padding = (Vector2){ get_screen_offset().x, elm_space_gap };
+  const Rectangle desc_box = (Rectangle) {
+    .x      = panel_dest.x - (panel_dest.width * .5f) + padding.x,
+    .y      = passive_name_pos.y + padding.y,
+    .width  = panel_dest.width - padding.x,
+    .height = desc_box_height - padding.y,
+  };
+  gui_label_wrap(stat->passive_desc, FONT_TYPE_MINI_MOOD, desc_font_size, desc_box, WHITE, false);
 
-  gui_label(stat->passive_desc, FONT_TYPE_MINI_MOOD, desc_font_size, VECTOR2(desc_x_axis, start_panel_height), WHITE, true);
 }
 
 #undef STATE_ASSERT

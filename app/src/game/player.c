@@ -75,20 +75,6 @@ bool player_system_initialize(void) {
     player->wreck_right_sprite_queue_index = register_sprite(SHEET_ID_PLAYER_ANIMATION_WRECK_RIGHT, true, false, true);
     player->last_played_sprite_id = player->idle_left_sprite_queue_index; // The position player starts. To avoid from the error when move firstly called
     
-
-		
-		/* typedef enum character_stats {
-		  CHARACTER_STATS_UNDEFINED,
-		  CHARACTER_STATS_HEALTH,
-		  CHARACTER_STATS_HP_REGEN,
-		  CHARACTER_STATS_MOVE_SPEED,
-		  CHARACTER_STATS_AOE,
-		  CHARACTER_STATS_DAMAGE,
-		  CHARACTER_STATS_ABILITY_CD,
-		  CHARACTER_STATS_PROJECTILE_AMOUTH,
-		  CHARACTER_STATS_EXP_GAIN,
-		  CHARACTER_STATS_MAX,
-		} character_stats; */
     {
       player->stats[CHARACTER_STATS_UNDEFINED] = (character_stat){0};
 
@@ -139,6 +125,22 @@ bool player_system_initialize(void) {
 				.passive_display_name = "Hourglass",
 				.passive_desc = "Reduce CD",
 				.passive_icon_src = (Rectangle){128, 64, 32, 32}
+			};
+      player->stats[CHARACTER_STATS_PROJECTILE_AMOUTH] = (character_stat){
+				.id = CHARACTER_STATS_PROJECTILE_AMOUTH,
+				.level = 1,
+				.buffer.i32 = {0},
+				.passive_display_name = "Second Hand",
+				.passive_desc = "Increases projectile amouth",
+				.passive_icon_src = (Rectangle){64, 448, 32, 32}
+			};
+      player->stats[CHARACTER_STATS_EXP_GAIN] = (character_stat){
+				.id = CHARACTER_STATS_EXP_GAIN,
+				.level = 1,
+				.buffer.i32 = {0},
+				.passive_display_name = "Seeing Eyes",
+				.passive_desc = "Increases experiance gain",
+				.passive_icon_src = (Rectangle){192, 32, 32, 32}
 			};
     }
 
