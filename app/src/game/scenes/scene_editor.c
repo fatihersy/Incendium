@@ -665,11 +665,6 @@ void editor_update_mouse_bindings(void) {
         }
         break;
       }
-      case SLC_TYPE_TILE: { 
-        tilemap_tile tile = _get_tile_from_map_by_mouse_pos(state->edit_layer);
-        set_map_tile(state->edit_layer, &tile, &state->selected_tile);
-        break; 
-      }
       case SLC_TYPE_DROP_PROP: {
         Vector2 coord = GetScreenToWorld2D(GetMousePosition(), state->in_camera_metrics->handle);
         state->selected_prop.dest.x = coord.x;
@@ -702,6 +697,11 @@ void editor_update_mouse_bindings(void) {
           state->selected_prop.dest = prop->dest;
         }
         break;
+      }
+      case SLC_TYPE_TILE: { 
+        tilemap_tile tile = _get_tile_from_map_by_mouse_pos(state->edit_layer);
+        set_map_tile(state->edit_layer, &tile, &state->selected_tile);
+        break; 
       }
       default: break;
     }
