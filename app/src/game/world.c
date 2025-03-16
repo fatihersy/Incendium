@@ -443,7 +443,7 @@ bool add_prop_curr_map(tilemap_prop* prop) {
   return true;
 }
 bool remove_prop_cur_map_by_id(u16 id) {
-  if (id >= CURR_MAP.prop_count) {
+  if (id >= MAX_TILEMAP_PROPS) {
     TraceLog(LOG_WARNING, "world::remove_prop_cur_map_by_id()::Recieved id was out of bound");
     return false;
   }

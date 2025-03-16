@@ -755,10 +755,11 @@ void editor_update_keyboard_bindings(void) {
   }
   if (IsKeyReleased(KEY_DELETE)) {
     if (state->mouse_focus == MOUSE_FOCUS_MAP && state->selection_type == SLC_TYPE_SLC_PROP && !state->b_dragging_prop) {
-      if(remove_prop_cur_map_by_id(state->selected_prop.id)) {
-        state->selected_prop = (tilemap_prop) {0};
-        state->selection_type = SLC_TYPE_UNSELECTED;
+      if(!remove_prop_cur_map_by_id(state->selected_prop.id)) {
+        TraceLog(LOG_WARNING, "scene_editor::editor_update_keyboard_bindings()::Removing property failed.");
       }
+      state->selected_prop = (tilemap_prop) {0};
+      state->selection_type = SLC_TYPE_UNSELECTED;
     }
   }
 

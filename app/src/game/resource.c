@@ -2,6 +2,7 @@
 #include <defines.h>
 
 #include "core/fmemory.h"
+#include "tools/pak_parser.h"
 
 typedef struct resource_system_state {
   u16 texture_amouth;
@@ -28,6 +29,9 @@ bool resource_system_initialize(void) {
   if (state) return false;
 
   state = (resource_system_state*)allocate_memory_linear(sizeof(resource_system_state), true);
+
+  pak_parser_system_initialize();
+  parse_pak(PAK_FILE_LOCATION);
 
   //NOTE: _path = "%s%s", RESOURCE_PATH, _path
   load_texture("space_bg.png",                 false, (Vector2){ 0,  0}, TEX_ID_BACKGROUND);

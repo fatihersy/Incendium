@@ -10,6 +10,8 @@
 #define TARGET_FPS 60
 #define MAX_SPRITE_RENDERQUEUE 50
 
+#define PAK_FILE_LOCATION "./resource.pak"
+
 #define MAX_IMAGE_SLOTS 10
 #define MAX_SPRITESHEET_SLOTS 50
 
