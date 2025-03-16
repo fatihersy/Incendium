@@ -6,7 +6,7 @@
 #define RESOURCE_PATH "D:/Workspace/resources/"
 #define SHADER_PATH "../app/src/shaders/"
 
-#define TOTAL_ALLOCATED_MEMORY 256 * 1024 * 1024
+#define TOTAL_ALLOCATED_MEMORY 512 * 1024 * 1024
 #define TARGET_FPS 60
 #define MAX_SPRITE_RENDERQUEUE 50
 

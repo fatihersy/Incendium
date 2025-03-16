@@ -3,7 +3,7 @@
 
 #include "core/fmemory.h"
 
-#define TOTAL_PAK_FILE_SIZE 64 * 1024 * 1024
+#define TOTAL_PAK_FILE_SIZE 128 * 1024 * 1024
 
 #define MAX_RESOURCE_FILES 256
 
@@ -54,10 +54,6 @@ typedef struct pak_parser_system_state {
   u32 pak_data_size;
   u32 pak_data_offset;
   u32 total_file_count;
-
-  u32 header_symbol_between_len;
-  u32 header_symbol_data_start_len;
-  u32 header_symbol_data_end_len;
 }pak_parser_system_state;
 
 static pak_parser_system_state *restrict state;
@@ -71,8 +67,6 @@ void pak_parser_system_initialize(void) {
   }
 
   state = (pak_parser_system_state*)allocate_memory_linear(sizeof(pak_parser_system_state), true);
-
-  state->header_symbol_between_len = TextLength(HEADER_SYMBOL_ENTRY);
 }
 
 void parse_pak(const char* path) {
