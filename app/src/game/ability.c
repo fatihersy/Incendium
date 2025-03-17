@@ -8,7 +8,7 @@ typedef struct ability_system_state {
   spritesheet_play_system spritesheet_system;
   ability abilities[ABILITY_TYPE_MAX];
 
-  camera_metrics* camera_metrics;
+  camera_metrics* in_camera_metrics;
   app_settings* settings;
 } ability_system_state;
 
@@ -45,7 +45,7 @@ bool ability_system_initialize(camera_metrics* _camera_metrics, app_settings* se
     return false;
   }
   state->settings = settings;
-  state->camera_metrics = _camera_metrics;
+  state->in_camera_metrics = _camera_metrics;
 
   register_ability("Fireball", (Rectangle) {192, 640, 32, 32}, 
     (ability_upgradables[ABILITY_UPG_MAX]){ABILITY_UPG_DAMAGE, ABILITY_UPG_SPEED, ABILITY_UPG_AMOUNT, ABILITY_UPG_UNDEFINED, ABILITY_UPG_UNDEFINED},
@@ -220,9 +220,9 @@ void movement_comet(ability* abl) {
     if (vec2_equals(abl->projectiles[i].position, pVECTOR2(abl->projectiles[i].buffer.f32), .1)) {
       f32* rand_count = &abl->projectiles[i].buffer.f32[2];
       const f32 rand = rand_percent[(i32)*rand_count] * GetScreenWidth();
-      const Vector2 screen_min_world = GetScreenToWorld2D((Vector2) {0}, state->camera_metrics->handle);
-      const Vector2 screen_max_world = GetScreenToWorld2D((Vector2) {GetScreenWidth(), GetScreenHeight()}, state->camera_metrics->handle);
-      abl->projectiles[i].position = GetScreenToWorld2D((Vector2) {rand, -abl->proj_dim.y},state->camera_metrics->handle);
+      const Vector2 screen_min_world = GetScreenToWorld2D((Vector2) {0}, state->in_camera_metrics->handle);
+      const Vector2 screen_max_world = GetScreenToWorld2D((Vector2) {GetScreenWidth(), GetScreenHeight()}, state->in_camera_metrics->handle);
+      abl->projectiles[i].position = GetScreenToWorld2D((Vector2) {rand, -abl->proj_dim.y},state->in_camera_metrics->handle);
       const Vector2 new_prj_pos = (Vector2) {
         .x = FCLAMP(abl->projectiles[i].position.x + (state->settings->resolution_div4.x * rand_recoil[(i32)*rand_count]), 
                       screen_min_world.x, screen_max_world.x),

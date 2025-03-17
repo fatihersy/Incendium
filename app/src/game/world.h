@@ -4,7 +4,7 @@
 
 #include "defines.h"
 
-bool world_system_initialize(camera_metrics* camera_metrics, Vector2 resolution_div2);
+bool world_system_initialize(camera_metrics* _in_camera_metrics, Vector2 resolution_div2);
 
 void set_worldmap_location(u16 id);
 void set_map_tile(i32 layer, tilemap_tile* src, tilemap_tile* dst);
@@ -24,7 +24,7 @@ bool remove_prop_cur_map_by_id(u16 id);
 void update_map(void);
 void drag_tilesheet(Vector2 vec);
 void _render_tile(tilemap_tile* tile);
-void render_map(void);
+void render_map();
 void render_map_palette(f32 zoom);
 
 

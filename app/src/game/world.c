@@ -18,6 +18,8 @@ static world_system_state *restrict state;
 
 #define CURR_MAP state->map[state->active_stage.map_id]
 
+Rectangle get_camera_view_rect(Camera2D camera);
+
 bool world_system_initialize(camera_metrics* _in_camera_metrics, Vector2 resolution_div2) {
   if (state) {
     TraceLog(LOG_WARNING, "world::world_system_initialize()::Initialize called twice");
@@ -402,8 +404,8 @@ void drag_tilesheet(Vector2 vec) {
   state->palette.position.y += vec.y;
 }
 
-void render_map(void) {
-  render_tilemap(&CURR_MAP);
+void render_map() {
+  render_tilemap(&CURR_MAP, get_camera_view_rect(state->in_camera_metrics->handle));
 }
 
 void render_map_palette(f32 zoom) {
@@ -457,5 +459,26 @@ bool remove_prop_cur_map_by_id(u16 id) {
   }
   TraceLog(LOG_WARNING, "world::remove_prop_cur_map_by_id()::No match found");
   return false;
+}
+Rectangle get_camera_view_rect(Camera2D camera) {
+  // Get the current window dimensions
+  int screen_width = GetScreenWidth();
+  int screen_height = GetScreenHeight();
+  
+  // Calculate the camera's view dimensions, accounting for zoom
+  float view_width = screen_width / camera.zoom;
+  float view_height = screen_height / camera.zoom;
+  
+  // Calculate the top-left corner of the camera view in world space
+  // Since camera.target is the center of the screen, we subtract half the view dimensions
+  float x = camera.target.x;
+  float y = camera.target.y;
+  
+  // Apply camera offset
+  x -= camera.offset.x/camera.zoom;
+  y -= camera.offset.y/camera.zoom;
+  
+  // Return the camera view rectangle in world coordinates
+  return (Rectangle){ x, y, view_width, view_height };
 }
 

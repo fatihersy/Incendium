@@ -22,9 +22,10 @@ typedef enum in_game_stages {
 typedef struct scene_in_game_state {
   panel ability_upg_panels[MAX_UPDATE_ABILITY_PANEL_COUNT];
   panel passive_selection_panels[MAX_UPDATE_PASSIVE_PANEL_COUNT];
-  worldmap_stage worldmap_locations[MAX_WORLDMAP_LOCATIONS];
   panel worldmap_selection_panel;
+  worldmap_stage worldmap_locations[MAX_WORLDMAP_LOCATIONS];
   in_game_stages stage;
+  camera_metrics* in_camera_metrics;
 
   u16 clouds_animation_timer;
   u16 hovered_stage;
@@ -95,6 +96,8 @@ bool initialize_scene_in_game(camera_metrics* _camera_metrics) {
     state->passive_selection_panels[i] = default_panel;
   }
   state->worldmap_selection_panel = default_panel;
+
+  state->in_camera_metrics = _camera_metrics;
 
   set_is_game_paused(true);
   state->stage = IN_GAME_STAGE_PASSIVE_CHOICE;

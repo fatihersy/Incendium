@@ -86,37 +86,58 @@ void create_tilesheet(tilesheet_type _type, u16 _dest_tile_size, f32 _offset, ti
 
 void update_tilemap(void) {}
 
-void render_tilemap(tilemap* _tilemap) {
+void render_tilemap(tilemap* _tilemap, Rectangle camera_view) {
   if (!_tilemap) {
     TraceLog(LOG_ERROR, "ERROR::tilemap::render_tilemap()::Provided map was null");
     return;
   }
 
-  for (u16 i = 0; i < _tilemap->map_dim_total; ++i) {
-    u16 x = i % _tilemap->map_dim;  
-    u16 y = i / _tilemap->map_dim;  
-    i16 x_pos = _tilemap->position.x + x * _tilemap->tile_size; 
-    i16 y_pos = _tilemap->position.y + y * _tilemap->tile_size; 
-    if (x >= MAX_TILEMAP_TILESLOT_X || x < 0 || y >= MAX_TILEMAP_TILESLOT_Y || y < 0) {
-      TraceLog(LOG_ERROR, "tilemap::render_tilemap()::Calculated tile's x or y out of bound");
-      return;
-    }
-    for (int i=0; i<MAX_TILEMAP_LAYERS; ++i) {
-      if (!_tilemap->tiles[i][x][y].is_initialized) {
-        TraceLog(LOG_ERROR, "tilemap::render_tilemap()::tile:{%d,%d} is not initialized or corrupted", x, y);
-        return;
+  // Calculate tile indices that are visible in the camera view
+  int start_x = (int)((camera_view.x - _tilemap->position.x) / _tilemap->tile_size);
+  int start_y = (int)((camera_view.y - _tilemap->position.y) / _tilemap->tile_size);
+  int end_x = (int)((camera_view.x + camera_view.width - _tilemap->position.x) / _tilemap->tile_size) + 1;
+  int end_y = (int)((camera_view.y + camera_view.height - _tilemap->position.y) / _tilemap->tile_size) + 1;
+  
+  // Clamp to map boundaries
+  start_x = start_x < 0 ? 0 : (start_x >= _tilemap->map_dim ? _tilemap->map_dim - 1 : start_x);
+  start_y = start_y < 0 ? 0 : (start_y >= _tilemap->map_dim ? _tilemap->map_dim - 1 : start_y);
+  end_x = end_x < 0 ? 0 : (end_x > _tilemap->map_dim ? _tilemap->map_dim : end_x);
+  end_y = end_y < 0 ? 0 : (end_y > _tilemap->map_dim ? _tilemap->map_dim : end_y);
+
+  // Only render tiles within the visible area
+  for (u16 y = start_y; y < end_y; ++y) {
+    for (u16 x = start_x; x < end_x; ++x) {
+      if (x >= MAX_TILEMAP_TILESLOT_X || y >= MAX_TILEMAP_TILESLOT_Y) {
+        TraceLog(LOG_ERROR, "tilemap::render_tilemap()::Calculated tile's x or y out of bound");
+        continue; // Skip this tile but continue rendering others
       }
-      render_tile(&_tilemap->tiles[i][x][y], (Rectangle) { x_pos, y_pos, _tilemap->tile_size, _tilemap->tile_size});
+      
+      i16 x_pos = _tilemap->position.x + x * _tilemap->tile_size;
+      i16 y_pos = _tilemap->position.y + y * _tilemap->tile_size;
+      
+      for (int i = 0; i < MAX_TILEMAP_LAYERS; ++i) {
+        if (!_tilemap->tiles[i][x][y].is_initialized) {
+          TraceLog(LOG_ERROR, "tilemap::render_tilemap()::tile:{%d,%d} is not initialized or corrupted", x, y);
+          continue; // Skip this layer but continue with others
+        }
+        render_tile(&_tilemap->tiles[i][x][y], (Rectangle) { x_pos, y_pos, _tilemap->tile_size, _tilemap->tile_size});
+      }
     }
   }
-  for (int i=0; i < _tilemap->prop_count; ++i) {
+  
+  // For props, do individual frustum culling checks
+  for (int i = 0; i < _tilemap->prop_count; ++i) {
     if (!_tilemap->props[i].is_initialized) continue;
     
     tilemap_prop* prop = &_tilemap->props[i];
     if (prop) {
-      Texture2D* tex = get_texture_by_enum(prop->atlas_id);
-      if (tex) {
-        DrawTexturePro(*tex, prop->source, prop->dest, (Vector2) {0}, 0.f, WHITE); 
+      // Check if prop is visible in camera view
+      Rectangle prop_rect = prop->dest;
+      if (CheckCollisionRecs(camera_view, prop_rect)) {
+        Texture2D* tex = get_texture_by_enum(prop->atlas_id);
+        if (tex) {
+          DrawTexturePro(*tex, prop->source, prop->dest, (Vector2) {0}, 0.f, WHITE);
+        }
       }
     }
   }
@@ -217,6 +238,7 @@ tilemap_tile get_tile_from_map_by_mouse_pos(tilemap* map, Vector2 mouse_pos, u16
   tile.is_initialized = true;
   return tile;
 }
+
 void map_to_str(tilemap* map, tilemap_stringtify_package* out_package) {
   if (!map) {
     TraceLog(LOG_ERROR, "Recieved a NULL pointer");
@@ -335,7 +357,6 @@ bool save_map_data(tilemap* map, tilemap_stringtify_package* out_package) {
 
   return false;
 }
-
 /**
  * @brief Loads from "%s%s", RESOURCE_PATH, "map.txt"
  * 
