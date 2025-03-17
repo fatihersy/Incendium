@@ -69,7 +69,6 @@ void create_tilemap(tilesheet_type _type, Vector2 _position, u16 _grid_size, u16
   out_tilemap->is_initialized = true;
   return;
 }
-
 void create_tilesheet(tilesheet_type _type, u16 _dest_tile_size, f32 _offset, tilesheet* out_tilesheet) {
   if (_type >= TILESHEET_TYPE_MAX || _type <= 0) {
     TraceLog(LOG_ERROR, "ERROR::tilemap::create_tilesheet()::Sheet type out of bound");
@@ -122,7 +121,6 @@ void render_tilemap(tilemap* _tilemap) {
     }
   }
 }
-
 void render_tilesheet(tilesheet* sheet, f32 zoom) {
   if (!sheet) {
     TraceLog(LOG_ERROR, "tilemap::render_tilesheet()::Provided sheet was null");
@@ -148,7 +146,6 @@ void render_tilesheet(tilesheet* sheet, f32 zoom) {
     });
   }
 }
-
 /**
  * @brief Unsafe!
  * @param tile Needed for x, y, tex_id and sheet_type
@@ -165,7 +162,6 @@ void render_tile(tilemap_tile* tile, Rectangle dest) {
     (Vector2){0},0.f, WHITE
   );
 }
-
 /**
  * @brief Unsafe!
  */
@@ -175,7 +171,6 @@ Vector2 get_tilesheet_dim(tilesheet* sheet) {
     (sheet->tile_count_y * sheet->offset) * sheet->dest_tile_size,
   };
 }
-
 tilemap_tile get_tile_from_sheet_by_mouse_pos(tilesheet* sheet, Vector2 mouse_pos, f32 zoom) {
   if (!sheet) {
     TraceLog(LOG_ERROR, "ERROR::tilemap::get_tile_from_mouse_pos()::Provided sheet was null");
@@ -203,7 +198,6 @@ tilemap_tile get_tile_from_sheet_by_mouse_pos(tilesheet* sheet, Vector2 mouse_po
   tile.is_initialized = true;
   return tile;
 }
-
 tilemap_tile get_tile_from_map_by_mouse_pos(tilemap* map, Vector2 mouse_pos, u16 layer) {
   if (!map) {
     TraceLog(LOG_ERROR, "ERROR::tilemap::get_tile_from_mouse_pos()::Provided sheet was null");
@@ -223,7 +217,6 @@ tilemap_tile get_tile_from_map_by_mouse_pos(tilemap* map, Vector2 mouse_pos, u16
   tile.is_initialized = true;
   return tile;
 }
-
 void map_to_str(tilemap* map, tilemap_stringtify_package* out_package) {
   if (!map) {
     TraceLog(LOG_ERROR, "Recieved a NULL pointer");
@@ -268,7 +261,6 @@ void map_to_str(tilemap* map, tilemap_stringtify_package* out_package) {
   out_package->size_props_str = sizeof(out_package->str_props);
   out_package->is_success = true;
 }
-
 void str_to_map(tilemap* map, tilemap_stringtify_package* out_package) {
   if (!out_package || !map) {
     TraceLog(LOG_ERROR, "Recieved a NULL pointer");
@@ -323,7 +315,6 @@ void str_to_map(tilemap* map, tilemap_stringtify_package* out_package) {
 
   out_package->is_success = true;
 }
-
 /**
  * @brief Saves at "%s%s", RESOURCE_PATH, "map.txt"
  * 

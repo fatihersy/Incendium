@@ -1,14 +1,9 @@
 #include "pak_parser.h"
-#include <defines.h>
-
 #include "core/fmemory.h"
 
 #define TOTAL_PAK_FILE_SIZE 128 * 1024 * 1024
-
 #define MAX_RESOURCE_FILES 256
 
-#define MAX_FILENAME_LENGTH 64
-#define MAX_FILENAME_EXT_LENGTH 5
 #define MAX_FILE_ENTRY_LENGTH 64
 
 #define HEADER_SYMBOL_ENTRY "__ENTRY__"
@@ -39,13 +34,6 @@ typedef struct filename_offset_data {
   bool is_success;
 }filename_offset_data;
 
-typedef struct file_data {
-  i8 file_name[MAX_FILENAME_LENGTH];
-  i8 file_extension[MAX_FILENAME_EXT_LENGTH];
-  u64 size;
-  u32 offset;
-}file_data;
-
 typedef struct pak_parser_system_state {
   file_data file_datas[MAX_RESOURCE_FILES];
 
@@ -70,6 +58,10 @@ void pak_parser_system_initialize(void) {
 }
 
 void parse_pak(const char* path) {
+  if (!state) {
+    TraceLog(LOG_ERROR, "pak_parser::parse_pak()::Pak parser system didn't initialized");
+    return;
+  }
   if (!FileExists(path)) {
     TraceLog(LOG_WARNING, "pak_parser::parse_pak()::Path does not exist");
     return;
@@ -102,6 +94,7 @@ void parse_pak(const char* path) {
     }
     case READING_ORDER_DATA_LOCATION_OFFSET: {
       file.offset = i;
+      file.data = &state->pak_data[i];
       i = get_entry(i);
       break;
     }
@@ -112,6 +105,7 @@ void parse_pak(const char* path) {
     }
     reading_order = (reading_order % (READING_ORDER_MAX)) + 1;
     if (reading_order == READING_ORDER_MAX) {
+      file.is_initialized = true;
       state->file_datas[state->total_file_count] = file;
       file = (file_data){0};
       state->total_file_count++;
@@ -124,22 +118,16 @@ void parse_pak(const char* path) {
 }
  
 u32 get_entry(u32 offset) {
-
-  u8 seek_header[HEADER_SYMBOL_LENGTH_NULL_TERMINATED] = {0};
   u32 data_counter = 0;
   u32 out_offset = 0;
 
   for (u32 i=offset; i<state->pak_data_size; ++i) {
-    if (TextIsEqual((const char*)seek_header, HEADER_SYMBOL_ENTRY)) {
+
+    u8 header_symbol[HEADER_SYMBOL_LENGTH_NULL_TERMINATED] = {0};
+    copy_memory(header_symbol, state->pak_data + i, HEADER_SYMBOL_LENGTH);
+
+    if (TextIsEqual((const char*)header_symbol, HEADER_SYMBOL_ENTRY)) {
       break;
-    }
-    if (data_counter < HEADER_SYMBOL_LENGTH) {
-      seek_header[data_counter] = state->pak_data[i];
-    } else {      
-      for (i32 j=0; j<HEADER_SYMBOL_LENGTH-1; ++j) { // Rotate header
-        seek_header[j] = seek_header[j+1];
-      }
-      seek_header[HEADER_SYMBOL_LENGTH-1] = state->pak_data[i];
     }
 
     state->read_buffer[data_counter] = state->pak_data[i];
@@ -147,7 +135,20 @@ u32 get_entry(u32 offset) {
     out_offset = i;
     data_counter++;
   }
-  zero_memory(state->read_buffer + data_counter - HEADER_SYMBOL_LENGTH, HEADER_SYMBOL_LENGTH);
+  return out_offset + HEADER_SYMBOL_LENGTH;
+}
 
-  return out_offset;
+file_data get_file_data(const char* file_name) {
+  if (!state) {
+    TraceLog(LOG_ERROR, "pak_parser::get_file_data()::Pak parser system didn't initialized");
+    return (file_data){0};
+  }
+
+  for (u32 i=0; i<state->total_file_count; ++i) {
+    if(TextIsEqual((const char*)state->file_datas[i].file_name, file_name)) {
+      return state->file_datas[i];
+    }
+  }
+
+  return (file_data){0};
 }

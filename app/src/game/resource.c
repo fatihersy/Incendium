@@ -1,8 +1,6 @@
 #include "resource.h"
-#include <defines.h>
-
-#include "core/fmemory.h"
-#include "tools/pak_parser.h"
+#include <tools/pak_parser.h>
+#include <core/fmemory.h>
 
 typedef struct resource_system_state {
   u16 texture_amouth;
@@ -20,9 +18,9 @@ typedef struct resource_system_state {
 
 static resource_system_state *state;
 
-unsigned int load_texture(const char* _path, bool resize, Vector2 new_size, texture_id _id);
-bool load_image(const char *_path, bool resize, Vector2 new_size, image_type type);
-void load_spritesheet(const char* _path, spritesheet_id _id, u16 _fps, u16 _frame_width, u16 _frame_height, u16 _total_row, u16 _total_col);
+unsigned int load_texture(const char* filename, bool resize, Vector2 new_size, texture_id _id);
+bool load_image(const char *filename, bool resize, Vector2 new_size, image_type type);
+void load_spritesheet(const char* filename, spritesheet_id _id, u16 _fps, u16 _frame_width, u16 _frame_height, u16 _total_row, u16 _total_col);
 void load_tilesheet(tilesheet_type _sheet_sheet_type, texture_id _sheet_tex_id, u16 _tile_count_x, u16 _tile_count_y, u16 _tile_size);
 
 bool resource_system_initialize(void) {
@@ -30,24 +28,19 @@ bool resource_system_initialize(void) {
 
   state = (resource_system_state*)allocate_memory_linear(sizeof(resource_system_state), true);
 
-  pak_parser_system_initialize();
-  parse_pak(PAK_FILE_LOCATION);
-
-  //NOTE: _path = "%s%s", RESOURCE_PATH, _path
+  // NOTE: resource files inside the pak file
+  load_texture("crimson_fantasy_panel_bg.png", false, (Vector2){ 0,  0}, TEX_ID_CRIMSON_FANTASY_PANEL_BG);
   load_texture("space_bg.png",                 false, (Vector2){ 0,  0}, TEX_ID_BACKGROUND);
+  load_texture("bg_black.png",                 false, (Vector2){ 0,  0}, TEX_ID_BG_BLACK);
   load_texture("fudesumi.png",                 true,  (Vector2){64, 64}, TEX_ID_ENEMY_TEXTURE);
   load_texture("map_tileset.png",              false, (Vector2){ 0,  0}, TEX_ID_MAP_TILESET_TEXTURE);
   load_texture("progress_bar_inside_full.png", false, (Vector2){ 0,  0}, TEX_ID_PROGRESS_BAR_INSIDE_FULL);
   load_texture("progress_bar_outside_full.png",false, (Vector2){ 0,  0}, TEX_ID_PROGRESS_BAR_OUTSIDE_FULL);
   load_texture("crimson_fantasy_panel.png",    false, (Vector2){ 0,  0}, TEX_ID_CRIMSON_FANTASY_PANEL);
-  load_texture("crimson_fantasy_panel_bg.png", false, (Vector2){ 0,  0}, TEX_ID_CRIMSON_FANTASY_PANEL_BG);
   load_texture("map_props_atlas.png",          false, (Vector2){ 0,  0}, TEX_ID_MAP_PROPS_ATLAS);
-  load_texture("ability_icons.png",            false, (Vector2){ 0,  0}, TEX_ID_ABILITY_ICON_ATLAS);
   load_texture("worldmap_w_clouds.png",        false, (Vector2){ 0,  0}, TEX_ID_WORLDMAP_W_CLOUDS);
   load_texture("worldmap_wo_clouds.png",       false, (Vector2){ 0,  0}, TEX_ID_WORLDMAP_WO_CLOUDS);
-  load_texture("worldmap_clouds.png",          false, (Vector2){ 0,  0}, TEX_ID_WORLDMAP_CLOUDS);
   load_texture("game_bg_space.png",            false, (Vector2){ 0,  0}, TEX_ID_GAME_BG_SPACE);
-  load_texture("bg_black.png",                 false, (Vector2){ 0,  0}, TEX_ID_BG_BLACK);
   load_texture("icon_atlas.png",               false, (Vector2){ 0,  0}, TEX_ID_ICON_ATLAS);
   load_spritesheet("idle_left.png",                  SHEET_ID_PLAYER_ANIMATION_IDLE_LEFT,         15,   86,  86, 1,  4);
   load_spritesheet("idle_right.png",                 SHEET_ID_PLAYER_ANIMATION_IDLE_RIGHT,        15,   86,  86, 1,  4);
@@ -66,7 +59,6 @@ bool resource_system_initialize(void) {
   load_spritesheet("slider_right_button_edited.png", SHEET_ID_SLIDER_RIGHT_BUTTON,                 0,   11,  10, 1,  2);
   load_spritesheet("menu_button.png",                SHEET_ID_MENU_BUTTON,                         0,   80,  16, 1,  2);
   load_spritesheet("flat_button.png",                SHEET_ID_FLAT_BUTTON,                         0,   44,  14, 1,  2);
-  load_spritesheet("fireball.png",                   SHEET_ID_FIREBALL_ANIMATION,                 15,   32,  32, 1,  4);
   
   load_tilesheet(TILESHEET_TYPE_MAP, TEX_ID_MAP_TILESET_TEXTURE, 49, 63, 32);
 
@@ -82,7 +74,6 @@ Texture2D* get_texture_by_enum(texture_id _id) {
   return &state->textures[_id];
 }
 Image* get_image_by_enum(image_type type) {
-
   if (type >= IMAGE_TYPE_MAX || type <= IMAGE_TYPE_UNSPECIFIED){
     TraceLog(LOG_WARNING, "resource::get_image_by_enum()::Image type out of bound");
     return (Image*){0};
@@ -90,16 +81,13 @@ Image* get_image_by_enum(image_type type) {
 
   return &state->images[type];
 }
-
 spritesheet get_spritesheet_by_enum(spritesheet_id type) {
-
   if (type >= SHEET_ID_SPRITESHEET_TYPE_MAX || type <= SHEET_ID_SPRITESHEET_UNSPECIFIED){
     TraceLog(LOG_WARNING, "resource::get_spritesheet_by_enum()::Spritesheet type out of bound");
     return (spritesheet){0};
   }
   return state->sprites[type];
 }
-
 tilesheet* get_tilesheet_by_enum(tilesheet_type type) {
   if (type >= TILESHEET_TYPE_MAX || type <= TILESHEET_TYPE_UNSPECIFIED){
     TraceLog(LOG_WARNING, "resource::get_tilesheet_by_enum()::Tilesheet type out of bound");
@@ -108,76 +96,97 @@ tilesheet* get_tilesheet_by_enum(tilesheet_type type) {
 
   return &state->tilesheets[type];
 }
-
-const char *rs_path(const char *_path) {
-  return TextFormat("%s%s", RESOURCE_PATH, _path);
+const char *rs_path(const char *filename) {
+  return TextFormat("%s%s", RESOURCE_PATH, filename);
 }
 
-unsigned int load_texture(const char *_path, bool resize, Vector2 new_size, texture_id _id) {
-  const char *path = rs_path(_path);
-  if (!FileExists(path)) { TraceLog(
-  LOG_ERROR,"ERROR::resource::load_texture():: Path:'%s' Cannot find", path);
-    return INVALID_ID32;
-  } 
-  if (_id >= TEX_ID_MAX || _id <= TEX_ID_UNSPECIFIED) { TraceLog(
-  LOG_ERROR,
-  "ERROR::resource::load_texture()::texture type out of bound");
+unsigned int load_texture(const char *filename, bool resize, Vector2 new_size, texture_id _id) {
+  if (_id >= TEX_ID_MAX || _id <= TEX_ID_UNSPECIFIED) { 
+    TraceLog(LOG_ERROR, "resource::load_texture()::texture type out of bound");
     return INVALID_ID32;
   }
+  Texture2D tex = {0};
 
-  Texture2D tex;
-  if (resize) {
-    Image img = LoadImage(path);
-    ImageResize(&img, new_size.x, new_size.y);
+  #if USE_PAK_FORMAT
+    file_data file = get_file_data(filename);
+    if (!file.is_initialized) {
+      TraceLog(LOG_ERROR, "resource::load_texture()::File:'%s' does not exist", filename);
+      return INVALID_ID32;
+    }
+    Image img = LoadImageFromMemory((const char*)file.file_extension, file.data, file.size);
+    if (resize) {
+      ImageResize(&img, new_size.x, new_size.y);
+    }
     tex = LoadTextureFromImage(img);
-  } else {
-    tex = LoadTexture(path);
-  }
+  #else
+    const char *path = rs_path(filename);
+    if (resize) {
+      Image img = LoadImage(path);
+      ImageResize(&img, new_size.x, new_size.y);
+      tex = LoadTextureFromImage(img);
+    } else {
+      tex = LoadTexture(path);
+    }
+  #endif
 
   state->texture_amouth++;
   state->textures[_id] = tex;
   return state->textures[_id].id;
 }
-
-bool load_image(const char *_path, bool resize, Vector2 new_size, image_type type) {
-  const char *path = rs_path(_path);
-  if (!FileExists(path)) { TraceLog(
-    LOG_ERROR, "resource::load_image()::Path does not exist");
+bool load_image(const char *filename, bool resize, Vector2 new_size, image_type type) {
+  if (type >= IMAGE_TYPE_MAX || type <= IMAGE_TYPE_UNSPECIFIED) { 
+    TraceLog(LOG_ERROR, "resource::load_image()::Image type out of bound");
     return false;
   }
-  if (type >= IMAGE_TYPE_MAX || type <= IMAGE_TYPE_UNSPECIFIED) { TraceLog(
-  LOG_ERROR,
-  "ERROR::resource::load_image()::Image type out of bound");
-    return false;
-  }
+  Image img = {0};
 
-  Image img;
-  if (resize) {
+  #if USE_PAK_FORMAT
+    file_data file = get_file_data(filename);
+    if (!file.is_initialized) {
+      TraceLog(LOG_ERROR, "resource::load_image()::File:'%s' does not exist", filename);
+      return false;
+    }
+    img = LoadImageFromMemory((const char*)file.file_extension, file.data, file.size);
+    if (resize) {
+      ImageResize(&img, new_size.x, new_size.y);
+    }
+  #else
+    const char *path = rs_path(filename);
     img = LoadImage(path);
-    ImageResize(&img, new_size.x, new_size.y);
-  } else {
-    img = LoadImage(path);
-  }
+    if (resize) {
+      ImageResize(&img, new_size.x, new_size.y);
+    }
+  #endif
 
   state->image_amouth++;
   state->images[type] = img;
   return true;
 }
-
-
-void load_spritesheet(const char *_path, spritesheet_id _id, u16 _fps, u16 _frame_width, u16 _frame_height, u16 _total_row, u16 _total_col) {
-  const char *path = rs_path(_path);
-  if (!FileExists(path)) { TraceLog(
-  LOG_ERROR,"ERROR::resource::load_spritesheet():: Path:'%s' Cannot find", path);
-    return;
-  } 
-  if (_id >= MAX_SPRITESHEET_SLOTS || _id <= SHEET_ID_SPRITESHEET_UNSPECIFIED) { TraceLog(
-    LOG_ERROR, "resource::load_spritesheet()::Sheet type out of bound");
+void load_spritesheet(const char *filename, spritesheet_id _id, u16 _fps, u16 _frame_width, u16 _frame_height, u16 _total_row, u16 _total_col) {
+  if (_id >= MAX_SPRITESHEET_SLOTS || _id <= SHEET_ID_SPRITESHEET_UNSPECIFIED) { 
+    TraceLog(LOG_ERROR, "resource::load_spritesheet()::Sheet type out of bound");
     return;
   }
 
   spritesheet _sheet = {0};
-  Texture2D tex = LoadTexture(path);
+  Texture2D tex = {0};
+
+  #if USE_PAK_FORMAT
+    file_data file = get_file_data(filename);
+    if (!file.is_initialized) {
+      TraceLog(LOG_ERROR, "resource::load_spritesheet()::File:'%s' does not exist", filename);
+      return;
+    }
+    Image img = LoadImageFromMemory((const char*)file.file_extension, file.data, file.size);
+    tex = LoadTextureFromImage(img);
+  #else
+    const char *path = rs_path(filename);
+    if (!FileExists(path)) {
+      TraceLog(LOG_ERROR, "resource::load_spritesheet()::File:'%s' does not exist", filename);
+      return;
+    }
+    tex = LoadTexture(path);
+  #endif
 
   _sheet.handle = tex;
   _sheet.type = _id;
@@ -198,17 +207,13 @@ void load_spritesheet(const char *_path, spritesheet_id _id, u16 _fps, u16 _fram
   state->sprite_amouth++;
   state->sprites[_id] = _sheet;
 }
-
 void load_tilesheet(tilesheet_type _sheet_sheet_type, texture_id _sheet_tex_id, u16 _tile_count_x, u16 _tile_count_y, u16 _tile_size) {
   if (_sheet_sheet_type >= MAX_TILESHEET_SLOTS || _sheet_sheet_type <= 0) {
-    TraceLog(LOG_ERROR,
-             "ERROR::resource::load_tilesheet()::Sheet type out of bound");
+    TraceLog(LOG_ERROR, "resource::load_tilesheet()::Sheet type out of bound");
     return;
   }
   if (_sheet_tex_id >= TEX_ID_MAX || _sheet_tex_id <= 0) {
-    TraceLog(
-        LOG_ERROR,
-        "ERROR::resource::load_tilesheet()::texture type out of bound");
+    TraceLog(LOG_ERROR,"resource::load_tilesheet()::texture type out of bound");
   }
   tilesheet* _tilesheet = &state->tilesheets[_sheet_sheet_type];
 
@@ -233,5 +238,3 @@ void load_tilesheet(tilesheet_type _sheet_sheet_type, texture_id _sheet_tex_id, 
 
   state->tilesheet_amouth++;
 }
-
-

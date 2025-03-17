@@ -383,7 +383,6 @@ tilemap_prop* get_map_prop_by_id(u16 id) {
   return (tilemap_prop*){0};  
 }
 
-
 void save_current_map(void) {
   if(!save_map_data(&CURR_MAP, &state->map_stringtify[state->active_stage.map_id])) {
     TraceLog(LOG_WARNING, "world::save_current_map()::save_map_data returned false");

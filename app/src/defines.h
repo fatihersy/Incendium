@@ -25,6 +25,9 @@
 #define TEXT_SHADOW_COLOR BLACK
 #define TEXT_SHADOW_OFFSET CLITERAL(Vector2){ 0, 1}
 
+#define MAX_FILENAME_LENGTH 64
+#define MAX_FILENAME_EXT_LENGTH 5
+
 #define INI_FILE_MAX_FILE_SIZE 32000
 #define INI_FILE_MAX_SECTION_NAME_LENGTH 32
 #define INI_FILE_MAX_SECTION_LENGTH 512
@@ -82,6 +85,7 @@
 #define RANDOM_STACK_COUNT 10
 
 #define DEBUG_COLLISIONS 0
+#define USE_PAK_FORMAT 0
 
 // Unsigned int types.
 typedef unsigned char u8;
@@ -140,6 +144,15 @@ STATIC_ASSERT(sizeof(f64) == 8, "Expected float to be 8 bytes.");
  */
 #define INVALID_ID32 U32_MAX
 #define INVALID_ID16 U16_MAX
+
+typedef struct file_data {
+  i8 file_name[MAX_FILENAME_LENGTH];
+  i8 file_extension[MAX_FILENAME_EXT_LENGTH];
+  u64 size;
+  u32 offset;
+  u8* data;
+  bool is_initialized;
+}file_data;
 
 typedef enum data_type {
   DATA_TYPE_UNRESERVED,
