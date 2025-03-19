@@ -147,7 +147,7 @@ void update_scene_in_game(void) {
 void render_scene_in_game(void) {
   STATE_ASSERT("render_scene_in_game")
 
-  gui_draw_texture_id(TEX_ID_GAME_BG_SPACE, (Rectangle) {0, 0, GetScreenWidth(), GetScreenHeight()});
+  //gui_draw_texture_id(TEX_ID_GAME_BG_SPACE, (Rectangle) {0, 0, GetScreenWidth(), GetScreenHeight()});
 
   switch (state->stage) {
     case IN_GAME_STAGE_MAP_CHOICE: {
@@ -271,7 +271,10 @@ void render_interface_in_game(void) {
             for (int i=0; i<MAX_UPDATE_ABILITY_PANEL_COUNT; ++i) {
               state->ability_upg_panels[i].buffer[0].data.u16[0] = 0;
             }
-            // TODO: Upgrade ability
+            if (new.level >= MAX_ABILITY_LEVEL || new.level <= 1) { 
+              _add_ability(new.type); 
+            }
+            else { _upgrade_ability(abl); }
           }
           draw_upgrade_panel(abl, new, dest);
         }
@@ -369,7 +372,7 @@ void start_game(character_stat* stat) {
   }
   upgrade_player_stat(stat);
   state->stage = IN_GAME_STAGE_PLAY;
-  set_worldmap_location(0); // HACK: remove later. this is for skip the stage map choosing 
+  set_worldmap_location(1); // HACK: remove later. this is for skip the stage map choosing 
   gm_start_game(*get_active_worldmap());
 }
 

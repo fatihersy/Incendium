@@ -19,6 +19,7 @@ static world_system_state *restrict state;
 #define CURR_MAP state->map[state->active_stage.map_id]
 
 Rectangle get_camera_view_rect(Camera2D camera);
+Rectangle get_position_view_rect(Camera2D camera, Vector2 pos, f32 zoom);
 
 bool world_system_initialize(camera_metrics* _in_camera_metrics, Vector2 resolution_div2) {
   if (state) {
@@ -409,6 +410,9 @@ void drag_tilesheet(Vector2 vec) {
 void render_map() {
   render_tilemap(&CURR_MAP, get_camera_view_rect(state->in_camera_metrics->handle));
 }
+void render_map_view_on(Vector2 pos, f32 zoom) {
+  render_tilemap(&CURR_MAP, get_position_view_rect(state->in_camera_metrics->handle, pos, zoom));
+}
 
 void render_map_palette(f32 zoom) {
   render_tilesheet(&state->palette, zoom);
@@ -483,4 +487,18 @@ Rectangle get_camera_view_rect(Camera2D camera) {
   // Return the camera view rectangle in world coordinates
   return (Rectangle){ x, y, view_width, view_height };
 }
-
+Rectangle get_position_view_rect(Camera2D camera, Vector2 pos, f32 zoom) {
+  int screen_width = GetScreenWidth();
+  int screen_height = GetScreenHeight();
+  
+  float view_width = screen_width / zoom;
+  float view_height = screen_height / zoom;
+  
+  float x = pos.x;
+  float y = pos.y;
+  
+  x -= camera.offset.x/zoom;
+  y -= camera.offset.y/zoom;
+  
+  return (Rectangle){ x, y, view_width, view_height };
+}

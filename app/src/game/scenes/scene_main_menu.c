@@ -3,6 +3,8 @@
 
 #include "core/event.h"
 #include "core/fmemory.h"
+
+#include "game/world.h"
 #include "game/user_interface.h"
 
 typedef enum main_menu_scene_type {
@@ -28,6 +30,8 @@ void initialize_scene_main_menu(void) {
   state = (main_menu_scene_state*)allocate_memory_linear(sizeof(main_menu_scene_state), true);
 
   user_interface_system_initialize();
+
+  set_worldmap_location(WORLDMAP_MAINMENU_MAP); // NOTE: Worldmap index 0 is mainmenu background now 
 }
 
 void update_scene_main_menu(void) {
@@ -54,11 +58,7 @@ void update_scene_main_menu(void) {
 
 void render_scene_main_menu(void) {
   if (!state->scene_changing_process_complete) {
-    gui_draw_texture_to_background(TEX_ID_BACKGROUND);
-    gui_draw_spritesheet_to_background(
-      SHEET_ID_SCREEN_CRT_SHEET, 
-      (Color) {WHITE_ROCK.r, WHITE_ROCK.g, WHITE_ROCK.b, 100} //(Color) {218, 165, 32, 100}
-    );
+    render_map();
   }
 }
 

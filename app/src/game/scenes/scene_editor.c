@@ -491,7 +491,13 @@ void update_scene_editor(void) {
   update_user_interface();
 }
 void render_scene_editor(void) {
-  render_map();
+  if (state->selected_stage == WORLDMAP_MAINMENU_MAP) {
+    render_map_view_on((Vector2) {0}, 1);
+  }
+  else {
+    render_map();
+  }
+
   DrawPixel(0, 0, RED);
 }
 void render_interface_editor(void) {

@@ -26,6 +26,7 @@ void update_map(void);
 void drag_tilesheet(Vector2 vec);
 void _render_tile(tilemap_tile* tile);
 void render_map();
+void render_map_view_on(Vector2 pos, f32 zoom);
 void render_map_palette(f32 zoom);
 
 

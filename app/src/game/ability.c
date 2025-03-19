@@ -27,6 +27,7 @@ void register_ability(
   ability_upgradables _upgradables[ABILITY_UPG_MAX],
   ability_type type,
   movement_pattern move_pattern, 
+  u16 proj_count_on_start,
   f32 proj_duration, 
   u16 _damage, 
   Vector2 proj_size, 
@@ -50,17 +51,17 @@ bool ability_system_initialize(camera_metrics* _camera_metrics, app_settings* se
   register_ability("Fireball", (Rectangle) {192, 640, 32, 32}, 
     (ability_upgradables[ABILITY_UPG_MAX]){ABILITY_UPG_DAMAGE, ABILITY_UPG_SPEED, ABILITY_UPG_AMOUNT, ABILITY_UPG_UNDEFINED, ABILITY_UPG_UNDEFINED},
     ABILITY_TYPE_FIREBALL, MOVE_TYPE_SATELLITE, 
-    0, 15, (Vector2) {30, 30}, SHEET_ID_FIREBALL_ANIMATION, true
+    1, 0, 15, (Vector2) {30, 30}, SHEET_ID_FIREBALL_ANIMATION, true
   );
   register_ability("Bullet", (Rectangle) { 32,   0, 32, 32}, 
     (ability_upgradables[ABILITY_UPG_MAX]){ABILITY_UPG_DAMAGE, ABILITY_UPG_HITBOX, ABILITY_UPG_UNDEFINED, ABILITY_UPG_UNDEFINED, ABILITY_UPG_UNDEFINED},
     ABILITY_TYPE_BULLET, MOVE_TYPE_BULLET, 
-    1.75, 15, (Vector2) {30, 30}, SHEET_ID_FIREBALL_ANIMATION, true
+    1, 1.75, 15, (Vector2) {30, 30}, SHEET_ID_FIREBALL_ANIMATION, true
   );
   register_ability("Comet",  (Rectangle) { 96,   0, 32, 32}, 
     (ability_upgradables[ABILITY_UPG_MAX]){ABILITY_UPG_DAMAGE, ABILITY_UPG_HITBOX, ABILITY_UPG_AMOUNT, ABILITY_UPG_UNDEFINED, ABILITY_UPG_UNDEFINED},
     ABILITY_TYPE_COMET, MOVE_TYPE_COMET, 
-    0, 15, (Vector2) {30, 30}, SHEET_ID_FIREBALL_ANIMATION, true
+    2, 0, 15, (Vector2) {30, 30}, SHEET_ID_FIREBALL_ANIMATION, true
   );
   return true;
 }
@@ -268,7 +269,7 @@ void render_abilities(ability_play_system* system) {
  */
 void register_ability(
   char _display_name[MAX_ABILITY_NAME_LENGTH], Rectangle icon_loc, ability_upgradables _upgradables[ABILITY_UPG_MAX], 
-  ability_type type, movement_pattern move_pattern, f32 proj_duration, u16 _damage, Vector2 proj_size, 
+  ability_type type, movement_pattern move_pattern, u16 proj_count_on_start, f32 proj_duration, u16 _damage, Vector2 proj_size, 
   spritesheet_id proj_anim, bool _should_center
 ) {
   ability abl = {0};
@@ -277,9 +278,9 @@ void register_ability(
     return;
   }
   abl.type = type;
-  abl.level = 0;
+  abl.level = 1;
   abl.base_damage = _damage;
-  abl.proj_count = 0;
+  abl.proj_count = proj_count_on_start;
   abl.proj_duration = proj_duration;
   abl.proj_anim_sprite = proj_anim;
   abl.move_pattern = move_pattern;
