@@ -21,7 +21,7 @@
             "source": "Git Bash"
         },
         "pwsh7": {
-            "path": "D:/Program Files/pwsh7/7/pwsh.exe"
+            "path": "D:/Program Files/PowerShell/7/pwsh.exe"
         }
     },
     "editor.fontFamily": "Fira Code Retina",

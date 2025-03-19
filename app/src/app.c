@@ -2,9 +2,7 @@
 #include "settings.h"
 #include "defines.h"
 
-#if USE_PAK_FORMAT
-  #include "tools/pak_parser.h"
-#endif
+#include "tools/pak_parser.h"
 
 #include "core/event.h"
 #include "core/ftime.h"
@@ -53,12 +51,21 @@ bool app_initialize(void) {
   SetConfigFlags(FLAG_WINDOW_UNDECORATED | FLAG_WINDOW_TOPMOST);
 
   // Game
+  #ifdef PAK_FILE_LOCATION
+    pak_parser_system_initialize(PAK_FILE_LOCATION);
+  #endif
+  file_data loading_image_file = fetch_file_data("aaa_game_start_loading_screen.png");
+  Image loading_image = LoadImageFromMemory(".png", loading_image_file.data, loading_image_file.size);
+  Texture loading_tex = LoadTextureFromImage(loading_image);
+
   BeginDrawing();
   ClearBackground(CLEAR_BACKGROUND_COLOR); //TODO: Loading screen
+  DrawTexturePro(loading_tex, 
+    (Rectangle){0, 0, loading_image.width, loading_image.height}, 
+    (Rectangle){0, 0, GetScreenWidth(), GetScreenHeight()}, (Vector2){0}, 0, WHITE);
   EndDrawing();
 
   #if USE_PAK_FORMAT
-    pak_parser_system_initialize();
     parse_pak(PAK_FILE_LOCATION);
   #endif
 

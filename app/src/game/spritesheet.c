@@ -19,7 +19,7 @@ void _update_sprite_renderqueue(spritesheet_play_system *system) {
 void update_sprite(spritesheet_play_system *system, u16 queue_index) {
   spritesheet sheet = system->renderqueue[queue_index];
   if (sheet.fps == 0) {
-    TraceLog(LOG_ERROR, "ERROR::spritesheet::update_sprite()::Sheet not meant to be playable");
+    TraceLog(LOG_ERROR, "spritesheet::update_sprite()::Sheet not meant to be playable");
     return;
   }
   sheet.counter++;
@@ -54,7 +54,7 @@ void update_sprite(spritesheet_play_system *system, u16 queue_index) {
 }
 void render_sprite_renderqueue(spritesheet_play_system *system, u16 queue_index) {
   if (queue_index > system->renderqueue_count || queue_index <= 0) {
-    TraceLog(LOG_ERROR, "ERROR::spritesheet::render_sprite_renderqueue()::invalid queue index: %d", queue_index);
+    TraceLog(LOG_ERROR, "spritesheet::render_sprite_renderqueue()::invalid queue index: %d", queue_index);
     return;
   }
   spritesheet* sheet = &system->renderqueue[queue_index];
@@ -79,10 +79,14 @@ void render_sprite_renderqueue(spritesheet_play_system *system, u16 queue_index)
 
 u16 _register_sprite(spritesheet_play_system *system, spritesheet_id _id, bool _play_looped, bool _play_once, bool _center_sprite) {
   if (_id > SHEET_ID_SPRITESHEET_TYPE_MAX || _id <= SHEET_ID_SPRITESHEET_UNSPECIFIED) {
-    TraceLog(LOG_ERROR, "ERROR::spritesheet::play_sprite_on_site()::sprite type out of bound");
+    TraceLog(LOG_ERROR, "spritesheet::register_sprite()::sprite type out of bound");
     return INVALID_ID16;
   }
   spritesheet sheet = get_spritesheet_by_enum(_id);
+  if (sheet.type >= SHEET_ID_SPRITESHEET_TYPE_MAX || sheet.type <= SHEET_ID_SPRITESHEET_UNSPECIFIED) {
+    TraceLog(LOG_ERROR, "spritesheet::register_sprite()::Recieved spritesheet doesn't exist or invalid");
+    return INVALID_ID16;
+  }
 
   system->renderqueue_count++;
 
@@ -97,10 +101,14 @@ u16 _register_sprite(spritesheet_play_system *system, spritesheet_id _id, bool _
 
 void _play_sprite_on_site(spritesheet_play_system *system, u16 _id, Color _tint, Rectangle dest) {
   if (_id > system->renderqueue_count || _id <= 0) {
-    TraceLog(LOG_ERROR, "ERROR::spritesheet::play_sprite_on_site()::invalid queue id: %d", _id);
+    TraceLog(LOG_ERROR, "spritesheet::play_sprite_on_site()::invalid queue id: %d", _id);
     return;
   }
   spritesheet* sheet = &system->renderqueue[_id];
+  if (sheet->type >= SHEET_ID_SPRITESHEET_TYPE_MAX || sheet->type <= SHEET_ID_SPRITESHEET_UNSPECIFIED) {
+    TraceLog(LOG_ERROR, "spritesheet::play_sprite_on_site()::Recieved spritesheet doesn't exist or invalid");
+    return;
+  }
 
   if (sheet->play_once && sheet->is_played && !sheet->is_started) { return; }
   sheet->playmod = ON_SITE;
@@ -118,10 +126,14 @@ void _play_sprite_on_site(spritesheet_play_system *system, u16 _id, Color _tint,
 
 void _draw_sprite_on_site(spritesheet_id _id, Color _tint, Vector2 pos, Vector2 scale, u16 frame, bool _should_center) {
   if (_id > SHEET_ID_SPRITESHEET_TYPE_MAX || _id <= SHEET_ID_SPRITESHEET_UNSPECIFIED) {
-    TraceLog(LOG_ERROR, "ERROR::spritesheet::draw_sprite_on_site()::invalid sprite type");
+    TraceLog(LOG_ERROR, "spritesheet::draw_sprite_on_site()::invalid sprite type");
     return;
   }
   spritesheet sheet = get_spritesheet_by_enum(_id);
+  if (sheet.type >= SHEET_ID_SPRITESHEET_TYPE_MAX || sheet.type <= SHEET_ID_SPRITESHEET_UNSPECIFIED) {
+    TraceLog(LOG_ERROR, "spritesheet::play_sprite_on_site()::Recieved spritesheet doesn't exist or invalid");
+    return;
+  }
 
   u16 col = frame % sheet.col_total;
   u16 row = frame / sheet.row_total;
@@ -151,7 +163,7 @@ void _draw_sprite_on_site(spritesheet_id _id, Color _tint, Vector2 pos, Vector2 
 
 void _queue_sprite_change_location(spritesheet_play_system *system, u16 queue_index, Rectangle _location) {
   if (queue_index > system->renderqueue_count || queue_index <= 0) {
-    TraceLog(LOG_ERROR, "ERROR::resource::stop_sprite()::invalid index: %d",
+    TraceLog(LOG_ERROR, "resource::stop_sprite()::invalid index: %d",
              queue_index);
     return;
   }
@@ -160,7 +172,7 @@ void _queue_sprite_change_location(spritesheet_play_system *system, u16 queue_in
 
 bool _is_sprite_playing(spritesheet_play_system *system, u16 queue_index) {
   if (queue_index > system->renderqueue_count || queue_index <= 0)  {
-    TraceLog(LOG_ERROR, "ERROR::resource::stop_sprite()::invalid index: %d",
+    TraceLog(LOG_ERROR, "resource::stop_sprite()::invalid index: %d",
     queue_index);
     return false;
   }
@@ -169,7 +181,7 @@ bool _is_sprite_playing(spritesheet_play_system *system, u16 queue_index) {
 
 void _stop_sprite(spritesheet_play_system *system, u16 queue_index, bool reset) {
   if (queue_index > system->renderqueue_count || queue_index <= 0)  {
-    TraceLog(LOG_ERROR, "ERROR::resource::stop_sprite()::invalid index: %d",
+    TraceLog(LOG_ERROR, "resource::stop_sprite()::invalid index: %d",
     queue_index);
     return;
   }
@@ -186,7 +198,7 @@ void _stop_sprite(spritesheet_play_system *system, u16 queue_index, bool reset) 
 
 void _reset_sprite(spritesheet_play_system *system, u16 _queue_index, bool _retrospective) {
   if (_queue_index > system->renderqueue_count || _queue_index <= 0)  {
-    TraceLog(LOG_ERROR, "ERROR::resource::reset_sprite()::invalid index: %d",
+    TraceLog(LOG_ERROR, "resource::reset_sprite()::invalid index: %d",
     _queue_index);
     return;
   }

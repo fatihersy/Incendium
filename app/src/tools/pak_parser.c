@@ -48,31 +48,29 @@ static pak_parser_system_state *restrict state;
 
 u32 get_entry(u32 offset);
 
-void pak_parser_system_initialize(void) {
+void pak_parser_system_initialize(const char* path) {
   if (state) {
     TraceLog(LOG_WARNING, "pak_parser::pak_parser_system_initialize()::Init function called twice");
-    return;
-  }
-
-  state = (pak_parser_system_state*)allocate_memory_linear(sizeof(pak_parser_system_state), true);
-}
-
-void parse_pak(const char* path) {
-  if (!state) {
-    TraceLog(LOG_ERROR, "pak_parser::parse_pak()::Pak parser system didn't initialized");
     return;
   }
   if (!FileExists(path)) {
     TraceLog(LOG_WARNING, "pak_parser::parse_pak()::Path does not exist");
     return;
   }
+  state = (pak_parser_system_state*)allocate_memory_linear(sizeof(pak_parser_system_state), true);
+
   i32 data_size = 1;
   u8 * data = LoadFileData(path, &data_size);
   copy_memory(state->pak_data, data, data_size);
   UnloadFileData(data);
-
   state->pak_data_size = data_size;
+}
 
+void parse_pak(void) {
+  if (!state) {
+    TraceLog(LOG_ERROR, "pak_parser::parse_pak()::Pak parser system didn't initialized");
+    return;
+  }
   pak_reading_order reading_order = READING_ORDER_FILENAME;
   file_data file = {0};
   for (u32 i=0; i<state->pak_data_size; ++i) {
@@ -151,4 +149,59 @@ file_data get_file_data(const char* file_name) {
   }
 
   return (file_data){0};
+}
+
+file_data fetch_file_data(const char* file_name) {
+  if (!state) {
+    TraceLog(LOG_ERROR, "pak_parser::get_file_data()::Pak parser system didn't initialized");
+    return (file_data){0};
+  }
+  pak_reading_order reading_order = READING_ORDER_FILENAME;
+  file_data file = {0};
+  bool found = false;
+  for (u32 i=0; i<state->pak_data_size; ++i) {
+    switch (reading_order) {
+    case READING_ORDER_FILENAME: {
+      i = get_entry(i);
+      if (TextIsEqual((const char*)state->read_buffer, file_name)) {
+        found = true;
+        copy_memory(file.file_name, state->read_buffer, TextLength((const char*)state->read_buffer));
+      }
+      break;
+    }
+    case READING_ORDER_FILE_EXTENSION: {
+      i = get_entry(i);
+      if (found) {
+        copy_memory(file.file_extension, state->read_buffer, TextLength((const char*)state->read_buffer));
+      }
+      break;
+    }
+    case READING_ORDER_SIZE: {
+      i = get_entry(i);
+      if (found) {
+        file.size = TextToInteger((const char*)state->read_buffer);
+      }
+      break;
+    }
+    case READING_ORDER_DATA_LOCATION_OFFSET: {
+      if (found) {
+        file.offset = i;
+        file.data = &state->pak_data[i];
+      }
+      i = get_entry(i);
+      break;
+    }
+    default: {
+      TraceLog(LOG_ERROR, "pak_parser::parse_pak()::Unsupported reading order stage");
+      return (file_data){0};
+    }
+    }
+    reading_order = (reading_order % (READING_ORDER_MAX)) + 1;
+    if (reading_order == READING_ORDER_MAX && found) {
+      break;
+    }
+    zero_memory(state->read_buffer, sizeof(state->read_buffer));
+  }
+
+  return file;
 }

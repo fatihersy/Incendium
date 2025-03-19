@@ -252,6 +252,7 @@ typedef enum texture_id {
   TEX_ID_GAME_BG_SPACE,
   TEX_ID_BG_BLACK,
   TEX_ID_ICON_ATLAS,
+  TEX_ID_GAME_START_LOADING_SCREEN,
 
   TEX_ID_MAX,
 } texture_id;
@@ -682,15 +683,22 @@ typedef struct player_state {
   u16 wreck_right_sprite_queue_index;
   u16 last_played_sprite_id;
 
-  u16 level;
-  u16 health_max;
-  u16 health_current;
+  u32 level;
+  u32 health_max;
+  u32 health_current;
+  u32 health_regen;
   f32 health_perc;
   u32 exp_to_next_level;
   u32 exp_current;
   f32 exp_perc;
   f32 damage_break_time;
   f32 damage_break_current;
+  u32 damage;
+  u16 projectile_amouth;
+  f32 damage_area_multiply;
+  f32 move_speed_multiply;
+  f32 cooldown_multiply;
+  f32 exp_gain_multiply;
 
   bool is_player_have_ability_upgrade_points;
   bool is_initialized;

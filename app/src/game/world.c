@@ -345,6 +345,9 @@ bool world_system_initialize(camera_metrics* _in_camera_metrics, Vector2 resolut
 worldmap_stage* get_worldmap_locations(void) {
   return state->worldmap_locations;
 }
+worldmap_stage* get_active_worldmap(void) {
+  return &state->active_stage;
+}
 tilemap* get_active_map(void) {
   return &CURR_MAP;
 }
@@ -403,7 +406,6 @@ void drag_tilesheet(Vector2 vec) {
   state->palette.position.x += vec.x;
   state->palette.position.y += vec.y;
 }
-
 void render_map() {
   render_tilemap(&CURR_MAP, get_camera_view_rect(state->in_camera_metrics->handle));
 }

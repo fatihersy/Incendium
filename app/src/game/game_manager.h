@@ -22,7 +22,7 @@ void gm_start_game(worldmap_stage stage);
 void damage_any_spawn(Character2D *projectile);
 void damage_any_collider_by_type(Character2D *from_actor, actor_type to_type);
 void add_collision(rectangle_collision rect);
-
+void upgrade_player_stat(character_stat* stat);
 
 bool _add_ability(ability_type _type);
 Vector2 _get_player_position(bool centered);

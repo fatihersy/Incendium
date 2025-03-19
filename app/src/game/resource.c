@@ -42,6 +42,7 @@ bool resource_system_initialize(void) {
   load_texture("worldmap_wo_clouds.png",       false, (Vector2){ 0,  0}, TEX_ID_WORLDMAP_WO_CLOUDS);
   load_texture("game_bg_space.png",            false, (Vector2){ 0,  0}, TEX_ID_GAME_BG_SPACE);
   load_texture("icon_atlas.png",               false, (Vector2){ 0,  0}, TEX_ID_ICON_ATLAS);
+  load_texture("game_start_loading_screen.png",false, (Vector2){ 0,  0}, TEX_ID_GAME_START_LOADING_SCREEN);
   load_spritesheet("idle_left.png",                  SHEET_ID_PLAYER_ANIMATION_IDLE_LEFT,         15,   86,  86, 1,  4);
   load_spritesheet("idle_right.png",                 SHEET_ID_PLAYER_ANIMATION_IDLE_RIGHT,        15,   86,  86, 1,  4);
   load_spritesheet("move_left.png",                  SHEET_ID_PLAYER_ANIMATION_MOVE_LEFT,         10,   86,  86, 1,  6);
@@ -59,6 +60,7 @@ bool resource_system_initialize(void) {
   load_spritesheet("slider_right_button_edited.png", SHEET_ID_SLIDER_RIGHT_BUTTON,                 0,   11,  10, 1,  2);
   load_spritesheet("menu_button.png",                SHEET_ID_MENU_BUTTON,                         0,   80,  16, 1,  2);
   load_spritesheet("flat_button.png",                SHEET_ID_FLAT_BUTTON,                         0,   44,  14, 1,  2);
+  load_spritesheet("fireball.png",                   SHEET_ID_FIREBALL_ANIMATION,                 15,   32,  32, 1,  4);
   
   load_tilesheet(TILESHEET_TYPE_MAP, TEX_ID_MAP_TILESET_TEXTURE, 49, 63, 32);
 

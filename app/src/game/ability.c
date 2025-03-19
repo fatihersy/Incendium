@@ -83,9 +83,8 @@ void upgrade_ability(ability* abl) {
       case ABILITY_UPG_AMOUNT: { 
         u16 new_proj_count = abl->proj_count + 1;
         for (int i = abl->proj_count; i < new_proj_count; ++i) {
-          abl->projectiles[i].animation_sprite_queueindex = register_sprite(abl->proj_anim_sprite, true, false, abl->center_proj_anim);
-          abl->projectiles[i].damage = abl->base_damage + abl->level * 2;
           abl->projectiles[i].collision = (Rectangle) {0, 0, abl->proj_dim.x, abl->proj_dim.y};
+          abl->projectiles[i].damage = abl->base_damage + abl->level * 2;
           abl->projectiles[i].is_active = true;
         }
         abl->proj_count = new_proj_count;
@@ -277,7 +276,6 @@ void register_ability(
     TraceLog(LOG_WARNING, "ability::register_ability()::Ability:'%s's name length is out of bound!", _display_name);
     return;
   }
-
   abl.type = type;
   abl.level = 0;
   abl.base_damage = _damage;
@@ -291,6 +289,14 @@ void register_ability(
   copy_memory(abl.display_name, _display_name, TextLength(_display_name));
   copy_memory(abl.upgradables, _upgradables, sizeof(abl.upgradables));
 
+  for (int i = 0; i < MAX_ABILITY_PROJECTILE_SLOT; ++i) {
+    abl.projectiles[i] = (projectile){0};
+    abl.projectiles[i].animation_sprite_queueindex = register_sprite(abl.proj_anim_sprite, true, false, abl.center_proj_anim);
+    abl.projectiles[i].collision = (Rectangle) {0, 0, abl.proj_dim.x, abl.proj_dim.y};
+    abl.projectiles[i].damage = abl.base_damage;
+    abl.projectiles[i].is_active = false;
+  }
+
   state->abilities[type] = abl;
 }
 ability get_ability(ability_type _type) {
@@ -298,15 +304,6 @@ ability get_ability(ability_type _type) {
     return (ability){0};
   }
   ability abl = state->abilities[_type];
-  upgrade_ability(&abl);
-
-  for (int i = 0; i < abl.proj_count; ++i) {
-    abl.projectiles[i].animation_sprite_queueindex = register_sprite(abl.proj_anim_sprite, true, false, abl.center_proj_anim);
-    abl.projectiles[i].damage = abl.base_damage + abl.level * 2;
-    abl.projectiles[i].collision = (Rectangle) {0, 0, abl.proj_dim.x, abl.proj_dim.y};
-    abl.projectiles[i].is_active = true;
-  }
-  
   return abl;
 }
 
