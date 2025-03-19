@@ -41,7 +41,7 @@ bool world_system_initialize(camera_metrics* _in_camera_metrics, Vector2 resolut
         resolution_div2.y
       },
       .map_id = 0,
-      .is_active = true
+      .is_active = false
     };
     state->worldmap_locations[1] = (worldmap_stage) {
       .displayname = "Stage 2",

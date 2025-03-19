@@ -32,7 +32,7 @@ bool resource_system_initialize(void) {
   load_texture("crimson_fantasy_panel_bg.png", false, (Vector2){ 0,  0}, TEX_ID_CRIMSON_FANTASY_PANEL_BG);
   load_texture("space_bg.png",                 false, (Vector2){ 0,  0}, TEX_ID_BACKGROUND);
   load_texture("bg_black.png",                 false, (Vector2){ 0,  0}, TEX_ID_BG_BLACK);
-  load_texture("fudesumi.png",                 true,  (Vector2){64, 64}, TEX_ID_ENEMY_TEXTURE);
+  load_texture("fudesumi.png",                 true,  (Vector2){64, 64}, TEX_ID_SPAWN_TEXTURE);
   load_texture("map_tileset.png",              false, (Vector2){ 0,  0}, TEX_ID_MAP_TILESET_TEXTURE);
   load_texture("progress_bar_inside_full.png", false, (Vector2){ 0,  0}, TEX_ID_PROGRESS_BAR_INSIDE_FULL);
   load_texture("progress_bar_outside_full.png",false, (Vector2){ 0,  0}, TEX_ID_PROGRESS_BAR_OUTSIDE_FULL);

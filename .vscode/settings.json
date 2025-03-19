@@ -1,5 +1,5 @@
 {
-    "workbench.colorTheme": "Monokai",
+    "workbench.colorTheme": "Default Dark Modern",
     "editor.minimap.enabled": false,
     "files.autoSave": "onFocusChange",
     "terminal.integrated.defaultProfile.windows": "pwsh7",
@@ -24,8 +24,8 @@
             "path": "D:/Program Files/PowerShell/7/pwsh.exe"
         }
     },
-    "editor.fontFamily": "Fira Code Retina",
-    "editor.fontSize": 16,
+    "editor.fontFamily": "Fira Code Medium",
+    "editor.fontSize": 15,
     "editor.fontLigatures": "'cv01', 'cv04', 'cv08', 'ss01', 'zero', 'cv14', 'cv17', 'ss05', 'ss04', 'cv18', 'ss03', 'cv30', 'ss02'",
     "terminal.integrated.fontFamily": "IBM Plex Mono",
     "workbench.editor.showTabs": "multiple",

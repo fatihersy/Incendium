@@ -113,11 +113,24 @@ void update_abilities(ability_play_system* system) {
     if (!abl->is_active || !abl->is_initialized) continue;
 
     switch (abl->move_pattern) {
-      case MOVE_TYPE_SATELLITE: movement_satellite(abl); continue;
-      case MOVE_TYPE_BULLET: movement_bullet(abl); continue;
-      case MOVE_TYPE_COMET: movement_comet(abl); continue;
-      default: continue;
+      case MOVE_TYPE_SATELLITE: movement_satellite(abl); break;
+      case MOVE_TYPE_BULLET: movement_bullet(abl); break;
+      case MOVE_TYPE_COMET: movement_comet(abl); break;
+      default: {  
+        TraceLog(LOG_ERROR, "ability::update_abilities()::Unsuppported ability movement type");
+        break;
+      }
     } 
+
+    for (i32 j = 0; j<MAX_ABILITY_PROJECTILE_SLOT; ++j) {
+      if (!abl->projectiles[j].is_active) { continue; }
+
+      event_fire(EVENT_CODE_DAMAGE_ANY_SPAWN_IF_COLLIDE, (event_context) {
+        .data.u16[0] = abl->projectiles[j].collision.x, .data.u16[1] = abl->projectiles[j].collision.y,
+        .data.u16[2] = abl->projectiles[j].collision.width, .data.u16[3] = abl->projectiles[j].collision.height,
+        .data.u16[4] = abl->projectiles[j].damage,
+      });
+    }
 
     // TODO: Handle all situations
   }
@@ -153,12 +166,6 @@ void movement_satellite(ability* abl) {
 
     abl->projectiles[i].collision.x = abl->projectiles[i].position.x;
     abl->projectiles[i].collision.y = abl->projectiles[i].position.y;
-    
-    event_fire(EVENT_CODE_RELOCATE_PROJECTILE_COLLISION, (event_context) {
-      .data.u16[0] = abl->projectiles[i].id,
-      .data.u16[1] = abl->projectiles[i].collision.x,
-      .data.u16[2] = abl->projectiles[i].collision.y
-    });
   }
 }
 void movement_bullet(ability* abl) {
@@ -191,11 +198,6 @@ void movement_bullet(ability* abl) {
     abl->projectiles[i].collision.x = abl->projectiles[i].position.x;
     abl->projectiles[i].collision.y = abl->projectiles[i].position.y;
     
-    event_fire(EVENT_CODE_RELOCATE_PROJECTILE_COLLISION, (event_context) {
-      .data.u16[0] = abl->projectiles[i].id,
-      .data.u16[1] = abl->projectiles[i].collision.x,
-      .data.u16[2] = abl->projectiles[i].collision.y
-    });
   }
 }
 void movement_comet(ability* abl) {
@@ -240,12 +242,6 @@ void movement_comet(ability* abl) {
 
     abl->projectiles[i].collision.x = abl->projectiles[i].position.x;
     abl->projectiles[i].collision.y = abl->projectiles[i].position.y;
-    
-    event_fire(EVENT_CODE_RELOCATE_PROJECTILE_COLLISION, (event_context) {
-      .data.u16[0] = abl->projectiles[i].id,
-      .data.u16[1] = abl->projectiles[i].collision.x,
-      .data.u16[2] = abl->projectiles[i].collision.y
-    });
   }
 }
 

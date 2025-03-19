@@ -100,7 +100,7 @@ bool initialize_scene_in_game(camera_metrics* _camera_metrics) {
   state->in_camera_metrics = _camera_metrics;
 
   set_is_game_paused(true);
-  state->stage = IN_GAME_STAGE_PASSIVE_CHOICE;
+  state->stage = IN_GAME_STAGE_MAP_CHOICE;
   state->clouds_animation_playing = false;
   state->hovered_stage = U16_MAX;
   event_fire(EVENT_CODE_UI_START_FADEIN_EFFECT, (event_context){ .data.u16[0] = CLOUDS_ANIMATION_DURATION });
@@ -372,7 +372,6 @@ void start_game(character_stat* stat) {
   }
   upgrade_player_stat(stat);
   state->stage = IN_GAME_STAGE_PLAY;
-  set_worldmap_location(1); // HACK: remove later. this is for skip the stage map choosing 
   gm_start_game(*get_active_worldmap());
 }
 

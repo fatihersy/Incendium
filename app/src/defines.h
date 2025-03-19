@@ -182,10 +182,10 @@ typedef enum shader_id {
 } shader_id;
 
 typedef enum actor_type {
-  ENEMY,
-  PROJECTILE_ENEMY,
-  PLAYER,
-  PROJECTILE_PLAYER,
+  ACTOR_TYPE_SPAWN,
+  ACTOR_TYPE_PROJECTILE_SPAWN,
+  ACTOR_TYPE_PLAYER,
+  ACTOR_TYPE_PROJECTILE_PLAYER,
 } actor_type;
 
 typedef enum scene_type {
@@ -238,7 +238,7 @@ typedef enum character_stats {
 typedef enum texture_id {
   TEX_ID_UNSPECIFIED,
   TEX_ID_PLAYER_TEXTURE,
-  TEX_ID_ENEMY_TEXTURE,
+  TEX_ID_SPAWN_TEXTURE,
   TEX_ID_BACKGROUND,
   TEX_ID_MAP_TILESET_TEXTURE,
   TEX_ID_PROGRESS_BAR_OUTSIDE_FULL,
@@ -521,13 +521,6 @@ typedef struct tilemap_stringtify_package {
   bool is_success;
 }tilemap_stringtify_package;
 
-typedef struct rectangle_collision {
-  u16 owner_id;
-  actor_type owner_type;
-  Rectangle rect;
-  bool is_active;
-} rectangle_collision;
-
 typedef struct spritesheet {
   spritesheet_id type;
   u16 col_total;
@@ -573,6 +566,7 @@ typedef struct Character2D {
   u16 health;
   i16 damage;
   f32 speed;
+  bool is_dead;
 } Character2D;
 
 typedef struct projectile {
