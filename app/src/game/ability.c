@@ -47,17 +47,17 @@ bool ability_system_initialize(camera_metrics* _camera_metrics, app_settings* se
   state->settings = settings;
   state->in_camera_metrics = _camera_metrics;
 
-  register_ability("Fireball", (Rectangle) {192, 640, 32, 32}, 
+  register_ability("Fireball", (Rectangle){704, 768, 32, 32}, 
     (ability_upgradables[ABILITY_UPG_MAX]){ABILITY_UPG_DAMAGE, ABILITY_UPG_SPEED, ABILITY_UPG_AMOUNT, ABILITY_UPG_UNDEFINED, ABILITY_UPG_UNDEFINED},
     ABILITY_TYPE_FIREBALL, MOVE_TYPE_SATELLITE, 
     1, 0, 15, (Vector2) {30, 30}, SHEET_ID_FIREBALL_ANIMATION, true
   );
-  register_ability("Bullet", (Rectangle) { 32,   0, 32, 32}, 
+  register_ability("Bullet", (Rectangle){544, 128, 32, 32}, 
     (ability_upgradables[ABILITY_UPG_MAX]){ABILITY_UPG_DAMAGE, ABILITY_UPG_HITBOX, ABILITY_UPG_UNDEFINED, ABILITY_UPG_UNDEFINED, ABILITY_UPG_UNDEFINED},
     ABILITY_TYPE_BULLET, MOVE_TYPE_BULLET, 
     1, 1.75, 15, (Vector2) {30, 30}, SHEET_ID_FIREBALL_ANIMATION, true
   );
-  register_ability("Comet",  (Rectangle) { 96,   0, 32, 32}, 
+  register_ability("Comet",  (Rectangle) {576, 128, 32, 32}, 
     (ability_upgradables[ABILITY_UPG_MAX]){ABILITY_UPG_DAMAGE, ABILITY_UPG_HITBOX, ABILITY_UPG_AMOUNT, ABILITY_UPG_UNDEFINED, ABILITY_UPG_UNDEFINED},
     ABILITY_TYPE_COMET, MOVE_TYPE_COMET, 
     2, 0, 15, (Vector2) {30, 30}, SHEET_ID_FIREBALL_ANIMATION, true

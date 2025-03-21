@@ -33,7 +33,6 @@ bool resource_system_initialize(void) {
   // NOTE: resource files inside the pak file
   load_texture("atlas.png", false, (Vector2){ 0, 0}, TEX_ID_ASSET_ATLAS);
   load_texture("worldmap_wo_clouds.png",       false, (Vector2){ 0,  0}, TEX_ID_WORLDMAP_WO_CLOUDS);
-  load_texture("game_start_loading_screen.png",false, (Vector2){ 0,  0}, TEX_ID_GAME_START_LOADING_SCREEN);
 
   load_texture_from_atlas(ATLAS_TEX_ID_MAP_TILESET_TEXTURE,       (Rectangle){   0,   0,  1568, 2016});
   load_texture_from_atlas(ATLAS_TEX_ID_PROGRESS_BAR_OUTSIDE_FULL, (Rectangle){1568, 112,    64,    9});

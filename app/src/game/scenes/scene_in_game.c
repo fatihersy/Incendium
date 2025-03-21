@@ -191,6 +191,23 @@ void render_interface_in_game(void) {
   
   switch (state->stage) {
     case IN_GAME_STAGE_MAP_CHOICE: {
+      for (int i=0; i<MAX_WORLDMAP_LOCATIONS; ++i) {
+        if (state->hovered_stage == i) {
+          panel* pnl = &state->worldmap_selection_panel;
+          Rectangle scrloc = (Rectangle){
+            state->worldmap_locations[i].screen_location.x * GetScreenWidth() - WORLDMAP_LOC_PIN_SIZE_DIV2, 
+            state->worldmap_locations[i].screen_location.y * GetScreenHeight() - WORLDMAP_LOC_PIN_SIZE_DIV2,
+            WORLDMAP_LOC_PIN_SIZE, WORLDMAP_LOC_PIN_SIZE
+          };
+          pnl->dest = (Rectangle) {scrloc.x + WORLDMAP_LOC_PIN_SIZE, scrloc.y + WORLDMAP_LOC_PIN_SIZE_DIV2, get_resolution_div4()->x, get_resolution_div4()->y};
+          DrawCircleGradient(scrloc.x + WORLDMAP_LOC_PIN_SIZE_DIV2, scrloc.y + WORLDMAP_LOC_PIN_SIZE_DIV2, 100, (Color){236,240,241,50}, (Color){0});
+          gui_panel_scissored((*pnl), false, {
+            gui_label(state->worldmap_locations[i].displayname, FONT_TYPE_MOOD, 10, (Vector2) {
+              pnl->dest.x + pnl->dest.width *.5f, pnl->dest.y + pnl->dest.height*.5f
+            }, WHITE, true);
+          });
+        }
+      }
       break;
     }
     case IN_GAME_STAGE_PASSIVE_CHOICE: {

@@ -578,7 +578,19 @@ typedef struct spritesheet {
 
 typedef struct Character2D {
   u16 character_id;
+  u16 health;
+  i16 damage;
+  f32 speed;
+  actor_type type;
+  Rectangle collision;
+  world_direction w_direction;
   spritesheet animation;
+  Vector2 position;
+  u16 rotation;
+  f32 scale;
+  bool is_dead;
+  bool initialized;
+
   // 128 byte buffer
   union {
     i64 i64[2];
@@ -597,17 +609,6 @@ typedef struct Character2D {
 
     char c[16];
   } buffer;
-  Rectangle collision;
-  Vector2 position;
-  world_direction w_direction;
-  actor_type type;
-  
-  u16 rotation;
-  u16 health;
-  i16 damage;
-  f32 speed;
-  bool is_dead;
-  bool initialized;
 } Character2D;
 
 typedef struct projectile {

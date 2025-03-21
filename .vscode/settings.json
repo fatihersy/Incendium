@@ -65,6 +65,11 @@
             "text": "LABEL:",
             "color": "#B5B8BE",
             "backgroundColor": "rgba(0,0,0,0)"
+        },
+        {
+            "text": "INFO:",
+            "color": "#f1c40f",
+            "backgroundColor": "rgba(0,0,0,0)"
         }
     ],
     "todohighlight.include": [

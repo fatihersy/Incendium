@@ -57,13 +57,13 @@ u16 spawn_character(Character2D _character) {
     TraceLog(LOG_WARNING, "spawn_character()::Spawn count is out of bounds");
     return INVALID_ID16;
   }
+  _character.animation.sheet_id = SHEET_ID_SPAWN_ZOMBIE_ANIMATION_IDLE_LEFT;
+  set_sprite(&_character.animation, true, false, false);
 
   _character.character_id = state->current_spawn_count;
   _character.initialized = true;
-  _character.collision.width = _character.animation.current_frame_rect.width;
-  _character.collision.height = _character.animation.current_frame_rect.height;
-  _character.animation.sheet_id = SHEET_ID_SPAWN_ZOMBIE_ANIMATION_IDLE_LEFT;
-  set_sprite(&_character.animation, true, false, false);
+  _character.collision.width = _character.animation.current_frame_rect.width * _character.scale;
+  _character.collision.height = _character.animation.current_frame_rect.height * _character.scale;
   
   state->spawns[state->current_spawn_count] = _character;
   state->current_spawn_count++;
@@ -107,7 +107,9 @@ bool render_spawns(void) {
   // Enemies
   for (i32 i = 0; i < state->current_spawn_count; ++i) {
     if (state->spawns[i].initialized) {
-      play_sprite_on_site(&state->spawns[i].animation, WHITE, state->spawns[i].collision);
+      Rectangle collision = state->spawns[i].collision;
+      play_sprite_on_site(&state->spawns[i].animation, WHITE, collision);
+      DrawRectangleLines(collision.x, collision.y, collision.width, collision.height, RED);
     }
   }
   return true;

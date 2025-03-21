@@ -4,12 +4,14 @@
 #include "core/event.h"
 #include "core/fmemory.h"
 
+#include "game/spritesheet.h"
+
 // To avoid dublicate symbol errors. Implementation in defines.h
 extern const u32 level_curve[MAX_PLAYER_LEVEL+1];
+
 static player_state* player;
 
-#define PSPRITESHEET_SYSTEM player->spritesheet_system // Don't forget undef at the bottom of the file
-#include "game/spritesheet.h"
+#define PLAYER_SCALE 3.f
 
 void play_anim(spritesheet_id player_anim_sheet);
 void add_exp_to_player(u32 exp);
@@ -33,17 +35,19 @@ bool player_system_initialize(void) {
 
     player->position.x = 0;
     player->position.y = 0;
-    player->dimentions = (Vector2) {86, 86}; // TODO: Hardcoded dimentions
+    player->dimentions = (Vector2) {22, 32}; // INFO: Hardcoded player dimentions
+    player->dimentions.x *= PLAYER_SCALE;
+    player->dimentions.y *= PLAYER_SCALE;
     player->dimentions_div2 = (Vector2) {player->dimentions.x/2, player->dimentions.y/2};
 
     //player->ability_system = ability_manager_initialize(PLAYER, player->dimentions);
 
     player->collision = (Rectangle)
     {
-        .x = player->position.x - player->dimentions.x / 2.f,
-        .y = player->position.y - player->dimentions.y / 2.f,
-        .width = player->dimentions.x,
-        .height = player->dimentions.y
+      .x = player->position.x - player->dimentions.x / 2.f,
+      .y = player->position.y - player->dimentions.y / 2.f,
+      .width = player->dimentions.x,
+      .height = player->dimentions.y
     };
 
     player->is_dead = false;
@@ -391,6 +395,4 @@ bool player_system_on_event(u16 code, event_context context) {
 
     return false;
 }
-
-#undef PSPRITESHEET_SYSTEM
 

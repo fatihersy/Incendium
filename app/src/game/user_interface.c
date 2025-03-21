@@ -467,6 +467,16 @@ void gui_progress_bar(progress_bar_id bar_id, Vector2 pos, bool _should_center) 
     TraceLog(LOG_ERROR, "user_interface::gui_player_experiance_process()::Player experiance process bar didn't initialized");
     return;
   }
+  atlas_texture* inside_tex = _get_atlas_texture_by_enum(prg_bar.type.body_inside);
+  Texture2D* atlas = _get_texture_by_enum(ATLAS_TEXTURE_ID);
+  if (!inside_tex) {
+    TraceLog(LOG_ERROR, "user_interface::gui_player_experiance_process()::progress bar atlas is null");
+    return;
+  }
+  f32 start_uv = inside_tex->source.x / atlas->width;
+  f32 end_uv = (inside_tex->source.x + inside_tex->source.width) / atlas->width;
+
+  f32 process = start_uv + (end_uv - start_uv) * prg_bar.progress;
 
   draw_atlas_texture_stretch(
     prg_bar.type.body_outside, 
@@ -478,10 +488,10 @@ void gui_progress_bar(progress_bar_id bar_id, Vector2 pos, bool _should_center) 
   );
 
   BeginShaderMode(get_shader_by_enum(prg_bar.type.mask_shader_id)->handle);
-  set_shader_uniform(prg_bar.type.mask_shader_id, 0, (data_pack) {.data.f32[0] = prg_bar.progress});
+  set_shader_uniform(prg_bar.type.mask_shader_id, 0, (data_pack) {.data.f32[0] = process});
   draw_atlas_texture_stretch(
     prg_bar.type.body_inside, 
-    pos, 
+    pos,
     prg_bar.scale, 
     (Rectangle) {.x = 27, .y = 0, .width = 10, .height = 9},
     prg_bar.width_multiply,
@@ -526,11 +536,9 @@ void draw_atlas_texture_stretch(atlas_texture_id body, Vector2 pos, Vector2 scal
     second_dest.x -= first_dest.width + (second_dest.width / 2.f);
     third_dest.x  -= first_dest.width + (second_dest.width / 2.f);
   }
-  DrawTexturePro(*body_tex->atlas_handle, first_source, first_dest, (Vector2) {0}, 0, WHITE);
-
-  DrawTexturePro(*body_tex->atlas_handle, stretch_part, second_dest, (Vector2) {0}, 0, WHITE);
-  
-  DrawTexturePro(*body_tex->atlas_handle, third_source, third_dest, (Vector2) {0}, 0, WHITE);
+  gui_draw_atlas_texture_id_pro(body, first_source, first_dest, true);
+  gui_draw_atlas_texture_id_pro(body, stretch_part, second_dest, true);
+  gui_draw_atlas_texture_id_pro(body, third_source, third_dest, true);
 }
 
 void gui_slider(slider_id _id, Vector2 pos, Vector2 offset, f32 offset_scale) {

@@ -13,12 +13,12 @@ uniform float progress = 0.0;
 
 void main()
 {
-    vec4 source = texture(texture0, fragTexCoord);
-    
-    if(fragTexCoord.x < progress) {
-        finalColor = source;
-    }
-    else {
-        finalColor = vec4(0.0, 0.0, 0.0, 0.0);
-    }
+  vec4 source = texture(texture0, fragTexCoord);
+  
+  if(fragTexCoord.x < progress) {
+      finalColor = source;
+  }
+  else {
+      finalColor = vec4(0.0, 0.0, 0.0, 0.0);
+  }
 }

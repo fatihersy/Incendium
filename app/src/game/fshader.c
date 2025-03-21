@@ -22,7 +22,7 @@ void initialize_shader_system(void) {
   state = (shader_system_state *)allocate_memory_linear(sizeof(shader_system_state), true);
 
   // NOTE: _path = "%s%s", SHADER_PATH, _path
-  load_shader(0, "mask.fs", SHADER_ID_PROGRESS_BAR_MASK);
+  load_shader(0, "prg_bar_mask.fs", SHADER_ID_PROGRESS_BAR_MASK);
   load_shader(0, "fade_transition.fs", SHADER_ID_FADE_TRANSITION);
 
   shader_add_uniform(SHADER_ID_PROGRESS_BAR_MASK, "progress", SHADER_UNIFORM_FLOAT);
@@ -127,8 +127,7 @@ void set_shader_uniform(shader_id _id, i32 index, data_pack _data_pack) {
   }
 }
 
-void load_shader(const char *_vs_path, const char *_fs_path,
-                 shader_id _id) {
+void load_shader(const char *_vs_path, const char *_fs_path, shader_id _id) {
   const char *vs_path = shader_path(_vs_path);
   if (!FileExists(vs_path) && vs_path) {
     TraceLog(LOG_ERROR, "resource::load_shader()::Vertex path does not exist");
@@ -149,7 +148,6 @@ void load_shader(const char *_vs_path, const char *_fs_path,
   state->shaders[_id].handle = LoadShader(vs_path, fs_path);
   state->shaders[_id].total_locations = 0;
 }
-
 
 void shader_add_uniform(shader_id _id, const char *_name, ShaderUniformDataType _data_id) {
   if (_id >= SHADER_ID_MAX || _id <= SHADER_ID_UNSPECIFIED) {

@@ -142,10 +142,14 @@ void gm_start_game(worldmap_stage stage) {
   {
     Vector2 position = (Vector2) {
       get_random((i32)state->stage.spawning_areas[0].x, (i32)state->stage.spawning_areas[0].x + state->stage.spawning_areas[0].width),
-      get_random((i32)state->stage.spawning_areas[0].y, (i32)state->stage.spawning_areas[0].y + state->stage.spawning_areas[0].height)};
+      get_random((i32)state->stage.spawning_areas[0].y, (i32)state->stage.spawning_areas[0].y + state->stage.spawning_areas[0].height)
+    };
+    i32 rnd = get_random(0, 100);
+    f32 scale = 2.f + (.5f * rnd / 100.f); // 2.f is minimum and "min + (.5f)" is max
     spawn_character((Character2D) {
       .character_id = 0,
       .buffer.u16[0] = get_random(SPAWN_TYPE_UNDEFINED+1, SPAWN_TYPE_MAX-1),
+      .scale = scale,
       .initialized = false,
       .position = position,
       .w_direction = WORLD_DIRECTION_LEFT,
