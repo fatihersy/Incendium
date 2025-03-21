@@ -83,8 +83,8 @@ bool initialize_scene_in_game(camera_metrics* _camera_metrics) {
   
   panel default_panel = (panel) {
     .signal_state  = BTN_STATE_RELEASED,
-    .bg_tex_id     = TEX_ID_CRIMSON_FANTASY_PANEL_BG,
-    .frame_tex_id  = TEX_ID_CRIMSON_FANTASY_PANEL,
+    .bg_tex_id     = ATLAS_TEX_ID_CRIMSON_FANTASY_PANEL_BG,
+    .frame_tex_id  = ATLAS_TEX_ID_CRIMSON_FANTASY_PANEL,
     .bg_tint       = (Color) { 30, 39, 46, 245},
     .bg_hover_tint = (Color) { 52, 64, 76, 245},
     .offsets = (Vector4) {6, 6, 6, 6},
@@ -156,29 +156,15 @@ void render_scene_in_game(void) {
         state->clouds_animation_timer = 0;
         event_fire(EVENT_CODE_UI_START_FADEOUT_EFFECT, (event_context){ .data.u16[0] = CLOUDS_ANIMATION_DURATION});
       }
-      if (state->clouds_animation_playing && (state->clouds_animation_timer >= 0 && state->clouds_animation_timer <= CLOUDS_ANIMATION_DURATION)) {
-        f32 clouds_mul = EaseQuadIn(state->clouds_animation_timer, 2, -1, CLOUDS_ANIMATION_DURATION);
-        f32 worldmap_mul = EaseQuadIn(state->clouds_animation_timer, 0.75f, 0.25f, CLOUDS_ANIMATION_DURATION);
-        gui_draw_texture_id_center(TEX_ID_WORLDMAP_WO_CLOUDS, 
-          *get_resolution_div2(), VECTOR2(GetScreenWidth() * worldmap_mul, GetScreenHeight() * worldmap_mul), true);
-        gui_draw_texture_id_center(TEX_ID_WORLDMAP_CLOUDS, 
-          *get_resolution_div2(), VECTOR2(GetScreenWidth() * clouds_mul, GetScreenHeight() * clouds_mul), true);
-        state->clouds_animation_timer++;
-        if (state->clouds_animation_timer > CLOUDS_ANIMATION_DURATION) {
-          state->clouds_animation_playing = false;
-          state->clouds_animation_timer = 0;
-        }
-      }
-      else{
-        gui_draw_texture_id(TEX_ID_WORLDMAP_WO_CLOUDS, (Rectangle) {0, 0, GetScreenWidth(), GetScreenHeight()});
-        for (int i=0; i<MAX_WORLDMAP_LOCATIONS; ++i) {
-          if (state->worldmap_locations[i].is_active) {
-            Vector2 scrloc = (Vector2) {
-              state->worldmap_locations[i].screen_location.x * GetScreenWidth(), 
-              state->worldmap_locations[i].screen_location.y * GetScreenHeight()
-            };
-            gui_draw_map_stage_pin(state->hovered_stage == i, scrloc);
-          }
+ 
+      gui_draw_texture_id(TEX_ID_WORLDMAP_WO_CLOUDS, (Rectangle) {0, 0, GetScreenWidth(), GetScreenHeight()});
+      for (int i=0; i<MAX_WORLDMAP_LOCATIONS; ++i) {
+        if (state->worldmap_locations[i].is_active) {
+          Vector2 scrloc = (Vector2) {
+            state->worldmap_locations[i].screen_location.x * GetScreenWidth(), 
+            state->worldmap_locations[i].screen_location.y * GetScreenHeight()
+          };
+          gui_draw_map_stage_pin(state->hovered_stage == i, scrloc);
         }
       }
       break;
@@ -399,7 +385,7 @@ void draw_upgrade_panel(ability* abl, ability upg, Rectangle panel_dest) {
   const u16 level_ind_font_size = 9; 
   const u16 upgr_font_size = 6; 
 
-  gui_draw_texture_id_pro(TEX_ID_ABILITY_ICON_ATLAS, upg.icon_src, icon_rect);
+  gui_draw_atlas_texture_id_pro(ATLAS_TEX_ID_ICON_ATLAS, upg.icon_src, icon_rect, true);
   gui_label(upg.display_name, FONT_TYPE_MOOD, title_font_size, ability_name_pos, WHITE, true);
 
   if (upg.level == 1) {
@@ -443,7 +429,7 @@ void draw_passive_selection_panel(character_stat* stat, Rectangle panel_dest) {
 
   const u16 title_font_size = 10; 
   
-  gui_draw_texture_id_pro(TEX_ID_ICON_ATLAS, stat->passive_icon_src, icon_rect);
+  gui_draw_atlas_texture_id_pro(ATLAS_TEX_ID_ICON_ATLAS, stat->passive_icon_src, icon_rect, true);
   gui_label(stat->passive_display_name, FONT_TYPE_MOOD, title_font_size, passive_name_pos, WHITE, true);
   
   const u16 desc_font_size = 6;

@@ -5,7 +5,6 @@
 #include "core/event.h"
 #include "core/fmemory.h"
 
-#include "game/resource.h"
 #include "game/ability.h"
 #include "game/player.h"
 #include "game/spawn.h"
@@ -70,10 +69,7 @@ bool game_manager_initialize(camera_metrics* _camera_metrics) {
 void update_game_manager(void) {
   if (!state) {
     return;
-  }/* 
-  if (IsKeyDown(KEY_LEFT_SHIFT) && IsKeyDown(KEY_D)) {
-    TraceLog(LOG_TRACE, "game_manager::update_game_manager()::Tracing");
-  } */
+  }
 
   update_collisions();
   update_player();
@@ -147,10 +143,9 @@ void gm_start_game(worldmap_stage stage) {
     Vector2 position = (Vector2) {
       get_random((i32)state->stage.spawning_areas[0].x, (i32)state->stage.spawning_areas[0].x + state->stage.spawning_areas[0].width),
       get_random((i32)state->stage.spawning_areas[0].y, (i32)state->stage.spawning_areas[0].y + state->stage.spawning_areas[0].height)};
-    Texture2D *tex = get_texture_by_enum(TEX_ID_SPAWN_TEXTURE);
     spawn_character((Character2D) {
       .character_id = 0,
-      .tex = tex,
+      .buffer.u16[0] = get_random(SPAWN_TYPE_UNDEFINED+1, SPAWN_TYPE_MAX-1),
       .initialized = false,
       .position = position,
       .w_direction = WORLD_DIRECTION_LEFT,

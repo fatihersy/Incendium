@@ -46,11 +46,6 @@ bool player_system_initialize(void) {
         .height = player->dimentions.y
     };
 
-    //add_ability(&player->ability_system, FIREBALL);
-    // add_ability(ability_system, salvo);
-    // add_ability(ability_system, radiation);
-    // add_ability(ability_system, direct_fire);
-
     player->is_dead = false;
     player->is_moving = false;
     player->w_direction = WORLD_DIRECTION_LEFT;
@@ -65,15 +60,25 @@ bool player_system_initialize(void) {
     player->health_current = player->health_max;
     player->health_perc = (float) player->health_current / player->health_max;
 
-    player->move_left_sprite_queue_index = register_sprite(SHEET_ID_PLAYER_ANIMATION_MOVE_LEFT, true, false, true);
-    player->move_right_sprite_queue_index = register_sprite(SHEET_ID_PLAYER_ANIMATION_MOVE_RIGHT, true, false, true);
-    player->idle_left_sprite_queue_index = register_sprite(SHEET_ID_PLAYER_ANIMATION_IDLE_LEFT, true, false, true);
-    player->idle_right_sprite_queue_index = register_sprite(SHEET_ID_PLAYER_ANIMATION_IDLE_RIGHT, true, false, true);
-    player->take_damage_left_sprite_queue_index = register_sprite(SHEET_ID_PLAYER_ANIMATION_TAKE_DAMAGE_LEFT, true, false, true);
-    player->take_damage_right_sprite_queue_index = register_sprite(SHEET_ID_PLAYER_ANIMATION_TAKE_DAMAGE_RIGHT, true, false, true);
-    player->wreck_left_sprite_queue_index = register_sprite(SHEET_ID_PLAYER_ANIMATION_WRECK_LEFT, true, false, true);
-    player->wreck_right_sprite_queue_index = register_sprite(SHEET_ID_PLAYER_ANIMATION_WRECK_RIGHT, true, false, true);
-    player->last_played_sprite_id = player->idle_left_sprite_queue_index; // The position player starts. To avoid from the error when move firstly called
+    player->move_left_sprite.sheet_id = SHEET_ID_PLAYER_ANIMATION_MOVE_LEFT;
+    player->move_right_sprite.sheet_id = SHEET_ID_PLAYER_ANIMATION_MOVE_RIGHT;
+    player->idle_left_sprite.sheet_id = SHEET_ID_PLAYER_ANIMATION_IDLE_LEFT;
+    player->idle_right_sprite.sheet_id = SHEET_ID_PLAYER_ANIMATION_IDLE_RIGHT;
+    player->take_damage_left_sprite.sheet_id =  SHEET_ID_PLAYER_ANIMATION_TAKE_DAMAGE_LEFT;
+    player->take_damage_right_sprite.sheet_id = SHEET_ID_PLAYER_ANIMATION_TAKE_DAMAGE_RIGHT;
+    player->wreck_left_sprite.sheet_id = SHEET_ID_PLAYER_ANIMATION_WRECK_LEFT;
+    player->wreck_right_sprite.sheet_id = SHEET_ID_PLAYER_ANIMATION_WRECK_RIGHT;
+
+    set_sprite(&player->move_left_sprite, true, false, true);
+    set_sprite(&player->move_right_sprite, true, false, true);
+    set_sprite(&player->idle_left_sprite, true, false, true);
+    set_sprite(&player->idle_right_sprite, true, false, true);
+    set_sprite(&player->take_damage_left_sprite, true, false, true);
+    set_sprite(&player->take_damage_right_sprite, true, false, true);
+    set_sprite(&player->wreck_left_sprite, true, false, true);
+    set_sprite(&player->wreck_right_sprite, true, false, true);
+
+    player->last_played_animation = &player->idle_left_sprite; // The position player starts. To avoid from the error when move firstly called
     
     {
       player->stats[CHARACTER_STATS_UNDEFINED] = (character_stat){0};
@@ -239,8 +244,8 @@ bool update_player(void) {
   player->collision.y = player->position.y - player->dimentions_div2.y;
   player->collision.width = player->dimentions.x;
   player->collision.height = player->dimentions.y;
-  //update_abilities(&player->ability_system, player->position);
-  update_sprite_renderqueue();
+
+  update_sprite(player->last_played_animation);
   return true;
 }
 
@@ -311,43 +316,43 @@ void play_anim(spritesheet_id player_anim_sheet) {
     };
     switch (player_anim_sheet) {
         case SHEET_ID_PLAYER_ANIMATION_MOVE_LEFT: {
-            play_sprite_on_site(player->move_left_sprite_queue_index, dest, WHITE);
-            player->last_played_sprite_id = player->move_left_sprite_queue_index;
+            play_sprite_on_site(&player->move_left_sprite, WHITE, dest);
+            player->last_played_animation = &player->move_left_sprite;
             break;
         }
         case SHEET_ID_PLAYER_ANIMATION_MOVE_RIGHT: {
-            play_sprite_on_site(player->move_right_sprite_queue_index, dest, WHITE);
-            player->last_played_sprite_id = player->move_right_sprite_queue_index;
+            play_sprite_on_site(&player->move_right_sprite, WHITE, dest);
+            player->last_played_animation = &player->move_right_sprite;
             break;
         }
         case SHEET_ID_PLAYER_ANIMATION_IDLE_LEFT:  {
-            play_sprite_on_site(player->idle_left_sprite_queue_index, dest, WHITE);
-            player->last_played_sprite_id = player->idle_left_sprite_queue_index;
+            play_sprite_on_site(&player->idle_left_sprite, WHITE, dest);
+            player->last_played_animation = &player->idle_left_sprite;
             break;
         }
         case SHEET_ID_PLAYER_ANIMATION_IDLE_RIGHT:  {
-            play_sprite_on_site(player->idle_right_sprite_queue_index, dest, WHITE);
-            player->last_played_sprite_id = player->idle_right_sprite_queue_index;
+            play_sprite_on_site(&player->idle_right_sprite, WHITE, dest);
+            player->last_played_animation = &player->idle_right_sprite;
             break;
         }
         case SHEET_ID_PLAYER_ANIMATION_TAKE_DAMAGE_LEFT:  {
-            play_sprite_on_site(player->take_damage_left_sprite_queue_index, dest, WHITE);
-            player->last_played_sprite_id = player->take_damage_left_sprite_queue_index;
+            play_sprite_on_site(&player->take_damage_left_sprite, WHITE, dest);
+            player->last_played_animation = &player->take_damage_left_sprite;
             break;
         }
         case SHEET_ID_PLAYER_ANIMATION_TAKE_DAMAGE_RIGHT:  {
-            play_sprite_on_site(player->take_damage_right_sprite_queue_index, dest, WHITE);
-            player->last_played_sprite_id = player->take_damage_right_sprite_queue_index;
+            play_sprite_on_site(&player->take_damage_right_sprite, WHITE, dest);
+            player->last_played_animation = &player->take_damage_right_sprite;
             break;
         }
         case SHEET_ID_PLAYER_ANIMATION_WRECK_LEFT:  {
-            play_sprite_on_site(player->wreck_left_sprite_queue_index, dest, WHITE);
-            player->last_played_sprite_id = player->wreck_left_sprite_queue_index;
+            play_sprite_on_site(&player->wreck_left_sprite, WHITE, dest);
+            player->last_played_animation = &player->wreck_left_sprite;
             break;
         }
         case SHEET_ID_PLAYER_ANIMATION_WRECK_RIGHT:  {
-            play_sprite_on_site(player->wreck_right_sprite_queue_index, dest, WHITE);
-            player->last_played_sprite_id = player->wreck_right_sprite_queue_index;
+            play_sprite_on_site(&player->wreck_right_sprite, WHITE, dest);
+            player->last_played_animation = &player->wreck_right_sprite;
             break;
         }
         

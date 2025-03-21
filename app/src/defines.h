@@ -15,6 +15,8 @@
 #define MAX_IMAGE_SLOTS 10
 #define MAX_SPRITESHEET_SLOTS 50
 
+#define ATLAS_TEXTURE_ID TEX_ID_ASSET_ATLAS
+
 #define MAX_UPDATE_ABILITY_PANEL_COUNT 3
 #define MAX_UPDATE_PASSIVE_PANEL_COUNT 3
 
@@ -181,6 +183,15 @@ typedef enum shader_id {
   SHADER_ID_MAX,
 } shader_id;
 
+typedef enum spawn_type {
+  SPAWN_TYPE_UNDEFINED,
+  SPAWN_TYPE_ORANGE,
+  SPAWN_TYPE_GREEN,
+  SPAWN_TYPE_YELLOW,
+  SPAWN_TYPE_RED,
+  SPAWN_TYPE_MAX
+} spawn_type;
+
 typedef enum actor_type {
   ACTOR_TYPE_SPAWN,
   ACTOR_TYPE_PROJECTILE_SPAWN,
@@ -237,26 +248,28 @@ typedef enum character_stats {
 
 typedef enum texture_id {
   TEX_ID_UNSPECIFIED,
-  TEX_ID_PLAYER_TEXTURE,
-  TEX_ID_SPAWN_TEXTURE,
-  TEX_ID_BACKGROUND,
-  TEX_ID_MAP_TILESET_TEXTURE,
-  TEX_ID_PROGRESS_BAR_OUTSIDE_FULL,
-  TEX_ID_PROGRESS_BAR_INSIDE_FULL,
-  TEX_ID_CRIMSON_FANTASY_PANEL,
-  TEX_ID_CRIMSON_FANTASY_PANEL_BG,
-  TEX_ID_MAP_PROPS_ATLAS,
-  TEX_ID_ABILITY_ICON_ATLAS,
-  TEX_ID_WORLDMAP_W_CLOUDS,
   TEX_ID_WORLDMAP_WO_CLOUDS,
-  TEX_ID_WORLDMAP_CLOUDS,
-  TEX_ID_GAME_BG_SPACE,
-  TEX_ID_BG_BLACK,
-  TEX_ID_ICON_ATLAS,
   TEX_ID_GAME_START_LOADING_SCREEN,
-
+  TEX_ID_ASSET_ATLAS,
   TEX_ID_MAX,
 } texture_id;
+
+typedef enum atlas_texture_id {
+  ATLAS_TEX_ID_UNSPECIFIED,
+  ATLAS_TEX_ID_PLAYER_TEXTURE,
+  ATLAS_TEX_ID_SPAWN_TEXTURE,
+  ATLAS_TEX_ID_MAP_TILESET_TEXTURE,
+  ATLAS_TEX_ID_PROGRESS_BAR_OUTSIDE_FULL,
+  ATLAS_TEX_ID_PROGRESS_BAR_INSIDE_FULL,
+  ATLAS_TEX_ID_CRIMSON_FANTASY_PANEL,
+  ATLAS_TEX_ID_CRIMSON_FANTASY_PANEL_BG,
+  ATLAS_TEX_ID_MAP_PROPS_ATLAS,
+  ATLAS_TEX_ID_BG_BLACK,
+  ATLAS_TEX_ID_ICON_ATLAS,
+  ATLAS_TEX_ID_ZOMBIES_SPRITESHEET,
+  ATLAS_TEX_ID_UI_ASSET_ATLAS,
+  ATLAS_TEX_ID_MAX,
+} atlas_texture_id;
 
 typedef enum font_type {
   FONT_TYPE_UNDEFINED,
@@ -297,6 +310,14 @@ typedef enum spritesheet_id {
   SHEET_ID_PLAYER_ANIMATION_TAKE_DAMAGE_RIGHT,
   SHEET_ID_PLAYER_ANIMATION_WRECK_LEFT,
   SHEET_ID_PLAYER_ANIMATION_WRECK_RIGHT,
+  SHEET_ID_SPAWN_ZOMBIE_ANIMATION_IDLE_LEFT,
+  SHEET_ID_SPAWN_ZOMBIE_ANIMATION_IDLE_RIGHT,
+  SHEET_ID_SPAWN_ZOMBIE_ANIMATION_MOVE_LEFT,
+  SHEET_ID_SPAWN_ZOMBIE_ANIMATION_MOVE_RIGHT,
+  SHEET_ID_SPAWN_ZOMBIE_ANIMATION_TAKE_DAMAGE_LEFT,
+  SHEET_ID_SPAWN_ZOMBIE_ANIMATION_TAKE_DAMAGE_RIGHT,
+  SHEET_ID_SPAWN_ZOMBIE_ANIMATION_WRECK_LEFT,
+  SHEET_ID_SPAWN_ZOMBIE_ANIMATION_WRECK_RIGHT,
   SHEET_ID_BUTTON_REFLECTION_SHEET,
   SHEET_ID_MENU_BUTTON,
   SHEET_ID_FLAT_BUTTON,
@@ -449,14 +470,19 @@ typedef struct app_settings {
   i32 window_state;
 } app_settings;
 
+typedef struct atlas_texture {
+  Texture2D* atlas_handle;
+  Rectangle source;
+} atlas_texture;
+
 typedef struct tile_symbol {
   u8 c[3];
 }tile_symbol;
 
 typedef struct tilesheet {
-  tilesheet_type sheet_type;
-  texture_id tex_id;
-  Texture2D *tex;
+  tilesheet_type sheet_id;
+  atlas_texture atlas_source;
+  Texture2D *atlas_handle;
 
   tile_symbol tile_symbols[MAX_TILESHEET_UNIQUE_TILESLOTS_X][MAX_TILESHEET_UNIQUE_TILESLOTS_Y];
   u16 tile_count_x;
@@ -490,9 +516,10 @@ typedef struct tilemap_tile {
 } tilemap_tile;
 
 typedef struct tilemap_prop {
-	texture_id atlas_id;
+	atlas_texture_id atlas_id;
   u16 id;
   Rectangle source;
+  Rectangle relative_source;
   Rectangle dest;
   bool is_initialized;
 } tilemap_prop;
@@ -522,7 +549,10 @@ typedef struct tilemap_stringtify_package {
 }tilemap_stringtify_package;
 
 typedef struct spritesheet {
-  spritesheet_id type;
+  spritesheet_id sheet_id;
+  texture_id tex_id;
+  Texture2D* tex_handle;
+  Vector2 offset;
   u16 col_total;
   u16 row_total;
   u16 frame_total;
@@ -532,7 +562,6 @@ typedef struct spritesheet {
   Rectangle current_frame_rect;
   Rectangle coord;
 
-  Texture2D handle;
   Color tint;
   i16 fps;
   i16 counter;
@@ -547,31 +576,43 @@ typedef struct spritesheet {
   bool play_once;
 } spritesheet;
 
-typedef struct spritesheet_play_system {
-  spritesheet renderqueue[MAX_SPRITE_RENDERQUEUE];
-  u16 renderqueue_count;
-} spritesheet_play_system;
-
 typedef struct Character2D {
   u16 character_id;
-  Texture2D *tex;
-  bool initialized;
+  spritesheet animation;
+  // 128 byte buffer
+  union {
+    i64 i64[2];
+    u64 u64[2];
+    f64 f64[2];
 
+    i32 i32[4];
+    u32 u32[4];
+    f32 f32[4];
+
+    i16 i16[8];
+    u16 u16[8];
+
+    i8 i8[16];
+    u8 u8[16];
+
+    char c[16];
+  } buffer;
   Rectangle collision;
   Vector2 position;
   world_direction w_direction;
   actor_type type;
-
+  
   u16 rotation;
   u16 health;
   i16 damage;
   f32 speed;
   bool is_dead;
+  bool initialized;
 } Character2D;
 
 typedef struct projectile {
   u16 id;
-  u16 animation_sprite_queueindex;
+  spritesheet animation;
   Vector2 position;
   Rectangle collision;
   world_direction direction;
@@ -602,13 +643,13 @@ typedef struct projectile {
 
 typedef struct ability {
   ability_type type;
+  spritesheet_id anim_id;
   void* p_owner;
   Vector2 position;
   u16 level;
   u16 base_damage;
   u16 rotation;
   projectile projectiles[MAX_ABILITY_PROJECTILE_SLOT];
-  spritesheet_id proj_anim_sprite;
   movement_pattern move_pattern;
   ability_upgradables upgradables[ABILITY_UPG_MAX];
   u16 proj_count;
@@ -659,7 +700,6 @@ typedef struct character_stat {
 typedef struct player_state {
   Rectangle collision;
   ability_play_system ability_system;
-  spritesheet_play_system spritesheet_system;
   ability_type starter_ability;
   character_stat stats[CHARACTER_STATS_MAX];
 
@@ -668,15 +708,15 @@ typedef struct player_state {
   Vector2 dimentions_div2;
   world_direction w_direction;
 
-  u16 move_left_sprite_queue_index;
-  u16 move_right_sprite_queue_index;
-  u16 idle_left_sprite_queue_index;
-  u16 idle_right_sprite_queue_index;
-  u16 take_damage_left_sprite_queue_index;
-  u16 take_damage_right_sprite_queue_index;
-  u16 wreck_left_sprite_queue_index;
-  u16 wreck_right_sprite_queue_index;
-  u16 last_played_sprite_id;
+  spritesheet move_left_sprite;
+  spritesheet move_right_sprite;
+  spritesheet idle_left_sprite;
+  spritesheet idle_right_sprite;
+  spritesheet take_damage_left_sprite;
+  spritesheet take_damage_right_sprite;
+  spritesheet wreck_left_sprite;
+  spritesheet wreck_right_sprite;
+  spritesheet* last_played_animation;
 
   u32 level;
   u32 health_max;

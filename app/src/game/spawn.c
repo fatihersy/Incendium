@@ -4,6 +4,8 @@
 #include "core/fmath.h"
 #include "core/fmemory.h"
 
+#include "spritesheet.h"
+
 typedef struct spawn_system_state {
   Character2D spawns[MAX_SPAWN_COUNT];
   u16 current_spawn_count;
@@ -58,8 +60,10 @@ u16 spawn_character(Character2D _character) {
 
   _character.character_id = state->current_spawn_count;
   _character.initialized = true;
-  _character.collision.width = _character.tex->width;
-  _character.collision.height = _character.tex->height;
+  _character.collision.width = _character.animation.current_frame_rect.width;
+  _character.collision.height = _character.animation.current_frame_rect.height;
+  _character.animation.sheet_id = SHEET_ID_SPAWN_ZOMBIE_ANIMATION_IDLE_LEFT;
+  set_sprite(&_character.animation, true, false, false);
   
   state->spawns[state->current_spawn_count] = _character;
   state->current_spawn_count++;
@@ -100,22 +104,10 @@ bool render_spawns(void) {
     TraceLog(LOG_WARNING, "render_spawns()::Spawn count is out of bounds");
     return false;
   }
-
   // Enemies
   for (i32 i = 0; i < state->current_spawn_count; ++i) {
     if (state->spawns[i].initialized) {
-      DrawTexture(
-        *state->spawns[i].tex,
-        state->spawns[i].position.x,
-        state->spawns[i].position.y, WHITE
-      );
-      DrawRectangleLines(
-        state->spawns[i].collision.x,
-        state->spawns[i].collision.y,
-        state->spawns[i].collision.width,
-        state->spawns[i].collision.height, 
-        WHITE
-      );
+      play_sprite_on_site(&state->spawns[i].animation, WHITE, state->spawns[i].collision);
     }
   }
   return true;

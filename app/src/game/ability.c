@@ -5,7 +5,6 @@
 #include "core/fmemory.h"
 
 typedef struct ability_system_state {
-  spritesheet_play_system spritesheet_system;
   ability abilities[ABILITY_TYPE_MAX];
 
   camera_metrics* in_camera_metrics;
@@ -134,8 +133,15 @@ void update_abilities(ability_play_system* system) {
 
     // TODO: Handle all situations
   }
+  for (i32 i=0; i<MAX_ABILITY_SLOT; ++i) {
+    if (!state->abilities[i].is_active) { continue; }
 
-  update_sprite_renderqueue();
+    for (i32 j=0; j<MAX_ABILITY_PROJECTILE_SLOT; ++j) {
+      if (!state->abilities[i].projectiles[j].is_active) { continue; }
+
+      update_sprite(&state->abilities[i].projectiles[j].animation);
+    }
+  }
 }
 void movement_satellite(ability* abl) {
   if (!abl->is_active || !abl->is_initialized) {
@@ -247,14 +253,15 @@ void movement_comet(ability* abl) {
 
 void render_abilities(ability_play_system* system) {
   for (int i = 1; i < ABILITY_TYPE_MAX; ++i) {
-    if (!system->abilities[i].is_active || !system->abilities[i].is_initialized) continue;
+    if (!system->abilities[i].is_active || !system->abilities[i].is_initialized) { continue; }
 
     for (int j = 0; j < system->abilities[i].proj_count; ++j) {
-      if (!system->abilities[i].projectiles[j].is_active) continue;
+      if (!system->abilities[i].projectiles[j].is_active) { continue; }
       play_sprite_on_site(
-        system->abilities[i].projectiles[j].animation_sprite_queueindex, 
-        system->abilities[i].projectiles[j].collision,
-        WHITE);
+        &system->abilities[i].projectiles[j].animation, 
+        WHITE,
+        system->abilities[i].projectiles[j].collision
+      );
     }
   }
 }
@@ -274,11 +281,11 @@ void register_ability(
     return;
   }
   abl.type = type;
+  abl.anim_id = proj_anim;
   abl.level = 1;
   abl.base_damage = _damage;
   abl.proj_count = proj_count_on_start;
   abl.proj_duration = proj_duration;
-  abl.proj_anim_sprite = proj_anim;
   abl.move_pattern = move_pattern;
   abl.center_proj_anim = _should_center;
   abl.proj_dim = proj_size;
@@ -288,10 +295,11 @@ void register_ability(
 
   for (int i = 0; i < MAX_ABILITY_PROJECTILE_SLOT; ++i) {
     abl.projectiles[i] = (projectile){0};
-    abl.projectiles[i].animation_sprite_queueindex = register_sprite(abl.proj_anim_sprite, true, false, abl.center_proj_anim);
     abl.projectiles[i].collision = (Rectangle) {0, 0, abl.proj_dim.x, abl.proj_dim.y};
     abl.projectiles[i].damage = abl.base_damage;
     abl.projectiles[i].is_active = false;
+    abl.projectiles[i].animation.sheet_id = abl.anim_id;
+    set_sprite(&abl.projectiles[i].animation, true, true, abl.center_proj_anim);
   }
 
   state->abilities[type] = abl;

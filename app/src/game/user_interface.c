@@ -1,6 +1,5 @@
 #include "user_interface.h"
 #include <reasings.h>
-#include <defines.h>
 #include <settings.h>
 
 #include "core/fmath.h"
@@ -10,8 +9,6 @@
 #include "fshader.h"
 
 typedef struct user_interface_system_state {
-  spritesheet_play_system spritesheet_system;
-  
   button      buttons[BTN_ID_MAX];
   button_type button_types[BTN_TYPE_MAX];
   slider      sliders[SDR_ID_MAX];
@@ -78,16 +75,16 @@ void update_sliders(void);
 
 void draw_fade_effect();
 void draw_slider_body(slider* sdr);
-void draw_texture_stretch(texture_id body, Vector2 pos, Vector2 scale, Rectangle stretch_part, u16 stretch_part_mltp, bool should_center);
-void draw_texture_regular(texture_id _id, Rectangle dest, Color tint, bool should_center);
-void draw_texture_npatch(texture_id _id, Rectangle dest, Vector4 offsets, bool should_center);
+void draw_atlas_texture_stretch(atlas_texture_id body, Vector2 pos, Vector2 scale, Rectangle stretch_part, u16 stretch_part_mltp, bool should_center);
+void draw_atlas_texture_regular(atlas_texture_id _id, Rectangle dest, Color tint, bool should_center);
+void draw_atlas_texture_npatch(atlas_texture_id _id, Rectangle dest, Vector4 offsets, bool should_center);
 void gui_draw_settings_screen(void);
 bool gui_button(const char* text, button_id _id, Font font, f32 font_size_scale, Vector2 pos);
 
 void register_button(button_id _btn_id, button_type_id _btn_type_id);
-void register_button_type(button_type_id _btn_type_id, spritesheet_id _ss_type, Vector2 frame_dim, Vector2 on_click_text_offset, f32 _scale, bool _play_reflection, bool _play_crt, bool _should_center);
+void register_button_type(button_type_id _btn_type_id, spritesheet_id _ss_type, Vector2 frame_dim, Vector2 on_click_text_offset, f32 _scale, bool _play_reflection, bool _should_center);
 void register_progress_bar(progress_bar_id _id, progress_bar_type_id _type_id, f32 width_multiply, Vector2 scale);
-void register_progress_bar_type(progress_bar_type_id _type_id, texture_id _body_inside, texture_id _body_outside, shader_id _mask_shader_id);
+void register_progress_bar_type(progress_bar_type_id _type_id, atlas_texture_id _body_inside, atlas_texture_id _body_outside, shader_id _mask_shader_id);
 void register_slider(slider_id _sdr_id, slider_type_id _sdr_type_id, button_id _left_btn_id, button_id _right_btn_id, bool _is_clickable);
 void register_slider_type(slider_type_id _sdr_type_id, spritesheet_id _ss_sdr_body_type, f32 _scale, u16 _width_multiply, button_type_id _left_btn_type_id, button_type_id _right_btn_type_id, u16 _char_limit);
 
@@ -107,19 +104,19 @@ void user_interface_system_initialize(void) {
   
   // Loading fonts
   { 
-    state->mood_font = LoadFont(rs_path("mood.ttf"));
+    state->mood_font = LoadFont(_rs_path("mood.ttf"));
     if (state->mood_font.baseSize == 0) { // If custom font load failed
       state->mood_font = GetFontDefault();
     }
-    state->mood_outline_font = LoadFont(rs_path("mood_outline.ttf"));
+    state->mood_outline_font = LoadFont(_rs_path("mood_outline.ttf"));
     if (state->mood_outline_font.baseSize == 0) { // If custom font load failed
       state->mood_outline_font = GetFontDefault();
     }
-    state->mini_mood_font = LoadFont(rs_path("mini_mood.ttf"));
+    state->mini_mood_font = LoadFont(_rs_path("mini_mood.ttf"));
     if (state->mini_mood_font.baseSize == 0) { // If custom font load failed
       state->mini_mood_font = GetFontDefault();
     }
-    state->mini_mood_outline_font = LoadFont(rs_path("mini_mood_outline.ttf"));
+    state->mini_mood_outline_font = LoadFont(_rs_path("mini_mood_outline.ttf"));
     if (state->mini_mood_outline_font.baseSize == 0) { // If custom font load failed
       state->mini_mood_outline_font = GetFontDefault();
     }
@@ -128,8 +125,8 @@ void user_interface_system_initialize(void) {
   
   state->default_panel = (panel) {
     .signal_state = BTN_STATE_UNDEFINED,
-    .bg_tex_id    = TEX_ID_CRIMSON_FANTASY_PANEL_BG,
-    .frame_tex_id = TEX_ID_CRIMSON_FANTASY_PANEL,
+    .bg_tex_id    = ATLAS_TEX_ID_CRIMSON_FANTASY_PANEL_BG,
+    .frame_tex_id = ATLAS_TEX_ID_CRIMSON_FANTASY_PANEL,
     .bg_tint = (Color) { 30, 39, 46, 245},
     .offsets = (Vector4) {6, 6, 6, 6},
   };
@@ -141,23 +138,23 @@ void user_interface_system_initialize(void) {
   register_button_type(
     BTN_TYPE_MENU_BUTTON, SHEET_ID_MENU_BUTTON, 
     (Vector2){80, 16}, (Vector2){0, 2}, 
-    DEFAULT_MENU_BUTTON_SCALE, true, true, false);
+    DEFAULT_MENU_BUTTON_SCALE, true, false);
   register_button_type(
     BTN_TYPE_MENU_BUTTON_NO_CRT, SHEET_ID_MENU_BUTTON, 
     (Vector2){80, 16}, (Vector2){0, 2}, 
-    DEFAULT_MENU_BUTTON_SCALE, true, false, false);
+    DEFAULT_MENU_BUTTON_SCALE, true, false);
   register_button_type(
     BTN_TYPE_SLIDER_LEFT_BUTTON, SHEET_ID_SLIDER_LEFT_BUTTON, 
     (Vector2){10, 10}, (Vector2){0, 0}, 
-    DEFAULT_MENU_BUTTON_SCALE, false, false, false);
+    DEFAULT_MENU_BUTTON_SCALE, false, false);
   register_button_type(
     BTN_TYPE_SLIDER_RIGHT_BUTTON, SHEET_ID_SLIDER_RIGHT_BUTTON, 
     (Vector2){10, 10}, (Vector2){0, 0}, 
-    DEFAULT_MENU_BUTTON_SCALE, false, false, false);
+    DEFAULT_MENU_BUTTON_SCALE, false, false);
   register_button_type(
     BTN_TYPE_FLAT_BUTTON, SHEET_ID_FLAT_BUTTON, 
     (Vector2){44, 14}, (Vector2){0, 0}, 
-    2, false, false, false);
+    2, false, false);
   }
   // BUTTON TYPES
 
@@ -180,7 +177,7 @@ void user_interface_system_initialize(void) {
   {
     register_progress_bar_type(
       PRG_BAR_TYPE_ID_CRIMSON_FANT_BAR,
-      TEX_ID_PROGRESS_BAR_INSIDE_FULL, TEX_ID_PROGRESS_BAR_OUTSIDE_FULL,
+      ATLAS_TEX_ID_PROGRESS_BAR_INSIDE_FULL, ATLAS_TEX_ID_PROGRESS_BAR_OUTSIDE_FULL,
       SHADER_ID_PROGRESS_BAR_MASK
     );
   }
@@ -304,7 +301,6 @@ void update_user_interface(void) {
   state->mouse_pos = GetMousePosition();
   state->offset = get_screen_offset();
   
-  update_sprite_renderqueue();
   update_buttons();
   update_sliders();
   if (state->fade_animation_playing) {
@@ -328,7 +324,7 @@ void update_buttons(void) {
       if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
         btn->state = BTN_STATE_PRESSED;
         if(state->buttons[btn->id].btn_type.play_reflection)  {
-          stop_sprite(state->buttons[btn->id].reflection_render_index, true);
+          stop_sprite(&state->buttons[btn->id].reflection_anim, true);
         }
       } else {
         if (btn->state == BTN_STATE_PRESSED) { 
@@ -337,11 +333,14 @@ void update_buttons(void) {
         else if (btn->state != BTN_STATE_HOVER) {
           btn->state = BTN_STATE_HOVER;
         }
+        if (btn->state == BTN_STATE_HOVER && btn->btn_type.play_reflection) {
+          update_sprite(&btn->reflection_anim);
+        }
       }
     } else {
       if (btn->state != BTN_STATE_UP) { 
         if(state->buttons[btn->id].btn_type.play_reflection)  {
-          reset_sprite(btn->reflection_render_index, true);
+          reset_sprite(&btn->reflection_anim, true);
         }
         btn->state = BTN_STATE_UP;
       }
@@ -354,7 +353,7 @@ void update_sliders(void) {
     if (state->sliders[i].id == SDR_ID_UNDEFINED || !state->sliders[i].on_screen) continue;
       slider* sdr = &state->sliders[i];
       if (!sdr->is_registered) {
-        TraceLog(LOG_WARNING, "WARNING::user_interface::update_sliders()::Using slider didn't registered");
+        TraceLog(LOG_WARNING, "user_interface::update_sliders()::Using slider didn't registered");
         sdr->on_screen = false;
         continue;
       }
@@ -410,13 +409,13 @@ bool gui_slider_button(button_id _id, Vector2 pos) {
 
 bool gui_button(const char* text, button_id _id, Font font, f32 font_size_scale, Vector2 pos) {
   if (_id >= BTN_ID_MAX || _id <= BTN_ID_UNDEFINED) {
-    TraceLog(LOG_WARNING, "WARNING::user_interface::gui_button()::Recieved button type out of bound");
+    TraceLog(LOG_WARNING, "user_interface::gui_button()::Recieved button type out of bound");
     return false;
   }
 
   button* _btn = &state->buttons[_id];
   if (!_btn->is_registered) {
-    TraceLog(LOG_WARNING, "WARNING::user_interface::gui_button()::The button is not registered");
+    TraceLog(LOG_WARNING, "user_interface::gui_button()::The button is not registered");
     return false;
   }
   button_type* _btn_type = &_btn->btn_type;
@@ -435,20 +434,18 @@ bool gui_button(const char* text, button_id _id, Font font, f32 font_size_scale,
     };
   }
 
-  if(_btn_type->play_crt) {play_sprite_on_site(_btn->crt_render_index, _btn->dest, WHITE); }
-
   Vector2 draw_sprite_scale = (Vector2) {_btn->btn_type.scale,_btn->btn_type.scale};
 
   if (_btn->state == BTN_STATE_PRESSED) {
-    draw_sprite_on_site(_btn->btn_type.ss_type, WHITE, VECTOR2(_btn->dest.x,_btn->dest.y), draw_sprite_scale, 1, false);
+    draw_sprite_on_site_by_id(_btn->btn_type.ss_type, WHITE, VECTOR2(_btn->dest.x,_btn->dest.y), draw_sprite_scale, 1, false);
     if (!TextIsEqual(text, "")) {
       Vector2 pressed_text_pos = vec2_add(text_pos, _btn_type->text_offset_on_click);
       draw_text(text, pressed_text_pos, font, font.baseSize * font_size_scale, BUTTON_TEXT_PRESSED_COLOR, false);
     }
   } else {
-    draw_sprite_on_site(_btn->btn_type.ss_type, WHITE, VECTOR2(_btn->dest.x,_btn->dest.y), draw_sprite_scale, 0, false);
+    draw_sprite_on_site_by_id(_btn->btn_type.ss_type, WHITE, VECTOR2(_btn->dest.x,_btn->dest.y), draw_sprite_scale, 0, false);
     if (_btn->state == BTN_STATE_HOVER) {
-      if(_btn_type->play_reflection) {play_sprite_on_site(_btn->reflection_render_index, _btn->dest, WHITE);};
+      if(_btn_type->play_reflection) {play_sprite_on_site(&_btn->reflection_anim, WHITE, _btn->dest);};
       if (!TextIsEqual(text, "")) {
         draw_text(text, text_pos, font, font.baseSize * font_size_scale, BUTTON_TEXT_HOVER_COLOR, false);
       }
@@ -471,7 +468,7 @@ void gui_progress_bar(progress_bar_id bar_id, Vector2 pos, bool _should_center) 
     return;
   }
 
-  draw_texture_stretch(
+  draw_atlas_texture_stretch(
     prg_bar.type.body_outside, 
     pos, 
     prg_bar.scale, 
@@ -482,7 +479,7 @@ void gui_progress_bar(progress_bar_id bar_id, Vector2 pos, bool _should_center) 
 
   BeginShaderMode(get_shader_by_enum(prg_bar.type.mask_shader_id)->handle);
   set_shader_uniform(prg_bar.type.mask_shader_id, 0, (data_pack) {.data.f32[0] = prg_bar.progress});
-  draw_texture_stretch(
+  draw_atlas_texture_stretch(
     prg_bar.type.body_inside, 
     pos, 
     prg_bar.scale, 
@@ -493,12 +490,12 @@ void gui_progress_bar(progress_bar_id bar_id, Vector2 pos, bool _should_center) 
   EndShaderMode();
 }
 
-void draw_texture_stretch(texture_id body, Vector2 pos, Vector2 scale, Rectangle stretch_part, u16 stretch_part_mltp, bool should_center) {
-  if (body>= TEX_ID_MAX || body<= TEX_ID_UNSPECIFIED) {
+void draw_atlas_texture_stretch(atlas_texture_id body, Vector2 pos, Vector2 scale, Rectangle stretch_part, u16 stretch_part_mltp, bool should_center) {
+  if (body >= ATLAS_TEX_ID_MAX || body <= ATLAS_TEX_ID_UNSPECIFIED) {
     TraceLog(LOG_ERROR, "user_interface::draw_repetitive_body_tex()::Recieved texture out of bound");
     return;
   }
-  Texture2D* body_tex    = get_texture_by_enum(body);
+  atlas_texture* body_tex = _get_atlas_texture_by_enum(body);
   if (!body_tex) {
     TraceLog(LOG_ERROR, "user_interface::draw_repetitive_body_tex()::Recieved texture returned NULL");
     return;
@@ -518,7 +515,7 @@ void draw_texture_stretch(texture_id body, Vector2 pos, Vector2 scale, Rectangle
   };
   Rectangle third_source = (Rectangle){
     .x = stretch_part.x + stretch_part.width, .y = 0,
-    .width = body_tex->width - (stretch_part.x + stretch_part.width), .height = stretch_part.height,
+    .width = body_tex->source.width - (stretch_part.x + stretch_part.width), .height = stretch_part.height,
   };
   Rectangle third_dest = (Rectangle){
     .x = pos.x + first_dest.width + second_dest.width, .y = pos.y,
@@ -529,11 +526,11 @@ void draw_texture_stretch(texture_id body, Vector2 pos, Vector2 scale, Rectangle
     second_dest.x -= first_dest.width + (second_dest.width / 2.f);
     third_dest.x  -= first_dest.width + (second_dest.width / 2.f);
   }
-  DrawTexturePro(*body_tex, first_source, first_dest, (Vector2) {0}, 0, WHITE);
+  DrawTexturePro(*body_tex->atlas_handle, first_source, first_dest, (Vector2) {0}, 0, WHITE);
 
-  DrawTexturePro(*body_tex, stretch_part, second_dest, (Vector2) {0}, 0, WHITE);
+  DrawTexturePro(*body_tex->atlas_handle, stretch_part, second_dest, (Vector2) {0}, 0, WHITE);
   
-  DrawTexturePro(*body_tex, third_source, third_dest, (Vector2) {0}, 0, WHITE);
+  DrawTexturePro(*body_tex->atlas_handle, third_source, third_dest, (Vector2) {0}, 0, WHITE);
 }
 
 void gui_slider(slider_id _id, Vector2 pos, Vector2 offset, f32 offset_scale) {
@@ -592,11 +589,7 @@ void draw_slider_body(slider* sdr) {
         Vector2 _pos = sdr->position;
         _pos.x += i * sdr_type.body_width; 
 
-        draw_sprite_on_site(
-        sdr_type.ss_sdr_body, WHITE, _pos, draw_sprite_scale, 
-        FMIN(scaled_value, sdr->max_value), false
-        );
-
+        draw_sprite_on_site_by_id(sdr_type.ss_sdr_body, WHITE, _pos, draw_sprite_scale, FMIN(scaled_value, sdr->max_value), false);
         scaled_value -= scaled_value < sdr->max_value ? scaled_value : sdr->max_value;
       }
       break;
@@ -613,24 +606,16 @@ void draw_slider_body(slider* sdr) {
       for (int i = 1; i < sdr->max_value; ++i) {
         Vector2 _pos = _pos_temp;
         _pos.x += (each_body_width + get_screen_offset().x) * (i-1); 
-
-        draw_sprite_on_site(
-          sdr_type.ss_sdr_body, WHITE, 
-          _pos, draw_sprite_scale, 
-          (i == sdr->current_value) ? 1 : 0, false
-        );
+        draw_sprite_on_site_by_id(sdr_type.ss_sdr_body, WHITE, _pos, draw_sprite_scale, (i == sdr->current_value) ? 1 : 0, false);
       }
-
       Vector2 text_pos = (Vector2) {
         sdr->position.x + total_body_width/2.f - text_measure.x / 2.f,
         sdr->position.y + sdr_type.body_height/2.f - text_measure.y / 2.f
       };
-
       draw_text(text, text_pos, state->mood_font, state->mood_font.baseSize, BUTTON_TEXT_UP_COLOR, false);
       break;
     }
-
-    default: TraceLog(LOG_WARNING, "WARNING::user_interface::render_slider_body()::Unsupported slider type");
+    default: TraceLog(LOG_WARNING, "user_interface::render_slider_body()::Unsupported slider type");
     break;
   }
 }
@@ -644,7 +629,7 @@ void gui_panel(panel pan, Rectangle dest, bool _should_center) {
     bg_dest.y -= bg_dest.height / 2.f;
   }
   DrawRectanglePro(bg_dest, (Vector2) {0, 0}, 0, pan.bg_tint);
-  draw_texture_npatch(pan.frame_tex_id, dest, pan.offsets, _should_center);
+  draw_atlas_texture_npatch(pan.frame_tex_id, dest, pan.offsets, _should_center);
 }
 bool gui_panel_active(panel* pan, Rectangle dest, bool _should_center) {
 
@@ -674,7 +659,7 @@ bool gui_panel_active(panel* pan, Rectangle dest, bool _should_center) {
     ? DrawRectanglePro(dest, (Vector2) {0, 0}, 0, pan->bg_hover_tint)  //draw_texture_regular(pan->bg_tex_id, dest, pan->bg_hover_tint, false)
     : DrawRectanglePro(dest, (Vector2) {0, 0}, 0, pan->bg_tint); //draw_texture_regular(pan->bg_tex_id, dest, pan->bg_tint, false);
 
-  draw_texture_npatch(pan->frame_tex_id, dest, pan->offsets, false);
+  draw_atlas_texture_npatch(pan->frame_tex_id, dest, pan->offsets, false);
 
   return pan->current_state == pan->signal_state;
 }
@@ -696,7 +681,7 @@ void gui_label(const char* text, font_type type, i32 font_size, Vector2 position
       draw_text(text, position, state->mini_mood_outline_font, font_size * LABEL_MINI_OUTLINE_FONT_SIZE, tint, _should_center);
       break;
     }
-    default: TraceLog(LOG_WARNING, "WARNING::user_interface::gui_label()::Unsupported font type");
+    default: TraceLog(LOG_WARNING, "user_interface::gui_label()::Unsupported font type");
     break;
   }
 }
@@ -723,7 +708,7 @@ void gui_label_wrap(const char* text, font_type type, i32 font_size, Rectangle p
       DrawTextBoxed(state->mini_mood_outline_font, text, position, font_size * LABEL_MINI_OUTLINE_FONT_SIZE, UI_FONT_SPACING, true, tint);
       break;
     }
-    default: TraceLog(LOG_WARNING, "WARNING::user_interface::gui_label()::Unsupported font type");
+    default: TraceLog(LOG_WARNING, "user_interface::gui_label()::Unsupported font type");
     break;
   }
 }
@@ -799,11 +784,11 @@ bool gui_slider_add_option(slider_id _id, const char* _display_text, data_pack c
     return false;
   }
 }
-void register_button_type(button_type_id _btn_type_id, spritesheet_id _ss_type, Vector2 frame_dim, Vector2 on_click_text_offset, f32 _scale, bool _play_reflection, bool _play_crt, bool _should_center) {
+void register_button_type(button_type_id _btn_type_id, spritesheet_id _ss_type, Vector2 frame_dim, Vector2 on_click_text_offset, f32 _scale, bool _play_reflection, bool _should_center) {
   if (_ss_type     >= SHEET_ID_SPRITESHEET_TYPE_MAX || _ss_type <= SHEET_ID_SPRITESHEET_UNSPECIFIED || 
       _btn_type_id >= BTN_TYPE_MAX         || _btn_type_id <= BTN_TYPE_UNDEFINED  ||
       !state) {
-    TraceLog(LOG_WARNING, "WARNING::user_interface::register_button_type()::Recieved id was out of bound");
+    TraceLog(LOG_WARNING, "user_interface::register_button_type()::Recieved id was out of bound");
     return;
   }
   button_type btn_type = {
@@ -812,7 +797,6 @@ void register_button_type(button_type_id _btn_type_id, spritesheet_id _ss_type, 
     .ss_type = _ss_type,
     .source_frame_dim = frame_dim,
     .text_offset_on_click = (Vector2) { .x = on_click_text_offset.x * _scale, .y = on_click_text_offset.y * _scale},
-    .play_crt = _play_crt,
     .play_reflection = _play_reflection,
     .should_center = _should_center,
     .dest_frame_dim = (Vector2) {
@@ -826,7 +810,7 @@ void register_button(button_id _btn_id, button_type_id _btn_type_id) {
   if (_btn_id      >= BTN_ID_MAX   || _btn_id      <= BTN_ID_UNDEFINED   || 
       _btn_type_id >= BTN_TYPE_MAX || _btn_type_id <= BTN_TYPE_UNDEFINED || !state) 
   {
-    TraceLog(LOG_WARNING, "WARNING::user_interface::register_button()::One of recieved ids was out of bound");
+    TraceLog(LOG_WARNING, "user_interface::register_button()::One of recieved ids was out of bound");
     return;
   }
 
@@ -840,15 +824,13 @@ void register_button(button_id _btn_id, button_type_id _btn_type_id) {
       .width = _btn_type->dest_frame_dim.x, .height = _btn_type->dest_frame_dim.y
     },
     .state = BTN_STATE_UP,
-    .crt_render_index = _btn_type->play_crt 
-      ? register_sprite(SHEET_ID_BUTTON_CRT_SHEET, true, false, false)
-      : 0,
-    .reflection_render_index = _btn_type->play_reflection 
-      ? register_sprite(SHEET_ID_BUTTON_REFLECTION_SHEET, false, true, false)
-      : 0,
     .on_screen = false,
     .is_registered = true,
   };
+  btn.reflection_anim.sheet_id = SHEET_ID_BUTTON_REFLECTION_SHEET;
+  if (_btn_type->play_reflection) {
+    set_sprite(&btn.reflection_anim, false, true, false);
+  }
 
   state->buttons[_btn_id] = btn;
 }
@@ -869,10 +851,10 @@ void register_progress_bar(progress_bar_id _id, progress_bar_type_id _type_id, f
 
   state->prg_bars[_id] = prg_bar;
 }
-void register_progress_bar_type(progress_bar_type_id _type_id, texture_id _body_inside, texture_id _body_outside, shader_id _mask_shader_id) {
+void register_progress_bar_type(progress_bar_type_id _type_id, atlas_texture_id _body_inside, atlas_texture_id _body_outside, shader_id _mask_shader_id) {
   if (_type_id       >= PRG_BAR_TYPE_ID_MAX || _type_id       <= PRG_BAR_TYPE_ID_UNDEFINED ||
-      _body_inside   >= TEX_ID_MAX          || _body_inside   <= TEX_ID_UNSPECIFIED        ||
-      _body_outside  >= TEX_ID_MAX          || _body_outside  <= TEX_ID_UNSPECIFIED        ||
+      _body_inside   >= ATLAS_TEX_ID_MAX          || _body_inside   <= ATLAS_TEX_ID_UNSPECIFIED        ||
+      _body_outside  >= ATLAS_TEX_ID_MAX          || _body_outside  <= ATLAS_TEX_ID_UNSPECIFIED        ||
       _mask_shader_id>= SHADER_ID_MAX       || _mask_shader_id<= SHADER_ID_UNSPECIFIED     ||
       !state) {
     TraceLog(LOG_WARNING, "user_interface::register_progress_bar_type()::Recieved id was out of bound");
@@ -899,7 +881,7 @@ void register_slider_type(
       return;
     }
 
-  spritesheet ss_body = get_spritesheet_by_enum(_ss_sdr_body_type);
+  spritesheet ss_body = *_get_spritesheet_by_enum(_ss_sdr_body_type);
   button_type* left_btn_type = &state->button_types[_left_btn_type_id]; 
   button_type* right_btn_type = &state->button_types[_right_btn_type_id]; 
 
@@ -970,67 +952,67 @@ void register_slider(
 
   state->sliders[_sdr_id] = sdr;
 }
-void gui_draw_texture_to_background(texture_id _id) {
-  draw_texture_regular(_id, (Rectangle) {0, 0, GetScreenWidth(), GetScreenHeight()}, WHITE, false);
+void gui_draw_atlas_texture_to_background(atlas_texture_id _id) {
+  draw_atlas_texture_regular(_id, (Rectangle) {0, 0, GetScreenWidth(), GetScreenHeight()}, WHITE, false);
 }
 void gui_draw_spritesheet_to_background(spritesheet_id _id, Color _tint) {
   if (_id >= SHEET_ID_SPRITESHEET_TYPE_MAX || _id <= SHEET_ID_SPRITESHEET_UNSPECIFIED || !state) {
-    TraceLog(LOG_WARNING, "WARNING::user_interface::gui_draw_spritesheet_to_background()::Sprite type out of bound");
+    TraceLog(LOG_WARNING, "user_interface::gui_draw_spritesheet_to_background()::Sprite type out of bound");
     return;
   }
-  if (state->ss_to_draw_bg.type != _id) {
-    state->ss_to_draw_bg = get_spritesheet_by_enum(_id);
-    state->ss_to_draw_bg.render_queue_index = register_sprite(_id, true, false, false);
+  if (state->ss_to_draw_bg.sheet_id != _id) {
+    state->ss_to_draw_bg = *_get_spritesheet_by_enum(_id);
+    set_sprite(&state->ss_to_draw_bg, true, false, false);
   }
   Rectangle dest = (Rectangle) {0, 0, GetScreenWidth(), GetScreenHeight()};
-  play_sprite_on_site(state->ss_to_draw_bg.render_queue_index, dest, _tint);
+  play_sprite_on_site(&state->ss_to_draw_bg, _tint, dest);
 }
 /**
  * @note inline function, returns "(Rectangle) {0}" if texture type returns null pointer
  * @return (Rectangle) { .x = 0, .y = 0, .width = tex->width, .height = tex->height}; 
  */
-inline Rectangle get_texture_source_rect(texture_id _id) {
-  Texture2D* tex = get_texture_by_enum(_id);
+inline Rectangle get_atlas_texture_source_rect(atlas_texture_id _id) {
+  atlas_texture* tex = _get_atlas_texture_by_enum(_id);
   if (!tex) { 
-    TraceLog(LOG_WARNING, "WARNING::user_interface::get_texture_source_rect()::Requested type was null");
+    TraceLog(LOG_WARNING, "user_interface::get_texture_source_rect()::Requested type was null");
     return (Rectangle) {0}; 
   }
   
-  return (Rectangle) { .x = 0, .y = 0, .width = tex->width, .height = tex->height};
+  return tex->source;
 }
 /**
  * @brief Centers over -> dest.x -= dest.width / 2.f; 
  */
-inline void draw_texture_regular(texture_id _id, Rectangle dest, Color tint, bool should_center) {
-  if (_id >= TEX_ID_MAX || _id <= TEX_ID_UNSPECIFIED) {
+inline void draw_atlas_texture_regular(atlas_texture_id _id, Rectangle dest, Color tint, bool should_center) {
+  if (_id >= ATLAS_TEX_ID_MAX || _id <= ATLAS_TEX_ID_UNSPECIFIED) {
     TraceLog(LOG_WARNING, 
     "user_interface::draw_texture_regular()::ID was out of bound"); 
     return; 
   }
-  Texture2D* tex = get_texture_by_enum(_id);
+  atlas_texture* tex = _get_atlas_texture_by_enum(_id);
   if (!tex) { TraceLog(
-  LOG_WARNING, "WARNING::user_interface::draw_texture_regular()::Tex was null");
+  LOG_WARNING, "user_interface::draw_texture_regular()::Tex was null");
     return; 
   }
   if (should_center) {
     dest.x -= dest.width / 2.f; 
     dest.y -= dest.height / 2.f; 
   }
-  DrawTexturePro(*tex, 
-  (Rectangle) { 0, 0, tex->width, tex->height}, 
+  DrawTexturePro(*tex->atlas_handle, 
+  tex->source, 
   dest, 
   (Vector2) {0}, 0, tint);
 }
 /**
  * @brief Centers over -> dest.x -= dest.width / 2.f; 
  */
-inline void draw_texture_npatch(texture_id _id, Rectangle dest, Vector4 offsets, bool should_center) {
-  if (_id >= TEX_ID_MAX || _id <= TEX_ID_UNSPECIFIED) {
+inline void draw_atlas_texture_npatch(atlas_texture_id _id, Rectangle dest, Vector4 offsets, bool should_center) {
+  if (_id >= ATLAS_TEX_ID_MAX || _id <= ATLAS_TEX_ID_UNSPECIFIED) {
     TraceLog(LOG_WARNING, 
     "user_interface::draw_texture_npatch()::ID was out of bound"); 
     return; 
   }
-  Texture2D* tex = get_texture_by_enum(_id);
+  atlas_texture* tex = _get_atlas_texture_by_enum(_id);
   if (!tex) { TraceLog(LOG_WARNING, 
     "user_interface::draw_texture_npatch()::Tex was null"); 
     return; 
@@ -1042,7 +1024,7 @@ inline void draw_texture_npatch(texture_id _id, Rectangle dest, Vector4 offsets,
   }
 
   NPatchInfo npatch = (NPatchInfo){
-    (Rectangle) {0, 0, tex->width, tex->height},
+    tex->source,
     offsets.x,
     offsets.y,
     offsets.z,
@@ -1050,7 +1032,7 @@ inline void draw_texture_npatch(texture_id _id, Rectangle dest, Vector4 offsets,
     NPATCH_NINE_PATCH
   };
 
-  DrawTextureNPatch(*tex, npatch, dest, (Vector2) {0}, 0, WHITE);
+  DrawTextureNPatch(*tex->atlas_handle, npatch, dest, (Vector2) {0}, 0, WHITE);
 }
 inline Vector2 make_vector(f32 x, f32 y) {
   return (Vector2) {x,y};
@@ -1062,10 +1044,10 @@ inline void gui_draw_map_stage_pin(bool have_hovered, Vector2 screen_loc) {
   icon_loc.y -= icon_loc.height * .5f;
   
   if(have_hovered) {
-    gui_draw_texture_id_pro(TEX_ID_ICON_ATLAS, (Rectangle){64, 320, 32, 32}, icon_loc);
+    gui_draw_atlas_texture_id_pro(ATLAS_TEX_ID_ICON_ATLAS, (Rectangle){64, 320, 32, 32}, icon_loc, true);
   }
   else {
-    gui_draw_texture_id_pro(TEX_ID_ICON_ATLAS, (Rectangle){32, 320, 32, 32}, icon_loc);
+    gui_draw_atlas_texture_id_pro(ATLAS_TEX_ID_ICON_ATLAS, (Rectangle){32, 320, 32, 32}, icon_loc, true);
   }
 }
 /**
@@ -1184,53 +1166,51 @@ void draw_fade_effect() {
     : EaseQuadOut(state->fade_animation_timer, 1.f,-1.f, state->fade_animation_duration);
   BeginShaderMode(get_shader_by_enum(SHADER_ID_FADE_TRANSITION)->handle);
   set_shader_uniform(SHADER_ID_FADE_TRANSITION, 0, (data_pack) {.data.f32[0] = process});
-  draw_texture_regular(TEX_ID_BG_BLACK, (Rectangle) {0, 0, GetScreenWidth(), GetScreenHeight()}, WHITE, false);
+  draw_atlas_texture_regular(ATLAS_TEX_ID_BG_BLACK, (Rectangle) {0, 0, GetScreenWidth(), GetScreenHeight()}, WHITE, false);
   EndShaderMode();
 }
 
-void gui_draw_texture_id_pro(texture_id _id, Rectangle src, Rectangle dest) {
-  if (_id >= TEX_ID_MAX || _id <= TEX_ID_UNSPECIFIED) {
+void gui_draw_atlas_texture_id_pro(atlas_texture_id _id, Rectangle src, Rectangle dest, bool relative) {
+  if (_id >= ATLAS_TEX_ID_MAX || _id <= ATLAS_TEX_ID_UNSPECIFIED) {
     TraceLog(LOG_WARNING, "user_interface::gui_draw_texture_id_pro()::ID was out of bound"); 
     return; 
   }
-  Texture2D* tex = get_texture_by_enum(_id);
+  atlas_texture* tex = _get_atlas_texture_by_enum(_id);
   if (!tex) { 
     TraceLog(LOG_WARNING, "user_interface::gui_draw_texture_id_pro()::Tex was null");
     return; 
   }
-  DrawTexturePro(*tex, 
-  src, 
-  dest, 
-  (Vector2) {0}, 0, WHITE);
+  if (relative) {
+    src.x += tex->source.x;
+    src.y += tex->source.y;
+  }
+  DrawTexturePro(*tex->atlas_handle, src, dest, (Vector2) {0}, 0, WHITE);
 }
-void gui_draw_texture_id(texture_id _id, Rectangle dest) {
-  if (_id >= TEX_ID_MAX || _id <= TEX_ID_UNSPECIFIED) {
+void gui_draw_atlas_texture_id(atlas_texture_id _id, Rectangle dest) {
+  if (_id >= ATLAS_TEX_ID_MAX || _id <= ATLAS_TEX_ID_UNSPECIFIED) {
     TraceLog(LOG_WARNING, "user_interface::gui_draw_texture_id_pro()::ID was out of bound"); 
     return; 
   }
-  Texture2D* tex = get_texture_by_enum(_id);
+  atlas_texture* tex = _get_atlas_texture_by_enum(_id);
   if (!tex) { 
     TraceLog(LOG_WARNING, "user_interface::gui_draw_texture_id_pro()::Tex was null");
     return; 
   }
-  DrawTexturePro(*tex, 
-  (Rectangle) {0, 0, tex->width, tex->height}, 
-  dest, 
-  (Vector2) {0}, 0, WHITE);
+  DrawTexturePro(*tex->atlas_handle, tex->source, dest, (Vector2) {0}, 0, WHITE);
 }
 void gui_draw_spritesheet_id(spritesheet_id _id, Color _tint, Vector2 pos, Vector2 scale, u16 frame, bool _should_center) {
   if (_id >= SHEET_ID_SPRITESHEET_TYPE_MAX || _id <= SHEET_ID_SPRITESHEET_UNSPECIFIED) {
     TraceLog(LOG_WARNING, "user_interface::gui_draw_texture_id_pro()::ID was out of bound"); 
     return; 
   }
-  draw_sprite_on_site(_id, _tint, pos, scale, frame, _should_center);
+  draw_sprite_on_site_by_id(_id, _tint, pos, scale, frame, _should_center);
 }
-void gui_draw_texture_id_center(texture_id _id, Vector2 pos, Vector2 dim, bool should_center) {
-  if (_id >= TEX_ID_MAX || _id <= TEX_ID_UNSPECIFIED) {
+void gui_draw_atlas_texture_id_center(atlas_texture_id _id, Vector2 pos, Vector2 dim, bool should_center) {
+  if (_id >= ATLAS_TEX_ID_MAX || _id <= ATLAS_TEX_ID_UNSPECIFIED) {
     TraceLog(LOG_WARNING, "user_interface::gui_draw_texture_id_center()::ID was out of bound"); 
     return; 
   }
-  Texture2D* tex = get_texture_by_enum(_id);
+  atlas_texture* tex = _get_atlas_texture_by_enum(_id);
   if (!tex) { 
     TraceLog(LOG_WARNING, "user_interface::gui_draw_texture_id_center()::Tex was null");
     return; 
@@ -1240,9 +1220,24 @@ void gui_draw_texture_id_center(texture_id _id, Vector2 pos, Vector2 dim, bool s
     pos.y -= dim.y / 2.f; 
   }
 
-  DrawTexturePro(*tex, 
-  (Rectangle) {0, 0, tex->width, tex->height}, 
+  DrawTexturePro(*tex->atlas_handle, 
+  tex->source, 
   (Rectangle) {pos.x, pos.y, dim.x, dim.y}, 
+  (Vector2) {0}, 0, WHITE);
+}
+void gui_draw_texture_id(texture_id _id, Rectangle dest) {
+  if (_id >= TEX_ID_MAX || _id <= TEX_ID_UNSPECIFIED) {
+    TraceLog(LOG_WARNING, "user_interface::gui_draw_texture_id()::ID was out of bound"); 
+    return; 
+  }
+  Texture2D* tex = _get_texture_by_enum(_id);
+  if (!tex) { 
+    TraceLog(LOG_WARNING, "user_interface::gui_draw_texture_id()::Tex was null");
+    return; 
+  }
+  DrawTexturePro(*tex, 
+  (Rectangle){0, 0, tex->width, tex->height},
+  dest, 
   (Vector2) {0}, 0, WHITE);
 }
 
@@ -1263,8 +1258,8 @@ Font* ui_get_font(font_type font) {
 }
 panel get_default_panel(void) {
   return (panel) {
-    .frame_tex_id  = TEX_ID_CRIMSON_FANTASY_PANEL,
-    .bg_tex_id     = TEX_ID_CRIMSON_FANTASY_PANEL_BG,
+    .frame_tex_id  = ATLAS_TEX_ID_CRIMSON_FANTASY_PANEL,
+    .bg_tex_id     = ATLAS_TEX_ID_CRIMSON_FANTASY_PANEL_BG,
     .bg_tint       = (Color) { 30, 39, 46, 245},
     .bg_hover_tint = (Color) { 52, 64, 76, 245},
     .offsets       = (Vector4) {6, 6, 6, 6},

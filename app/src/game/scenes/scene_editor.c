@@ -56,8 +56,8 @@ void editor_update_mouse_bindings(void);
 void editor_update_keyboard_bindings(void);
 i32 map_prop_id_to_index(u16 id);
 
-void add_prop(texture_id source_tex, Rectangle source, f32 scale);
-#define add_prop_epic_cemetery(...) add_prop(TEX_ID_MAP_PROPS_ATLAS, __VA_ARGS__)      
+void add_prop(atlas_texture_id source_tex, Rectangle source, f32 scale);
+#define add_prop_epic_cemetery(...) add_prop(ATLAS_TEX_ID_MAP_PROPS_ATLAS, __VA_ARGS__)      
 
 void initialize_scene_editor(camera_metrics* _camera_metrics) {
   if (state) {
@@ -531,12 +531,12 @@ void render_interface_editor(void) {
     gui_panel_scissored((*pnl), false, {
       f32 prop_height_count = 0;
       for (int i = 0; i < state->prop_count; ++i) {
-          tilemap_prop* prop = &state->props[i];
-          Rectangle dest = prop->dest;
-          dest.x = 0;
-          dest.y = (pnl->scroll * pnl->buffer[0].data.f32[0]) + prop_height_count;
-          gui_draw_texture_id_pro(prop->atlas_id, prop->source, dest);
-          prop_height_count += prop->dest.height;
+        const tilemap_prop* prop = &state->props[i];
+        Rectangle dest = prop->dest;
+        dest.x = 0;
+        dest.y = (pnl->scroll * pnl->buffer[0].data.f32[0]) + prop_height_count;
+        gui_draw_atlas_texture_id_pro(prop->atlas_id, prop->relative_source, dest, false);
+        prop_height_count += prop->dest.height;
       }
       pnl->buffer[0].data.f32[0] = prop_height_count;
       pnl->scroll_handle.y = FMAX(pnl->scroll_handle.y, pnl->dest.y + get_screen_offset().x);
@@ -552,13 +552,11 @@ void render_interface_editor(void) {
       break;
     }
     case SLC_TYPE_DROP_PROP: {
-      gui_draw_texture_id_pro(
-        state->selected_prop.atlas_id, 
-        state->selected_prop.source,
+      gui_draw_atlas_texture_id_pro(state->selected_prop.atlas_id, state->selected_prop.relative_source,
         (Rectangle) {
           GetMousePosition().x, GetMousePosition().y, 
           state->selected_prop.dest.width, state->selected_prop.dest.height
-        });
+        }, false);
       break;
     }
     case SLC_TYPE_SLC_PROP: {
@@ -585,17 +583,17 @@ void render_interface_editor(void) {
 }
 // UPDATE / RENDER
 
-void add_prop(texture_id source_tex, Rectangle source, f32 scale) {
-  if (source_tex >= TEX_ID_MAX || source_tex <= TEX_ID_UNSPECIFIED) {
+void add_prop(atlas_texture_id source_tex, Rectangle source, f32 scale) {
+  if (source_tex >= ATLAS_TEX_ID_MAX || source_tex <= ATLAS_TEX_ID_UNSPECIFIED) {
     TraceLog(LOG_WARNING, "scene_editor::add_prop()::Provided texture id out of bound");
     return;
   }
-  Texture2D* tex = get_texture_by_enum(source_tex);
-  if (!tex || tex->id == 0 || tex->id == U32_MAX) {
-    TraceLog(LOG_WARNING, "scene_editor::add_prop()::Provided texture uninitialized or corrupted");
+  const atlas_texture* tex = get_atlas_texture_by_enum(source_tex);
+  if (!tex || !tex->atlas_handle) {
+    TraceLog(LOG_WARNING, "scene_editor::add_prop()::Invalid atlas");
     return;
   }
-  if (tex->width < source.x + source.width || tex->height < source.y + source.height) {
+  if (tex->atlas_handle->width < source.x + source.width || tex->atlas_handle->height < source.y + source.height) {
     TraceLog(LOG_WARNING, "scene_editor::add_prop()::Provided prop dimentions out of bound");
     return;
   }
@@ -603,6 +601,12 @@ void add_prop(texture_id source_tex, Rectangle source, f32 scale) {
   
   prop->atlas_id = source_tex;
   prop->source = source;
+  prop->relative_source = (Rectangle){ 
+    prop->source.x + tex->source.x,  
+    prop->source.y + tex->source.y,  
+    prop->source.width,  
+    prop->source.height
+  };
   prop->dest = (Rectangle) {0, 0, source.width * scale, source.height * scale};
   prop->id = state->prop_count;
   prop->is_initialized = true;

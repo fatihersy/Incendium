@@ -5,8 +5,8 @@
 #include "defines.h"
 
 typedef struct panel {
-    texture_id frame_tex_id;
-    texture_id bg_tex_id;
+    atlas_texture_id frame_tex_id;
+    atlas_texture_id bg_tex_id;
     Color bg_tint;
     Color bg_hover_tint;
     Vector4 offsets;
@@ -29,7 +29,6 @@ typedef struct panel {
     f32 scale;
     Vector2 text_offset_on_click;
     bool play_reflection;
-    bool play_crt;
     bool should_center;
   } button_type;
   
@@ -38,10 +37,7 @@ typedef struct panel {
     button_type btn_type;
     button_state state;
     Rectangle dest;
-  
-    u16 crt_render_index;
-    u16 reflection_render_index;
-  
+    spritesheet reflection_anim;
     bool on_screen;
     bool is_registered;
   } button;
@@ -87,8 +83,8 @@ typedef struct panel {
   
   typedef struct progress_bar_type {
     //texture_id body_repetitive;
-    texture_id body_inside;
-    texture_id body_outside;
+    atlas_texture_id body_inside;
+    atlas_texture_id body_outside;
   
   
     shader_id mask_shader_id;
@@ -131,10 +127,11 @@ void gui_label(const char* text, font_type type, i32 font_size, Vector2 position
 void gui_label_wrap(const char* text, font_type type, i32 font_size, Rectangle position, Color tint, bool _should_center);
 
 void gui_draw_pause_screen(void);
-void gui_draw_texture_id_pro(texture_id _id, Rectangle src, Rectangle dest); 
-void gui_draw_texture_id(texture_id _id, Rectangle dest); 
+void gui_draw_atlas_texture_id_pro(atlas_texture_id _id, Rectangle src, Rectangle dest, bool relative); 
+void gui_draw_atlas_texture_id(atlas_texture_id _id, Rectangle dest); 
 void gui_draw_spritesheet_id(spritesheet_id _id, Color _tint, Vector2 pos, Vector2 scale, u16 frame, bool _should_center); 
-void gui_draw_texture_id_center(texture_id _id, Vector2 pos, Vector2 dim, bool should_center);
+void gui_draw_atlas_texture_id_center(atlas_texture_id _id, Vector2 pos, Vector2 dim, bool should_center);
+void gui_draw_texture_id(texture_id _id, Rectangle dest); 
 void gui_draw_map_stage_pin(bool have_hovered, Vector2 screen_loc);
 
 #define gui_label_format(FONT, FONT_SIZE, X,Y, COLOR, CENTER, TEXT, ...) gui_label(TextFormat(TEXT, __VA_ARGS__), FONT, FONT_SIZE, (Vector2){X,Y}, COLOR, CENTER)

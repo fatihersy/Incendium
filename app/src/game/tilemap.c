@@ -129,14 +129,14 @@ void render_tilemap(tilemap* _tilemap, Rectangle camera_view) {
   for (int i = 0; i < _tilemap->prop_count; ++i) {
     if (!_tilemap->props[i].is_initialized) continue;
     
-    tilemap_prop* prop = &_tilemap->props[i];
+    const tilemap_prop* prop = &_tilemap->props[i];
     if (prop) {
       // Check if prop is visible in camera view
       Rectangle prop_rect = prop->dest;
       if (CheckCollisionRecs(camera_view, prop_rect)) {
-        Texture2D* tex = get_texture_by_enum(prop->atlas_id);
+        atlas_texture* tex = get_atlas_texture_by_enum(prop->atlas_id);
         if (tex) {
-          DrawTexturePro(*tex, prop->source, prop->dest, (Vector2) {0}, 0.f, WHITE);
+          DrawTexturePro(*tex->atlas_handle, prop->relative_source, prop->dest, (Vector2) {0}, 0.f, WHITE);
         }
       }
     }
@@ -177,16 +177,23 @@ void render_tile(tilemap_tile* tile, Rectangle dest) {
     return;
   }
 
-  DrawTexturePro(*tile->sheet->tex, 
-    (Rectangle) { tile->x, tile->y, tile->sheet->tile_size, tile->sheet->tile_size},
+  DrawTexturePro(*tile->sheet->atlas_handle, 
+    (Rectangle) { 
+      tile->x + tile->sheet->atlas_source.source.x, 
+      tile->y + tile->sheet->atlas_source.source.y, 
+      tile->sheet->tile_size, 
+      tile->sheet->tile_size
+    },
     dest,
     (Vector2){0},0.f, WHITE
   );
 }
-/**
- * @brief Unsafe!
- */
+
 Vector2 get_tilesheet_dim(tilesheet* sheet) {
+  if (!sheet) {
+    TraceLog(LOG_ERROR, "tilemap::get_tilesheet_dim()::Sheet is invalid");
+    return (Vector2){0};
+  }
   return (Vector2) {
     (sheet->tile_count_x * sheet->offset) * sheet->dest_tile_size,
     (sheet->tile_count_y * sheet->offset) * sheet->dest_tile_size,
