@@ -11,6 +11,7 @@
 #define MAX_SPRITE_RENDERQUEUE 50
 
 #define PAK_FILE_LOCATION "./resource.pak"
+#define CONFIG_FILE_LOCATION "./config.ini"
 
 #define MAX_IMAGE_SLOTS 10
 #define MAX_SPRITESHEET_SLOTS 50
@@ -653,6 +654,7 @@ typedef struct ability {
   projectile projectiles[MAX_ABILITY_PROJECTILE_SLOT];
   movement_pattern move_pattern;
   ability_upgradables upgradables[ABILITY_UPG_MAX];
+  f32 ability_play_time;
   u16 proj_count;
   u16 proj_speed;
   f32 proj_duration;
@@ -735,6 +737,8 @@ typedef struct player_state {
   f32 move_speed_multiply;
   f32 cooldown_multiply;
   f32 exp_gain_multiply;
+
+  u32 in_game_currency_souls;
 
   bool is_player_have_ability_upgrade_points;
   bool is_initialized;

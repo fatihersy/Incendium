@@ -16,6 +16,14 @@ static spawn_system_state *state;
 // To avoid dublicate symbol errors. Implementation in defines.h
 extern const u32 level_curve[MAX_PLAYER_LEVEL + 1];
 
+#define CHECK_pSPAWN_COLLISION(REC1, SPAWN, NEW_POS) \
+CheckCollisionRecs(REC1, \
+  (Rectangle) { \
+    NEW_POS.x, NEW_POS.y, \
+    SPAWN->collision.width, SPAWN->collision.height\
+})
+
+
 bool spawn_system_initialize(void) {
   if (state) {
     TraceLog(LOG_ERROR, "spawn::state_initialize()::State init called twice");
@@ -52,22 +60,32 @@ u16 damage_spawn(u16 _id, u16 damage) {
   return 0;
 }
 
-u16 spawn_character(Character2D _character) {
+bool spawn_character(Character2D _character) {
   if (state->current_spawn_count >= MAX_SPAWN_COUNT) {
-    TraceLog(LOG_WARNING, "spawn_character()::Spawn count is out of bounds");
-    return INVALID_ID16;
+    TraceLog(LOG_WARNING, "spawn_character()::Spawn count exceeded");
+    return false;
   }
+  
   _character.animation.sheet_id = SHEET_ID_SPAWN_ZOMBIE_ANIMATION_IDLE_LEFT;
   set_sprite(&_character.animation, true, false, false);
 
-  _character.character_id = state->current_spawn_count;
-  _character.initialized = true;
   _character.collision.width = _character.animation.current_frame_rect.width * _character.scale;
   _character.collision.height = _character.animation.current_frame_rect.height * _character.scale;
+
+  for (i32 i=0; i<state->current_spawn_count; ++i) {
+    if(CheckCollisionRecs(state->spawns[i].collision, (Rectangle) {
+      _character.position.x, _character.position.y,
+      _character.collision.width, _character.collision.height})) { return false; }
+  }
+
+  _character.collision.x = _character.position.x;
+  _character.collision.y = _character.position.y;
+  _character.character_id = state->current_spawn_count;
+  _character.initialized = true;
   
   state->spawns[state->current_spawn_count] = _character;
   state->current_spawn_count++;
-  return _character.character_id;
+  return true;
 }
 
 bool update_spawns(Vector2 player_position) {
@@ -83,18 +101,36 @@ bool update_spawns(Vector2 player_position) {
       continue;
     }
     Vector2 new_position = move_towards(character->position, player_position,character->speed);
-    character->position = new_position;
-    character->collision.x = new_position.x;
-    character->collision.y = new_position.y;
+    bool x0_collide = false;
+    bool y0_collide = false;
+    for (i32 j=0; j<state->current_spawn_count; ++j) {
+      if (state->spawns[j].character_id == character->character_id) { continue; }
 
+      const Rectangle spw_col = character->collision;
+      const Rectangle x0 = (Rectangle) {spw_col.x, new_position.y, spw_col.width, spw_col.height};
+      const Rectangle y0 = (Rectangle) {new_position.x, spw_col.y, spw_col.width, spw_col.height};
+
+      if(CheckCollisionRecs(state->spawns[j].collision, x0)) {
+        x0_collide = true;
+      }
+      if(CheckCollisionRecs(state->spawns[j].collision, y0)) {
+        y0_collide = true;
+      }
+    }
+    if (!x0_collide) {
+      character->position.y = new_position.y;
+      character->collision.y = character->position.y;
+    }
+    if (!y0_collide) {
+      character->position.x = new_position.x;
+      character->collision.x = character->position.x;
+    }
     event_fire(EVENT_CODE_DAMAGE_PLAYER_IF_COLLIDE, (event_context) {
       .data.u16[0] = character->collision.x, .data.u16[1] = character->collision.y,
       .data.u16[2] = character->collision.width, .data.u16[3] = character->collision.height,
       .data.u16[4] = character->damage,
     });
-
   }
-
   return true;
 }
 

@@ -4,6 +4,9 @@
 #include "core/fmath.h"
 #include "core/fmemory.h"
 
+#include "game/spritesheet.h"
+
+
 typedef struct ability_system_state {
   ability abilities[ABILITY_TYPE_MAX];
 
@@ -12,9 +15,6 @@ typedef struct ability_system_state {
 } ability_system_state;
 
 static ability_system_state* state;
-
-#define PSPRITESHEET_SYSTEM state->spritesheet_system
-#include "game/spritesheet.h"
 
 void movement_satellite(ability* abl);
 void movement_bullet(ability* abl);
@@ -316,7 +316,3 @@ ability get_next_level(ability abl) {
   upgrade_ability(&abl);
   return abl;
 }
-
-#undef PSPRITESHEET_SYSTEM
-
-

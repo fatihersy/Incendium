@@ -73,14 +73,14 @@ bool player_system_initialize(void) {
     player->wreck_left_sprite.sheet_id = SHEET_ID_PLAYER_ANIMATION_WRECK_LEFT;
     player->wreck_right_sprite.sheet_id = SHEET_ID_PLAYER_ANIMATION_WRECK_RIGHT;
 
-    set_sprite(&player->move_left_sprite, true, false, true);
-    set_sprite(&player->move_right_sprite, true, false, true);
-    set_sprite(&player->idle_left_sprite, true, false, true);
-    set_sprite(&player->idle_right_sprite, true, false, true);
-    set_sprite(&player->take_damage_left_sprite, true, false, true);
-    set_sprite(&player->take_damage_right_sprite, true, false, true);
-    set_sprite(&player->wreck_left_sprite, true, false, true);
-    set_sprite(&player->wreck_right_sprite, true, false, true);
+    set_sprite(&player->move_left_sprite, true, false, false);
+    set_sprite(&player->move_right_sprite, true, false, false);
+    set_sprite(&player->idle_left_sprite, true, false, false);
+    set_sprite(&player->idle_right_sprite, true, false, false);
+    set_sprite(&player->take_damage_left_sprite, true, false, false);
+    set_sprite(&player->take_damage_right_sprite, true, false, false);
+    set_sprite(&player->wreck_left_sprite, true, false, false);
+    set_sprite(&player->wreck_right_sprite, true, false, false);
 
     player->last_played_animation = &player->idle_left_sprite; // The position player starts. To avoid from the error when move firstly called
     
@@ -170,8 +170,8 @@ Vector2 get_player_position(bool centered) {
   Vector2 pos = {0};
   if(centered) {
     pos = (Vector2) {
-      .x = player->position.x - player->dimentions_div2.x,
-      .y = player->position.y - player->dimentions_div2.y
+      .x = player->position.x + player->dimentions_div2.x,
+      .y = player->position.y + player->dimentions_div2.y
     };
   }
   else { 
@@ -198,23 +198,23 @@ void add_exp_to_player(u32 exp) {
   player->exp_perc = (float) player->exp_current / player->exp_to_next_level;
 }
 void take_damage(u16 damage) {
-  if(!player->is_damagable) return;
-  if(player->health_current - damage > 0) {
+  if(!player->is_damagable || player->is_dead) return;
+  if((player->health_current - damage) > 0 && (player->health_current - damage) <= player->health_max) {
     player->health_current -= damage;
     player->is_damagable = false;
   }
   else {
     player->health_current = 0;
     player->is_dead = true;
+    event_fire(EVENT_CODE_END_GAME, (event_context) {0});
   }
   player->health_perc = (float) player->health_current / player->health_max;
 }
 
-bool update_player(void) {
-  if (!player) return false;
-  if (player->is_dead) {
-    event_fire(EVENT_CODE_PAUSE_GAME, (event_context){0});
-  }
+player_update_results update_player(void) {
+  if (!player) return (player_update_results){ .is_success = false };
+  if (player->is_dead) return (player_update_results){ .is_success = false }; 
+
   if(!player->is_damagable) {
     if(player->damage_break_current - GetFrameTime() > 0) player->damage_break_current -= GetFrameTime();
     else
@@ -223,34 +223,48 @@ bool update_player(void) {
       player->is_damagable = true;
     }
   }
+  Vector2 new_position = {0};
   if (IsKeyDown(KEY_W)) {
-    player->position.y -= 2;
-    player->is_moving = true;
+    new_position.y -= 2;
   }
   if (IsKeyDown(KEY_A)) {
-    player->position.x -= 2;
-    player->w_direction = WORLD_DIRECTION_LEFT;
-    player->is_moving = true;
+    new_position.x -= 2;
   }
   if (IsKeyDown(KEY_S)) {
-    player->position.y += 2;
-    player->is_moving = true;
+    new_position.y += 2;
   }
   if (IsKeyDown(KEY_D)) {
-    player->position.x += 2;
-    player->w_direction = WORLD_DIRECTION_RIGHT;
-    player->is_moving = true;
+    new_position.x += 2;
   }
-  if (IsKeyUp(KEY_W) && IsKeyUp(KEY_A) && IsKeyUp(KEY_S) && IsKeyUp(KEY_D)) {    
-    player->is_moving = false;
-  }
-  player->collision.x = player->position.x - player->dimentions_div2.x;
-  player->collision.y = player->position.y - player->dimentions_div2.y;
-  player->collision.width = player->dimentions.x;
-  player->collision.height = player->dimentions.y;
 
   update_sprite(player->last_played_animation);
-  return true;
+  return (player_update_results){ 
+    .move_request = new_position,
+    .is_success = true
+  };
+}
+void move_player(Vector2 new_pos) {
+  if (!player) {
+    TraceLog(LOG_ERROR, "player::move_player()::Player state is null");
+  }
+  if (new_pos.x < 0) {
+    player->w_direction = WORLD_DIRECTION_LEFT;
+  }
+  else if (new_pos.x > 0) {
+    player->w_direction = WORLD_DIRECTION_RIGHT;
+  }
+  else if(new_pos.x == 0 && new_pos.y == 0) {
+    player->is_moving = false;
+    return;
+  }
+  player->is_moving = true;
+  player->position.x += new_pos.x;
+  player->position.y += new_pos.y;
+
+  player->collision.x = player->position.x;
+  player->collision.y = player->position.y;
+  player->collision.width = player->dimentions.x;
+  player->collision.height = player->dimentions.y;
 }
 
 bool render_player(void) {
@@ -299,7 +313,6 @@ bool render_player(void) {
           : play_anim(SHEET_ID_PLAYER_ANIMATION_WRECK_RIGHT);
   	}
   
-  //render_abilities(&player->ability_system);
   #if DEBUG_COLLISIONS
       DrawRectangleLines(
           player->collision.x,

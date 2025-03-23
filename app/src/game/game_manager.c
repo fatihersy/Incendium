@@ -17,6 +17,7 @@ typedef struct game_manager_system_state {
   player_state* p_player;
   worldmap_stage stage;
 
+  bool is_game_end;
   bool is_game_paused;
   bool game_manager_initialized;
 } game_manager_system_state;
@@ -26,7 +27,8 @@ static game_manager_system_state *restrict state;
 // To avoid dublicate symbol errors. Implementation in defines.h
 extern const u32 level_curve[MAX_PLAYER_LEVEL+1];
 
-void update_collisions(void);
+#define SPAWN_TRYING_LIMIT 15
+
 bool game_manager_on_event(u16 code, event_context context);
 
 bool game_manager_initialize(camera_metrics* _camera_metrics) {
@@ -56,6 +58,7 @@ bool game_manager_initialize(camera_metrics* _camera_metrics) {
   state->spawns = get_spawns();
   state->p_spawn_system_spawn_count = get_spawn_count();
   
+  event_register(EVENT_CODE_END_GAME, game_manager_on_event);
   event_register(EVENT_CODE_PAUSE_GAME, game_manager_on_event);
   event_register(EVENT_CODE_UNPAUSE_GAME, game_manager_on_event);
   event_register(EVENT_CODE_DAMAGE_PLAYER_IF_COLLIDE, game_manager_on_event);
@@ -66,25 +69,50 @@ bool game_manager_initialize(camera_metrics* _camera_metrics) {
   return true;
 }
 
-void update_game_manager(void) {
+void update_game_manager() {
   if (!state) {
     return;
   }
 
-  update_collisions();
-  update_player();
-  update_abilities(&state->p_player->ability_system);
-  update_spawns(get_player_position(true));
-}
-void update_collisions(void) {
+  if (!state->p_player->is_dead) {
+    const player_update_results pur = update_player();
+    if (pur.is_success) { // TODO: Player-Map collision detection system
+      /*
+      const Rectangle pl_col = state->p_player->collision;
+      const Rectangle x0 = (Rectangle) {pl_col.x, pl_col.y + pur.move_request.y, pl_col.width, pl_col.height};
+      const Rectangle y0 = (Rectangle) {pl_col.x + pur.move_request.x, pl_col.y, pl_col.width, pl_col.height};
 
+      if(!CheckCollisionRecs(state->spawns[0].collision, x0)) {
+        move_player(VECTOR2(0, pur.move_request.y));
+      }
+      if(!CheckCollisionRecs(state->spawns[0].collision, y0)) {
+        move_player(VECTOR2(pur.move_request.x, 0));
+      } 
+      */
+      move_player(pur.move_request);
+    }
+    update_abilities(&state->p_player->ability_system);
+    update_spawns(get_player_position(true));
+
+    for (int i=0; i<ABILITY_TYPE_MAX; ++i) {
+      state->p_player->ability_system.abilities[i].ability_play_time += GetFrameTime();
+    }
+  }
 }
+
 void render_game(void) {
-  
-  DrawRectangleRec(state->stage.spawning_areas[0], RED);
-  render_player();
-  render_spawns();
-  render_abilities(&state->p_player->ability_system);
+  if (!state) {
+    return;
+  }
+  if (!state->p_player->is_dead) {
+    render_abilities(&state->p_player->ability_system);
+    render_player();
+    render_spawns();
+  }
+  else {
+    render_player();
+    render_spawns();
+  }
 }
 
 // OPS
@@ -137,8 +165,8 @@ void gm_start_game(worldmap_stage stage) {
   }
 
   state->stage = stage;
-
-  for (u16 i = 0; i < MAX_SPAWN_COUNT; ++i) 
+  u32 spawn_trying_limit = SPAWN_TRYING_LIMIT;
+  for (u16 i = 0; i < MAX_SPAWN_COUNT && (spawn_trying_limit <= SPAWN_TRYING_LIMIT && spawn_trying_limit > 0); ) 
   {
     Vector2 position = (Vector2) {
       get_random((i32)state->stage.spawning_areas[0].x, (i32)state->stage.spawning_areas[0].x + state->stage.spawning_areas[0].width),
@@ -158,7 +186,7 @@ void gm_start_game(worldmap_stage stage) {
       .health = 100,
       .damage = 10,
       .speed = 1,
-    });
+    }) ? ++i : --spawn_trying_limit;
   }
 
   event_fire(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, (event_context){
@@ -280,6 +308,15 @@ void set_is_game_paused(bool _is_game_paused) {
 void toggle_is_game_paused(void) {
   state->is_game_paused = !state->is_game_paused;
 }
+bool get_is_game_end(void) {
+  return state->is_game_end;
+}
+void set_is_game_end(bool _is_game_end) { 
+  state->is_game_end = _is_game_end; 
+}
+void toggle_is_game_end(void) {
+  state->is_game_end = !state->is_game_end;
+}
 u16 get_remaining_enemies(void) {
   return *state->p_spawn_system_spawn_count;
 }
@@ -360,14 +397,16 @@ Vector2 _get_player_position(bool centered) {
 
 bool game_manager_on_event(u16 code, event_context context) {
   switch (code) {
+  case EVENT_CODE_END_GAME: {
+    state->is_game_end = true;
+    return true;
+  }
   case EVENT_CODE_PAUSE_GAME: {
     state->is_game_paused = true;
-
     return true;
   }
   case EVENT_CODE_UNPAUSE_GAME: {
     state->is_game_paused = false;
-
     return true;
   }
   case EVENT_CODE_DAMAGE_PLAYER_IF_COLLIDE: {
@@ -402,8 +441,6 @@ bool game_manager_on_event(u16 code, event_context context) {
   }
   }
 
-  // TODO: Log unexpected termination
+  TraceLog(LOG_WARNING, "game_engine::game_manager_on_event()::Fire event ended unexpectedly");
   return false;
 }
-
-

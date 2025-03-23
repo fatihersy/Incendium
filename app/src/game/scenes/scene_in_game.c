@@ -16,6 +16,7 @@ typedef enum in_game_stages {
   IN_GAME_STAGE_MAP_CHOICE,
   IN_GAME_STAGE_PASSIVE_CHOICE,
   IN_GAME_STAGE_PLAY,
+  IN_GAME_STAGE_PLAY_RESULTS,
   IN_GAME_STAGE_MAX,
 } in_game_stages;
 
@@ -26,6 +27,7 @@ typedef struct scene_in_game_state {
   worldmap_stage worldmap_locations[MAX_WORLDMAP_LOCATIONS];
   in_game_stages stage;
   camera_metrics* in_camera_metrics;
+  f32 play_time;
 
   u16 clouds_animation_timer;
   u16 hovered_stage;
@@ -61,9 +63,10 @@ void initialize_worldmap_locations(void);
 void start_game(character_stat* stat);
 void draw_upgrade_panel(ability* abl, ability upg, Rectangle panel_dest);
 void draw_passive_selection_panel(character_stat* stat, Rectangle panel_dest);
+void draw_end_game_panel();
 
 /**
- * @brief Requires world system, world init moved to app as well as its loading time
+ * @brief Requires world system, world init moved to app, as well as its loading time
  */
 bool initialize_scene_in_game(camera_metrics* _camera_metrics) {
   if (state) {
@@ -115,6 +118,11 @@ void update_scene_in_game(void) {
 
   switch (state->stage) {
     case IN_GAME_STAGE_MAP_CHOICE: {
+      event_fire(EVENT_CODE_SCENE_MANAGER_SET_CAM_POS, (event_context) {
+        .data.f32[0] = get_resolution_div2()->x,
+        .data.f32[1] = get_resolution_div2()->y,
+      });
+
       if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON) && state->hovered_stage <= MAX_WORLDMAP_LOCATIONS) {
         set_worldmap_location(state->hovered_stage);
         state->stage = IN_GAME_STAGE_PASSIVE_CHOICE;
@@ -128,15 +136,20 @@ void update_scene_in_game(void) {
       if (get_is_game_paused() || !state->has_game_started) {
         return;
       }
+      if (get_is_game_end()) {
+        state->stage = IN_GAME_STAGE_PLAY_RESULTS;
+      }
       update_map();
       update_game_manager();
+      state->play_time += GetFrameTime();
     
       event_fire(EVENT_CODE_SCENE_MANAGER_SET_TARGET, (event_context){
-        .data.f32[0] = _get_player_position(false).x,
-        .data.f32[1] = _get_player_position(false).y,
+        .data.f32[0] = _get_player_position(true).x,
+        .data.f32[1] = _get_player_position(true).y,
       });
       break;
     }
+    case IN_GAME_STAGE_PLAY_RESULTS: { break; }
     default: {
       TraceLog(LOG_WARNING, "scene_in_game::update_scene_in_game()::Unsupported stage");
       break;
@@ -146,8 +159,6 @@ void update_scene_in_game(void) {
 
 void render_scene_in_game(void) {
   STATE_ASSERT("render_scene_in_game")
-
-  //gui_draw_texture_id(TEX_ID_GAME_BG_SPACE, (Rectangle) {0, 0, GetScreenWidth(), GetScreenHeight()});
 
   switch (state->stage) {
     case IN_GAME_STAGE_MAP_CHOICE: {
@@ -178,12 +189,15 @@ void render_scene_in_game(void) {
       render_game();
       break;
     }
+    case IN_GAME_STAGE_PLAY_RESULTS: {
+      render_map();
+      break; 
+    }
     default: {
       TraceLog(LOG_WARNING, "scene_in_game::render_scene_in_game()::Unsupported stage");
       break;
     }
   }
-
 }
 
 void render_interface_in_game(void) {
@@ -289,6 +303,10 @@ void render_interface_in_game(void) {
       }
       break;
     }
+    case IN_GAME_STAGE_PLAY_RESULTS: { 
+      draw_end_game_panel();
+      break; 
+    }
     default: {
       TraceLog(LOG_WARNING, "scene_in_game::render_interface_in_game()::Unsupported stage");
       break;
@@ -320,6 +338,7 @@ void in_game_update_mouse_bindings(void) {
     case IN_GAME_STAGE_PLAY: {
       break;
     }
+    case IN_GAME_STAGE_PLAY_RESULTS: { break; }
     default: {
       TraceLog(LOG_WARNING, "scene_in_game::update_scene_in_game()::Unsupported stage");
       break;
@@ -356,6 +375,7 @@ void in_game_update_keyboard_bindings(void) {
       }
       break;
     }
+    case IN_GAME_STAGE_PLAY_RESULTS: { break; }
     default: {
       TraceLog(LOG_WARNING, "scene_in_game::in_game_update_keyboard_bindings()::Unsupported stage");
       break;
@@ -459,6 +479,20 @@ void draw_passive_selection_panel(character_stat* stat, Rectangle panel_dest) {
     .height = desc_box_height - padding.y,
   };
   gui_label_wrap(stat->passive_desc, FONT_TYPE_MINI_MOOD, desc_font_size, desc_box, WHITE, false);
+
+}
+void draw_end_game_panel() {
+  STATE_ASSERT("draw_end_game_panel")
+
+  gui_panel(get_default_panel(), (Rectangle){ 
+    get_resolution_div2()->x, get_resolution_div2()->y, 
+    get_resolution_5div4()->x, get_resolution_5div4()->y
+  }, true);
+
+  u32 min  = (i32)state->play_time/60;
+  u32 secs = (i32)state->play_time%60;
+  gui_label_format_v(FONT_TYPE_MOOD, 10, *get_resolution_div2(), WHITE, true, "%d:%d", min, secs);
+
 
 }
 

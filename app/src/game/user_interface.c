@@ -37,6 +37,9 @@ typedef struct user_interface_system_state {
 
 static user_interface_system_state *restrict state;
 
+#define BASE_WIDTH 1920.0f
+#define BASE_HEIGHT 1080.0f
+
 #define MAX_UI_WORDWRAP_WORD_LENGTH 20
 #define MAX_UI_WORDWRAP_SENTENCE_LENGTH 300
 #define MENU_BUTTON_FONT state->mini_mood_font
@@ -48,10 +51,7 @@ static user_interface_system_state *restrict state;
 #define LABEL_MINI_FONT_SIZE state->mini_mood_font.baseSize * .1f
 #define LABEL_MINI_OUTLINE_FONT_SIZE state->mini_mood_outline_font.baseSize * .1f
 #define DEFAULT_MENU_BUTTON_SCALE 3
-#define SPACE_BTW_V(OFFSET_X, OFFSET_Y, POS, DIM, f) ((Vector2){  \
-  .x = (POS).x - ((DIM).x / 2.0f) + (((DIM).x / (f)) * (OFFSET_X)), \
-  .y = (POS).y - ((DIM).y / 2.0f) + (((DIM).y / (f)) * (OFFSET_Y)) \
-})
+
 #define draw_text(TEXT, TEXT_POS, FONT, FONT_SIZE, COLOR, CENTER)                                                 \
   if (CENTER) {                                                                                                   \
     Vector2 text_measure = MeasureTextEx(FONT, TEXT, FONT_SIZE, UI_FONT_SPACING);                                 \
@@ -91,6 +91,8 @@ void register_slider_type(slider_type_id _sdr_type_id, spritesheet_id _ss_sdr_bo
 Rectangle get_texture_source_rect(texture_id _id);
 void DrawTextBoxed(Font font, const char *text, Rectangle rec, float fontSize, float spacing, bool wordWrap, Color tint);
 const char* wrap_text(const char* text, Font font, i32 font_size, Rectangle bounds, bool center_x);
+Vector2 position_element(Vector2 offset, Vector2 pos, Vector2 dim, f32 f);
+void set_resolution_slider_native_res(void);
 
 Vector2 make_vector(f32 x, f32 y);
 
@@ -295,6 +297,37 @@ void user_interface_system_initialize(void) {
   event_register(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, user_interface_on_event);
   event_register(EVENT_CODE_UI_START_FADEIN_EFFECT, user_interface_on_event);
   event_register(EVENT_CODE_UI_START_FADEOUT_EFFECT, user_interface_on_event);
+
+  for (int i=0; i<state->sliders[SDR_ID_SETTINGS_WIN_MODE_SLIDER].max_value; ++i) {
+    if (state->sliders[SDR_ID_SETTINGS_WIN_MODE_SLIDER].options[i].content.data.i32[0] == get_app_settings()->window_state && i != 0) {
+      state->sliders[SDR_ID_SETTINGS_WIN_MODE_SLIDER].current_value = i;
+      break;
+    }
+  }
+  for (int i=0; i<state->sliders[SDR_ID_SETTINGS_RES_SLIDER].max_value; ++i) {
+    if (
+      state->sliders[SDR_ID_SETTINGS_RES_SLIDER].options[i].content.data.u16[0] == get_app_settings()->resolution[0] &&
+      state->sliders[SDR_ID_SETTINGS_RES_SLIDER].options[i].content.data.u16[1] == get_app_settings()->resolution[1]) 
+    {
+      state->sliders[SDR_ID_SETTINGS_RES_SLIDER].current_value = i;
+      break;
+    }
+  }
+  if (SDR_CURR_VAL(SDR_ID_SETTINGS_RES_SLIDER).content.data.u16[0] != get_app_settings()->resolution[0] ||
+      SDR_CURR_VAL(SDR_ID_SETTINGS_RES_SLIDER).content.data.u16[1] != get_app_settings()->resolution[1]) 
+  {
+    Vector2 new_res = pVECTOR2(get_app_settings()->resolution);
+    const char* new_res_text = TextFormat("%.0fx%.0f", new_res.x, new_res.y);
+
+    if(gui_slider_add_option(SDR_ID_SETTINGS_RES_SLIDER, new_res_text, (data_pack) {
+      .data.u16[0] = new_res.x,
+      .data.u16[1] = new_res.y,
+      .array_lenght = 2,
+      .type_flag = DATA_TYPE_U16
+    })) {
+      state->sliders[SDR_ID_SETTINGS_RES_SLIDER].current_value = state->sliders[SDR_ID_SETTINGS_RES_SLIDER].max_value-1;
+    }
+  }
 }
 
 void update_user_interface(void) {
@@ -394,13 +427,13 @@ void render_user_interface(void) {
 bool gui_menu_button(const char* text, button_id _id, Vector2 offset) {
   return gui_button(text, _id, 
     MENU_BUTTON_FONT, MENU_BUTTON_FONT_SIZE, 
-    SPACE_BTW_V(offset.x, offset.y, *get_resolution_div2(), state->buttons[_id].btn_type.dest_frame_dim, 3.f)
+    position_element(offset, *get_resolution_div2(), state->buttons[_id].btn_type.dest_frame_dim, 2.1f)
   );
 }
 bool gui_mini_button(const char* text, button_id _id, Vector2 offset, f32 offset_scale) {
   return gui_button(text, _id, 
     MINI_BUTTON_FONT, MINI_BUTTON_FONT_SIZE, 
-    SPACE_BTW_V(offset.x, offset.y, *get_resolution_div2(), state->buttons[_id].btn_type.dest_frame_dim, offset_scale)
+    position_element(offset, *get_resolution_div2(), state->buttons[_id].btn_type.dest_frame_dim, offset_scale)
   );
 }
 bool gui_slider_button(button_id _id, Vector2 pos) {
@@ -552,7 +585,7 @@ void gui_slider(slider_id _id, Vector2 pos, Vector2 offset, f32 offset_scale) {
     return;
   }
   slider_type* sdr_type = &sdr->sdr_type;
-  sdr->position = SPACE_BTW_V( offset.x, offset.y, pos, sdr_type->whole_body_width, offset_scale);
+  sdr->position = position_element(offset, pos, sdr_type->whole_body_width, offset_scale);
   if (!sdr->is_registered || (sdr_type->id == SDR_TYPE_OPTION && sdr->max_value <= 0)) return;
  
   button* btn_left = &state->buttons[sdr->sdr_type.left_btn_id];
@@ -732,21 +765,22 @@ void gui_draw_settings_screen(void) { // TODO: Return to settings later
   if(gui_menu_button("Apply", BTN_ID_SETTINGS_APPLY_SETTINGS_BUTTON, VECTOR2(-2,15))) {
     slider sdr_win_mode = state->sliders[SDR_ID_SETTINGS_WIN_MODE_SLIDER];
     i32 window_mod = sdr_win_mode.options[sdr_win_mode.current_value].content.data.i32[0];
-
+    
     if (window_mod == FLAG_BORDERLESS_WINDOWED_MODE && !IsWindowState(FLAG_BORDERLESS_WINDOWED_MODE)) {
       event_fire(EVENT_CODE_TOGGLE_BORDERLESS, (event_context) {0});
+      set_resolution_slider_native_res();
     }
     else if (window_mod == FLAG_FULLSCREEN_MODE && !IsWindowFullscreen()) {    
       event_fire(EVENT_CODE_TOGGLE_FULLSCREEN, (event_context) {0});
-      Vector2 new_res = pVECTOR2(SDR_CURR_VAL(SDR_ID_SETTINGS_RES_SLIDER).content.data.u16);
-      set_resolution(new_res.x, new_res.y);
+      set_resolution_slider_native_res();
     }
     else if (window_mod == 0) {
+      Vector2 res = pVECTOR2(SDR_CURR_VAL(SDR_ID_SETTINGS_RES_SLIDER).content.data.u16);
+      set_resolution(res.x, res.y);
       event_fire(EVENT_CODE_TOGGLE_WINDOWED, (event_context) {0});
-      Vector2 new_res = pVECTOR2(SDR_CURR_VAL(SDR_ID_SETTINGS_RES_SLIDER).content.data.u16);
-      SetWindowSize(new_res.x, new_res.y);
-      set_resolution(new_res.x, new_res.y);
     }
+
+    save_ini_file();
   }
 }
 void gui_draw_pause_screen(void) {
@@ -1058,6 +1092,17 @@ inline void gui_draw_map_stage_pin(bool have_hovered, Vector2 screen_loc) {
     gui_draw_atlas_texture_id_pro(ATLAS_TEX_ID_ICON_ATLAS, (Rectangle){32, 320, 32, 32}, icon_loc, true);
   }
 }
+inline Vector2 position_element(Vector2 offset, Vector2 pos, Vector2 dim, f32 f) {
+  Vector2 current_res = *get_resolution_div2();
+  f32 scale_x = (current_res.x * 2.0f) / BASE_WIDTH;
+  f32 scale_y = (current_res.y * 2.0f) / BASE_HEIGHT;
+  
+  return (Vector2){
+      .x = pos.x - (dim.x / 2.0f) + ((dim.x / f) * offset.x) * scale_x,
+      .y = pos.y - (dim.y / 2.0f) + ((dim.y / f) * offset.y) * scale_y
+  };
+}
+
 /**
  * @brief NOTE: Source https://github.com/raysan5/raylib/blob/master/examples/text/text_rectangle_bounds.c
  */
@@ -1293,6 +1338,25 @@ bool is_ui_fade_anim_complete() {
 }
 bool is_ui_fade_anim_about_to_complete() {
   return state->fade_animation_timer == state->fade_animation_duration-1;
+}
+void set_resolution_slider_native_res(void) {
+  if (!state) {
+    TraceLog(LOG_ERROR, "user_interface::set_resolution_slider_native_res()::State is null");
+    return;
+  }
+  
+  i32 monitor = GetCurrentMonitor();
+  Vector2 res = (Vector2) {GetMonitorWidth(monitor), GetMonitorHeight(monitor)};
+
+  for (int i=0; i<state->sliders[SDR_ID_SETTINGS_RES_SLIDER].max_value; ++i) {
+    if (
+      state->sliders[SDR_ID_SETTINGS_RES_SLIDER].options[i].content.data.u16[0] == res.x &&
+      state->sliders[SDR_ID_SETTINGS_RES_SLIDER].options[i].content.data.u16[1] == res.y) 
+    {
+      state->sliders[SDR_ID_SETTINGS_RES_SLIDER].current_value = i;
+      break;
+    }
+  }
 }
 
 void user_interface_system_destroy(void) {

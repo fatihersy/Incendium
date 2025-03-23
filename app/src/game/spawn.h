@@ -6,7 +6,7 @@
 #include "defines.h"
 
 bool spawn_system_initialize(void);
-u16 spawn_character(Character2D _character);
+bool spawn_character(Character2D _character);
 Character2D *get_spawns();
 u16 *get_spawn_count();
 

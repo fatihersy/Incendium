@@ -38,8 +38,8 @@ void update_scene_main_menu(void) {
   update_user_interface();
 
   event_fire(EVENT_CODE_SCENE_MANAGER_SET_CAM_POS, (event_context) {
-    .data.f32[0] = GetScreenWidth()/2.f,
-    .data.f32[1] = GetScreenHeight()/2.f,
+    .data.f32[0] = 0,
+    .data.f32[1] = 0,
   });
   if (state->in_scene_changing_process && is_ui_fade_anim_about_to_complete()) {
     state->scene_changing_process_complete = true;

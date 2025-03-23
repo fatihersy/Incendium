@@ -14,7 +14,7 @@
 #include "game/world.h"
 
 typedef struct app_system_state {
-  app_settings settings;
+  app_settings* settings;
   bool app_runing;
 } app_system_state;
 
@@ -31,22 +31,26 @@ bool app_initialize(void) {
   
   // Platform    
   settings_initialize();
-  set_settings_from_ini_file("config.ini");
-  state->settings = *get_app_settings();
+  set_settings_from_ini_file(CONFIG_FILE_LOCATION);
+  state->settings = get_app_settings();
   SetConfigFlags(FLAG_VSYNC_HINT | FLAG_WINDOW_HIGHDPI);
   InitWindow(
-    state->settings.resolution[0], 
-    state->settings.resolution[1], 
-    state->settings.title);
+    1280, 
+    720, 
+    state->settings->title);
   SetTargetFPS(TARGET_FPS); 
   SetExitKey(0);
-  if (state->settings.window_state == FLAG_BORDERLESS_WINDOWED_MODE) {
-    i32 monitor = GetCurrentMonitor();
+  if (state->settings->window_state == FLAG_BORDERLESS_WINDOWED_MODE) {
     ToggleBorderlessWindowed();
-    SetWindowSize(GetMonitorWidth(monitor), GetMonitorHeight(monitor));
+    Vector2 res = (Vector2) {GetMonitorWidth(GetCurrentMonitor()), GetMonitorHeight(GetCurrentMonitor())};
+    SetWindowSize(res.x, res.y);
+    set_resolution(res.x, res.y);
   }
-  else if (state->settings.window_state == FLAG_FULLSCREEN_MODE) {
+  else if (state->settings->window_state == FLAG_FULLSCREEN_MODE) {
     ToggleFullscreen();
+    Vector2 res = (Vector2) {GetMonitorWidth(GetCurrentMonitor()), GetMonitorHeight(GetCurrentMonitor())};
+    SetWindowSize(res.x, res.y);
+    set_resolution(res.x, res.y);
   }
   SetConfigFlags(FLAG_WINDOW_UNDECORATED | FLAG_WINDOW_TOPMOST);
 
@@ -89,6 +93,7 @@ bool app_initialize(void) {
 
   state->app_runing = true;
 
+  save_ini_file();
   return true;
 }
 
@@ -135,24 +140,32 @@ bool application_on_event(u16 code, event_context context) {
   }
   case EVENT_CODE_TOGGLE_BORDERLESS: { 
     i32 monitor = GetCurrentMonitor();
+    Vector2 res = (Vector2) {GetMonitorWidth(monitor), GetMonitorHeight(monitor)};
     ToggleBorderlessWindowed();
-    set_resolution(GetMonitorWidth(monitor), GetMonitorHeight(monitor));
-    state->settings.window_state = FLAG_BORDERLESS_WINDOWED_MODE;
+    SetWindowSize(res.x, res.y);
+    set_resolution(res.x, res.y);
+    state->settings->window_state = FLAG_BORDERLESS_WINDOWED_MODE;
     return true;
   }
   case EVENT_CODE_TOGGLE_FULLSCREEN: {
+    i32 monitor = GetCurrentMonitor();
+    Vector2 res = (Vector2) {GetMonitorWidth(monitor), GetMonitorHeight(monitor)};
     ToggleFullscreen();
-    state->settings.window_state = FLAG_FULLSCREEN_MODE;
+    SetWindowSize(res.x, res.y);
+    set_resolution(res.x, res.y);
+    state->settings->window_state = FLAG_FULLSCREEN_MODE;
     return true;
   }
   case EVENT_CODE_TOGGLE_WINDOWED: {    
-    if (state->settings.window_state == FLAG_BORDERLESS_WINDOWED_MODE) {
+    if (state->settings->window_state == FLAG_BORDERLESS_WINDOWED_MODE) {
       ToggleBorderlessWindowed();
-      state->settings.window_state = 0;
+      SetWindowSize(get_app_settings()->resolution[0], get_app_settings()->resolution[1]);
+      state->settings->window_state = 0;
     }
-    else if (state->settings.window_state == FLAG_FULLSCREEN_MODE) {
+    else if (state->settings->window_state == FLAG_FULLSCREEN_MODE) {
       ToggleFullscreen();
-      state->settings.window_state = 0;
+      SetWindowSize(get_app_settings()->resolution[0], get_app_settings()->resolution[1]);
+      state->settings->window_state = 0;
     }
     return true;
   }

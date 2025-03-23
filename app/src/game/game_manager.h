@@ -17,6 +17,9 @@ void set_player_have_ability_upgrade_points(bool _b);
 bool get_is_game_paused(void);
 void set_is_game_paused(bool _is_game_paused);
 void toggle_is_game_paused(void);
+bool get_is_game_end(void);
+void set_is_game_end(bool _is_game_end);
+void toggle_is_game_end(void);
 
 void gm_start_game(worldmap_stage stage);
 void damage_any_spawn(Character2D *projectile);

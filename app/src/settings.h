@@ -7,6 +7,7 @@
 void settings_initialize(void);
 
 bool set_settings_from_ini_file(const char* file_name);
+bool save_ini_file(void);
 
 bool set_resolution(u32 width, u32 height);
 bool set_master_sound(u32 volume);

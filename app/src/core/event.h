@@ -45,6 +45,7 @@ typedef enum system_event_code {
     EVENT_CODE_TOGGLE_WINDOWED,
 
     // game_manager
+    EVENT_CODE_END_GAME,
     EVENT_CODE_PAUSE_GAME,
     EVENT_CODE_UNPAUSE_GAME,
     EVENT_CODE_DAMAGE_PLAYER_IF_COLLIDE,

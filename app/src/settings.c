@@ -7,11 +7,17 @@
 
 typedef struct app_settings_system_state {
   app_settings settings;
-
+  app_settings default_settings;
   u16 offset;
 } app_settings_system_state;
 
 static app_settings_system_state *state;
+
+#define TEXT_WINDOWED "windowed"
+#define TEXT_BORDERLESS "borderless"
+#define TEXT_FULLSCREEN "fullscreen"
+
+bool create_ini_file(void);
 
 void settings_initialize(void) {
   if (state) {
@@ -30,6 +36,9 @@ bool set_settings_from_ini_file(const char *file_name) {
     TraceLog(LOG_WARNING, "settings::set_settings_from_ini_file()::settings "
                           "state didn't initialized yet");
     return false;
+  }
+  if (!FileExists(file_name)) {
+    create_ini_file();
   }
   if (!parse_app_settings_ini(file_name, &state->settings)) {
     TraceLog(LOG_WARNING,
@@ -183,4 +192,46 @@ Vector2 get_screen_offset(void) {
   }
 
   return (Vector2) {state->offset, state->offset};
+}
+
+bool create_ini_file(void) {
+
+  return SaveFileText(CONFIG_FILE_LOCATION, 
+  "[title]\n"
+  "title = \"Hello No\"\n"
+  "[resolution]\n"
+  "width = 1280\n"
+  "height = 720\n"
+  "[sound]\n"
+  "master = 100\n"
+  "[window]\n"
+  "mode = \"windowed\"\n"
+  );
+}
+bool save_ini_file(void) {
+
+  i8 windows_state_char[12] = {0};
+  if (state->settings.window_state == 0) {
+    copy_memory(windows_state_char, TEXT_WINDOWED, TextLength(TEXT_WINDOWED));
+  }
+  else if (state->settings.window_state == FLAG_BORDERLESS_WINDOWED_MODE) {
+    copy_memory(windows_state_char, TEXT_BORDERLESS, TextLength(TEXT_BORDERLESS));
+  }
+  else if (state->settings.window_state == FLAG_FULLSCREEN_MODE) {
+    copy_memory(windows_state_char, TEXT_FULLSCREEN, TextLength(TEXT_FULLSCREEN));
+  }
+
+  const char* ini_text = TextFormat("%s %s%s%s %s %s%d%s %s%d%s %s %s %s %s%s%s",
+    "[title]\n",
+    "title = \"", state->settings.title, "\"\n",
+    "[resolution]\n",
+    "width = \"", state->settings.resolution[0], "\"\n",
+    "height = \"", state->settings.resolution[1], "\"\n",
+    "[sound]\n",
+    "master = 100\n",
+    "[window]\n",
+    "mode = \"", windows_state_char, "\"\n"
+  );
+
+  return SaveFileText(CONFIG_FILE_LOCATION, (char*)ini_text);
 }

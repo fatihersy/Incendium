@@ -6,7 +6,7 @@ VENDOR_DIR := vendor
 
 ASSEMBLY := app
 EXTENSION := 
-COMPILER_FLAGS := -g -MD -Werror=vla -Wall -Wextra -Wpedantic -fPIC -fdeclspec -fno-strict-aliasing -std=c23
+COMPILER_FLAGS := -g -MD -Werror=vla -Wall -Wextra -Wpedantic -std=c23
 INCLUDE_FLAGS := -I./app/src -I./vendor/include
 LINKER_FLAGS := -L./$(BUILD_DIR) -L./vendor/lib/ -lraylib -lGL -lm -lpthread -ldl -lrt -lX11
 DEFINES := -D_DEBUG -DKIMPORT
