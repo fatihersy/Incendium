@@ -127,7 +127,7 @@ void draw_sprite_on_site_by_id(spritesheet_id _id, Color _tint, Vector2 pos, Vec
   #if DEBUG_COLLISIONS
     DrawRectangleLines(
       pos.x, pos.y, 
-      sheet->current_frame_rect.width * scale.x,sheet->current_frame_rect.height * scale.y, 
+      sheet.current_frame_rect.width * scale.x,sheet.current_frame_rect.height * scale.y, 
       WHITE);
   #endif
 }

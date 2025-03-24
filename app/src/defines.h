@@ -13,6 +13,17 @@
 #define PAK_FILE_LOCATION "./resource.pak"
 #define CONFIG_FILE_LOCATION "./config.ini"
 
+#define SCREEN_OFFSET CLITERAL(Vector2){5, 5}
+
+#define BASE_RENDER_RES     CLITERAL(Vector2){ 1920 , 1080}
+#define BASE_RENDER_5DIV4   CLITERAL(Vector2){ 1920 / 1.25f, 1080 / 1.25f}
+#define BASE_RENDER_3DIV2   CLITERAL(Vector2){ 1920 / 1.50f, 1080 / 1.50f}
+#define BASE_RENDER_35DIV20 CLITERAL(Vector2){ 1920 / 1.75f, 1080 / 1.75f}
+#define BASE_RENDER_38DIV20 CLITERAL(Vector2){ 1920 / 1.90f, 1080 / 1.90f}
+#define BASE_RENDER_DIV2    CLITERAL(Vector2){ 1920 / 2.f  , 1080 / 2.f  }
+#define BASE_RENDER_DIV3    CLITERAL(Vector2){ 1920 / 3.f  , 1080 / 3.f  }
+#define BASE_RENDER_DIV4    CLITERAL(Vector2){ 1920 / 4.f  , 1080 / 4.f  }
+
 #define MAX_IMAGE_SLOTS 10
 #define MAX_SPRITESHEET_SLOTS 50
 
@@ -22,11 +33,6 @@
 #define MAX_UPDATE_PASSIVE_PANEL_COUNT 3
 
 #define CLEAR_BACKGROUND_COLOR BLACK
-#define BUTTON_TEXT_UP_COLOR WHITE_ROCK
-#define BUTTON_TEXT_HOVER_COLOR WHITE
-#define BUTTON_TEXT_PRESSED_COLOR WHITE
-#define TEXT_SHADOW_COLOR BLACK
-#define TEXT_SHADOW_OFFSET CLITERAL(Vector2){ 0, 1}
 
 #define MAX_FILENAME_LENGTH 64
 #define MAX_FILENAME_EXT_LENGTH 5
@@ -458,14 +464,9 @@ typedef struct data_pack {
 } data_pack;
 
 typedef struct app_settings {
-  u32 resolution[2];
-  Vector2 resolution_div4;
-  Vector2 resolution_div3;
-  Vector2 resolution_div2;
-  Vector2 resolution_38div20;
-  Vector2 resolution_35div20;
-  Vector2 resolution_3div2;
-  Vector2 resolution_5div4;
+  Vector2 window_size;
+  f32 normalized_ratio;
+  Vector2 scale_ratio;
   char title[16];
   u16 master_sound_volume;
   i32 window_state;
@@ -838,14 +839,14 @@ static const u32 level_curve[MAX_PLAYER_LEVEL + 1] = {
 #define NORMALIZE_VEC2(X, Y, X_MAX, Y_MAX)  ((Vector2){X / X_MAX, Y / Y_MAX})
 #define CENTER_RECT(RECT) ((Rectangle){RECT.x - RECT.width / 2.f, RECT.y - RECT.height, RECT.width, RECT.height});
 #define SCREEN_POS(X, Y) ((Vector2){  \
-  .x = GetScreenWidth()  * (X / 100), \
-  .y = GetScreenHeight() * (Y / 100)  \
+  .x = BASE_RENDER_RES.x  * (X / 100), \
+  .y = BASE_RENDER_RES.y * (Y / 100)  \
 })
 #define SCREEN_RECT(X, Y, W, H) ((Rectangle){  \
-  .x = GetScreenWidth()  * (X / 120.f), \
-  .y = GetScreenHeight() * (Y / 120.f),  \
-  .width = (GetScreenWidth() / 120.f) * W, \
-  .height = (GetScreenHeight() / 120.f) * H  \
+  .x = BASE_RENDER_RES.x  * (X / 120.f), \
+  .y = BASE_RENDER_RES.y * (Y / 120.f),  \
+  .width = (BASE_RENDER_RES.x / 120.f) * W, \
+  .height = (BASE_RENDER_RES.y / 120.f) * H  \
 })
 
 #endif

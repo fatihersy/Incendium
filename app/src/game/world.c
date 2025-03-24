@@ -419,24 +419,23 @@ void render_map_palette(f32 zoom) {
   state->palette_zoom = zoom;
 }
 
-tilemap_tile _get_tile_from_sheet_by_mouse_pos() {
-  return get_tile_from_sheet_by_mouse_pos(&state->palette, GetMousePosition(), state->palette_zoom);
+tilemap_tile _get_tile_from_sheet_by_mouse_pos(Vector2 _mouse_pos) {
+  return get_tile_from_sheet_by_mouse_pos(&state->palette, _mouse_pos, state->palette_zoom);
 }
-tilemap_tile _get_tile_from_map_by_mouse_pos(u16 from_layer) {
+tilemap_tile _get_tile_from_map_by_mouse_pos(u16 from_layer, Vector2 _mouse_pos) {
   if (from_layer >= MAX_TILEMAP_LAYERS) {
     TraceLog(LOG_WARNING, "world::_get_tile_from_map_by_mouse_pos()::Recieved layer was out of bound");
     return (tilemap_tile) {0};
   }
-  return get_tile_from_map_by_mouse_pos(&CURR_MAP, GetScreenToWorld2D(GetMousePosition(), state->in_camera_metrics->handle), from_layer);
+  return get_tile_from_map_by_mouse_pos(&CURR_MAP, GetScreenToWorld2D(_mouse_pos, state->in_camera_metrics->handle), from_layer);
 }
-void _render_tile(tilemap_tile* tile) {
+void _render_tile_on_pos(tilemap_tile* tile, Vector2 pos) {
   if (!tile) {
     TraceLog(LOG_WARNING, "world::_render_tile()::Recieved tile was empty");
     return;
   }
 
-  render_tile(tile, 
-    (Rectangle) {GetMousePosition().x, GetMousePosition().y, CURR_MAP.tile_size, CURR_MAP.tile_size});
+  render_tile(tile, (Rectangle) {pos.x, pos.y, CURR_MAP.tile_size, CURR_MAP.tile_size});
 }
 bool add_prop_curr_map(tilemap_prop* prop) {
   if (!prop) {
@@ -467,29 +466,21 @@ bool remove_prop_cur_map_by_id(u16 id) {
   return false;
 }
 Rectangle get_camera_view_rect(Camera2D camera) {
-  // Get the current window dimensions
-  int screen_width = GetScreenWidth();
-  int screen_height = GetScreenHeight();
+
+  f32 view_width = BASE_RENDER_RES.x / camera.zoom;
+  f32 view_height = BASE_RENDER_RES.y / camera.zoom;
+
+  f32 x = camera.target.x;
+  f32 y = camera.target.y;
   
-  // Calculate the camera's view dimensions, accounting for zoom
-  float view_width = screen_width / camera.zoom;
-  float view_height = screen_height / camera.zoom;
-  
-  // Calculate the top-left corner of the camera view in world space
-  // Since camera.target is the center of the screen, we subtract half the view dimensions
-  float x = camera.target.x;
-  float y = camera.target.y;
-  
-  // Apply camera offset
   x -= camera.offset.x/camera.zoom;
   y -= camera.offset.y/camera.zoom;
   
-  // Return the camera view rectangle in world coordinates
   return (Rectangle){ x, y, view_width, view_height };
 }
 Rectangle get_position_view_rect(Camera2D camera, Vector2 pos, f32 zoom) {
-  int screen_width = GetScreenWidth();
-  int screen_height = GetScreenHeight();
+  int screen_width = BASE_RENDER_RES.x;
+  int screen_height = BASE_RENDER_RES.y;
   
   float view_width = screen_width / zoom;
   float view_height = screen_height / zoom;

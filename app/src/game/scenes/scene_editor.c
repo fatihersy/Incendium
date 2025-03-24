@@ -46,6 +46,7 @@ typedef struct scene_editor_state {
   editor_state_selection_type selection_type;
   editor_state_mouse_focus mouse_focus;
   Vector2 mouse_pos_world;
+  Vector2 mouse_pos_screen;
 } scene_editor_state;
 
 static scene_editor_state *restrict state;
@@ -66,7 +67,7 @@ void initialize_scene_editor(camera_metrics* _camera_metrics) {
   }
   state = (scene_editor_state*)allocate_memory_linear(sizeof(scene_editor_state), true);
 
-  world_system_initialize(_camera_metrics, *get_resolution_div2());
+  world_system_initialize(_camera_metrics, BASE_RENDER_DIV2);
 
   copy_memory(&state->worldmap_locations, get_worldmap_locations(), sizeof(state->worldmap_locations));
   if (!_camera_metrics) {
@@ -77,11 +78,11 @@ void initialize_scene_editor(camera_metrics* _camera_metrics) {
   user_interface_system_initialize();
   state->tile_selection_panel = get_default_panel();
   state->tile_selection_panel.signal_state = BTN_STATE_HOVER;
-  state->tile_selection_panel.dest = (Rectangle) {0, 0, get_resolution_div3()->x, GetScreenHeight()};
+  state->tile_selection_panel.dest = (Rectangle) {0, 0, BASE_RENDER_DIV3.x, BASE_RENDER_RES.y};
   panel* prop_pnl = &state->prop_selection_panel;
   *prop_pnl = get_default_panel();
   prop_pnl->signal_state = BTN_STATE_HOVER;
-  prop_pnl->dest = (Rectangle) {0, 0, get_resolution_div3()->x, GetScreenHeight()};
+  prop_pnl->dest = (Rectangle) {0, 0, BASE_RENDER_DIV3.x, BASE_RENDER_RES.y};
   prop_pnl->scroll_handle = (Rectangle){
     .x = prop_pnl->dest.x + prop_pnl->dest.width - PROP_DRAG_HANDLE_DIM - 10, .y = 0,
     .width = PROP_DRAG_HANDLE_DIM, .height = PROP_DRAG_HANDLE_DIM * 5,
@@ -483,7 +484,9 @@ void update_scene_editor(void) {
     return;
   }
   else state->mouse_focus = MOUSE_FOCUS_MAP;
-  state->mouse_pos_world = GetScreenToWorld2D(GetMousePosition(), state->in_camera_metrics->handle);
+  state->mouse_pos_screen.x = GetMousePosition().x * get_app_settings()->scale_ratio.x;
+  state->mouse_pos_screen.y = GetMousePosition().y * get_app_settings()->scale_ratio.y;
+  state->mouse_pos_world = GetScreenToWorld2D(state->mouse_pos_screen, state->in_camera_metrics->handle);
   state->edit_layer = get_slider_current_value(SDR_ID_EDITOR_MAP_LAYER_SLC_SLIDER)->data.u16[0]; // HACK: Should not updated every frame
 
   editor_update_bindings();
@@ -506,7 +509,7 @@ void render_interface_editor(void) {
   { 
     gui_panel_scissored(state->tile_selection_panel, false, {
       render_map_palette(state->tile_selection_panel.zoom);
-      gui_slider(SDR_ID_EDITOR_MAP_LAYER_SLC_SLIDER, get_screen_offset(), VECTOR2(4,3), 3.f);
+      gui_slider(SDR_ID_EDITOR_MAP_LAYER_SLC_SLIDER, SCREEN_OFFSET, VECTOR2(4,3), 3.f);
 
       if(gui_slider_button(BTN_ID_EDITOR_BTN_STAGE_MAP_CHANGE_LEFT, SCREEN_POS(6.5f,9.f))){
         if (state->selected_stage > 0) {
@@ -539,22 +542,22 @@ void render_interface_editor(void) {
         prop_height_count += prop->dest.height;
       }
       pnl->buffer[0].data.f32[0] = prop_height_count;
-      pnl->scroll_handle.y = FMAX(pnl->scroll_handle.y, pnl->dest.y + get_screen_offset().x);
+      pnl->scroll_handle.y = FMAX(pnl->scroll_handle.y, pnl->dest.y + SCREEN_OFFSET.x);
       pnl->scroll_handle.y = FMIN(pnl->scroll_handle.y, pnl->dest.y + pnl->dest.height);
-      pnl->scroll = (pnl->scroll_handle.y - pnl->dest.y - get_screen_offset().x) / (pnl->dest.height - pnl->scroll_handle.height) * -1;
+      pnl->scroll = (pnl->scroll_handle.y - pnl->dest.y - SCREEN_OFFSET.x) / (pnl->dest.height - pnl->scroll_handle.height) * -1;
       DrawRectangleRec(pnl->scroll_handle, WHITE);
     });
   }
 
   switch (state->selection_type) {
     case SLC_TYPE_TILE: {
-      _render_tile(&state->selected_tile);
+      _render_tile_on_pos(&state->selected_tile, state->mouse_pos_screen);
       break;
     }
     case SLC_TYPE_DROP_PROP: {
       gui_draw_atlas_texture_id_pro(state->selected_prop.atlas_id, state->selected_prop.relative_source,
         (Rectangle) {
-          GetMousePosition().x, GetMousePosition().y, 
+          state->mouse_pos_screen.x, state->mouse_pos_screen.y, 
           state->selected_prop.dest.width, state->selected_prop.dest.height
         }, false);
       break;
@@ -619,7 +622,7 @@ void editor_update_bindings(void) {
   editor_update_keyboard_bindings();
 }
 void editor_update_mouse_bindings(void) { 
-  if(state->b_show_tilesheet_tile_selection_screen && CheckCollisionPointRec(GetMousePosition(), state->tile_selection_panel.dest))
+  if(state->b_show_tilesheet_tile_selection_screen && CheckCollisionPointRec(state->mouse_pos_screen, state->tile_selection_panel.dest))
   {
     state->mouse_focus = MOUSE_FOCUS_TILE_SELECTION;
     state->tile_selection_panel.zoom += ((float)GetMouseWheelMove()*0.05f);
@@ -627,7 +630,7 @@ void editor_update_mouse_bindings(void) {
     if (state->tile_selection_panel.zoom > 3.0f) state->tile_selection_panel.zoom = 3.0f;
     else if (state->tile_selection_panel.zoom < 0.1f) state->tile_selection_panel.zoom = 0.1f;
     if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON) && state->selection_type == SLC_TYPE_UNSELECTED) {
-      tilemap_tile tile = _get_tile_from_sheet_by_mouse_pos();
+      tilemap_tile tile = _get_tile_from_sheet_by_mouse_pos(state->mouse_pos_screen);
       if (tile.is_initialized) {
         state->selected_tile = tile;
         state->selection_type = SLC_TYPE_TILE;
@@ -637,7 +640,7 @@ void editor_update_mouse_bindings(void) {
       drag_tilesheet(GetMouseDelta());
     }
   }
-  else if(state->b_show_prop_selection_screen && CheckCollisionPointRec(GetMousePosition(), state->prop_selection_panel.dest))
+  else if(state->b_show_prop_selection_screen && CheckCollisionPointRec(state->mouse_pos_screen, state->prop_selection_panel.dest))
   {
     if (state->mouse_focus == MOUSE_FOCUS_TILE_SELECTION) {
       TraceLog(LOG_ERROR, "scene_editor::editor_update_mouse_bindings()::tile and prop screen activated at the same time.");
@@ -646,14 +649,14 @@ void editor_update_mouse_bindings(void) {
     else state->mouse_focus = MOUSE_FOCUS_PROP_SELECTION;
     panel* pnl = &state->prop_selection_panel;
 
-    if (IsMouseButtonDown(MOUSE_LEFT_BUTTON) && state->selection_type == SLC_TYPE_UNSELECTED && CheckCollisionPointRec(GetMousePosition(), pnl->scroll_handle)) {
+    if (IsMouseButtonDown(MOUSE_LEFT_BUTTON) && state->selection_type == SLC_TYPE_UNSELECTED && CheckCollisionPointRec(state->mouse_pos_screen, pnl->scroll_handle)) {
       pnl->is_dragging_scroll = true;
     }
 
     pnl->scroll_handle.y += GetMouseWheelMove() * -10.f;
  
     if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON) && state->selection_type == SLC_TYPE_UNSELECTED && !pnl->is_dragging_scroll) {
-      i32 h = (pnl->scroll * pnl->buffer[0].data.f32[0] * (-1)) + GetMousePosition().y;
+      i32 h = (pnl->scroll * pnl->buffer[0].data.f32[0] * (-1)) + state->mouse_pos_screen.y;
       for (int i=0; i<state->prop_count; ++i) {
         if(h - state->props[i].source.height < 0) {
           state->selected_prop = state->props[i];
@@ -676,7 +679,7 @@ void editor_update_mouse_bindings(void) {
         break;
       }
       case SLC_TYPE_DROP_PROP: {
-        Vector2 coord = GetScreenToWorld2D(GetMousePosition(), state->in_camera_metrics->handle);
+        Vector2 coord = GetScreenToWorld2D(state->mouse_pos_screen, state->in_camera_metrics->handle);
         state->selected_prop.dest.x = coord.x;
         state->selected_prop.dest.y = coord.y;
         add_prop_curr_map(&state->selected_prop);
@@ -709,7 +712,7 @@ void editor_update_mouse_bindings(void) {
         break;
       }
       case SLC_TYPE_TILE: { 
-        tilemap_tile tile = _get_tile_from_map_by_mouse_pos(state->edit_layer);
+        tilemap_tile tile = _get_tile_from_map_by_mouse_pos(state->edit_layer, state->mouse_pos_screen);
         set_map_tile(state->edit_layer, &tile, &state->selected_tile);
         break; 
       }
@@ -720,7 +723,7 @@ void editor_update_mouse_bindings(void) {
   {
     panel* pnl = &state->prop_selection_panel;
     if (state->prop_selection_panel.is_dragging_scroll && state->b_show_prop_selection_screen) {
-      i32 mouse_pos_y = GetMousePosition().y;
+      i32 mouse_pos_y = state->mouse_pos_screen.y;
       pnl->scroll_handle.y = mouse_pos_y - pnl->scroll_handle.height / 2.f;
     } else if(state->prop_selection_panel.is_dragging_scroll && !state->b_show_prop_selection_screen) state->prop_selection_panel.is_dragging_scroll = false;
   }

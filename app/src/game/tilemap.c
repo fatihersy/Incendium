@@ -39,20 +39,20 @@ void create_tilemap(tilesheet_type _type, Vector2 _position, u16 _grid_size, u16
           break; 
         }
         case 1: { 
-          out_tilemap->tiles[j][x][y].tile_symbol = sheet->tile_symbols[2][0];
-          out_tilemap->tiles[j][x][y].x = 2 * sheet->tile_size;
+          out_tilemap->tiles[j][x][y].tile_symbol = sheet->tile_symbols[0][0];
+          out_tilemap->tiles[j][x][y].x = 0 * sheet->tile_size;
           out_tilemap->tiles[j][x][y].y = 0 * sheet->tile_size;
           break; 
         }
         case 2: { 
-          out_tilemap->tiles[j][x][y].tile_symbol = sheet->tile_symbols[3][0];
-          out_tilemap->tiles[j][x][y].x = 3 * sheet->tile_size;
+          out_tilemap->tiles[j][x][y].tile_symbol = sheet->tile_symbols[0][0];
+          out_tilemap->tiles[j][x][y].x = 0 * sheet->tile_size;
           out_tilemap->tiles[j][x][y].y = 0 * sheet->tile_size;
           break; 
         }
         case 3: { 
-          out_tilemap->tiles[j][x][y].tile_symbol = sheet->tile_symbols[4][0];
-          out_tilemap->tiles[j][x][y].x = 4 * sheet->tile_size;
+          out_tilemap->tiles[j][x][y].tile_symbol = sheet->tile_symbols[0][0];
+          out_tilemap->tiles[j][x][y].x = 0 * sheet->tile_size;
           out_tilemap->tiles[j][x][y].y = 0 * sheet->tile_size;
           break; 
         }
@@ -159,9 +159,7 @@ void render_tilesheet(tilesheet* sheet, f32 zoom) {
     i16 y_pos    = sheet->offset     + sheet->position.y + dest_y; 
     tilemap_tile tile = (tilemap_tile) {.sheet = sheet,.x = origin_x, .y = origin_y,};
 
-    render_tile(
-    &tile, 
-    (Rectangle) {
+    render_tile(&tile, (Rectangle) {
       x_pos, y_pos, 
       sheet->dest_tile_size * zoom, sheet->dest_tile_size * zoom
     });

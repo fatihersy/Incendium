@@ -227,12 +227,12 @@ void movement_comet(ability* abl) {
 
     if (vec2_equals(abl->projectiles[i].position, pVECTOR2(abl->projectiles[i].buffer.f32), .1)) {
       f32* rand_count = &abl->projectiles[i].buffer.f32[2];
-      const f32 rand = rand_percent[(i32)*rand_count] * GetScreenWidth();
+      const f32 rand = rand_percent[(i32)*rand_count] * BASE_RENDER_RES.x;
       const Vector2 screen_min_world = GetScreenToWorld2D((Vector2) {0}, state->in_camera_metrics->handle);
-      const Vector2 screen_max_world = GetScreenToWorld2D((Vector2) {GetScreenWidth(), GetScreenHeight()}, state->in_camera_metrics->handle);
+      const Vector2 screen_max_world = GetScreenToWorld2D((Vector2) {BASE_RENDER_RES.x, BASE_RENDER_RES.y}, state->in_camera_metrics->handle);
       abl->projectiles[i].position = GetScreenToWorld2D((Vector2) {rand, -abl->proj_dim.y},state->in_camera_metrics->handle);
       const Vector2 new_prj_pos = (Vector2) {
-        .x = FCLAMP(abl->projectiles[i].position.x + (state->settings->resolution_div4.x * rand_recoil[(i32)*rand_count]), 
+        .x = FCLAMP(abl->projectiles[i].position.x + (BASE_RENDER_DIV4.x * rand_recoil[(i32)*rand_count]), 
                       screen_min_world.x, screen_max_world.x),
         .y = player->position.y
       };

@@ -23,7 +23,7 @@ void create_camera(Vector2 position) {
 
   state = (main_camera_system_state *)allocate_memory_linear(sizeof(main_camera_system_state), true);
 
-  state->in_camera_metrics.handle.offset = *get_resolution_div2();
+  state->in_camera_metrics.handle.offset = BASE_RENDER_DIV2;
   state->in_camera_metrics.handle.target = (Vector2){position.x, position.y};
   state->in_camera_metrics.handle.rotation = 0;
   state->in_camera_metrics.handle.zoom = 1.0f;
@@ -32,10 +32,10 @@ void create_camera(Vector2 position) {
   state->camera_fraction_speed = 5.f;
 }
 
-camera_metrics* get_active_metrics(void) { return &state->in_camera_metrics; }
+camera_metrics* get_in_game_camera(void) { return &state->in_camera_metrics; }
 
 bool update_camera(Vector2 position) {
-  state->in_camera_metrics.handle.offset = *get_resolution_div2();
+  state->in_camera_metrics.handle.offset = BASE_RENDER_DIV2;
 
   Vector2 diff = vec2_subtract(position, state->in_camera_metrics.handle.target);
   float length = vec2_lenght(diff);

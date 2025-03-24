@@ -6,7 +6,8 @@
 #include "core/event.h"
 #include "core/fmemory.h"
 
-#include "fshader.h"
+#include "game/spritesheet.h"
+#include "game/fshader.h"
 
 typedef struct user_interface_system_state {
   button      buttons[BTN_ID_MAX];
@@ -19,7 +20,6 @@ typedef struct user_interface_system_state {
   panel default_panel;
   spritesheet ss_to_draw_bg;
   
-  Vector2 offset;
   Vector2 mouse_pos;
 
   Font mood_font;
@@ -37,8 +37,11 @@ typedef struct user_interface_system_state {
 
 static user_interface_system_state *restrict state;
 
-#define BASE_WIDTH 1920.0f
-#define BASE_HEIGHT 1080.0f
+#define BUTTON_TEXT_UP_COLOR WHITE_ROCK
+#define BUTTON_TEXT_HOVER_COLOR WHITE
+#define BUTTON_TEXT_PRESSED_COLOR WHITE
+#define TEXT_SHADOW_COLOR BLACK
+#define TEXT_SHADOW_OFFSET CLITERAL(Vector2){ 0, 4}
 
 #define MAX_UI_WORDWRAP_WORD_LENGTH 20
 #define MAX_UI_WORDWRAP_SENTENCE_LENGTH 300
@@ -50,7 +53,7 @@ static user_interface_system_state *restrict state;
 #define LABEL_MOOD_OUTLINE_FONT_SIZE state->mood_outline_font.baseSize * .1f
 #define LABEL_MINI_FONT_SIZE state->mini_mood_font.baseSize * .1f
 #define LABEL_MINI_OUTLINE_FONT_SIZE state->mini_mood_outline_font.baseSize * .1f
-#define DEFAULT_MENU_BUTTON_SCALE 3
+#define DEFAULT_MENU_BUTTON_SCALE 4
 
 #define draw_text(TEXT, TEXT_POS, FONT, FONT_SIZE, COLOR, CENTER)                                                 \
   if (CENTER) {                                                                                                   \
@@ -64,9 +67,6 @@ static user_interface_system_state *restrict state;
   DrawTextEx(FONT, TEXT, TEXT_POS, FONT_SIZE, UI_FONT_SPACING, COLOR);                    
 
 #define SDR_CURR_VAL(ID) state->sliders[ID].options[state->sliders[ID].current_value]
-
-#define PSPRITESHEET_SYSTEM state->spritesheet_system // Don't forget to undef at very bottom of the file
-#include "game/spritesheet.h"
 
 bool user_interface_on_event(u16 code, event_context context);
 
@@ -256,21 +256,21 @@ void user_interface_system_initialize(void) {
 
   // SLIDER OPTIONS
   {
+  gui_slider_add_option(SDR_ID_SETTINGS_RES_SLIDER, "960x540", (data_pack) {
+    .data.u16[0] = 960,
+    .data.u16[1] = 540,
+    .array_lenght = 2,
+    .type_flag = DATA_TYPE_U16
+  });
+  gui_slider_add_option(SDR_ID_SETTINGS_RES_SLIDER, "1280x760", (data_pack) {
+    .data.u16[0] = 1280,
+    .data.u16[1] = 760,
+    .array_lenght = 2,
+    .type_flag = DATA_TYPE_U16
+  });
   gui_slider_add_option(SDR_ID_SETTINGS_RES_SLIDER, "1920x1080", (data_pack) {
     .data.u16[0] = 1920,
     .data.u16[1] = 1080,
-    .array_lenght = 2,
-    .type_flag = DATA_TYPE_U16
-  });
-  gui_slider_add_option(SDR_ID_SETTINGS_RES_SLIDER, "2560x1440", (data_pack) {
-    .data.u16[0] = 2560,
-    .data.u16[1] = 1440,
-    .array_lenght = 2,
-    .type_flag = DATA_TYPE_U16
-  });
-  gui_slider_add_option(SDR_ID_SETTINGS_RES_SLIDER, "3840x2160", (data_pack) {
-    .data.u16[0] = 3840,
-    .data.u16[1] = 2160,
     .array_lenght = 2,
     .type_flag = DATA_TYPE_U16
   });
@@ -306,17 +306,17 @@ void user_interface_system_initialize(void) {
   }
   for (int i=0; i<state->sliders[SDR_ID_SETTINGS_RES_SLIDER].max_value; ++i) {
     if (
-      state->sliders[SDR_ID_SETTINGS_RES_SLIDER].options[i].content.data.u16[0] == get_app_settings()->resolution[0] &&
-      state->sliders[SDR_ID_SETTINGS_RES_SLIDER].options[i].content.data.u16[1] == get_app_settings()->resolution[1]) 
+      state->sliders[SDR_ID_SETTINGS_RES_SLIDER].options[i].content.data.u16[0] == BASE_RENDER_RES.x &&
+      state->sliders[SDR_ID_SETTINGS_RES_SLIDER].options[i].content.data.u16[1] == BASE_RENDER_RES.y) 
     {
       state->sliders[SDR_ID_SETTINGS_RES_SLIDER].current_value = i;
       break;
     }
   }
-  if (SDR_CURR_VAL(SDR_ID_SETTINGS_RES_SLIDER).content.data.u16[0] != get_app_settings()->resolution[0] ||
-      SDR_CURR_VAL(SDR_ID_SETTINGS_RES_SLIDER).content.data.u16[1] != get_app_settings()->resolution[1]) 
+  if (SDR_CURR_VAL(SDR_ID_SETTINGS_RES_SLIDER).content.data.u16[0] != BASE_RENDER_RES.x ||
+      SDR_CURR_VAL(SDR_ID_SETTINGS_RES_SLIDER).content.data.u16[1] != BASE_RENDER_RES.y) 
   {
-    Vector2 new_res = pVECTOR2(get_app_settings()->resolution);
+    Vector2 new_res = BASE_RENDER_RES;
     const char* new_res_text = TextFormat("%.0fx%.0f", new_res.x, new_res.y);
 
     if(gui_slider_add_option(SDR_ID_SETTINGS_RES_SLIDER, new_res_text, (data_pack) {
@@ -331,9 +331,9 @@ void user_interface_system_initialize(void) {
 }
 
 void update_user_interface(void) {
-  state->mouse_pos = GetMousePosition();
-  state->offset = get_screen_offset();
-  
+  state->mouse_pos.x = GetMousePosition().x * get_app_settings()->scale_ratio.x;
+  state->mouse_pos.y = GetMousePosition().y * get_app_settings()->scale_ratio.y;
+
   update_buttons();
   update_sliders();
   if (state->fade_animation_playing) {
@@ -427,13 +427,13 @@ void render_user_interface(void) {
 bool gui_menu_button(const char* text, button_id _id, Vector2 offset) {
   return gui_button(text, _id, 
     MENU_BUTTON_FONT, MENU_BUTTON_FONT_SIZE, 
-    position_element(offset, *get_resolution_div2(), state->buttons[_id].btn_type.dest_frame_dim, 2.1f)
+    position_element(offset, BASE_RENDER_DIV2, state->buttons[_id].btn_type.dest_frame_dim, 2.7f)
   );
 }
 bool gui_mini_button(const char* text, button_id _id, Vector2 offset, f32 offset_scale) {
   return gui_button(text, _id, 
     MINI_BUTTON_FONT, MINI_BUTTON_FONT_SIZE, 
-    position_element(offset, *get_resolution_div2(), state->buttons[_id].btn_type.dest_frame_dim, offset_scale)
+    position_element(offset, BASE_RENDER_DIV2, state->buttons[_id].btn_type.dest_frame_dim, offset_scale)
   );
 }
 bool gui_slider_button(button_id _id, Vector2 pos) {
@@ -637,16 +637,16 @@ void draw_slider_body(slider* sdr) {
     }
     case SDR_TYPE_OPTION: {
       u16 total_body_width = sdr_type.body_width * sdr_type.width_multiply;
-      u16 each_body_width = (total_body_width - ((sdr->max_value) * get_screen_offset().x)) / (sdr->max_value-1);
+      u16 each_body_width = (total_body_width - ((sdr->max_value) * SCREEN_OFFSET.x)) / (sdr->max_value-1);
       f32 each_body_scale = (float)each_body_width / sdr_type.origin_body_width;
       Vector2 draw_sprite_scale = (Vector2) {each_body_scale, sdr_type.scale};
-      Vector2 _pos_temp = (Vector2) {sdr->position.x + get_screen_offset().x, sdr->position.y};
+      Vector2 _pos_temp = (Vector2) {sdr->position.x + SCREEN_OFFSET.x, sdr->position.y};
       const char* text = TextFormat("%s", sdr->options[sdr->current_value].display_text);
       Vector2 text_measure = MeasureTextEx(state->mood_font, text, state->mood_font.baseSize, UI_FONT_SPACING);
 
       for (int i = 1; i < sdr->max_value; ++i) {
         Vector2 _pos = _pos_temp;
-        _pos.x += (each_body_width + get_screen_offset().x) * (i-1); 
+        _pos.x += (each_body_width + SCREEN_OFFSET.x) * (i-1); 
         draw_sprite_on_site_by_id(sdr_type.ss_sdr_body, WHITE, _pos, draw_sprite_scale, (i == sdr->current_value) ? 1 : 0, false);
       }
       Vector2 text_pos = (Vector2) {
@@ -756,11 +756,11 @@ void gui_label_wrap(const char* text, font_type type, i32 font_size, Rectangle p
 
 void gui_draw_settings_screen(void) { // TODO: Return to settings later
 
-  gui_slider(SDR_ID_SETTINGS_SOUND_SLIDER, get_app_settings()->resolution_div2, VECTOR2(0,0), 3.f);
+  gui_slider(SDR_ID_SETTINGS_SOUND_SLIDER, BASE_RENDER_DIV2, VECTOR2(0,0), 3.f);
 
-  gui_slider(SDR_ID_SETTINGS_RES_SLIDER, get_app_settings()->resolution_div2, VECTOR2(0,5), 3.f);
+  gui_slider(SDR_ID_SETTINGS_RES_SLIDER, BASE_RENDER_DIV2, VECTOR2(0,5), 3.f);
 
-  gui_slider(SDR_ID_SETTINGS_WIN_MODE_SLIDER, get_app_settings()->resolution_div2, VECTOR2(0,10), 3.f);
+  gui_slider(SDR_ID_SETTINGS_WIN_MODE_SLIDER, BASE_RENDER_DIV2, VECTOR2(0,10), 3.f);
 
   if(gui_menu_button("Apply", BTN_ID_SETTINGS_APPLY_SETTINGS_BUTTON, VECTOR2(-2,15))) {
     slider sdr_win_mode = state->sliders[SDR_ID_SETTINGS_WIN_MODE_SLIDER];
@@ -785,10 +785,10 @@ void gui_draw_settings_screen(void) { // TODO: Return to settings later
 }
 void gui_draw_pause_screen(void) {
   Rectangle dest = (Rectangle) {
-    get_resolution_div2()->x,
-    get_resolution_div2()->y,
-    get_resolution_5div4()->x,
-    get_resolution_5div4()->y
+    BASE_RENDER_DIV2.x,
+    BASE_RENDER_DIV2.y,
+    BASE_RENDER_5DIV4.x,
+    BASE_RENDER_5DIV4.y
   };
   gui_panel(state->default_panel, dest, true);
 
@@ -995,7 +995,7 @@ void register_slider(
   state->sliders[_sdr_id] = sdr;
 }
 void gui_draw_atlas_texture_to_background(atlas_texture_id _id) {
-  draw_atlas_texture_regular(_id, (Rectangle) {0, 0, GetScreenWidth(), GetScreenHeight()}, WHITE, false);
+  draw_atlas_texture_regular(_id, (Rectangle) {0, 0, BASE_RENDER_RES.x, BASE_RENDER_RES.y}, WHITE, false);
 }
 void gui_draw_spritesheet_to_background(spritesheet_id _id, Color _tint) {
   if (_id >= SHEET_ID_SPRITESHEET_TYPE_MAX || _id <= SHEET_ID_SPRITESHEET_UNSPECIFIED || !state) {
@@ -1006,7 +1006,7 @@ void gui_draw_spritesheet_to_background(spritesheet_id _id, Color _tint) {
     state->ss_to_draw_bg = *_get_spritesheet_by_enum(_id);
     set_sprite(&state->ss_to_draw_bg, true, false, false);
   }
-  Rectangle dest = (Rectangle) {0, 0, GetScreenWidth(), GetScreenHeight()};
+  Rectangle dest = (Rectangle) {0, 0, BASE_RENDER_RES.x, BASE_RENDER_RES.y};
   play_sprite_on_site(&state->ss_to_draw_bg, _tint, dest);
 }
 /**
@@ -1081,7 +1081,7 @@ inline Vector2 make_vector(f32 x, f32 y) {
 }
 inline void gui_draw_map_stage_pin(bool have_hovered, Vector2 screen_loc) {
   const Vector2 icon_size = NORMALIZE_VEC2(32.f, 32.f, 1280, 720);
-  Rectangle icon_loc = (Rectangle) {screen_loc.x, screen_loc.y, icon_size.x * GetScreenWidth(), icon_size.y * GetScreenHeight()}; 
+  Rectangle icon_loc = (Rectangle) {screen_loc.x, screen_loc.y, icon_size.x * BASE_RENDER_RES.x, icon_size.y * BASE_RENDER_RES.y}; 
   icon_loc.x -= icon_loc.width  * .5f;
   icon_loc.y -= icon_loc.height * .5f;
   
@@ -1093,9 +1093,9 @@ inline void gui_draw_map_stage_pin(bool have_hovered, Vector2 screen_loc) {
   }
 }
 inline Vector2 position_element(Vector2 offset, Vector2 pos, Vector2 dim, f32 f) {
-  Vector2 current_res = *get_resolution_div2();
-  f32 scale_x = (current_res.x * 2.0f) / BASE_WIDTH;
-  f32 scale_y = (current_res.y * 2.0f) / BASE_HEIGHT;
+  Vector2 current_res = BASE_RENDER_DIV2;
+  f32 scale_x = (current_res.x * 2.0f) / BASE_RENDER_RES.x;
+  f32 scale_y = (current_res.y * 2.0f) / BASE_RENDER_RES.y;
   
   return (Vector2){
       .x = pos.x - (dim.x / 2.0f) + ((dim.x / f) * offset.x) * scale_x,
@@ -1219,7 +1219,7 @@ void draw_fade_effect() {
     : EaseQuadOut(state->fade_animation_timer, 1.f,-1.f, state->fade_animation_duration);
   BeginShaderMode(get_shader_by_enum(SHADER_ID_FADE_TRANSITION)->handle);
   set_shader_uniform(SHADER_ID_FADE_TRANSITION, 0, (data_pack) {.data.f32[0] = process});
-  draw_atlas_texture_regular(ATLAS_TEX_ID_BG_BLACK, (Rectangle) {0, 0, GetScreenWidth(), GetScreenHeight()}, WHITE, false);
+  draw_atlas_texture_regular(ATLAS_TEX_ID_BG_BLACK, (Rectangle) {0, 0, BASE_RENDER_RES.x, BASE_RENDER_RES.y}, WHITE, false);
   EndShaderMode();
 }
 
@@ -1396,7 +1396,6 @@ bool user_interface_on_event(u16 code, event_context context) {
   return false;
 }
 
-#undef PSPRITESHEET_SYSTEM
 #undef SPACE_BTW_V
 #undef DEFAULT_MENU_BUTTON_SCALE
 #undef MENU_BUTTON_FONT

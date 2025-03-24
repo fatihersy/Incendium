@@ -16,6 +16,8 @@
 typedef struct app_system_state {
   app_settings* settings;
   bool app_runing;
+  RenderTexture2D drawing_target;
+  Camera2D screen_space_camera;
 } app_system_state;
 
 static app_system_state* state;
@@ -33,13 +35,14 @@ bool app_initialize(void) {
   settings_initialize();
   set_settings_from_ini_file(CONFIG_FILE_LOCATION);
   state->settings = get_app_settings();
-  SetConfigFlags(FLAG_VSYNC_HINT | FLAG_WINDOW_HIGHDPI);
+
   InitWindow(
-    1280, 
-    720, 
+    state->settings->window_size.x, 
+    state->settings->window_size.y, 
     state->settings->title);
   SetTargetFPS(TARGET_FPS); 
-  SetExitKey(0);
+  SetExitKey(KEY_END);
+  SetConfigFlags(FLAG_VSYNC_HINT | FLAG_WINDOW_HIGHDPI);
   if (state->settings->window_state == FLAG_BORDERLESS_WINDOWED_MODE) {
     ToggleBorderlessWindowed();
     Vector2 res = (Vector2) {GetMonitorWidth(GetCurrentMonitor()), GetMonitorHeight(GetCurrentMonitor())};
@@ -53,6 +56,7 @@ bool app_initialize(void) {
     set_resolution(res.x, res.y);
   }
   SetConfigFlags(FLAG_WINDOW_UNDECORATED | FLAG_WINDOW_TOPMOST);
+  state->drawing_target = LoadRenderTexture(BASE_RENDER_RES.x, BASE_RENDER_RES.y);
 
   // Game
   #ifdef PAK_FILE_LOCATION
@@ -78,9 +82,9 @@ bool app_initialize(void) {
   #endif
 
   resource_system_initialize();
-  create_camera(*get_resolution_div2());
+  create_camera(BASE_RENDER_DIV2);
 
-  world_system_initialize(get_active_metrics(), *get_resolution_div2());
+  world_system_initialize(get_in_game_camera(), BASE_RENDER_DIV2);
   if (!scene_manager_initialize()) {
     TraceLog(LOG_ERROR, "scene_manager() initialization failed");
     return false;
@@ -103,6 +107,12 @@ bool window_should_close(void) {
 
 bool app_update(void) {
   if (GetFPS() > TARGET_FPS) return true;
+  if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_W)) {
+    state->app_runing = false;
+  }
+  if (IsKeyDown(KEY_LEFT_ALT) && IsKeyPressed(KEY_ENTER)) {
+   event_fire(EVENT_CODE_TOGGLE_BORDERLESS, (event_context) {0});
+  }
   
   if(IsWindowFocused() && !IsWindowState(FLAG_WINDOW_TOPMOST)) {
     SetWindowState(FLAG_WINDOW_TOPMOST);
@@ -117,15 +127,31 @@ bool app_update(void) {
 
 bool app_render(void) {
   if (GetFPS() > TARGET_FPS) return true;
+
+  BeginTextureMode(state->drawing_target);
+    ClearBackground(CLEAR_BACKGROUND_COLOR);
+
+    BeginMode2D(get_in_game_camera()->handle);
+      render_scene_world();
+    EndMode2D();
+
+    render_scene_interface();
+  EndTextureMode();
+  
+  state->screen_space_camera.target = (Vector2) {0};
+  state->screen_space_camera.zoom = 1.f;
   BeginDrawing();
-  ClearBackground(CLEAR_BACKGROUND_COLOR);
-  
-  BeginMode2D(get_active_metrics()->handle);
-  render_scene_world();
-  EndMode2D();
-  
-  render_scene_interface();
-  
+    ClearBackground(CLEAR_BACKGROUND_COLOR);
+    BeginMode2D(state->screen_space_camera);
+      DrawTexturePro(state->drawing_target.texture, 
+        (Rectangle) {0, 0, state->drawing_target.texture.width, -state->drawing_target.texture.height},
+        (Rectangle) {
+          -state->settings->normalized_ratio, -state->settings->normalized_ratio, 
+          state->settings->window_size.x + (state->settings->normalized_ratio*2), 
+          state->settings->window_size.y + (state->settings->normalized_ratio*2)
+        }, (Vector2) {0}, 0, WHITE
+      );
+    EndMode2D();
   EndDrawing();
   return true;
 }
@@ -159,12 +185,12 @@ bool application_on_event(u16 code, event_context context) {
   case EVENT_CODE_TOGGLE_WINDOWED: {    
     if (state->settings->window_state == FLAG_BORDERLESS_WINDOWED_MODE) {
       ToggleBorderlessWindowed();
-      SetWindowSize(get_app_settings()->resolution[0], get_app_settings()->resolution[1]);
+      SetWindowSize(get_app_settings()->window_size.x, get_app_settings()->window_size.y);
       state->settings->window_state = 0;
     }
     else if (state->settings->window_state == FLAG_FULLSCREEN_MODE) {
       ToggleFullscreen();
-      SetWindowSize(get_app_settings()->resolution[0], get_app_settings()->resolution[1]);
+      SetWindowSize(get_app_settings()->window_size.x, get_app_settings()->window_size.y);
       state->settings->window_state = 0;
     }
     return true;

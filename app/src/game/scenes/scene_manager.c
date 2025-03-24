@@ -77,13 +77,13 @@ bool scene_manager_on_event(u16 code, event_context context) {
   switch (code) {
   case EVENT_CODE_SCENE_IN_GAME: {
     scene_manager_state->scene_data = SCENE_IN_GAME;
-    initialize_scene_in_game(get_active_metrics());
+    initialize_scene_in_game(get_in_game_camera());
     return true;
     break;
   }
   case EVENT_CODE_SCENE_EDITOR: {
     scene_manager_state->scene_data = SCENE_EDITOR;
-    initialize_scene_editor(get_active_metrics());
+    initialize_scene_editor(get_in_game_camera());
     return true;
     break;
   }
@@ -102,13 +102,13 @@ bool scene_manager_on_event(u16 code, event_context context) {
   case EVENT_CODE_SCENE_MANAGER_SET_CAM_POS: {
     scene_manager_state->target.x = context.data.f32[0];
     scene_manager_state->target.y = context.data.f32[1];
-    get_active_metrics()->handle.target.x = context.data.f32[0];
-    get_active_metrics()->handle.target.y = context.data.f32[1];
+    get_in_game_camera()->handle.target.x = context.data.f32[0];
+    get_in_game_camera()->handle.target.y = context.data.f32[1];
     return true;
     break;
   }
   case EVENT_CODE_SCENE_MANAGER_SET_ZOOM: {
-    get_active_metrics()->handle.zoom = context.data.f32[0];
+    get_in_game_camera()->handle.zoom = context.data.f32[0];
     return true;
     break;
   }

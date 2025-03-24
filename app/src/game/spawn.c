@@ -145,7 +145,7 @@ bool render_spawns(void) {
     if (state->spawns[i].initialized) {
       Rectangle collision = state->spawns[i].collision;
       play_sprite_on_site(&state->spawns[i].animation, WHITE, collision);
-      DrawRectangleLines(collision.x, collision.y, collision.width, collision.height, RED);
+      //DrawRectangleLines(collision.x, collision.y, collision.width, collision.height, RED);
     }
   }
   return true;
