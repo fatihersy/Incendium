@@ -10,6 +10,7 @@ bool game_manager_initialize(camera_metrics* _camera_metrics);
 void update_game_manager(void);
 
 u16 get_remaining_enemies(void);
+u32 get_currency_souls(void);
 bool get_b_player_have_upgrade_points(void);
 ability* get_player_ability(ability_type type);
 character_stat* get_player_stat(character_stats stat);

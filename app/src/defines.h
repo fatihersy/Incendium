@@ -317,8 +317,6 @@ typedef enum spritesheet_id {
   SHEET_ID_PLAYER_ANIMATION_TAKE_DAMAGE_RIGHT,
   SHEET_ID_PLAYER_ANIMATION_WRECK_LEFT,
   SHEET_ID_PLAYER_ANIMATION_WRECK_RIGHT,
-  SHEET_ID_SPAWN_ZOMBIE_ANIMATION_IDLE_LEFT,
-  SHEET_ID_SPAWN_ZOMBIE_ANIMATION_IDLE_RIGHT,
   SHEET_ID_SPAWN_ZOMBIE_ANIMATION_MOVE_LEFT,
   SHEET_ID_SPAWN_ZOMBIE_ANIMATION_MOVE_RIGHT,
   SHEET_ID_SPAWN_ZOMBIE_ANIMATION_TAKE_DAMAGE_LEFT,
@@ -586,11 +584,17 @@ typedef struct Character2D {
   actor_type type;
   Rectangle collision;
   world_direction w_direction;
-  spritesheet animation;
+  spritesheet move_right_animation;
+  spritesheet move_left_animation;
+  spritesheet take_damage_right_animation;
+  spritesheet take_damage_left_animation;
+  spritesheet* last_played_animation;
   Vector2 position;
   u16 rotation;
   f32 scale;
+  f32 damage_break_time;
   bool is_dead;
+  bool is_damagable;
   bool initialized;
 
   // 128 byte buffer
@@ -700,6 +704,10 @@ typedef struct character_stat {
   } buffer;
 }character_stat;
 
+typedef struct save_data {
+  u32 currency_souls_player_have;
+} save_data;
+
 // LABEL: Player State
 typedef struct player_state {
   Rectangle collision;
@@ -738,8 +746,6 @@ typedef struct player_state {
   f32 move_speed_multiply;
   f32 cooldown_multiply;
   f32 exp_gain_multiply;
-
-  u32 in_game_currency_souls;
 
   bool is_player_have_ability_upgrade_points;
   bool is_initialized;

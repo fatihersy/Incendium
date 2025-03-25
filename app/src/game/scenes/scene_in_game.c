@@ -158,7 +158,6 @@ void update_scene_in_game(void) {
       break;
     }
   }
-  
 }
 
 void render_scene_in_game(void) {
@@ -304,6 +303,7 @@ void render_interface_in_game(void) {
         gui_progress_bar(PRG_BAR_ID_PLAYER_EXPERIANCE, (Vector2){.x = BASE_RENDER_DIV2.x, .y = SCREEN_OFFSET.x}, true);
         gui_progress_bar(PRG_BAR_ID_PLAYER_HEALTH, SCREEN_OFFSET, false);
         gui_label_format(FONT_TYPE_MOOD, 10, SCREEN_OFFSET.x, BASE_RENDER_DIV4.y, WHITE, false, "Remaining: %d", get_remaining_enemies());
+        gui_label_format(FONT_TYPE_MOOD, 10, BASE_RENDER_5DIV4.x, SCREEN_OFFSET.y, WHITE, false, "Souls: %d", get_currency_souls());
       }
       break;
     }

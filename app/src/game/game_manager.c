@@ -17,6 +17,8 @@ typedef struct game_manager_system_state {
   player_state* p_player;
   worldmap_stage stage;
 
+  save_data game_progression_data;
+
   bool is_game_end;
   bool is_game_paused;
   bool game_manager_initialized;
@@ -63,6 +65,7 @@ bool game_manager_initialize(camera_metrics* _camera_metrics) {
   event_register(EVENT_CODE_UNPAUSE_GAME, game_manager_on_event);
   event_register(EVENT_CODE_DAMAGE_PLAYER_IF_COLLIDE, game_manager_on_event);
   event_register(EVENT_CODE_DAMAGE_ANY_SPAWN_IF_COLLIDE, game_manager_on_event);
+  event_register(EVENT_CODE_ADD_ITEM_PLAYER_CURRENCY_SOULS, game_manager_on_event);
 
   state->game_manager_initialized = true;
 
@@ -287,6 +290,9 @@ void upgrade_player_stat(character_stat* _stat) {
 // OPS
 
 // GET / SET
+u32 get_currency_souls(void) {
+  return state->game_progression_data.currency_souls_player_have;
+}
 bool get_b_player_have_upgrade_points(void) {
   return state->p_player->is_player_have_ability_upgrade_points;
 }
@@ -435,6 +441,10 @@ bool game_manager_on_event(u16 code, event_context context) {
 
     return true;
   }
+  case EVENT_CODE_ADD_ITEM_PLAYER_CURRENCY_SOULS: {
+    state->game_progression_data.currency_souls_player_have += context.data.u32[0];
+    return true;
+  }
   default: {
     TraceLog(LOG_WARNING, "game_engine::game_manager_on_event()::Unsuppported code.");
     return false;
@@ -444,3 +454,5 @@ bool game_manager_on_event(u16 code, event_context context) {
   TraceLog(LOG_WARNING, "game_engine::game_manager_on_event()::Fire event ended unexpectedly");
   return false;
 }
+
+#undef SPAWN_TRYING_LIMIT

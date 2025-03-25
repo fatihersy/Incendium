@@ -287,31 +287,34 @@ bool render_player(void) {
             break;
         	}
       	}
-			} else 
-				{
-					switch (player->w_direction) {
-        		case WORLD_DIRECTION_LEFT: play_anim(SHEET_ID_PLAYER_ANIMATION_IDLE_LEFT);
-        		break;
-        		case WORLD_DIRECTION_RIGHT:play_anim(SHEET_ID_PLAYER_ANIMATION_IDLE_RIGHT);
-        		break;
-        		default: {
-          		TraceLog(LOG_WARNING, "player::render_player()::Player has no directions");
-          		break;
-        		}
-      		}
-				}
-    }	else 
+			} 
+      else 
 			{
-        (player->w_direction == WORLD_DIRECTION_LEFT) 
-            ? play_anim(SHEET_ID_PLAYER_ANIMATION_TAKE_DAMAGE_LEFT)
-            : play_anim(SHEET_ID_PLAYER_ANIMATION_TAKE_DAMAGE_RIGHT);
-    	}
-  } else 
+				switch (player->w_direction) {
+        	case WORLD_DIRECTION_LEFT: play_anim(SHEET_ID_PLAYER_ANIMATION_IDLE_LEFT);
+        	break;
+        	case WORLD_DIRECTION_RIGHT:play_anim(SHEET_ID_PLAYER_ANIMATION_IDLE_RIGHT);
+        	break;
+        	default: {
+        		TraceLog(LOG_WARNING, "player::render_player()::Player has no directions");
+        		break;
+        	}
+      	}
+			}
+    }	
+    else 
 		{
       (player->w_direction == WORLD_DIRECTION_LEFT) 
-          ? play_anim(SHEET_ID_PLAYER_ANIMATION_WRECK_LEFT)
-          : play_anim(SHEET_ID_PLAYER_ANIMATION_WRECK_RIGHT);
-  	}
+        ? play_anim(SHEET_ID_PLAYER_ANIMATION_TAKE_DAMAGE_LEFT)
+        : play_anim(SHEET_ID_PLAYER_ANIMATION_TAKE_DAMAGE_RIGHT);
+    }
+  } 
+  else 
+	{
+    (player->w_direction == WORLD_DIRECTION_LEFT) 
+      ? play_anim(SHEET_ID_PLAYER_ANIMATION_WRECK_LEFT)
+      : play_anim(SHEET_ID_PLAYER_ANIMATION_WRECK_RIGHT);
+  }
   
   #if DEBUG_COLLISIONS
       DrawRectangleLines(
@@ -325,57 +328,57 @@ bool render_player(void) {
 }
 
 void play_anim(spritesheet_id player_anim_sheet) {
-    Rectangle dest = (Rectangle) {
-        .x = player->position.x,
-        .y = player->position.y,
-        .width = player->dimentions.x,
-        .height = player->dimentions.y
-    };
-    switch (player_anim_sheet) {
-        case SHEET_ID_PLAYER_ANIMATION_MOVE_LEFT: {
-            play_sprite_on_site(&player->move_left_sprite, WHITE, dest);
-            player->last_played_animation = &player->move_left_sprite;
-            break;
-        }
-        case SHEET_ID_PLAYER_ANIMATION_MOVE_RIGHT: {
-            play_sprite_on_site(&player->move_right_sprite, WHITE, dest);
-            player->last_played_animation = &player->move_right_sprite;
-            break;
-        }
-        case SHEET_ID_PLAYER_ANIMATION_IDLE_LEFT:  {
-            play_sprite_on_site(&player->idle_left_sprite, WHITE, dest);
-            player->last_played_animation = &player->idle_left_sprite;
-            break;
-        }
-        case SHEET_ID_PLAYER_ANIMATION_IDLE_RIGHT:  {
-            play_sprite_on_site(&player->idle_right_sprite, WHITE, dest);
-            player->last_played_animation = &player->idle_right_sprite;
-            break;
-        }
-        case SHEET_ID_PLAYER_ANIMATION_TAKE_DAMAGE_LEFT:  {
-            play_sprite_on_site(&player->take_damage_left_sprite, WHITE, dest);
-            player->last_played_animation = &player->take_damage_left_sprite;
-            break;
-        }
-        case SHEET_ID_PLAYER_ANIMATION_TAKE_DAMAGE_RIGHT:  {
-            play_sprite_on_site(&player->take_damage_right_sprite, WHITE, dest);
-            player->last_played_animation = &player->take_damage_right_sprite;
-            break;
-        }
-        case SHEET_ID_PLAYER_ANIMATION_WRECK_LEFT:  {
-            play_sprite_on_site(&player->wreck_left_sprite, WHITE, dest);
-            player->last_played_animation = &player->wreck_left_sprite;
-            break;
-        }
-        case SHEET_ID_PLAYER_ANIMATION_WRECK_RIGHT:  {
-            play_sprite_on_site(&player->wreck_right_sprite, WHITE, dest);
-            player->last_played_animation = &player->wreck_right_sprite;
-            break;
-        }
-        
-        default: TraceLog(LOG_ERROR, "ERROR::player::move()::move function called with unspecified value.");
-        break;
+  Rectangle dest = (Rectangle) {
+    .x = player->position.x,
+    .y = player->position.y,
+    .width = player->dimentions.x,
+    .height = player->dimentions.y
+  };
+  switch (player_anim_sheet) {
+    case SHEET_ID_PLAYER_ANIMATION_MOVE_LEFT: {
+      play_sprite_on_site(&player->move_left_sprite, WHITE, dest);
+      player->last_played_animation = &player->move_left_sprite;
+      break;
     }
+    case SHEET_ID_PLAYER_ANIMATION_MOVE_RIGHT: {
+      play_sprite_on_site(&player->move_right_sprite, WHITE, dest);
+      player->last_played_animation = &player->move_right_sprite;
+      break;
+    }
+    case SHEET_ID_PLAYER_ANIMATION_IDLE_LEFT:  {
+      play_sprite_on_site(&player->idle_left_sprite, WHITE, dest);
+      player->last_played_animation = &player->idle_left_sprite;
+      break;
+    }
+    case SHEET_ID_PLAYER_ANIMATION_IDLE_RIGHT:  {
+      play_sprite_on_site(&player->idle_right_sprite, WHITE, dest);
+      player->last_played_animation = &player->idle_right_sprite;
+      break;
+    }
+    case SHEET_ID_PLAYER_ANIMATION_TAKE_DAMAGE_LEFT:  {
+      play_sprite_on_site(&player->take_damage_left_sprite, WHITE, dest);
+      player->last_played_animation = &player->take_damage_left_sprite;
+      break;
+    }
+    case SHEET_ID_PLAYER_ANIMATION_TAKE_DAMAGE_RIGHT:  {
+      play_sprite_on_site(&player->take_damage_right_sprite, WHITE, dest);
+      player->last_played_animation = &player->take_damage_right_sprite;
+      break;
+    }
+    case SHEET_ID_PLAYER_ANIMATION_WRECK_LEFT:  {
+      play_sprite_on_site(&player->wreck_left_sprite, WHITE, dest);
+      player->last_played_animation = &player->wreck_left_sprite;
+      break;
+    }
+    case SHEET_ID_PLAYER_ANIMATION_WRECK_RIGHT:  {
+      play_sprite_on_site(&player->wreck_right_sprite, WHITE, dest);
+      player->last_played_animation = &player->wreck_right_sprite;
+      break;
+    }
+    
+    default: TraceLog(LOG_ERROR, "player::move()::move function called with unspecified value.");
+    break;
+  }
 }
 
 bool player_system_on_event(u16 code, event_context context) {
