@@ -39,25 +39,25 @@ void update_scene_scene(void) {
   update_camera(scene_manager_state->target);
 
   switch (scene_manager_state->scene_data) {
-    case SCENE_MAIN_MENU: update_scene_main_menu();     break;
-    case SCENE_IN_GAME:   update_scene_in_game();       break;
-    case SCENE_EDITOR:    update_scene_editor();        break;
+    case SCENE_TYPE_MAIN_MENU: update_scene_main_menu();     break;
+    case SCENE_TYPE_IN_GAME:   update_scene_in_game();       break;
+    case SCENE_TYPE_EDITOR:    update_scene_editor();        break;
   default: break;
   }
 }
 void render_scene_world(void) {
   switch (scene_manager_state->scene_data) {
-    case SCENE_MAIN_MENU: render_scene_main_menu();     break;
-    case SCENE_IN_GAME:   render_scene_in_game();       break;
-    case SCENE_EDITOR:    render_scene_editor();        break;
+    case SCENE_TYPE_MAIN_MENU: render_scene_main_menu();     break;
+    case SCENE_TYPE_IN_GAME:   render_scene_in_game();       break;
+    case SCENE_TYPE_EDITOR:    render_scene_editor();        break;
   default: break;
   }
 }
 void render_scene_interface(void) {
   switch (scene_manager_state->scene_data) {
-    case SCENE_IN_GAME:   render_interface_in_game();   break;
-    case SCENE_MAIN_MENU: render_interface_main_menu(); break;
-    case SCENE_EDITOR:    render_interface_editor();    break;
+    case SCENE_TYPE_IN_GAME:   render_interface_in_game();   break;
+    case SCENE_TYPE_MAIN_MENU: render_interface_main_menu(); break;
+    case SCENE_TYPE_EDITOR:    render_interface_editor();    break;
   default: break;
   }
 }
@@ -76,19 +76,19 @@ Vector2 get_spectator_position(void) {
 bool scene_manager_on_event(u16 code, event_context context) {
   switch (code) {
   case EVENT_CODE_SCENE_IN_GAME: {
-    scene_manager_state->scene_data = SCENE_IN_GAME;
+    scene_manager_state->scene_data = SCENE_TYPE_IN_GAME;
     initialize_scene_in_game(get_in_game_camera());
     return true;
     break;
   }
   case EVENT_CODE_SCENE_EDITOR: {
-    scene_manager_state->scene_data = SCENE_EDITOR;
+    scene_manager_state->scene_data = SCENE_TYPE_EDITOR;
     initialize_scene_editor(get_in_game_camera());
     return true;
     break;
   }
   case EVENT_CODE_SCENE_MAIN_MENU: {
-    scene_manager_state->scene_data = SCENE_MAIN_MENU;
+    scene_manager_state->scene_data = SCENE_TYPE_MAIN_MENU;
     initialize_scene_main_menu();
     return true;
     break;

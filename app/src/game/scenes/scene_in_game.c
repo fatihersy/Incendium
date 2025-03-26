@@ -24,6 +24,7 @@ typedef struct scene_in_game_state {
   panel ability_upg_panels[MAX_UPDATE_ABILITY_PANEL_COUNT];
   panel passive_selection_panels[MAX_UPDATE_PASSIVE_PANEL_COUNT];
   panel worldmap_selection_panel;
+  panel default_panel;
   worldmap_stage worldmap_locations[MAX_WORLDMAP_LOCATIONS];
   in_game_stages stage;
   camera_metrics* in_camera_metrics;
@@ -65,6 +66,7 @@ void start_game(character_stat* stat);
 void draw_upgrade_panel(ability* abl, ability upg, Rectangle panel_dest);
 void draw_passive_selection_panel(character_stat* stat, Rectangle panel_dest);
 void draw_end_game_panel();
+void reset_game();
 
 /**
  * @brief Requires world system, world init moved to app, as well as its loading time
@@ -85,7 +87,7 @@ bool initialize_scene_in_game(camera_metrics* _camera_metrics) {
   }
   _set_player_position(BASE_RENDER_DIV2);
   
-  panel default_panel = (panel) {
+  state->default_panel = (panel) {
     .signal_state  = BTN_STATE_RELEASED,
     .bg_tex_id     = ATLAS_TEX_ID_CRIMSON_FANTASY_PANEL_BG,
     .frame_tex_id  = ATLAS_TEX_ID_CRIMSON_FANTASY_PANEL,
@@ -94,12 +96,12 @@ bool initialize_scene_in_game(camera_metrics* _camera_metrics) {
     .offsets = (Vector4) {6, 6, 6, 6},
   };
   for (int i=0; i<MAX_UPDATE_ABILITY_PANEL_COUNT; ++i) {
-    state->ability_upg_panels[i] = default_panel;
+    state->ability_upg_panels[i] = state->default_panel;
   }
   for (int i=0; i<MAX_UPDATE_PASSIVE_PANEL_COUNT; ++i) {
-    state->passive_selection_panels[i] = default_panel;
+    state->passive_selection_panels[i] = state->default_panel;
   }
-  state->worldmap_selection_panel = default_panel;
+  state->worldmap_selection_panel = state->default_panel;
 
   state->in_camera_metrics = _camera_metrics;
 
@@ -235,6 +237,11 @@ void render_interface_in_game(void) {
       f32 dest_x_buffer = dest.x;
       for (int i=0; i<MAX_UPDATE_PASSIVE_PANEL_COUNT; ++i) {
         panel* pnl = &state->passive_selection_panels[i];
+        if (pnl->frame_tex_id <= ATLAS_TEX_ID_UNSPECIFIED || pnl->frame_tex_id >= ATLAS_TEX_ID_MAX || 
+          pnl->bg_tex_id    <= ATLAS_TEX_ID_UNSPECIFIED || pnl->bg_tex_id    >= ATLAS_TEX_ID_MAX ) 
+        {
+          *pnl = state->default_panel;
+        }
         if(pnl->buffer[0].data.u16[0] <= 0 || pnl->buffer[0].data.u16[0] >= CHARACTER_STATS_MAX) {
           pnl->buffer[0].data.u16[0] = get_random(1,CHARACTER_STATS_MAX-1);
         }
@@ -244,7 +251,7 @@ void render_interface_in_game(void) {
           set_is_game_paused(false);
           start_game(stat);
           for (int i=0; i<MAX_UPDATE_ABILITY_PANEL_COUNT; ++i) {
-            state->passive_selection_panels[i] = (panel){0};
+            state->passive_selection_panels[i].buffer[0].data.u16[0] = 0;
           }
           break;
         }
@@ -299,6 +306,9 @@ void render_interface_in_game(void) {
           draw_upgrade_panel(abl, new, dest);
         }
       }
+      else if (get_remaining_enemies() <= 0 || get_remaining_enemies() >= MAX_SPAWN_COUNT) {
+        event_fire(EVENT_CODE_END_GAME, (event_context) {0});
+      }
       else {
         gui_progress_bar(PRG_BAR_ID_PLAYER_EXPERIANCE, (Vector2){.x = BASE_RENDER_DIV2.x, .y = SCREEN_OFFSET.x}, true);
         gui_progress_bar(PRG_BAR_ID_PLAYER_HEALTH, SCREEN_OFFSET, false);
@@ -309,6 +319,11 @@ void render_interface_in_game(void) {
     }
     case IN_GAME_STAGE_PLAY_RESULTS: { 
       draw_end_game_panel();
+      if(gui_menu_button("Accept", BTN_ID_IN_GAME_BUTTON_RETURN_MENU, (Vector2) {0, 5})) {
+        gm_save_game();
+        reset_game();
+        event_fire(EVENT_CODE_SCENE_MAIN_MENU, (event_context) {0});
+      }
       break; 
     }
     default: {
@@ -397,9 +412,11 @@ void start_game(character_stat* stat) {
     TraceLog(LOG_ERROR, "scene_in_game::start_game()::state returned zero");
     return;
   }
-  upgrade_player_stat(stat);
-  state->stage = IN_GAME_STAGE_PLAY;
   gm_start_game(*get_active_worldmap());
+
+  upgrade_player_stat(stat);
+  _set_player_position(BASE_RENDER_DIV2);
+  state->stage = IN_GAME_STAGE_PLAY;
 }
 
 void draw_upgrade_panel(ability* abl, ability upg, Rectangle panel_dest) {
@@ -488,7 +505,7 @@ void draw_passive_selection_panel(character_stat* stat, Rectangle panel_dest) {
 void draw_end_game_panel() {
   STATE_ASSERT("draw_end_game_panel")
 
-  gui_panel(get_default_panel(), (Rectangle){ 
+  gui_panel(state->default_panel, (Rectangle){ 
     BASE_RENDER_DIV2.x, BASE_RENDER_DIV2.y, 
     BASE_RENDER_5DIV4.x, BASE_RENDER_5DIV4.y
   }, true);
@@ -498,6 +515,14 @@ void draw_end_game_panel() {
   gui_label_format_v(FONT_TYPE_MOOD, 10, BASE_RENDER_DIV2, WHITE, true, "%d:%d", min, secs);
 
 
+}
+void reset_game() {
+  gm_reset_game();
+
+  state->stage = IN_GAME_STAGE_MAP_CHOICE;
+  state->play_time = 0.f;
+  state->hovered_stage = U16_MAX;
+  state->has_game_started = false; 
 }
 
 #undef STATE_ASSERT

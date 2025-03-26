@@ -1,6 +1,7 @@
 #include "app.h"
 #include "settings.h"
 #include "defines.h"
+#include "save_game.h"
 
 #include "tools/pak_parser.h"
 
@@ -89,6 +90,8 @@ bool app_initialize(void) {
     TraceLog(LOG_ERROR, "scene_manager() initialization failed");
     return false;
   }
+  save_system_initialize();
+  parse_or_create_save_data_from_file(SAVE_SLOT_CURRENT_SESSION);
 
   event_register(EVENT_CODE_APPLICATION_QUIT, application_on_event);
   event_register(EVENT_CODE_TOGGLE_BORDERLESS, application_on_event);

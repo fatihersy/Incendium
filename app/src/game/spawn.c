@@ -45,8 +45,8 @@ u16 damage_spawn(u16 _id, u16 damage) {
 
   for (int i = 0; i < spawn_count ; ++i) {
     if(spawns[i].character_id == _id) {
-        character = &spawns[i];
-        break;
+      character = &spawns[i];
+      break;
     }
   }
   if (!character) return INVALID_ID16;
@@ -219,7 +219,7 @@ u16 *get_spawn_count() {
   return &state->current_spawn_count;
 }
 
-void clean_up_state(void) {
+void clean_up_spawn_state(void) {
   for (u16 i = 0; i < state->current_spawn_count; i++) {
     state->spawns[i] = (Character2D){0};
   }

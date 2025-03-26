@@ -23,6 +23,8 @@ void set_is_game_end(bool _is_game_end);
 void toggle_is_game_end(void);
 
 void gm_start_game(worldmap_stage stage);
+void gm_reset_game();
+void gm_save_game();
 void damage_any_spawn(Character2D *projectile);
 void damage_any_collider_by_type(Character2D from_actor, actor_type to_type);
 void upgrade_player_stat(character_stat* stat);

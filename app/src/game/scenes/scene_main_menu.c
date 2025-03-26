@@ -25,7 +25,10 @@ static main_menu_scene_state *state;
 #define MAIN_MENU_FADE_DURATION 1 * TARGET_FPS
 
 void initialize_scene_main_menu(void) {
-  if (state) {return;}
+  if (state) {
+    mm_clear_scene_main_menu();
+    return;
+  }
   
   state = (main_menu_scene_state*)allocate_memory_linear(sizeof(main_menu_scene_state), true);
 
@@ -46,8 +49,15 @@ void update_scene_main_menu(void) {
   }
   if (state->in_scene_changing_process && is_ui_fade_anim_complete()) {
     switch (state->next_scene) {
-      case SCENE_IN_GAME: event_fire(EVENT_CODE_SCENE_IN_GAME, (event_context){0}); break;
-      case SCENE_EDITOR: event_fire(EVENT_CODE_SCENE_EDITOR, (event_context){0}); break;
+      case SCENE_TYPE_DEFAULT: break;
+      case SCENE_TYPE_IN_GAME: {
+        mm_clear_scene_main_menu();
+        event_fire(EVENT_CODE_SCENE_IN_GAME, (event_context){0}); break;
+      }
+      case SCENE_TYPE_EDITOR:{ 
+        mm_clear_scene_main_menu();
+        event_fire(EVENT_CODE_SCENE_EDITOR, (event_context){0}); break;
+      }
       default: {
         TraceLog(LOG_ERROR, "scene_main_menu::update_scene_main_menu::Unknown scene");
         break;
@@ -67,12 +77,12 @@ void render_interface_main_menu(void) {
     if (state->type == MAIN_MENU_SCENE_DEFAULT) {
       if (gui_menu_button("Play", BTN_ID_MAINMENU_BUTTON_PLAY, VECTOR2(0,  0))) {
         state->in_scene_changing_process = true;
-        state->next_scene = SCENE_IN_GAME;
+        state->next_scene = SCENE_TYPE_IN_GAME;
         event_fire(EVENT_CODE_UI_START_FADEOUT_EFFECT, (event_context){ .data.u16[0] = MAIN_MENU_FADE_DURATION});
       }
       if (gui_menu_button("Editor", BTN_ID_MAINMENU_BUTTON_EDITOR, VECTOR2(0,  4))) {
         state->in_scene_changing_process = true;
-        state->next_scene = SCENE_EDITOR;
+        state->next_scene = SCENE_TYPE_EDITOR;
         event_fire(EVENT_CODE_UI_START_FADEOUT_EFFECT, (event_context){ .data.u16[0] = MAIN_MENU_FADE_DURATION});
       }
       if (gui_menu_button("Settings", BTN_ID_MAINMENU_BUTTON_SETTINGS, VECTOR2(0,  8))) {
@@ -92,4 +102,11 @@ void render_interface_main_menu(void) {
     }
     render_user_interface();
   }
+}
+
+void mm_clear_scene_main_menu(void) {
+  state->type = MAIN_MENU_SCENE_DEFAULT;
+  state->next_scene = SCENE_TYPE_DEFAULT;
+  state->in_scene_changing_process = false;
+  state->scene_changing_process_complete = false;
 }

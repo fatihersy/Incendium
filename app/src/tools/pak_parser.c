@@ -46,7 +46,7 @@ typedef struct pak_parser_system_state {
 
 static pak_parser_system_state *restrict state;
 
-u32 get_entry(u32 offset);
+u32 pak_parser_get_entry(u32 offset);
 
 void pak_parser_system_initialize(const char* path) {
   if (state) {
@@ -76,24 +76,24 @@ void parse_pak(void) {
   for (u32 i=0; i<state->pak_data_size; ++i) {
     switch (reading_order) {
     case READING_ORDER_FILENAME: {
-      i = get_entry(i);
+      i = pak_parser_get_entry(i);
       copy_memory(file.file_name, state->read_buffer, TextLength((const char*)state->read_buffer));
       break;
     }
     case READING_ORDER_FILE_EXTENSION: {
-      i = get_entry(i);
+      i = pak_parser_get_entry(i);
       copy_memory(file.file_extension, state->read_buffer, TextLength((const char*)state->read_buffer));
       break;
     }
     case READING_ORDER_SIZE: {
-      i = get_entry(i);
+      i = pak_parser_get_entry(i);
       file.size = TextToInteger((const char*)state->read_buffer);
       break;
     }
     case READING_ORDER_DATA_LOCATION_OFFSET: {
       file.offset = i;
       file.data = &state->pak_data[i];
-      i = get_entry(i);
+      i = pak_parser_get_entry(i);
       break;
     }
     default: {
@@ -115,7 +115,7 @@ void parse_pak(void) {
 
 }
  
-u32 get_entry(u32 offset) {
+u32 pak_parser_get_entry(u32 offset) {
   u32 data_counter = 0;
   u32 out_offset = 0;
 
@@ -162,7 +162,7 @@ file_data fetch_file_data(const char* file_name) {
   for (u32 i=0; i<state->pak_data_size; ++i) {
     switch (reading_order) {
     case READING_ORDER_FILENAME: {
-      i = get_entry(i);
+      i = pak_parser_get_entry(i);
       if (TextIsEqual((const char*)state->read_buffer, file_name)) {
         found = true;
         copy_memory(file.file_name, state->read_buffer, TextLength((const char*)state->read_buffer));
@@ -170,14 +170,14 @@ file_data fetch_file_data(const char* file_name) {
       break;
     }
     case READING_ORDER_FILE_EXTENSION: {
-      i = get_entry(i);
+      i = pak_parser_get_entry(i);
       if (found) {
         copy_memory(file.file_extension, state->read_buffer, TextLength((const char*)state->read_buffer));
       }
       break;
     }
     case READING_ORDER_SIZE: {
-      i = get_entry(i);
+      i = pak_parser_get_entry(i);
       if (found) {
         file.size = TextToInteger((const char*)state->read_buffer);
       }
@@ -188,7 +188,7 @@ file_data fetch_file_data(const char* file_name) {
         file.offset = i;
         file.data = &state->pak_data[i];
       }
-      i = get_entry(i);
+      i = pak_parser_get_entry(i);
       break;
     }
     default: {

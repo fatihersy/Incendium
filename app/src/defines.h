@@ -12,6 +12,7 @@
 
 #define PAK_FILE_LOCATION "./resource.pak"
 #define CONFIG_FILE_LOCATION "./config.ini"
+#define SAVE_GAME_EXTENSION ".save_slot"
 
 #define SCREEN_OFFSET CLITERAL(Vector2){5, 5}
 
@@ -207,9 +208,11 @@ typedef enum actor_type {
 } actor_type;
 
 typedef enum scene_type {
-  SCENE_MAIN_MENU,
-  SCENE_IN_GAME,
-  SCENE_EDITOR
+  SCENE_TYPE_DEFAULT,
+  SCENE_TYPE_MAIN_MENU,
+  SCENE_TYPE_IN_GAME,
+  SCENE_TYPE_EDITOR,
+  SCENE_TYPE_MAX
 } scene_type;
 
 // LABEL: Move Type
@@ -364,6 +367,8 @@ typedef enum button_id {
   BTN_ID_MAINMENU_BUTTON_EXIT,
   BTN_ID_MAINMENU_SETTINGS_CANCEL,
   BTN_ID_MAINMENU_BACK_BUTTON,
+
+  BTN_ID_IN_GAME_BUTTON_RETURN_MENU,
 
   BTN_ID_PAUSEMENU_BUTTON_INVENTORY,
   BTN_ID_PAUSEMENU_BUTTON_TECHNOLOGIES,
@@ -703,10 +708,6 @@ typedef struct character_stat {
     char c[16];
   } buffer;
 }character_stat;
-
-typedef struct save_data {
-  u32 currency_souls_player_have;
-} save_data;
 
 // LABEL: Player State
 typedef struct player_state {

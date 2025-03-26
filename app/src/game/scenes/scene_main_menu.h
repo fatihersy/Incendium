@@ -5,6 +5,8 @@
 
 void initialize_scene_main_menu(void);
 
+void mm_clear_scene_main_menu(void);
+
 void update_scene_main_menu(void);
 void render_scene_main_menu(void);
 void render_interface_main_menu(void);

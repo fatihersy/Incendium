@@ -204,6 +204,7 @@ void user_interface_system_initialize(void) {
 
   // IN GAME
   {
+  register_button(BTN_ID_IN_GAME_BUTTON_RETURN_MENU, BTN_TYPE_MENU_BUTTON_NO_CRT);
   }
   // IN GAME
 
@@ -1050,13 +1051,12 @@ inline void draw_atlas_texture_regular(atlas_texture_id _id, Rectangle dest, Col
  */
 inline void draw_atlas_texture_npatch(atlas_texture_id _id, Rectangle dest, Vector4 offsets, bool should_center) {
   if (_id >= ATLAS_TEX_ID_MAX || _id <= ATLAS_TEX_ID_UNSPECIFIED) {
-    TraceLog(LOG_WARNING, 
-    "user_interface::draw_texture_npatch()::ID was out of bound"); 
+    TraceLog(LOG_WARNING, "user_interface::draw_atlas_texture_npatch()::ID was out of bound"); 
     return; 
   }
   atlas_texture* tex = _get_atlas_texture_by_enum(_id);
-  if (!tex) { TraceLog(LOG_WARNING, 
-    "user_interface::draw_texture_npatch()::Tex was null"); 
+  if (!tex) { 
+    TraceLog(LOG_WARNING, "user_interface::draw_atlas_texture_npatch()::Tex was null"); 
     return; 
   }
 

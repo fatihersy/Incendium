@@ -14,8 +14,6 @@ static player_state* player;
 #define PLAYER_SCALE 3.f
 
 void play_anim(spritesheet_id player_anim_sheet);
-void add_exp_to_player(u32 exp);
-void take_damage(u16 damage);
 
 bool player_system_on_event(u16 code, event_context context);
 
@@ -209,6 +207,16 @@ void take_damage(u16 damage) {
     event_fire(EVENT_CODE_END_GAME, (event_context) {0});
   }
   player->health_perc = (float) player->health_current / player->health_max;
+}
+void heal_player(u16 amouth){
+  if(player->is_dead) return;
+  if(player->health_current + amouth <= player->health_max) {
+    player->health_current += amouth;
+  }
+  else {
+    player->health_current = player->health_max;
+  }
+  player->health_perc = (f32) player->health_current / player->health_max;
 }
 
 player_update_results update_player(void) {

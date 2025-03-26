@@ -13,5 +13,4 @@ void upgrade_ability(ability* abl);
 void update_abilities(ability_play_system* system);
 void render_abilities(ability_play_system* system);
 
-
 #endif

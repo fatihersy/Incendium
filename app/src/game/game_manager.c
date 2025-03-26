@@ -1,5 +1,6 @@
 #include "game_manager.h"
 #include <settings.h>
+#include "save_game.h"
 
 #include "core/ftime.h"
 #include "core/event.h"
@@ -17,7 +18,7 @@ typedef struct game_manager_system_state {
   player_state* p_player;
   worldmap_stage stage;
 
-  save_data game_progression_data;
+  save_data* game_progression_data;
 
   bool is_game_end;
   bool is_game_paused;
@@ -48,6 +49,7 @@ bool game_manager_initialize(camera_metrics* _camera_metrics) {
   }
   state->p_player = get_player_state();
   state->player_abilities = state->p_player->ability_system.abilities;
+  state->game_progression_data = get_save_data(SAVE_SLOT_CURRENT_SESSION);
 
   if (!ability_system_initialize(_camera_metrics, get_app_settings())) {
     TraceLog(LOG_ERROR, "game_manager::ability_system_initialize()::Returned false");
@@ -192,6 +194,8 @@ void gm_start_game(worldmap_stage stage) {
     }) ? ++i : --spawn_trying_limit;
   }
 
+  heal_player(state->p_player->health_max);
+  state->p_player->is_player_have_ability_upgrade_points = false;
   event_fire(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, (event_context){
     .data.f32[0] = PRG_BAR_ID_PLAYER_EXPERIANCE,
     .data.f32[1] = state->p_player->exp_perc,
@@ -287,11 +291,22 @@ void upgrade_player_stat(character_stat* _stat) {
   }
   }
 }
+void gm_reset_game() {
+  clean_up_spawn_state();
+
+  state->is_game_end = false;
+  state->is_game_paused = true;
+  state->is_game_end = false;
+  state->stage = (worldmap_stage){0};
+}
+void gm_save_game() {
+  save_save_data(SAVE_SLOT_CURRENT_SESSION);
+}
 // OPS
 
 // GET / SET
 u32 get_currency_souls(void) {
-  return state->game_progression_data.currency_souls_player_have;
+  return state->game_progression_data->currency_souls_player_have;
 }
 bool get_b_player_have_upgrade_points(void) {
   return state->p_player->is_player_have_ability_upgrade_points;
@@ -442,7 +457,7 @@ bool game_manager_on_event(u16 code, event_context context) {
     return true;
   }
   case EVENT_CODE_ADD_ITEM_PLAYER_CURRENCY_SOULS: {
-    state->game_progression_data.currency_souls_player_have += context.data.u32[0];
+    state->game_progression_data->currency_souls_player_have += context.data.u32[0];
     return true;
   }
   default: {
