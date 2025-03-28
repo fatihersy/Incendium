@@ -6,6 +6,7 @@
 
 #include "game/spritesheet.h"
 
+#define ABILITIES_BASE_SCALE 2.5f
 
 typedef struct ability_system_state {
   ability abilities[ABILITY_TYPE_MAX];
@@ -134,12 +135,13 @@ void update_abilities(ability_play_system* system) {
     // TODO: Handle all situations
   }
   for (i32 i=0; i<MAX_ABILITY_SLOT; ++i) {
-    if (!state->abilities[i].is_active) { continue; }
+    ability* abl = &system->abilities[i];
+    if (!abl->is_active) { continue; }
 
     for (i32 j=0; j<MAX_ABILITY_PROJECTILE_SLOT; ++j) {
-      if (!state->abilities[i].projectiles[j].is_active) { continue; }
+      if (!abl->projectiles[j].is_active) { continue; }
 
-      update_sprite(&state->abilities[i].projectiles[j].animation);
+      update_sprite(&abl->projectiles[j].animation);
     }
   }
 }
@@ -252,16 +254,21 @@ void movement_comet(ability* abl) {
 }
 
 void render_abilities(ability_play_system* system) {
+
   for (int i = 1; i < ABILITY_TYPE_MAX; ++i) {
     if (!system->abilities[i].is_active || !system->abilities[i].is_initialized) { continue; }
 
     for (int j = 0; j < system->abilities[i].proj_count; ++j) {
       if (!system->abilities[i].projectiles[j].is_active) { continue; }
+      Rectangle proj_coll = system->abilities[i].projectiles[j].collision;
+      system->abilities[i].projectiles[j].is_active = true;
       play_sprite_on_site(
         &system->abilities[i].projectiles[j].animation, 
         WHITE,
-        system->abilities[i].projectiles[j].collision
-      );
+        (Rectangle) {
+          proj_coll.x, proj_coll.y, 
+          proj_coll.width * ABILITIES_BASE_SCALE, proj_coll.height * ABILITIES_BASE_SCALE
+      });
     }
   }
 }
@@ -299,7 +306,7 @@ void register_ability(
     abl.projectiles[i].damage = abl.base_damage;
     abl.projectiles[i].is_active = false;
     abl.projectiles[i].animation.sheet_id = abl.anim_id;
-    set_sprite(&abl.projectiles[i].animation, true, true, abl.center_proj_anim);
+    set_sprite(&abl.projectiles[i].animation, true, false, abl.center_proj_anim);
   }
 
   state->abilities[type] = abl;

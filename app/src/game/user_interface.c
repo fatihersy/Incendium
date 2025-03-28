@@ -476,6 +476,7 @@ bool gui_button(const char* text, button_id _id, Font font, f32 font_size_scale,
       Vector2 pressed_text_pos = vec2_add(text_pos, _btn_type->text_offset_on_click);
       draw_text(text, pressed_text_pos, font, font.baseSize * font_size_scale, BUTTON_TEXT_PRESSED_COLOR, false);
     }
+    event_fire(EVENT_CODE_PLAY_BUTTON_ON_CLICK, (event_context) { .data.u16[0] = true});
   } else {
     draw_sprite_on_site_by_id(_btn->btn_type.ss_type, WHITE, VECTOR2(_btn->dest.x,_btn->dest.y), draw_sprite_scale, 0, false);
     if (_btn->state == BTN_STATE_HOVER) {
@@ -483,6 +484,9 @@ bool gui_button(const char* text, button_id _id, Font font, f32 font_size_scale,
       if (!TextIsEqual(text, "")) {
         draw_text(text, text_pos, font, font.baseSize * font_size_scale, BUTTON_TEXT_HOVER_COLOR, false);
       }
+      event_fire(EVENT_CODE_RESET_SOUND, (event_context) { 
+        .data.i32[0] = SOUND_ID_BUTTON_ON_CLICK
+      });
     }
     if (_btn->state != BTN_STATE_HOVER) {
       draw_text(text, text_pos, font, font.baseSize * font_size_scale, BUTTON_TEXT_UP_COLOR, false);

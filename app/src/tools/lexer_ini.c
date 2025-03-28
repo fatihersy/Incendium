@@ -48,7 +48,6 @@ bool parse_app_settings_ini(const char* filename, app_settings* out_settings) {
   char file_str[INI_FILE_MAX_FILE_SIZE] = "";
   char section_resolution[INI_FILE_MAX_SECTION_LENGTH] = "";
   char section_sound[INI_FILE_MAX_SECTION_LENGTH] = "";
-  char section_title[INI_FILE_MAX_SECTION_LENGTH] = "";
   char section_window[INI_FILE_MAX_SECTION_LENGTH] = "";
   u8* _str = LoadFileData(filename, &size);
   if (size > INI_FILE_MAX_FILE_SIZE) {
@@ -58,7 +57,6 @@ bool parse_app_settings_ini(const char* filename, app_settings* out_settings) {
   TextCopy(file_str, (char*)_str);
   TextCopy(section_resolution, get_section(file_str, "resolution"));
   TextCopy(section_sound,      get_section(file_str, "sound"));
-  TextCopy(section_title,      get_section(file_str, "title"));
   TextCopy(section_window,      get_section(file_str, "window"));
   out_settings->window_size.x = get_variable_I32(section_resolution, "width");
   out_settings->window_size.y = get_variable_I32(section_resolution, "height");
@@ -73,7 +71,6 @@ bool parse_app_settings_ini(const char* filename, app_settings* out_settings) {
   else if (TextIsEqual(str_win_mode, "windowed")) {
     out_settings->window_state = 0;
   }
-  TextCopy(out_settings->title, get_value_string(section_title, "title"));
   return true;
 }
 

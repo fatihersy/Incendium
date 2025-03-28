@@ -14,7 +14,7 @@ typedef struct resource_system_state {
   Image images[IMAGE_TYPE_MAX];
   tilesheet tilesheets[TILESHEET_TYPE_MAX];
 
-  scene_type game_on_scene;
+  scene_id game_on_scene;
 } resource_system_state;
 
 static resource_system_state *state;
@@ -58,14 +58,14 @@ bool resource_system_initialize(void) {
   load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_SPAWN_ZOMBIE_ANIMATION_TAKE_DAMAGE_LEFT,  VECTOR2(1776, 176), 15,   32,  40, 1,  4);
   load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_SPAWN_ZOMBIE_ANIMATION_TAKE_DAMAGE_RIGHT, VECTOR2(1936, 176), 15,   32,  40, 1,  4);
 
-  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_BUTTON_REFLECTION_SHEET,            VECTOR2(1504,  0), 30,   80,  16, 1,  9);
-  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_SLIDER_PERCENT,                     VECTOR2(1664, 16),  0,   20,  10, 1, 11);
-  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_SLIDER_OPTION,                      VECTOR2(1632, 32),  0,   21,  10, 1,  2);
-  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_SLIDER_LEFT_BUTTON,                 VECTOR2(1600, 32),  0,   10,  10, 1,  2);
-  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_SLIDER_RIGHT_BUTTON,                VECTOR2(1610, 42),  0,   10,  10, 1,  2);
-  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_MENU_BUTTON,                        VECTOR2(1504, 16),  0,   80,  16, 1,  2);
-  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_FLAT_BUTTON,                        VECTOR2(1504, 96),  0,   44,  14, 1,  2);
-  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_FIREBALL_ANIMATION,                 VECTOR2(1888, 16), 15,   32,  32, 1,  4);
+  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_BUTTON_REFLECTION_SHEET,            VECTOR2(1504,   0), 30,   80,  16, 1,  9);
+  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_SLIDER_PERCENT,                     VECTOR2(1664,  16),  0,   20,  10, 1, 11);
+  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_SLIDER_OPTION,                      VECTOR2(1632,  32),  0,   21,  10, 1,  2);
+  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_SLIDER_LEFT_BUTTON,                 VECTOR2(1600,  32),  0,   10,  10, 1,  2);
+  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_SLIDER_RIGHT_BUTTON,                VECTOR2(1610,  42),  0,   10,  10, 1,  2);
+  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_MENU_BUTTON,                        VECTOR2(1504,  16),  0,   80,  16, 1,  2);
+  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_FLAT_BUTTON,                        VECTOR2(1504,  96),  0,   44,  14, 1,  2);
+  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_FIREBALL_ANIMATION,                 VECTOR2(1584, 352),  10,   48,  48, 1, 18);
   
   load_tilesheet(TILESHEET_TYPE_MAP, ATLAS_TEX_ID_MAP_TILESET_TEXTURE, 49, 63, 32);
   return true;

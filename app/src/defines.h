@@ -3,6 +3,8 @@
 
 #include <raylib.h>
 
+#define GAME_TITLE "Incendium"
+
 #define RESOURCE_PATH "D:/Workspace/resources/"
 #define SHADER_PATH "../app/src/shaders/"
 
@@ -207,13 +209,13 @@ typedef enum actor_type {
   ACTOR_TYPE_PROJECTILE_PLAYER,
 } actor_type;
 
-typedef enum scene_type {
-  SCENE_TYPE_DEFAULT,
+typedef enum scene_id {
+  SCENE_TYPE_UNSPECIFIED,
   SCENE_TYPE_MAIN_MENU,
   SCENE_TYPE_IN_GAME,
   SCENE_TYPE_EDITOR,
   SCENE_TYPE_MAX
-} scene_type;
+} scene_id;
 
 // LABEL: Move Type
 typedef enum movement_pattern {
@@ -255,6 +257,21 @@ typedef enum character_stats {
   CHARACTER_STATS_EXP_GAIN,
   CHARACTER_STATS_MAX,
 } character_stats;
+
+typedef enum sound_id {
+  SOUND_ID_UNSPECIFIED,
+  SOUND_ID_BUTTON_ON_CLICK,
+  SOUND_ID_FIRE_ON_HIT,
+  SOUND_ID_MAX,
+} sound_id;
+
+typedef enum music_id {
+  MUSIC_ID_UNSPECIFIED,
+  MUSIC_ID_MAIN_MENU_THEME,
+  MUSIC_ID_NIGHT_THEME2,
+  MUSIC_ID_TRACK5,
+  MUSIC_ID_MAX,
+} music_id;
 
 typedef enum texture_id {
   TEX_ID_UNSPECIFIED,
@@ -466,11 +483,29 @@ typedef struct data_pack {
   } data;
 } data_pack;
 
+typedef struct music_data {
+  music_id id;
+  Music handle;
+  file_data file;
+
+  bool play_once;
+  bool played;
+}music_data;
+
+typedef struct sound_data {
+  sound_id id;
+  Sound handle;
+  Wave wav;
+  file_data file;
+
+  bool play_once;
+  bool played;
+}sound_data;
+
 typedef struct app_settings {
   Vector2 window_size;
   f32 normalized_ratio;
   Vector2 scale_ratio;
-  char title[16];
   u16 master_sound_volume;
   i32 window_state;
 } app_settings;

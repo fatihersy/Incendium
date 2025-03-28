@@ -5,6 +5,7 @@
 #include <defines.h>
 
 void initialize_scene_editor(camera_metrics* _camera);
+void end_scene_editor(void);
 
 void update_scene_editor(void);
 void render_scene_editor(void);

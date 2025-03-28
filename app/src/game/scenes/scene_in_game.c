@@ -58,14 +58,15 @@ if (UPG.level == 1) {\
 #define PASSIVE_SELECTION_PANEL_ICON_SIZE ABILITY_UPG_PANEL_ICON_SIZE
 #define CLOUDS_ANIMATION_DURATION TARGET_FPS * 1.5f // second
 
+void begin_scene_in_game(void);
 void in_game_update_bindings(void);
 void in_game_update_mouse_bindings(void);
 void in_game_update_keyboard_bindings(void);
 void initialize_worldmap_locations(void);
-void start_game(character_stat* stat);
 void draw_upgrade_panel(ability* abl, ability upg, Rectangle panel_dest);
 void draw_passive_selection_panel(character_stat* stat, Rectangle panel_dest);
 void draw_end_game_panel();
+void start_game(character_stat* stat);
 void reset_game();
 
 /**
@@ -73,43 +74,19 @@ void reset_game();
  */
 bool initialize_scene_in_game(camera_metrics* _camera_metrics) {
   if (state) {
-    TraceLog(LOG_ERROR, "scene_in_game::initialize_scene_in_game()::Initialize called twice");
+    begin_scene_in_game();
     return false;
   }
-
   state = (scene_in_game_state *)allocate_memory_linear(sizeof(scene_in_game_state), true);
-
-  copy_memory(&state->worldmap_locations, get_worldmap_locations(), sizeof(state->worldmap_locations));
+  state->in_camera_metrics = _camera_metrics;
 
   if (!game_manager_initialize(_camera_metrics)) { // Inits player & spawns
     TraceLog(LOG_ERROR, "scene_in_game::initialize_scene_in_game()::game_manager_initialize() failed");
     return false;
   }
-  _set_player_position(BASE_RENDER_DIV2);
-  
-  state->default_panel = (panel) {
-    .signal_state  = BTN_STATE_RELEASED,
-    .bg_tex_id     = ATLAS_TEX_ID_CRIMSON_FANTASY_PANEL_BG,
-    .frame_tex_id  = ATLAS_TEX_ID_CRIMSON_FANTASY_PANEL,
-    .bg_tint       = (Color) { 30, 39, 46, 245},
-    .bg_hover_tint = (Color) { 52, 64, 76, 245},
-    .offsets = (Vector4) {6, 6, 6, 6},
-  };
-  for (int i=0; i<MAX_UPDATE_ABILITY_PANEL_COUNT; ++i) {
-    state->ability_upg_panels[i] = state->default_panel;
-  }
-  for (int i=0; i<MAX_UPDATE_PASSIVE_PANEL_COUNT; ++i) {
-    state->passive_selection_panels[i] = state->default_panel;
-  }
-  state->worldmap_selection_panel = state->default_panel;
 
-  state->in_camera_metrics = _camera_metrics;
+  begin_scene_in_game();
 
-  set_is_game_paused(true);
-  state->stage = IN_GAME_STAGE_MAP_CHOICE;
-  state->clouds_animation_playing = false;
-  state->hovered_stage = U16_MAX;
-  event_fire(EVENT_CODE_UI_START_FADEIN_EFFECT, (event_context){ .data.u16[0] = CLOUDS_ANIMATION_DURATION });
   return true;
 }
 
@@ -321,7 +298,7 @@ void render_interface_in_game(void) {
       draw_end_game_panel();
       if(gui_menu_button("Accept", BTN_ID_IN_GAME_BUTTON_RETURN_MENU, (Vector2) {0, 5})) {
         gm_save_game();
-        reset_game();
+        end_scene_in_game();
         event_fire(EVENT_CODE_SCENE_MAIN_MENU, (event_context) {0});
       }
       break; 
@@ -405,6 +382,44 @@ void in_game_update_keyboard_bindings(void) {
 void in_game_update_bindings(void) {
   in_game_update_mouse_bindings();
   in_game_update_keyboard_bindings();
+}
+
+void begin_scene_in_game(void) {
+  
+  state->default_panel = (panel) {
+    .signal_state  = BTN_STATE_RELEASED,
+    .bg_tex_id     = ATLAS_TEX_ID_CRIMSON_FANTASY_PANEL_BG,
+    .frame_tex_id  = ATLAS_TEX_ID_CRIMSON_FANTASY_PANEL,
+    .bg_tint       = (Color) { 30, 39, 46, 245},
+    .bg_hover_tint = (Color) { 52, 64, 76, 245},
+    .offsets = (Vector4) {6, 6, 6, 6},
+  };
+
+  copy_memory(&state->worldmap_locations, get_worldmap_locations(), sizeof(state->worldmap_locations));
+  _set_player_position(BASE_RENDER_DIV2);
+  set_is_game_paused(true);
+  
+  for (int i=0; i<MAX_UPDATE_ABILITY_PANEL_COUNT; ++i) {
+    state->ability_upg_panels[i] = state->default_panel;
+  }
+  for (int i=0; i<MAX_UPDATE_PASSIVE_PANEL_COUNT; ++i) {
+    state->passive_selection_panels[i] = state->default_panel;
+  }
+  state->worldmap_selection_panel = state->default_panel;
+  state->stage = IN_GAME_STAGE_MAP_CHOICE;
+  state->clouds_animation_playing = false;
+  state->hovered_stage = U16_MAX;
+
+  event_fire(EVENT_CODE_UI_START_FADEIN_EFFECT, (event_context){ .data.u16[0] = CLOUDS_ANIMATION_DURATION });
+}
+
+void end_scene_in_game(void) {
+  gm_reset_game();
+
+  state->stage = IN_GAME_STAGE_MAP_CHOICE;
+  state->play_time = 0.f;
+  state->hovered_stage = U16_MAX;
+  state->has_game_started = false; 
 }
 
 void start_game(character_stat* stat) {
@@ -515,14 +530,6 @@ void draw_end_game_panel() {
   gui_label_format_v(FONT_TYPE_MOOD, 10, BASE_RENDER_DIV2, WHITE, true, "%d:%d", min, secs);
 
 
-}
-void reset_game() {
-  gm_reset_game();
-
-  state->stage = IN_GAME_STAGE_MAP_CHOICE;
-  state->play_time = 0.f;
-  state->hovered_stage = U16_MAX;
-  state->has_game_started = false; 
 }
 
 #undef STATE_ASSERT

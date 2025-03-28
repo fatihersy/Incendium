@@ -15,7 +15,7 @@ typedef enum main_menu_scene_type {
 
 typedef struct main_menu_scene_state {
   main_menu_scene_type type;
-  scene_type next_scene;
+  scene_id next_scene;
   bool in_scene_changing_process;
   bool scene_changing_process_complete;
 } main_menu_scene_state;
@@ -24,17 +24,20 @@ static main_menu_scene_state *state;
 
 #define MAIN_MENU_FADE_DURATION 1 * TARGET_FPS
 
+void begin_scene_main_menu(void);
+
 void initialize_scene_main_menu(void) {
   if (state) {
-    mm_clear_scene_main_menu();
+    begin_scene_main_menu();
     return;
   }
-  
   state = (main_menu_scene_state*)allocate_memory_linear(sizeof(main_menu_scene_state), true);
 
   user_interface_system_initialize();
 
   set_worldmap_location(WORLDMAP_MAINMENU_MAP); // NOTE: Worldmap index 0 is mainmenu background now 
+
+  begin_scene_main_menu();
 }
 
 void update_scene_main_menu(void) {
@@ -49,13 +52,11 @@ void update_scene_main_menu(void) {
   }
   if (state->in_scene_changing_process && is_ui_fade_anim_complete()) {
     switch (state->next_scene) {
-      case SCENE_TYPE_DEFAULT: break;
+      case SCENE_TYPE_UNSPECIFIED: break;
       case SCENE_TYPE_IN_GAME: {
-        mm_clear_scene_main_menu();
         event_fire(EVENT_CODE_SCENE_IN_GAME, (event_context){0}); break;
       }
       case SCENE_TYPE_EDITOR:{ 
-        mm_clear_scene_main_menu();
         event_fire(EVENT_CODE_SCENE_EDITOR, (event_context){0}); break;
       }
       default: {
@@ -75,6 +76,8 @@ void render_scene_main_menu(void) {
 void render_interface_main_menu(void) {
   if (!state->scene_changing_process_complete) {
     if (state->type == MAIN_MENU_SCENE_DEFAULT) {
+      gui_label(GAME_TITLE, FONT_TYPE_MOOD, 65, VECTOR2(BASE_RENDER_DIV2.x, BASE_RENDER_DIV4.y), WHITE, true);
+
       if (gui_menu_button("Play", BTN_ID_MAINMENU_BUTTON_PLAY, VECTOR2(0,  0))) {
         state->in_scene_changing_process = true;
         state->next_scene = SCENE_TYPE_IN_GAME;
@@ -104,9 +107,15 @@ void render_interface_main_menu(void) {
   }
 }
 
-void mm_clear_scene_main_menu(void) {
+void begin_scene_main_menu(void) {
   state->type = MAIN_MENU_SCENE_DEFAULT;
-  state->next_scene = SCENE_TYPE_DEFAULT;
+  state->next_scene = SCENE_TYPE_UNSPECIFIED;
   state->in_scene_changing_process = false;
   state->scene_changing_process_complete = false;
+
+  event_fire(EVENT_CODE_PLAY_MAIN_MENU_THEME, (event_context) {0});
+}
+void end_scene_main_menu(void) {
+  event_fire(EVENT_CODE_RESET_MUSIC, (event_context){ .data.i32[0] = MUSIC_ID_MAIN_MENU_THEME});
+
 }

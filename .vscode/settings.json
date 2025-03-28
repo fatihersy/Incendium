@@ -116,5 +116,6 @@
         "reasings.h": "c",
         "save_game.h": "c",
         "settings.h": "c",
+        "sound.h": "c"
     },
 }

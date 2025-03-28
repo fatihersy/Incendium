@@ -3,6 +3,7 @@ BUILD_DIR := bin
 VENDOR_DIR := vendor
 OBJ_DIR := obj
 
+TITLE := Incendium
 ASSEMBLY := app
 EXTENSION := .exe
 COMPILER_FLAGS := -g -MD -Werror=vla -Wall -Wextra -Wpedantic -std=c23
@@ -28,7 +29,7 @@ scaffold: # create build directory
 .PHONY: link
 link: scaffold $(OBJ_FILES) # link
 	@echo Linking $(ASSEMBLY)...
-	@gcc $(OBJ_FILES) -o $(BUILD_DIR)/$(ASSEMBLY)$(EXTENSION) $(LINKER_FLAGS)
+	@gcc $(OBJ_FILES) -o $(BUILD_DIR)/$(TITLE)$(EXTENSION) $(LINKER_FLAGS)
 
 .PHONY: compile
 compile: #compile .c files
@@ -36,7 +37,7 @@ compile: #compile .c files
 
 .PHONY: clean
 clean: # clean build directory
-	if exist $(BUILD_DIR)\$(ASSEMBLY)$(EXTENSION) del $(BUILD_DIR)\$(ASSEMBLY)$(EXTENSION)
+	if exist $(BUILD_DIR)\$(TITLE)$(EXTENSION) del $(BUILD_DIR)\$(TITLE)$(EXTENSION)
 	rmdir /s /q $(OBJ_DIR)\$(ASSEMBLY)
 
 $(OBJ_DIR)/%.c.o: %.c # compile .c to .c.o object

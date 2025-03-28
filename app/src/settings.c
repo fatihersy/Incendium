@@ -123,9 +123,7 @@ bool save_ini_file(void) {
     copy_memory(windows_state_char, TEXT_FULLSCREEN, TextLength(TEXT_FULLSCREEN));
   }
 
-  const char* ini_text = TextFormat("%s %s%s%s %s %s%.0f%s %s%.0f%s %s %s %s %s%s%s",
-    "[title]\n",
-    "title = \"", state->settings.title, "\"\n",
+  const char* ini_text = TextFormat("%s %s%.0f%s %s%.0f%s %s %s %s %s%s%s",
     "[resolution]\n",
     "width = \"", state->settings.window_size.x, "\"\n",
     "height = \"", state->settings.window_size.y, "\"\n",

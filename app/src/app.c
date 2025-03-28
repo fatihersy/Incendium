@@ -2,6 +2,7 @@
 #include "settings.h"
 #include "defines.h"
 #include "save_game.h"
+#include "sound.h"
 
 #include "tools/pak_parser.h"
 
@@ -40,7 +41,7 @@ bool app_initialize(void) {
   InitWindow(
     state->settings->window_size.x, 
     state->settings->window_size.y, 
-    state->settings->title);
+    GAME_TITLE);
   SetTargetFPS(TARGET_FPS); 
   SetExitKey(KEY_END);
   SetConfigFlags(FLAG_VSYNC_HINT | FLAG_WINDOW_HIGHDPI);
@@ -73,16 +74,14 @@ bool app_initialize(void) {
       (Rectangle){0, 0, GetScreenWidth(), GetScreenHeight()}, (Vector2){0}, 0, WHITE);
     EndDrawing();
 
-    #if USE_PAK_FORMAT
-      parse_pak(PAK_FILE_LOCATION);
-    #endif
+    parse_pak();
   #else
     BeginDrawing();
     ClearBackground(CLEAR_BACKGROUND_COLOR); //TODO: Loading screen
     EndDrawing();
   #endif
-
   resource_system_initialize();
+  sound_system_initialize();
   create_camera(BASE_RENDER_DIV2);
 
   world_system_initialize(get_in_game_camera(), BASE_RENDER_DIV2);
@@ -125,6 +124,7 @@ bool app_update(void) {
     ClearWindowState(FLAG_WINDOW_TOPMOST);
   }
   update_scene_scene();
+  update_sound_system();
   update_time();
   return true;
 }

@@ -51,6 +51,7 @@ typedef struct scene_editor_state {
 
 static scene_editor_state *restrict state;
 
+void begin_scene_editor(void);
 void editor_update_bindings(void);
 void editor_update_movement(void);
 void editor_update_mouse_bindings(void);
@@ -62,20 +63,368 @@ void add_prop(atlas_texture_id source_tex, Rectangle source, f32 scale);
 
 void initialize_scene_editor(camera_metrics* _camera_metrics) {
   if (state) {
-    TraceLog(LOG_WARNING, "scene_editor::initialize_scene_editor()::Initialize called twice");
+    begin_scene_editor();
     return;
   }
   state = (scene_editor_state*)allocate_memory_linear(sizeof(scene_editor_state), true);
 
-  world_system_initialize(_camera_metrics, BASE_RENDER_DIV2);
-
-  copy_memory(&state->worldmap_locations, get_worldmap_locations(), sizeof(state->worldmap_locations));
   if (!_camera_metrics) {
     TraceLog(LOG_ERROR, "scene_editor::initialize_scene_editor()::Camera metrics recieved NULL");
     return;
   }
+  state->in_camera_metrics = _camera_metrics;
+  world_system_initialize(_camera_metrics, BASE_RENDER_DIV2);
 
   user_interface_system_initialize();
+  
+  begin_scene_editor();
+}
+
+// UPDATE / RENDER
+void update_scene_editor(void) {
+  if(!IsWindowFocused()) {
+    state->mouse_focus = MOUSE_FOCUS_UNFOCUSED;
+    return;
+  }
+  else state->mouse_focus = MOUSE_FOCUS_MAP;
+  state->mouse_pos_screen.x = GetMousePosition().x * get_app_settings()->scale_ratio.x;
+  state->mouse_pos_screen.y = GetMousePosition().y * get_app_settings()->scale_ratio.y;
+  state->mouse_pos_world = GetScreenToWorld2D(state->mouse_pos_screen, state->in_camera_metrics->handle);
+  state->edit_layer = get_slider_current_value(SDR_ID_EDITOR_MAP_LAYER_SLC_SLIDER)->data.u16[0]; // HACK: Should not updated every frame
+
+  editor_update_bindings();
+  update_map();
+  update_user_interface();
+}
+void render_scene_editor(void) {
+  if (state->selected_stage == WORLDMAP_MAINMENU_MAP) {
+    render_map_view_on((Vector2) {0}, 1);
+  }
+  else {
+    render_map();
+  }
+
+  DrawPixel(0, 0, RED);
+}
+void render_interface_editor(void) {
+  
+  if(state->b_show_tilesheet_tile_selection_screen && !state->b_show_prop_selection_screen) 
+  { 
+    gui_panel_scissored(state->tile_selection_panel, false, {
+      render_map_palette(state->tile_selection_panel.zoom);
+      gui_slider(SDR_ID_EDITOR_MAP_LAYER_SLC_SLIDER, SCREEN_OFFSET, VECTOR2(4,3), 3.f);
+
+      if(gui_slider_button(BTN_ID_EDITOR_BTN_STAGE_MAP_CHANGE_LEFT, SCREEN_POS(6.5f,9.f))){
+        if (state->selected_stage > 0) {
+          state->selected_stage -= 1;
+          set_worldmap_location(state->selected_stage);
+        }
+      }
+
+      gui_label_format_v(FONT_TYPE_MOOD, 10, SCREEN_POS(14.f,10.f), WHITE, true, "%d", state->selected_stage);
+
+      if(gui_slider_button(BTN_ID_EDITOR_BTN_STAGE_MAP_CHANGE_RIGHT, SCREEN_POS(17.f,9.f))) {
+        if (state->selected_stage < MAX_WORLDMAP_LOCATIONS-1) {
+          state->selected_stage += 1;
+          set_worldmap_location(state->selected_stage);
+        }
+      }
+    }); 
+  }
+  else if(state->b_show_prop_selection_screen && !state->b_show_tilesheet_tile_selection_screen) 
+  {
+    panel* pnl = &state->prop_selection_panel;
+    gui_panel_scissored((*pnl), false, {
+      f32 prop_height_count = 0;
+      for (int i = 0; i < state->prop_count; ++i) {
+        const tilemap_prop* prop = &state->props[i];
+        Rectangle dest = prop->dest;
+        dest.x = 0;
+        dest.y = (pnl->scroll * pnl->buffer[0].data.f32[0]) + prop_height_count;
+        gui_draw_atlas_texture_id_pro(prop->atlas_id, prop->relative_source, dest, false);
+        prop_height_count += prop->dest.height;
+      }
+      pnl->buffer[0].data.f32[0] = prop_height_count;
+      pnl->scroll_handle.y = FMAX(pnl->scroll_handle.y, pnl->dest.y + SCREEN_OFFSET.x);
+      pnl->scroll_handle.y = FMIN(pnl->scroll_handle.y, pnl->dest.y + pnl->dest.height);
+      pnl->scroll = (pnl->scroll_handle.y - pnl->dest.y - SCREEN_OFFSET.x) / (pnl->dest.height - pnl->scroll_handle.height) * -1;
+      DrawRectangleRec(pnl->scroll_handle, WHITE);
+    });
+  }
+
+  switch (state->selection_type) {
+    case SLC_TYPE_TILE: {
+      _render_tile_on_pos(&state->selected_tile, state->mouse_pos_screen);
+      break;
+    }
+    case SLC_TYPE_DROP_PROP: {
+      gui_draw_atlas_texture_id_pro(state->selected_prop.atlas_id, state->selected_prop.relative_source,
+        (Rectangle) {
+          state->mouse_pos_screen.x, state->mouse_pos_screen.y, 
+          state->selected_prop.dest.width, state->selected_prop.dest.height
+        }, false);
+      break;
+    }
+    case SLC_TYPE_SLC_PROP: {
+      Vector2 prop_pos = GetWorldToScreen2D(
+        (Vector2){state->selected_prop.dest.x, state->selected_prop.dest.y}, 
+        state->in_camera_metrics->handle
+      );
+      f32 relative_width = state->selected_prop.dest.width * state->in_camera_metrics->handle.zoom;
+      f32 relative_height = state->selected_prop.dest.height * state->in_camera_metrics->handle.zoom;
+      DrawRectangleLines(
+        prop_pos.x, prop_pos.y, 
+        relative_width, 
+        relative_height, 
+        WHITE);
+      prop_pos.x += relative_width / 2.f - PROP_DRAG_HANDLE_DIM_DIV2;
+      prop_pos.y += relative_height / 2.f - PROP_DRAG_HANDLE_DIM_DIV2;
+      DrawRectangle(prop_pos.x, prop_pos.y, PROP_DRAG_HANDLE_DIM, PROP_DRAG_HANDLE_DIM, WHITE);
+      break;
+    }
+    default: break;
+  } 
+
+  render_user_interface();
+}
+// UPDATE / RENDER
+
+void add_prop(atlas_texture_id source_tex, Rectangle source, f32 scale) {
+  if (source_tex >= ATLAS_TEX_ID_MAX || source_tex <= ATLAS_TEX_ID_UNSPECIFIED) {
+    TraceLog(LOG_WARNING, "scene_editor::add_prop()::Provided texture id out of bound");
+    return;
+  }
+  const atlas_texture* tex = get_atlas_texture_by_enum(source_tex);
+  if (!tex || !tex->atlas_handle) {
+    TraceLog(LOG_WARNING, "scene_editor::add_prop()::Invalid atlas");
+    return;
+  }
+  if (tex->atlas_handle->width < source.x + source.width || tex->atlas_handle->height < source.y + source.height) {
+    TraceLog(LOG_WARNING, "scene_editor::add_prop()::Provided prop dimentions out of bound");
+    return;
+  }
+  tilemap_prop* prop = &state->props[state->prop_count];
+  
+  prop->atlas_id = source_tex;
+  prop->source = source;
+  prop->relative_source = (Rectangle){ 
+    prop->source.x + tex->source.x,  
+    prop->source.y + tex->source.y,  
+    prop->source.width,  
+    prop->source.height
+  };
+  prop->dest = (Rectangle) {0, 0, source.width * scale, source.height * scale};
+  prop->id = state->prop_count;
+  prop->is_initialized = true;
+  ++state->prop_count;
+}
+
+// BINDINGS
+void editor_update_bindings(void) {
+  editor_update_mouse_bindings();
+  editor_update_keyboard_bindings();
+}
+void editor_update_mouse_bindings(void) { 
+  if(state->b_show_tilesheet_tile_selection_screen && CheckCollisionPointRec(state->mouse_pos_screen, state->tile_selection_panel.dest))
+  {
+    state->mouse_focus = MOUSE_FOCUS_TILE_SELECTION;
+    state->tile_selection_panel.zoom += ((float)GetMouseWheelMove()*0.05f);
+
+    if (state->tile_selection_panel.zoom > 3.0f) state->tile_selection_panel.zoom = 3.0f;
+    else if (state->tile_selection_panel.zoom < 0.1f) state->tile_selection_panel.zoom = 0.1f;
+    if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON) && state->selection_type == SLC_TYPE_UNSELECTED) {
+      tilemap_tile tile = _get_tile_from_sheet_by_mouse_pos(state->mouse_pos_screen);
+      if (tile.is_initialized) {
+        state->selected_tile = tile;
+        state->selection_type = SLC_TYPE_TILE;
+      }
+    }
+    if (IsMouseButtonDown(MOUSE_MIDDLE_BUTTON)) {
+      drag_tilesheet(GetMouseDelta());
+    }
+  }
+  else if(state->b_show_prop_selection_screen && CheckCollisionPointRec(state->mouse_pos_screen, state->prop_selection_panel.dest))
+  {
+    if (state->mouse_focus == MOUSE_FOCUS_TILE_SELECTION) {
+      TraceLog(LOG_ERROR, "scene_editor::editor_update_mouse_bindings()::tile and prop screen activated at the same time.");
+      return;
+    } 
+    else state->mouse_focus = MOUSE_FOCUS_PROP_SELECTION;
+    panel* pnl = &state->prop_selection_panel;
+
+    if (IsMouseButtonDown(MOUSE_LEFT_BUTTON) && state->selection_type == SLC_TYPE_UNSELECTED && CheckCollisionPointRec(state->mouse_pos_screen, pnl->scroll_handle)) {
+      pnl->is_dragging_scroll = true;
+    }
+
+    pnl->scroll_handle.y += GetMouseWheelMove() * -10.f;
+ 
+    if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON) && state->selection_type == SLC_TYPE_UNSELECTED && !pnl->is_dragging_scroll) {
+      i32 h = (pnl->scroll * pnl->buffer[0].data.f32[0] * (-1)) + state->mouse_pos_screen.y;
+      for (int i=0; i<state->prop_count; ++i) {
+        if(h - state->props[i].source.height < 0) {
+          state->selected_prop = state->props[i];
+          state->selection_type = SLC_TYPE_DROP_PROP;
+          break;
+        }
+        h -= state->props[i].source.height;
+      }
+    }
+  }
+  else if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON) && state->mouse_focus == MOUSE_FOCUS_MAP) 
+  {
+    switch (state->selection_type) {
+      case SLC_TYPE_UNSELECTED: {
+        tilemap_prop* prop = get_map_prop_by_pos(state->mouse_pos_world);
+        if (prop) {
+          state->selected_prop = *prop;
+          state->selection_type = SLC_TYPE_SLC_PROP;
+        }
+        break;
+      }
+      case SLC_TYPE_DROP_PROP: {
+        Vector2 coord = GetScreenToWorld2D(state->mouse_pos_screen, state->in_camera_metrics->handle);
+        state->selected_prop.dest.x = coord.x;
+        state->selected_prop.dest.y = coord.y;
+        add_prop_curr_map(&state->selected_prop);
+        break;
+      }
+      case SLC_TYPE_SLC_PROP: {
+        state->b_dragging_prop = false;
+        break;
+      }     
+      default: break;
+    }
+  }
+  else if (IsMouseButtonDown(MOUSE_LEFT_BUTTON) && state->mouse_focus == MOUSE_FOCUS_MAP) 
+  {
+    switch (state->selection_type) {
+      case SLC_TYPE_SLC_PROP: {
+        tilemap_prop* prop = get_map_prop_by_id(state->selected_prop.id);
+        Rectangle drag_handle = (Rectangle) {
+          prop->dest.x + prop->dest.width/2.f - PROP_DRAG_HANDLE_DIM_DIV2, prop->dest.y + prop->dest.height/2.f - PROP_DRAG_HANDLE_DIM_DIV2, 
+          PROP_DRAG_HANDLE_DIM, PROP_DRAG_HANDLE_DIM
+        };
+        if(!state->b_dragging_prop && CheckCollisionPointRec(state->mouse_pos_world, drag_handle)) {
+          state->b_dragging_prop = true;
+        }
+        if (state->b_dragging_prop) {
+          prop->dest.x = state->mouse_pos_world.x - prop->dest.width/2.f;
+          prop->dest.y = state->mouse_pos_world.y - prop->dest.height/2.f;
+          state->selected_prop.dest = prop->dest;
+        }
+        break;
+      }
+      case SLC_TYPE_TILE: { 
+        tilemap_tile tile = _get_tile_from_map_by_mouse_pos(state->edit_layer, state->mouse_pos_screen);
+        set_map_tile(state->edit_layer, &tile, &state->selected_tile);
+        break; 
+      }
+      default: break;
+    }
+  }
+  if (IsMouseButtonDown(MOUSE_LEFT_BUTTON)) 
+  {
+    panel* pnl = &state->prop_selection_panel;
+    if (state->prop_selection_panel.is_dragging_scroll && state->b_show_prop_selection_screen) {
+      i32 mouse_pos_y = state->mouse_pos_screen.y;
+      pnl->scroll_handle.y = mouse_pos_y - pnl->scroll_handle.height / 2.f;
+    } else if(state->prop_selection_panel.is_dragging_scroll && !state->b_show_prop_selection_screen) state->prop_selection_panel.is_dragging_scroll = false;
+  }
+  if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON)) 
+  {
+    if (state->prop_selection_panel.is_dragging_scroll) {
+      state->prop_selection_panel.is_dragging_scroll = false;
+    }
+  }
+  if (IsMouseButtonReleased(MOUSE_RIGHT_BUTTON) && state->selection_type != SLC_TYPE_UNSELECTED) 
+  {
+    state->selected_tile = (tilemap_tile) {0};
+    state->selected_prop = (tilemap_prop) {0};
+    state->selection_type = SLC_TYPE_UNSELECTED;
+  }
+  if (state->mouse_focus == MOUSE_FOCUS_MAP) {
+    state->in_camera_metrics->handle.zoom += ((float)GetMouseWheelMove()*0.05f);
+
+    if (state->in_camera_metrics->handle.zoom > 3.0f) state->in_camera_metrics->handle.zoom = 3.0f;
+    else if (state->in_camera_metrics->handle.zoom < 0.1f) state->in_camera_metrics->handle.zoom = 0.1f;
+  }
+}
+void editor_update_keyboard_bindings(void) {
+  editor_update_movement();
+
+  if (IsKeyReleased(KEY_ESCAPE)) {
+    event_fire(EVENT_CODE_UI_SHOW_PAUSE_MENU, (event_context){0});
+  }
+  if (IsKeyPressed(KEY_F5)) {
+    save_current_map();
+  }
+  if (IsKeyPressed(KEY_F8)) {
+    load_current_map();
+  }
+  if (IsKeyReleased(KEY_TAB)) {
+    state->b_show_tilesheet_tile_selection_screen = !state->b_show_tilesheet_tile_selection_screen;
+    state->b_show_prop_selection_screen = false;
+  }
+  if (IsKeyPressed(KEY_I)) {
+    state->b_show_prop_selection_screen = !state->b_show_prop_selection_screen;
+    state->b_show_tilesheet_tile_selection_screen = false;
+  }
+  if (IsKeyReleased(KEY_DELETE)) {
+    if (state->mouse_focus == MOUSE_FOCUS_MAP && state->selection_type == SLC_TYPE_SLC_PROP && !state->b_dragging_prop) {
+      if(!remove_prop_cur_map_by_id(state->selected_prop.id)) {
+        TraceLog(LOG_WARNING, "scene_editor::editor_update_keyboard_bindings()::Removing property failed.");
+      }
+      state->selected_prop = (tilemap_prop) {0};
+      state->selection_type = SLC_TYPE_UNSELECTED;
+    }
+  }
+
+}
+void editor_update_movement(void) {
+  f32 speed = 10;
+
+  if (IsKeyDown(KEY_W)) {
+    state->target.y -= speed;
+    event_context context = (event_context)
+    {
+      .data.f32[0] = state->target.x, 
+      .data.f32[1] = state->target.y
+    };
+    event_fire(EVENT_CODE_SCENE_MANAGER_SET_TARGET, context);
+  }
+  if (IsKeyDown(KEY_A)) {
+    state->target.x -= speed;
+    event_context context = (event_context)
+    {
+      .data.f32[0] = state->target.x, 
+      .data.f32[1] = state->target.y
+    };
+    event_fire(EVENT_CODE_SCENE_MANAGER_SET_TARGET, context);
+  }
+  if (IsKeyDown(KEY_S)) {
+    state->target.y += speed;
+    event_context context = (event_context)
+    {
+      .data.f32[0] = state->target.x, 
+      .data.f32[1] = state->target.y
+    };
+    event_fire(EVENT_CODE_SCENE_MANAGER_SET_TARGET, context);
+  }
+  if (IsKeyDown(KEY_D)) {
+    state->target.x += speed;
+    event_context context = (event_context)
+    {
+      .data.f32[0] = state->target.x, 
+      .data.f32[1] = state->target.y
+    };
+    event_fire(EVENT_CODE_SCENE_MANAGER_SET_TARGET, context);
+  }
+}
+// BINDINGS
+
+void begin_scene_editor(void) {
+
+  copy_memory(&state->worldmap_locations, get_worldmap_locations(), sizeof(state->worldmap_locations));
   state->tile_selection_panel = get_default_panel();
   state->tile_selection_panel.signal_state = BTN_STATE_HOVER;
   state->tile_selection_panel.dest = (Rectangle) {0, 0, BASE_RENDER_DIV3.x, BASE_RENDER_RES.y};
@@ -87,7 +436,6 @@ void initialize_scene_editor(camera_metrics* _camera_metrics) {
     .x = prop_pnl->dest.x + prop_pnl->dest.width - PROP_DRAG_HANDLE_DIM - 10, .y = 0,
     .width = PROP_DRAG_HANDLE_DIM, .height = PROP_DRAG_HANDLE_DIM * 5,
   };
-  state->in_camera_metrics = _camera_metrics;
 
   event_fire(EVENT_CODE_SCENE_MANAGER_SET_CAM_POS, (event_context){
     .data.f32[0] = state->target.x,
@@ -476,345 +824,4 @@ void initialize_scene_editor(camera_metrics* _camera_metrics) {
     });
   }
 }
-
-// UPDATE / RENDER
-void update_scene_editor(void) {
-  if(!IsWindowFocused()) {
-    state->mouse_focus = MOUSE_FOCUS_UNFOCUSED;
-    return;
-  }
-  else state->mouse_focus = MOUSE_FOCUS_MAP;
-  state->mouse_pos_screen.x = GetMousePosition().x * get_app_settings()->scale_ratio.x;
-  state->mouse_pos_screen.y = GetMousePosition().y * get_app_settings()->scale_ratio.y;
-  state->mouse_pos_world = GetScreenToWorld2D(state->mouse_pos_screen, state->in_camera_metrics->handle);
-  state->edit_layer = get_slider_current_value(SDR_ID_EDITOR_MAP_LAYER_SLC_SLIDER)->data.u16[0]; // HACK: Should not updated every frame
-
-  editor_update_bindings();
-  update_map();
-  update_user_interface();
-}
-void render_scene_editor(void) {
-  if (state->selected_stage == WORLDMAP_MAINMENU_MAP) {
-    render_map_view_on((Vector2) {0}, 1);
-  }
-  else {
-    render_map();
-  }
-
-  DrawPixel(0, 0, RED);
-}
-void render_interface_editor(void) {
-  
-  if(state->b_show_tilesheet_tile_selection_screen && !state->b_show_prop_selection_screen) 
-  { 
-    gui_panel_scissored(state->tile_selection_panel, false, {
-      render_map_palette(state->tile_selection_panel.zoom);
-      gui_slider(SDR_ID_EDITOR_MAP_LAYER_SLC_SLIDER, SCREEN_OFFSET, VECTOR2(4,3), 3.f);
-
-      if(gui_slider_button(BTN_ID_EDITOR_BTN_STAGE_MAP_CHANGE_LEFT, SCREEN_POS(6.5f,9.f))){
-        if (state->selected_stage > 0) {
-          state->selected_stage -= 1;
-          set_worldmap_location(state->selected_stage);
-        }
-      }
-
-      gui_label_format_v(FONT_TYPE_MOOD, 10, SCREEN_POS(14.f,10.f), WHITE, true, "%d", state->selected_stage);
-
-      if(gui_slider_button(BTN_ID_EDITOR_BTN_STAGE_MAP_CHANGE_RIGHT, SCREEN_POS(17.f,9.f))) {
-        if (state->selected_stage < MAX_WORLDMAP_LOCATIONS-1) {
-          state->selected_stage += 1;
-          set_worldmap_location(state->selected_stage);
-        }
-      }
-    }); 
-  }
-  else if(state->b_show_prop_selection_screen && !state->b_show_tilesheet_tile_selection_screen) 
-  {
-    panel* pnl = &state->prop_selection_panel;
-    gui_panel_scissored((*pnl), false, {
-      f32 prop_height_count = 0;
-      for (int i = 0; i < state->prop_count; ++i) {
-        const tilemap_prop* prop = &state->props[i];
-        Rectangle dest = prop->dest;
-        dest.x = 0;
-        dest.y = (pnl->scroll * pnl->buffer[0].data.f32[0]) + prop_height_count;
-        gui_draw_atlas_texture_id_pro(prop->atlas_id, prop->relative_source, dest, false);
-        prop_height_count += prop->dest.height;
-      }
-      pnl->buffer[0].data.f32[0] = prop_height_count;
-      pnl->scroll_handle.y = FMAX(pnl->scroll_handle.y, pnl->dest.y + SCREEN_OFFSET.x);
-      pnl->scroll_handle.y = FMIN(pnl->scroll_handle.y, pnl->dest.y + pnl->dest.height);
-      pnl->scroll = (pnl->scroll_handle.y - pnl->dest.y - SCREEN_OFFSET.x) / (pnl->dest.height - pnl->scroll_handle.height) * -1;
-      DrawRectangleRec(pnl->scroll_handle, WHITE);
-    });
-  }
-
-  switch (state->selection_type) {
-    case SLC_TYPE_TILE: {
-      _render_tile_on_pos(&state->selected_tile, state->mouse_pos_screen);
-      break;
-    }
-    case SLC_TYPE_DROP_PROP: {
-      gui_draw_atlas_texture_id_pro(state->selected_prop.atlas_id, state->selected_prop.relative_source,
-        (Rectangle) {
-          state->mouse_pos_screen.x, state->mouse_pos_screen.y, 
-          state->selected_prop.dest.width, state->selected_prop.dest.height
-        }, false);
-      break;
-    }
-    case SLC_TYPE_SLC_PROP: {
-      Vector2 prop_pos = GetWorldToScreen2D(
-        (Vector2){state->selected_prop.dest.x, state->selected_prop.dest.y}, 
-        state->in_camera_metrics->handle
-      );
-      f32 relative_width = state->selected_prop.dest.width * state->in_camera_metrics->handle.zoom;
-      f32 relative_height = state->selected_prop.dest.height * state->in_camera_metrics->handle.zoom;
-      DrawRectangleLines(
-        prop_pos.x, prop_pos.y, 
-        relative_width, 
-        relative_height, 
-        WHITE);
-      prop_pos.x += relative_width / 2.f - PROP_DRAG_HANDLE_DIM_DIV2;
-      prop_pos.y += relative_height / 2.f - PROP_DRAG_HANDLE_DIM_DIV2;
-      DrawRectangle(prop_pos.x, prop_pos.y, PROP_DRAG_HANDLE_DIM, PROP_DRAG_HANDLE_DIM, WHITE);
-      break;
-    }
-    default: break;
-  } 
-
-  render_user_interface();
-}
-// UPDATE / RENDER
-
-void add_prop(atlas_texture_id source_tex, Rectangle source, f32 scale) {
-  if (source_tex >= ATLAS_TEX_ID_MAX || source_tex <= ATLAS_TEX_ID_UNSPECIFIED) {
-    TraceLog(LOG_WARNING, "scene_editor::add_prop()::Provided texture id out of bound");
-    return;
-  }
-  const atlas_texture* tex = get_atlas_texture_by_enum(source_tex);
-  if (!tex || !tex->atlas_handle) {
-    TraceLog(LOG_WARNING, "scene_editor::add_prop()::Invalid atlas");
-    return;
-  }
-  if (tex->atlas_handle->width < source.x + source.width || tex->atlas_handle->height < source.y + source.height) {
-    TraceLog(LOG_WARNING, "scene_editor::add_prop()::Provided prop dimentions out of bound");
-    return;
-  }
-  tilemap_prop* prop = &state->props[state->prop_count];
-  
-  prop->atlas_id = source_tex;
-  prop->source = source;
-  prop->relative_source = (Rectangle){ 
-    prop->source.x + tex->source.x,  
-    prop->source.y + tex->source.y,  
-    prop->source.width,  
-    prop->source.height
-  };
-  prop->dest = (Rectangle) {0, 0, source.width * scale, source.height * scale};
-  prop->id = state->prop_count;
-  prop->is_initialized = true;
-  ++state->prop_count;
-}
-
-// BINDINGS
-void editor_update_bindings(void) {
-  editor_update_mouse_bindings();
-  editor_update_keyboard_bindings();
-}
-void editor_update_mouse_bindings(void) { 
-  if(state->b_show_tilesheet_tile_selection_screen && CheckCollisionPointRec(state->mouse_pos_screen, state->tile_selection_panel.dest))
-  {
-    state->mouse_focus = MOUSE_FOCUS_TILE_SELECTION;
-    state->tile_selection_panel.zoom += ((float)GetMouseWheelMove()*0.05f);
-
-    if (state->tile_selection_panel.zoom > 3.0f) state->tile_selection_panel.zoom = 3.0f;
-    else if (state->tile_selection_panel.zoom < 0.1f) state->tile_selection_panel.zoom = 0.1f;
-    if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON) && state->selection_type == SLC_TYPE_UNSELECTED) {
-      tilemap_tile tile = _get_tile_from_sheet_by_mouse_pos(state->mouse_pos_screen);
-      if (tile.is_initialized) {
-        state->selected_tile = tile;
-        state->selection_type = SLC_TYPE_TILE;
-      }
-    }
-    if (IsMouseButtonDown(MOUSE_MIDDLE_BUTTON)) {
-      drag_tilesheet(GetMouseDelta());
-    }
-  }
-  else if(state->b_show_prop_selection_screen && CheckCollisionPointRec(state->mouse_pos_screen, state->prop_selection_panel.dest))
-  {
-    if (state->mouse_focus == MOUSE_FOCUS_TILE_SELECTION) {
-      TraceLog(LOG_ERROR, "scene_editor::editor_update_mouse_bindings()::tile and prop screen activated at the same time.");
-      return;
-    } 
-    else state->mouse_focus = MOUSE_FOCUS_PROP_SELECTION;
-    panel* pnl = &state->prop_selection_panel;
-
-    if (IsMouseButtonDown(MOUSE_LEFT_BUTTON) && state->selection_type == SLC_TYPE_UNSELECTED && CheckCollisionPointRec(state->mouse_pos_screen, pnl->scroll_handle)) {
-      pnl->is_dragging_scroll = true;
-    }
-
-    pnl->scroll_handle.y += GetMouseWheelMove() * -10.f;
- 
-    if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON) && state->selection_type == SLC_TYPE_UNSELECTED && !pnl->is_dragging_scroll) {
-      i32 h = (pnl->scroll * pnl->buffer[0].data.f32[0] * (-1)) + state->mouse_pos_screen.y;
-      for (int i=0; i<state->prop_count; ++i) {
-        if(h - state->props[i].source.height < 0) {
-          state->selected_prop = state->props[i];
-          state->selection_type = SLC_TYPE_DROP_PROP;
-          break;
-        }
-        h -= state->props[i].source.height;
-      }
-    }
-  }
-  else if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON) && state->mouse_focus == MOUSE_FOCUS_MAP) 
-  {
-    switch (state->selection_type) {
-      case SLC_TYPE_UNSELECTED: {
-        tilemap_prop* prop = get_map_prop_by_pos(state->mouse_pos_world);
-        if (prop) {
-          state->selected_prop = *prop;
-          state->selection_type = SLC_TYPE_SLC_PROP;
-        }
-        break;
-      }
-      case SLC_TYPE_DROP_PROP: {
-        Vector2 coord = GetScreenToWorld2D(state->mouse_pos_screen, state->in_camera_metrics->handle);
-        state->selected_prop.dest.x = coord.x;
-        state->selected_prop.dest.y = coord.y;
-        add_prop_curr_map(&state->selected_prop);
-        break;
-      }
-      case SLC_TYPE_SLC_PROP: {
-        state->b_dragging_prop = false;
-        break;
-      }     
-      default: break;
-    }
-  }
-  else if (IsMouseButtonDown(MOUSE_LEFT_BUTTON) && state->mouse_focus == MOUSE_FOCUS_MAP) 
-  {
-    switch (state->selection_type) {
-      case SLC_TYPE_SLC_PROP: {
-        tilemap_prop* prop = get_map_prop_by_id(state->selected_prop.id);
-        Rectangle drag_handle = (Rectangle) {
-          prop->dest.x + prop->dest.width/2.f - PROP_DRAG_HANDLE_DIM_DIV2, prop->dest.y + prop->dest.height/2.f - PROP_DRAG_HANDLE_DIM_DIV2, 
-          PROP_DRAG_HANDLE_DIM, PROP_DRAG_HANDLE_DIM
-        };
-        if(!state->b_dragging_prop && CheckCollisionPointRec(state->mouse_pos_world, drag_handle)) {
-          state->b_dragging_prop = true;
-        }
-        if (state->b_dragging_prop) {
-          prop->dest.x = state->mouse_pos_world.x - prop->dest.width/2.f;
-          prop->dest.y = state->mouse_pos_world.y - prop->dest.height/2.f;
-          state->selected_prop.dest = prop->dest;
-        }
-        break;
-      }
-      case SLC_TYPE_TILE: { 
-        tilemap_tile tile = _get_tile_from_map_by_mouse_pos(state->edit_layer, state->mouse_pos_screen);
-        set_map_tile(state->edit_layer, &tile, &state->selected_tile);
-        break; 
-      }
-      default: break;
-    }
-  }
-  if (IsMouseButtonDown(MOUSE_LEFT_BUTTON)) 
-  {
-    panel* pnl = &state->prop_selection_panel;
-    if (state->prop_selection_panel.is_dragging_scroll && state->b_show_prop_selection_screen) {
-      i32 mouse_pos_y = state->mouse_pos_screen.y;
-      pnl->scroll_handle.y = mouse_pos_y - pnl->scroll_handle.height / 2.f;
-    } else if(state->prop_selection_panel.is_dragging_scroll && !state->b_show_prop_selection_screen) state->prop_selection_panel.is_dragging_scroll = false;
-  }
-  if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON)) 
-  {
-    if (state->prop_selection_panel.is_dragging_scroll) {
-      state->prop_selection_panel.is_dragging_scroll = false;
-    }
-  }
-  if (IsMouseButtonReleased(MOUSE_RIGHT_BUTTON) && state->selection_type != SLC_TYPE_UNSELECTED) 
-  {
-    state->selected_tile = (tilemap_tile) {0};
-    state->selected_prop = (tilemap_prop) {0};
-    state->selection_type = SLC_TYPE_UNSELECTED;
-  }
-  if (state->mouse_focus == MOUSE_FOCUS_MAP) {
-    state->in_camera_metrics->handle.zoom += ((float)GetMouseWheelMove()*0.05f);
-
-    if (state->in_camera_metrics->handle.zoom > 3.0f) state->in_camera_metrics->handle.zoom = 3.0f;
-    else if (state->in_camera_metrics->handle.zoom < 0.1f) state->in_camera_metrics->handle.zoom = 0.1f;
-  }
-}
-void editor_update_keyboard_bindings(void) {
-  editor_update_movement();
-
-  if (IsKeyReleased(KEY_ESCAPE)) {
-    event_fire(EVENT_CODE_UI_SHOW_PAUSE_MENU, (event_context){0});
-  }
-  if (IsKeyPressed(KEY_F5)) {
-    save_current_map();
-  }
-  if (IsKeyPressed(KEY_F8)) {
-    load_current_map();
-  }
-  if (IsKeyReleased(KEY_TAB)) {
-    state->b_show_tilesheet_tile_selection_screen = !state->b_show_tilesheet_tile_selection_screen;
-    state->b_show_prop_selection_screen = false;
-  }
-  if (IsKeyPressed(KEY_I)) {
-    state->b_show_prop_selection_screen = !state->b_show_prop_selection_screen;
-    state->b_show_tilesheet_tile_selection_screen = false;
-  }
-  if (IsKeyReleased(KEY_DELETE)) {
-    if (state->mouse_focus == MOUSE_FOCUS_MAP && state->selection_type == SLC_TYPE_SLC_PROP && !state->b_dragging_prop) {
-      if(!remove_prop_cur_map_by_id(state->selected_prop.id)) {
-        TraceLog(LOG_WARNING, "scene_editor::editor_update_keyboard_bindings()::Removing property failed.");
-      }
-      state->selected_prop = (tilemap_prop) {0};
-      state->selection_type = SLC_TYPE_UNSELECTED;
-    }
-  }
-
-}
-void editor_update_movement(void) {
-  f32 speed = 10;
-
-  if (IsKeyDown(KEY_W)) {
-    state->target.y -= speed;
-    event_context context = (event_context)
-    {
-      .data.f32[0] = state->target.x, 
-      .data.f32[1] = state->target.y
-    };
-    event_fire(EVENT_CODE_SCENE_MANAGER_SET_TARGET, context);
-  }
-  if (IsKeyDown(KEY_A)) {
-    state->target.x -= speed;
-    event_context context = (event_context)
-    {
-      .data.f32[0] = state->target.x, 
-      .data.f32[1] = state->target.y
-    };
-    event_fire(EVENT_CODE_SCENE_MANAGER_SET_TARGET, context);
-  }
-  if (IsKeyDown(KEY_S)) {
-    state->target.y += speed;
-    event_context context = (event_context)
-    {
-      .data.f32[0] = state->target.x, 
-      .data.f32[1] = state->target.y
-    };
-    event_fire(EVENT_CODE_SCENE_MANAGER_SET_TARGET, context);
-  }
-  if (IsKeyDown(KEY_D)) {
-    state->target.x += speed;
-    event_context context = (event_context)
-    {
-      .data.f32[0] = state->target.x, 
-      .data.f32[1] = state->target.y
-    };
-    event_fire(EVENT_CODE_SCENE_MANAGER_SET_TARGET, context);
-  }
-}
-// BINDINGS
+void end_scene_editor(void) {}

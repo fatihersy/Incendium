@@ -9,7 +9,7 @@
             "name": "Launch (Windows)",
             "request": "launch",
             "type": "lldb",
-            "program": "${workspaceFolder}/bin/app.exe",
+            "program": "${workspaceFolder}/bin/Incendium.exe",
             "stopOnEntry": false,
             "console":"integratedTerminal",
             "cwd": "${workspaceFolder}/bin/",
@@ -18,7 +18,7 @@
             "name": "Launch (lldb)",
             "request": "launch",
             "type": "lldb",
-            "program": "${workspaceFolder}/bin/app",
+            "program": "${workspaceFolder}/bin/Incendium",
             "linux": {
                 "console":"integratedTerminal",
                 "cwd": "${workspaceFolder}/bin/",

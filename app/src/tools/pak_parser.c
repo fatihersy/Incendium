@@ -151,9 +151,12 @@ file_data get_file_data(const char* file_name) {
   return (file_data){0};
 }
 
+/**
+ * @brief get_file_data() returns readed data unlike the fetch_file_data() reads when it's called
+ */
 file_data fetch_file_data(const char* file_name) {
   if (!state) {
-    TraceLog(LOG_ERROR, "pak_parser::get_file_data()::Pak parser system didn't initialized");
+    TraceLog(LOG_ERROR, "pak_parser::fetch_file_data()::Pak parser system didn't initialized");
     return (file_data){0};
   }
   pak_reading_order reading_order = READING_ORDER_FILENAME;
