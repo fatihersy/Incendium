@@ -1,21 +1,23 @@
 #include "scene_main_menu.h"
-#include "defines.h"
 
 #include "core/event.h"
 #include "core/fmemory.h"
 
 #include "game/world.h"
+#include "game/game_manager.h"
 #include "game/user_interface.h"
 
 typedef enum main_menu_scene_type {
   MAIN_MENU_SCENE_DEFAULT,
   MAIN_MENU_SCENE_SETTINGS,
+  MAIN_MENU_SCENE_UPGRADE,
   MAIN_MENU_SCENE_EXTRAS,
 } main_menu_scene_type;
 
 typedef struct main_menu_scene_state {
   main_menu_scene_type type;
   scene_id next_scene;
+  panel upgrade_panel;
   bool in_scene_changing_process;
   bool scene_changing_process_complete;
 } main_menu_scene_state;
@@ -23,15 +25,23 @@ typedef struct main_menu_scene_state {
 static main_menu_scene_state *state;
 
 #define MAIN_MENU_FADE_DURATION 1 * TARGET_FPS
+#define MAIN_MENU_UPGRADE_PANEL_COL 5
+#define MAIN_MENU_UPGRADE_PANEL_ROW 3
 
 void begin_scene_main_menu(void);
+void draw_main_menu_upgrade_panel(void);
 
-void initialize_scene_main_menu(void) {
+void initialize_scene_main_menu(camera_metrics* _camera_metrics) {
   if (state) {
     begin_scene_main_menu();
     return;
   }
   state = (main_menu_scene_state*)allocate_memory_linear(sizeof(main_menu_scene_state), true);
+  
+  if (!game_manager_initialize(_camera_metrics)) { // Inits player & spawns
+    TraceLog(LOG_ERROR, "scene_in_game::initialize_scene_in_game()::game_manager_initialize() failed");
+    return;
+  }
 
   user_interface_system_initialize();
 
@@ -83,24 +93,32 @@ void render_interface_main_menu(void) {
         state->next_scene = SCENE_TYPE_IN_GAME;
         event_fire(EVENT_CODE_UI_START_FADEOUT_EFFECT, (event_context){ .data.u16[0] = MAIN_MENU_FADE_DURATION});
       }
-      if (gui_menu_button("Editor", BTN_ID_MAINMENU_BUTTON_EDITOR, VECTOR2(0,  4))) {
-        state->in_scene_changing_process = true;
-        state->next_scene = SCENE_TYPE_EDITOR;
-        event_fire(EVENT_CODE_UI_START_FADEOUT_EFFECT, (event_context){ .data.u16[0] = MAIN_MENU_FADE_DURATION});
+      if (gui_menu_button("Upgrade", BTN_ID_MAINMENU_BUTTON_UPGRADE, VECTOR2(0,  4))) {
+        state->type = MAIN_MENU_SCENE_UPGRADE;
       }
       if (gui_menu_button("Settings", BTN_ID_MAINMENU_BUTTON_SETTINGS, VECTOR2(0,  8))) {
         state->type = MAIN_MENU_SCENE_SETTINGS;
         event_fire(EVENT_CODE_UI_SHOW_SETTINGS_MENU, (event_context) {0});
       }
-      if (gui_menu_button("Extras", BTN_ID_MAINMENU_BUTTON_EXTRAS, VECTOR2(0,  12))) {}
+      if (gui_menu_button("Editor", BTN_ID_MAINMENU_BUTTON_EDITOR, VECTOR2(0,  12))) {
+        state->in_scene_changing_process = true;
+        state->next_scene = SCENE_TYPE_EDITOR;
+        event_fire(EVENT_CODE_UI_START_FADEOUT_EFFECT, (event_context){ .data.u16[0] = MAIN_MENU_FADE_DURATION});
+      }
       if (gui_menu_button("Exit", BTN_ID_MAINMENU_BUTTON_EXIT, VECTOR2(0,  16))) {
         event_fire(EVENT_CODE_APPLICATION_QUIT, (event_context){0});
       }
     }
     else if (state->type == MAIN_MENU_SCENE_SETTINGS) {
       if(gui_menu_button("Cancel", BTN_ID_MAINMENU_SETTINGS_CANCEL, VECTOR2(2,  15))) {
-         state->type = MAIN_MENU_SCENE_DEFAULT;
+        state->type = MAIN_MENU_SCENE_DEFAULT;
         event_fire(EVENT_CODE_UI_SHOW_SETTINGS_MENU, (event_context) {0});
+      }
+    }
+    else if (state->type == MAIN_MENU_SCENE_UPGRADE) {
+      draw_main_menu_upgrade_panel();
+      if(gui_menu_button("Back", BTN_ID_MAINMENU_UPGRADE_BACK, VECTOR2(-2,  15))) {
+        state->type = MAIN_MENU_SCENE_DEFAULT;
       }
     }
     render_user_interface();
@@ -112,10 +130,73 @@ void begin_scene_main_menu(void) {
   state->next_scene = SCENE_TYPE_UNSPECIFIED;
   state->in_scene_changing_process = false;
   state->scene_changing_process_complete = false;
+  state->upgrade_panel = get_default_panel();
+  state->upgrade_panel.dest = (Rectangle) { 
+    BASE_RENDER_DIV2.x, BASE_RENDER_DIV2.y, 
+    BASE_RENDER_5DIV4.x, BASE_RENDER_5DIV4.y
+  }; 
 
   event_fire(EVENT_CODE_PLAY_MAIN_MENU_THEME, (event_context) {0});
 }
 void end_scene_main_menu(void) {
   event_fire(EVENT_CODE_RESET_MUSIC, (event_context){ .data.i32[0] = MUSIC_ID_MAIN_MENU_THEME});
 
+}
+
+void draw_main_menu_upgrade_panel(void) {
+  gui_panel(state->upgrade_panel, state->upgrade_panel.dest, true);
+
+  const f32 showcase_dim = BASE_RENDER_DIV4.y;
+  const f32 showcase_spacing = showcase_dim * 1.25f;
+
+  f32 total_showcases_width = showcase_dim + (MAIN_MENU_UPGRADE_PANEL_COL - 1) * showcase_spacing;
+  f32 total_showcases_height = showcase_dim + (MAIN_MENU_UPGRADE_PANEL_ROW - 1) * showcase_spacing;
+
+  const Vector2 showcase_start_pos = VECTOR2(
+    state->upgrade_panel.dest.x - (state->upgrade_panel.dest.width / 2.f) + (state->upgrade_panel.dest.width - total_showcases_width) / 4.f,
+    state->upgrade_panel.dest.y - (state->upgrade_panel.dest.height / 2.f)+ (state->upgrade_panel.dest.height - total_showcases_height) / 4.f
+  );
+
+  for (i32 i = 0; i < MAIN_MENU_UPGRADE_PANEL_ROW; ++i) {
+    for (i32 j = 0; j < MAIN_MENU_UPGRADE_PANEL_COL; ++j) {
+      const character_stat* stat = get_player_stat((MAIN_MENU_UPGRADE_PANEL_COL * i) + j);
+      if (!stat || stat->id >= CHARACTER_STATS_MAX || stat->id <= CHARACTER_STATS_UNDEFINED) {
+        continue;
+      }
+      
+      Vector2 showcase_position = VECTOR2(
+        showcase_start_pos.x + j * showcase_spacing,
+        showcase_start_pos.y + i * showcase_spacing
+      );
+      
+      gui_draw_atlas_texture_id(ATLAS_TEX_ID_CRIMSON_FANTASY_SHOWCASE, (Rectangle){
+        showcase_position.x, showcase_position.y, showcase_dim, showcase_dim
+      });
+      Rectangle tier_symbol_src_rect = get_atlas_texture_source_rect(ATLAS_TEX_ID_PASSIVE_UPGRADE_TIER_STAR);
+
+      f32 star_spacing = tier_symbol_src_rect.width * 1.25f;
+      f32 tier_symbols_total_width = tier_symbol_src_rect.width + (MAX_PASSIVE_UPGRADE_TIER - 1.f) * star_spacing;
+      f32 tier_symbols_left_edge = showcase_position.x + (showcase_dim - tier_symbols_total_width) / 2.f;
+      f32 tier_symbols_vertical_center = showcase_position.y + showcase_dim / 5.f;
+
+      for (i32 i = 0; i < MAX_PASSIVE_UPGRADE_TIER; ++i) {
+        Vector2 tier_pos = (Vector2) { tier_symbols_left_edge + i * star_spacing, tier_symbols_vertical_center };
+        gui_draw_atlas_texture_id_scale(ATLAS_TEX_ID_PASSIVE_UPGRADE_TIER_STAR, tier_pos, 1.f, WHITE, false);
+      }
+
+      Rectangle icon_pos = (Rectangle) {
+        showcase_position.x + BASE_RENDER_DIV4.y * .25f, 
+        showcase_position.y + BASE_RENDER_DIV4.y * .25f,
+        BASE_RENDER_DIV4.y * .5f,
+        BASE_RENDER_DIV4.y * .5f
+      };
+      gui_draw_atlas_texture_id_pro(ATLAS_TEX_ID_ICON_ATLAS, stat->passive_icon_src, icon_pos, true);
+
+      Vector2 title_pos = VECTOR2(
+        showcase_position.x + BASE_RENDER_DIV4.y / 2.f, 
+        showcase_position.y + BASE_RENDER_DIV4.y * 0.8f
+      );
+      gui_label(stat->passive_display_name, FONT_TYPE_MINI_MOOD, 8, title_pos, WHITE, true);
+    }
+  }
 }

@@ -3,7 +3,9 @@
 #ifndef SCENE_MAIN_MENU_H
 #define SCENE_MAIN_MENU_H
 
-void initialize_scene_main_menu(void);
+#include "defines.h"
+
+void initialize_scene_main_menu(camera_metrics* _camera_metrics);
 void end_scene_main_menu(void);
 
 void update_scene_main_menu(void);

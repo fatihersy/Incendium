@@ -262,9 +262,7 @@ void render_abilities(ability_play_system* system) {
       if (!system->abilities[i].projectiles[j].is_active) { continue; }
       Rectangle proj_coll = system->abilities[i].projectiles[j].collision;
       system->abilities[i].projectiles[j].is_active = true;
-      play_sprite_on_site(
-        &system->abilities[i].projectiles[j].animation, 
-        WHITE,
+      play_sprite_on_site(&system->abilities[i].projectiles[j].animation, WHITE,
         (Rectangle) {
           proj_coll.x, proj_coll.y, 
           proj_coll.width * ABILITIES_BASE_SCALE, proj_coll.height * ABILITIES_BASE_SCALE

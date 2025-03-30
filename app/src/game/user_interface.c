@@ -1,6 +1,7 @@
 #include "user_interface.h"
 #include <reasings.h>
 #include <settings.h>
+#include <tools/pak_parser.h>
 
 #include "core/fmath.h"
 #include "core/event.h"
@@ -48,23 +49,28 @@ static user_interface_system_state *restrict state;
 #define MENU_BUTTON_FONT state->mini_mood_font
 #define MENU_BUTTON_FONT_SIZE state->mini_mood_font.baseSize / 30.f
 #define MINI_BUTTON_FONT state->mini_mood_font
-#define MINI_BUTTON_FONT_SIZE state->mini_mood_font.baseSize / 60.f
+#define MINI_BUTTON_FONT_SIZE state->mini_mood_font.baseSize / 30.f
 #define LABEL_MOOD_FONT_SIZE state->mood_font.baseSize * .1f
 #define LABEL_MOOD_OUTLINE_FONT_SIZE state->mood_outline_font.baseSize * .1f
 #define LABEL_MINI_FONT_SIZE state->mini_mood_font.baseSize * .1f
 #define LABEL_MINI_OUTLINE_FONT_SIZE state->mini_mood_outline_font.baseSize * .1f
 #define DEFAULT_MENU_BUTTON_SCALE 4
 
-#define draw_text(TEXT, TEXT_POS, FONT, FONT_SIZE, COLOR, CENTER)                                                 \
+#define draw_text(TEXT, TEXT_POS, FONT, FONT_SIZE, COLOR, CENTER, USE_GRID_POS, GRID_SCALE) {                     \
+  Vector2 text_measure = MeasureTextEx(FONT, TEXT, FONT_SIZE, UI_FONT_SPACING);                                   \
+  Vector2 text_position = TEXT_POS;                                                                               \
+  if (USE_GRID_POS) {                                                                                             \
+    text_position = position_element(text_position, BASE_RENDER_DIV2, text_measure, GRID_SCALE);                  \
+  }                                                                                                               \
   if (CENTER) {                                                                                                   \
-    Vector2 text_measure = MeasureTextEx(FONT, TEXT, FONT_SIZE, UI_FONT_SPACING);                                 \
-    TEXT_POS.x -= (text_measure.x / 2.f);                                                                         \
-    TEXT_POS.y -= (text_measure.y / 2.f);                                                                         \
+    text_position.x -= (text_measure.x / 2.f);                                                                    \
+    text_position.y -= (text_measure.y / 2.f);                                                                    \
   }                                                                                                               \
   DrawTextEx(FONT, TEXT,                                                                                          \
-  (Vector2) { .x = TEXT_POS.x + TEXT_SHADOW_OFFSET.x, .y = TEXT_POS.y + TEXT_SHADOW_OFFSET.y, },                  \
+  (Vector2) { text_position.x + TEXT_SHADOW_OFFSET.x, text_position.y + TEXT_SHADOW_OFFSET.y},                    \
   FONT_SIZE, UI_FONT_SPACING, TEXT_SHADOW_COLOR);                                                                 \
-  DrawTextEx(FONT, TEXT, TEXT_POS, FONT_SIZE, UI_FONT_SPACING, COLOR);                    
+  DrawTextEx(FONT, TEXT, text_position, FONT_SIZE, UI_FONT_SPACING, COLOR);                                       \
+}
 
 #define SDR_CURR_VAL(ID) state->sliders[ID].options[state->sliders[ID].current_value]
 
@@ -88,11 +94,10 @@ void register_progress_bar_type(progress_bar_type_id _type_id, atlas_texture_id 
 void register_slider(slider_id _sdr_id, slider_type_id _sdr_type_id, button_id _left_btn_id, button_id _right_btn_id, bool _is_clickable);
 void register_slider_type(slider_type_id _sdr_type_id, spritesheet_id _ss_sdr_body_type, f32 _scale, u16 _width_multiply, button_type_id _left_btn_type_id, button_type_id _right_btn_type_id, u16 _char_limit);
 
-Rectangle get_texture_source_rect(texture_id _id);
 void DrawTextBoxed(Font font, const char *text, Rectangle rec, float fontSize, float spacing, bool wordWrap, Color tint);
 const char* wrap_text(const char* text, Font font, i32 font_size, Rectangle bounds, bool center_x);
-Vector2 position_element(Vector2 offset, Vector2 pos, Vector2 dim, f32 f);
 void set_resolution_slider_native_res(void);
+Font load_font(const char* file_name, i32 font_size, i32 * code_points, i32 code_point_count);
 
 Vector2 make_vector(f32 x, f32 y);
 
@@ -101,30 +106,13 @@ void user_interface_system_initialize(void) {
     TraceLog(LOG_WARNING, "user_interface::user_interface_system_initialize()::Initialize called twice");
     return;
   }
-
   state = (user_interface_system_state *)allocate_memory_linear(sizeof(user_interface_system_state), true);
   
-  // Loading fonts
-  { 
-    state->mood_font = LoadFont(_rs_path("mood.ttf"));
-    if (state->mood_font.baseSize == 0) { // If custom font load failed
-      state->mood_font = GetFontDefault();
-    }
-    state->mood_outline_font = LoadFont(_rs_path("mood_outline.ttf"));
-    if (state->mood_outline_font.baseSize == 0) { // If custom font load failed
-      state->mood_outline_font = GetFontDefault();
-    }
-    state->mini_mood_font = LoadFont(_rs_path("mini_mood.ttf"));
-    if (state->mini_mood_font.baseSize == 0) { // If custom font load failed
-      state->mini_mood_font = GetFontDefault();
-    }
-    state->mini_mood_outline_font = LoadFont(_rs_path("mini_mood_outline.ttf"));
-    if (state->mini_mood_outline_font.baseSize == 0) { // If custom font load failed
-      state->mini_mood_outline_font = GetFontDefault();
-    }
-  }
-  // Loading fonts
-  
+  state->mood_font              = load_font("mood.ttf",             32, 0, 0);
+  state->mood_outline_font      = load_font("mood_outline.ttf",     32, 0, 0);
+  state->mini_mood_font         = load_font("mini_mood.ttf",        32, 0, 0);
+  state->mini_mood_outline_font = load_font("mini_mood_outline.ttf",32, 0, 0);
+
   state->default_panel = (panel) {
     .signal_state = BTN_STATE_UNDEFINED,
     .bg_tex_id    = ATLAS_TEX_ID_CRIMSON_FANTASY_PANEL_BG,
@@ -213,9 +201,10 @@ void user_interface_system_initialize(void) {
   register_button(BTN_ID_MAINMENU_BUTTON_PLAY,     BTN_TYPE_MENU_BUTTON_NO_CRT);
   register_button(BTN_ID_MAINMENU_BUTTON_EDITOR,   BTN_TYPE_MENU_BUTTON_NO_CRT);
   register_button(BTN_ID_MAINMENU_BUTTON_SETTINGS, BTN_TYPE_MENU_BUTTON_NO_CRT);
-  register_button(BTN_ID_MAINMENU_BUTTON_EXTRAS,   BTN_TYPE_MENU_BUTTON_NO_CRT);
+  register_button(BTN_ID_MAINMENU_BUTTON_UPGRADE,  BTN_TYPE_MENU_BUTTON_NO_CRT);
   register_button(BTN_ID_MAINMENU_BUTTON_EXIT,     BTN_TYPE_MENU_BUTTON_NO_CRT);
   register_button(BTN_ID_MAINMENU_SETTINGS_CANCEL, BTN_TYPE_MENU_BUTTON_NO_CRT);
+  register_button(BTN_ID_MAINMENU_UPGRADE_BACK,    BTN_TYPE_MENU_BUTTON_NO_CRT);
   register_button(BTN_ID_MAINMENU_BACK_BUTTON,     BTN_TYPE_MENU_BUTTON_NO_CRT);
   }
   // MAIN MENU
@@ -425,16 +414,16 @@ void render_user_interface(void) {
     gui_draw_settings_screen();
   }
 }
-bool gui_menu_button(const char* text, button_id _id, Vector2 offset) {
+bool gui_menu_button(const char* text, button_id _id, Vector2 grid) {
   return gui_button(text, _id, 
     MENU_BUTTON_FONT, MENU_BUTTON_FONT_SIZE, 
-    position_element(offset, BASE_RENDER_DIV2, state->buttons[_id].btn_type.dest_frame_dim, 2.7f)
+    position_element(grid, BASE_RENDER_DIV2, state->buttons[_id].btn_type.dest_frame_dim, 2.7f)
   );
 }
-bool gui_mini_button(const char* text, button_id _id, Vector2 offset, f32 offset_scale) {
+bool gui_mini_button(const char* text, button_id _id, Vector2 grid, f32 grid_scale) {
   return gui_button(text, _id, 
     MINI_BUTTON_FONT, MINI_BUTTON_FONT_SIZE, 
-    position_element(offset, BASE_RENDER_DIV2, state->buttons[_id].btn_type.dest_frame_dim, offset_scale)
+    position_element(grid, BASE_RENDER_DIV2, state->buttons[_id].btn_type.dest_frame_dim, grid_scale)
   );
 }
 bool gui_slider_button(button_id _id, Vector2 pos) {
@@ -474,7 +463,7 @@ bool gui_button(const char* text, button_id _id, Font font, f32 font_size_scale,
     draw_sprite_on_site_by_id(_btn->btn_type.ss_type, WHITE, VECTOR2(_btn->dest.x,_btn->dest.y), draw_sprite_scale, 1, false);
     if (!TextIsEqual(text, "")) {
       Vector2 pressed_text_pos = vec2_add(text_pos, _btn_type->text_offset_on_click);
-      draw_text(text, pressed_text_pos, font, font.baseSize * font_size_scale, BUTTON_TEXT_PRESSED_COLOR, false);
+      draw_text(text, pressed_text_pos, font, font.baseSize * font_size_scale, BUTTON_TEXT_PRESSED_COLOR, false, false, 0.f);
     }
     event_fire(EVENT_CODE_PLAY_BUTTON_ON_CLICK, (event_context) { .data.u16[0] = true});
   } else {
@@ -482,14 +471,14 @@ bool gui_button(const char* text, button_id _id, Font font, f32 font_size_scale,
     if (_btn->state == BTN_STATE_HOVER) {
       if(_btn_type->play_reflection) {play_sprite_on_site(&_btn->reflection_anim, WHITE, _btn->dest);};
       if (!TextIsEqual(text, "")) {
-        draw_text(text, text_pos, font, font.baseSize * font_size_scale, BUTTON_TEXT_HOVER_COLOR, false);
+        draw_text(text, text_pos, font, font.baseSize * font_size_scale, BUTTON_TEXT_HOVER_COLOR, false, false, 0.f);
       }
       event_fire(EVENT_CODE_RESET_SOUND, (event_context) { 
         .data.i32[0] = SOUND_ID_BUTTON_ON_CLICK
       });
     }
     if (_btn->state != BTN_STATE_HOVER) {
-      draw_text(text, text_pos, font, font.baseSize * font_size_scale, BUTTON_TEXT_UP_COLOR, false);
+      draw_text(text, text_pos, font, font.baseSize * font_size_scale, BUTTON_TEXT_UP_COLOR, false, false, 0.f);
     }
   }
   return _btn->state == BTN_STATE_RELEASED;
@@ -579,7 +568,7 @@ void draw_atlas_texture_stretch(atlas_texture_id body, Vector2 pos, Vector2 scal
   gui_draw_atlas_texture_id_pro(body, third_source, third_dest, true);
 }
 
-void gui_slider(slider_id _id, Vector2 pos, Vector2 offset, f32 offset_scale) {
+void gui_slider(slider_id _id, Vector2 pos, Vector2 grid, f32 grid_scale) {
   if (_id >= SDR_ID_MAX || _id <= SDR_ID_UNDEFINED || !state) {
     TraceLog(LOG_WARNING, "user_interface::gui_slider()::One of recieved ids was out of bound");
     return;
@@ -590,7 +579,7 @@ void gui_slider(slider_id _id, Vector2 pos, Vector2 offset, f32 offset_scale) {
     return;
   }
   slider_type* sdr_type = &sdr->sdr_type;
-  sdr->position = position_element(offset, pos, sdr_type->whole_body_width, offset_scale);
+  sdr->position = position_element(grid, pos, sdr_type->whole_body_width, grid_scale);
   if (!sdr->is_registered || (sdr_type->id == SDR_TYPE_OPTION && sdr->max_value <= 0)) return;
  
   button* btn_left = &state->buttons[sdr->sdr_type.left_btn_id];
@@ -658,7 +647,7 @@ void draw_slider_body(slider* sdr) {
         sdr->position.x + total_body_width/2.f - text_measure.x / 2.f,
         sdr->position.y + sdr_type.body_height/2.f - text_measure.y / 2.f
       };
-      draw_text(text, text_pos, state->mood_font, state->mood_font.baseSize, BUTTON_TEXT_UP_COLOR, false);
+      draw_text(text, text_pos, state->mood_font, state->mood_font.baseSize, BUTTON_TEXT_UP_COLOR, false, false, 0.f);
       break;
     }
     default: TraceLog(LOG_WARNING, "user_interface::render_slider_body()::Unsupported slider type");
@@ -712,19 +701,19 @@ bool gui_panel_active(panel* pan, Rectangle dest, bool _should_center) {
 void gui_label(const char* text, font_type type, i32 font_size, Vector2 position, Color tint, bool _should_center) {
   switch (type) {
     case FONT_TYPE_MOOD: {
-      draw_text(text, position, state->mood_font, font_size * LABEL_MOOD_FONT_SIZE, tint, _should_center);
+      draw_text(text, position, state->mood_font, font_size * LABEL_MOOD_FONT_SIZE, tint, _should_center, false, 0.f);
       break;
     }
     case FONT_TYPE_MOOD_OUTLINE: {
-      draw_text(text, position, state->mood_outline_font, font_size * LABEL_MOOD_OUTLINE_FONT_SIZE, tint, _should_center);
+      draw_text(text, position, state->mood_outline_font, font_size * LABEL_MOOD_OUTLINE_FONT_SIZE, tint, _should_center, false, 0.f);
       break;
     }
     case FONT_TYPE_MINI_MOOD: {
-      draw_text(text, position, state->mini_mood_font, font_size * LABEL_MINI_FONT_SIZE, tint, _should_center);
+      draw_text(text, position, state->mini_mood_font, font_size * LABEL_MINI_FONT_SIZE, tint, _should_center, false, 0.f);
       break;
     }
     case FONT_TYPE_MINI_MOOD_OUTLINE: {
-      draw_text(text, position, state->mini_mood_outline_font, font_size * LABEL_MINI_OUTLINE_FONT_SIZE, tint, _should_center);
+      draw_text(text, position, state->mini_mood_outline_font, font_size * LABEL_MINI_OUTLINE_FONT_SIZE, tint, _should_center, false, 0.f);
       break;
     }
     default: TraceLog(LOG_WARNING, "user_interface::gui_label()::Unsupported font type");
@@ -736,7 +725,6 @@ void gui_label_wrap(const char* text, font_type type, i32 font_size, Rectangle p
     position.x -= (position.width / 2.f);
     position.y -= (position.height / 2.f);
   }
-  
   switch (type) {
     case FONT_TYPE_MOOD: {
       DrawTextBoxed(state->mood_font, text, position, font_size * LABEL_MOOD_FONT_SIZE, UI_FONT_SPACING, true, tint);
@@ -757,6 +745,59 @@ void gui_label_wrap(const char* text, font_type type, i32 font_size, Rectangle p
     default: TraceLog(LOG_WARNING, "user_interface::gui_label()::Unsupported font type");
     break;
   }
+}
+void gui_label_grid(const char* text, font_type type, i32 font_size, Vector2 position, Color tint, bool _should_center, f32 grid_scale) {
+  switch (type) {
+    case FONT_TYPE_MOOD: {
+      draw_text(text, position, state->mood_font, font_size * LABEL_MOOD_FONT_SIZE, tint, _should_center, true, grid_scale);
+      break;
+    }
+    case FONT_TYPE_MOOD_OUTLINE: {
+      draw_text(text, position, state->mood_outline_font, font_size * LABEL_MOOD_OUTLINE_FONT_SIZE, tint, _should_center, true, grid_scale);
+      break;
+    }
+    case FONT_TYPE_MINI_MOOD: {
+      draw_text(text, position, state->mini_mood_font, font_size * LABEL_MINI_FONT_SIZE, tint, _should_center, true, grid_scale);
+      break;
+    }
+    case FONT_TYPE_MINI_MOOD_OUTLINE: {
+      draw_text(text, position, state->mini_mood_outline_font, font_size * LABEL_MINI_OUTLINE_FONT_SIZE, tint, _should_center, true, grid_scale);
+      break;
+    }
+    default: TraceLog(LOG_WARNING, "user_interface::gui_label()::Unsupported font type");
+    break;
+  }
+}
+void gui_label_wrap_grid(const char* text, font_type type, i32 font_size, Rectangle position, Color tint, bool _should_center, f32 grid_scale) {
+  Vector2 _position = position_element(VECTOR2(position.x, position.y), BASE_RENDER_DIV2, VECTOR2(position.width, position.height), grid_scale);
+  position.x = _position.x;
+  position.y = _position.y;
+
+  if (_should_center) {
+    position.x -= (position.width / 2.f);
+    position.y -= (position.height / 2.f);
+  }
+  switch (type) {
+    case FONT_TYPE_MOOD: {
+      DrawTextBoxed(state->mood_font, text, position, font_size * LABEL_MOOD_FONT_SIZE, UI_FONT_SPACING, true, tint);
+      break;
+    }
+    case FONT_TYPE_MOOD_OUTLINE: {
+      DrawTextBoxed(state->mood_outline_font, text, position, font_size * LABEL_MOOD_OUTLINE_FONT_SIZE, UI_FONT_SPACING, true, tint);
+      break;
+    }
+    case FONT_TYPE_MINI_MOOD: {
+      DrawTextBoxed(state->mini_mood_font, text, position, font_size * LABEL_MINI_FONT_SIZE, UI_FONT_SPACING, true, tint);
+      break;
+    }
+    case FONT_TYPE_MINI_MOOD_OUTLINE: {
+      DrawTextBoxed(state->mini_mood_outline_font, text, position, font_size * LABEL_MINI_OUTLINE_FONT_SIZE, UI_FONT_SPACING, true, tint);
+      break;
+    }
+    default: TraceLog(LOG_WARNING, "user_interface::gui_label()::Unsupported font type");
+    break;
+  }
+
 }
 
 void gui_draw_settings_screen(void) { // TODO: Return to settings later
@@ -1021,7 +1062,7 @@ void gui_draw_spritesheet_to_background(spritesheet_id _id, Color _tint) {
 inline Rectangle get_atlas_texture_source_rect(atlas_texture_id _id) {
   atlas_texture* tex = _get_atlas_texture_by_enum(_id);
   if (!tex) { 
-    TraceLog(LOG_WARNING, "user_interface::get_texture_source_rect()::Requested type was null");
+    TraceLog(LOG_WARNING, "user_interface::get_atlas_texture_source_rect()::Requested type was null");
     return (Rectangle) {0}; 
   }
   
@@ -1096,14 +1137,10 @@ inline void gui_draw_map_stage_pin(bool have_hovered, Vector2 screen_loc) {
     gui_draw_atlas_texture_id_pro(ATLAS_TEX_ID_ICON_ATLAS, (Rectangle){32, 320, 32, 32}, icon_loc, true);
   }
 }
-inline Vector2 position_element(Vector2 offset, Vector2 pos, Vector2 dim, f32 f) {
-  Vector2 current_res = BASE_RENDER_DIV2;
-  f32 scale_x = (current_res.x * 2.0f) / BASE_RENDER_RES.x;
-  f32 scale_y = (current_res.y * 2.0f) / BASE_RENDER_RES.y;
-  
+inline Vector2 position_element(Vector2 grid, Vector2 pos, Vector2 dim, f32 f) {
   return (Vector2){
-      .x = pos.x - (dim.x / 2.0f) + ((dim.x / f) * offset.x) * scale_x,
-      .y = pos.y - (dim.y / 2.0f) + ((dim.y / f) * offset.y) * scale_y
+      .x = pos.x - (dim.x / 2.0f) + ((dim.x / f) * grid.x),
+      .y = pos.y - (dim.y / 2.0f) + ((dim.y / f) * grid.y)
   };
 }
 
@@ -1226,7 +1263,9 @@ void draw_fade_effect() {
   draw_atlas_texture_regular(ATLAS_TEX_ID_BG_BLACK, (Rectangle) {0, 0, BASE_RENDER_RES.x, BASE_RENDER_RES.y}, WHITE, false);
   EndShaderMode();
 }
-
+/**
+ * @brief relative if you want to draw from another atlas.
+ */
 void gui_draw_atlas_texture_id_pro(atlas_texture_id _id, Rectangle src, Rectangle dest, bool relative) {
   if (_id >= ATLAS_TEX_ID_MAX || _id <= ATLAS_TEX_ID_UNSPECIFIED) {
     TraceLog(LOG_WARNING, "user_interface::gui_draw_texture_id_pro()::ID was out of bound"); 
@@ -1253,6 +1292,40 @@ void gui_draw_atlas_texture_id(atlas_texture_id _id, Rectangle dest) {
     TraceLog(LOG_WARNING, "user_interface::gui_draw_texture_id_pro()::Tex was null");
     return; 
   }
+  DrawTexturePro(*tex->atlas_handle, tex->source, dest, (Vector2) {0}, 0, WHITE);
+}
+void gui_draw_atlas_texture_id_pro_grid(atlas_texture_id _id, Rectangle src, Rectangle dest, bool relative, f32 grid_scale) {
+  if (_id >= ATLAS_TEX_ID_MAX || _id <= ATLAS_TEX_ID_UNSPECIFIED) {
+    TraceLog(LOG_WARNING, "user_interface::gui_draw_texture_id_pro()::ID was out of bound"); 
+    return; 
+  }
+  atlas_texture* tex = _get_atlas_texture_by_enum(_id);
+  if (!tex) { 
+    TraceLog(LOG_WARNING, "user_interface::gui_draw_texture_id_pro()::Tex was null");
+    return; 
+  }
+  if (relative) {
+    src.x += tex->source.x;
+    src.y += tex->source.y;
+  }
+  Vector2 pos = position_element(VECTOR2(dest.x, dest.y), BASE_RENDER_DIV2, VECTOR2(dest.width, dest.height), grid_scale);
+  dest.x = pos.x;
+  dest.y = pos.y;
+  DrawTexturePro(*tex->atlas_handle, src, dest, (Vector2) {0}, 0, WHITE);
+}
+void gui_draw_atlas_texture_id_grid(atlas_texture_id _id, Rectangle dest, f32 grid_scale) {
+  if (_id >= ATLAS_TEX_ID_MAX || _id <= ATLAS_TEX_ID_UNSPECIFIED) {
+    TraceLog(LOG_WARNING, "user_interface::gui_draw_texture_id_pro()::ID was out of bound"); 
+    return; 
+  }
+  atlas_texture* tex = _get_atlas_texture_by_enum(_id);
+  if (!tex) { 
+    TraceLog(LOG_WARNING, "user_interface::gui_draw_texture_id_pro()::Tex was null");
+    return; 
+  }
+  Vector2 pos = position_element(VECTOR2(dest.x, dest.y), BASE_RENDER_DIV2, VECTOR2(dest.width, dest.height), grid_scale);
+  dest.x = pos.x;
+  dest.y = pos.y;
   DrawTexturePro(*tex->atlas_handle, tex->source, dest, (Vector2) {0}, 0, WHITE);
 }
 void gui_draw_spritesheet_id(spritesheet_id _id, Color _tint, Vector2 pos, Vector2 scale, u16 frame, bool _should_center) {
@@ -1296,6 +1369,26 @@ void gui_draw_texture_id(texture_id _id, Rectangle dest) {
   (Rectangle){0, 0, tex->width, tex->height},
   dest, 
   (Vector2) {0}, 0, WHITE);
+}
+void gui_draw_atlas_texture_id_scale(atlas_texture_id _id, Vector2 position, f32 scale, Color tint, bool should_center) {
+  if (_id >= ATLAS_TEX_ID_MAX || _id <= ATLAS_TEX_ID_UNSPECIFIED) {
+    TraceLog(LOG_WARNING, "user_interface::gui_draw_atlas_texture_id_scale()::ID was out of bound"); 
+    return; 
+  }
+  atlas_texture* tex = _get_atlas_texture_by_enum(_id);
+  if (!tex) { 
+    TraceLog(LOG_WARNING, "user_interface::gui_draw_atlas_texture_id_scale()::Tex was null");
+    return; 
+  }
+  if (should_center) {
+    position.x -= tex->source.width / 2.f; 
+    position.y -= tex->source.height / 2.f; 
+  }
+
+  DrawTexturePro(*tex->atlas_handle, 
+  tex->source, 
+  (Rectangle) {position.x, position.y, tex->source.width * scale, tex->source.height * scale}, 
+  (Vector2) {0}, 0, tint);
 }
 
 Font* ui_get_font(font_type font) {
@@ -1361,6 +1454,17 @@ void set_resolution_slider_native_res(void) {
       break;
     }
   }
+}
+Font load_font(const char* file_name, i32 font_size, i32 * code_points, i32 code_point_count) {
+
+  file_data font_file_data = get_file_data(file_name);
+  Font font = LoadFontFromMemory(
+    (const char*)font_file_data.file_extension, font_file_data.data, font_file_data.size, font_size, code_points, code_point_count
+  );
+  if (font.baseSize == 0) { // If custom font load failed
+    return GetFontDefault();
+  }
+  return font;
 }
 
 void user_interface_system_destroy(void) {

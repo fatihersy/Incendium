@@ -33,23 +33,14 @@ extern const u32 level_curve[MAX_PLAYER_LEVEL+1];
 #define SPAWN_TRYING_LIMIT 15
 
 bool game_manager_on_event(u16 code, event_context context);
+void game_manager_reinit(void);
 
 bool game_manager_initialize(camera_metrics* _camera_metrics) {
   if (state) {
-    TraceLog(LOG_ERROR, "game_manager::game_manager_initialize()::Initialize called twice");
-    return false;
+    game_manager_reinit();
+    return true;
   }
-
   state = (game_manager_system_state *)allocate_memory_linear(sizeof(game_manager_system_state), true);
-  state->is_game_paused = true;
-
-  if (!player_system_initialize()) {
-    TraceLog(LOG_ERROR, "game_manager::player_system_initialize()::Returned false");
-    return false;
-  }
-  state->p_player = get_player_state();
-  state->player_abilities = state->p_player->ability_system.abilities;
-  state->game_progression_data = get_save_data(SAVE_SLOT_CURRENT_SESSION);
 
   if (!ability_system_initialize(_camera_metrics, get_app_settings())) {
     TraceLog(LOG_ERROR, "game_manager::ability_system_initialize()::Returned false");
@@ -59,9 +50,7 @@ bool game_manager_initialize(camera_metrics* _camera_metrics) {
     TraceLog(LOG_ERROR, "game_manager::spawn_system_initialize()::Returned false");
     return false;
   }
-  state->spawns = get_spawns();
-  state->p_spawn_system_spawn_count = get_spawn_count();
-  
+
   event_register(EVENT_CODE_END_GAME, game_manager_on_event);
   event_register(EVENT_CODE_PAUSE_GAME, game_manager_on_event);
   event_register(EVENT_CODE_UNPAUSE_GAME, game_manager_on_event);
@@ -69,8 +58,7 @@ bool game_manager_initialize(camera_metrics* _camera_metrics) {
   event_register(EVENT_CODE_DAMAGE_ANY_SPAWN_IF_COLLIDE, game_manager_on_event);
   event_register(EVENT_CODE_ADD_ITEM_PLAYER_CURRENCY_SOULS, game_manager_on_event);
 
-  state->game_manager_initialized = true;
-
+  game_manager_reinit();
   return true;
 }
 
@@ -302,6 +290,19 @@ void gm_reset_game() {
 void gm_save_game() {
   save_save_data(SAVE_SLOT_CURRENT_SESSION);
 }
+void game_manager_reinit(void) {
+  if (!player_system_initialize()) {
+    TraceLog(LOG_ERROR, "game_manager::game_manager_reinit()::Returned false");
+  }
+
+  state->p_player = get_player_state();
+  state->player_abilities = state->p_player->ability_system.abilities;
+  state->game_progression_data = get_save_data(SAVE_SLOT_CURRENT_SESSION);
+  state->spawns = get_spawns();
+  state->p_spawn_system_spawn_count = get_spawn_count();
+  state->game_manager_initialized = true;
+  state->is_game_paused = true;
+}
 // OPS
 
 // GET / SET
@@ -318,6 +319,10 @@ ability* get_player_ability(ability_type type) {
   return &state->p_player->ability_system.abilities[type];
 }
 character_stat* get_player_stat(character_stats stat) {
+  if (stat >= CHARACTER_STATS_MAX || stat <= CHARACTER_STATS_UNDEFINED) {
+    return 0;
+  }
+  
   return &state->p_player->stats[stat];
 }
 bool get_is_game_paused(void) {

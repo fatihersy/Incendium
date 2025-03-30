@@ -2,10 +2,10 @@
 #include <reasings.h>
 #include <settings.h>
 
-#include <core/ftime.h>
-#include <core/event.h>
 #include <core/fmath.h>
+#include <core/event.h>
 #include <core/fmemory.h>
+#include <core/ftime.h>
 
 #include "game/world.h"
 #include "game/game_manager.h"
@@ -63,7 +63,7 @@ void in_game_update_bindings(void);
 void in_game_update_mouse_bindings(void);
 void in_game_update_keyboard_bindings(void);
 void initialize_worldmap_locations(void);
-void draw_upgrade_panel(ability* abl, ability upg, Rectangle panel_dest);
+void draw_in_game_upgrade_panel(ability* abl, ability upg, Rectangle panel_dest);
 void draw_passive_selection_panel(character_stat* stat, Rectangle panel_dest);
 void draw_end_game_panel();
 void start_game(character_stat* stat);
@@ -86,7 +86,6 @@ bool initialize_scene_in_game(camera_metrics* _camera_metrics) {
   }
 
   begin_scene_in_game();
-
   return true;
 }
 
@@ -280,7 +279,7 @@ void render_interface_in_game(void) {
             }
             else { _upgrade_ability(abl); }
           }
-          draw_upgrade_panel(abl, new, dest);
+          draw_in_game_upgrade_panel(abl, new, dest);
         }
       }
       else if (get_remaining_enemies() <= 0 || get_remaining_enemies() >= MAX_SPAWN_COUNT) {
@@ -434,7 +433,7 @@ void start_game(character_stat* stat) {
   state->stage = IN_GAME_STAGE_PLAY;
 }
 
-void draw_upgrade_panel(ability* abl, ability upg, Rectangle panel_dest) {
+void draw_in_game_upgrade_panel(ability* abl, ability upg, Rectangle panel_dest) {
   if (upg.type <= ABILITY_TYPE_UNDEFINED || upg.type >= ABILITY_TYPE_MAX) {
     TraceLog(LOG_WARNING, "scene_in_game::draw_upgrade_panel()::Upgraded ability is out of bounds"); 
     return;

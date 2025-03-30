@@ -110,7 +110,7 @@ bool scene_manager_on_event(u16 code, event_context context) {
   case EVENT_CODE_SCENE_MAIN_MENU: {
     end_scene(scene_manager_state->scene_data);
     scene_manager_state->scene_data = SCENE_TYPE_MAIN_MENU;
-    initialize_scene_main_menu();
+    initialize_scene_main_menu(get_in_game_camera());
     return true;
     break;
   }

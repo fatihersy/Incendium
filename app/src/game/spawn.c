@@ -27,14 +27,16 @@ void spawn_play_anim(Character2D* spawn, spritesheet_id sheet);
 
 bool spawn_system_initialize(void) {
   if (state) {
-    TraceLog(LOG_ERROR, "spawn::state_initialize()::State init called twice");
-    return 0;
+    state->current_spawn_count = 0;
+    return true;
+  }
+  state = (spawn_system_state *)allocate_memory_linear(sizeof(spawn_system_state), true);
+  if (!state) {
+    TraceLog(LOG_ERROR, "spawn::spawn_system_initialize()::Spawn system init failed");
+    return false;
   }
 
-    state = (spawn_system_state *)allocate_memory_linear(sizeof(spawn_system_state), true);
-
-    state->current_spawn_count = 0;
-
+  state->current_spawn_count = 0;
   return true;
 }
 
