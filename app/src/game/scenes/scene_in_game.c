@@ -29,7 +29,6 @@ typedef struct scene_in_game_state {
   in_game_stages stage;
   camera_metrics* in_camera_metrics;
   f32 play_time;
-  Vector2 mouse_pos;
 
   u16 clouds_animation_timer;
   u16 hovered_stage;
@@ -91,8 +90,6 @@ bool initialize_scene_in_game(camera_metrics* _camera_metrics) {
 
 void update_scene_in_game(void) {
   STATE_ASSERT("update_scene_in_game")
-  state->mouse_pos.x = GetMousePosition().x * get_app_settings()->scale_ratio.x;
-  state->mouse_pos.y = GetMousePosition().y * get_app_settings()->scale_ratio.y;
 
   in_game_update_bindings();
   update_user_interface();
@@ -321,7 +318,7 @@ void in_game_update_mouse_bindings(void) {
           state->worldmap_locations[i].screen_location.y * BASE_RENDER_RES.y - WORLDMAP_LOC_PIN_SIZE_DIV2,
           WORLDMAP_LOC_PIN_SIZE, WORLDMAP_LOC_PIN_SIZE
         };
-        if (CheckCollisionPointRec(state->mouse_pos, scrloc)) {
+        if (CheckCollisionPointRec(*ui_get_mouse_pos(), scrloc)) {
           state->hovered_stage = i;
         }
       }

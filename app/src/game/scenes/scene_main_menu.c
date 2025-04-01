@@ -18,6 +18,8 @@ typedef struct main_menu_scene_state {
   main_menu_scene_type type;
   scene_id next_scene;
   panel upgrade_panel;
+  Vector2 mouse_pos;
+
   bool in_scene_changing_process;
   bool scene_changing_process_complete;
 } main_menu_scene_state;
@@ -145,39 +147,50 @@ void end_scene_main_menu(void) {
 
 void draw_main_menu_upgrade_panel(void) {
   gui_panel(state->upgrade_panel, state->upgrade_panel.dest, true);
+  const Rectangle panel_dest = (Rectangle) { // Centered panel destination adjustment
+    state->upgrade_panel.dest.x - state->upgrade_panel.dest.width / 2.f,
+    state->upgrade_panel.dest.y - state->upgrade_panel.dest.height / 2.f,
+    state->upgrade_panel.dest.width,
+    state->upgrade_panel.dest.height
+  };
+  f32 showcase_hover_scale = 1.1f;
+  f32 showcase_base_dim = BASE_RENDER_DIV4.y;
+  const f32 showcase_spacing = showcase_base_dim * 1.1f;
 
-  const f32 showcase_dim = BASE_RENDER_DIV4.y;
-  const f32 showcase_spacing = showcase_dim * 1.25f;
-
-  f32 total_showcases_width = showcase_dim + (MAIN_MENU_UPGRADE_PANEL_COL - 1) * showcase_spacing;
-  f32 total_showcases_height = showcase_dim + (MAIN_MENU_UPGRADE_PANEL_ROW - 1) * showcase_spacing;
+  const f32 total_showcases_width = (MAIN_MENU_UPGRADE_PANEL_COL * showcase_base_dim) + ((MAIN_MENU_UPGRADE_PANEL_COL - 1) * (showcase_spacing - showcase_base_dim));
+  const f32 total_showcases_height = (MAIN_MENU_UPGRADE_PANEL_ROW * showcase_base_dim) + ((MAIN_MENU_UPGRADE_PANEL_ROW - 1) * (showcase_spacing - showcase_base_dim));
 
   const Vector2 showcase_start_pos = VECTOR2(
-    state->upgrade_panel.dest.x - (state->upgrade_panel.dest.width / 2.f) + (state->upgrade_panel.dest.width - total_showcases_width) / 4.f,
-    state->upgrade_panel.dest.y - (state->upgrade_panel.dest.height / 2.f)+ (state->upgrade_panel.dest.height - total_showcases_height) / 4.f
+    panel_dest.x + (panel_dest.width  / 2.f) - (total_showcases_width / 2.f),
+    panel_dest.y + (panel_dest.height / 2.f) - (total_showcases_height / 2.f)
   );
 
   for (i32 i = 0; i < MAIN_MENU_UPGRADE_PANEL_ROW; ++i) {
     for (i32 j = 0; j < MAIN_MENU_UPGRADE_PANEL_COL; ++j) {
-      const character_stat* stat = get_player_stat((MAIN_MENU_UPGRADE_PANEL_COL * i) + j);
+      const character_stat* stat = get_player_stat((MAIN_MENU_UPGRADE_PANEL_COL * i) + j + 1);
       if (!stat || stat->id >= CHARACTER_STATS_MAX || stat->id <= CHARACTER_STATS_UNDEFINED) {
         continue;
       }
-      
       Vector2 showcase_position = VECTOR2(
         showcase_start_pos.x + j * showcase_spacing,
         showcase_start_pos.y + i * showcase_spacing
       );
+      f32 showcase_new_dim = showcase_base_dim;
+      if (CheckCollisionPointRec(*ui_get_mouse_pos(), (Rectangle) {showcase_position.x, showcase_position.y, showcase_base_dim, showcase_base_dim})) {
+        showcase_new_dim *= showcase_hover_scale;
+        showcase_position.x -= (showcase_new_dim - showcase_base_dim) / 2.f;
+        showcase_position.y -= (showcase_new_dim - showcase_base_dim) / 2.f;
+      }
       
       gui_draw_atlas_texture_id(ATLAS_TEX_ID_CRIMSON_FANTASY_SHOWCASE, (Rectangle){
-        showcase_position.x, showcase_position.y, showcase_dim, showcase_dim
+        showcase_position.x, showcase_position.y, showcase_new_dim, showcase_new_dim
       });
       Rectangle tier_symbol_src_rect = get_atlas_texture_source_rect(ATLAS_TEX_ID_PASSIVE_UPGRADE_TIER_STAR);
 
       f32 star_spacing = tier_symbol_src_rect.width * 1.25f;
       f32 tier_symbols_total_width = tier_symbol_src_rect.width + (MAX_PASSIVE_UPGRADE_TIER - 1.f) * star_spacing;
-      f32 tier_symbols_left_edge = showcase_position.x + (showcase_dim - tier_symbols_total_width) / 2.f;
-      f32 tier_symbols_vertical_center = showcase_position.y + showcase_dim / 5.f;
+      f32 tier_symbols_left_edge = showcase_position.x + (showcase_new_dim - tier_symbols_total_width) / 2.f;
+      f32 tier_symbols_vertical_center = showcase_position.y + showcase_new_dim / 5.f;
 
       for (i32 i = 0; i < MAX_PASSIVE_UPGRADE_TIER; ++i) {
         Vector2 tier_pos = (Vector2) { tier_symbols_left_edge + i * star_spacing, tier_symbols_vertical_center };
@@ -185,16 +198,16 @@ void draw_main_menu_upgrade_panel(void) {
       }
 
       Rectangle icon_pos = (Rectangle) {
-        showcase_position.x + BASE_RENDER_DIV4.y * .25f, 
-        showcase_position.y + BASE_RENDER_DIV4.y * .25f,
-        BASE_RENDER_DIV4.y * .5f,
-        BASE_RENDER_DIV4.y * .5f
+        showcase_position.x + showcase_new_dim * .25f, 
+        showcase_position.y + showcase_new_dim * .25f,
+        showcase_new_dim * .5f,
+        showcase_new_dim * .5f
       };
       gui_draw_atlas_texture_id_pro(ATLAS_TEX_ID_ICON_ATLAS, stat->passive_icon_src, icon_pos, true);
 
       Vector2 title_pos = VECTOR2(
-        showcase_position.x + BASE_RENDER_DIV4.y / 2.f, 
-        showcase_position.y + BASE_RENDER_DIV4.y * 0.8f
+        showcase_position.x + showcase_new_dim / 2.f, 
+        showcase_position.y + showcase_new_dim * 0.8f
       );
       gui_label(stat->passive_display_name, FONT_TYPE_MINI_MOOD, 8, title_pos, WHITE, true);
     }

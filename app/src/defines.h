@@ -10,7 +10,6 @@
 
 #define TOTAL_ALLOCATED_MEMORY 512 * 1024 * 1024
 #define TARGET_FPS 60
-#define MAX_SPRITE_RENDERQUEUE 50
 
 #define PAK_FILE_LOCATION "./resource.pak"
 #define CONFIG_FILE_LOCATION "./config.ini"

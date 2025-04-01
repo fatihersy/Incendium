@@ -82,9 +82,9 @@ bool save_save_data(save_slots slot) {
     return false;
   }
   save_data* slot_data = &state->save_slots[slot];
-
+  encode_integer_result result = encode_integer(slot_data->currency_souls_player_have);
   const char* slot_data_text = TextFormat("%s%s",
-    encode_integer(slot_data->currency_souls_player_have),
+    result.txt,
     HEADER_SYMBOL_ENTRY
   );
 
@@ -143,7 +143,8 @@ u32 save_game_get_entry(u32 offset) {
 encode_integer_result encode_integer(i32 val) {
   encode_integer_result result = {0};
   const char* souls_text = TextFormat("%d", val);
-  for (u32 i=0; i<TextLength(souls_text); ++i) {
+  i32 val_str_len = TextLength(souls_text);
+  for (i32 i=0; i<val_str_len; ++i) {
     result.txt[i] = souls_text[i] + SAVE_GAME_VAR_NUM_START_SYMBOL;
   }
 

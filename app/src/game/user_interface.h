@@ -111,8 +111,9 @@ Vector2 position_element(Vector2 grid, Vector2 pos, Vector2 dim, f32 f);
 Font* ui_get_font(font_type font);
 panel get_default_panel(void);
 data_pack* get_slider_current_value(slider_id id);
-bool is_ui_fade_anim_complete();
-bool is_ui_fade_anim_about_to_complete();
+bool is_ui_fade_anim_complete(void);
+bool is_ui_fade_anim_about_to_complete(void);
+Vector2* ui_get_mouse_pos(void);
 
 bool gui_slider_add_option(slider_id _id, const char* _display_text, data_pack content);
 Rectangle get_atlas_texture_source_rect(atlas_texture_id _id);

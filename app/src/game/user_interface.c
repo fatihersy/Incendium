@@ -656,8 +656,6 @@ void draw_slider_body(slider* sdr) {
 }
 
 void gui_panel(panel pan, Rectangle dest, bool _should_center) {
-  
-  //draw_texture_regular(pan.bg_tex_id, dest, pan.bg_tint, _should_center);
   Rectangle bg_dest = dest;
   if (_should_center) {
     bg_dest.x -= bg_dest.width / 2.f;
@@ -1406,6 +1404,13 @@ Font* ui_get_font(font_type font) {
 
   return (Font*) {0};
 }
+Vector2* ui_get_mouse_pos(void) {
+  if (!state) {
+    TraceLog(LOG_ERROR, "user_interface::ui_get_mouse_pos()::State is not valid");
+    return 0;
+  }
+  return &state->mouse_pos;
+}
 panel get_default_panel(void) {
   return (panel) {
     .frame_tex_id  = ATLAS_TEX_ID_CRIMSON_FANTASY_PANEL,
@@ -1430,10 +1435,10 @@ data_pack* get_slider_current_value(slider_id id) {
 
   return &state->sliders[id].options[state->sliders[id].current_value].content;
 }
-bool is_ui_fade_anim_complete() {
+bool is_ui_fade_anim_complete(void) {
   return state->fade_animation_timer == 0;
 }
-bool is_ui_fade_anim_about_to_complete() {
+bool is_ui_fade_anim_about_to_complete(void) {
   return state->fade_animation_timer == state->fade_animation_duration-1;
 }
 void set_resolution_slider_native_res(void) {
