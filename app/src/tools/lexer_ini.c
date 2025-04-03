@@ -15,32 +15,32 @@
 #define DATA_TYPE_I8_DELIMITER 3 
 #define DATA_TYPE_U8_DELIMITER 3
 
-i64 get_variable_I64(char _section[INI_FILE_MAX_SECTION_LENGTH], const char* variable);
-u64 get_variable_U64(char _section[INI_FILE_MAX_SECTION_LENGTH], const char* variable);
-f64 get_variable_F64(char _section[INI_FILE_MAX_SECTION_LENGTH], const char* variable);
-i32 get_variable_I32(char _section[INI_FILE_MAX_SECTION_LENGTH], const char* variable);
-u32 get_variable_U32(char _section[INI_FILE_MAX_SECTION_LENGTH], const char* variable);
-f32 get_variable_F32(char _section[INI_FILE_MAX_SECTION_LENGTH], const char* variable);
-i16 get_variable_I16(char _section[INI_FILE_MAX_SECTION_LENGTH], const char* variable);
-u16 get_variable_U16(char _section[INI_FILE_MAX_SECTION_LENGTH], const char* variable);
-i8  get_variable_I8 (char _section[INI_FILE_MAX_SECTION_LENGTH], const char* variable);
-u8  get_variable_U8 (char _section[INI_FILE_MAX_SECTION_LENGTH], const char* variable);
+i64 get_variable_I64(const char* _section, const char* variable);
+u64 get_variable_U64(const char* _section, const char* variable);
+f64 get_variable_F64(const char* _section, const char* variable);
+i32 get_variable_I32(const char* _section, const char* variable);
+u32 get_variable_U32(const char* _section, const char* variable);
+f32 get_variable_F32(const char* _section, const char* variable);
+i16 get_variable_I16(const char* _section, const char* variable);
+u16 get_variable_U16(const char* _section, const char* variable);
+i8  get_variable_I8 (const char* _section, const char* variable);
+u8  get_variable_U8 (const char* _section, const char* variable);
 
-const char* get_section(char _str[INI_FILE_MAX_FILE_SIZE], const char* section);
-const char* get_value_number(char _section[INI_FILE_MAX_SECTION_LENGTH], const char* variable_name, data_type type);
-const char* get_value_string(char _section[INI_FILE_MAX_SECTION_LENGTH], const char* variable_name);
+const char* get_section(const char* _str, const char* section);
+const char* get_value_number(const char* _section, const char* variable_name, data_type type);
+const char* get_value_string(const char* _section, const char* variable_name);
 
-bool is_alpha(char *c);
-bool is_letter(char *c);
-bool is_digit(char *c);
-bool is_number(char *c);
-bool is_unsigned_number(char *c);
-bool is_variable_allowed(char *c);
-bool is_string_allowed(char *c);
-void move_next_alpha(char _str[INI_FILE_MAX_FILE_SIZE], u16* counter, bool stay_the_line);
-void move_next_letter(char _str[INI_FILE_MAX_FILE_SIZE], u16* counter, bool stay_the_line);
-void move_next_number(char _str[INI_FILE_MAX_FILE_SIZE], u16* counter, bool stay_the_line);
-void move_next_string(char _str[INI_FILE_MAX_FILE_SIZE], u16* counter, bool stay_the_line);
+bool is_alpha(const char *c);
+bool is_letter(const char *c);
+bool is_digit(const char *c);
+bool is_number(const char *c);
+bool is_unsigned_number(const char *c);
+bool is_variable_allowed(const char *c);
+bool is_string_allowed(const char *c);
+void move_next_alpha(const char* _str, u16* counter, bool stay_the_line);
+void move_next_letter(const char* _str, u16* counter, bool stay_the_line);
+void move_next_number(const char* _str, u16* counter, bool stay_the_line);
+void move_next_string(const char* _str, u16* counter, bool stay_the_line);
 
 bool parse_app_settings_ini(const char* filename, app_settings* out_settings) {
 
@@ -74,7 +74,7 @@ bool parse_app_settings_ini(const char* filename, app_settings* out_settings) {
   return true;
 }
 
-const char* get_section(char _str[INI_FILE_MAX_FILE_SIZE], const char* section) {
+const char* get_section(const char* _str, const char* section) {
     u16 counter = 0;
     while(_str[counter] != '\0') {
         if (_str[counter] == '[') {
@@ -109,7 +109,7 @@ const char* get_section(char _str[INI_FILE_MAX_FILE_SIZE], const char* section) 
     TraceLog(LOG_WARNING, "lexer::get_section()::Cannot found the section %s ", section);
     return "";
 }
-const char* get_value_number(char _section[INI_FILE_MAX_SECTION_LENGTH], const char* variable_name, data_type type) {
+const char* get_value_number(const char* _section, const char* variable_name, data_type type) {
     u16 i = 0;
     u16 delimiter = 0;
     switch (type) {
@@ -162,7 +162,7 @@ const char* get_value_number(char _section[INI_FILE_MAX_SECTION_LENGTH], const c
     TraceLog(LOG_WARNING, "lexer::get_value_number()::Cannot found the variable %s ", variable_name);
     return "";
 }
-const char* get_value_string(char _section[INI_FILE_MAX_SECTION_LENGTH], const char* variable_name) {
+const char* get_value_string(const char* _section, const char* variable_name) {
     u16 i = 0;
     u16 delimiter = DATA_TYPE_C_DELIMITER;
 
@@ -202,7 +202,7 @@ const char* get_value_string(char _section[INI_FILE_MAX_SECTION_LENGTH], const c
     TraceLog(LOG_WARNING, "lexer::get_value_number()::Cannot found the variable %s ", variable_name);
     return "";
 }
-i64 get_variable_I64(char _section[INI_FILE_MAX_SECTION_LENGTH], const char* variable) {
+i64 get_variable_I64(const char* _section, const char* variable) {
   char value_str[INI_FILE_MAX_VARIABLE_VALUE_LENGTH] = "";
   TextCopy(value_str, get_value_number(_section, variable, DATA_TYPE_I64));
   if (TextLength(value_str) == 0) {
@@ -211,7 +211,7 @@ i64 get_variable_I64(char _section[INI_FILE_MAX_SECTION_LENGTH], const char* var
   }
   return str_to_I64(value_str);
 }
-u64 get_variable_U64(char _section[INI_FILE_MAX_SECTION_LENGTH], const char* variable) {
+u64 get_variable_U64(const char* _section, const char* variable) {
   char value_str[INI_FILE_MAX_VARIABLE_VALUE_LENGTH] = "";
   TextCopy(value_str, get_value_number(_section, variable, DATA_TYPE_U64));
   if (TextLength(value_str) == 0) {
@@ -224,7 +224,7 @@ u64 get_variable_U64(char _section[INI_FILE_MAX_SECTION_LENGTH], const char* var
   }
   return str_to_U64(value_str);
 }
-f64 get_variable_F64(char _section[INI_FILE_MAX_SECTION_LENGTH], const char* variable) {
+f64 get_variable_F64(const char* _section, const char* variable) {
   char value_str[INI_FILE_MAX_VARIABLE_VALUE_LENGTH] = "";
   TextCopy(value_str, get_value_number(_section, variable, DATA_TYPE_F64));
   if (TextLength(value_str) == 0) {
@@ -233,7 +233,7 @@ f64 get_variable_F64(char _section[INI_FILE_MAX_SECTION_LENGTH], const char* var
   }
   return str_to_F64(value_str);
 }
-i32 get_variable_I32(char _section[INI_FILE_MAX_SECTION_LENGTH], const char* variable) {
+i32 get_variable_I32(const char* _section, const char* variable) {
   char value_str[INI_FILE_MAX_VARIABLE_VALUE_LENGTH] = "";
   TextCopy(value_str, get_value_number(_section, variable, DATA_TYPE_I32));
   if (TextLength(value_str) == 0) {
@@ -242,7 +242,7 @@ i32 get_variable_I32(char _section[INI_FILE_MAX_SECTION_LENGTH], const char* var
   }
   return str_to_I32(value_str);
 }
-u32 get_variable_U32(char _section[INI_FILE_MAX_SECTION_LENGTH], const char* variable) {
+u32 get_variable_U32(const char* _section, const char* variable) {
   char value_str[INI_FILE_MAX_VARIABLE_VALUE_LENGTH] = "";
   TextCopy(value_str, get_value_number(_section, variable, DATA_TYPE_U32));
   if (TextLength(value_str) == 0) {
@@ -255,7 +255,7 @@ u32 get_variable_U32(char _section[INI_FILE_MAX_SECTION_LENGTH], const char* var
   }
   return str_to_U32(value_str);
 }
-f32 get_variable_F32(char _section[INI_FILE_MAX_SECTION_LENGTH], const char* variable) {
+f32 get_variable_F32(const char* _section, const char* variable) {
   char value_str[INI_FILE_MAX_VARIABLE_VALUE_LENGTH] = "";
   TextCopy(value_str, get_value_number(_section, variable, DATA_TYPE_F32));
   if (TextLength(value_str) == 0) {
@@ -264,7 +264,7 @@ f32 get_variable_F32(char _section[INI_FILE_MAX_SECTION_LENGTH], const char* var
   }
   return str_to_F32(value_str);
 }
-i16 get_variable_I16(char _section[INI_FILE_MAX_SECTION_LENGTH], const char* variable) {
+i16 get_variable_I16(const char* _section, const char* variable) {
   char value_str[INI_FILE_MAX_VARIABLE_VALUE_LENGTH] = "";
   TextCopy(value_str, get_value_number(_section, variable, DATA_TYPE_I16));
   if (TextLength(value_str) == 0) {
@@ -273,7 +273,7 @@ i16 get_variable_I16(char _section[INI_FILE_MAX_SECTION_LENGTH], const char* var
   }
   return str_to_I16(value_str);
 }
-u16 get_variable_U16(char _section[INI_FILE_MAX_SECTION_LENGTH], const char* variable) {
+u16 get_variable_U16(const char* _section, const char* variable) {
   char value_str[INI_FILE_MAX_VARIABLE_VALUE_LENGTH] = "";
   TextCopy(value_str, get_value_number(_section, variable, DATA_TYPE_U16));
   if (TextLength(value_str) == 0) {
@@ -286,7 +286,7 @@ u16 get_variable_U16(char _section[INI_FILE_MAX_SECTION_LENGTH], const char* var
   }
   return str_to_U16(value_str);
 }
-i8  get_variable_I8 (char _section[INI_FILE_MAX_SECTION_LENGTH], const char* variable) {
+i8  get_variable_I8 (const char* _section, const char* variable) {
   char value_str[INI_FILE_MAX_VARIABLE_VALUE_LENGTH] = "";
   TextCopy(value_str, get_value_number(_section, variable, DATA_TYPE_I8));
   if (TextLength(value_str) == 0) {
@@ -296,7 +296,7 @@ i8  get_variable_I8 (char _section[INI_FILE_MAX_SECTION_LENGTH], const char* var
 
   return str_to_I8(value_str);
 }
-u8  get_variable_U8 (char _section[INI_FILE_MAX_SECTION_LENGTH], const char* variable) {
+u8  get_variable_U8 (const char* _section, const char* variable) {
   char value_str[INI_FILE_MAX_VARIABLE_VALUE_LENGTH] = "";
   TextCopy(value_str, get_value_number(_section, variable, DATA_TYPE_U8));
   if (TextLength(value_str) == 0) {
@@ -310,7 +310,7 @@ u8  get_variable_U8 (char _section[INI_FILE_MAX_SECTION_LENGTH], const char* var
   return str_to_U8(value_str);
 }
 
-bool is_alpha(char *c) {
+bool is_alpha(const char *c) {
   
   if (*c >= '0' && *c <= '9') {
     return true;
@@ -326,7 +326,7 @@ bool is_alpha(char *c) {
   
   return false;
 }
-bool is_letter(char *c) { 
+bool is_letter(const char *c) { 
   if (*c >= 'A' && *c <= 'Z') {
     return true;
   }
@@ -335,7 +335,7 @@ bool is_letter(char *c) {
   }
   return false;
 }
-bool is_number(char *c) {
+bool is_number(const char *c) {
   if (*c >= '0' && *c <= '9') {
     return true;
   }
@@ -344,7 +344,7 @@ bool is_number(char *c) {
   }
   return false;
 }
-bool is_unsigned_number(char *c) {
+bool is_unsigned_number(const char *c) {
   if (*c >= '0' && *c <= '9') {
     return true;
   }
@@ -353,50 +353,50 @@ bool is_unsigned_number(char *c) {
   }
   return false;
 }
-bool is_digit(char *c) {
+bool is_digit(const char *c) {
   if (*c >= '0' && *c <= '9') {
     return true;
   }
   return false;
 }
-bool is_eol(char *c) {
+bool is_eol(const char *c) {
   if (*c >= 10 && *(c+1) <= 13) {
     return true;
   }
   return false;
 }
-bool is_variable_allowed(char *c) {
+bool is_variable_allowed(const char *c) {
   if (is_alpha(c) || *c == '_') return true;
 
   return false;
 }
-bool is_string_allowed(char *c) {
+bool is_string_allowed(const char *c) {
   if (is_alpha(c) || *c == '_' || *c == ' ') return true;
   return false;
 }
 
-void move_next_alpha(char _str[INI_FILE_MAX_FILE_SIZE], u16* counter, bool stay_the_line) {
+void move_next_alpha(const char* _str, u16* counter, bool stay_the_line) {
   while(_str[(*counter)++] != '\0') {
     if (is_alpha(&_str[*counter])) return;
     if (stay_the_line && is_eol(&_str[*counter])) break;
   }
   *counter = INVALID_ID16;
 }
-void move_next_letter(char _str[INI_FILE_MAX_FILE_SIZE], u16* counter, bool stay_the_line) {
+void move_next_letter(const char* _str, u16* counter, bool stay_the_line) {
   while(_str[(*counter)++] != '\0') {
     if (is_letter(&_str[*counter])) return;
     if (stay_the_line && is_eol(&_str[*counter])) break;
   }
   *counter = INVALID_ID16;
 }
-void move_next_number(char _str[INI_FILE_MAX_FILE_SIZE], u16* counter, bool stay_the_line) {
+void move_next_number(const char* _str, u16* counter, bool stay_the_line) {
   while(_str[(*counter)++] != '\0') {
     if (is_number(&_str[*counter])) return;
     if (stay_the_line && is_eol(&_str[*counter])) break;
   }
   *counter = INVALID_ID16;
 }
-void move_next_string(char _str[INI_FILE_MAX_FILE_SIZE], u16* counter, bool stay_the_line) {
+void move_next_string(const char* _str, u16* counter, bool stay_the_line) {
   while(_str[(*counter)++] != '\0') {
     if (_str[*counter] == '"') {
       ++(*counter);

@@ -393,7 +393,7 @@ void update_sliders(void) {
           f32 ratio = relative / sdr_rect.width;
 
           sdr->current_value = ratio * sdr->max_value + 1;
-          FCLAMP(sdr->current_value, sdr->min_value, sdr->max_value);
+          sdr->current_value = FCLAMP(sdr->current_value, sdr->min_value, sdr->max_value);
       }
     }
     

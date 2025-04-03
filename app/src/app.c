@@ -1,4 +1,5 @@
 #include "app.h"
+#include "raylib.h"
 #include "settings.h"
 #include "defines.h"
 #include "save_game.h"
@@ -189,13 +190,19 @@ bool application_on_event(u16 code, event_context context) {
   case EVENT_CODE_TOGGLE_WINDOWED: {    
     if (state->settings->window_state == FLAG_BORDERLESS_WINDOWED_MODE) {
       ToggleBorderlessWindowed();
-      SetWindowSize(get_app_settings()->window_size.x, get_app_settings()->window_size.y);
       state->settings->window_state = 0;
     }
     else if (state->settings->window_state == FLAG_FULLSCREEN_MODE) {
       ToggleFullscreen();
-      SetWindowSize(get_app_settings()->window_size.x, get_app_settings()->window_size.y);
       state->settings->window_state = 0;
+    }
+    SetWindowSize(get_app_settings()->window_size.x, get_app_settings()->window_size.y);
+    SetWindowPosition(
+      (GetMonitorWidth(GetCurrentMonitor())  / 2.f) - (GetScreenWidth()  / 2.f), 
+      (GetMonitorHeight(GetCurrentMonitor()) / 2.f) - (GetScreenHeight() / 2.f)
+    );
+    if (IsWindowState(FLAG_WINDOW_UNDECORATED)) {
+      ClearWindowState(FLAG_WINDOW_UNDECORATED);
     }
     return true;
   }

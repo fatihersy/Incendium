@@ -22,7 +22,7 @@ void movement_bullet(ability* abl);
 void movement_comet(ability* abl);
 
 void register_ability(
-  char _display_name[MAX_ABILITY_NAME_LENGTH], 
+  const char* _display_name, 
   Rectangle icon_loc, 
   ability_upgradables _upgradables[ABILITY_UPG_MAX],
   ability_type type,
@@ -276,7 +276,7 @@ void render_abilities(ability_play_system* system) {
  * @param _should_center for projectile spritesheet
  */
 void register_ability(
-  char _display_name[MAX_ABILITY_NAME_LENGTH], Rectangle icon_loc, ability_upgradables _upgradables[ABILITY_UPG_MAX], 
+  const char* _display_name, Rectangle icon_loc, ability_upgradables _upgradables[ABILITY_UPG_MAX], 
   ability_type type, movement_pattern move_pattern, u16 proj_count_on_start, f32 proj_duration, u16 _damage, Vector2 proj_size, 
   spritesheet_id proj_anim, bool _should_center
 ) {

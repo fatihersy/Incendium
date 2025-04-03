@@ -27,7 +27,7 @@
     "editor.fontFamily": "Fira Code Medium",
     "editor.fontSize": 15,
     "editor.fontLigatures": "'cv01', 'cv04', 'cv08', 'ss01', 'zero', 'cv14', 'cv17', 'ss05', 'ss04', 'cv18', 'ss03', 'cv30', 'ss02'",
-    "terminal.integrated.fontFamily": "IBM Plex Mono",
+    "terminal.integrated.fontFamily": "FiraMono Nerd Font",
     "workbench.editor.showTabs": "multiple",
     "workbench.colorCustomizations": {
         "editor.selectionHighlightBackground": "#c03a2bf1"

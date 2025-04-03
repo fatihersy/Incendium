@@ -5,7 +5,7 @@
 
 #define GAME_TITLE "Incendium"
 
-#define RESOURCE_PATH "D:/Workspace/resources/"
+#define RESOURCE_PATH "/home/fatihersy/Workspace/resources/"
 #define SHADER_PATH "../app/src/shaders/"
 
 #define TOTAL_ALLOCATED_MEMORY 512 * 1024 * 1024

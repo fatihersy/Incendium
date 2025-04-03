@@ -234,7 +234,7 @@ tilemap_tile get_tile_from_map_by_mouse_pos(tilemap* map, Vector2 mouse_pos, u16
   tile.x = (mouse_pos.x - map->position.x) / map->tile_size;
   tile.y = (mouse_pos.y - map->position.y) / map->tile_size;
 
-  if (tile.x < 0 || tile.x >= map->map_dim || tile.y < 0 || tile.y >= map->map_dim) {
+  if (tile.x >= map->map_dim || tile.y >= map->map_dim) { // NOTE: Assumes tilemap x and y is unsigned
     return (tilemap_tile) { .is_initialized = false };
   }
 
