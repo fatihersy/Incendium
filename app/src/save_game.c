@@ -1,5 +1,6 @@
 #include "save_game.h"
 #include "core/fmemory.h"
+#include "raylib.h"
 
 #define TOTAL_SAVE_FILE_SIZE 2 * 1024 * 1024
 #define HEADER_SYMBOL_ENTRY "!!!"
@@ -118,7 +119,10 @@ void parse_data(save_slots slot) {
 }
 
 save_data* get_save_data(save_slots slot) {
-
+  if (!state) {
+    TraceLog(LOG_ERROR, "save_game::get_save_data()::State is not valid");
+    return 0;
+  }
   return &state->save_slots[slot];
 }
 u32 save_game_get_entry(u32 offset) {

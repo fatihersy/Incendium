@@ -73,7 +73,7 @@ void initialize_scene_editor(camera_metrics* _camera_metrics) {
     return;
   }
   state->in_camera_metrics = _camera_metrics;
-  world_system_initialize(_camera_metrics, BASE_RENDER_DIV2);
+  world_system_initialize(_camera_metrics, BASE_RENDER_SCALE(.5f));
 
   user_interface_system_initialize();
   
@@ -121,7 +121,7 @@ void render_interface_editor(void) {
         }
       }
 
-      gui_label_format_v(FONT_TYPE_MOOD, 10, SCREEN_POS(14.f,10.f), WHITE, true, "%d", state->selected_stage);
+      gui_label_format_v(FONT_TYPE_MOOD, 10, SCREEN_POS(14.f,10.f), WHITE, true, true, "%d", state->selected_stage);
 
       if(gui_slider_button(BTN_ID_EDITOR_BTN_STAGE_MAP_CHANGE_RIGHT, SCREEN_POS(17.f,9.f))) {
         if (state->selected_stage < MAX_WORLDMAP_LOCATIONS-1) {
@@ -427,11 +427,11 @@ void begin_scene_editor(void) {
   copy_memory(&state->worldmap_locations, get_worldmap_locations(), sizeof(state->worldmap_locations));
   state->tile_selection_panel = get_default_panel();
   state->tile_selection_panel.signal_state = BTN_STATE_HOVER;
-  state->tile_selection_panel.dest = (Rectangle) {0, 0, BASE_RENDER_DIV3.x, BASE_RENDER_RES.y};
+  state->tile_selection_panel.dest = (Rectangle) {0, 0, BASE_RENDER_SCALE(.3f).x, BASE_RENDER_RES.y};
   panel* prop_pnl = &state->prop_selection_panel;
   *prop_pnl = get_default_panel();
   prop_pnl->signal_state = BTN_STATE_HOVER;
-  prop_pnl->dest = (Rectangle) {0, 0, BASE_RENDER_DIV3.x, BASE_RENDER_RES.y};
+  prop_pnl->dest = (Rectangle) {0, 0, BASE_RENDER_SCALE(.3f).x, BASE_RENDER_RES.y};
   prop_pnl->scroll_handle = (Rectangle){
     .x = prop_pnl->dest.x + prop_pnl->dest.width - PROP_DRAG_HANDLE_DIM - 10, .y = 0,
     .width = PROP_DRAG_HANDLE_DIM, .height = PROP_DRAG_HANDLE_DIM * 5,

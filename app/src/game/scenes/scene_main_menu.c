@@ -3,9 +3,11 @@
 #include "core/event.h"
 #include "core/fmemory.h"
 
+#include "defines.h"
 #include "game/world.h"
 #include "game/game_manager.h"
 #include "game/user_interface.h"
+#include "raylib.h"
 
 typedef enum main_menu_scene_type {
   MAIN_MENU_SCENE_DEFAULT,
@@ -19,6 +21,7 @@ typedef struct main_menu_scene_state {
   scene_id next_scene;
   panel upgrade_panel;
   Vector2 mouse_pos;
+  camera_metrics* in_camera_metrics;
 
   bool in_scene_changing_process;
   bool scene_changing_process_complete;
@@ -39,15 +42,7 @@ void initialize_scene_main_menu(camera_metrics* _camera_metrics) {
     return;
   }
   state = (main_menu_scene_state*)allocate_memory_linear(sizeof(main_menu_scene_state), true);
-  
-  if (!game_manager_initialize(_camera_metrics)) { // Inits player & spawns
-    TraceLog(LOG_ERROR, "scene_in_game::initialize_scene_in_game()::game_manager_initialize() failed");
-    return;
-  }
-
-  user_interface_system_initialize();
-
-  set_worldmap_location(WORLDMAP_MAINMENU_MAP); // NOTE: Worldmap index 0 is mainmenu background now 
+  state->in_camera_metrics = _camera_metrics;
 
   begin_scene_main_menu();
 }
@@ -88,7 +83,7 @@ void render_scene_main_menu(void) {
 void render_interface_main_menu(void) {
   if (!state->scene_changing_process_complete) {
     if (state->type == MAIN_MENU_SCENE_DEFAULT) {
-      gui_label(GAME_TITLE, FONT_TYPE_MOOD, 65, VECTOR2(BASE_RENDER_DIV2.x, BASE_RENDER_DIV4.y), WHITE, true);
+      gui_label(GAME_TITLE, FONT_TYPE_MOOD, 65, VECTOR2(BASE_RENDER_SCALE(.5f).x, BASE_RENDER_SCALE(.25f).y), WHITE, true, true);
 
       if (gui_menu_button("Play", BTN_ID_MAINMENU_BUTTON_PLAY, VECTOR2(0,  0))) {
         state->in_scene_changing_process = true;
@@ -128,14 +123,23 @@ void render_interface_main_menu(void) {
 }
 
 void begin_scene_main_menu(void) {
+  if (!game_manager_initialize(state->in_camera_metrics)) { // Inits player & spawns
+    TraceLog(LOG_ERROR, "scene_in_game::initialize_scene_in_game()::game_manager_initialize() failed");
+    return;
+  }
+
+  user_interface_system_initialize();
+
+  set_worldmap_location(WORLDMAP_MAINMENU_MAP); // NOTE: Worldmap index 0 is mainmenu background now 
+
   state->type = MAIN_MENU_SCENE_DEFAULT;
   state->next_scene = SCENE_TYPE_UNSPECIFIED;
   state->in_scene_changing_process = false;
   state->scene_changing_process_complete = false;
   state->upgrade_panel = get_default_panel();
   state->upgrade_panel.dest = (Rectangle) { 
-    BASE_RENDER_DIV2.x, BASE_RENDER_DIV2.y, 
-    BASE_RENDER_5DIV4.x, BASE_RENDER_5DIV4.y
+    BASE_RENDER_SCALE(.5f).x, BASE_RENDER_SCALE(.5f).y, 
+    BASE_RENDER_SCALE(.85f).x, BASE_RENDER_SCALE(.85f).y
   }; 
 
   event_fire(EVENT_CODE_PLAY_MAIN_MENU_THEME, (event_context) {0});
@@ -146,7 +150,14 @@ void end_scene_main_menu(void) {
 }
 
 void draw_main_menu_upgrade_panel(void) {
+  DrawRectangle(0, 0, BASE_RENDER_RES.x, BASE_RENDER_SCALE(.1f).y, (Color) {0, 0, 0, 50});
   gui_panel(state->upgrade_panel, state->upgrade_panel.dest, true);
+  gui_label_format(
+    FONT_TYPE_MOOD, 25, BASE_RENDER_SCALE(.5f).x, 
+    0, WHITE, true, false, 
+    "Souls:%d", get_currency_souls()
+  );
+
   const Rectangle panel_dest = (Rectangle) { // Centered panel destination adjustment
     state->upgrade_panel.dest.x - state->upgrade_panel.dest.width / 2.f,
     state->upgrade_panel.dest.y - state->upgrade_panel.dest.height / 2.f,
@@ -154,7 +165,7 @@ void draw_main_menu_upgrade_panel(void) {
     state->upgrade_panel.dest.height
   };
   f32 showcase_hover_scale = 1.1f;
-  f32 showcase_base_dim = BASE_RENDER_DIV4.y;
+  f32 showcase_base_dim = BASE_RENDER_SCALE(.25f).y;
   const f32 showcase_spacing = showcase_base_dim * 1.1f;
 
   const f32 total_showcases_width = (MAIN_MENU_UPGRADE_PANEL_COL * showcase_base_dim) + ((MAIN_MENU_UPGRADE_PANEL_COL - 1) * (showcase_spacing - showcase_base_dim));
@@ -180,6 +191,9 @@ void draw_main_menu_upgrade_panel(void) {
         showcase_new_dim *= showcase_hover_scale;
         showcase_position.x -= (showcase_new_dim - showcase_base_dim) / 2.f;
         showcase_position.y -= (showcase_new_dim - showcase_base_dim) / 2.f;
+        if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT)) {
+          
+        }
       }
       
       gui_draw_atlas_texture_id(ATLAS_TEX_ID_CRIMSON_FANTASY_SHOWCASE, (Rectangle){
@@ -209,7 +223,7 @@ void draw_main_menu_upgrade_panel(void) {
         showcase_position.x + showcase_new_dim / 2.f, 
         showcase_position.y + showcase_new_dim * 0.8f
       );
-      gui_label(stat->passive_display_name, FONT_TYPE_MINI_MOOD, 8, title_pos, WHITE, true);
+      gui_label(stat->passive_display_name, FONT_TYPE_MINI_MOOD, 8, title_pos, WHITE, true, true);
     }
   }
 }

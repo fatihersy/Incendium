@@ -46,14 +46,14 @@ static scene_in_game_state *restrict state;
 }
 #define DRAW_ABL_UPG_STAT_PNL(ABL, UPG, TEXT, STAT){ \
 if (UPG.level == 1) {\
-  gui_label_format(FONT_TYPE_MINI_MOOD, upgr_font_size, start_upgradables_x_exis, upgradables_height_buffer, WHITE, false, TEXT"%d", UPG.base_damage);\
+  gui_label_format(FONT_TYPE_MINI_MOOD, upgr_font_size, start_upgradables_x_exis, upgradables_height_buffer, WHITE, false, false, TEXT"%d", UPG.base_damage);\
   upgradables_height_buffer += btw_space_gap;\
 } else if(UPG.level>1 && UPG.level <= MAX_ABILITY_LEVEL) {\
-  gui_label_format(FONT_TYPE_MINI_MOOD, upgr_font_size, start_upgradables_x_exis, upgradables_height_buffer, WHITE, false, TEXT"%d -> %d", ABL->base_damage, UPG.base_damage);\
+  gui_label_format(FONT_TYPE_MINI_MOOD, upgr_font_size, start_upgradables_x_exis, upgradables_height_buffer, WHITE, false, false, TEXT"%d -> %d", ABL->base_damage, UPG.base_damage);\
   upgradables_height_buffer += btw_space_gap;\
 }}
 
-#define ABILITY_UPG_PANEL_ICON_SIZE BASE_RENDER_DIV4.x*.5f
+#define ABILITY_UPG_PANEL_ICON_SIZE BASE_RENDER_SCALE(.25f).x*.5f
 #define PASSIVE_SELECTION_PANEL_ICON_SIZE ABILITY_UPG_PANEL_ICON_SIZE
 #define CLOUDS_ANIMATION_DURATION TARGET_FPS * 1.5f // second
 
@@ -97,8 +97,8 @@ void update_scene_in_game(void) {
   switch (state->stage) {
     case IN_GAME_STAGE_MAP_CHOICE: {
       event_fire(EVENT_CODE_SCENE_MANAGER_SET_CAM_POS, (event_context) {
-        .data.f32[0] = BASE_RENDER_DIV2.x,
-        .data.f32[1] = BASE_RENDER_DIV2.y,
+        .data.f32[0] = BASE_RENDER_SCALE(.5f).x,
+        .data.f32[1] = BASE_RENDER_SCALE(.5f).y,
       });
 
       if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON) && state->hovered_stage <= MAX_WORLDMAP_LOCATIONS) {
@@ -191,12 +191,12 @@ void render_interface_in_game(void) {
             state->worldmap_locations[i].screen_location.y * BASE_RENDER_RES.y - WORLDMAP_LOC_PIN_SIZE_DIV2,
             WORLDMAP_LOC_PIN_SIZE, WORLDMAP_LOC_PIN_SIZE
           };
-          pnl->dest = (Rectangle) {scrloc.x + WORLDMAP_LOC_PIN_SIZE, scrloc.y + WORLDMAP_LOC_PIN_SIZE_DIV2, BASE_RENDER_DIV4.x, BASE_RENDER_DIV4.y};
+          pnl->dest = (Rectangle) {scrloc.x + WORLDMAP_LOC_PIN_SIZE, scrloc.y + WORLDMAP_LOC_PIN_SIZE_DIV2, BASE_RENDER_SCALE(.25f).x, BASE_RENDER_SCALE(.25f).y};
           DrawCircleGradient(scrloc.x + WORLDMAP_LOC_PIN_SIZE_DIV2, scrloc.y + WORLDMAP_LOC_PIN_SIZE_DIV2, 100, (Color){236,240,241,50}, (Color){0});
           gui_panel_scissored((*pnl), false, {
             gui_label(state->worldmap_locations[i].displayname, FONT_TYPE_MOOD, 10, (Vector2) {
               pnl->dest.x + pnl->dest.width *.5f, pnl->dest.y + pnl->dest.height*.5f
-            }, WHITE, true);
+            }, WHITE, true, true);
           });
         }
       }
@@ -204,8 +204,8 @@ void render_interface_in_game(void) {
     }
     case IN_GAME_STAGE_PASSIVE_CHOICE: {
       Rectangle dest = (Rectangle) {
-        BASE_RENDER_DIV4.x, BASE_RENDER_DIV2.y, 
-        BASE_RENDER_DIV4.x, BASE_RENDER_3DIV2.y 
+        BASE_RENDER_SCALE(.25f).x, BASE_RENDER_SCALE(.5f).y, 
+        BASE_RENDER_SCALE(.25f).x, BASE_RENDER_SCALE(.8f).y 
       };
       f32 dest_x_buffer = dest.x;
       for (int i=0; i<MAX_UPDATE_PASSIVE_PANEL_COUNT; ++i) {
@@ -233,17 +233,17 @@ void render_interface_in_game(void) {
       break;
     }
     case IN_GAME_STAGE_PLAY: {  
-      DrawFPS(SCREEN_OFFSET.x, BASE_RENDER_DIV2.y);
+      DrawFPS(SCREEN_OFFSET.x, BASE_RENDER_SCALE(.5f).y);
 
       if (!state->has_game_started) {
-        gui_label("Press Space to Start!", FONT_TYPE_MOOD_OUTLINE, 10, (Vector2) {BASE_RENDER_DIV2.x, BASE_RENDER_3DIV2.y}, WHITE, true);
+        gui_label("Press Space to Start!", FONT_TYPE_MOOD_OUTLINE, 10, (Vector2) {BASE_RENDER_SCALE(.5f).x, BASE_RENDER_SCALE(.5f).y}, WHITE, true, true);
         return;
       }
       else if (get_b_player_have_upgrade_points()) {
         set_is_game_paused(true);
         Rectangle dest = (Rectangle) {
-          BASE_RENDER_DIV4.x, BASE_RENDER_DIV2.y, 
-          BASE_RENDER_DIV4.x, BASE_RENDER_3DIV2.y 
+          BASE_RENDER_SCALE(.25f).x, BASE_RENDER_SCALE(.5f).y, 
+          BASE_RENDER_SCALE(.25f).x, BASE_RENDER_SCALE(.5f).y 
         };
         f32 dest_x_buffer = dest.x;
         for (int i=0; i<MAX_UPDATE_ABILITY_PANEL_COUNT; ++i) {
@@ -283,10 +283,10 @@ void render_interface_in_game(void) {
         event_fire(EVENT_CODE_END_GAME, (event_context) {0});
       }
       else {
-        gui_progress_bar(PRG_BAR_ID_PLAYER_EXPERIANCE, (Vector2){.x = BASE_RENDER_DIV2.x, .y = SCREEN_OFFSET.x}, true);
+        gui_progress_bar(PRG_BAR_ID_PLAYER_EXPERIANCE, (Vector2){.x = BASE_RENDER_SCALE(.5f).x, .y = SCREEN_OFFSET.x}, true);
         gui_progress_bar(PRG_BAR_ID_PLAYER_HEALTH, SCREEN_OFFSET, false);
-        gui_label_format(FONT_TYPE_MOOD, 10, SCREEN_OFFSET.x, BASE_RENDER_DIV4.y, WHITE, false, "Remaining: %d", get_remaining_enemies());
-        gui_label_format(FONT_TYPE_MOOD, 10, BASE_RENDER_5DIV4.x, SCREEN_OFFSET.y, WHITE, false, "Souls: %d", get_currency_souls());
+        gui_label_format(FONT_TYPE_MOOD, 10, SCREEN_OFFSET.x, BASE_RENDER_SCALE(.25f).y, WHITE, false, false, "Remaining: %d", get_remaining_enemies());
+        gui_label_format(FONT_TYPE_MOOD, 10, BASE_RENDER_SCALE(.75f).x, SCREEN_OFFSET.y, WHITE, false, false, "Souls: %d", get_currency_souls());
       }
       break;
     }
@@ -392,7 +392,7 @@ void begin_scene_in_game(void) {
   };
 
   copy_memory(&state->worldmap_locations, get_worldmap_locations(), sizeof(state->worldmap_locations));
-  _set_player_position(BASE_RENDER_DIV2);
+  _set_player_position(BASE_RENDER_SCALE(.5f));
   set_is_game_paused(true);
   
   for (int i=0; i<MAX_UPDATE_ABILITY_PANEL_COUNT; ++i) {
@@ -426,7 +426,7 @@ void start_game(character_stat* stat) {
   gm_start_game(*get_active_worldmap());
 
   upgrade_player_stat(stat);
-  _set_player_position(BASE_RENDER_DIV2);
+  _set_player_position(BASE_RENDER_SCALE(.5f));
   state->stage = IN_GAME_STAGE_PLAY;
 }
 
@@ -455,12 +455,12 @@ void draw_in_game_upgrade_panel(ability* abl, ability upg, Rectangle panel_dest)
   const u16 upgr_font_size = 6; 
 
   gui_draw_atlas_texture_id_pro(ATLAS_TEX_ID_ICON_ATLAS, upg.icon_src, icon_rect, true);
-  gui_label(upg.display_name, FONT_TYPE_MOOD, title_font_size, ability_name_pos, WHITE, true);
+  gui_label(upg.display_name, FONT_TYPE_MOOD, title_font_size, ability_name_pos, WHITE, true, true);
 
   if (upg.level == 1) {
-    gui_label("NEW!", FONT_TYPE_MOOD_OUTLINE, level_ind_font_size, ability_level_ind, WHITE, true);
+    gui_label("NEW!", FONT_TYPE_MOOD_OUTLINE, level_ind_font_size, ability_level_ind, WHITE, true, true);
   } else if(upg.level>1 && upg.level <= MAX_ABILITY_LEVEL) {
-    gui_label_format_v(FONT_TYPE_MOOD_OUTLINE, level_ind_font_size, ability_level_ind, WHITE, true, "%d -> %d", abl->level, upg.level);
+    gui_label_format_v(FONT_TYPE_MOOD_OUTLINE, level_ind_font_size, ability_level_ind, WHITE, true, true, "%d -> %d", abl->level, upg.level);
   }
   const u16 start_upgradables_x_exis = panel_dest.x - panel_dest.width*.5f + elm_space_gap;
   u16 upgradables_height_buffer = ability_level_ind.y + elm_space_gap;
@@ -499,7 +499,7 @@ void draw_passive_selection_panel(character_stat* stat, Rectangle panel_dest) {
   const u16 title_font_size = 10; 
   
   gui_draw_atlas_texture_id_pro(ATLAS_TEX_ID_ICON_ATLAS, stat->passive_icon_src, icon_rect, true);
-  gui_label(stat->passive_display_name, FONT_TYPE_MOOD, title_font_size, passive_name_pos, WHITE, true);
+  gui_label(stat->passive_display_name, FONT_TYPE_MOOD, title_font_size, passive_name_pos, WHITE, true, true);
   
   const u16 desc_font_size = 6;
   const f32 desc_box_height = panel_dest.y + (panel_dest.height * .5f) - passive_name_pos.y - elm_space_gap;
@@ -517,13 +517,13 @@ void draw_end_game_panel() {
   STATE_ASSERT("draw_end_game_panel")
 
   gui_panel(state->default_panel, (Rectangle){ 
-    BASE_RENDER_DIV2.x, BASE_RENDER_DIV2.y, 
-    BASE_RENDER_5DIV4.x, BASE_RENDER_5DIV4.y
+    BASE_RENDER_SCALE(.5f).x, BASE_RENDER_SCALE(.5f).y, 
+    BASE_RENDER_SCALE(.75f).x, BASE_RENDER_SCALE(.75f).y
   }, true);
 
   u32 min  = (i32)state->play_time/60;
   u32 secs = (i32)state->play_time%60;
-  gui_label_format_v(FONT_TYPE_MOOD, 10, BASE_RENDER_DIV2, WHITE, true, "%d:%d", min, secs);
+  gui_label_format_v(FONT_TYPE_MOOD, 10, BASE_RENDER_SCALE(.5f), WHITE, true, true, "%d:%d", min, secs);
 
 
 }

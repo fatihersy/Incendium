@@ -17,6 +17,7 @@ typedef enum save_slots {
   SAVE_SLOT_MAX,
 }save_slots;
 
+
 void save_system_initialize(void);
 
 bool parse_or_create_save_data_from_file(save_slots slot);

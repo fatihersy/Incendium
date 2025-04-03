@@ -17,14 +17,8 @@
 
 #define SCREEN_OFFSET CLITERAL(Vector2){5, 5}
 
-#define BASE_RENDER_RES     CLITERAL(Vector2){ 1920 , 1080}
-#define BASE_RENDER_5DIV4   CLITERAL(Vector2){ 1920 / 1.25f, 1080 / 1.25f}
-#define BASE_RENDER_3DIV2   CLITERAL(Vector2){ 1920 / 1.50f, 1080 / 1.50f}
-#define BASE_RENDER_35DIV20 CLITERAL(Vector2){ 1920 / 1.75f, 1080 / 1.75f}
-#define BASE_RENDER_38DIV20 CLITERAL(Vector2){ 1920 / 1.90f, 1080 / 1.90f}
-#define BASE_RENDER_DIV2    CLITERAL(Vector2){ 1920 / 2.f  , 1080 / 2.f  }
-#define BASE_RENDER_DIV3    CLITERAL(Vector2){ 1920 / 3.f  , 1080 / 3.f  }
-#define BASE_RENDER_DIV4    CLITERAL(Vector2){ 1920 / 4.f  , 1080 / 4.f  }
+#define BASE_RENDER_RES     CLITERAL(Vector2){ 1920, 1080}
+#define BASE_RENDER_SCALE(FLOAT) CLITERAL(Vector2){ BASE_RENDER_RES.x * FLOAT , BASE_RENDER_RES.y * FLOAT }
 
 #define MAX_IMAGE_SLOTS 10
 #define MAX_SPRITESHEET_SLOTS 50
@@ -97,7 +91,7 @@
 #define RANDOM_STACK_COUNT 10
 
 #define DEBUG_COLLISIONS 0
-#define USE_PAK_FORMAT 1
+#define USE_PAK_FORMAT 0
 
 // Unsigned int types.
 typedef unsigned char u8;
@@ -885,12 +879,6 @@ static const u32 level_curve[MAX_PLAYER_LEVEL + 1] = {
 #define SCREEN_POS(X, Y) ((Vector2){  \
   .x = BASE_RENDER_RES.x  * (X / 100), \
   .y = BASE_RENDER_RES.y * (Y / 100)  \
-})
-#define SCREEN_RECT(X, Y, W, H) ((Rectangle){  \
-  .x = BASE_RENDER_RES.x  * (X / 120.f), \
-  .y = BASE_RENDER_RES.y * (Y / 120.f),  \
-  .width = (BASE_RENDER_RES.x / 120.f) * W, \
-  .height = (BASE_RENDER_RES.y / 120.f) * H  \
 })
 
 #endif

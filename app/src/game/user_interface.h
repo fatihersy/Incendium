@@ -127,9 +127,9 @@ void gui_draw_spritesheet_to_background(spritesheet_id _id, Color _tint);
 void gui_progress_bar(progress_bar_id bar_id, Vector2 pos, bool _should_center);
 void gui_panel(panel pan, Rectangle dest, bool _should_center);
 bool gui_panel_active(panel* panel, Rectangle dest, bool _should_center);
-void gui_label(const char* text, font_type type, i32 font_size, Vector2 position, Color tint, bool _should_center);
+void gui_label(const char* text, font_type type, i32 font_size, Vector2 position, Color tint, bool _center_h, bool _center_v);
 void gui_label_wrap(const char* text, font_type type, i32 font_size, Rectangle position, Color tint, bool _should_center);
-void gui_label_grid(const char* text, font_type type, i32 font_size, Vector2 position, Color tint, bool _should_center, f32 grid_scale);
+void gui_label_grid(const char* text, font_type type, i32 font_size, Vector2 position, Color tint, bool _center_h, bool _center_v, f32 grid_scale);
 void gui_label_wrap_grid(const char* text, font_type type, i32 font_size, Rectangle position, Color tint, bool _should_center, f32 grid_scale);
 
 void gui_draw_pause_screen(void);
@@ -143,10 +143,10 @@ void gui_draw_atlas_texture_id_center(atlas_texture_id _id, Vector2 pos, Vector2
 void gui_draw_texture_id(texture_id _id, Rectangle dest); 
 void gui_draw_map_stage_pin(bool have_hovered, Vector2 screen_loc);
 
-#define gui_label_format(FONT, FONT_SIZE, X,Y, COLOR, CENTER, TEXT, ...) gui_label(TextFormat(TEXT, __VA_ARGS__), FONT, FONT_SIZE, (Vector2){X,Y}, COLOR, CENTER)
-#define gui_label_format_v(FONT, FONT_SIZE, POS, COLOR, CENTER, TEXT, ...) gui_label(TextFormat(TEXT, __VA_ARGS__), FONT, FONT_SIZE, POS, COLOR, CENTER)
-#define gui_label_format_grid(FONT, FONT_SIZE, X,Y, GRID_SCALE, COLOR, CENTER, TEXT, ...) gui_label_grid(TextFormat(TEXT, __VA_ARGS__), FONT, FONT_SIZE, (Vector2){X,Y}, COLOR, CENTER, GRID_SCALE)
-#define gui_label_format_v_grid(FONT, FONT_SIZE, POS, GRID_SCALE, COLOR, CENTER, TEXT, ...) gui_label_grid(TextFormat(TEXT, __VA_ARGS__), FONT, FONT_SIZE, POS, COLOR, CENTER, GRID_SCALE)
+#define gui_label_format(FONT, FONT_SIZE, X,Y, COLOR, CENTER_H, CENTER_V, TEXT, ...) gui_label(TextFormat(TEXT, __VA_ARGS__), FONT, FONT_SIZE, (Vector2){X,Y}, COLOR, CENTER_H, CENTER_V)
+#define gui_label_format_v(FONT, FONT_SIZE, POS, COLOR, CENTER_H, CENTER_V, TEXT, ...) gui_label(TextFormat(TEXT, __VA_ARGS__), FONT, FONT_SIZE, POS, COLOR, CENTER_H, CENTER_V)
+#define gui_label_format_grid(FONT, FONT_SIZE, X,Y, GRID_SCALE, COLOR, CENTER_H, CENTER_V, TEXT, ...) gui_label_grid(TextFormat(TEXT, __VA_ARGS__), FONT, FONT_SIZE, (Vector2){X,Y}, COLOR, CENTER_H, CENTER_V, GRID_SCALE)
+#define gui_label_format_v_grid(FONT, FONT_SIZE, POS, GRID_SCALE, COLOR, CENTER_H, CENTER_V, TEXT, ...) gui_label_grid(TextFormat(TEXT, __VA_ARGS__), FONT, FONT_SIZE, POS, COLOR, CENTER_H, CENTER_V, GRID_SCALE)
 
 #define gui_panel_scissored(PANEL, CENTER, CODE)                                      \
     gui_panel(PANEL, PANEL.dest, CENTER);                                             \

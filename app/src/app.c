@@ -5,7 +5,9 @@
 #include "save_game.h"
 #include "sound.h"
 
-#include "tools/pak_parser.h"
+#if USE_PAK_FORMAT 
+  #include "tools/pak_parser.h"
+#endif
 
 #include "core/event.h"
 #include "core/ftime.h"
@@ -51,18 +53,19 @@ bool app_initialize(void) {
     Vector2 res = (Vector2) {GetMonitorWidth(GetCurrentMonitor()), GetMonitorHeight(GetCurrentMonitor())};
     SetWindowSize(res.x, res.y);
     set_resolution(res.x, res.y);
+    SetConfigFlags(FLAG_WINDOW_UNDECORATED | FLAG_WINDOW_TOPMOST);
   }
   else if (state->settings->window_state == FLAG_FULLSCREEN_MODE) {
     ToggleFullscreen();
     Vector2 res = (Vector2) {GetMonitorWidth(GetCurrentMonitor()), GetMonitorHeight(GetCurrentMonitor())};
     SetWindowSize(res.x, res.y);
     set_resolution(res.x, res.y);
+    SetConfigFlags(FLAG_WINDOW_UNDECORATED | FLAG_WINDOW_TOPMOST);
   }
-  SetConfigFlags(FLAG_WINDOW_UNDECORATED | FLAG_WINDOW_TOPMOST);
   state->drawing_target = LoadRenderTexture(BASE_RENDER_RES.x, BASE_RENDER_RES.y);
 
   // Game
-  #ifdef PAK_FILE_LOCATION
+  #if USE_PAK_FORMAT 
     pak_parser_system_initialize(PAK_FILE_LOCATION);
     file_data loading_image_file = fetch_file_data("aaa_game_start_loading_screen.png");
     Image loading_image = LoadImageFromMemory(".png", loading_image_file.data, loading_image_file.size);
@@ -77,21 +80,24 @@ bool app_initialize(void) {
 
     parse_pak();
   #else
+    Texture loading_tex = LoadTexture("aaa_game_start_loading_screen.png");
+
     BeginDrawing();
     ClearBackground(CLEAR_BACKGROUND_COLOR); //TODO: Loading screen
+    DrawTexturePro(loading_tex, 
+      (Rectangle){0, 0, loading_tex.width, loading_tex.height}, 
+      (Rectangle){0, 0, GetScreenWidth(), GetScreenHeight()}, (Vector2){0}, 0, WHITE);
     EndDrawing();
   #endif
   resource_system_initialize();
   sound_system_initialize();
-  create_camera(BASE_RENDER_DIV2);
+  create_camera(BASE_RENDER_SCALE(.5f));
 
-  world_system_initialize(get_in_game_camera(), BASE_RENDER_DIV2);
-  if (!scene_manager_initialize()) {
-    TraceLog(LOG_ERROR, "scene_manager() initialization failed");
-    return false;
-  }
+  world_system_initialize(get_in_game_camera(), BASE_RENDER_SCALE(.5f));
   save_system_initialize();
   parse_or_create_save_data_from_file(SAVE_SLOT_CURRENT_SESSION);
+  
+  scene_manager_initialize();
 
   event_register(EVENT_CODE_APPLICATION_QUIT, application_on_event);
   event_register(EVENT_CODE_TOGGLE_BORDERLESS, application_on_event);

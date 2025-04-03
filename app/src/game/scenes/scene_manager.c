@@ -19,10 +19,13 @@ static scene_manager_system_state *scene_manager_state;
 bool scene_manager_on_event(u16 code, event_context context);
 void begin_scene(scene_id scene_id);
 void end_scene(scene_id scene_id);
+void scene_manager_reinit(void);
 
-bool scene_manager_initialize(void) {
-  if (scene_manager_state) return false;
-
+void scene_manager_initialize(void) {
+  if (scene_manager_state) {
+    scene_manager_reinit();
+    return;
+  }
   scene_manager_state = (scene_manager_system_state *)allocate_memory_linear(sizeof(scene_manager_system_state), true);
 
   event_register(EVENT_CODE_SCENE_IN_GAME, scene_manager_on_event);
@@ -32,9 +35,10 @@ bool scene_manager_initialize(void) {
   event_register(EVENT_CODE_SCENE_MANAGER_SET_CAM_POS, scene_manager_on_event);
   event_register(EVENT_CODE_SCENE_MANAGER_SET_ZOOM, scene_manager_on_event);
 
+  scene_manager_reinit();
+}
+void scene_manager_reinit(void) {
   event_fire(EVENT_CODE_SCENE_MAIN_MENU, (event_context) {0});
-  
-  return true;
 }
 
 void update_scene_scene(void) {
@@ -44,7 +48,10 @@ void update_scene_scene(void) {
     case SCENE_TYPE_MAIN_MENU: update_scene_main_menu();     break;
     case SCENE_TYPE_IN_GAME:   update_scene_in_game();       break;
     case SCENE_TYPE_EDITOR:    update_scene_editor();        break;
-  default: break;
+    default: {
+      event_fire(EVENT_CODE_SCENE_MAIN_MENU, (event_context) {0});
+      return;
+    }
   }
 }
 void render_scene_world(void) {
@@ -52,7 +59,10 @@ void render_scene_world(void) {
     case SCENE_TYPE_MAIN_MENU: render_scene_main_menu();     break;
     case SCENE_TYPE_IN_GAME:   render_scene_in_game();       break;
     case SCENE_TYPE_EDITOR:    render_scene_editor();        break;
-  default: break;
+    default: {
+      event_fire(EVENT_CODE_SCENE_MAIN_MENU, (event_context) {0});
+      return;
+    }
   }
 }
 void render_scene_interface(void) {
@@ -60,7 +70,10 @@ void render_scene_interface(void) {
     case SCENE_TYPE_IN_GAME:   render_interface_in_game();   break;
     case SCENE_TYPE_MAIN_MENU: render_interface_main_menu(); break;
     case SCENE_TYPE_EDITOR:    render_interface_editor();    break;
-  default: break;
+    default: {
+      event_fire(EVENT_CODE_SCENE_MAIN_MENU, (event_context) {0});
+      return;
+    }
   }
 }
 
@@ -75,10 +88,8 @@ Vector2 get_spectator_position(void) {
 }
 void end_scene(scene_id scene_id) {
   switch (scene_id) {
-  case SCENE_TYPE_UNSPECIFIED: {
-    TraceLog(LOG_WARNING, "scene_manager::end_scene()::Scene has not unspecified");
-    return;
-  }
+  case SCENE_TYPE_UNSPECIFIED: { return; }
+
   case SCENE_TYPE_MAIN_MENU: end_scene_main_menu(); return;
   case SCENE_TYPE_IN_GAME: end_scene_in_game(); return;
   case SCENE_TYPE_EDITOR: end_scene_editor(); return;

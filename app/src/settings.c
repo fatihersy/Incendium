@@ -53,18 +53,16 @@ bool set_settings_from_ini_file(const char *file_name) {
   return true;
 }
 
-bool set_resolution(u32 width, u32 height) {
+void set_resolution(u32 width, u32 height) {
   if (!state) {
     TraceLog(LOG_WARNING, "settings::set_resolution()::settings state didn't initialized yet");
-    return 0;
+    return;
   }
   state->settings.window_size = (Vector2) {width, height};
   state->settings.normalized_ratio = state->settings.window_size.x / BASE_RENDER_RES.x;
   state->settings.scale_ratio.x = BASE_RENDER_RES.x / state->settings.window_size.x;
   state->settings.scale_ratio.y = BASE_RENDER_RES.y / state->settings.window_size.y;
   state->offset = 5;
-
-  return save_ini_file();
 }
 
 bool set_master_sound(u32 volume) {
