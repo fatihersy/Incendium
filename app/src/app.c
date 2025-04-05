@@ -1,7 +1,5 @@
 #include "app.h"
-#include "raylib.h"
 #include "settings.h"
-#include "defines.h"
 #include "save_game.h"
 #include "sound.h"
 
@@ -80,7 +78,7 @@ bool app_initialize(void) {
 
     parse_pak();
   #else
-    Texture loading_tex = LoadTexture("aaa_game_start_loading_screen.png");
+    Texture loading_tex = LoadTexture(RESOURCE_PATH "aaa_game_start_loading_screen.png");
 
     BeginDrawing();
     ClearBackground(CLEAR_BACKGROUND_COLOR); //TODO: Loading screen

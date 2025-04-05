@@ -141,7 +141,7 @@ void render_interface_editor(void) {
         Rectangle dest = prop->dest;
         dest.x = 0;
         dest.y = (pnl->scroll * pnl->buffer[0].data.f32[0]) + prop_height_count;
-        gui_draw_atlas_texture_id_pro(prop->atlas_id, prop->relative_source, dest, false);
+        gui_draw_atlas_texture_id_pro(prop->atlas_id, prop->relative_source, dest, false, false);
         prop_height_count += prop->dest.height;
       }
       pnl->buffer[0].data.f32[0] = prop_height_count;
@@ -162,7 +162,7 @@ void render_interface_editor(void) {
         (Rectangle) {
           state->mouse_pos_screen.x, state->mouse_pos_screen.y, 
           state->selected_prop.dest.width, state->selected_prop.dest.height
-        }, false);
+        }, false, false);
       break;
     }
     case SLC_TYPE_SLC_PROP: {

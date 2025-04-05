@@ -202,14 +202,14 @@ void user_interface_system_initialize(void) {
 
   // MAIN MENU
   {  
-  register_button(BTN_ID_MAINMENU_BUTTON_PLAY,     BTN_TYPE_MENU_BUTTON_NO_CRT);
-  register_button(BTN_ID_MAINMENU_BUTTON_EDITOR,   BTN_TYPE_MENU_BUTTON_NO_CRT);
-  register_button(BTN_ID_MAINMENU_BUTTON_SETTINGS, BTN_TYPE_MENU_BUTTON_NO_CRT);
-  register_button(BTN_ID_MAINMENU_BUTTON_UPGRADE,  BTN_TYPE_MENU_BUTTON_NO_CRT);
-  register_button(BTN_ID_MAINMENU_BUTTON_EXIT,     BTN_TYPE_MENU_BUTTON_NO_CRT);
-  register_button(BTN_ID_MAINMENU_SETTINGS_CANCEL, BTN_TYPE_MENU_BUTTON_NO_CRT);
-  register_button(BTN_ID_MAINMENU_UPGRADE_BACK,    BTN_TYPE_MENU_BUTTON_NO_CRT);
-  register_button(BTN_ID_MAINMENU_BACK_BUTTON,     BTN_TYPE_MENU_BUTTON_NO_CRT);
+  register_button(BTN_ID_MAINMENU_BUTTON_PLAY,        BTN_TYPE_MENU_BUTTON_NO_CRT);
+  register_button(BTN_ID_MAINMENU_BUTTON_EDITOR,      BTN_TYPE_MENU_BUTTON_NO_CRT);
+  register_button(BTN_ID_MAINMENU_BUTTON_SETTINGS,    BTN_TYPE_MENU_BUTTON_NO_CRT);
+  register_button(BTN_ID_MAINMENU_BUTTON_UPGRADE,     BTN_TYPE_MENU_BUTTON_NO_CRT);
+  register_button(BTN_ID_MAINMENU_BUTTON_EXIT,        BTN_TYPE_MENU_BUTTON_NO_CRT);
+  register_button(BTN_ID_MAINMENU_SETTINGS_CANCEL,    BTN_TYPE_MENU_BUTTON_NO_CRT);
+  register_button(BTN_ID_MAINMENU_UPGRADE_BACK,       BTN_TYPE_MENU_BUTTON_NO_CRT);
+  register_button(BTN_ID_MAINMENU_UPGRADE_BUY_UPGRADE,BTN_TYPE_MENU_BUTTON_NO_CRT);
   }
   // MAIN MENU
 
@@ -419,10 +419,10 @@ void render_user_interface(void) {
     gui_draw_settings_screen();
   }
 }
-bool gui_menu_button(const char* text, button_id _id, Vector2 grid) {
+bool gui_menu_button(const char* text, button_id _id, Vector2 grid, f32 grid_scale) {
   return gui_button(text, _id, 
     MENU_BUTTON_FONT, MENU_BUTTON_FONT_SIZE, 
-    position_element(grid, BASE_RENDER_SCALE(.5f), state->buttons[_id].btn_type.dest_frame_dim, 2.7f)
+    position_element(grid, BASE_RENDER_SCALE(.5f), state->buttons[_id].btn_type.dest_frame_dim, grid_scale)
   );
 }
 bool gui_mini_button(const char* text, button_id _id, Vector2 grid, f32 grid_scale) {
@@ -568,9 +568,9 @@ void draw_atlas_texture_stretch(atlas_texture_id body, Vector2 pos, Vector2 scal
     second_dest.x -= first_dest.width + (second_dest.width / 2.f);
     third_dest.x  -= first_dest.width + (second_dest.width / 2.f);
   }
-  gui_draw_atlas_texture_id_pro(body, first_source, first_dest, true);
-  gui_draw_atlas_texture_id_pro(body, stretch_part, second_dest, true);
-  gui_draw_atlas_texture_id_pro(body, third_source, third_dest, true);
+  gui_draw_atlas_texture_id_pro(body, first_source, first_dest, true, false);
+  gui_draw_atlas_texture_id_pro(body, stretch_part, second_dest, true, false);
+  gui_draw_atlas_texture_id_pro(body, third_source, third_dest, true, false);
 }
 
 void gui_slider(slider_id _id, Vector2 pos, Vector2 grid, f32 grid_scale) {
@@ -811,7 +811,7 @@ void gui_draw_settings_screen(void) { // TODO: Return to settings later
 
   gui_slider(SDR_ID_SETTINGS_WIN_MODE_SLIDER, BASE_RENDER_SCALE(.5f), VECTOR2(0,10), 3.f);
 
-  if(gui_menu_button("Apply", BTN_ID_SETTINGS_APPLY_SETTINGS_BUTTON, VECTOR2(-2,15))) {
+  if(gui_menu_button("Apply", BTN_ID_SETTINGS_APPLY_SETTINGS_BUTTON, VECTOR2(-2,15), 2.7f)) {
     slider sdr_win_mode = state->sliders[SDR_ID_SETTINGS_WIN_MODE_SLIDER];
     i32 window_mod = sdr_win_mode.options[sdr_win_mode.current_value].content.data.i32[0];
     
@@ -1134,10 +1134,10 @@ inline void gui_draw_map_stage_pin(bool have_hovered, Vector2 screen_loc) {
   icon_loc.y -= icon_loc.height * .5f;
   
   if(have_hovered) {
-    gui_draw_atlas_texture_id_pro(ATLAS_TEX_ID_ICON_ATLAS, (Rectangle){64, 320, 32, 32}, icon_loc, true);
+    gui_draw_atlas_texture_id_pro(ATLAS_TEX_ID_ICON_ATLAS, (Rectangle){64, 320, 32, 32}, icon_loc, true, false);
   }
   else {
-    gui_draw_atlas_texture_id_pro(ATLAS_TEX_ID_ICON_ATLAS, (Rectangle){32, 320, 32, 32}, icon_loc, true);
+    gui_draw_atlas_texture_id_pro(ATLAS_TEX_ID_ICON_ATLAS, (Rectangle){32, 320, 32, 32}, icon_loc, true, false);
   }
 }
 inline Vector2 position_element(Vector2 grid, Vector2 pos, Vector2 dim, f32 f) {
@@ -1269,7 +1269,7 @@ void draw_fade_effect() {
 /**
  * @brief relative if you want to draw from another atlas.
  */
-void gui_draw_atlas_texture_id_pro(atlas_texture_id _id, Rectangle src, Rectangle dest, bool relative) {
+void gui_draw_atlas_texture_id_pro(atlas_texture_id _id, Rectangle src, Rectangle dest, bool relative, bool should_center) {
   if (_id >= ATLAS_TEX_ID_MAX || _id <= ATLAS_TEX_ID_UNSPECIFIED) {
     TraceLog(LOG_WARNING, "user_interface::gui_draw_texture_id_pro()::ID was out of bound"); 
     return; 
@@ -1282,6 +1282,10 @@ void gui_draw_atlas_texture_id_pro(atlas_texture_id _id, Rectangle src, Rectangl
   if (relative) {
     src.x += tex->source.x;
     src.y += tex->source.y;
+  }
+  if (should_center) {
+    dest.x -= dest.width / 2.f;
+    dest.y -= dest.height / 2.f;
   }
   DrawTexturePro(*tex->atlas_handle, src, dest, (Vector2) {0}, 0, WHITE);
 }

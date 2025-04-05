@@ -199,13 +199,12 @@ void gm_start_game(worldmap_stage stage) {
 
   _add_ability(state->p_player->starter_ability);
 }
-void upgrade_player_stat(character_stat* _stat) {
+void upgrade_player_stat(character_stat* stat) {
   if (!state) {
     TraceLog(LOG_ERROR, "game_manager::gm_start_game()::State returned null");
     return;
   }
 
-  character_stat* stat = &state->p_player->stats[_stat->id];
   if (!stat) {
     TraceLog(LOG_ERROR, "game_manager::upgrade_player_stat()::stat returned null");
     return;

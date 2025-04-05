@@ -292,7 +292,7 @@ void render_interface_in_game(void) {
     }
     case IN_GAME_STAGE_PLAY_RESULTS: { 
       draw_end_game_panel();
-      if(gui_menu_button("Accept", BTN_ID_IN_GAME_BUTTON_RETURN_MENU, (Vector2) {0, 5})) {
+      if(gui_menu_button("Accept", BTN_ID_IN_GAME_BUTTON_RETURN_MENU, (Vector2) {0, 5}, 2.7f)) {
         gm_save_game();
         end_scene_in_game();
         event_fire(EVENT_CODE_SCENE_MAIN_MENU, (event_context) {0});
@@ -454,7 +454,7 @@ void draw_in_game_upgrade_panel(ability* abl, ability upg, Rectangle panel_dest)
   const u16 level_ind_font_size = 9; 
   const u16 upgr_font_size = 6; 
 
-  gui_draw_atlas_texture_id_pro(ATLAS_TEX_ID_ICON_ATLAS, upg.icon_src, icon_rect, true);
+  gui_draw_atlas_texture_id_pro(ATLAS_TEX_ID_ICON_ATLAS, upg.icon_src, icon_rect, true, false);
   gui_label(upg.display_name, FONT_TYPE_MOOD, title_font_size, ability_name_pos, WHITE, true, true);
 
   if (upg.level == 1) {
@@ -498,7 +498,7 @@ void draw_passive_selection_panel(character_stat* stat, Rectangle panel_dest) {
 
   const u16 title_font_size = 10; 
   
-  gui_draw_atlas_texture_id_pro(ATLAS_TEX_ID_ICON_ATLAS, stat->passive_icon_src, icon_rect, true);
+  gui_draw_atlas_texture_id_pro(ATLAS_TEX_ID_ICON_ATLAS, stat->passive_icon_src, icon_rect, true, false);
   gui_label(stat->passive_display_name, FONT_TYPE_MOOD, title_font_size, passive_name_pos, WHITE, true, true);
   
   const u16 desc_font_size = 6;
@@ -524,8 +524,6 @@ void draw_end_game_panel() {
   u32 min  = (i32)state->play_time/60;
   u32 secs = (i32)state->play_time%60;
   gui_label_format_v(FONT_TYPE_MOOD, 10, BASE_RENDER_SCALE(.5f), WHITE, true, true, "%d:%d", min, secs);
-
-
 }
 
 #undef STATE_ASSERT

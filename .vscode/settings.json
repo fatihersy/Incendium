@@ -1,7 +1,38 @@
 {
-    "workbench.colorTheme": "Monokai",
-    "editor.minimap.enabled": false,
+    "window.zoomLevel": 0,
     "files.autoSave": "onFocusChange",
+    "workbench.colorTheme": "Oro Theme",
+    "workbench.editor.showTabs": "multiple",
+    "workbench.statusBar.visible": true,
+    "workbench.colorCustomizations": {
+        "editor.selectionHighlightBackground": "#c03a2bf1"
+    },
+    "editor.minimap.enabled": false,
+    "editor.lineNumbers": "on",
+    "editor.cursorStyle": "block",
+    "editor.tabCompletion": "on",
+    "editor.parameterHints.enabled": true,
+    "editor.inlayHints.enabled": "off",
+    "editor.hover.enabled": true,
+    "editor.hover.delay": 800,
+    "editor.cursorSmoothCaretAnimation" : "on",
+    "editor.cursorBlinking": "smooth",
+    "editor.overviewRulerBorder": false,
+    "editor.showFoldingControls" :"mouseover",
+    "editor.renderWhitespace": "none",
+    "editor.quickSuggestionsDelay": 0,
+    "editor.fontFamily": "Fira Code Retina",
+    "editor.fontSize": 14,
+    "editor.fontLigatures": "'cv01', 'cv04', 'cv08', 'ss01', 'zero', 'cv14', 'cv17', 'ss05', 'ss04', 'cv18', 'ss03', 'cv30', 'ss02'",
+    "editor.quickSuggestions": {
+        "other": "on",
+        "comments": "on",
+        "strings": "on"
+    },
+    "editor.tokenColorCustomizations": {
+        "textMateRules": []
+    },
+    "terminal.integrated.fontFamily": "FiraMono Nerd Font",
     "terminal.integrated.defaultProfile.windows": "pwsh7",
     "terminal.integrated.defaultProfile.linux": "zsh",
     "terminal.integrated.profiles.windows": {
@@ -24,26 +55,6 @@
             "path": "D:/Program Files/PowerShell/7/pwsh.exe"
         }
     },
-    "editor.fontFamily": "Fira Code Medium",
-    "editor.fontSize": 15,
-    "editor.fontLigatures": "'cv01', 'cv04', 'cv08', 'ss01', 'zero', 'cv14', 'cv17', 'ss05', 'ss04', 'cv18', 'ss03', 'cv30', 'ss02'",
-    "terminal.integrated.fontFamily": "FiraMono Nerd Font",
-    "workbench.editor.showTabs": "multiple",
-    "workbench.colorCustomizations": {
-        "editor.selectionHighlightBackground": "#c03a2bf1"
-    },
-    "workbench.statusBar.visible": true,
-    "editor.lineNumbers": "on",
-    "editor.cursorStyle": "block",
-    "editor.tabCompletion": "on",
-    "editor.hover.enabled": true,
-    "editor.hover.delay": 800,
-    "editor.quickSuggestions": {
-        "other": "on",
-        "comments": "on",
-        "strings": "on"
-    },
-    "window.zoomLevel": 0,
     "todohighlight.isEnable": true,
     "todohighlight.keywords": [
         {

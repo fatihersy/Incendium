@@ -1,10 +1,13 @@
 #include "sound.h"
+#include "defines.h"
 #include "raylib.h"
 
 #include "core/fmemory.h"
 #include "core/event.h"
 
-#include "tools/pak_parser.h"
+#if USE_PAK_FORMAT 
+  #include "tools/pak_parser.h"
+#endif
 
 // TODO: Destroy sound system
 
@@ -35,7 +38,7 @@ void sound_system_initialize(void) {
 
   InitAudioDevice();
   
-  load_sound("button_click.wav", SOUND_ID_BUTTON_ON_CLICK);
+  load_sound("button_click1.wav", SOUND_ID_BUTTON_ON_CLICK);
   load_sound("fire_hit.wav", SOUND_ID_FIRE_ON_HIT);
   load_music("main_menu_theme.wav", MUSIC_ID_MAIN_MENU_THEME);
   load_music("night_theme_2.wav", MUSIC_ID_NIGHT_THEME2);
@@ -64,14 +67,21 @@ void update_sound_system(void) {
 }
 
 void load_sound(const char* file_name, sound_id id) {
-  file_data file = get_file_data(file_name);
-
-  if (!file.is_initialized) {
-    TraceLog(LOG_ERROR, "file:'%s' is not initialized", file.file_name);
-    return;
-  }
+  file_data file = {0};
+  Wave wav = {0};
   sound_data data = {0};
-  Wave wav = LoadWaveFromMemory((const char*)file.file_extension, file.data, file.size);
+
+  #if USE_PAK_FORMAT
+    file = get_file_data(file_name);
+    wav = LoadWaveFromMemory((const char*)file.file_extension, file.data, file.size);
+    if (!file.is_initialized) {
+      TraceLog(LOG_ERROR, "file:'%s' is not initialized", file.file_name);
+      return;
+    }
+  #else
+    wav = LoadWave(TextFormat("%s%s", RESOURCE_PATH, file_name));
+  #endif
+
   data.wav = wav;
   data.file = file;
   data.id = id;
@@ -80,16 +90,23 @@ void load_sound(const char* file_name, sound_id id) {
 }
 
 void load_music(const char* file_name, music_id id) {
-  file_data file = get_file_data(file_name);
+  file_data file = {0};
+  Music music = {0};
 
-  if (!file.is_initialized) {
-    TraceLog(LOG_ERROR, "file:'%s' is not initialized", file.file_name);
-    return;
-  }
+  #if USE_PAK_FORMAT
+    file = get_file_data(file_name);
+    music = LoadMusicStreamFromMemory((const char*)file.file_extension, file.data, file.size);
+    if (!file.is_initialized) {
+      TraceLog(LOG_ERROR, "file:'%s' is not initialized", file.file_name);
+      return;
+    }
+  #else
+    music = LoadMusicStream(TextFormat("%s%s", RESOURCE_PATH, file_name));
+  #endif
+
   music_data data = {0};
   data.file = file;
   data.id = id;
-  Music music = LoadMusicStreamFromMemory((const char*)file.file_extension, file.data, file.size);
   data.handle = music;
   state->musics[id] = data;
 }

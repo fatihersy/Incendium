@@ -118,7 +118,7 @@ Vector2* ui_get_mouse_pos(void);
 bool gui_slider_add_option(slider_id _id, const char* _display_text, data_pack content);
 Rectangle get_atlas_texture_source_rect(atlas_texture_id _id);
 
-bool gui_menu_button(const char* text, button_id _id, Vector2 grid);
+bool gui_menu_button(const char* text, button_id _id, Vector2 grid, f32 grid_scale);
 bool gui_mini_button(const char* text, button_id _id, Vector2 grid, f32 grid_scale);
 bool gui_slider_button(button_id _id, Vector2 pos);
 void gui_slider(slider_id _id, Vector2 pos, Vector2 grid, f32 grid_scale);
@@ -133,7 +133,7 @@ void gui_label_grid(const char* text, font_type type, i32 font_size, Vector2 pos
 void gui_label_wrap_grid(const char* text, font_type type, i32 font_size, Rectangle position, Color tint, bool _should_center, f32 grid_scale);
 
 void gui_draw_pause_screen(void);
-void gui_draw_atlas_texture_id_pro(atlas_texture_id _id, Rectangle src, Rectangle dest, bool relative); 
+void gui_draw_atlas_texture_id_pro(atlas_texture_id _id, Rectangle src, Rectangle dest, bool relative, bool should_center); 
 void gui_draw_atlas_texture_id(atlas_texture_id _id, Rectangle dest); 
 void gui_draw_atlas_texture_id_scale(atlas_texture_id _id, Vector2 position, f32 scale, Color tint, bool should_center); 
 void gui_draw_atlas_texture_id_pro_grid(atlas_texture_id _id, Rectangle src, Rectangle dest, bool relative, f32 grid_scale); 
