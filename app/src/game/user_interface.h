@@ -118,8 +118,8 @@ Vector2* ui_get_mouse_pos(void);
 bool gui_slider_add_option(slider_id _id, const char* _display_text, data_pack content);
 Rectangle get_atlas_texture_source_rect(atlas_texture_id _id);
 
-bool gui_menu_button(const char* text, button_id _id, Vector2 grid, f32 grid_scale);
-bool gui_mini_button(const char* text, button_id _id, Vector2 grid, f32 grid_scale);
+bool gui_menu_button(const char* text, button_id _id, Vector2 grid, f32 grid_scale, bool play_on_click_sound);
+bool gui_mini_button(const char* text, button_id _id, Vector2 grid, f32 grid_scale, bool play_on_click_sound);
 bool gui_slider_button(button_id _id, Vector2 pos);
 void gui_slider(slider_id _id, Vector2 pos, Vector2 grid, f32 grid_scale);
 void gui_draw_texture_to_background(texture_id _id);

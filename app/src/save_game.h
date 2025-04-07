@@ -6,6 +6,8 @@
 typedef struct save_data {
   u8 file_name[MAX_FILENAME_LENGTH];
   u32 currency_souls_player_have;
+  player_state p_player;
+  bool is_success;
 } save_data;
 
 typedef enum save_slots {

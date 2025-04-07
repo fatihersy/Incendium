@@ -22,11 +22,6 @@ bool player_system_initialize(void) {
   }
   player = (player_state*)allocate_memory_linear(sizeof(player_state), true);
 
-  if (!player) {
-    TraceLog(LOG_FATAL, "player::player_system_initialize()::Player system allocation failed");
-    return false;
-  }
-
   player->move_left_sprite.sheet_id = SHEET_ID_PLAYER_ANIMATION_MOVE_LEFT;
   player->move_right_sprite.sheet_id = SHEET_ID_PLAYER_ANIMATION_MOVE_RIGHT;
   player->idle_left_sprite.sheet_id = SHEET_ID_PLAYER_ANIMATION_IDLE_LEFT;
@@ -46,70 +41,78 @@ bool player_system_initialize(void) {
 
   {
     player->stats[CHARACTER_STATS_UNDEFINED] = (character_stat){0};
-
+    u16 level = 1;
     player->stats[CHARACTER_STATS_HEALTH] = (character_stat){
 			.id = CHARACTER_STATS_HEALTH,
-			.level = 1,
+			.level = level,
 			.buffer.i32 = {0},
 			.passive_display_name = "Life Essance",
 			.passive_desc = "Essential",
-			.passive_icon_src = (Rectangle){512, 320, 32, 32}
+			.passive_icon_src = (Rectangle){512, 320, 32, 32},
+      .upgrade_cost = level_curve[level]
 		};
     player->stats[CHARACTER_STATS_HP_REGEN] = (character_stat){
 			.id = CHARACTER_STATS_HP_REGEN,
-			.level = 1,
+			.level = level,
 			.buffer.i32 = {0},
 			.passive_display_name = "Bread",
 			.passive_desc = "Keeps you fed",
-			.passive_icon_src = (Rectangle){288, 288, 32, 32}
+			.passive_icon_src = (Rectangle){288, 288, 32, 32},
+      .upgrade_cost = level_curve[level]
 		};
     player->stats[CHARACTER_STATS_MOVE_SPEED] = (character_stat){
 		  .id = CHARACTER_STATS_MOVE_SPEED,
-		  .level = 1,
+		  .level = level,
 		  .buffer.i32 = {0},
 		  .passive_display_name = "Cardinal Boots",
 		  .passive_desc = "Increases move speed",
-		  .passive_icon_src = (Rectangle){64, 352, 32, 32}
+		  .passive_icon_src = (Rectangle){64, 352, 32, 32},
+      .upgrade_cost = level_curve[level]
 		};
     player->stats[CHARACTER_STATS_AOE] = (character_stat){
 			.id = CHARACTER_STATS_AOE,
-			.level = 1,
+			.level = level,
 			.buffer.i32 = {0},
 			.passive_display_name = "Blast Scroll",
 			.passive_desc = "Increase the area",
-			.passive_icon_src = (Rectangle){320, 32, 32, 32}
+			.passive_icon_src = (Rectangle){320, 32, 32, 32},
+      .upgrade_cost = level_curve[level]
 		};
     player->stats[CHARACTER_STATS_DAMAGE] = (character_stat){
 			.id = CHARACTER_STATS_DAMAGE,
-			.level = 1,
+			.level = level,
 			.buffer.i32 = {0},
 			.passive_display_name = "Heavy Cross",
 			.passive_desc = "Increases Damage",
-			.passive_icon_src = (Rectangle){288, 32, 32, 32}
+			.passive_icon_src = (Rectangle){288, 32, 32, 32},
+      .upgrade_cost = level_curve[level]
 		};
     player->stats[CHARACTER_STATS_ABILITY_CD] = (character_stat){
 			.id = CHARACTER_STATS_ABILITY_CD,
-			.level = 1,
+			.level = level,
 			.buffer.i32 = {0},
 			.passive_display_name = "Hourglass",
 			.passive_desc = "Reduce CD",
-			.passive_icon_src = (Rectangle){128, 64, 32, 32}
+			.passive_icon_src = (Rectangle){128, 64, 32, 32},
+      .upgrade_cost = level_curve[level]
 		};
     player->stats[CHARACTER_STATS_PROJECTILE_AMOUTH] = (character_stat){
 			.id = CHARACTER_STATS_PROJECTILE_AMOUTH,
-			.level = 1,
+			.level = level,
 			.buffer.i32 = {0},
 			.passive_display_name = "Second Hand",
 			.passive_desc = "Increases projectile amouth",
-			.passive_icon_src = (Rectangle){64, 448, 32, 32}
+			.passive_icon_src = (Rectangle){64, 448, 32, 32},
+      .upgrade_cost = level_curve[level]
 		};
     player->stats[CHARACTER_STATS_EXP_GAIN] = (character_stat){
 			.id = CHARACTER_STATS_EXP_GAIN,
-			.level = 1,
+			.level = level,
 			.buffer.i32 = {0},
 			.passive_display_name = "Seeing Eyes",
 			.passive_desc = "Increases experiance gain",
-			.passive_icon_src = (Rectangle){192, 32, 32, 32}
+			.passive_icon_src = (Rectangle){192, 32, 32, 32},
+      .upgrade_cost = level_curve[level]
 		};
   }
 

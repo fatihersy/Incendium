@@ -8,7 +8,7 @@ echo "Building everything..."
 # source build.sh
 # popd
 
-bear -- make -f Makefile.app.linux.mak all
+bear --append -- make -f "Makefile.app.linux.mak" all
 ERRORLEVEL=$?
 if [ $ERRORLEVEL -ne 0 ]
 then

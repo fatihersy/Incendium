@@ -30,14 +30,12 @@ typedef struct scene_in_game_state {
   camera_metrics* in_camera_metrics;
   f32 play_time;
 
-  u16 clouds_animation_timer;
   u16 hovered_stage;
-
   bool has_game_started;
-  bool clouds_animation_playing;
 } scene_in_game_state;
 
 static scene_in_game_state *restrict state;
+
 
 #define STATE_ASSERT(FUNCTION) if (!state) {                                              \
   TraceLog(LOG_ERROR, "scene_in_game::" FUNCTION "::In game state was not initialized");  \
@@ -140,11 +138,6 @@ void render_scene_in_game(void) {
 
   switch (state->stage) {
     case IN_GAME_STAGE_MAP_CHOICE: {
-      if (IsKeyReleased(KEY_R)) {
-        state->clouds_animation_playing = true;
-        state->clouds_animation_timer = 0;
-        event_fire(EVENT_CODE_UI_START_FADEOUT_EFFECT, (event_context){ .data.u16[0] = CLOUDS_ANIMATION_DURATION});
-      }
  
       gui_draw_texture_id(TEX_ID_WORLDMAP_WO_CLOUDS, (Rectangle) {0, 0, BASE_RENDER_RES.x, BASE_RENDER_RES.y});
       for (int i=0; i<MAX_WORLDMAP_LOCATIONS; ++i) {
@@ -292,7 +285,7 @@ void render_interface_in_game(void) {
     }
     case IN_GAME_STAGE_PLAY_RESULTS: { 
       draw_end_game_panel();
-      if(gui_menu_button("Accept", BTN_ID_IN_GAME_BUTTON_RETURN_MENU, (Vector2) {0, 5}, 2.7f)) {
+      if(gui_menu_button("Accept", BTN_ID_IN_GAME_BUTTON_RETURN_MENU, (Vector2) {0, 5}, 2.7f, true)) {
         gm_save_game();
         end_scene_in_game();
         event_fire(EVENT_CODE_SCENE_MAIN_MENU, (event_context) {0});
@@ -403,7 +396,6 @@ void begin_scene_in_game(void) {
   }
   state->worldmap_selection_panel = state->default_panel;
   state->stage = IN_GAME_STAGE_MAP_CHOICE;
-  state->clouds_animation_playing = false;
   state->hovered_stage = U16_MAX;
 
   event_fire(EVENT_CODE_UI_START_FADEIN_EFFECT, (event_context){ .data.u16[0] = CLOUDS_ANIMATION_DURATION });

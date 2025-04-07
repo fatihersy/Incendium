@@ -89,7 +89,7 @@ void draw_atlas_texture_stretch(atlas_texture_id body, Vector2 pos, Vector2 scal
 void draw_atlas_texture_regular(atlas_texture_id _id, Rectangle dest, Color tint, bool should_center);
 void draw_atlas_texture_npatch(atlas_texture_id _id, Rectangle dest, Vector4 offsets, bool should_center);
 void gui_draw_settings_screen(void);
-bool gui_button(const char* text, button_id _id, Font font, f32 font_size_scale, Vector2 pos);
+bool gui_button(const char* text, button_id _id, Font font, f32 font_size_scale, Vector2 pos, bool play_on_click_sound);
 
 void register_button(button_id _btn_id, button_type_id _btn_type_id);
 void register_button_type(button_type_id _btn_type_id, spritesheet_id _ss_type, Vector2 frame_dim, Vector2 on_click_text_offset, f32 _scale, bool _play_reflection, bool _should_center);
@@ -419,23 +419,25 @@ void render_user_interface(void) {
     gui_draw_settings_screen();
   }
 }
-bool gui_menu_button(const char* text, button_id _id, Vector2 grid, f32 grid_scale) {
+bool gui_menu_button(const char* text, button_id _id, Vector2 grid, f32 grid_scale, bool play_on_click_sound) {
   return gui_button(text, _id, 
     MENU_BUTTON_FONT, MENU_BUTTON_FONT_SIZE, 
-    position_element(grid, BASE_RENDER_SCALE(.5f), state->buttons[_id].btn_type.dest_frame_dim, grid_scale)
+    position_element(grid, BASE_RENDER_SCALE(.5f), state->buttons[_id].btn_type.dest_frame_dim, grid_scale),
+    play_on_click_sound
   );
 }
-bool gui_mini_button(const char* text, button_id _id, Vector2 grid, f32 grid_scale) {
+bool gui_mini_button(const char* text, button_id _id, Vector2 grid, f32 grid_scale, bool play_on_click_sound) {
   return gui_button(text, _id, 
     MINI_BUTTON_FONT, MINI_BUTTON_FONT_SIZE, 
-    position_element(grid, BASE_RENDER_SCALE(.5f), state->buttons[_id].btn_type.dest_frame_dim, grid_scale)
+    position_element(grid, BASE_RENDER_SCALE(.5f), state->buttons[_id].btn_type.dest_frame_dim, grid_scale),
+    play_on_click_sound
   );
 }
 bool gui_slider_button(button_id _id, Vector2 pos) {
-  return gui_button("", _id, (Font) {0}, 0, pos);
+  return gui_button("", _id, (Font) {0}, 0, pos, true);
 }
 
-bool gui_button(const char* text, button_id _id, Font font, f32 font_size_scale, Vector2 pos) {
+bool gui_button(const char* text, button_id _id, Font font, f32 font_size_scale, Vector2 pos, bool play_on_click_sound) {
   if (_id >= BTN_ID_MAX || _id <= BTN_ID_UNDEFINED) {
     TraceLog(LOG_WARNING, "user_interface::gui_button()::Recieved button type out of bound");
     return false;
@@ -470,7 +472,7 @@ bool gui_button(const char* text, button_id _id, Font font, f32 font_size_scale,
       Vector2 pressed_text_pos = vec2_add(text_pos, _btn_type->text_offset_on_click);
       draw_text(text, pressed_text_pos, font, font.baseSize * font_size_scale, BUTTON_TEXT_PRESSED_COLOR, false, false, false, 0.f);
     }
-    event_fire(EVENT_CODE_PLAY_BUTTON_ON_CLICK, (event_context) { .data.u16[0] = true});
+    if (play_on_click_sound) event_fire(EVENT_CODE_PLAY_BUTTON_ON_CLICK, (event_context) { .data.u16[0] = true});
   } else {
     draw_sprite_on_site_by_id(_btn->btn_type.ss_type, WHITE, VECTOR2(_btn->dest.x,_btn->dest.y), draw_sprite_scale, 0, false);
     if (_btn->state == BTN_STATE_HOVER) {
@@ -811,7 +813,7 @@ void gui_draw_settings_screen(void) { // TODO: Return to settings later
 
   gui_slider(SDR_ID_SETTINGS_WIN_MODE_SLIDER, BASE_RENDER_SCALE(.5f), VECTOR2(0,10), 3.f);
 
-  if(gui_menu_button("Apply", BTN_ID_SETTINGS_APPLY_SETTINGS_BUTTON, VECTOR2(-2,15), 2.7f)) {
+  if(gui_menu_button("Apply", BTN_ID_SETTINGS_APPLY_SETTINGS_BUTTON, VECTOR2(-2,15), 2.7f, true)) {
     slider sdr_win_mode = state->sliders[SDR_ID_SETTINGS_WIN_MODE_SLIDER];
     i32 window_mod = sdr_win_mode.options[sdr_win_mode.current_value].content.data.i32[0];
     
@@ -841,13 +843,13 @@ void gui_draw_pause_screen(void) {
   };
   gui_panel(state->default_panel, dest, true);
 
-  if (gui_mini_button("Inventory", BTN_ID_PAUSEMENU_BUTTON_INVENTORY, (Vector2) {-5.00f, -10.f}, 1.1f)) {
+  if (gui_mini_button("Inventory", BTN_ID_PAUSEMENU_BUTTON_INVENTORY, (Vector2) {-5.00f, -10.f}, 1.1f, true)) {
     state->b_show_pause_menu = !state->b_show_pause_menu;
   }
-  if (gui_mini_button("Update", BTN_ID_PAUSEMENU_BUTTON_TECHNOLOGIES, (Vector2) {-2.50f, -10.f}, 1.1f)) {}
-  if (gui_mini_button("Settings", BTN_ID_PAUSEMENU_BUTTON_SETTINGS,   (Vector2) { 0.00f, -10.f}, 1.1f)) {}
-  if (gui_mini_button("Credits", BTN_ID_PAUSEMENU_BUTTON_CREDITS,     (Vector2) { 2.50f, -10.f}, 1.1f)) {}
-  if (gui_mini_button("Exit", BTN_ID_PAUSEMENU_BUTTON_EXIT,           (Vector2) { 5.00f, -10.f}, 1.1f)) {
+  if (gui_mini_button("Update", BTN_ID_PAUSEMENU_BUTTON_TECHNOLOGIES, (Vector2) {-2.50f, -10.f}, 1.1f, true)) {}
+  if (gui_mini_button("Settings", BTN_ID_PAUSEMENU_BUTTON_SETTINGS,   (Vector2) { 0.00f, -10.f}, 1.1f, true)) {}
+  if (gui_mini_button("Credits", BTN_ID_PAUSEMENU_BUTTON_CREDITS,     (Vector2) { 2.50f, -10.f}, 1.1f, true)) {}
+  if (gui_mini_button("Exit", BTN_ID_PAUSEMENU_BUTTON_EXIT,           (Vector2) { 5.00f, -10.f}, 1.1f, true)) {
     event_fire(EVENT_CODE_APPLICATION_QUIT, (event_context) {0});
   }
 }

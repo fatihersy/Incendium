@@ -45,6 +45,9 @@ bool resource_system_initialize(void) {
   load_texture_from_atlas(ATLAS_TEX_ID_ZOMBIES_SPRITESHEET,       (Rectangle){2224,   0,   256,  480});
   load_texture_from_atlas(ATLAS_TEX_ID_CRIMSON_FANTASY_SHOWCASE,  (Rectangle){1568,1088,    68,   68});
   load_texture_from_atlas(ATLAS_TEX_ID_PASSIVE_UPGRADE_TIER_STAR, (Rectangle){1648,1088,    28,   28});
+  load_texture_from_atlas(ATLAS_TEX_ID_CURRENCY_SOUL_ICON_5000,   (Rectangle){1888, 736,    32,   32});
+  load_texture_from_atlas(ATLAS_TEX_ID_CURRENCY_SOUL_ICON_15000,  (Rectangle){1920, 736,    32,   32});
+  load_texture_from_atlas(ATLAS_TEX_ID_CURRENCY_SOUL_ICON_45000,  (Rectangle){1952, 736,    32,   32});
 
   load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_PLAYER_ANIMATION_IDLE_LEFT,         VECTOR2(1584, 288), 15,   22,  32, 1,  4);
   load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_PLAYER_ANIMATION_IDLE_RIGHT,        VECTOR2(1584, 224), 15,   22,  32, 1,  4);

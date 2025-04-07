@@ -254,6 +254,7 @@ typedef enum character_stats {
 typedef enum sound_id {
   SOUND_ID_UNSPECIFIED,
   SOUND_ID_BUTTON_ON_CLICK,
+  SOUND_ID_DENY,
   SOUND_ID_FIRE_ON_HIT,
   SOUND_ID_MAX,
 } sound_id;
@@ -290,6 +291,9 @@ typedef enum atlas_texture_id {
   ATLAS_TEX_ID_ICON_ATLAS,
   ATLAS_TEX_ID_ZOMBIES_SPRITESHEET,
   ATLAS_TEX_ID_UI_ASSET_ATLAS,
+  ATLAS_TEX_ID_CURRENCY_SOUL_ICON_5000,
+  ATLAS_TEX_ID_CURRENCY_SOUL_ICON_15000,
+  ATLAS_TEX_ID_CURRENCY_SOUL_ICON_45000,
   ATLAS_TEX_ID_MAX,
 } atlas_texture_id;
 
@@ -719,6 +723,7 @@ typedef struct character_stat {
   char passive_display_name[MAX_PASSIVE_NAME_LENGTH];
   char passive_desc[MAX_PASSIVE_DESC_LENGTH];
   Rectangle passive_icon_src;
+  i32 upgrade_cost;
 
   // 128 byte buffer
   union {

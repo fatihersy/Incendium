@@ -39,6 +39,7 @@ void sound_system_initialize(void) {
   InitAudioDevice();
   
   load_sound("button_click1.wav", SOUND_ID_BUTTON_ON_CLICK);
+  load_sound("deny.wav", SOUND_ID_DENY);
   load_sound("fire_hit.wav", SOUND_ID_FIRE_ON_HIT);
   load_music("main_menu_theme.wav", MUSIC_ID_MAIN_MENU_THEME);
   load_music("night_theme_2.wav", MUSIC_ID_NIGHT_THEME2);

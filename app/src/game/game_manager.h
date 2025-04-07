@@ -11,6 +11,7 @@ void update_game_manager(void);
 
 u16 get_remaining_enemies(void);
 u32 get_currency_souls(void);
+void set_currency_souls(i32 value);
 bool get_b_player_have_upgrade_points(void);
 ability* get_player_ability(ability_type type);
 character_stat* get_player_stat(character_stats stat);
@@ -25,9 +26,12 @@ void toggle_is_game_end(void);
 void gm_start_game(worldmap_stage stage);
 void gm_reset_game();
 void gm_save_game();
+void gm_load_game();
 void damage_any_spawn(Character2D *projectile);
 void damage_any_collider_by_type(Character2D from_actor, actor_type to_type);
 void upgrade_player_stat(character_stat* stat);
+void refresh_player_stats();
+void currency_souls_add(i32 value);
 
 bool _add_ability(ability_type _type);
 Vector2 _get_player_position(bool centered);

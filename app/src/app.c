@@ -1,6 +1,5 @@
 #include "app.h"
 #include "settings.h"
-#include "save_game.h"
 #include "sound.h"
 
 #if USE_PAK_FORMAT 
@@ -92,9 +91,6 @@ bool app_initialize(void) {
   create_camera(BASE_RENDER_SCALE(.5f));
 
   world_system_initialize(get_in_game_camera(), BASE_RENDER_SCALE(.5f));
-  save_system_initialize();
-  parse_or_create_save_data_from_file(SAVE_SLOT_CURRENT_SESSION);
-  
   scene_manager_initialize();
 
   event_register(EVENT_CODE_APPLICATION_QUIT, application_on_event);
