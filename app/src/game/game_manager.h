@@ -24,13 +24,13 @@ void set_is_game_end(bool _is_game_end);
 void toggle_is_game_end(void);
 
 void gm_start_game(worldmap_stage stage);
-void gm_reset_game();
-void gm_save_game();
-void gm_load_game();
+void gm_reset_game(void);
+void gm_save_game(void);
+void gm_load_game(void);
 void damage_any_spawn(Character2D *projectile);
 void damage_any_collider_by_type(Character2D from_actor, actor_type to_type);
 void upgrade_player_stat(character_stat* stat);
-void refresh_player_stats();
+void refresh_player_stats(void);
 void currency_souls_add(i32 value);
 
 bool _add_ability(ability_type _type);
@@ -40,6 +40,7 @@ u16 _spawn_character(Character2D _character);
 void _set_player_position(Vector2 position);
 ability _get_next_level(ability abl);
 ability _get_ability(ability_type type);
+player_state* _get_player_state(void);
 
 void render_game(void);
 

@@ -73,7 +73,7 @@ void initialize_scene_editor(camera_metrics* _camera_metrics) {
     return;
   }
   state->in_camera_metrics = _camera_metrics;
-  world_system_initialize(_camera_metrics, BASE_RENDER_SCALE(.5f));
+  world_system_initialize(_camera_metrics);
 
   user_interface_system_initialize();
   

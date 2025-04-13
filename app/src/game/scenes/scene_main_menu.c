@@ -1,8 +1,8 @@
 #include "scene_main_menu.h"
 #include <reasings.h>
 
-#include "core/event.h"
 #include "core/fmemory.h"
+#include "core/event.h"
 
 #include "game/game_manager.h"
 #include "game/user_interface.h"
@@ -16,15 +16,16 @@ typedef enum main_menu_scene_type {
 } main_menu_scene_type;
 
 typedef struct main_menu_scene_state {
-  main_menu_scene_type type;
-  scene_id next_scene;
   panel upgrade_list_panel;
   panel upgrade_details_panel;
-  character_stat *hovered_stat;
-  Vector2 mouse_pos;
-  camera_metrics *in_camera_metrics;
-  u32 deny_notify_timer;
 
+  character_stat *hovered_stat;
+  camera_metrics *in_camera_metrics;
+  
+  Vector2 mouse_pos;
+  u32 deny_notify_timer;
+  main_menu_scene_type type;
+  scene_id next_scene;
   bool in_scene_changing_process;
   bool scene_changing_process_complete;
 } main_menu_scene_state;
@@ -43,6 +44,7 @@ void begin_scene_main_menu(void);
 void draw_main_menu_upgrade_panel(void);
 void draw_main_menu_upgrade_list_panel(void);
 void draw_main_menu_upgrade_details_panel(void);
+Rectangle smm_get_camera_view_rect(Camera2D camera);
 
 void initialize_scene_main_menu(camera_metrics *_camera_metrics) {
   if (state) {
@@ -57,6 +59,7 @@ void initialize_scene_main_menu(camera_metrics *_camera_metrics) {
 
 void update_scene_main_menu(void) {
   update_user_interface();
+  state->in_camera_metrics->frustum = smm_get_camera_view_rect(state->in_camera_metrics->handle);
 
   event_fire(EVENT_CODE_SCENE_MANAGER_SET_CAM_POS, (event_context) { .data.f32[0] = 0, .data.f32[1] = 0, });
   if (state->in_scene_changing_process && is_ui_fade_anim_about_to_complete()) {
@@ -345,4 +348,18 @@ void draw_main_menu_upgrade_details_panel(void) {
       state->deny_notify_timer = DENY_NOTIFY_TIME;
     }
   }
+}
+
+Rectangle smm_get_camera_view_rect(Camera2D camera) {
+
+  f32 view_width = BASE_RENDER_RES.x / camera.zoom;
+  f32 view_height = BASE_RENDER_RES.y / camera.zoom;
+
+  f32 x = camera.target.x;
+  f32 y = camera.target.y;
+  
+  x -= camera.offset.x/camera.zoom;
+  y -= camera.offset.y/camera.zoom;
+  
+  return (Rectangle){ x, y, view_width, view_height };
 }

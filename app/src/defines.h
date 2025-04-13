@@ -69,7 +69,7 @@
 
 #define MAX_PLAYER_LEVEL 100
 #define MAX_SPAWN_COUNT 100
-#define MAX_SPAWN_COLLISIONS 10
+#define MAX_SPAWN_COLLISIONS 1
 
 #define MAX_ABILITY_NAME_LENGTH 10
 #define MAX_ABILITY_SLOT 5
@@ -542,6 +542,7 @@ typedef struct worldmap_stage {
   char filename[MAX_WORLDMAP_LOCATION_NAME_LENGTH];
   Rectangle spawning_areas[MAX_SPAWN_COLLISIONS];
   Vector2 screen_location;
+  bool is_centered;
   bool is_active;
 } worldmap_stage;
 
@@ -794,6 +795,7 @@ typedef struct player_state {
 typedef struct camera_metrics {
   Camera2D handle;
   Vector2 screen_offset;
+  Rectangle frustum;
 } camera_metrics;
 
 static const u32 level_curve[MAX_PLAYER_LEVEL + 1] = {

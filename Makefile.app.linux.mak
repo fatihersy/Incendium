@@ -8,9 +8,8 @@ ASSEMBLY := app
 EXTENSION := 
 COMPILER_FLAGS := -g -MD -Werror=vla -Wall -Wextra -Wpedantic -std=c23
 INCLUDE_FLAGS := -I./app/src -I./vendor/include
-LINKER_FLAGS := -L./$(BUILD_DIR) -L./vendor/lib/ -lraylib -lGL -lm -lpthread -ldl -lrt -lX11
-DEFINES := -D_DEBUG -DKIMPORT
-
+LINKER_FLAGS := -L./$(OBJ_DIR)/ -L./$(VENDOR_DIR)/lib/ -L./$(BUILD_DIR) -lraylib -lGL -lm -lpthread -ldl -lrt -lX11
+DEFINES := -D_DEBUG
 # Make does not offer a recursive wildcard function, so here's one:
 #rwildcard=$(wildcard $1$2) $(foreach d,$(wildcard $1*),$(call rwildcard,$d/,$2))
 

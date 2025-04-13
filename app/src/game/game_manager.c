@@ -19,6 +19,7 @@ typedef struct game_manager_system_state {
   worldmap_stage stage;
 
   save_data* game_progression_data;
+  camera_metrics* in_camera_metrics;
 
   bool is_game_end;
   bool is_game_paused;
@@ -35,6 +36,7 @@ extern const u32 level_curve[MAX_PLAYER_LEVEL+1];
 bool game_manager_on_event(u16 code, event_context context);
 void game_manager_reinit(void);
 void game_manager_refresh_stats(character_stat* stats);
+void populate_map_with_spawns(void);
 
 bool game_manager_initialize(camera_metrics* _camera_metrics) {
   if (state) {
@@ -42,13 +44,18 @@ bool game_manager_initialize(camera_metrics* _camera_metrics) {
     return true;
   }
   state = (game_manager_system_state *)allocate_memory_linear(sizeof(game_manager_system_state), true);
-
-  if (!ability_system_initialize(_camera_metrics, get_app_settings())) {
-    TraceLog(LOG_ERROR, "game_manager::ability_system_initialize()::Returned false");
+  if (!state) {
+    TraceLog(LOG_ERROR, "game_manager::game_manager_initialize()::Gama manager state allocation failed");
     return false;
   }
-  if (!spawn_system_initialize()) {
-    TraceLog(LOG_ERROR, "game_manager::spawn_system_initialize()::Returned false");
+  state->in_camera_metrics = _camera_metrics;
+
+  if (!ability_system_initialize(_camera_metrics, get_app_settings())) {
+    TraceLog(LOG_ERROR, "game_manager::game_manager_initialize()::Ability system init returned false");
+    return false;
+  }
+  if (!spawn_system_initialize(_camera_metrics)) {
+    TraceLog(LOG_ERROR, "game_manager::game_manager_initialize()::Spawn system init returned false");
     return false;
   }
 
@@ -62,8 +69,27 @@ bool game_manager_initialize(camera_metrics* _camera_metrics) {
   game_manager_reinit();
   return true;
 }
+void game_manager_reinit(void) {
+  save_system_initialize();
 
-void update_game_manager() {
+  if (!player_system_initialize()) {
+    TraceLog(LOG_ERROR, "game_manager::game_manager_reinit()::Returned false");
+  }
+  state->p_player = get_player_state();
+  state->player_abilities = state->p_player->ability_system.abilities;
+  state->game_progression_data = get_save_data(SAVE_SLOT_CURRENT_SESSION);
+  copy_memory(state->game_progression_data->p_player.stats, state->p_player->stats, sizeof(character_stat) * CHARACTER_STATS_MAX);
+
+  parse_or_create_save_data_from_file(SAVE_SLOT_CURRENT_SESSION);
+  gm_load_game();
+  
+  state->spawns = get_spawns();
+  state->p_spawn_system_spawn_count = get_spawn_count();
+  state->game_manager_initialized = true;
+  state->is_game_paused = true;
+}
+
+void update_game_manager(void) {
   if (!state) {
     return;
   }
@@ -89,7 +115,9 @@ void update_game_manager() {
     update_spawns(get_player_position(true));
 
     for (int i=0; i<ABILITY_TYPE_MAX; ++i) {
-      state->p_player->ability_system.abilities[i].ability_play_time += GetFrameTime();
+      if (state->p_player->ability_system.abilities[i].is_active) {
+        state->p_player->ability_system.abilities[i].ability_play_time += GetFrameTime();
+      }
     }
   }
 }
@@ -157,10 +185,31 @@ void gm_start_game(worldmap_stage stage) {
     TraceLog(LOG_ERROR, "game_manager::gm_start_game()::State returned null");
     return;
   }
-
   state->stage = stage;
+
+  heal_player(state->p_player->health_max);
+  state->p_player->is_player_have_ability_upgrade_points = false;
+  event_fire(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, (event_context){
+    .data.f32[0] = PRG_BAR_ID_PLAYER_EXPERIANCE,
+    .data.f32[1] = state->p_player->exp_perc,
+  });
+  event_fire(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, (event_context){
+    .data.f32[0] = PRG_BAR_ID_PLAYER_HEALTH,
+    .data.f32[1] = state->p_player->health_perc,
+  });
+
+  _add_ability(state->p_player->starter_ability);
+
+  populate_map_with_spawns();
+}
+void populate_map_with_spawns(void) {
+  if (!state->spawns) {
+    TraceLog(LOG_ERROR, "game_manager::populate_map_with_spawns()::Spawn accessor is not valid");
+    return;
+  }
+
   u32 spawn_trying_limit = SPAWN_TRYING_LIMIT;
-  for (u16 i = 0; i < MAX_SPAWN_COUNT && (spawn_trying_limit <= SPAWN_TRYING_LIMIT && spawn_trying_limit > 0); ) 
+  for (u16 i = 0; i < MAX_SPAWN_COUNT && (spawn_trying_limit <= SPAWN_TRYING_LIMIT && spawn_trying_limit != 0); ) 
   {
     Vector2 position = (Vector2) {
       get_random((i32)state->stage.spawning_areas[0].x, (i32)state->stage.spawning_areas[0].x + state->stage.spawning_areas[0].width),
@@ -172,40 +221,24 @@ void gm_start_game(worldmap_stage stage) {
       .character_id = 0,
       .buffer.u16[0] = get_random(SPAWN_TYPE_UNDEFINED+1, SPAWN_TYPE_MAX-1),
       .scale = scale,
-      .initialized = false,
       .position = position,
       .w_direction = WORLD_DIRECTION_LEFT,
       .type = ACTOR_TYPE_SPAWN,
       .rotation = 0,
-      .health = 100,
+      .health = 35,
       .damage = 10,
       .speed = 1,
+      .is_damagable = true,
+      .initialized = false
     }) ? ++i : --spawn_trying_limit;
   }
-
-  heal_player(state->p_player->health_max);
-  state->p_player->is_player_have_ability_upgrade_points = false;
-  event_fire(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, (event_context){
-    .data.f32[0] = PRG_BAR_ID_PLAYER_EXPERIANCE,
-    .data.f32[1] = state->p_player->exp_perc,
-  });
-  event_fire(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, (event_context){
-    .data.f32[0] = PRG_BAR_ID_PLAYER_HEALTH,
-    .data.f32[1] = state->p_player->health_perc,
-  });  
-  event_fire(EVENT_CODE_SCENE_MANAGER_SET_CAM_POS, (event_context){
-    .data.f32[0] = state->p_player->position.x,
-    .data.f32[1] = state->p_player->position.y,
-  });
-
-  _add_ability(state->p_player->starter_ability);
 }
 void upgrade_player_stat(character_stat* stat) {
   if (!state) {
     TraceLog(LOG_ERROR, "game_manager::gm_start_game()::State is not valid");
     return;
   }
-  if (!state->p_player) {
+  if (!state->p_player->is_initialized) {
     TraceLog(LOG_ERROR, "game_manager::upgrade_player_stat()::state->p_player returned null");
     return;
   }
@@ -291,7 +324,7 @@ void game_manager_refresh_stats(character_stat* stats) {
     TraceLog(LOG_ERROR, "game_manager::gm_start_game()::State returned null");
     return;
   }
-  if (!state->p_player) {
+  if (!state->p_player->is_initialized) {
     TraceLog(LOG_ERROR, "game_manager::upgrade_player_stat()::stat returned null");
     return;
   }
@@ -374,20 +407,18 @@ void refresh_player_stats() {
     TraceLog(LOG_ERROR, "game_manager::gm_start_game()::State returned null");
     return;
   }
-  if (!state->p_player) {
+  if (!state->p_player->is_initialized) {
     TraceLog(LOG_ERROR, "game_manager::upgrade_player_stat()::stat returned null");
     return;
   }
 
   game_manager_refresh_stats(state->p_player->stats);
 }
-
 void gm_reset_game() {
   clean_up_spawn_state();
 
   state->is_game_end = false;
   state->is_game_paused = true;
-  state->is_game_end = false;
   state->stage = (worldmap_stage){0};
 }
 void gm_save_game() {
@@ -397,25 +428,6 @@ void gm_save_game() {
 void gm_load_game() {
   copy_memory(state->p_player->stats, state->game_progression_data->p_player.stats, sizeof(character_stat) * CHARACTER_STATS_MAX);
   refresh_player_stats();
-}
-void game_manager_reinit(void) {
-  save_system_initialize();
-
-  if (!player_system_initialize()) {
-    TraceLog(LOG_ERROR, "game_manager::game_manager_reinit()::Returned false");
-  }
-  state->p_player = get_player_state();
-  state->player_abilities = state->p_player->ability_system.abilities;
-  state->game_progression_data = get_save_data(SAVE_SLOT_CURRENT_SESSION);
-  copy_memory(state->game_progression_data->p_player.stats, state->p_player->stats, sizeof(character_stat) * CHARACTER_STATS_MAX);
-
-  parse_or_create_save_data_from_file(SAVE_SLOT_CURRENT_SESSION);
-  gm_load_game();
-  
-  state->spawns = get_spawns();
-  state->p_spawn_system_spawn_count = get_spawn_count();
-  state->game_manager_initialized = true;
-  state->is_game_paused = true;
 }
 void currency_souls_add(i32 value) {
   state->game_progression_data->currency_souls_player_have += value;
@@ -538,6 +550,9 @@ void _set_player_position(Vector2 position) {
 Vector2 _get_player_position(bool centered) {
   return get_player_position(centered);
 }
+player_state* _get_player_state(void) {
+  return get_player_state();
+}
 // Exposed functions
 
 
@@ -558,10 +573,10 @@ bool game_manager_on_event(u16 code, event_context context) {
   case EVENT_CODE_DAMAGE_PLAYER_IF_COLLIDE: {
     Character2D from_actor = (Character2D) {
       .collision = (Rectangle) {
-        context.data.u16[0], context.data.u16[1], 
-        context.data.u16[2], context.data.u16[3]
+        context.data.i16[0], context.data.i16[1], 
+        context.data.i16[2], context.data.i16[3]
       },
-      .damage = context.data.u16[4],
+      .damage = context.data.i16[4],
       .initialized = true
     };
     damage_any_collider_by_type(from_actor, ACTOR_TYPE_PLAYER);
@@ -571,10 +586,10 @@ bool game_manager_on_event(u16 code, event_context context) {
   case EVENT_CODE_DAMAGE_ANY_SPAWN_IF_COLLIDE: {
     Character2D from_actor = (Character2D) {
       .collision = (Rectangle) {
-        context.data.u16[0], context.data.u16[1], 
-        context.data.u16[2], context.data.u16[3]
+        context.data.i16[0], context.data.i16[1], 
+        context.data.i16[2], context.data.i16[3]
       },
-      .damage = context.data.u16[4],
+      .damage = context.data.i16[4],
       .initialized = true
     };
     damage_any_collider_by_type(from_actor, ACTOR_TYPE_SPAWN);

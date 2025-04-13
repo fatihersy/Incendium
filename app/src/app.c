@@ -90,7 +90,7 @@ bool app_initialize(void) {
   sound_system_initialize();
   create_camera(BASE_RENDER_SCALE(.5f));
 
-  world_system_initialize(get_in_game_camera(), BASE_RENDER_SCALE(.5f));
+  world_system_initialize(get_in_game_camera());
   scene_manager_initialize();
 
   event_register(EVENT_CODE_APPLICATION_QUIT, application_on_event);

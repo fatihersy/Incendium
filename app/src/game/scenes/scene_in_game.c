@@ -21,15 +21,16 @@ typedef enum in_game_stages {
 } in_game_stages;
 
 typedef struct scene_in_game_state {
+  worldmap_stage worldmap_locations[MAX_WORLDMAP_LOCATIONS];
   panel ability_upg_panels[MAX_UPDATE_ABILITY_PANEL_COUNT];
   panel passive_selection_panels[MAX_UPDATE_PASSIVE_PANEL_COUNT];
   panel worldmap_selection_panel;
   panel default_panel;
-  worldmap_stage worldmap_locations[MAX_WORLDMAP_LOCATIONS];
-  in_game_stages stage;
+  
   camera_metrics* in_camera_metrics;
+  
+  in_game_stages stage;
   f32 play_time;
-
   u16 hovered_stage;
   bool has_game_started;
 } scene_in_game_state;
@@ -65,6 +66,7 @@ void draw_passive_selection_panel(character_stat* stat, Rectangle panel_dest);
 void draw_end_game_panel();
 void start_game(character_stat* stat);
 void reset_game();
+Rectangle sig_get_camera_view_rect(Camera2D camera);
 
 /**
  * @brief Requires world system, world init moved to app, as well as its loading time
@@ -98,6 +100,7 @@ void update_scene_in_game(void) {
         .data.f32[0] = BASE_RENDER_SCALE(.5f).x,
         .data.f32[1] = BASE_RENDER_SCALE(.5f).y,
       });
+      state->in_camera_metrics->frustum = sig_get_camera_view_rect(state->in_camera_metrics->handle);
 
       if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON) && state->hovered_stage <= MAX_WORLDMAP_LOCATIONS) {
         set_worldmap_location(state->hovered_stage);
@@ -112,6 +115,9 @@ void update_scene_in_game(void) {
       if (get_is_game_paused() || !state->has_game_started) {
         return;
       }
+      else if (get_remaining_enemies() <= 0 || get_remaining_enemies() > MAX_SPAWN_COUNT) {
+        event_fire(EVENT_CODE_END_GAME, (event_context) {0});
+      }
       if (get_is_game_end()) {
         state->stage = IN_GAME_STAGE_PLAY_RESULTS;
       }
@@ -123,6 +129,7 @@ void update_scene_in_game(void) {
         .data.f32[0] = _get_player_position(true).x,
         .data.f32[1] = _get_player_position(true).y,
       });
+      state->in_camera_metrics->frustum = sig_get_camera_view_rect(state->in_camera_metrics->handle);
       break;
     }
     case IN_GAME_STAGE_PLAY_RESULTS: { break; }
@@ -226,7 +233,7 @@ void render_interface_in_game(void) {
       break;
     }
     case IN_GAME_STAGE_PLAY: {  
-      DrawFPS(SCREEN_OFFSET.x, BASE_RENDER_SCALE(.5f).y);
+      DrawFPS(BASE_RENDER_SCALE(.75f).x, SCREEN_OFFSET.y * 10);
 
       if (!state->has_game_started) {
         gui_label("Press Space to Start!", FONT_TYPE_MOOD_OUTLINE, 10, (Vector2) {BASE_RENDER_SCALE(.5f).x, BASE_RENDER_SCALE(.5f).y}, WHITE, true, true);
@@ -272,14 +279,19 @@ void render_interface_in_game(void) {
           draw_in_game_upgrade_panel(abl, new, dest);
         }
       }
-      else if (get_remaining_enemies() <= 0 || get_remaining_enemies() >= MAX_SPAWN_COUNT) {
-        event_fire(EVENT_CODE_END_GAME, (event_context) {0});
-      }
       else {
         gui_progress_bar(PRG_BAR_ID_PLAYER_EXPERIANCE, (Vector2){.x = BASE_RENDER_SCALE(.5f).x, .y = SCREEN_OFFSET.x}, true);
         gui_progress_bar(PRG_BAR_ID_PLAYER_HEALTH, SCREEN_OFFSET, false);
-        gui_label_format(FONT_TYPE_MOOD, 10, SCREEN_OFFSET.x, BASE_RENDER_SCALE(.25f).y, WHITE, false, false, "Remaining: %d", get_remaining_enemies());
-        gui_label_format(FONT_TYPE_MOOD, 10, BASE_RENDER_SCALE(.75f).x, SCREEN_OFFSET.y, WHITE, false, false, "Souls: %d", get_currency_souls());
+        gui_label_format(FONT_TYPE_MOOD, 10, BASE_RENDER_SCALE(.75f).x, SCREEN_OFFSET.y, WHITE, false, false, "Remaining: %d", get_remaining_enemies());
+        gui_label_format(FONT_TYPE_MOOD, 10, BASE_RENDER_SCALE(.75f).x, SCREEN_OFFSET.y * 5.f, WHITE, false, false, "Souls: %d", get_currency_souls());
+
+        gui_label_format(FONT_TYPE_MOOD, 10, 0, BASE_RENDER_SCALE(.35f).y, WHITE, false, false, "damage_break: %.1f", _get_player_state()->damage_break_current);
+        gui_label_format(FONT_TYPE_MOOD, 10, 0, BASE_RENDER_SCALE(.40f).y, WHITE, false, false, "health: %d", _get_player_state()->health_current);
+        gui_label_format(FONT_TYPE_MOOD, 10, 0, BASE_RENDER_SCALE(.45f).y, WHITE, false, false, "collision_x: %.1f", _get_player_state()->collision.x);
+        gui_label_format(FONT_TYPE_MOOD, 10, 0, BASE_RENDER_SCALE(.50f).y, WHITE, false, false, "collision_y: %.1f", _get_player_state()->collision.y);
+        gui_label_format(FONT_TYPE_MOOD, 10, 0, BASE_RENDER_SCALE(.55f).y, WHITE, false, false, "collision_width: %.1f", _get_player_state()->collision.width);
+        gui_label_format(FONT_TYPE_MOOD, 10, 0, BASE_RENDER_SCALE(.60f).y, WHITE, false, false, "collision_height: %.1f", _get_player_state()->collision.height);
+        gui_label_format(FONT_TYPE_MOOD, 10, 0, BASE_RENDER_SCALE(.65f).y, WHITE, false, false, "is_damagable: %d", _get_player_state()->is_damagable);
       }
       break;
     }
@@ -516,6 +528,20 @@ void draw_end_game_panel() {
   u32 min  = (i32)state->play_time/60;
   u32 secs = (i32)state->play_time%60;
   gui_label_format_v(FONT_TYPE_MOOD, 10, BASE_RENDER_SCALE(.5f), WHITE, true, true, "%d:%d", min, secs);
+}
+
+Rectangle sig_get_camera_view_rect(Camera2D camera) {
+
+  f32 view_width = BASE_RENDER_RES.x / camera.zoom;
+  f32 view_height = BASE_RENDER_RES.y / camera.zoom;
+
+  f32 x = camera.target.x;
+  f32 y = camera.target.y;
+  
+  x -= camera.offset.x/camera.zoom;
+  y -= camera.offset.y/camera.zoom;
+  
+  return (Rectangle){ x, y, view_width, view_height };
 }
 
 #undef STATE_ASSERT

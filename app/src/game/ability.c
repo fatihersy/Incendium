@@ -107,7 +107,6 @@ void upgrade_ability(ability* abl) {
 
 }
 void update_abilities(ability_play_system* system) {
-
   for (int i=0; i<ABILITY_TYPE_MAX; ++i) {
     ability* abl = &system->abilities[i];
     if (!abl->is_active || !abl->is_initialized) continue;
@@ -120,27 +119,16 @@ void update_abilities(ability_play_system* system) {
         TraceLog(LOG_ERROR, "ability::update_abilities()::Unsuppported ability movement type");
         break;
       }
-    } 
+    }
 
     for (i32 j = 0; j<MAX_ABILITY_PROJECTILE_SLOT; ++j) {
       if (!abl->projectiles[j].is_active) { continue; }
 
       event_fire(EVENT_CODE_DAMAGE_ANY_SPAWN_IF_COLLIDE, (event_context) {
-        .data.u16[0] = abl->projectiles[j].collision.x, .data.u16[1] = abl->projectiles[j].collision.y,
-        .data.u16[2] = abl->projectiles[j].collision.width, .data.u16[3] = abl->projectiles[j].collision.height,
-        .data.u16[4] = abl->projectiles[j].damage,
+        .data.i16[0] = abl->projectiles[j].collision.x, .data.i16[1] = abl->projectiles[j].collision.y,
+        .data.i16[2] = abl->projectiles[j].collision.width, .data.i16[3] = abl->projectiles[j].collision.height,
+        .data.i16[4] = abl->projectiles[j].damage,
       });
-    }
-
-    // TODO: Handle all situations
-  }
-  for (i32 i=0; i<MAX_ABILITY_SLOT; ++i) {
-    ability* abl = &system->abilities[i];
-    if (!abl->is_active) { continue; }
-
-    for (i32 j=0; j<MAX_ABILITY_PROJECTILE_SLOT; ++j) {
-      if (!abl->projectiles[j].is_active) { continue; }
-
       update_sprite(&abl->projectiles[j].animation);
     }
   }
@@ -150,11 +138,7 @@ void movement_satellite(ability* abl) {
     TraceLog(LOG_WARNING, "ability::movement_satellite()::Ability is not active or not initialized");
     return;
   }
-  if (abl->move_pattern >= MOVE_TYPE_MAX || abl->move_pattern <= MOVE_TYPE_UNDEFINED) {
-    TraceLog(LOG_WARNING, "ability::movement_satelite()::Recieved pattern out of bound");
-    return ;
-  }
-  player_state* player = (player_state*)abl->p_owner; // HACK: Hardcoded character state
+  player_state* player = (player_state*)abl->p_owner;
 
   abl->position.x  = player->collision.x + player->collision.width / 2.f;
   abl->position.y  = player->collision.y + player->collision.height / 2.f;
@@ -167,11 +151,7 @@ void movement_satellite(ability* abl) {
 
     i16 angle = (i32)(((360.f / abl->proj_count) * i) + abl->rotation) % 360;
 
-    abl->projectiles[i].position = get_a_point_of_a_circle(
-      abl->position, 
-      (abl->level * 3.f) + player->collision.height + 15,  // NOTE: Better radius calculation?
-      angle);
-
+    abl->projectiles[i].position = get_a_point_of_a_circle( abl->position, (abl->level * 3.f) + player->collision.height + 15, angle);
     abl->projectiles[i].collision.x = abl->projectiles[i].position.x;
     abl->projectiles[i].collision.y = abl->projectiles[i].position.y;
   }
@@ -180,10 +160,6 @@ void movement_bullet(ability* abl) {
   if (!abl->is_active || !abl->is_initialized) {
     TraceLog(LOG_WARNING, "ability::movement_bullet()::Ability is not active or not initialized");
     return;
-  }
-  if (abl->move_pattern >= MOVE_TYPE_MAX || abl->move_pattern <= MOVE_TYPE_UNDEFINED) {
-    TraceLog(LOG_WARNING, "ability::movement_bullet()::Recieved pattern out of bound");
-    return ;
   }
   player_state* player = (player_state*)abl->p_owner; // HACK: Hardcoded character state
 
@@ -212,10 +188,6 @@ void movement_comet(ability* abl) {
   if (!abl->is_active || !abl->is_initialized) {
     TraceLog(LOG_WARNING, "ability::movement_comet()::Ability is not active or not initialized");
     return;
-  }
-  if (abl->move_pattern >= MOVE_TYPE_MAX || abl->move_pattern <= MOVE_TYPE_UNDEFINED) {
-    TraceLog(LOG_WARNING, "ability::movement_comet()::Recieved pattern out of bound");
-    return ;
   }
   player_state* player = (player_state*)abl->p_owner; // HACK: Hardcoded character state
 

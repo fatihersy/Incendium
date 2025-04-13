@@ -124,6 +124,39 @@ bool player_system_initialize(void) {
 
   return true;
 }
+void player_system_reinit(void) {
+  
+  player->position.x = 0;
+  player->position.y = 0;
+  player->dimentions = (Vector2) {22, 32};
+  player->dimentions.x *= PLAYER_SCALE;
+  player->dimentions.y *= PLAYER_SCALE;
+  player->dimentions_div2 = (Vector2) {player->dimentions.x/2, player->dimentions.y/2};
+  player->collision = (Rectangle)
+  {
+    .x = player->position.x - player->dimentions.x / 2.f,
+    .y = player->position.y - player->dimentions.y / 2.f,
+    .width = player->dimentions.x,
+    .height = player->dimentions.y
+  };
+  player->is_dead = false;
+  player->is_moving = false;
+  player->w_direction = WORLD_DIRECTION_LEFT;
+  player->is_damagable = true;
+  player->damage_break_time = .2; //ms
+  player->damage_break_current = player->damage_break_time;
+  player->level = 1;
+  player->exp_to_next_level = level_curve[player->level];
+  player->exp_current = 0;
+  player->health_max = 1000; // INFO: Modifies by player stats
+  player->health_current = player->health_max;
+  player->health_perc = (float) player->health_current / player->health_max;
+
+  player->last_played_animation = &player->idle_left_sprite; // The position player starts. To avoid from the error when move firstly called
+  
+  player->starter_ability = ABILITY_TYPE_FIREBALL;
+  player->is_initialized = true;
+}
 
 player_state* get_player_state(void) {
   if (!player) {
@@ -169,6 +202,7 @@ void take_damage(u16 damage) {
   if((player->health_current - damage) > 0 && (player->health_current - damage) <= player->health_max) {
     player->health_current -= damage;
     player->is_damagable = false;
+    player->damage_break_current = player->damage_break_time;
   }
   else {
     player->health_current = 0;
@@ -190,15 +224,13 @@ void heal_player(u16 amouth){
 
 player_update_results update_player(void) {
   if (!player) return (player_update_results){ .is_success = false };
-  if (player->is_dead) return (player_update_results){ .is_success = false }; 
-
+  if (player->is_dead) { 
+    return (player_update_results){ .is_success = false }; 
+  }
+  
   if(!player->is_damagable) {
-    if(player->damage_break_current - GetFrameTime() > 0) player->damage_break_current -= GetFrameTime();
-    else
-    {
-      player->damage_break_current = player->damage_break_time;
-      player->is_damagable = true;
-    }
+    if(player->damage_break_current <= 0) { player->is_damagable = true; }
+    else { player->damage_break_current -= GetFrameTime(); }
   }
   Vector2 new_position = {0};
   if (IsKeyDown(KEY_W)) {
@@ -213,7 +245,6 @@ player_update_results update_player(void) {
   if (IsKeyDown(KEY_D)) {
     new_position.x += 2;
   }
-
   update_sprite(player->last_played_animation);
   return (player_update_results){ 
     .move_request = new_position,
@@ -356,40 +387,6 @@ void play_anim(spritesheet_id player_anim_sheet) {
     default: TraceLog(LOG_ERROR, "player::move()::move function called with unspecified value.");
     break;
   }
-}
-
-void player_system_reinit(void) {
-  
-  player->position.x = 0;
-  player->position.y = 0;
-  player->dimentions = (Vector2) {22, 32};
-  player->dimentions.x *= PLAYER_SCALE;
-  player->dimentions.y *= PLAYER_SCALE;
-  player->dimentions_div2 = (Vector2) {player->dimentions.x/2, player->dimentions.y/2};
-  player->collision = (Rectangle)
-  {
-    .x = player->position.x - player->dimentions.x / 2.f,
-    .y = player->position.y - player->dimentions.y / 2.f,
-    .width = player->dimentions.x,
-    .height = player->dimentions.y
-  };
-  player->is_dead = false;
-  player->is_moving = false;
-  player->w_direction = WORLD_DIRECTION_LEFT;
-  player->is_damagable = true;
-  player->damage_break_time = .2; //ms
-  player->damage_break_current = player->damage_break_time;
-  player->level = 1;
-  player->exp_to_next_level = level_curve[player->level];
-  player->exp_current = 0;
-  player->health_max = 255;
-  player->health_current = player->health_max;
-  player->health_perc = (float) player->health_current / player->health_max;
-
-  player->last_played_animation = &player->idle_left_sprite; // The position player starts. To avoid from the error when move firstly called
-  
-  player->starter_ability = ABILITY_TYPE_FIREBALL;
-  player->is_initialized = true;
 }
 
 bool player_system_on_event(u16 code, event_context context) {

@@ -7,11 +7,12 @@
 #include "spritesheet.h"
 
 typedef struct spawn_system_state {
-  Character2D spawns[MAX_SPAWN_COUNT];
+  Character2D spawns[MAX_SPAWN_COUNT]; // NOTE: See also clean-up function
   u16 current_spawn_count;
+  camera_metrics* in_camera_metrics;
 } spawn_system_state;
 
-static spawn_system_state *state;
+static spawn_system_state *restrict state;
 
 // To avoid dublicate symbol errors. Implementation in defines.h
 extern const u32 level_curve[MAX_PLAYER_LEVEL + 1];
@@ -25,9 +26,9 @@ CheckCollisionRecs(REC1, \
 
 void spawn_play_anim(Character2D* spawn, spritesheet_id sheet);
 
-bool spawn_system_initialize(void) {
+bool spawn_system_initialize(camera_metrics* _camera_metrics) {
   if (state) {
-    state->current_spawn_count = 0;
+    clean_up_spawn_state();
     return true;
   }
   state = (spawn_system_state *)allocate_memory_linear(sizeof(spawn_system_state), true);
@@ -35,6 +36,7 @@ bool spawn_system_initialize(void) {
     TraceLog(LOG_ERROR, "spawn::spawn_system_initialize()::Spawn system init failed");
     return false;
   }
+  state->in_camera_metrics = _camera_metrics;
 
   state->current_spawn_count = 0;
   return true;
@@ -52,10 +54,11 @@ u16 damage_spawn(u16 _id, u16 damage) {
     }
   }
   if (!character) return INVALID_ID16;
+  if (!character->is_damagable) { return character->health; }
 
   if(character->health - damage > 0 && character->health - damage < 100) {
     character->is_damagable = false;
-    character->damage_break_time = (f32)TARGET_FPS / character->take_damage_left_animation.fps;
+    character->damage_break_time = character->take_damage_left_animation.fps /(f32)TARGET_FPS;
     character->health -= damage;
     return character->health;
   }
@@ -86,17 +89,15 @@ bool spawn_character(Character2D _character) {
   _character.collision.width = _character.move_left_animation.current_frame_rect.width * _character.scale;
   _character.collision.height = _character.move_left_animation.current_frame_rect.height * _character.scale;
   _character.w_direction = WORLD_DIRECTION_RIGHT;
-
-  for (i32 i=0; i<state->current_spawn_count; ++i) {
-    if(CheckCollisionRecs(state->spawns[i].collision, (Rectangle) {
-      _character.position.x, _character.position.y,
-      _character.collision.width, _character.collision.height})) { return false; }
-  }
-
   _character.collision.x = _character.position.x;
   _character.collision.y = _character.position.y;
   _character.character_id = state->current_spawn_count;
   _character.initialized = true;
+
+  for (i32 i=0; i<state->current_spawn_count; ++i) {
+    if(CheckCollisionRecs(state->spawns[i].collision, _character.collision)) { return false; }
+    if(CheckCollisionRecs(state->in_camera_metrics->frustum, _character.collision)) { return false; }
+  }
   
   state->spawns[state->current_spawn_count] = _character;
   state->current_spawn_count++;
@@ -147,15 +148,33 @@ bool update_spawns(Vector2 player_position) {
       character->collision.x = character->position.x;
     }
     event_fire(EVENT_CODE_DAMAGE_PLAYER_IF_COLLIDE, (event_context) {
-      .data.u16[0] = character->collision.x, .data.u16[1] = character->collision.y,
-      .data.u16[2] = character->collision.width, .data.u16[3] = character->collision.height,
-      .data.u16[4] = character->damage,
+      .data.i16[0] = character->collision.x, .data.i16[1] = character->collision.y,
+      .data.i16[2] = character->collision.width, .data.i16[3] = character->collision.height,
+      .data.i16[4] = character->damage,
     });
     if (!character->is_damagable) {
       if (character->damage_break_time >= 0) {
         character->damage_break_time -= GetFrameTime();
       }
       else character->is_damagable = true;
+    }
+  }
+
+  
+  if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_D)) {
+    TraceLog(LOG_INFO, "spawn::update_spawns()::Debug Spawns");
+
+    for (i32 i = 0; i < state->current_spawn_count; ++i) {
+      Character2D *character = &state->spawns[i];
+
+      TraceLog(LOG_INFO, "Spawn ID:%d", character->character_id);
+      TraceLog(LOG_INFO, "Spawn is Init:%d", character->initialized);
+      TraceLog(LOG_INFO, "Spawn Health:%d", character->health);
+      TraceLog(LOG_INFO, "Spawn Position:{%.1f, %.1f}", character->position.x, character->position.y);
+      TraceLog(LOG_INFO, "Spawn Collision:{%.1f, %.1f, %.1f, %.1f, }", 
+        character->collision.x, character->collision.y,
+        character->collision.width, character->collision.height
+      );
     }
   }
   return true;
@@ -222,13 +241,9 @@ u16 *get_spawn_count() {
 }
 
 void clean_up_spawn_state(void) {
-  for (u16 i = 0; i < state->current_spawn_count; i++) {
-    state->spawns[i] = (Character2D){0};
-  }
+  zero_memory(state->spawns, sizeof(Character2D) * MAX_SPAWN_COUNT);
 
   state->current_spawn_count = 0;
-
-  // state = (spawn_system_state*){0};
 }
 
 void spawn_play_anim(Character2D* spawn, spritesheet_id sheet) {
