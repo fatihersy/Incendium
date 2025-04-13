@@ -748,16 +748,13 @@ typedef struct character_stat {
 
 // LABEL: Player State
 typedef struct player_state {
-  Rectangle collision;
   ability_play_system ability_system;
-  ability_type starter_ability;
   character_stat stats[CHARACTER_STATS_MAX];
-
-  Vector2 position;
+  ability_type starter_ability;
+  
+  Rectangle collision;
   Vector2 dimentions;
   Vector2 dimentions_div2;
-  world_direction w_direction;
-
   spritesheet move_left_sprite;
   spritesheet move_right_sprite;
   spritesheet idle_left_sprite;
@@ -768,6 +765,9 @@ typedef struct player_state {
   spritesheet wreck_right_sprite;
   spritesheet* last_played_animation;
 
+  
+  world_direction w_direction;
+  Vector2 position;
   u32 level;
   u32 health_max;
   u32 health_current;
@@ -784,7 +784,6 @@ typedef struct player_state {
   f32 move_speed_multiply;
   f32 cooldown_multiply;
   f32 exp_gain_multiply;
-
   bool is_player_have_ability_upgrade_points;
   bool is_initialized;
   bool is_moving;

@@ -65,7 +65,7 @@ u16 damage_spawn(u16 _id, u16 damage) {
   character->health = 0;
   character->is_dead = true;
   
-  event_fire(EVENT_CODE_ADD_ITEM_PLAYER_CURRENCY_SOULS, (event_context){.data.u32[0] = (u32)character->scale});
+  event_fire(EVENT_CODE_ADD_CURRENCY_SOULS, (event_context){.data.u32[0] = (u32)character->scale});
   event_fire(EVENT_CODE_PLAYER_ADD_EXP, (event_context){.data.u32[0] = 32}); // TODO: Make exp gain dynamic 
   return 0;
 }

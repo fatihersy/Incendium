@@ -340,7 +340,7 @@ void draw_main_menu_upgrade_details_panel(void) {
   if (gui_menu_button("Upgrade", BTN_ID_MAINMENU_UPGRADE_BUY_UPGRADE, (Vector2){5.25f, 17.1f}, 2.7f, false)) {
     if (((i32)get_currency_souls() - state->hovered_stat->upgrade_cost) >= 0) {
       currency_souls_add(-state->hovered_stat->upgrade_cost);
-      upgrade_player_stat(get_player_stat(state->hovered_stat->id));
+      upgrade_default_player_stat(state->hovered_stat->id);
       gm_save_game();
       event_fire(EVENT_CODE_PLAY_BUTTON_ON_CLICK, (event_context) { .data.u16[0] = true});
     } else {

@@ -30,6 +30,7 @@ void gm_load_game(void);
 void damage_any_spawn(Character2D *projectile);
 void damage_any_collider_by_type(Character2D from_actor, actor_type to_type);
 void upgrade_player_stat(character_stat* stat);
+void upgrade_default_player_stat(character_stats stat);
 void refresh_player_stats(void);
 void currency_souls_add(i32 value);
 

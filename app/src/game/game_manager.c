@@ -15,7 +15,8 @@ typedef struct game_manager_system_state {
   u16* p_spawn_system_spawn_count;
   ability* player_abilities;
 
-  player_state* p_player;
+  player_state player_in_game_default;
+  player_state* p_player_public;
   worldmap_stage stage;
 
   save_data* game_progression_data;
@@ -64,7 +65,6 @@ bool game_manager_initialize(camera_metrics* _camera_metrics) {
   event_register(EVENT_CODE_UNPAUSE_GAME, game_manager_on_event);
   event_register(EVENT_CODE_DAMAGE_PLAYER_IF_COLLIDE, game_manager_on_event);
   event_register(EVENT_CODE_DAMAGE_ANY_SPAWN_IF_COLLIDE, game_manager_on_event);
-  event_register(EVENT_CODE_ADD_ITEM_PLAYER_CURRENCY_SOULS, game_manager_on_event);
 
   game_manager_reinit();
   return true;
@@ -75,10 +75,11 @@ void game_manager_reinit(void) {
   if (!player_system_initialize()) {
     TraceLog(LOG_ERROR, "game_manager::game_manager_reinit()::Returned false");
   }
-  state->p_player = get_player_state();
-  state->player_abilities = state->p_player->ability_system.abilities;
+  state->player_in_game_default = *get_player_state();
+  state->p_player_public = get_player_state();
+  state->player_abilities = state->p_player_public->ability_system.abilities;
   state->game_progression_data = get_save_data(SAVE_SLOT_CURRENT_SESSION);
-  copy_memory(state->game_progression_data->p_player.stats, state->p_player->stats, sizeof(character_stat) * CHARACTER_STATS_MAX);
+  copy_memory(state->game_progression_data->p_player.stats, state->p_player_public->stats, sizeof(character_stat) * CHARACTER_STATS_MAX);
 
   parse_or_create_save_data_from_file(SAVE_SLOT_CURRENT_SESSION);
   gm_load_game();
@@ -94,11 +95,11 @@ void update_game_manager(void) {
     return;
   }
 
-  if (!state->p_player->is_dead) {
+  if (!state->p_player_public->is_dead) {
     const player_update_results pur = update_player();
     if (pur.is_success) { // TODO: Player-Map collision detection system
       /*
-      const Rectangle pl_col = state->p_player->collision;
+      const Rectangle pl_col = state->p_player_public->collision;
       const Rectangle x0 = (Rectangle) {pl_col.x, pl_col.y + pur.move_request.y, pl_col.width, pl_col.height};
       const Rectangle y0 = (Rectangle) {pl_col.x + pur.move_request.x, pl_col.y, pl_col.width, pl_col.height};
 
@@ -111,12 +112,12 @@ void update_game_manager(void) {
       */
       move_player(pur.move_request);
     }
-    update_abilities(&state->p_player->ability_system);
+    update_abilities(&state->p_player_public->ability_system);
     update_spawns(get_player_position(true));
 
     for (int i=0; i<ABILITY_TYPE_MAX; ++i) {
-      if (state->p_player->ability_system.abilities[i].is_active) {
-        state->p_player->ability_system.abilities[i].ability_play_time += GetFrameTime();
+      if (state->p_player_public->ability_system.abilities[i].is_active) {
+        state->p_player_public->ability_system.abilities[i].ability_play_time += GetFrameTime();
       }
     }
   }
@@ -126,8 +127,8 @@ void render_game(void) {
   if (!state) {
     return;
   }
-  if (!state->p_player->is_dead) {
-    render_abilities(&state->p_player->ability_system);
+  if (!state->p_player_public->is_dead) {
+    render_abilities(&state->p_player_public->ability_system);
     render_player();
     render_spawns();
   }
@@ -138,6 +139,45 @@ void render_game(void) {
 }
 
 // OPS
+/**
+ * @brief Start game before, then upgrade the stat
+ */
+void gm_start_game(worldmap_stage stage) {
+  if (!state) {
+    TraceLog(LOG_ERROR, "game_manager::gm_start_game()::State returned null");
+    return;
+  }
+  state->stage = stage;
+  
+  _add_ability(state->p_player_public->starter_ability);
+  
+  populate_map_with_spawns();
+
+  event_fire(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, (event_context){
+    .data.f32[0] = PRG_BAR_ID_PLAYER_EXPERIANCE,
+    .data.f32[1] = state->p_player_public->exp_perc,
+  });
+  event_fire(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, (event_context){
+    .data.f32[0] = PRG_BAR_ID_PLAYER_HEALTH,
+    .data.f32[1] = state->p_player_public->health_perc,
+  });
+}
+void gm_reset_game(void) {
+  clean_up_spawn_state();
+
+  *state->p_player_public = state->player_in_game_default;
+  state->is_game_end = false;
+  state->is_game_paused = true;
+  state->stage = (worldmap_stage){0};
+}
+void gm_save_game(void) {
+  state->game_progression_data->p_player = state->player_in_game_default;
+  save_save_data(SAVE_SLOT_CURRENT_SESSION);
+}
+void gm_load_game(void) {
+  copy_memory(state->player_in_game_default.stats, state->game_progression_data->p_player.stats, sizeof(character_stat) * CHARACTER_STATS_MAX);
+  refresh_player_stats();
+}
 void damage_any_spawn(Character2D *projectile) {
   if (!projectile) {
     TraceLog(LOG_ERROR, 
@@ -170,7 +210,7 @@ void damage_any_collider_by_type(Character2D from_actor, actor_type to_type) {
     break;
   }
   case ACTOR_TYPE_PLAYER: {
-    if (CheckCollisionRecs(from_actor.collision, state->p_player->collision)) {
+    if (CheckCollisionRecs(from_actor.collision, state->p_player_public->collision)) {
       event_fire(EVENT_CODE_PLAYER_TAKE_DAMAGE, (event_context) { .data.u8[0] = from_actor.damage});
       return;
     }
@@ -179,28 +219,6 @@ void damage_any_collider_by_type(Character2D from_actor, actor_type to_type) {
   case ACTOR_TYPE_PROJECTILE_SPAWN: break; 
   case ACTOR_TYPE_PROJECTILE_PLAYER: break; 
   }
-}
-void gm_start_game(worldmap_stage stage) {
-  if (!state) {
-    TraceLog(LOG_ERROR, "game_manager::gm_start_game()::State returned null");
-    return;
-  }
-  state->stage = stage;
-
-  heal_player(state->p_player->health_max);
-  state->p_player->is_player_have_ability_upgrade_points = false;
-  event_fire(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, (event_context){
-    .data.f32[0] = PRG_BAR_ID_PLAYER_EXPERIANCE,
-    .data.f32[1] = state->p_player->exp_perc,
-  });
-  event_fire(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, (event_context){
-    .data.f32[0] = PRG_BAR_ID_PLAYER_HEALTH,
-    .data.f32[1] = state->p_player->health_perc,
-  });
-
-  _add_ability(state->p_player->starter_ability);
-
-  populate_map_with_spawns();
 }
 void populate_map_with_spawns(void) {
   if (!state->spawns) {
@@ -238,8 +256,8 @@ void upgrade_player_stat(character_stat* stat) {
     TraceLog(LOG_ERROR, "game_manager::gm_start_game()::State is not valid");
     return;
   }
-  if (!state->p_player->is_initialized) {
-    TraceLog(LOG_ERROR, "game_manager::upgrade_player_stat()::state->p_player returned null");
+  if (!state->p_player_public->is_initialized) {
+    TraceLog(LOG_ERROR, "game_manager::upgrade_player_stat()::state->p_player_public returned null");
     return;
   }
   if (!stat) {
@@ -261,56 +279,56 @@ void upgrade_player_stat(character_stat* stat) {
     const u32 value = next_curve_value;
 
     stat->buffer.u32[0] = value;
-    state->p_player->health_max = value;
+    state->p_player_public->health_max = value;
     break; 
   }
   case CHARACTER_STATS_HP_REGEN:{ 
     const u32 value = next_curve_value;
 
     stat->buffer.u32[0] = value;
-    state->p_player->health_regen = value;
+    state->p_player_public->health_regen = value;
     break;
   }
   case CHARACTER_STATS_MOVE_SPEED:{
     const f32 value = next_curve_value / 1000.f;
 
     stat->buffer.f32[0] = value;
-    state->p_player->move_speed_multiply = value;
+    state->p_player_public->move_speed_multiply = value;
     break;
   }
   case CHARACTER_STATS_AOE:{
     const f32 value = next_curve_value / 1000.f;
 
     stat->buffer.f32[0] = value;
-    state->p_player->damage_area_multiply = value;
+    state->p_player_public->damage_area_multiply = value;
     break;
   }
   case CHARACTER_STATS_DAMAGE:{
     const u32 value = next_curve_value;
 
     stat->buffer.u32[0] = value;
-    state->p_player->damage = value;
+    state->p_player_public->damage = value;
     break;
   }
   case CHARACTER_STATS_ABILITY_CD:{
     const f32 value = next_curve_value / 1000.f;
 
     stat->buffer.f32[0] = value;
-    state->p_player->cooldown_multiply = value;
+    state->p_player_public->cooldown_multiply = value;
     break;
   }
   case CHARACTER_STATS_PROJECTILE_AMOUTH:{
     const u16 value = stat->level;
 
     stat->buffer.u16[0] = value;
-    state->p_player->projectile_amouth = value;
+    state->p_player_public->projectile_amouth = value;
     break;
   }
   case CHARACTER_STATS_EXP_GAIN:{
     const u32 value = next_curve_value / 1000.f;
 
     stat->buffer.u32[0] = value;
-    state->p_player->exp_gain_multiply = value;
+    state->p_player_public->exp_gain_multiply = value;
     break;
   }
   default:{
@@ -319,12 +337,20 @@ void upgrade_player_stat(character_stat* stat) {
   }
   }
 }
+void upgrade_default_player_stat(character_stats stat) {
+  if (!state) {
+    TraceLog(LOG_ERROR, "game_manager::upgrade_default_player_stat()::State is not valid");
+    return;
+  }
+
+  upgrade_player_stat(&state->player_in_game_default.stats[stat]);
+}
 void game_manager_refresh_stats(character_stat* stats) {
   if (!state) {
     TraceLog(LOG_ERROR, "game_manager::gm_start_game()::State returned null");
     return;
   }
-  if (!state->p_player->is_initialized) {
+  if (!state->p_player_public->is_initialized) {
     TraceLog(LOG_ERROR, "game_manager::upgrade_player_stat()::stat returned null");
     return;
   }
@@ -343,56 +369,57 @@ void game_manager_refresh_stats(character_stat* stats) {
         const u32 value = next_curve_value;
 
         stat->buffer.u32[0] = value;
-        state->p_player->health_max = value;
+        state->p_player_public->health_max = value;
+        state->p_player_public->health_current = state->p_player_public->health_max;
         break; 
       }
       case CHARACTER_STATS_HP_REGEN:{ 
         const u32 value = next_curve_value;
 
         stat->buffer.u32[0] = value;
-        state->p_player->health_regen = value;
+        state->p_player_public->health_regen = value;
         break;
       }
       case CHARACTER_STATS_MOVE_SPEED:{
         const f32 value = next_curve_value / 1000.f;
 
         stat->buffer.f32[0] = value;
-        state->p_player->move_speed_multiply = value;
+        state->p_player_public->move_speed_multiply = value;
         break;
       }
       case CHARACTER_STATS_AOE:{
         const f32 value = next_curve_value / 1000.f;
 
         stat->buffer.f32[0] = value;
-        state->p_player->damage_area_multiply = value;
+        state->p_player_public->damage_area_multiply = value;
         break;
       }
       case CHARACTER_STATS_DAMAGE:{
         const u32 value = next_curve_value;
 
         stat->buffer.u32[0] = value;
-        state->p_player->damage = value;
+        state->p_player_public->damage = value;
         break;
       }
       case CHARACTER_STATS_ABILITY_CD:{
         const f32 value = next_curve_value / 1000.f;
 
         stat->buffer.f32[0] = value;
-        state->p_player->cooldown_multiply = value;
+        state->p_player_public->cooldown_multiply = value;
         break;
       }
       case CHARACTER_STATS_PROJECTILE_AMOUTH:{
         const u16 value = stat->level;
 
         stat->buffer.u16[0] = value;
-        state->p_player->projectile_amouth = value;
+        state->p_player_public->projectile_amouth = value;
         break;
       }
       case CHARACTER_STATS_EXP_GAIN:{
         const u32 value = next_curve_value / 1000.f;
 
         stat->buffer.u32[0] = value;
-        state->p_player->exp_gain_multiply = value;
+        state->p_player_public->exp_gain_multiply = value;
         break;
       }
       default:{
@@ -407,27 +434,12 @@ void refresh_player_stats() {
     TraceLog(LOG_ERROR, "game_manager::gm_start_game()::State returned null");
     return;
   }
-  if (!state->p_player->is_initialized) {
+  if (!state->p_player_public->is_initialized) {
     TraceLog(LOG_ERROR, "game_manager::upgrade_player_stat()::stat returned null");
     return;
   }
 
-  game_manager_refresh_stats(state->p_player->stats);
-}
-void gm_reset_game() {
-  clean_up_spawn_state();
-
-  state->is_game_end = false;
-  state->is_game_paused = true;
-  state->stage = (worldmap_stage){0};
-}
-void gm_save_game() {
-  state->game_progression_data->p_player = *state->p_player;
-  save_save_data(SAVE_SLOT_CURRENT_SESSION);
-}
-void gm_load_game() {
-  copy_memory(state->p_player->stats, state->game_progression_data->p_player.stats, sizeof(character_stat) * CHARACTER_STATS_MAX);
-  refresh_player_stats();
+  game_manager_refresh_stats(state->p_player_public->stats);
 }
 void currency_souls_add(i32 value) {
   state->game_progression_data->currency_souls_player_have += value;
@@ -439,20 +451,20 @@ u32 get_currency_souls(void) {
   return state->game_progression_data->currency_souls_player_have;
 }
 bool get_b_player_have_upgrade_points(void) {
-  return state->p_player->is_player_have_ability_upgrade_points;
+  return state->p_player_public->is_player_have_ability_upgrade_points;
 }
 void set_player_have_ability_upgrade_points(bool _b) {
-  state->p_player->is_player_have_ability_upgrade_points = _b;
+  state->p_player_public->is_player_have_ability_upgrade_points = _b;
 }
 ability* get_player_ability(ability_type type) {
-  return &state->p_player->ability_system.abilities[type];
+  return &state->p_player_public->ability_system.abilities[type];
 }
 character_stat* get_player_stat(character_stats stat) {
   if (stat >= CHARACTER_STATS_MAX || stat <= CHARACTER_STATS_UNDEFINED) {
     return 0;
   }
   
-  return &state->p_player->stats[stat];
+  return &state->p_player_public->stats[stat];
 }
 bool get_is_game_paused(void) {
   return state->is_game_paused;
@@ -497,15 +509,15 @@ bool _add_ability(ability_type _type) {
     return false;
   }
   ability abl = get_ability(_type);
-  ability_play_system* system = &state->p_player->ability_system;
+  ability_play_system* system = &state->p_player_public->ability_system;
   if (!system) {
     TraceLog(LOG_WARNING, "game_manager::_add_ability()::Recieved system was NULL");
     return false;
   }
-  abl.p_owner = state->p_player;
+  abl.p_owner = state->p_player_public;
   abl.is_initialized = true;
 
-  abl.proj_count += state->p_player->projectile_amouth;
+  abl.proj_count += state->p_player_public->projectile_amouth;
 
   for (i32 i=0; i < abl.proj_count; ++i) {
     abl.projectiles[i].is_active = true;
@@ -521,7 +533,7 @@ bool _upgrade_ability(ability* abl) {
     TraceLog(LOG_WARNING, "game_manager::_upgrade_ability::Recieved ability has not initialized yet");
     return false;
   }
-  ability_play_system* system = &state->p_player->ability_system;
+  ability_play_system* system = &state->p_player_public->ability_system;
   if (!system) {
     TraceLog(LOG_WARNING, "game_manager::_add_ability()::Recieved system was NULL");
     return false;
@@ -558,52 +570,48 @@ player_state* _get_player_state(void) {
 
 bool game_manager_on_event(u16 code, event_context context) {
   switch (code) {
-  case EVENT_CODE_END_GAME: {
-    state->is_game_end = true;
-    return true;
-  }
-  case EVENT_CODE_PAUSE_GAME: {
-    state->is_game_paused = true;
-    return true;
-  }
-  case EVENT_CODE_UNPAUSE_GAME: {
-    state->is_game_paused = false;
-    return true;
-  }
-  case EVENT_CODE_DAMAGE_PLAYER_IF_COLLIDE: {
-    Character2D from_actor = (Character2D) {
-      .collision = (Rectangle) {
-        context.data.i16[0], context.data.i16[1], 
-        context.data.i16[2], context.data.i16[3]
-      },
-      .damage = context.data.i16[4],
-      .initialized = true
-    };
-    damage_any_collider_by_type(from_actor, ACTOR_TYPE_PLAYER);
+    case EVENT_CODE_END_GAME: {
+      state->is_game_end = true;
+      return true;
+    }
+    case EVENT_CODE_PAUSE_GAME: {
+      state->is_game_paused = true;
+      return true;
+    }
+    case EVENT_CODE_UNPAUSE_GAME: {
+      state->is_game_paused = false;
+      return true;
+    }
+    case EVENT_CODE_DAMAGE_PLAYER_IF_COLLIDE: {
+      Character2D from_actor = (Character2D) {
+        .collision = (Rectangle) {
+          context.data.i16[0], context.data.i16[1], 
+          context.data.i16[2], context.data.i16[3]
+        },
+        .damage = context.data.i16[4],
+        .initialized = true
+      };
+      damage_any_collider_by_type(from_actor, ACTOR_TYPE_PLAYER);
 
-    return true;
-  }
-  case EVENT_CODE_DAMAGE_ANY_SPAWN_IF_COLLIDE: {
-    Character2D from_actor = (Character2D) {
-      .collision = (Rectangle) {
-        context.data.i16[0], context.data.i16[1], 
-        context.data.i16[2], context.data.i16[3]
-      },
-      .damage = context.data.i16[4],
-      .initialized = true
-    };
-    damage_any_collider_by_type(from_actor, ACTOR_TYPE_SPAWN);
+      return true;
+    }
+    case EVENT_CODE_DAMAGE_ANY_SPAWN_IF_COLLIDE: {
+      Character2D from_actor = (Character2D) {
+        .collision = (Rectangle) {
+          context.data.i16[0], context.data.i16[1], 
+          context.data.i16[2], context.data.i16[3]
+        },
+        .damage = context.data.i16[4],
+        .initialized = true
+      };
+      damage_any_collider_by_type(from_actor, ACTOR_TYPE_SPAWN);
 
-    return true;
-  }
-  case EVENT_CODE_ADD_ITEM_PLAYER_CURRENCY_SOULS: {
-    state->game_progression_data->currency_souls_player_have += context.data.u32[0];
-    return true;
-  }
-  default: {
-    TraceLog(LOG_WARNING, "game_engine::game_manager_on_event()::Unsuppported code.");
-    return false;
-  }
+      return true;
+    }
+    default: {
+      TraceLog(LOG_WARNING, "game_engine::game_manager_on_event()::Unsuppported code.");
+      return false;
+    }
   }
 
   TraceLog(LOG_WARNING, "game_engine::game_manager_on_event()::Fire event ended unexpectedly");

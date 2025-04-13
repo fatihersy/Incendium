@@ -20,6 +20,12 @@ typedef enum in_game_stages {
   IN_GAME_STAGE_MAX,
 } in_game_stages;
 
+typedef struct end_game_results{
+  u16 collected_souls;
+  f32 play_time;
+  bool is_win;
+}end_game_results;
+
 typedef struct scene_in_game_state {
   worldmap_stage worldmap_locations[MAX_WORLDMAP_LOCATIONS];
   panel ability_upg_panels[MAX_UPDATE_ABILITY_PANEL_COUNT];
@@ -30,13 +36,12 @@ typedef struct scene_in_game_state {
   camera_metrics* in_camera_metrics;
   
   in_game_stages stage;
-  f32 play_time;
+  end_game_results end_game_result;
   u16 hovered_stage;
   bool has_game_started;
 } scene_in_game_state;
 
 static scene_in_game_state *restrict state;
-
 
 #define STATE_ASSERT(FUNCTION) if (!state) {                                              \
   TraceLog(LOG_ERROR, "scene_in_game::" FUNCTION "::In game state was not initialized");  \
@@ -56,6 +61,7 @@ if (UPG.level == 1) {\
 #define PASSIVE_SELECTION_PANEL_ICON_SIZE ABILITY_UPG_PANEL_ICON_SIZE
 #define CLOUDS_ANIMATION_DURATION TARGET_FPS * 1.5f // second
 
+bool scene_in_game_on_event(u16 code, event_context context);
 void begin_scene_in_game(void);
 void in_game_update_bindings(void);
 void in_game_update_mouse_bindings(void);
@@ -83,6 +89,8 @@ bool initialize_scene_in_game(camera_metrics* _camera_metrics) {
     TraceLog(LOG_ERROR, "scene_in_game::initialize_scene_in_game()::game_manager_initialize() failed");
     return false;
   }
+
+  event_register(EVENT_CODE_ADD_CURRENCY_SOULS, scene_in_game_on_event);
 
   begin_scene_in_game();
   return true;
@@ -117,13 +125,14 @@ void update_scene_in_game(void) {
       }
       else if (get_remaining_enemies() <= 0 || get_remaining_enemies() > MAX_SPAWN_COUNT) {
         event_fire(EVENT_CODE_END_GAME, (event_context) {0});
+        state->end_game_result.is_win = true;
       }
       if (get_is_game_end()) {
         state->stage = IN_GAME_STAGE_PLAY_RESULTS;
       }
       update_map();
       update_game_manager();
-      state->play_time += GetFrameTime();
+      state->end_game_result.play_time += GetFrameTime();
     
       event_fire(EVENT_CODE_SCENE_MANAGER_SET_TARGET, (event_context){
         .data.f32[0] = _get_player_position(true).x,
@@ -298,6 +307,7 @@ void render_interface_in_game(void) {
     case IN_GAME_STAGE_PLAY_RESULTS: { 
       draw_end_game_panel();
       if(gui_menu_button("Accept", BTN_ID_IN_GAME_BUTTON_RETURN_MENU, (Vector2) {0, 5}, 2.7f, true)) {
+        currency_souls_add(state->end_game_result.collected_souls);
         gm_save_game();
         end_scene_in_game();
         event_fire(EVENT_CODE_SCENE_MAIN_MENU, (event_context) {0});
@@ -417,9 +427,10 @@ void end_scene_in_game(void) {
   gm_reset_game();
 
   state->stage = IN_GAME_STAGE_MAP_CHOICE;
-  state->play_time = 0.f;
+  state->end_game_result.play_time = 0.f;
   state->hovered_stage = U16_MAX;
   state->has_game_started = false; 
+  state->end_game_result = (end_game_results){0};
 }
 
 void start_game(character_stat* stat) {
@@ -519,15 +530,21 @@ void draw_passive_selection_panel(character_stat* stat, Rectangle panel_dest) {
 }
 void draw_end_game_panel() {
   STATE_ASSERT("draw_end_game_panel")
+  gui_panel(state->default_panel, (Rectangle){ BASE_RENDER_SCALE(.5f).x, BASE_RENDER_SCALE(.5f).y, BASE_RENDER_SCALE(.75f).x, BASE_RENDER_SCALE(.75f).y}, true);
 
-  gui_panel(state->default_panel, (Rectangle){ 
-    BASE_RENDER_SCALE(.5f).x, BASE_RENDER_SCALE(.5f).y, 
-    BASE_RENDER_SCALE(.75f).x, BASE_RENDER_SCALE(.75f).y
-  }, true);
+  if (state->end_game_result.is_win) {
+    gui_label("Stage Cleared", FONT_TYPE_MOOD, 20, BASE_RENDER_SCALE(.5f), WHITE, true, true);
+  }
+  else {
+    gui_label("Dead", FONT_TYPE_MOOD, 20, BASE_RENDER_SCALE(.5f), RED, true, true);
+  }
+  u32 min  = (i32)state->end_game_result.play_time/60;
+  u32 secs = (i32)state->end_game_result.play_time%60;
+  gui_label_format_v(FONT_TYPE_MOOD, 15, VECTOR2(BASE_RENDER_SCALE(.5f).x, BASE_RENDER_SCALE(.55f).y), WHITE, true, true, "%d:%d", min, secs);
 
-  u32 min  = (i32)state->play_time/60;
-  u32 secs = (i32)state->play_time%60;
-  gui_label_format_v(FONT_TYPE_MOOD, 10, BASE_RENDER_SCALE(.5f), WHITE, true, true, "%d:%d", min, secs);
+  gui_label_format_v(FONT_TYPE_MOOD, 15, VECTOR2(BASE_RENDER_SCALE(.5f).x, BASE_RENDER_SCALE(.75f).y), WHITE, true, true, 
+    "Collected Souls:%d", state->end_game_result.collected_souls
+  );
 }
 
 Rectangle sig_get_camera_view_rect(Camera2D camera) {
@@ -544,8 +561,26 @@ Rectangle sig_get_camera_view_rect(Camera2D camera) {
   return (Rectangle){ x, y, view_width, view_height };
 }
 
+
+bool scene_in_game_on_event(u16 code, event_context context) {
+  switch (code) {
+    case EVENT_CODE_ADD_CURRENCY_SOULS: {
+      state->end_game_result.collected_souls += context.data.u32[0];
+      return true;
+    }
+    default: {
+      TraceLog(LOG_WARNING, "scene_in_game::scene_in_game_on_event()::Unsuppported code.");
+      return false;
+    }
+  }
+
+  TraceLog(LOG_WARNING, "scene_in_game::scene_in_game_on_event()::Fire event ended unexpectedly");
+  return false;
+}
+
 #undef STATE_ASSERT
 #undef ABILITY_UPG_PANEL_ICON_SIZE
 #undef CLOUDS_ANIMATION_DURATION
 #undef FADE_ANIMATION_DURATION
 #undef DRAW_ABL_UPG_STAT_PNL
+
