@@ -5,7 +5,7 @@
 
 #define GAME_TITLE "Incendium"
 
-#define RESOURCE_PATH "/home/fatihersy/Workspace/resources/"
+#define RESOURCE_PATH "D:\\Repositories\\resources\\"
 #define SHADER_PATH "../app/src/shaders/"
 
 #define TOTAL_ALLOCATED_MEMORY 512 * 1024 * 1024
@@ -28,6 +28,7 @@
 #define MAX_UPDATE_ABILITY_PANEL_COUNT 3
 #define MAX_UPDATE_PASSIVE_PANEL_COUNT 3
 
+#define WHITE_ROCK CLITERAL(Color) {165, 177, 194, 255}
 #define CLEAR_BACKGROUND_COLOR BLACK
 
 #define MAX_FILENAME_LENGTH 64

@@ -29,7 +29,7 @@ scaffold: # create build directory
 .PHONY: link
 link: scaffold $(OBJ_FILES) # link
 	@echo Linking $(ASSEMBLY)...
-	@gcc $(OBJ_FILES) -o $(BUILD_DIR)/$(TITLE)$(EXTENSION) $(LINKER_FLAGS)
+	@clang-20 $(OBJ_FILES) -o $(BUILD_DIR)/$(TITLE)$(EXTENSION) $(LINKER_FLAGS)
 
 .PHONY: compile
 compile: #compile .c files
@@ -42,4 +42,5 @@ clean: # clean build directory
 
 $(OBJ_DIR)/%.c.o: %.c # compile .c to .c.o object
 	@echo   $<...
-	@gcc $< $(COMPILER_FLAGS) -c -o $@ $(DEFINES) $(INCLUDE_FLAGS)
+	@clang-20 $< $(COMPILER_FLAGS) -c -o $@ $(DEFINES) $(INCLUDE_FLAGS)
+	

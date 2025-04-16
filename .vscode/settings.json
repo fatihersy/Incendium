@@ -52,7 +52,7 @@
             "source": "Git Bash"
         },
         "pwsh7": {
-            "path": "D:/Program Files/PowerShell/7/pwsh.exe"
+            "path": "D:\\program_files\\pwsh7\\7\\pwsh.exe"
         }
     },
     "todohighlight.isEnable": true,
