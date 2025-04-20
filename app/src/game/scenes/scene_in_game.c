@@ -16,6 +16,7 @@ typedef enum in_game_stages {
   IN_GAME_STAGE_MAP_CHOICE,
   IN_GAME_STAGE_PASSIVE_CHOICE,
   IN_GAME_STAGE_PLAY,
+  IN_GAME_STAGE_PLAY_DEBUG,
   IN_GAME_STAGE_PLAY_RESULTS,
   IN_GAME_STAGE_MAX,
 } in_game_stages;
@@ -31,6 +32,7 @@ typedef struct scene_in_game_state {
   panel ability_upg_panels[MAX_UPDATE_ABILITY_PANEL_COUNT];
   panel passive_selection_panels[MAX_UPDATE_PASSIVE_PANEL_COUNT];
   panel worldmap_selection_panel;
+  panel debug_info_panel;
   panel default_panel;
   
   camera_metrics* in_camera_metrics;
@@ -38,6 +40,7 @@ typedef struct scene_in_game_state {
   in_game_stages stage;
   end_game_results end_game_result;
   u16 hovered_stage;
+  u16 hovered_spawn;
   bool has_game_started;
 } scene_in_game_state;
 
@@ -130,10 +133,28 @@ void update_scene_in_game(void) {
       if (get_is_game_end()) {
         state->stage = IN_GAME_STAGE_PLAY_RESULTS;
       }
+      if (IsKeyDown(KEY_LEFT_SHIFT) && IsKeyReleased(KEY_D)) {
+        state->stage = IN_GAME_STAGE_PLAY_DEBUG;
+      }
+
       update_map();
       update_game_manager();
       state->end_game_result.play_time += GetFrameTime();
     
+      event_fire(EVENT_CODE_SCENE_MANAGER_SET_TARGET, (event_context){
+        .data.f32[0] = _get_player_position(true).x,
+        .data.f32[1] = _get_player_position(true).y,
+      });
+      state->in_camera_metrics->frustum = sig_get_camera_view_rect(state->in_camera_metrics->handle);
+      break;
+    }
+    case IN_GAME_STAGE_PLAY_DEBUG: {
+      if (IsKeyDown(KEY_LEFT_SHIFT) && IsKeyReleased(KEY_D)) {
+        state->stage = IN_GAME_STAGE_PLAY;
+      }
+      update_map();
+      update_game_manager_debug();
+
       event_fire(EVENT_CODE_SCENE_MANAGER_SET_TARGET, (event_context){
         .data.f32[0] = _get_player_position(true).x,
         .data.f32[1] = _get_player_position(true).y,
@@ -172,6 +193,11 @@ void render_scene_in_game(void) {
       break;
     }
     case IN_GAME_STAGE_PLAY: {
+      render_map();
+      render_game();
+      break;
+    }
+    case IN_GAME_STAGE_PLAY_DEBUG: {
       render_map();
       render_game();
       break;
@@ -228,7 +254,7 @@ void render_interface_in_game(void) {
           pnl->buffer[0].data.u16[0] = get_random(1,CHARACTER_STATS_MAX-1);
         }
         dest.x = dest_x_buffer + ((dest.width + SCREEN_OFFSET.x) * i);
-        character_stat* stat = get_player_stat(pnl->buffer[0].data.u16[0]);
+        character_stat* stat = get_player_in_game_stat(pnl->buffer[0].data.u16[0]);
         if(gui_panel_active(pnl, dest, true)) {
           set_is_game_paused(false);
           start_game(stat);
@@ -294,13 +320,72 @@ void render_interface_in_game(void) {
         gui_label_format(FONT_TYPE_MOOD, 10, BASE_RENDER_SCALE(.75f).x, SCREEN_OFFSET.y, WHITE, false, false, "Remaining: %d", get_remaining_enemies());
         gui_label_format(FONT_TYPE_MOOD, 10, BASE_RENDER_SCALE(.75f).x, SCREEN_OFFSET.y * 5.f, WHITE, false, false, "Souls: %d", get_currency_souls());
 
-        gui_label_format(FONT_TYPE_MOOD, 10, 0, BASE_RENDER_SCALE(.35f).y, WHITE, false, false, "damage_break: %.1f", _get_player_state()->damage_break_current);
-        gui_label_format(FONT_TYPE_MOOD, 10, 0, BASE_RENDER_SCALE(.40f).y, WHITE, false, false, "health: %d", _get_player_state()->health_current);
-        gui_label_format(FONT_TYPE_MOOD, 10, 0, BASE_RENDER_SCALE(.45f).y, WHITE, false, false, "collision_x: %.1f", _get_player_state()->collision.x);
-        gui_label_format(FONT_TYPE_MOOD, 10, 0, BASE_RENDER_SCALE(.50f).y, WHITE, false, false, "collision_y: %.1f", _get_player_state()->collision.y);
-        gui_label_format(FONT_TYPE_MOOD, 10, 0, BASE_RENDER_SCALE(.55f).y, WHITE, false, false, "collision_width: %.1f", _get_player_state()->collision.width);
-        gui_label_format(FONT_TYPE_MOOD, 10, 0, BASE_RENDER_SCALE(.60f).y, WHITE, false, false, "collision_height: %.1f", _get_player_state()->collision.height);
-        gui_label_format(FONT_TYPE_MOOD, 10, 0, BASE_RENDER_SCALE(.65f).y, WHITE, false, false, "is_damagable: %d", _get_player_state()->is_damagable);
+        gui_label_format(FONT_TYPE_MOOD, 10, 0, BASE_RENDER_SCALE(.35f).y, WHITE, false, false, "Health: %d", _get_player_in_game_state()->health_max);
+        gui_label_format(FONT_TYPE_MOOD, 10, 0, BASE_RENDER_SCALE(.40f).y, WHITE, false, false, "Current Health: %d", _get_player_in_game_state()->health_current);
+        gui_label_format(FONT_TYPE_MOOD, 10, 0, BASE_RENDER_SCALE(.45f).y, WHITE, false, false, "Damage: %d", _get_player_in_game_state()->damage);
+      }
+      break;
+    }
+    case IN_GAME_STAGE_PLAY_DEBUG: {  
+      DrawFPS(BASE_RENDER_SCALE(.75f).x, SCREEN_OFFSET.y * 10);
+
+      if (!state->has_game_started) { return; }
+      else {
+        gui_label_format(
+          FONT_TYPE_MOOD, 15, ui_get_mouse_pos()->x, ui_get_mouse_pos()->y, 
+          WHITE, false, false, "world_pos{%.1f, %.1f}", gm_get_mouse_pos_world().x, gm_get_mouse_pos_world().y
+        );
+        for (int i=0; i<get_remaining_enemies(); ++i) {
+          if(state->hovered_spawn == i && i != 0){
+            Character2D* spawn = get_spawn_info(i);
+            panel* pnl = &state->debug_info_panel;
+            pnl->dest = (Rectangle) {
+              ui_get_mouse_pos()->x, ui_get_mouse_pos()->y, 
+              BASE_RENDER_SCALE(.4f).x, BASE_RENDER_SCALE(.3f).y
+            };
+            i32 font_size = 18;
+            i32 line_height = BASE_RENDER_SCALE(.05f).y;
+            Vector2 debug_info_position_buffer = VECTOR2(pnl->dest.x, pnl->dest.y);
+            gui_panel_scissored((*pnl), false, {
+              gui_label_format(
+                FONT_TYPE_MOOD, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
+                WHITE, false, false, "Id: %d", spawn->character_id
+              );
+              debug_info_position_buffer.y += line_height;
+              gui_label_format(
+                FONT_TYPE_MOOD, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
+                WHITE, false, false, "Collision: {%.1f, %.1f, %.1f, %.1f}", spawn->collision.x, spawn->collision.y, spawn->collision.width, spawn->collision.height
+              );
+              debug_info_position_buffer.y += line_height;
+              gui_label_format(
+                FONT_TYPE_MOOD, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
+                WHITE, false, false, "Position: {%.1f, %.1f}", spawn->position.x, spawn->position.y
+              );
+              debug_info_position_buffer.y += line_height;
+              gui_label_format(
+                FONT_TYPE_MOOD, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
+                WHITE, false, false, "Health: %d", spawn->health
+              );
+              debug_info_position_buffer.y += line_height;
+              gui_label_format(
+                FONT_TYPE_MOOD, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
+                WHITE, false, false, "Scale: %.1f", spawn->scale
+              );
+              debug_info_position_buffer.y += line_height;
+              gui_label_format(
+                FONT_TYPE_MOOD, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
+                WHITE, false, false, "Speed: %.1f", spawn->speed
+              );
+            });
+          }
+        }
+
+        gui_label_format(FONT_TYPE_MOOD, 10, BASE_RENDER_SCALE(.75f).x, SCREEN_OFFSET.y, WHITE, false, false, "Remaining: %d", get_remaining_enemies());
+        gui_label_format(FONT_TYPE_MOOD, 10, BASE_RENDER_SCALE(.75f).x, SCREEN_OFFSET.y * 5.f, WHITE, false, false, "Souls: %d", get_currency_souls());
+
+        gui_label_format(FONT_TYPE_MOOD, 10, 0, BASE_RENDER_SCALE(.35f).y, WHITE, false, false, "Health: %d", _get_player_in_game_state()->health_max);
+        gui_label_format(FONT_TYPE_MOOD, 10, 0, BASE_RENDER_SCALE(.40f).y, WHITE, false, false, "Current Health: %d", _get_player_in_game_state()->health_current);
+        gui_label_format(FONT_TYPE_MOOD, 10, 0, BASE_RENDER_SCALE(.45f).y, WHITE, false, false, "Damage: %d", _get_player_in_game_state()->damage);
       }
       break;
     }
@@ -345,6 +430,19 @@ void in_game_update_mouse_bindings(void) {
     case IN_GAME_STAGE_PLAY: {
       break;
     }
+    case IN_GAME_STAGE_PLAY_DEBUG: {
+      state->hovered_spawn = U16_MAX;
+      for (int i=0; i<get_remaining_enemies(); ++i) {
+        Character2D* spawn = get_spawn_info(i);
+        if (spawn) {
+          Vector2 mouse_pos_world = gm_get_mouse_pos_world();
+          if (CheckCollisionPointRec(mouse_pos_world, spawn->collision)) {
+            state->hovered_spawn = i;
+          }
+        }
+      }
+      break;
+    }
     case IN_GAME_STAGE_PLAY_RESULTS: { break; }
     default: {
       TraceLog(LOG_WARNING, "scene_in_game::update_scene_in_game()::Unsupported stage");
@@ -352,7 +450,6 @@ void in_game_update_mouse_bindings(void) {
     }
   }
 }
-
 void in_game_update_keyboard_bindings(void) {
 
   switch (state->stage) {
@@ -382,6 +479,15 @@ void in_game_update_keyboard_bindings(void) {
       }
       break;
     }
+    case IN_GAME_STAGE_PLAY_DEBUG: {  
+      if (!state->has_game_started) {
+        state->stage = IN_GAME_STAGE_PLAY;
+      }
+      if (IsKeyReleased(KEY_ESCAPE)) {
+        state->stage = IN_GAME_STAGE_PLAY;
+      }
+      break;
+    }
     case IN_GAME_STAGE_PLAY_RESULTS: { break; }
     default: {
       TraceLog(LOG_WARNING, "scene_in_game::in_game_update_keyboard_bindings()::Unsupported stage");
@@ -389,12 +495,10 @@ void in_game_update_keyboard_bindings(void) {
     }
   }
 }
-
 void in_game_update_bindings(void) {
   in_game_update_mouse_bindings();
   in_game_update_keyboard_bindings();
 }
-
 void begin_scene_in_game(void) {
   
   state->default_panel = (panel) {
@@ -417,6 +521,8 @@ void begin_scene_in_game(void) {
     state->passive_selection_panels[i] = state->default_panel;
   }
   state->worldmap_selection_panel = state->default_panel;
+  state->debug_info_panel = state->default_panel;
+
   state->stage = IN_GAME_STAGE_MAP_CHOICE;
   state->hovered_stage = U16_MAX;
 
@@ -546,7 +652,6 @@ void draw_end_game_panel() {
     "Collected Souls:%d", state->end_game_result.collected_souls
   );
 }
-
 Rectangle sig_get_camera_view_rect(Camera2D camera) {
 
   f32 view_width = BASE_RENDER_RES.x / camera.zoom;
@@ -560,8 +665,6 @@ Rectangle sig_get_camera_view_rect(Camera2D camera) {
   
   return (Rectangle){ x, y, view_width, view_height };
 }
-
-
 bool scene_in_game_on_event(u16 code, event_context context) {
   switch (code) {
     case EVENT_CODE_ADD_CURRENCY_SOULS: {

@@ -123,11 +123,11 @@ void update_abilities(ability_play_system* system) {
 
     for (i32 j = 0; j<MAX_ABILITY_PROJECTILE_SLOT; ++j) {
       if (!abl->projectiles[j].is_active) { continue; }
-
+      player_state* player = (player_state*)abl->p_owner;
       event_fire(EVENT_CODE_DAMAGE_ANY_SPAWN_IF_COLLIDE, (event_context) {
         .data.i16[0] = abl->projectiles[j].collision.x, .data.i16[1] = abl->projectiles[j].collision.y,
         .data.i16[2] = abl->projectiles[j].collision.width, .data.i16[3] = abl->projectiles[j].collision.height,
-        .data.i16[4] = abl->projectiles[j].damage,
+        .data.i16[4] = abl->projectiles[j].damage + player->damage,
       });
       update_sprite(&abl->projectiles[j].animation);
     }

@@ -8,13 +8,16 @@
 bool game_manager_initialize(camera_metrics* _camera_metrics);
 
 void update_game_manager(void);
+void update_game_manager_debug(void);
 
 u16 get_remaining_enemies(void);
+Character2D* get_spawn_info(u16 spawn_id);
 u32 get_currency_souls(void);
 void set_currency_souls(i32 value);
 bool get_b_player_have_upgrade_points(void);
 ability* get_player_ability(ability_type type);
-character_stat* get_player_stat(character_stats stat);
+character_stat* get_player_in_game_stat(character_stats stat);
+character_stat* get_player_default_stat(character_stats stat);
 void set_player_have_ability_upgrade_points(bool _b);
 bool get_is_game_paused(void);
 void set_is_game_paused(bool _is_game_paused);
@@ -22,6 +25,7 @@ void toggle_is_game_paused(void);
 bool get_is_game_end(void);
 void set_is_game_end(bool _is_game_end);
 void toggle_is_game_end(void);
+Vector2 gm_get_mouse_pos_world(void);
 
 void gm_start_game(worldmap_stage stage);
 void gm_reset_game(void);
@@ -41,7 +45,7 @@ u16 _spawn_character(Character2D _character);
 void _set_player_position(Vector2 position);
 ability _get_next_level(ability abl);
 ability _get_ability(ability_type type);
-player_state* _get_player_state(void);
+player_state* _get_player_in_game_state(void);
 
 void render_game(void);
 

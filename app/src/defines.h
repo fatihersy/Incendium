@@ -28,7 +28,7 @@
 #define MAX_UPDATE_ABILITY_PANEL_COUNT 3
 #define MAX_UPDATE_PASSIVE_PANEL_COUNT 3
 
-#define WHITE_ROCK CLITERAL(Color) {165, 177, 194, 255}
+#define WHITE_ROCK CLITERAL(Color) {245, 246, 250,255}
 #define CLEAR_BACKGROUND_COLOR BLACK
 
 #define MAX_FILENAME_LENGTH 64
@@ -70,6 +70,7 @@
 
 #define MAX_PLAYER_LEVEL 100
 #define MAX_SPAWN_COUNT 100
+#define MAX_SPAWN_HEALTH 100000
 #define MAX_SPAWN_COLLISIONS 1
 
 #define MAX_ABILITY_NAME_LENGTH 10
@@ -341,8 +342,6 @@ typedef enum spritesheet_id {
   SHEET_ID_SPAWN_ZOMBIE_ANIMATION_MOVE_RIGHT,
   SHEET_ID_SPAWN_ZOMBIE_ANIMATION_TAKE_DAMAGE_LEFT,
   SHEET_ID_SPAWN_ZOMBIE_ANIMATION_TAKE_DAMAGE_RIGHT,
-  SHEET_ID_SPAWN_ZOMBIE_ANIMATION_WRECK_LEFT,
-  SHEET_ID_SPAWN_ZOMBIE_ANIMATION_WRECK_RIGHT,
   SHEET_ID_BUTTON_REFLECTION_SHEET,
   SHEET_ID_MENU_BUTTON,
   SHEET_ID_FLAT_BUTTON,
@@ -619,9 +618,9 @@ typedef struct spritesheet {
 } spritesheet;
 
 typedef struct Character2D {
-  u16 character_id;
-  u16 health;
-  i16 damage;
+  u32 character_id;
+  i32 health;
+  i32 damage;
   f32 speed;
   actor_type type;
   Rectangle collision;

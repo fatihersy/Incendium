@@ -193,7 +193,7 @@ void draw_main_menu_upgrade_list_panel(void) {
 
   for (i32 i = 0; i < MAIN_MENU_UPGRADE_PANEL_ROW; ++i) {
     for (i32 j = 0; j < MAIN_MENU_UPGRADE_PANEL_COL; ++j) {
-      character_stat *stat = get_player_stat((MAIN_MENU_UPGRADE_PANEL_COL * i) + j + 1);
+      character_stat *stat = get_player_default_stat((MAIN_MENU_UPGRADE_PANEL_COL * i) + j + 1);
       if (!stat || stat->id >= CHARACTER_STATS_MAX ||
         stat->id <= CHARACTER_STATS_UNDEFINED) {
         continue;

@@ -1,7 +1,7 @@
 {
     "window.zoomLevel": 0,
     "files.autoSave": "onFocusChange",
-    "workbench.colorTheme": "Oro Theme",
+    "workbench.colorTheme": "Dark",
     "workbench.editor.showTabs": "multiple",
     "workbench.statusBar.visible": true,
     "workbench.colorCustomizations": {
@@ -15,15 +15,15 @@
     "editor.inlayHints.enabled": "off",
     "editor.hover.enabled": true,
     "editor.hover.delay": 800,
-    "editor.cursorSmoothCaretAnimation" : "on",
+    "editor.cursorSmoothCaretAnimation" : "off",
     "editor.cursorBlinking": "smooth",
     "editor.overviewRulerBorder": false,
     "editor.showFoldingControls" :"mouseover",
     "editor.renderWhitespace": "none",
     "editor.quickSuggestionsDelay": 0,
-    "editor.fontFamily": "Fira Code Retina",
+    "editor.fontFamily": "Iosevka Nerd Font Mono Regular",
     "editor.fontSize": 14,
-    "editor.fontLigatures": "'cv01', 'cv04', 'cv08', 'ss01', 'zero', 'cv14', 'cv17', 'ss05', 'ss04', 'cv18', 'ss03', 'cv30', 'ss02'",
+    "editor.fontLigatures": "'ss07'",
     "editor.quickSuggestions": {
         "other": "on",
         "comments": "on",
@@ -32,7 +32,7 @@
     "editor.tokenColorCustomizations": {
         "textMateRules": []
     },
-    "terminal.integrated.fontFamily": "FiraMono Nerd Font",
+    "terminal.integrated.fontFamily": "IosevkaTermSlab Nerd Font Mono Regular",
     "terminal.integrated.defaultProfile.windows": "pwsh7",
     "terminal.integrated.defaultProfile.linux": "zsh",
     "terminal.integrated.profiles.windows": {

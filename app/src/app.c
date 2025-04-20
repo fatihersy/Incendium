@@ -60,7 +60,6 @@ bool app_initialize(void) {
     SetConfigFlags(FLAG_WINDOW_UNDECORATED | FLAG_WINDOW_TOPMOST);
   }
   state->drawing_target = LoadRenderTexture(BASE_RENDER_RES.x, BASE_RENDER_RES.y);
-
   // Game
   #if USE_PAK_FORMAT 
     pak_parser_system_initialize(PAK_FILE_LOCATION);
@@ -118,7 +117,7 @@ bool app_update(void) {
    event_fire(EVENT_CODE_TOGGLE_BORDERLESS, (event_context) {0});
   }
   
-  if(IsWindowFocused() && !IsWindowState(FLAG_WINDOW_TOPMOST)) {
+  if(IsWindowFocused() && !IsWindowState(FLAG_WINDOW_TOPMOST) && state->settings->window_state != 0) {
     SetWindowState(FLAG_WINDOW_TOPMOST);
   }
   else if(!IsWindowFocused() && IsWindowState(FLAG_WINDOW_TOPMOST)) {
