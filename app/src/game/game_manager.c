@@ -33,12 +33,6 @@ static game_manager_system_state *restrict state;
 extern const u32 level_curve[MAX_PLAYER_LEVEL+1];
 
 #define SPAWN_TRYING_LIMIT 15
-#define SPAWN_BASE_HEALTH 14
-#define SPAWN_BASE_DAMAGE 5
-#define SPAWN_BASE_SCALE_MIN .5f
-#define SPAWN_BASE_SCALE_MAX 2.f
-#define SPAWN_SCALE_MIN SPAWN_BASE_SCALE_MIN + SPAWN_BASE_SCALE_MIN * (level_curve[state->p_player_public->level] * .001)
-#define SPAWN_SCALE_MAX SPAWN_BASE_SCALE_MAX + SPAWN_BASE_SCALE_MAX * (level_curve[state->p_player_public->level] * .001)
 
 bool game_manager_on_event(u16 code, event_context context);
 void game_manager_reinit(void);
@@ -246,9 +240,6 @@ void populate_map_with_spawns(void) {
     return;
   }
 
-  i32 spawn_health = SPAWN_BASE_HEALTH + SPAWN_BASE_HEALTH * (level_curve[state->p_player_public->level] * .005);
-  i32 spawn_damage = SPAWN_BASE_DAMAGE + SPAWN_BASE_DAMAGE * (level_curve[state->p_player_public->level] * .005);
-
   u32 spawn_trying_limit = SPAWN_TRYING_LIMIT;
   for (u16 i = 0; i < MAX_SPAWN_COUNT && (spawn_trying_limit <= SPAWN_TRYING_LIMIT && spawn_trying_limit != 0); ) 
   {
@@ -256,18 +247,18 @@ void populate_map_with_spawns(void) {
       get_random((i32)state->stage.spawning_areas[0].x, (i32)state->stage.spawning_areas[0].x + state->stage.spawning_areas[0].width),
       get_random((i32)state->stage.spawning_areas[0].y, (i32)state->stage.spawning_areas[0].y + state->stage.spawning_areas[0].height)
     };
-    i32 rnd = get_random(0, 100);
-    f32 scale = SPAWN_SCALE_MIN + (SPAWN_SCALE_MAX * rnd / 100.f); // 2.f is minimum and "min + (.5f)" is max
     spawn_character((Character2D) {
       .character_id = 0,
       .buffer.u16[0] = get_random(SPAWN_TYPE_UNDEFINED+1, SPAWN_TYPE_MAX-1),
-      .scale = scale,
+      .buffer.u16[1] = state->p_player_public->level,
+      .buffer.u16[2] = get_random(0, 100),
+      .scale = 1,
       .position = position,
       .w_direction = WORLD_DIRECTION_LEFT,
       .type = ACTOR_TYPE_SPAWN,
       .rotation = 0,
-      .health = spawn_health,
-      .damage = spawn_damage,
+      .health = 0,
+      .damage = 0,
       .speed = 1,
       .is_damagable = true,
       .initialized = false

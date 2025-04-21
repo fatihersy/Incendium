@@ -6,6 +6,13 @@
 
 #include "spritesheet.h"
 
+typedef enum spawn_movement_animations {
+  SPAWN_ZOMBIE_ANIMATION_MOVE_LEFT,
+  SPAWN_ZOMBIE_ANIMATION_MOVE_RIGHT,
+  SPAWN_ZOMBIE_ANIMATION_TAKE_DAMAGE_LEFT,
+  SPAWN_ZOMBIE_ANIMATION_TAKE_DAMAGE_RIGHT,
+} spawn_movement_animations; 
+
 typedef struct spawn_system_state {
   Character2D spawns[MAX_SPAWN_COUNT]; // NOTE: See also clean-up function
   u32 current_spawn_count;
@@ -23,9 +30,21 @@ CheckCollisionRecs(REC1, \
     NEW_POS.x, NEW_POS.y, \
     SPAWN->collision.width, SPAWN->collision.height\
 })
+#define SPAWN_RND_SCALE_MIN 1.5f
+#define SPAWN_RND_SCALE_MAX 2.5f
+#define SPAWN_SCALE_INCREASE_BY_LEVEL(LEVEL) LEVEL * .1
 
-void spawn_play_anim(Character2D* spawn, spritesheet_id sheet);
+#define SPAWN_BASE_HEALTH 14
+#define SPAWN_HEALTH_SCALE_CURVE .5f
+#define SPAWN_HEALTH_CURVE(LEVEL, SCALE, TYPE) SPAWN_BASE_HEALTH + (SPAWN_BASE_HEALTH * ((SCALE * 0.4f) + (LEVEL * 0.6f) + (TYPE * 0.3f)) * level_curve[LEVEL] * 0.002f)
+
+#define SPAWN_BASE_DAMAGE 5
+#define SPAWN_DAMAGE_SCALE_CURVE .5f
+#define SPAWN_DAMAGE_CURVE(LEVEL, SCALE, TYPE) SPAWN_BASE_DAMAGE + (SPAWN_BASE_DAMAGE * ((SCALE * 0.4f) + (LEVEL * 0.6f) + (TYPE * 0.3f)) * level_curve[LEVEL] * 0.002f)
+
+void spawn_play_anim(Character2D* spawn, spawn_movement_animations sheet);
 void remove_spawn(u16 index);
+void register_spawn_animation(Character2D* spawn, spawn_movement_animations movement);
 
 bool spawn_system_initialize(camera_metrics* _camera_metrics) {
   if (state) {
@@ -78,33 +97,38 @@ bool spawn_character(Character2D _character) {
     TraceLog(LOG_WARNING, "spawn_character()::Spawn count exceeded");
     return false;
   }
+  // buffer.u16[0] = SPAWN_TYPE
+  // buffer.u16[1] = SPAWN_LEVEL
+  // buffer.u16[2] = SPAWN_RND_SCALE
+  Character2D *character = &_character;
+  character->scale = SPAWN_RND_SCALE_MIN + (SPAWN_RND_SCALE_MAX * character->buffer.u16[2] / 100.f);
+  character->scale += SPAWN_SCALE_INCREASE_BY_LEVEL(character->buffer.u16[1]);
 
-  _character.move_left_animation.sheet_id = SHEET_ID_SPAWN_ZOMBIE_ANIMATION_MOVE_LEFT;
-  set_sprite(&_character.move_left_animation, true, false, false);
+  character->health = SPAWN_HEALTH_CURVE(character->buffer.u16[1], character->scale, character->buffer.u16[0]);
+  character->damage = SPAWN_DAMAGE_CURVE(character->buffer.u16[1], character->scale, character->buffer.u16[0]);
+  
+  register_spawn_animation(character, SPAWN_ZOMBIE_ANIMATION_MOVE_LEFT);
 
   // INFO: Setting collision equal to the any animation dimentions, as we consider each are equal.
-  _character.collision.width = _character.move_left_animation.current_frame_rect.width * _character.scale;
-  _character.collision.height = _character.move_left_animation.current_frame_rect.height * _character.scale;
-  _character.collision.x = _character.position.x;
-  _character.collision.y = _character.position.y;
-  if(CheckCollisionRecs(state->in_camera_metrics->frustum, _character.collision)) { return false; }
+  character->collision.width = character->move_left_animation.current_frame_rect.width * character->scale;
+  character->collision.height = character->move_left_animation.current_frame_rect.height * character->scale;
+  character->collision.x = character->position.x;
+  character->collision.y = character->position.y;
+  if(CheckCollisionRecs(state->in_camera_metrics->frustum, character->collision)) { return false; }
 
-  _character.move_right_animation.sheet_id = SHEET_ID_SPAWN_ZOMBIE_ANIMATION_MOVE_RIGHT;
-  set_sprite(&_character.move_right_animation, true, false, false);
-  _character.take_damage_left_animation.sheet_id = SHEET_ID_SPAWN_ZOMBIE_ANIMATION_TAKE_DAMAGE_LEFT;
-  set_sprite(&_character.take_damage_left_animation, true, false, false);
-  _character.take_damage_right_animation.sheet_id = SHEET_ID_SPAWN_ZOMBIE_ANIMATION_TAKE_DAMAGE_RIGHT;
-  set_sprite(&_character.take_damage_right_animation, true, false, false);
+  register_spawn_animation(character, SPAWN_ZOMBIE_ANIMATION_MOVE_RIGHT);
+  register_spawn_animation(character, SPAWN_ZOMBIE_ANIMATION_TAKE_DAMAGE_LEFT);
+  register_spawn_animation(character, SPAWN_ZOMBIE_ANIMATION_TAKE_DAMAGE_RIGHT);
 
-  _character.w_direction = WORLD_DIRECTION_RIGHT;
-  _character.character_id = state->next_spawn_id++;
-  _character.initialized = true;
+  character->w_direction = WORLD_DIRECTION_RIGHT;
+  character->character_id = state->next_spawn_id++;
+  character->initialized = true;
 
   for (u32 i=0; i < state->current_spawn_count; ++i) {
-    if(CheckCollisionRecs(state->spawns[i].collision, _character.collision)) { return false; }
+    if(CheckCollisionRecs(state->spawns[i].collision, character->collision)) { return false; }
   }
   
-  state->spawns[state->current_spawn_count] = _character;
+  state->spawns[state->current_spawn_count] = *character;
   state->current_spawn_count++;
   return true;
 }
@@ -115,7 +139,7 @@ bool update_spawns(Vector2 player_position) {
     return false; 
   }
 
-  for (u32 i = 0; i < state->current_spawn_count; ++i) {
+  for (u32 i = 0; i < state->current_spawn_count && i < MAX_SPAWN_COUNT; ++i) {
     Character2D *character = &state->spawns[i];
     if (!character->initialized) { 
       remove_spawn(i);
@@ -173,15 +197,13 @@ bool update_spawns(Vector2 player_position) {
   }
   return true;
 }
-
 bool render_spawns(void) {
-
-  if (state->current_spawn_count > MAX_SPAWN_COUNT) {
-    TraceLog(LOG_WARNING, "spawn::render_spawns()::Spawn count is out of bounds");
+  if (!state) {
+    TraceLog(LOG_ERROR, "spawn::render_spawns()::State is not valid");
     return false;
   }
   // Enemies
-  for (u32 i = 0; i < state->current_spawn_count; ++i) {
+  for (u32 i = 0; i < state->current_spawn_count && i < MAX_SPAWN_COUNT; ++i) {
     if (state->spawns[i].initialized) {
       if(!state->spawns[i].is_dead) 
       {
@@ -189,9 +211,9 @@ bool render_spawns(void) {
         {
           switch (state->spawns[i].w_direction) 
           {
-            case WORLD_DIRECTION_LEFT: spawn_play_anim(&state->spawns[i], SHEET_ID_SPAWN_ZOMBIE_ANIMATION_MOVE_LEFT);
+            case WORLD_DIRECTION_LEFT: spawn_play_anim(&state->spawns[i], SPAWN_ZOMBIE_ANIMATION_MOVE_LEFT);
             break;
-            case WORLD_DIRECTION_RIGHT:spawn_play_anim(&state->spawns[i], SHEET_ID_SPAWN_ZOMBIE_ANIMATION_MOVE_RIGHT);
+            case WORLD_DIRECTION_RIGHT:spawn_play_anim(&state->spawns[i], SPAWN_ZOMBIE_ANIMATION_MOVE_RIGHT);
             break;
             default: {
               TraceLog(LOG_WARNING, "spawn::render_spawns()::Spawn has no directions");
@@ -202,15 +224,15 @@ bool render_spawns(void) {
         else 
         {
           (state->spawns[i].w_direction == WORLD_DIRECTION_LEFT) 
-            ? spawn_play_anim(&state->spawns[i], SHEET_ID_SPAWN_ZOMBIE_ANIMATION_TAKE_DAMAGE_LEFT)
-            : spawn_play_anim(&state->spawns[i], SHEET_ID_SPAWN_ZOMBIE_ANIMATION_TAKE_DAMAGE_RIGHT);
+            ? spawn_play_anim(&state->spawns[i], SPAWN_ZOMBIE_ANIMATION_TAKE_DAMAGE_LEFT)
+            : spawn_play_anim(&state->spawns[i], SPAWN_ZOMBIE_ANIMATION_TAKE_DAMAGE_RIGHT);
         }
       } 
       else 
       {
         (state->spawns[i].w_direction == WORLD_DIRECTION_LEFT) 
-          ? spawn_play_anim(&state->spawns[i], SHEET_ID_SPAWN_ZOMBIE_ANIMATION_TAKE_DAMAGE_LEFT)
-          : spawn_play_anim(&state->spawns[i], SHEET_ID_SPAWN_ZOMBIE_ANIMATION_TAKE_DAMAGE_RIGHT);
+          ? spawn_play_anim(&state->spawns[i], SPAWN_ZOMBIE_ANIMATION_TAKE_DAMAGE_LEFT)
+          : spawn_play_anim(&state->spawns[i], SPAWN_ZOMBIE_ANIMATION_TAKE_DAMAGE_RIGHT);
       }
     }
   }
@@ -241,26 +263,26 @@ void clean_up_spawn_state(void) {
   state->next_spawn_id = 0;
 }
 
-void spawn_play_anim(Character2D* spawn, spritesheet_id sheet) {
+void spawn_play_anim(Character2D* spawn, spawn_movement_animations movement) {
   Rectangle dest = spawn->collision;
 
-  switch (sheet) {
-    case SHEET_ID_SPAWN_ZOMBIE_ANIMATION_MOVE_LEFT: {
+  switch (movement) {
+    case SPAWN_ZOMBIE_ANIMATION_MOVE_LEFT: {
       play_sprite_on_site(&spawn->move_left_animation, WHITE, dest);
       spawn->last_played_animation = &spawn->move_left_animation;
       break;
     }
-    case SHEET_ID_SPAWN_ZOMBIE_ANIMATION_MOVE_RIGHT: {
+    case SPAWN_ZOMBIE_ANIMATION_MOVE_RIGHT: {
       play_sprite_on_site(&spawn->move_right_animation, WHITE, dest);
       spawn->last_played_animation = &spawn->move_right_animation;
       break;
     }
-    case SHEET_ID_SPAWN_ZOMBIE_ANIMATION_TAKE_DAMAGE_LEFT:  {
+    case SPAWN_ZOMBIE_ANIMATION_TAKE_DAMAGE_LEFT:  {
       play_sprite_on_site(&spawn->take_damage_left_animation, WHITE, dest);
       spawn->last_played_animation = &spawn->take_damage_left_animation;
       break;
     }
-    case SHEET_ID_SPAWN_ZOMBIE_ANIMATION_TAKE_DAMAGE_RIGHT:  {
+    case SPAWN_ZOMBIE_ANIMATION_TAKE_DAMAGE_RIGHT:  {
       play_sprite_on_site(&spawn->take_damage_right_animation, WHITE, dest);
       spawn->last_played_animation = &spawn->take_damage_right_animation;
       break;
@@ -290,4 +312,136 @@ void remove_spawn(u16 index) {
   zero_memory(&state->spawns[state->current_spawn_count-1], sizeof(Character2D));
   
   if (state->current_spawn_count > 0) state->current_spawn_count--;
+}
+
+void register_spawn_animation(Character2D* spawn, spawn_movement_animations movement) {
+  if (!spawn) {
+    TraceLog(LOG_WARNING, "spawn::register_spawn_animation()::Spawn is not valid");
+    return;
+  }
+
+  switch (movement) {
+    case SPAWN_ZOMBIE_ANIMATION_MOVE_LEFT: {
+      switch (spawn->buffer.u16[0]) {
+        case SPAWN_TYPE_BROWN: {
+          spawn->move_left_animation.sheet_id = SHEET_ID_SPAWN_BROWN_ZOMBIE_ANIMATION_MOVE_LEFT;
+          set_sprite(&spawn->move_left_animation, true, false, false);
+          return;
+        }
+        case SPAWN_TYPE_ORANGE: {
+          spawn->move_left_animation.sheet_id = SHEET_ID_SPAWN_ORANGE_ZOMBIE_ANIMATION_MOVE_LEFT;
+          set_sprite(&spawn->move_left_animation, true, false, false);
+          return;
+        }
+        case SPAWN_TYPE_YELLOW: {
+          spawn->move_left_animation.sheet_id = SHEET_ID_SPAWN_YELLOW_ZOMBIE_ANIMATION_MOVE_LEFT;
+          set_sprite(&spawn->move_left_animation, true, false, false);
+          return;
+        } 
+        case SPAWN_TYPE_RED: {
+          spawn->move_left_animation.sheet_id = SHEET_ID_SPAWN_RED_ZOMBIE_ANIMATION_MOVE_LEFT;
+          set_sprite(&spawn->move_left_animation, true, false, false);
+          return;
+        }
+        default: {
+          TraceLog(LOG_WARNING, "spawn::register_spawn_animation()::Unsupported spawn type");
+          return;
+        }
+      }
+      break;
+    }
+    case SPAWN_ZOMBIE_ANIMATION_MOVE_RIGHT: {
+      switch (spawn->buffer.u16[0]) {
+        case SPAWN_TYPE_BROWN: {
+          spawn->move_right_animation.sheet_id = SHEET_ID_SPAWN_BROWN_ZOMBIE_ANIMATION_MOVE_RIGHT;
+          set_sprite(&spawn->move_right_animation, true, false, false);
+          return;
+        }
+        case SPAWN_TYPE_ORANGE: {
+          spawn->move_right_animation.sheet_id = SHEET_ID_SPAWN_ORANGE_ZOMBIE_ANIMATION_MOVE_RIGHT;
+          set_sprite(&spawn->move_right_animation, true, false, false);
+          return;
+        }
+        case SPAWN_TYPE_YELLOW: {
+          spawn->move_right_animation.sheet_id = SHEET_ID_SPAWN_YELLOW_ZOMBIE_ANIMATION_MOVE_RIGHT;
+          set_sprite(&spawn->move_right_animation, true, false, false);
+          return;
+        } 
+        case SPAWN_TYPE_RED: {
+          spawn->move_right_animation.sheet_id = SHEET_ID_SPAWN_RED_ZOMBIE_ANIMATION_MOVE_RIGHT;
+          set_sprite(&spawn->move_right_animation, true, false, false);
+          return;
+        }
+        default: {
+          TraceLog(LOG_WARNING, "spawn::register_spawn_animation()::Unsupported spawn type");
+          return;
+        }
+      }
+      break;
+    }
+    case SPAWN_ZOMBIE_ANIMATION_TAKE_DAMAGE_LEFT:  {
+      switch (spawn->buffer.u16[0]) {
+        case SPAWN_TYPE_BROWN: {
+          spawn->take_damage_left_animation.sheet_id = SHEET_ID_SPAWN_BROWN_ZOMBIE_ANIMATION_TAKE_DAMAGE_LEFT;
+          set_sprite(&spawn->take_damage_left_animation, true, false, false);
+          return;
+        }
+        case SPAWN_TYPE_ORANGE: {
+          spawn->take_damage_left_animation.sheet_id = SHEET_ID_SPAWN_ORANGE_ZOMBIE_ANIMATION_TAKE_DAMAGE_LEFT;
+          set_sprite(&spawn->take_damage_left_animation, true, false, false);
+          return;
+        }
+        case SPAWN_TYPE_YELLOW: {
+          spawn->take_damage_left_animation.sheet_id = SHEET_ID_SPAWN_YELLOW_ZOMBIE_ANIMATION_TAKE_DAMAGE_LEFT;
+          set_sprite(&spawn->take_damage_left_animation, true, false, false);
+          return;
+        }
+        case SPAWN_TYPE_RED: {
+          spawn->take_damage_left_animation.sheet_id = SHEET_ID_SPAWN_RED_ZOMBIE_ANIMATION_TAKE_DAMAGE_LEFT;
+          set_sprite(&spawn->take_damage_left_animation, true, false, false);
+          return;
+        }
+        default: {
+          TraceLog(LOG_WARNING, "spawn::register_spawn_animation()::Unsupported spawn type");
+          return;
+        }
+      }
+      break;
+    }
+    case SPAWN_ZOMBIE_ANIMATION_TAKE_DAMAGE_RIGHT:  {
+      switch (spawn->buffer.u16[0]) {
+        case SPAWN_TYPE_BROWN: {
+          spawn->take_damage_right_animation.sheet_id = SHEET_ID_SPAWN_BROWN_ZOMBIE_ANIMATION_TAKE_DAMAGE_RIGHT;
+          set_sprite(&spawn->take_damage_right_animation, true, false, false);
+          return;
+        }
+        case SPAWN_TYPE_ORANGE: {
+          spawn->take_damage_right_animation.sheet_id = SHEET_ID_SPAWN_ORANGE_ZOMBIE_ANIMATION_TAKE_DAMAGE_RIGHT;
+          set_sprite(&spawn->take_damage_right_animation, true, false, false);
+          return;
+        }
+        case SPAWN_TYPE_YELLOW: {
+          spawn->take_damage_right_animation.sheet_id = SHEET_ID_SPAWN_YELLOW_ZOMBIE_ANIMATION_TAKE_DAMAGE_RIGHT;
+          set_sprite(&spawn->take_damage_right_animation, true, false, false);
+          return;
+        }
+        case SPAWN_TYPE_RED: {
+          spawn->take_damage_right_animation.sheet_id = SHEET_ID_SPAWN_RED_ZOMBIE_ANIMATION_TAKE_DAMAGE_RIGHT;
+          set_sprite(&spawn->take_damage_right_animation, true, false, false);
+          return;
+        }
+        default: {
+          TraceLog(LOG_WARNING, "spawn::register_spawn_animation()::Unsupported spawn type");
+          return;
+        }
+      }
+      break;
+    }
+    default: {
+      TraceLog(LOG_ERROR, "spawn::register_spawn_animation()::Unsupported sheet id");
+      return;
+    }
+  }
+
+  TraceLog(LOG_WARNING, "spawn::register_spawn_animation()::Function has ended unexpectedly");
 }

@@ -14,32 +14,17 @@ typedef struct ability_system_state {
   camera_metrics* in_camera_metrics;
   app_settings* settings;
 } ability_system_state;
-
-static ability_system_state* state;
+static ability_system_state *restrict state;
 
 void movement_satellite(ability* abl);
 void movement_bullet(ability* abl);
 void movement_comet(ability* abl);
-
-void register_ability(
-  const char* _display_name, 
-  Rectangle icon_loc, 
-  ability_upgradables _upgradables[ABILITY_UPG_MAX],
-  ability_type type,
-  movement_pattern move_pattern, 
-  u16 proj_count_on_start,
-  f32 proj_duration, 
-  u16 _damage, 
-  Vector2 proj_size, 
-  spritesheet_id proj_anim, 
-  bool _should_center
-);
+void register_ability(ability abl);
 
 bool ability_system_initialize(camera_metrics* _camera_metrics, app_settings* settings) {
   if (state) {
     return false;
   }
-
   state = (ability_system_state*)allocate_memory_linear(sizeof(ability_system_state),true);
   if (!state) {
     TraceLog(LOG_ERROR, "ability::ability_system_initialize()::Failed to allocate memory");
@@ -48,63 +33,50 @@ bool ability_system_initialize(camera_metrics* _camera_metrics, app_settings* se
   state->settings = settings;
   state->in_camera_metrics = _camera_metrics;
 
-  register_ability("Fireball", (Rectangle){704, 768, 32, 32}, 
-    (ability_upgradables[ABILITY_UPG_MAX]){ABILITY_UPG_DAMAGE, ABILITY_UPG_SPEED, ABILITY_UPG_AMOUNT, ABILITY_UPG_UNDEFINED, ABILITY_UPG_UNDEFINED},
-    ABILITY_TYPE_FIREBALL, MOVE_TYPE_SATELLITE, 
-    1, 0, 15, (Vector2) {30, 30}, SHEET_ID_FIREBALL_ANIMATION, true
-  );
-  register_ability("Bullet", (Rectangle){544, 128, 32, 32}, 
-    (ability_upgradables[ABILITY_UPG_MAX]){ABILITY_UPG_DAMAGE, ABILITY_UPG_HITBOX, ABILITY_UPG_UNDEFINED, ABILITY_UPG_UNDEFINED, ABILITY_UPG_UNDEFINED},
-    ABILITY_TYPE_BULLET, MOVE_TYPE_BULLET, 
-    1, 1.75, 15, (Vector2) {30, 30}, SHEET_ID_FIREBALL_ANIMATION, true
-  );
-  register_ability("Comet",  (Rectangle) {576, 128, 32, 32}, 
-    (ability_upgradables[ABILITY_UPG_MAX]){ABILITY_UPG_DAMAGE, ABILITY_UPG_HITBOX, ABILITY_UPG_AMOUNT, ABILITY_UPG_UNDEFINED, ABILITY_UPG_UNDEFINED},
-    ABILITY_TYPE_COMET, MOVE_TYPE_COMET, 
-    2, 0, 15, (Vector2) {30, 30}, SHEET_ID_FIREBALL_ANIMATION, true
-  );
+  register_ability((ability) {.display_name = "Fireball",
+    .type = ABILITY_TYPE_FIREBALL,
+    .move_pattern = MOVE_TYPE_SATELLITE,
+    .icon_src = (Rectangle){704, 768, 32, 32},
+    .upgradables = {ABILITY_UPG_DAMAGE, ABILITY_UPG_SPEED, ABILITY_UPG_AMOUNT, ABILITY_UPG_UNDEFINED, ABILITY_UPG_UNDEFINED},
+    .proj_count = 1,
+    .proj_duration = 0,
+    .proj_speed = 1,
+    .base_damage = 15,
+    .proj_dim = (Vector2){30, 30},
+    .anim_id = SHEET_ID_FLAME_ENERGY_ANIMATION,
+    .center_proj_anim = true,
+    .level = 1
+  });
+  register_ability((ability) {.display_name = "Bullet",
+    .type = ABILITY_TYPE_BULLET,
+    .move_pattern = MOVE_TYPE_BULLET,
+    .icon_src = (Rectangle){544, 128, 32, 32},
+    .upgradables = {ABILITY_UPG_DAMAGE, ABILITY_UPG_HITBOX, ABILITY_UPG_AMOUNT, ABILITY_UPG_UNDEFINED, ABILITY_UPG_UNDEFINED},
+    .proj_count = 1,
+    .proj_duration = 1.75f,
+    .base_damage = 15,
+    .proj_speed = 3.f,
+    .proj_dim = (Vector2){30, 30},
+    .anim_id = SHEET_ID_FLAME_ENERGY_ANIMATION,
+    .center_proj_anim = true,
+    .level = 1
+  });
+  register_ability((ability) {.display_name = "Comet",
+    .type = ABILITY_TYPE_COMET,
+    .move_pattern = MOVE_TYPE_COMET,
+    .icon_src = (Rectangle) {576, 128, 32, 32},
+    .upgradables = {ABILITY_UPG_DAMAGE, ABILITY_UPG_HITBOX, ABILITY_UPG_AMOUNT, ABILITY_UPG_UNDEFINED, ABILITY_UPG_UNDEFINED},
+    .proj_count = 2,
+    .proj_duration = 0,
+    .base_damage = 15,
+    .proj_speed = 5.f,
+    .proj_dim = (Vector2){30, 30},
+    .anim_id = SHEET_ID_FLAME_ENERGY_ANIMATION,
+    .center_proj_anim = true,
+    .level = 1
+  });
+
   return true;
-}
-
-void upgrade_ability(ability* abl) {
-  if (abl->type <= ABILITY_TYPE_UNDEFINED || abl->type >= ABILITY_TYPE_MAX) {
-    TraceLog(LOG_WARNING, "ability::upgrade_ability()::Ability is not initialized");
-    return;
-  }
-
-  ++abl->level;
-
-  for (int i=0; i<ABILITY_UPG_MAX; ++i) {
-    switch (abl->upgradables[i]) {
-      // TODO: Complete all cases
-      case ABILITY_UPG_DAMAGE: { 
-        abl->base_damage += abl->level * 2;
-        break;
-      }
-      case ABILITY_UPG_AMOUNT: { 
-        u16 new_proj_count = abl->proj_count + 1;
-        for (int i = abl->proj_count; i < new_proj_count; ++i) {
-          abl->projectiles[i].collision = (Rectangle) {0, 0, abl->proj_dim.x, abl->proj_dim.y};
-          abl->projectiles[i].damage = abl->base_damage + abl->level * 2;
-          abl->projectiles[i].is_active = true;
-        }
-        abl->proj_count = new_proj_count;
-        break;
-      }
-      case ABILITY_UPG_HITBOX: { 
-        
-        break;
-      }
-      case ABILITY_UPG_SPEED:  { 
-        
-        break;
-      }
-      
-      default: return;
-    }
-  }
-
-
 }
 void update_abilities(ability_play_system* system) {
   for (int i=0; i<ABILITY_TYPE_MAX; ++i) {
@@ -133,6 +105,24 @@ void update_abilities(ability_play_system* system) {
     }
   }
 }
+void render_abilities(ability_play_system* system) {
+
+  for (int i = 1; i < ABILITY_TYPE_MAX; ++i) {
+    if (!system->abilities[i].is_active || !system->abilities[i].is_initialized) { continue; }
+
+    for (int j = 0; j < system->abilities[i].proj_count; ++j) {
+      if (!system->abilities[i].projectiles[j].is_active) { continue; }
+      Rectangle proj_coll = system->abilities[i].projectiles[j].collision;
+      system->abilities[i].projectiles[j].is_active = true;
+      play_sprite_on_site(&system->abilities[i].projectiles[j].animation, WHITE,
+        (Rectangle) {
+          proj_coll.x, proj_coll.y, 
+          proj_coll.width * ABILITIES_BASE_SCALE, proj_coll.height * ABILITIES_BASE_SCALE
+      });
+    }
+  }
+}
+
 void movement_satellite(ability* abl) {
   if (!abl->is_active || !abl->is_initialized) {
     TraceLog(LOG_WARNING, "ability::movement_satellite()::Ability is not active or not initialized");
@@ -143,8 +133,8 @@ void movement_satellite(ability* abl) {
   abl->position.x  = player->collision.x + player->collision.width / 2.f;
   abl->position.y  = player->collision.y + player->collision.height / 2.f;
 
-  abl->rotation += 1;
-    
+  abl->rotation += abl->proj_speed;
+
   if (abl->rotation > 359) abl->rotation = 0;
 
   for (i16 i = 0; i < abl->proj_count; i++) {
@@ -177,7 +167,7 @@ void movement_bullet(ability* abl) {
       abl->projectiles[i].duration -= GetFrameTime();
     }
     
-    abl->projectiles[i].position.x += abl->projectiles[i].direction == WORLD_DIRECTION_RIGHT ? 2.75 : -2.75;
+    abl->projectiles[i].position.x += abl->projectiles[i].direction == WORLD_DIRECTION_RIGHT ? abl->proj_speed : -abl->proj_speed;
 
     abl->projectiles[i].collision.x = abl->projectiles[i].position.x;
     abl->projectiles[i].collision.y = abl->projectiles[i].position.y;
@@ -206,8 +196,7 @@ void movement_comet(ability* abl) {
       const Vector2 screen_max_world = GetScreenToWorld2D((Vector2) {BASE_RENDER_RES.x, BASE_RENDER_RES.y}, state->in_camera_metrics->handle);
       abl->projectiles[i].position = GetScreenToWorld2D((Vector2) {rand, -abl->proj_dim.y},state->in_camera_metrics->handle);
       const Vector2 new_prj_pos = (Vector2) {
-        .x = FCLAMP(abl->projectiles[i].position.x + (BASE_RENDER_SCALE(.25f).x * rand_recoil[(i32)*rand_count]), 
-                      screen_min_world.x, screen_max_world.x),
+        .x = FCLAMP(abl->projectiles[i].position.x + (BASE_RENDER_SCALE(.25f).x * rand_recoil[(i32)*rand_count]), screen_min_world.x, screen_max_world.x),
         .y = player->position.y
       };
       abl->projectiles[i].buffer.f32[0] = new_prj_pos.x;
@@ -218,58 +207,52 @@ void movement_comet(ability* abl) {
       abl->projectiles[i].duration -= GetFrameTime();
     }
     
-    abl->projectiles[i].position = move_towards(abl->projectiles[i].position, pVECTOR2(abl->projectiles[i].buffer.f32), 3);
+    abl->projectiles[i].position = move_towards(abl->projectiles[i].position, pVECTOR2(abl->projectiles[i].buffer.f32), abl->proj_speed);
 
     abl->projectiles[i].collision.x = abl->projectiles[i].position.x;
     abl->projectiles[i].collision.y = abl->projectiles[i].position.y;
   }
 }
 
-void render_abilities(ability_play_system* system) {
+void upgrade_ability(ability* abl) {
+  if (abl->type <= ABILITY_TYPE_UNDEFINED || abl->type >= ABILITY_TYPE_MAX) {
+    TraceLog(LOG_WARNING, "ability::upgrade_ability()::Ability is not initialized");
+    return;
+  }
+  ++abl->level;
 
-  for (int i = 1; i < ABILITY_TYPE_MAX; ++i) {
-    if (!system->abilities[i].is_active || !system->abilities[i].is_initialized) { continue; }
-
-    for (int j = 0; j < system->abilities[i].proj_count; ++j) {
-      if (!system->abilities[i].projectiles[j].is_active) { continue; }
-      Rectangle proj_coll = system->abilities[i].projectiles[j].collision;
-      system->abilities[i].projectiles[j].is_active = true;
-      play_sprite_on_site(&system->abilities[i].projectiles[j].animation, WHITE,
-        (Rectangle) {
-          proj_coll.x, proj_coll.y, 
-          proj_coll.width * ABILITIES_BASE_SCALE, proj_coll.height * ABILITIES_BASE_SCALE
-      });
+  for (int i=0; i<ABILITY_UPG_MAX; ++i) {
+    switch (abl->upgradables[i]) {
+      // TODO: Complete all cases
+      case ABILITY_UPG_DAMAGE: { 
+        abl->base_damage += abl->level * 2;
+        break;
+      }
+      case ABILITY_UPG_AMOUNT: { 
+        u16 new_proj_count = abl->proj_count + 1;
+        for (int i = abl->proj_count; i < new_proj_count; ++i) {
+          abl->projectiles[i].collision = (Rectangle) {0, 0, abl->proj_dim.x, abl->proj_dim.y};
+          abl->projectiles[i].damage = abl->base_damage + abl->level * 2;
+          abl->projectiles[i].is_active = true;
+        }
+        abl->proj_count = new_proj_count;
+        break;
+      }
+      case ABILITY_UPG_HITBOX: { break; }
+      case ABILITY_UPG_SPEED:  { break; }
+      default: return;
     }
   }
 }
-
 /**
  * @param proj_duration in secs. affects not to all abilities like fireball ability
  * @param _should_center for projectile spritesheet
  */
-void register_ability(
-  const char* _display_name, Rectangle icon_loc, ability_upgradables _upgradables[ABILITY_UPG_MAX], 
-  ability_type type, movement_pattern move_pattern, u16 proj_count_on_start, f32 proj_duration, u16 _damage, Vector2 proj_size, 
-  spritesheet_id proj_anim, bool _should_center
-) {
-  ability abl = {0};
-  if (TextLength(_display_name) >= MAX_ABILITY_NAME_LENGTH) {
-    TraceLog(LOG_WARNING, "ability::register_ability()::Ability:'%s's name length is out of bound!", _display_name);
+void register_ability(ability abl) {
+  if (TextLength(abl.display_name) >= MAX_ABILITY_NAME_LENGTH) {
+    TraceLog(LOG_WARNING, "ability::register_ability()::Ability:'%s's name length is out of bound!", abl.display_name);
     return;
   }
-  abl.type = type;
-  abl.anim_id = proj_anim;
-  abl.level = 1;
-  abl.base_damage = _damage;
-  abl.proj_count = proj_count_on_start;
-  abl.proj_duration = proj_duration;
-  abl.move_pattern = move_pattern;
-  abl.center_proj_anim = _should_center;
-  abl.proj_dim = proj_size;
-  abl.icon_src = icon_loc;
-  copy_memory(abl.display_name, _display_name, TextLength(_display_name));
-  copy_memory(abl.upgradables, _upgradables, sizeof(abl.upgradables));
-
   for (int i = 0; i < MAX_ABILITY_PROJECTILE_SLOT; ++i) {
     abl.projectiles[i] = (projectile){0};
     abl.projectiles[i].collision = (Rectangle) {0, 0, abl.proj_dim.x, abl.proj_dim.y};
@@ -279,8 +262,9 @@ void register_ability(
     set_sprite(&abl.projectiles[i].animation, true, false, abl.center_proj_anim);
   }
 
-  state->abilities[type] = abl;
+  state->abilities[abl.type] = abl;
 }
+
 ability get_ability(ability_type _type) {
   if (!state) {
     return (ability){0};
@@ -288,7 +272,6 @@ ability get_ability(ability_type _type) {
   ability abl = state->abilities[_type];
   return abl;
 }
-
 ability get_next_level(ability abl) {
   upgrade_ability(&abl);
   return abl;

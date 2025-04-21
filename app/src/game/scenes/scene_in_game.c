@@ -123,9 +123,7 @@ void update_scene_in_game(void) {
       break;
     }
     case IN_GAME_STAGE_PLAY: {
-      if (get_is_game_paused() || !state->has_game_started) {
-        return;
-      }
+      if (get_is_game_paused() || !state->has_game_started) { return; }
       else if (get_remaining_enemies() <= 0 || get_remaining_enemies() > MAX_SPAWN_COUNT) {
         event_fire(EVENT_CODE_END_GAME, (event_context) {0});
         state->end_game_result.is_win = true;
