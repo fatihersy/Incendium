@@ -18,6 +18,7 @@ void update_sprite(spritesheet *sheet) {
   if (sheet->counter >= 60 / sheet->fps) {
     sheet->counter = 0;
     sheet->current_col++;
+    sheet->current_frame++;
     if (sheet->current_col >= sheet->col_total) {
       sheet->current_row++;
       sheet->current_col = 0;
@@ -25,6 +26,7 @@ void update_sprite(spritesheet *sheet) {
     if (sheet->current_row >= sheet->row_total) {
       sheet->current_row = 0;
       sheet->current_col = 0;
+      sheet->current_frame = 0;
 
       if (sheet->play_looped) {
         reset_sprite(sheet, false);
@@ -188,11 +190,13 @@ void reset_sprite(spritesheet *sheet, bool _retrospective) {
   sheet->counter = 0;
   sheet->current_col = 0;
   sheet->current_row = 0;
+  sheet->current_frame = 0;
   sheet->current_frame_rect.x = 0;
   sheet->current_frame_rect.y = 0;
 
   if (_retrospective) {
     sheet->is_played = false;
+    sheet->is_started = false;
   }
 }
 Texture2D* _get_texture_by_enum(texture_id _id) {

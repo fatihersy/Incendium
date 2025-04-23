@@ -11,6 +11,9 @@
 #define TOTAL_ALLOCATED_MEMORY 512 * 1024 * 1024
 #define TARGET_FPS 60
 
+#define DEBUG_COLLISIONS 0
+#define USE_PAK_FORMAT 0
+
 #define PAK_FILE_LOCATION "./resource.pak"
 #define CONFIG_FILE_LOCATION "./config.ini"
 #define SAVE_GAME_EXTENSION ".save_slot"
@@ -91,9 +94,6 @@
 #define MAX_RAND 6
 #define RANDOM_TABLE_NUMBER_COUNT 507
 #define RANDOM_STACK_COUNT 10
-
-#define DEBUG_COLLISIONS 0
-#define USE_PAK_FORMAT 0
 
 // Unsigned int types.
 typedef unsigned char u8;
@@ -365,6 +365,7 @@ typedef enum spritesheet_id {
   SHEET_ID_SLIDER_RIGHT_BUTTON,
   SHEET_ID_FLAME_ENERGY_ANIMATION,
   SHEET_ID_FIREBALL_ANIMATION,
+  SHEET_ID_FIREBALL_EXPLOTION_ANIMATION,
   SHEET_ID_SPRITESHEET_TYPE_MAX
 } spritesheet_id;
 
@@ -674,7 +675,8 @@ typedef struct Character2D {
 
 typedef struct projectile {
   u16 id;
-  spritesheet animation;
+  spritesheet default_animation;
+  spritesheet explotion_animation; // Explotion animation etc.
   Vector2 position;
   Rectangle collision;
   world_direction direction;
@@ -700,6 +702,7 @@ typedef struct projectile {
   u16 damage;
   f32 duration;
   bool is_active;
+  bool play_explosion_animation;
 } projectile;
 
 typedef struct ability {
@@ -708,10 +711,12 @@ typedef struct ability {
   char display_name[MAX_ABILITY_NAME_LENGTH];
   ability_upgradables upgradables[ABILITY_UPG_MAX];
   ability_type type;
-  spritesheet_id anim_id;
+  spritesheet_id default_animation_id;
+  spritesheet_id explosion_animation_id;
   
   movement_pattern move_pattern;
   f32 ability_play_time;
+  f32 proj_scale;
   u16 proj_count;
   u16 proj_speed;
   f32 proj_duration;
