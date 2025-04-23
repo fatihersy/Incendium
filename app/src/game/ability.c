@@ -3,6 +3,7 @@
 #include "core/event.h"
 #include "core/fmath.h"
 #include "core/fmemory.h"
+#include "core/ftime.h"
 
 #include "game/spritesheet.h"
 
@@ -69,9 +70,9 @@ bool ability_system_initialize(camera_metrics* _camera_metrics, app_settings* se
     .proj_count = 2,
     .proj_duration = 0,
     .base_damage = 15,
-    .proj_speed = 5.f,
+    .proj_speed = 4.f,
     .proj_dim = (Vector2){30, 30},
-    .anim_id = SHEET_ID_FLAME_ENERGY_ANIMATION,
+    .anim_id = SHEET_ID_FIREBALL_ANIMATION,
     .center_proj_anim = true,
     .level = 1
   });
@@ -112,12 +113,12 @@ void render_abilities(ability_play_system* system) {
 
     for (int j = 0; j < system->abilities[i].proj_count; ++j) {
       if (!system->abilities[i].projectiles[j].is_active) { continue; }
-      Rectangle proj_coll = system->abilities[i].projectiles[j].collision;
-      system->abilities[i].projectiles[j].is_active = true;
-      play_sprite_on_site(&system->abilities[i].projectiles[j].animation, WHITE,
+      projectile* proj = &system->abilities[i].projectiles[j];
+      proj->is_active = true;
+      play_sprite_on_site(&proj->animation, WHITE,
         (Rectangle) {
-          proj_coll.x, proj_coll.y, 
-          proj_coll.width * ABILITIES_BASE_SCALE, proj_coll.height * ABILITIES_BASE_SCALE
+          proj->position.x, proj->position.y,
+          system->abilities[i].proj_dim.x * ABILITIES_BASE_SCALE, system->abilities[i].proj_dim.y * ABILITIES_BASE_SCALE
       });
     }
   }
@@ -179,36 +180,32 @@ void movement_comet(ability* abl) {
     TraceLog(LOG_WARNING, "ability::movement_comet()::Ability is not active or not initialized");
     return;
   }
-  player_state* player = (player_state*)abl->p_owner; // HACK: Hardcoded character state
-
-  const f32 rand_percent[MAX_ABILITY_PROJECTILE_SLOT] = { 0.72, 0.45, 0.89,  0.16,  0.33, 0.58};
-  const f32 rand_recoil[MAX_ABILITY_PROJECTILE_SLOT]  = {-0.58, 0.33, 0.16, -0.45, -0.89, 0.72};
+  if (!abl->p_owner) {
+    TraceLog(LOG_WARNING, "ability::movement_comet()::Owner is not valid");
+    return;
+  }
+  player_state* player = (player_state*)abl->p_owner;
+  const Rectangle* frustum = &state->in_camera_metrics->frustum;
 
   abl->position.x  = player->collision.x + player->collision.width / 2.f;
   abl->position.y  = player->collision.y + player->collision.height / 2.f;
 
   for (i16 i = 0; i < abl->proj_count; i++) {
-
     if (vec2_equals(abl->projectiles[i].position, pVECTOR2(abl->projectiles[i].buffer.f32), .1)) {
-      f32* rand_count = &abl->projectiles[i].buffer.f32[2];
-      const f32 rand = rand_percent[(i32)*rand_count] * BASE_RENDER_RES.x;
-      const Vector2 screen_min_world = GetScreenToWorld2D((Vector2) {0}, state->in_camera_metrics->handle);
-      const Vector2 screen_max_world = GetScreenToWorld2D((Vector2) {BASE_RENDER_RES.x, BASE_RENDER_RES.y}, state->in_camera_metrics->handle);
-      abl->projectiles[i].position = GetScreenToWorld2D((Vector2) {rand, -abl->proj_dim.y},state->in_camera_metrics->handle);
-      const Vector2 new_prj_pos = (Vector2) {
-        .x = FCLAMP(abl->projectiles[i].position.x + (BASE_RENDER_SCALE(.25f).x * rand_recoil[(i32)*rand_count]), screen_min_world.x, screen_max_world.x),
-        .y = player->position.y
+      const f32 rand = get_random(frustum->x, frustum->x + frustum->width);
+      abl->projectiles[i].position = VECTOR2(rand, frustum->y - abl->proj_dim.y);
+      Vector2 new_pos = (Vector2) {
+        get_random(frustum->x + frustum->width * .1f, frustum->x + frustum->width - frustum->width * .1f),
+        get_random(frustum->y + frustum->height * .2f, frustum->y + frustum->height - frustum->height * .2f)
       };
-      abl->projectiles[i].buffer.f32[0] = new_prj_pos.x;
-      abl->projectiles[i].buffer.f32[1] = new_prj_pos.y;
-      abl->projectiles[i].buffer.f32[2] = (*rand_count) + 1 >= MAX_RAND ? 0 : ++(*rand_count);
+      abl->projectiles[i].buffer.f32[0] = new_pos.x;
+      abl->projectiles[i].buffer.f32[1] = new_pos.y;
+      abl->projectiles[i].animation.rotation = get_movement_rotation(abl->projectiles[i].position, pVECTOR2(abl->projectiles[i].buffer.f32)) + 270.f;
     }
     else {
       abl->projectiles[i].duration -= GetFrameTime();
     }
-    
     abl->projectiles[i].position = move_towards(abl->projectiles[i].position, pVECTOR2(abl->projectiles[i].buffer.f32), abl->proj_speed);
-
     abl->projectiles[i].collision.x = abl->projectiles[i].position.x;
     abl->projectiles[i].collision.y = abl->projectiles[i].position.y;
   }

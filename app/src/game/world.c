@@ -22,9 +22,6 @@ static world_system_state *restrict state;
 #define CREATE_WORLDMAP_STAGE_CENTERED(ID, DISPLAY_NAME, FILENAME, SELECTION_SCREEN_LOCATION, WILL_BE_ON_SELECTION_SCREEN) state->worldmap_locations[ID] = \
   (worldmap_stage) { .displayname = DISPLAY_NAME, .filename = FILENAME,\
   .screen_location = NORMALIZE_VEC2(SELECTION_SCREEN_LOCATION.x, SELECTION_SCREEN_LOCATION.y, 3840.f, 2160.f),\
-  .spawning_areas[0] = (Rectangle) {\
-    state->map[ID].position.x, state->map[ID].position.y,\
-    state->map[ID].map_dim * state->map[ID].tile_size, state->map[ID].map_dim * state->map[ID].tile_size},\
   .map_id = ID, .is_active = WILL_BE_ON_SELECTION_SCREEN, \
   .is_centered = true}\
 
@@ -37,23 +34,6 @@ bool world_system_initialize(camera_metrics* _in_camera_metrics) {
   }
   state = (world_system_state*)allocate_memory_linear(sizeof(world_system_state), true);
   state->in_camera_metrics = _in_camera_metrics;
-
-  for (int i=0; i<MAX_WORLDMAP_LOCATIONS; ++i) {
-    for (int j=0; j<MAX_TILEMAP_LAYERS; ++j) {
-      copy_memory(state->map[i].filename[j], TextFormat("%s_layer%d.txt", state->worldmap_locations[i].filename, j), sizeof(i8) * MAX_TILEMAP_FILENAME_LEN);
-      copy_memory(state->map[i].propfile,    TextFormat("%s_prop.txt", state->worldmap_locations[i].filename), sizeof(i8) * MAX_TILEMAP_FILENAME_LEN);
-    }
-    create_tilemap(TILESHEET_TYPE_MAP, (Vector2) {0, 0}, 100, 16*3, &state->map[i]);
-    if(!state->map[i].is_initialized) {
-      TraceLog(LOG_WARNING, "WARNING::scene_in_game_edit::initialize_scene_in_game_edit()::tilemap initialization failed");
-    }
-    load_or_create_map_data(&state->map[i], &state->map_stringtify[i]);
-
-    if (!state->map_stringtify[i].is_success) {
-      TraceLog(LOG_ERROR, "game_manager_initialize::game manager unable to load map");
-      return false;
-    }
-  }
   create_tilesheet(TILESHEET_TYPE_MAP, 16*2, 1.1, &state->palette);
   if(!state->palette.is_initialized) {
     TraceLog(LOG_WARNING, "scene_in_game_edit::initialize_scene_in_game_edit()::palette initialization failed");
@@ -84,7 +64,26 @@ bool world_system_initialize(camera_metrics* _in_camera_metrics) {
     CREATE_WORLDMAP_STAGE_CENTERED(20, "Stage 21", "stage21", VECTOR2(1977,  385), true);
     CREATE_WORLDMAP_STAGE_CENTERED(21, "Stage 22", "stage22", VECTOR2(1661,  410), true);
   }
+  for (int i=0; i<MAX_WORLDMAP_LOCATIONS; ++i) {
+    for (int j=0; j<MAX_TILEMAP_LAYERS; ++j) {
+      copy_memory(state->map[i].filename[j], TextFormat("%s_layer%d.txt", state->worldmap_locations[i].filename, j), sizeof(i8) * MAX_TILEMAP_FILENAME_LEN);
+      copy_memory(state->map[i].propfile,    TextFormat("%s_prop.txt", state->worldmap_locations[i].filename), sizeof(i8) * MAX_TILEMAP_FILENAME_LEN);
+    }
+    create_tilemap(TILESHEET_TYPE_MAP, (Vector2) {0, 0}, 100, 16*3, &state->map[i]);
+    if(!state->map[i].is_initialized) {
+      TraceLog(LOG_WARNING, "WARNING::scene_in_game_edit::initialize_scene_in_game_edit()::tilemap initialization failed");
+    }
+    load_or_create_map_data(&state->map[i], &state->map_stringtify[i]);
 
+    if (!state->map_stringtify[i].is_success) {
+      TraceLog(LOG_ERROR, "game_manager_initialize::game manager unable to load map");
+      return false;
+    }
+    state->worldmap_locations[i].spawning_areas[0] = (Rectangle) {
+      state->map[i].position.x, state->map[i].position.y,
+      state->map[i].map_dim * state->map[i].tile_size, state->map[i].map_dim * state->map[i].tile_size
+    };
+  }
   return true;
 }
 

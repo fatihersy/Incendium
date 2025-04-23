@@ -53,7 +53,7 @@ void render_sprite(spritesheet *sheet) {
   };
   Rectangle dest = sheet->coord;
 
-  DrawTexturePro(*sheet->tex_handle, source, dest, (Vector2){0}, 0, sheet->tint);
+  DrawTexturePro(*sheet->tex_handle, source, dest, (Vector2){0}, sheet->rotation, sheet->tint);
 
   #if DEBUG_COLLISIONS
     DrawRectangleLines(

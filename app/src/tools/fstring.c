@@ -99,7 +99,6 @@ string_parse_result parse_string(const char* str, const char parser, u16 parse_c
       result.buffer[i][j++] = str[string_itr_len++];
     }
     result.buffer[i][j] = '\0';
-    
     if (str[string_itr_len] == '\0') {
       actual_count = i + 1;
       break;
@@ -108,7 +107,6 @@ string_parse_result parse_string(const char* str, const char parser, u16 parse_c
     actual_count = i + 1;
   }
   result.count = actual_count;
-
   return result;
 }
 

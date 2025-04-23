@@ -99,6 +99,56 @@ bool initialize_scene_in_game(camera_metrics* _camera_metrics) {
   return true;
 }
 
+void begin_scene_in_game(void) {
+  
+  state->default_panel = (panel) {
+    .signal_state  = BTN_STATE_RELEASED,
+    .bg_tex_id     = ATLAS_TEX_ID_CRIMSON_FANTASY_PANEL_BG,
+    .frame_tex_id  = ATLAS_TEX_ID_CRIMSON_FANTASY_PANEL,
+    .bg_tint       = (Color) { 30, 39, 46, 245},
+    .bg_hover_tint = (Color) { 52, 64, 76, 245},
+    .offsets = (Vector4) {6, 6, 6, 6},
+  };
+
+  copy_memory(&state->worldmap_locations, get_worldmap_locations(), sizeof(state->worldmap_locations));
+  _set_player_position(BASE_RENDER_SCALE(.5f));
+  set_is_game_paused(true);
+  
+  for (int i=0; i<MAX_UPDATE_ABILITY_PANEL_COUNT; ++i) {
+    state->ability_upg_panels[i] = state->default_panel;
+  }
+  for (int i=0; i<MAX_UPDATE_PASSIVE_PANEL_COUNT; ++i) {
+    state->passive_selection_panels[i] = state->default_panel;
+  }
+  state->worldmap_selection_panel = state->default_panel;
+  state->debug_info_panel = state->default_panel;
+
+  state->stage = IN_GAME_STAGE_MAP_CHOICE;
+  state->hovered_stage = U16_MAX;
+
+  event_fire(EVENT_CODE_UI_START_FADEIN_EFFECT, (event_context){ .data.u16[0] = CLOUDS_ANIMATION_DURATION });
+}
+void start_game(character_stat* stat) {
+  if (!state) {
+    TraceLog(LOG_ERROR, "scene_in_game::start_game()::state returned zero");
+    return;
+  }
+  gm_start_game(*get_active_worldmap());
+
+  upgrade_player_stat(stat);
+  _set_player_position(BASE_RENDER_SCALE(.5f));
+  state->stage = IN_GAME_STAGE_PLAY;
+}
+void end_scene_in_game(void) {
+  gm_reset_game();
+
+  state->stage = IN_GAME_STAGE_MAP_CHOICE;
+  state->end_game_result.play_time = 0.f;
+  state->hovered_stage = U16_MAX;
+  state->has_game_started = false; 
+  state->end_game_result = (end_game_results){0};
+}
+
 void update_scene_in_game(void) {
   STATE_ASSERT("update_scene_in_game")
 
@@ -167,6 +217,97 @@ void update_scene_in_game(void) {
     }
   }
 }
+void in_game_update_mouse_bindings(void) { 
+  switch (state->stage) {
+    case IN_GAME_STAGE_MAP_CHOICE: {
+      state->hovered_stage = U16_MAX;
+      for (int i=0; i<MAX_WORLDMAP_LOCATIONS; ++i) {
+        Rectangle scrloc = (Rectangle){
+          state->worldmap_locations[i].screen_location.x * BASE_RENDER_RES.x - WORLDMAP_LOC_PIN_SIZE_DIV2, 
+          state->worldmap_locations[i].screen_location.y * BASE_RENDER_RES.y - WORLDMAP_LOC_PIN_SIZE_DIV2,
+          WORLDMAP_LOC_PIN_SIZE, WORLDMAP_LOC_PIN_SIZE
+        };
+        if (CheckCollisionPointRec(*ui_get_mouse_pos(), scrloc)) {
+          state->hovered_stage = i;
+        }
+      }
+      break;
+    }
+    case IN_GAME_STAGE_PASSIVE_CHOICE: {
+      break;
+    }
+    case IN_GAME_STAGE_PLAY: {
+      break;
+    }
+    case IN_GAME_STAGE_PLAY_DEBUG: {
+      state->hovered_spawn = U16_MAX;
+      for (int i=0; i<get_remaining_enemies(); ++i) {
+        Character2D* spawn = get_spawn_info(i);
+        if (spawn) {
+          Vector2 mouse_pos_world = gm_get_mouse_pos_world();
+          if (CheckCollisionPointRec(mouse_pos_world, spawn->collision)) {
+            state->hovered_spawn = i;
+          }
+        }
+      }
+      break;
+    }
+    case IN_GAME_STAGE_PLAY_RESULTS: { break; }
+    default: {
+      TraceLog(LOG_WARNING, "scene_in_game::update_scene_in_game()::Unsupported stage");
+      break;
+    }
+  }
+}
+void in_game_update_keyboard_bindings(void) {
+
+  switch (state->stage) {
+    case IN_GAME_STAGE_MAP_CHOICE: {
+      if (IsKeyReleased(KEY_ESCAPE)) {
+        event_fire(EVENT_CODE_UI_SHOW_PAUSE_MENU, (event_context){0});
+      }
+
+      break;
+    }
+    case IN_GAME_STAGE_PASSIVE_CHOICE: {
+      if (IsKeyReleased(KEY_R)) {
+        for (int i=0; i<MAX_UPDATE_PASSIVE_PANEL_COUNT; ++i) {
+          state->passive_selection_panels[i].buffer[0].data.u16[0] = 0;
+        }
+      }
+      break;
+    }
+    case IN_GAME_STAGE_PLAY: {  
+      if (!state->has_game_started && IsKeyPressed(KEY_SPACE)) {
+        state->has_game_started = true;
+        set_is_game_paused(false);
+      }
+      if (IsKeyReleased(KEY_ESCAPE)) {
+        if(!get_b_player_have_upgrade_points()) toggle_is_game_paused();
+        event_fire(EVENT_CODE_UI_SHOW_PAUSE_MENU, (event_context){0});
+      }
+      break;
+    }
+    case IN_GAME_STAGE_PLAY_DEBUG: {  
+      if (!state->has_game_started) {
+        state->stage = IN_GAME_STAGE_PLAY;
+      }
+      if (IsKeyReleased(KEY_ESCAPE)) {
+        state->stage = IN_GAME_STAGE_PLAY;
+      }
+      break;
+    }
+    case IN_GAME_STAGE_PLAY_RESULTS: { break; }
+    default: {
+      TraceLog(LOG_WARNING, "scene_in_game::in_game_update_keyboard_bindings()::Unsupported stage");
+      break;
+    }
+  }
+}
+void in_game_update_bindings(void) {
+  in_game_update_mouse_bindings();
+  in_game_update_keyboard_bindings();
+}
 
 void render_scene_in_game(void) {
   STATE_ASSERT("render_scene_in_game")
@@ -210,7 +351,6 @@ void render_scene_in_game(void) {
     }
   }
 }
-
 void render_interface_in_game(void) {
   STATE_ASSERT("render_interface_in_game")
   
@@ -406,149 +546,6 @@ void render_interface_in_game(void) {
   render_user_interface();
 }
 
-void in_game_update_mouse_bindings(void) { 
-  switch (state->stage) {
-    case IN_GAME_STAGE_MAP_CHOICE: {
-      state->hovered_stage = U16_MAX;
-      for (int i=0; i<MAX_WORLDMAP_LOCATIONS; ++i) {
-        Rectangle scrloc = (Rectangle){
-          state->worldmap_locations[i].screen_location.x * BASE_RENDER_RES.x - WORLDMAP_LOC_PIN_SIZE_DIV2, 
-          state->worldmap_locations[i].screen_location.y * BASE_RENDER_RES.y - WORLDMAP_LOC_PIN_SIZE_DIV2,
-          WORLDMAP_LOC_PIN_SIZE, WORLDMAP_LOC_PIN_SIZE
-        };
-        if (CheckCollisionPointRec(*ui_get_mouse_pos(), scrloc)) {
-          state->hovered_stage = i;
-        }
-      }
-      break;
-    }
-    case IN_GAME_STAGE_PASSIVE_CHOICE: {
-      break;
-    }
-    case IN_GAME_STAGE_PLAY: {
-      break;
-    }
-    case IN_GAME_STAGE_PLAY_DEBUG: {
-      state->hovered_spawn = U16_MAX;
-      for (int i=0; i<get_remaining_enemies(); ++i) {
-        Character2D* spawn = get_spawn_info(i);
-        if (spawn) {
-          Vector2 mouse_pos_world = gm_get_mouse_pos_world();
-          if (CheckCollisionPointRec(mouse_pos_world, spawn->collision)) {
-            state->hovered_spawn = i;
-          }
-        }
-      }
-      break;
-    }
-    case IN_GAME_STAGE_PLAY_RESULTS: { break; }
-    default: {
-      TraceLog(LOG_WARNING, "scene_in_game::update_scene_in_game()::Unsupported stage");
-      break;
-    }
-  }
-}
-void in_game_update_keyboard_bindings(void) {
-
-  switch (state->stage) {
-    case IN_GAME_STAGE_MAP_CHOICE: {
-      if (IsKeyReleased(KEY_ESCAPE)) {
-        event_fire(EVENT_CODE_UI_SHOW_PAUSE_MENU, (event_context){0});
-      }
-
-      break;
-    }
-    case IN_GAME_STAGE_PASSIVE_CHOICE: {
-      if (IsKeyReleased(KEY_R)) {
-        for (int i=0; i<MAX_UPDATE_PASSIVE_PANEL_COUNT; ++i) {
-          state->passive_selection_panels[i].buffer[0].data.u16[0] = 0;
-        }
-      }
-      break;
-    }
-    case IN_GAME_STAGE_PLAY: {  
-      if (!state->has_game_started && IsKeyPressed(KEY_SPACE)) {
-        state->has_game_started = true;
-        set_is_game_paused(false);
-      }
-      if (IsKeyReleased(KEY_ESCAPE)) {
-        if(!get_b_player_have_upgrade_points()) toggle_is_game_paused();
-        event_fire(EVENT_CODE_UI_SHOW_PAUSE_MENU, (event_context){0});
-      }
-      break;
-    }
-    case IN_GAME_STAGE_PLAY_DEBUG: {  
-      if (!state->has_game_started) {
-        state->stage = IN_GAME_STAGE_PLAY;
-      }
-      if (IsKeyReleased(KEY_ESCAPE)) {
-        state->stage = IN_GAME_STAGE_PLAY;
-      }
-      break;
-    }
-    case IN_GAME_STAGE_PLAY_RESULTS: { break; }
-    default: {
-      TraceLog(LOG_WARNING, "scene_in_game::in_game_update_keyboard_bindings()::Unsupported stage");
-      break;
-    }
-  }
-}
-void in_game_update_bindings(void) {
-  in_game_update_mouse_bindings();
-  in_game_update_keyboard_bindings();
-}
-void begin_scene_in_game(void) {
-  
-  state->default_panel = (panel) {
-    .signal_state  = BTN_STATE_RELEASED,
-    .bg_tex_id     = ATLAS_TEX_ID_CRIMSON_FANTASY_PANEL_BG,
-    .frame_tex_id  = ATLAS_TEX_ID_CRIMSON_FANTASY_PANEL,
-    .bg_tint       = (Color) { 30, 39, 46, 245},
-    .bg_hover_tint = (Color) { 52, 64, 76, 245},
-    .offsets = (Vector4) {6, 6, 6, 6},
-  };
-
-  copy_memory(&state->worldmap_locations, get_worldmap_locations(), sizeof(state->worldmap_locations));
-  _set_player_position(BASE_RENDER_SCALE(.5f));
-  set_is_game_paused(true);
-  
-  for (int i=0; i<MAX_UPDATE_ABILITY_PANEL_COUNT; ++i) {
-    state->ability_upg_panels[i] = state->default_panel;
-  }
-  for (int i=0; i<MAX_UPDATE_PASSIVE_PANEL_COUNT; ++i) {
-    state->passive_selection_panels[i] = state->default_panel;
-  }
-  state->worldmap_selection_panel = state->default_panel;
-  state->debug_info_panel = state->default_panel;
-
-  state->stage = IN_GAME_STAGE_MAP_CHOICE;
-  state->hovered_stage = U16_MAX;
-
-  event_fire(EVENT_CODE_UI_START_FADEIN_EFFECT, (event_context){ .data.u16[0] = CLOUDS_ANIMATION_DURATION });
-}
-
-void end_scene_in_game(void) {
-  gm_reset_game();
-
-  state->stage = IN_GAME_STAGE_MAP_CHOICE;
-  state->end_game_result.play_time = 0.f;
-  state->hovered_stage = U16_MAX;
-  state->has_game_started = false; 
-  state->end_game_result = (end_game_results){0};
-}
-
-void start_game(character_stat* stat) {
-  if (!state) {
-    TraceLog(LOG_ERROR, "scene_in_game::start_game()::state returned zero");
-    return;
-  }
-  gm_start_game(*get_active_worldmap());
-
-  upgrade_player_stat(stat);
-  _set_player_position(BASE_RENDER_SCALE(.5f));
-  state->stage = IN_GAME_STAGE_PLAY;
-}
-
 void draw_in_game_upgrade_panel(ability* abl, ability upg, Rectangle panel_dest) {
   if (upg.type <= ABILITY_TYPE_UNDEFINED || upg.type >= ABILITY_TYPE_MAX) {
     TraceLog(LOG_WARNING, "scene_in_game::draw_upgrade_panel()::Upgraded ability is out of bounds"); 
@@ -663,6 +660,7 @@ Rectangle sig_get_camera_view_rect(Camera2D camera) {
   
   return (Rectangle){ x, y, view_width, view_height };
 }
+
 bool scene_in_game_on_event(u16 code, event_context context) {
   switch (code) {
     case EVENT_CODE_ADD_CURRENCY_SOULS: {

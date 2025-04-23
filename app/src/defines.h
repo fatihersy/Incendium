@@ -5,7 +5,7 @@
 
 #define GAME_TITLE "Incendium"
 
-#define RESOURCE_PATH "D:\\Repositories\\resources\\"
+#define RESOURCE_PATH "C:\\Users\\fatih\\repositories\\resources\\"
 #define SHADER_PATH "../app/src/shaders/"
 
 #define TOTAL_ALLOCATED_MEMORY 512 * 1024 * 1024
@@ -617,6 +617,7 @@ typedef struct spritesheet {
   Rectangle coord;
 
   Color tint;
+  f32 rotation;
   i16 fps;
   i16 counter;
   u16 render_queue_index;

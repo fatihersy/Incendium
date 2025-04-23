@@ -91,21 +91,25 @@ void render_tilemap(tilemap* _tilemap, Rectangle camera_view) {
     TraceLog(LOG_ERROR, "ERROR::tilemap::render_tilemap()::Provided map was null");
     return;
   }
+
+  // Calculate tile indices that are visible in the camera view
   int start_x = (int)((camera_view.x - _tilemap->position.x) / _tilemap->tile_size);
   int start_y = (int)((camera_view.y - _tilemap->position.y) / _tilemap->tile_size);
   int end_x = (int)((camera_view.x + camera_view.width - _tilemap->position.x) / _tilemap->tile_size) + 1;
   int end_y = (int)((camera_view.y + camera_view.height - _tilemap->position.y) / _tilemap->tile_size) + 1;
   
+  // Clamp to map boundaries
   start_x = start_x < 0 ? 0 : (start_x >= _tilemap->map_dim ? _tilemap->map_dim - 1 : start_x);
   start_y = start_y < 0 ? 0 : (start_y >= _tilemap->map_dim ? _tilemap->map_dim - 1 : start_y);
   end_x = end_x < 0 ? 0 : (end_x > _tilemap->map_dim ? _tilemap->map_dim : end_x);
   end_y = end_y < 0 ? 0 : (end_y > _tilemap->map_dim ? _tilemap->map_dim : end_y);
 
+  // Only render tiles within the visible area
   for (u16 y = start_y; y < end_y; ++y) {
     for (u16 x = start_x; x < end_x; ++x) {
       if (x >= MAX_TILEMAP_TILESLOT_X || y >= MAX_TILEMAP_TILESLOT_Y) {
         TraceLog(LOG_ERROR, "tilemap::render_tilemap()::Calculated tile's x or y out of bound");
-        continue;
+        continue; // Skip this tile but continue rendering others
       }
       
       i16 x_pos = _tilemap->position.x + x * _tilemap->tile_size;
@@ -114,17 +118,20 @@ void render_tilemap(tilemap* _tilemap, Rectangle camera_view) {
       for (int i = 0; i < MAX_TILEMAP_LAYERS; ++i) {
         if (!_tilemap->tiles[i][x][y].is_initialized) {
           TraceLog(LOG_ERROR, "tilemap::render_tilemap()::tile:{%d,%d} is not initialized or corrupted", x, y);
-          continue;
+          continue; // Skip this layer but continue with others
         }
         render_tile(&_tilemap->tiles[i][x][y], (Rectangle) { x_pos, y_pos, _tilemap->tile_size, _tilemap->tile_size});
       }
     }
   }
+  
+  // For props, do individual frustum culling checks
   for (int i = 0; i < _tilemap->prop_count; ++i) {
     if (!_tilemap->props[i].is_initialized) continue;
     
     const tilemap_prop* prop = &_tilemap->props[i];
     if (prop) {
+      // Check if prop is visible in camera view
       Rectangle prop_rect = prop->dest;
       if (CheckCollisionRecs(camera_view, prop_rect)) {
         atlas_texture* tex = get_atlas_texture_by_enum(prop->atlas_id);
@@ -140,6 +147,7 @@ void render_tilesheet(tilesheet* sheet, f32 zoom) {
     TraceLog(LOG_ERROR, "tilemap::render_tilesheet()::Provided sheet was null");
     return;
   }
+
   for (u16 i = 0; i < sheet->tile_count; ++i) {
     u16 x        = i % sheet->tile_count_x;
     u16 y        = i / sheet->tile_count_x;
@@ -166,6 +174,7 @@ void render_tile(tilemap_tile* tile, Rectangle dest) {
     TraceLog(LOG_WARNING, "tilemap::render_tile()::Recieved tilesheet or texture pointer was NULL");
     return;
   }
+
   DrawTexturePro(*tile->sheet->atlas_handle, 
     (Rectangle) { 
       tile->x + tile->sheet->atlas_source.source.x, 
@@ -258,7 +267,6 @@ void map_to_str(tilemap* map, tilemap_stringtify_package* out_package) {
       u16 origin_y = map->tiles[i][map_x][map_y].y;  
       u16 sheet_x = origin_x / sheet->tile_size;
       u16 sheet_y = origin_y / sheet->tile_size;
-
       if (sheet_x >= MAX_TILESHEET_UNIQUE_TILESLOTS_X || sheet_y >= MAX_TILESHEET_UNIQUE_TILESLOTS_Y) {
         TraceLog(LOG_ERROR, "map_to_str: Sheet coordinates out of bounds at layer %d, tile [%d,%d]", i, map_x, map_y);
         return;
@@ -270,7 +278,6 @@ void map_to_str(tilemap* map, tilemap_stringtify_package* out_package) {
       );
     }
   }
-
   for (int i = 0; i < map->prop_count && i < MAX_TILEMAP_PROPS; ++i) {
     if (!map->props[i].is_initialized) continue;
     
@@ -285,7 +292,6 @@ void map_to_str(tilemap* map, tilemap_stringtify_package* out_package) {
     copy_memory(out_package->str_props[i], symbol, copy_len);
     out_package->str_props[i][copy_len] = '\0';
   }
-  
   out_package->size_props_str = sizeof(out_package->str_props);
   out_package->is_success = true;
 }
@@ -296,20 +302,17 @@ void str_to_map(tilemap* map, tilemap_stringtify_package* out_package) {
   }
   out_package->is_success = false;
   map->prop_count = 0;
-  
+
   for (int i = 0; i < MAX_TILEMAP_LAYERS; ++i) {
     for (u16 j = 0; j < map->map_dim_total; ++j) {
       tile_symbol symbol = {0};
-
       u16 map_x = j % map->map_dim;
       u16 map_y = j / map->map_dim;
-      
       if (map_x >= MAX_TILEMAP_TILESLOT_X || map_y >= MAX_TILEMAP_TILESLOT_Y) {
         TraceLog(LOG_ERROR, "str_to_map: Map coordinates out of bounds at layer %d, index %d", i, j);
         return;
       }
       copy_memory(symbol.c, out_package->str_tilemap[i] + (sizeof(tile_symbol) * j), sizeof(symbol));
-      
       if (symbol.c[2] <= 0 || symbol.c[2] >= TILESHEET_TYPE_MAX) {
         TraceLog(LOG_ERROR, "str_to_map: Invalid tilesheet type %d at layer %d, tile [%d,%d]", 
                  symbol.c[2], i, map_x, map_y);
@@ -339,23 +342,19 @@ void str_to_map(tilemap* map, tilemap_stringtify_package* out_package) {
       TraceLog(LOG_INFO, "tilemap::str_to_map()::Loaded prop amount:%d", i);
       break;
     }
-    
     if (map->prop_count >= MAX_TILEMAP_PROPS) {
       TraceLog(LOG_WARNING, "str_to_map: Maximum number of props reached (%d)", MAX_TILEMAP_PROPS);
       break;
     }
-    
     tilemap_prop* prop = &map->props[map->prop_count];
     string_parse_result str_par = parse_string(
       (const char*)out_package->str_props[i], ',', 10, 
       TextLength((const char*)out_package->str_props[i])
     );
-    
     if (str_par.count < 10) {
       TraceLog(LOG_ERROR, "str_to_map: Failed to parse prop data, expected 10 values, got %d", str_par.count);
       continue;
     }
-
     prop->id = str_to_U16((const char*)&str_par.buffer[0]);
     prop->atlas_id = str_to_U16((const char*)&str_par.buffer[1]);
     prop->source = (Rectangle) {
@@ -423,6 +422,7 @@ bool load_map_data(tilemap *restrict map, tilemap_stringtify_package *restrict o
     copy_memory(out_package->str_props, _str_prop, sizeof(out_package->str_props));
     UnloadFileData(_str_prop);
   }
+  
   str_to_map(map, out_package);
   
   return out_package->is_success;
@@ -467,6 +467,7 @@ bool load_or_create_map_data(tilemap *restrict map, tilemap_stringtify_package *
       }
     }
   }
+  
   str_to_map(map, out_package);
   
   return out_package->is_success;

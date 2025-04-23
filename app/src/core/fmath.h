@@ -14,5 +14,6 @@ Vector2 vec2_subtract(Vector2 v1, Vector2 v2);
 Vector2 vec2_add(Vector2 v1, Vector2 v2);
 Vector2 vec2_scale(Vector2 v1, float f1);
 float vec2_lenght(Vector2 v1);
+float get_movement_rotation(Vector2 from, Vector2 to);
 
 #endif

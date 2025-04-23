@@ -6,7 +6,7 @@
 
 typedef struct string_parse_result {
   char buffer[MAX_PARSED_TEXT_ARR_LEN][MAX_PARSED_TEXT_TEXT_LEN];
-  u16 count;
+  u16 count;  // Add a count member to track the number of parsed elements
 } string_parse_result;
 
 i64 str_to_I64(const char* str);

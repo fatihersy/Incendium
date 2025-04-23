@@ -114,7 +114,7 @@ void update_game_manager(void) {
       move_player(pur.move_request);
     }
     update_abilities(&state->p_player_public->ability_system);
-    update_spawns(get_player_position(true));
+    //update_spawns(get_player_position(true));
 
     if (*state->p_spawn_system_spawn_count < 50) {
       populate_map_with_spawns();
@@ -144,7 +144,7 @@ void render_game(void) {
   if (!state->p_player_public->is_dead) {
     render_abilities(&state->p_player_public->ability_system);
     render_player();
-    render_spawns();
+    //render_spawns();
   }
   else {
     render_player();
