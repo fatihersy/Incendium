@@ -6,6 +6,7 @@
 #define GAME_TITLE "Incendium"
 
 #define RESOURCE_PATH "C:\\Users\\fatih\\repositories\\resources\\"
+#define MAP_LAYER_PATH "map_layers\\"
 #define SHADER_PATH "../app/src/shaders/"
 
 #define TOTAL_ALLOCATED_MEMORY 512 * 1024 * 1024
@@ -59,8 +60,8 @@
 #define MAX_TILESHEET_UNIQUE_TILESLOTS MAX_TILESHEET_UNIQUE_TILESLOTS_X * MAX_TILESHEET_UNIQUE_TILESLOTS_Y
 #define MAX_TILEMAP_LAYERS 5
 #define MAX_TILEMAP_TILESHEETSLOT 10
-#define MAX_TILEMAP_TILESLOT_X 255
-#define MAX_TILEMAP_TILESLOT_Y 255
+#define MAX_TILEMAP_TILESLOT_X 128
+#define MAX_TILEMAP_TILESLOT_Y MAX_TILEMAP_TILESLOT_X
 #define MAX_TILEMAP_TILESLOT MAX_TILEMAP_TILESLOT_X * MAX_TILEMAP_TILESLOT_Y
 #define TILEMAP_TILE_START_SYMBOL 0x21 // Refers to ASCII exclamation mark. First visible character on the chart. To debug.
 #define TILESHEET_TILE_SYMBOL_STR_LEN 2
@@ -530,7 +531,7 @@ typedef struct atlas_texture {
 } atlas_texture;
 
 typedef struct tile_symbol {
-  u8 c[3];
+  u8 c[2];
 }tile_symbol;
 
 typedef struct tilesheet {
@@ -560,16 +561,6 @@ typedef struct worldmap_stage {
   bool is_active;
 } worldmap_stage;
 
-typedef struct tilemap_tile {
-	tilesheet* sheet;
-
-	u16 x;
-	u16 y;
-  tile_symbol tile_symbol;
-
-  bool is_initialized;
-} tilemap_tile;
-
 typedef struct tilemap_prop {
 	atlas_texture_id atlas_id;
   u16 id;
@@ -579,6 +570,18 @@ typedef struct tilemap_prop {
   bool is_initialized;
 } tilemap_prop;
 
+typedef struct tile_position {
+  u16 layer;
+  u16 x;
+  u16 y;
+} tile_position;
+
+
+typedef struct tile {
+  tile_position position;
+  tile_symbol symbol;
+  u8 is_initialized;
+} tile;
 
 typedef struct tilemap {
   i8 filename[MAX_TILEMAP_LAYERS][MAX_TILEMAP_FILENAME_LEN];
@@ -587,7 +590,7 @@ typedef struct tilemap {
   u16 map_dim_total;
   u16 map_dim;
 
-  tilemap_tile tiles[MAX_TILEMAP_LAYERS][MAX_TILEMAP_TILESLOT_X][MAX_TILEMAP_TILESLOT_Y];
+  tile_symbol tiles[MAX_TILEMAP_LAYERS][MAX_TILEMAP_TILESLOT_X][MAX_TILEMAP_TILESLOT_Y];
   tilemap_prop props[MAX_TILEMAP_PROPS];
   u16 tile_size;
   u16 prop_count;

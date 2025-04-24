@@ -39,8 +39,9 @@ typedef struct scene_editor_state {
 
   panel prop_selection_panel;
   panel tile_selection_panel;
-  tilemap_tile selected_tile;
+  tile selected_tile;
   tilemap_prop selected_prop;
+  tilesheet* selected_sheet;
   u16 edit_layer;
   u16 selected_stage;
   editor_state_selection_type selection_type;
@@ -57,6 +58,7 @@ void editor_update_movement(void);
 void editor_update_mouse_bindings(void);
 void editor_update_keyboard_bindings(void);
 i32 map_prop_id_to_index(u16 id);
+Rectangle se_get_camera_view_rect(Camera2D camera);
 
 void add_prop(atlas_texture_id source_tex, Rectangle source, f32 scale);
 #define add_prop_epic_cemetery(...) add_prop(ATLAS_TEX_ID_MAP_PROPS_ATLAS, __VA_ARGS__)      
@@ -91,6 +93,7 @@ void update_scene_editor(void) {
   state->mouse_pos_screen.y = GetMousePosition().y * get_app_settings()->scale_ratio.y;
   state->mouse_pos_world = GetScreenToWorld2D(state->mouse_pos_screen, state->in_camera_metrics->handle);
   state->edit_layer = get_slider_current_value(SDR_ID_EDITOR_MAP_LAYER_SLC_SLIDER)->data.u16[0]; // HACK: Should not updated every frame
+  state->in_camera_metrics->frustum = se_get_camera_view_rect(state->in_camera_metrics->handle);
 
   editor_update_bindings();
   update_map();
@@ -154,7 +157,7 @@ void render_interface_editor(void) {
 
   switch (state->selection_type) {
     case SLC_TYPE_TILE: {
-      _render_tile_on_pos(&state->selected_tile, state->mouse_pos_screen);
+      _render_tile_on_pos(&state->selected_tile, state->mouse_pos_screen, state->selected_sheet);
       break;
     }
     case SLC_TYPE_DROP_PROP: {
@@ -233,10 +236,13 @@ void editor_update_mouse_bindings(void) {
     if (state->tile_selection_panel.zoom > 3.0f) state->tile_selection_panel.zoom = 3.0f;
     else if (state->tile_selection_panel.zoom < 0.1f) state->tile_selection_panel.zoom = 0.1f;
     if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON) && state->selection_type == SLC_TYPE_UNSELECTED) {
-      tilemap_tile tile = _get_tile_from_sheet_by_mouse_pos(state->mouse_pos_screen);
-      if (tile.is_initialized) {
-        state->selected_tile = tile;
+      tile _tile = _get_tile_from_sheet_by_mouse_pos(state->mouse_pos_screen);
+      if (_tile.is_initialized) {
+        state->selected_tile = _tile;
         state->selection_type = SLC_TYPE_TILE;
+      } else {
+        TraceLog(LOG_WARNING, "scene_editor::editor_update_mouse_bindings()::Tile selection failed");
+        return;
       }
     }
     if (IsMouseButtonDown(MOUSE_MIDDLE_BUTTON)) {
@@ -315,8 +321,10 @@ void editor_update_mouse_bindings(void) {
         break;
       }
       case SLC_TYPE_TILE: { 
-        tilemap_tile tile = _get_tile_from_map_by_mouse_pos(state->edit_layer, state->mouse_pos_screen);
-        set_map_tile(state->edit_layer, &tile, &state->selected_tile);
+        tile _tile = _get_tile_from_map_by_mouse_pos(state->edit_layer, state->mouse_pos_screen);
+        if (_tile.position.x < MAX_TILEMAP_TILESLOT_X || _tile.position.y < MAX_TILEMAP_TILESLOT_Y ) {
+          set_map_tile(state->edit_layer, _tile, state->selected_tile);
+        }
         break; 
       }
       default: break;
@@ -338,7 +346,7 @@ void editor_update_mouse_bindings(void) {
   }
   if (IsMouseButtonReleased(MOUSE_RIGHT_BUTTON) && state->selection_type != SLC_TYPE_UNSELECTED) 
   {
-    state->selected_tile = (tilemap_tile) {0};
+    state->selected_tile = (tile) {0};
     state->selected_prop = (tilemap_prop) {0};
     state->selection_type = SLC_TYPE_UNSELECTED;
   }
@@ -377,6 +385,9 @@ void editor_update_keyboard_bindings(void) {
       state->selected_prop = (tilemap_prop) {0};
       state->selection_type = SLC_TYPE_UNSELECTED;
     }
+  }
+  if (IsKeyDown(KEY_LEFT_SHIFT) && IsKeyReleased(KEY_D)) {
+    TraceLog(LOG_INFO, "");
   }
 
 }
@@ -428,6 +439,7 @@ void begin_scene_editor(void) {
   state->tile_selection_panel = get_default_panel();
   state->tile_selection_panel.signal_state = BTN_STATE_HOVER;
   state->tile_selection_panel.dest = (Rectangle) {0, 0, BASE_RENDER_SCALE(.3f).x, BASE_RENDER_RES.y};
+  state->selected_sheet = get_tilesheet_by_enum(TILESHEET_TYPE_MAP);
   panel* prop_pnl = &state->prop_selection_panel;
   *prop_pnl = get_default_panel();
   prop_pnl->signal_state = BTN_STATE_HOVER;
@@ -825,3 +837,18 @@ void begin_scene_editor(void) {
   }
 }
 void end_scene_editor(void) {}
+
+
+Rectangle se_get_camera_view_rect(Camera2D camera) {
+
+  f32 view_width = BASE_RENDER_RES.x / camera.zoom;
+  f32 view_height = BASE_RENDER_RES.y / camera.zoom;
+
+  f32 x = camera.target.x;
+  f32 y = camera.target.y;
+  
+  x -= camera.offset.x/camera.zoom;
+  y -= camera.offset.y/camera.zoom;
+  
+  return (Rectangle){ x, y, view_width, view_height };
+}

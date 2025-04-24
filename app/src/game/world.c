@@ -67,8 +67,8 @@ bool world_system_initialize(camera_metrics* _in_camera_metrics) {
   for (int i=0; i<MAX_WORLDMAP_LOCATIONS; ++i) {
     for (int j=0; j<MAX_TILEMAP_LAYERS; ++j) {
       copy_memory(state->map[i].filename[j], TextFormat("%s_layer%d.txt", state->worldmap_locations[i].filename, j), sizeof(i8) * MAX_TILEMAP_FILENAME_LEN);
-      copy_memory(state->map[i].propfile,    TextFormat("%s_prop.txt", state->worldmap_locations[i].filename), sizeof(i8) * MAX_TILEMAP_FILENAME_LEN);
     }
+    copy_memory(state->map[i].propfile,    TextFormat("%s_prop.txt", state->worldmap_locations[i].filename), sizeof(i8) * MAX_TILEMAP_FILENAME_LEN);
     create_tilemap(TILESHEET_TYPE_MAP, (Vector2) {0, 0}, 100, 16*3, &state->map[i]);
     if(!state->map[i].is_initialized) {
       TraceLog(LOG_WARNING, "WARNING::scene_in_game_edit::initialize_scene_in_game_edit()::tilemap initialization failed");
@@ -103,16 +103,17 @@ void set_worldmap_location(u16 id) {
   }
   state->active_stage = state->worldmap_locations[id];
 }
-void set_map_tile(i32 layer, tilemap_tile* src, tilemap_tile* dst) {
+void set_map_tile(i32 layer, tile src, tile dst) {
   if (layer < 0 || layer >= MAX_TILEMAP_LAYERS) {
     TraceLog(LOG_WARNING, "world::set_map_tile()::Recieved layer was out of bound");
     return;
   }
-  if (src->x >= MAX_TILEMAP_TILESLOT_X || src->y >= MAX_TILEMAP_TILESLOT_Y) {
+  if (src.position.x >= MAX_TILEMAP_TILESLOT_X || src.position.x >= MAX_TILEMAP_TILESLOT_Y) {
     TraceLog(LOG_WARNING, "world::set_map_tile()::Recieved tile was out of bound");
     return;
   }
-  CURR_MAP.tiles[layer][src->x][src->y] = *dst;
+  CURR_MAP.tiles[layer][src.position.x][src.position.y].c[0] = dst.symbol.c[0];
+  CURR_MAP.tiles[layer][src.position.x][src.position.y].c[1] = dst.symbol.c[1];
 }
 tilemap_prop* get_map_prop_by_pos(Vector2 pos) {
   for (int i=0; i<CURR_MAP.prop_count; ++i) {
@@ -163,23 +164,22 @@ void render_map_palette(f32 zoom) {
   state->palette_zoom = zoom;
 }
 
-tilemap_tile _get_tile_from_sheet_by_mouse_pos(Vector2 _mouse_pos) {
+tile _get_tile_from_sheet_by_mouse_pos(Vector2 _mouse_pos) {
   return get_tile_from_sheet_by_mouse_pos(&state->palette, _mouse_pos, state->palette_zoom);
 }
-tilemap_tile _get_tile_from_map_by_mouse_pos(u16 from_layer, Vector2 _mouse_pos) {
+tile _get_tile_from_map_by_mouse_pos(u16 from_layer, Vector2 _mouse_pos) {
   if (from_layer >= MAX_TILEMAP_LAYERS) {
     TraceLog(LOG_WARNING, "world::_get_tile_from_map_by_mouse_pos()::Recieved layer was out of bound");
-    return (tilemap_tile) {0};
+    return (tile) { .is_initialized = false};
   }
   return get_tile_from_map_by_mouse_pos(&CURR_MAP, GetScreenToWorld2D(_mouse_pos, state->in_camera_metrics->handle), from_layer);
 }
-void _render_tile_on_pos(tilemap_tile* tile, Vector2 pos) {
-  if (!tile) {
-    TraceLog(LOG_WARNING, "world::_render_tile()::Recieved tile was empty");
+void _render_tile_on_pos(tile* _tile, Vector2 pos, tilesheet* sheet) {
+  if (!_tile || !_tile->is_initialized || !sheet) {
+    TraceLog(LOG_WARNING, "world::_render_tile()::One of pointers is not valid");
     return;
   }
-
-  render_tile(tile, (Rectangle) {pos.x, pos.y, CURR_MAP.tile_size, CURR_MAP.tile_size});
+  render_tile(&_tile->symbol, (Rectangle) {pos.x, pos.y, CURR_MAP.tile_size, CURR_MAP.tile_size}, sheet);
 }
 bool add_prop_curr_map(tilemap_prop* prop) {
   if (!prop) {

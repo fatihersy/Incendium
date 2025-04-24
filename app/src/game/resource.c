@@ -132,6 +132,12 @@ tilesheet* get_tilesheet_by_enum(tilesheet_type type) {
 const char *rs_path(const char *filename) {
   return TextFormat("%s%s", RESOURCE_PATH, filename);
 }
+/**
+ * @brief "%s%s%s", RESOURCE_PATH, MAP_PATH, filename
+ */
+const char *map_layer_path(const char *filename) {
+  return TextFormat("%s%s%s", RESOURCE_PATH, MAP_LAYER_PATH, filename);
+}
 unsigned int load_texture(const char *filename, bool resize, Vector2 new_size, texture_id _id) {
   if (_id >= TEX_ID_MAX || _id <= TEX_ID_UNSPECIFIED) { 
     TraceLog(LOG_ERROR, "resource::load_texture()::texture type out of bound");
@@ -248,9 +254,7 @@ void load_tilesheet(tilesheet_type sheet_id, atlas_texture_id _atlas_tex_id, u16
     u8 x_symbol = TILEMAP_TILE_START_SYMBOL + x;
     u8 y_symbol = TILEMAP_TILE_START_SYMBOL + y;
 
-    _tilesheet->tile_symbols[x][y] = (tile_symbol) {
-      .c = { x_symbol, y_symbol, _tilesheet->sheet_id}
-    };
+    _tilesheet->tile_symbols[x][y] = (tile_symbol){ x_symbol, y_symbol};
   }
 
   state->tilesheet_amouth++;
