@@ -4,6 +4,15 @@
 
 #include "defines.h"
 
+
+typedef enum button_state {
+  BTN_STATE_UNDEFINED,
+  BTN_STATE_UP,
+  BTN_STATE_HOVER,
+  BTN_STATE_PRESSED,
+  BTN_STATE_RELEASED,
+} button_state;
+
 typedef struct panel {
     atlas_texture_id frame_tex_id;
     atlas_texture_id bg_tex_id;
@@ -16,9 +25,35 @@ typedef struct panel {
     button_state signal_state;
     Rectangle dest;
     Rectangle scroll_handle;
-    data_pack buffer[2];
     bool draggable;
     bool is_dragging_scroll;
+    
+    data128 buffer;
+
+    panel() {
+      this->frame_tex_id  = ATLAS_TEX_ID_CRIMSON_FANTASY_PANEL;
+      this->bg_tex_id     = ATLAS_TEX_ID_CRIMSON_FANTASY_PANEL_BG;
+      this->bg_tint       = Color { 30, 39, 46, 245};
+      this->bg_hover_tint = Color { 52, 64, 76, 245};
+      this->offsets       = Vector4 {6, 6, 6, 6};
+      this->zoom          = 1.f;
+      this->scroll        = 0;
+      this->current_state = BTN_STATE_UP;
+      this->signal_state  = BTN_STATE_UNDEFINED;
+      this->dest          = Rectangle {};
+      this->scroll_handle = Rectangle {};
+      this->draggable     = false;
+      this->is_dragging_scroll = false;
+      this->buffer = data128();
+    };
+    panel(button_state signal_state, atlas_texture_id bg_tex_id, atlas_texture_id frame_tex_id, Vector4 offsets, Color bg_tint, Color hover_tint = Color { 52, 64, 76, 245}) : panel() {
+      this->signal_state = signal_state;
+      this->bg_tex_id = bg_tex_id;
+      this->frame_tex_id = frame_tex_id;
+      this->bg_tint = bg_tint;
+      this->offsets = offsets;
+      this->bg_hover_tint = hover_tint;
+    }
   } panel;
   
   typedef struct button_type {
@@ -37,13 +72,13 @@ typedef struct panel {
     button_type btn_type;
     button_state state;
     Rectangle dest;
-    spritesheet reflection_anim;
+    spritesheet reflection_anim = spritesheet {};
     bool on_screen;
     bool is_registered;
   } button;
   
   typedef struct slider_option {
-    char display_text[MAX_SLIDER_OPTION_TEXT_SLOT];
+    std::string display_text;
     data_pack content;
   } slider_option;
   
@@ -54,8 +89,8 @@ typedef struct panel {
     f32 scale;
     u16 width_multiply;
     u16 char_limit;
-    button_id left_btn_id;
-    button_id right_btn_id;
+    button_id left_btn_id = BTN_ID_UNDEFINED;
+    button_id right_btn_id = BTN_ID_UNDEFINED;
     button_type_id left_btn_type_id;
     button_type_id right_btn_type_id;
     u16 left_btn_width;
@@ -63,7 +98,7 @@ typedef struct panel {
     u16 origin_body_width;
     u16 body_width;
     u16 body_height;
-    Vector2 whole_body_width;
+    Vector2 whole_body_width = Vector2 {};
   } slider_type;
   
   typedef struct slider {
@@ -71,7 +106,7 @@ typedef struct panel {
     slider_type sdr_type;
     Vector2 position;
   
-    slider_option options[MAX_SLIDER_OPTION_SLOT];
+    std::array<slider_option, MAX_SLIDER_OPTION_SLOT> options = {};
     u16 current_value;
     u16 max_value;
     u16 min_value;
@@ -143,9 +178,9 @@ void gui_draw_atlas_texture_id_center(atlas_texture_id _id, Vector2 pos, Vector2
 void gui_draw_texture_id(texture_id _id, Rectangle dest); 
 void gui_draw_map_stage_pin(bool have_hovered, Vector2 screen_loc);
 
-#define gui_label_format(FONT, FONT_SIZE, X,Y, COLOR, CENTER_H, CENTER_V, TEXT, ...) gui_label(TextFormat(TEXT, __VA_ARGS__), FONT, FONT_SIZE, (Vector2){X,Y}, COLOR, CENTER_H, CENTER_V)
+#define gui_label_format(FONT, FONT_SIZE, X,Y, COLOR, CENTER_H, CENTER_V, TEXT, ...) gui_label(TextFormat(TEXT, __VA_ARGS__), FONT, FONT_SIZE, Vector2{X,Y}, COLOR, CENTER_H, CENTER_V)
 #define gui_label_format_v(FONT, FONT_SIZE, POS, COLOR, CENTER_H, CENTER_V, TEXT, ...) gui_label(TextFormat(TEXT, __VA_ARGS__), FONT, FONT_SIZE, POS, COLOR, CENTER_H, CENTER_V)
-#define gui_label_format_grid(FONT, FONT_SIZE, X,Y, GRID_SCALE, COLOR, CENTER_H, CENTER_V, TEXT, ...) gui_label_grid(TextFormat(TEXT, __VA_ARGS__), FONT, FONT_SIZE, (Vector2){X,Y}, COLOR, CENTER_H, CENTER_V, GRID_SCALE)
+#define gui_label_format_grid(FONT, FONT_SIZE, X,Y, GRID_SCALE, COLOR, CENTER_H, CENTER_V, TEXT, ...) gui_label_grid(TextFormat(TEXT, __VA_ARGS__), FONT, FONT_SIZE, Vector2{X,Y}, COLOR, CENTER_H, CENTER_V, GRID_SCALE)
 #define gui_label_format_v_grid(FONT, FONT_SIZE, POS, GRID_SCALE, COLOR, CENTER_H, CENTER_V, TEXT, ...) gui_label_grid(TextFormat(TEXT, __VA_ARGS__), FONT, FONT_SIZE, POS, COLOR, CENTER_H, CENTER_V, GRID_SCALE)
 
 #define gui_panel_scissored(PANEL, CENTER, CODE)                                      \

@@ -7,7 +7,7 @@
 typedef struct fshader_location {
   char name[MAX_SHADER_LOCATION_NAME_LENGTH];
   u16 index;
-  data_pack data;
+  data128 data;
   ShaderUniformDataType uni_data_type;
 } fshader_location;
 
@@ -21,7 +21,7 @@ void initialize_shader_system(void);
 
 const char* shader_path(const char* _path);
 fshader* get_shader_by_enum(shader_id _id);
-void set_shader_uniform(shader_id _id, i32 index, data_pack _data_pack);
+void set_shader_uniform(shader_id _id, i32 index, data128 _data_pack);
 
 
 #endif

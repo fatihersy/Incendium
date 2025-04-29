@@ -6,9 +6,8 @@
 #include "defines.h"
 
 typedef struct player_update_results {
-  Vector2 move_request;
-
-  bool is_success;
+  Vector2 move_request = Vector2 {};
+  bool is_success = false;
 } player_update_results;
 
 bool player_system_initialize(void);

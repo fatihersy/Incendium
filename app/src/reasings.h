@@ -5,7 +5,7 @@
 *   Useful easing functions for values animation
 *
 *   This header uses:
-*       #define REASINGS_STATIC_INLINE      // Inlines all functions code, so it runs faster.
+*       #define REASINGS_STATIC_      // s all functions code, so it runs faster.
 *                                           // This requires lots of memory on system.
 *   How to use:
 *   The four inputs t,b,c,d are defined as follows:
@@ -66,7 +66,7 @@
 *   will the authors be held liable for any damages arising from the use of this software.
 *
 *   Permission is granted to anyone to use this software for any purpose, including commercial
-*   applications, and to alter it and redistribute it freely, subject to the following restrictions:
+*   applications, and to alter it and redistribute it freely, subject to the following ions:
 *
 *     1. The origin of this software must not be misrepresented; you must not claim that you
 *     wrote the original software. If you use this software in a product, an acknowledgment
@@ -82,10 +82,10 @@
 #ifndef REASINGS_H
 #define REASINGS_H
 
-#define REASINGS_STATIC_INLINE     // NOTE: By default, compile functions as static inline
+#define REASINGS_STATIC_     // NOTE: By default, compile functions as static 
 
-#if defined(REASINGS_STATIC_INLINE)
-    #define EASEDEF static inline
+#if defined(REASINGS_STATIC_)
+    #define EASEDEF static 
 #else
     #define EASEDEF extern
 #endif

@@ -2,6 +2,8 @@
 #define DEFINES_H
 
 #include <raylib.h>
+#include <array>
+#include <string>
 
 #define GAME_TITLE "Incendium"
 
@@ -115,26 +117,19 @@ typedef double f64;
 // Boolean types
 typedef int b32;
 
-// Properly define static assertions.
-#if defined(__clang__) || defined(__gcc__)
-#define STATIC_ASSERT _Static_assert
-#else
-#define STATIC_ASSERT static_assert
-#endif
-
 // Ensure all types are of the correct size.
-STATIC_ASSERT(sizeof(u8) == 1, "Expected u8 to be 1 byte.");
-STATIC_ASSERT(sizeof(u16) == 2, "Expected u16 to be 2 bytes.");
-STATIC_ASSERT(sizeof(u32) == 4, "Expected u32 to be 4 bytes.");
-STATIC_ASSERT(sizeof(u64) == 8, "Expected u64 to be 8 bytes.");
+static_assert(sizeof(u8) == 1, "Expected u8 to be 1 byte.");
+static_assert(sizeof(u16) == 2, "Expected u16 to be 2 bytes.");
+static_assert(sizeof(u32) == 4, "Expected u32 to be 4 bytes.");
+static_assert(sizeof(u64) == 8, "Expected u64 to be 8 bytes.");
 
-STATIC_ASSERT(sizeof(i8) == 1, "Expected i8 to be 1 byte.");
-STATIC_ASSERT(sizeof(i16) == 2, "Expected i16 to be 2 bytes.");
-STATIC_ASSERT(sizeof(i32) == 4, "Expected i32 to be 4 bytes.");
-STATIC_ASSERT(sizeof(i64) == 8, "Expected i64 to be 8 bytes.");
+static_assert(sizeof(i8) == 1, "Expected i8 to be 1 byte.");
+static_assert(sizeof(i16) == 2, "Expected i16 to be 2 bytes.");
+static_assert(sizeof(i32) == 4, "Expected i32 to be 4 bytes.");
+static_assert(sizeof(i64) == 8, "Expected i64 to be 8 bytes.");
 
-STATIC_ASSERT(sizeof(f32) == 4, "Expected f32 to be 4 bytes.");
-STATIC_ASSERT(sizeof(f64) == 8, "Expected float to be 8 bytes.");
+static_assert(sizeof(f32) == 4, "Expected f32 to be 4 bytes.");
+static_assert(sizeof(f64) == 8, "Expected float to be 8 bytes.");
 
 
 #define I64_MAX 9223372036854775807
@@ -370,14 +365,6 @@ typedef enum spritesheet_id {
   SHEET_ID_SPRITESHEET_TYPE_MAX
 } spritesheet_id;
 
-typedef enum button_state {
-  BTN_STATE_UNDEFINED,
-  BTN_STATE_UP,
-  BTN_STATE_HOVER,
-  BTN_STATE_PRESSED,
-  BTN_STATE_RELEASED,
-} button_state;
-
 typedef enum button_type_id {
   BTN_TYPE_UNDEFINED,
   BTN_TYPE_MENU_BUTTON,
@@ -473,29 +460,124 @@ typedef enum tilesheet_type {
   TILESHEET_TYPE_MAX
 } tilesheet_type;
 
+  // 128 bytes
+typedef union data128 {
+  i64 i64[2];
+  u64 u64[2];
+  f64 f64[2];
+ 
+  i32 i32[4];
+  u32 u32[4];
+  f32 f32[4];
+ 
+  i16 i16[8];
+  u16 u16[8];
+
+  i8 i8[16];
+  u8 u8[16];
+
+  char c[16];
+  Texture2D* sampler;
+
+  data128(){
+    this->u64[0] = 0;
+    this->u64[1] = 0;
+  }
+  
+  data128(::i64 value1, ::i64 value2 = 0){
+    this->i64[0] = value1;
+    this->i64[1] = value2;
+  }
+  data128(::u64 value1, ::u64 value2 = 0){
+    this->u64[0] = value1;
+    this->u64[1] = value2;
+  }
+  data128(::f64 value1, ::f64 value2 = 0){
+    this->f64[0] = value1;
+    this->f64[1] = value2;
+  }
+  data128(::i32 value1, ::i32 value2 = 0, ::i32 value3 = 0, ::i32 value4 = 0){
+    this->i32[0] = value1;
+    this->i32[1] = value2;
+    this->i32[2] = value3;
+    this->i32[3] = value4;
+  }
+  data128(::u32 value1, ::u32 value2 = 0, ::u32 value3 = 0, ::u32 value4 = 0){
+    this->u32[0] = value1;
+    this->u32[1] = value2;
+    this->u32[2] = value3;
+    this->u32[3] = value4;
+  }
+  data128(::f32 value1, ::f32 value2 = 0, ::f32 value3 = 0, ::f32 value4 = 0){
+    this->f32[0] = value1;
+    this->f32[1] = value2;
+    this->f32[2] = value3;
+    this->f32[3] = value4;
+  }
+  data128(::u16 value1, ::u16 value2 = 0, ::u16 value3 = 0, ::u16 value4 = 0, ::u16 value5 = 0, ::u16 value6 = 0, ::u16 value7 = 0, ::u16 value8 = 0){
+    this->u16[0] = value1;
+    this->u16[1] = value2;
+    this->u16[2] = value3;
+    this->u16[3] = value4;
+    this->u16[4] = value5;
+    this->u16[5] = value6;
+    this->u16[6] = value7;
+    this->u16[7] = value8;
+  }
+  data128(::i16 value1, ::i16 value2 = 0, ::i16 value3 = 0, ::i16 value4 = 0, ::i16 value5 = 0, ::i16 value6 = 0, ::i16 value7 = 0, ::i16 value8 = 0){
+    this->i16[0] = value1;
+    this->i16[1] = value2;
+    this->i16[2] = value3;
+    this->i16[3] = value4;
+    this->i16[4] = value5;
+    this->i16[5] = value6;
+    this->i16[6] = value7;
+    this->i16[7] = value8;
+  }
+  data128(::u16* value, ::u16 len){
+    for (int i=0; i < len; ++i) {
+      this->u16[i] = value[i];
+    }
+  }
+  data128(::i16* value, ::u16 len){
+    for (int i=0; i < len; ++i) {
+      this->i16[i] = value[i];
+    }
+  }
+  data128(::u8* value, ::u16 len){
+    for (int i=0; i < len; ++i) {
+      this->u8[i] = value[i];
+    }
+  }
+  data128(::i8* value, ::u16 len){
+    for (int i=0; i < len; ++i) {
+      this->i8[i] = value[i];
+    }
+  }
+  data128(char* value, ::u16 len){
+    for (int i=0; i < len; ++i) {
+      c[i] = value[i];
+    }
+  }
+  data128(Texture2D* _sampler){
+    sampler = _sampler;
+  }
+} data128;
+
 typedef struct data_pack {
   data_type type_flag;
   u16 array_lenght;
   Texture2D* sampler;
 
-  // 128 bytes
-  union {
-    i64 i64[2];
-    u64 u64[2];
-    f64 f64[2];
-
-    i32 i32[4];
-    u32 u32[4];
-    f32 f32[4];
-
-    i16 i16[8];
-    u16 u16[8];
-
-    i8 i8[16];
-    u8 u8[16];
-
-    char c[16];
-  } data;
+  data128 data;
+  data_pack() {};
+  data_pack(data_type type, data128 buffer, u16 len, Texture2D* tex2d = nullptr) : data_pack()
+  {
+    this->type_flag = type;
+    this->array_lenght = len; 
+    this->sampler = tex2d; 
+    this->data = buffer;
+  };
 } data_pack;
 
 typedef struct music_data {
@@ -553,9 +635,9 @@ typedef struct tilesheet {
 
 typedef struct worldmap_stage {
   u16 map_id;
-  char displayname[MAX_WORLDMAP_LOCATION_NAME_LENGTH];
-  char filename[MAX_WORLDMAP_LOCATION_NAME_LENGTH];
-  Rectangle spawning_areas[MAX_SPAWN_COLLISIONS];
+  std::string displayname;
+  std::string filename;
+  std::array<Rectangle, MAX_SPAWN_COLLISIONS> spawning_areas = {};
   Vector2 screen_location;
   bool is_centered;
   bool is_active;
@@ -578,9 +660,9 @@ typedef struct tile_position {
 
 
 typedef struct tile {
-  tile_position position;
-  tile_symbol symbol;
-  u8 is_initialized;
+  tile_position position = {};
+  tile_symbol symbol = { .c { '\0', '\0' } };
+  bool is_initialized = false;
 } tile;
 
 typedef struct tilemap {
@@ -656,24 +738,25 @@ typedef struct Character2D {
   bool is_damagable;
   bool initialized;
 
-  // 128 byte buffer
-  union {
-    i64 i64[2];
-    u64 u64[2];
-    f64 f64[2];
+  data128 buffer;
 
-    i32 i32[4];
-    u32 u32[4];
-    f32 f32[4];
-
-    i16 i16[8];
-    u16 u16[8];
-
-    i8 i8[16];
-    u8 u8[16];
-
-    char c[16];
-  } buffer;
+  Character2D() {}
+  Character2D(u16 spawn_type, u16 player_level, u16 rnd_scale, Vector2 position, f32 speed) : Character2D()
+  {
+    type = ACTOR_TYPE_SPAWN;
+    buffer.u16[0] = spawn_type;
+    buffer.u16[1] = player_level;
+    buffer.u16[2] = rnd_scale;
+    this->position = position;
+    this->speed = speed;
+    is_damagable = true;
+  }
+  Character2D(Rectangle collision, i32 damage) : Character2D()
+  {
+    this->collision = collision;
+    this->damage = damage;
+    this->initialized = true;
+  }
 } Character2D;
 
 typedef struct projectile {
@@ -710,14 +793,14 @@ typedef struct projectile {
 
 typedef struct ability {
   void* p_owner;
-  projectile projectiles[MAX_ABILITY_PROJECTILE_SLOT];
-  char display_name[MAX_ABILITY_NAME_LENGTH];
-  ability_upgradables upgradables[ABILITY_UPG_MAX];
+  std::string display_name;
+  std::array<projectile, MAX_ABILITY_PROJECTILE_SLOT> projectiles;
+  std::array<ability_upgradables, ABILITY_UPG_MAX> upgradables;
+  movement_pattern move_pattern;
   ability_type type;
   spritesheet_id default_animation_id;
   spritesheet_id explosion_animation_id;
   
-  movement_pattern move_pattern;
   f32 ability_play_time;
   f32 proj_scale;
   u16 proj_count;
@@ -732,6 +815,46 @@ typedef struct ability {
   bool center_proj_anim;
   bool is_active;
   bool is_initialized;
+
+  ability(std::string name, std::array<ability_upgradables, ABILITY_UPG_MAX> upgrs, ability_type type, spritesheet_id def_anim_id, spritesheet_id expl_anim_id, movement_pattern pattern, f32 proj_scale, u16 proj_count, 
+    u16 proj_speed, f32 proj_duration, Vector2 proj_dim, Rectangle icon_src, u16 base_damage, bool center_proj_anim, void* in_player = nullptr, bool is_active = false, bool is_initialized = false) 
+    : p_owner(in_player), move_pattern(pattern), type(type), default_animation_id(def_anim_id), explosion_animation_id(expl_anim_id),  proj_scale(proj_scale), proj_count(proj_count), 
+      proj_speed(proj_speed), proj_duration(proj_duration), proj_dim(proj_dim), icon_src(icon_src), base_damage(base_damage), center_proj_anim(center_proj_anim), is_active(is_active), 
+      is_initialized(is_initialized)
+  {
+      for (int i=0; i < MAX_ABILITY_NAME_LENGTH; ++i) {
+        display_name[i] = name[i];
+      }
+      display_name[MAX_ABILITY_NAME_LENGTH-1] = '\0';
+      for (int i=0; i < ABILITY_UPG_MAX; ++i) {
+        upgradables[i] = upgrs[i];
+      }
+  }
+
+  ability() {
+    p_owner = nullptr;
+    type = ABILITY_TYPE_UNDEFINED;
+    default_animation_id = SHEET_ID_SPRITESHEET_UNSPECIFIED;
+    explosion_animation_id = SHEET_ID_SPRITESHEET_UNSPECIFIED;
+    move_pattern = MOVE_TYPE_UNDEFINED;
+    proj_scale = 0;
+    proj_count = 0; 
+    proj_speed = 0;
+    proj_duration = 0;
+    proj_dim = {0, 0};
+    rotation = 0;
+    base_damage = 0;
+    center_proj_anim = false;
+    is_active = false;
+    is_initialized = false;
+    level = 0;
+    upgradables.fill(ABILITY_UPG_UNDEFINED);
+    projectiles.fill({});
+    display_name = "";
+    icon_src = {};
+    position = {};
+    ability_play_time = 0;
+  }
 }ability;
 
 typedef struct ability_play_system {
@@ -741,30 +864,24 @@ typedef struct ability_play_system {
 typedef struct character_stat {
   character_stats id;
   u16 level;
-
-  char passive_display_name[MAX_PASSIVE_NAME_LENGTH];
-  char passive_desc[MAX_PASSIVE_DESC_LENGTH];
+  std::string passive_display_name;
+  std::string passive_desc;
   Rectangle passive_icon_src;
   i32 upgrade_cost;
 
-  // 128 byte buffer
-  union {
-    i64 i64[2];
-    u64 u64[2];
-    f64 f64[2];
+  data128 buffer;
 
-    i32 i32[4];
-    u32 u32[4];
-    f32 f32[4];
-
-    i16 i16[8];
-    u16 u16[8];
-
-    i8 i8[16];
-    u8 u8[16];
-
-    char c[16];
-  } buffer;
+  character_stat() {}
+  character_stat(character_stats id, std::string display_name, std::string desc, Rectangle icon_src, i32 upgrade_cost, data128 buffer = {}) : character_stat() 
+  {
+    this->id = id;
+    this->passive_display_name = display_name;
+    this->passive_desc = desc;
+    this->passive_icon_src = icon_src;
+    this->upgrade_cost = upgrade_cost;
+    this->buffer = buffer;
+    this->level = 1;
+  }
 }character_stat;
 
 // LABEL: Player State
@@ -856,9 +973,6 @@ static const u32 level_curve[MAX_PLAYER_LEVEL + 1] = {
 // Platform detection
 #if defined(_WIN32) || defined(__WIN32__)
 #define PLATFORM_WINDOWS 1
-#ifndef _WIN64
-#error "64-bit is required on Windows!"
-#endif
 #elif defined(__linux__) || defined(__gnu_linux__)
 // Linux OS
 #define PLATFORM_LINUX 1
@@ -898,12 +1012,12 @@ static const u32 level_curve[MAX_PLAYER_LEVEL + 1] = {
 #define FMIN(v1, v2) (v1 <= v2) ? v1 : v2
 #define FABS(v1) (v1 < 0) ? v1*(-1) : v1
 
-#define pVECTOR2(X) ((Vector2){X[0], X[1]})
-#define VECTOR2(X, Y) ((Vector2){X, Y})
-#define TO_VECTOR2(X) ((Vector2){X, X})
-#define NORMALIZE_VEC2(X, Y, X_MAX, Y_MAX)  ((Vector2){X / X_MAX, Y / Y_MAX})
-#define CENTER_RECT(RECT) ((Rectangle){RECT.x - RECT.width / 2.f, RECT.y - RECT.height, RECT.width, RECT.height});
-#define SCREEN_POS(X, Y) ((Vector2){  \
+#define pVECTOR2(X) (Vector2{(f32)X[0], (f32)X[1]})
+#define VECTOR2(X, Y) (Vector2{X, Y})
+#define TO_VECTOR2(X) (Vector2{X, X})
+#define NORMALIZE_VEC2(X, Y, X_MAX, Y_MAX)  ( Vector2 {X / X_MAX, Y / Y_MAX})
+#define CENTER_RECT(RECT) (Rectangle{RECT.x - RECT.width / 2.f, RECT.y - RECT.height, RECT.width, RECT.height});
+#define SCREEN_POS(X, Y) (Vector2{  \
   .x = BASE_RENDER_RES.x  * (X / 100), \
   .y = BASE_RENDER_RES.y * (Y / 100)  \
 })

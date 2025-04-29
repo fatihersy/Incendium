@@ -24,6 +24,9 @@
     "editor.fontFamily": "Iosevka Nerd Font Mono Regular",
     "editor.fontSize": 14,
     "editor.fontLigatures": "'ss07'",
+    "editor.bracketPairColorization.enabled": true,
+    "editor.guides.bracketPairs": "active",
+    "editor.guides.bracketPairsHorizontal": "active",
     "editor.quickSuggestions": {
         "other": "on",
         "comments": "on",
@@ -95,7 +98,10 @@
     },
     "clangd.arguments": [
         "--header-insertion=never",
-        "--function-arg-placeholders=0"
+        "--function-arg-placeholders=0",
+    ],
+    "clangd.fallbackFlags": [
+        "-std=c++23"
     ],
     "files.associations": {
         "darray.h": "c",
