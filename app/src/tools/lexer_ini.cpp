@@ -1,7 +1,8 @@
 #include "tools/lexer_ini.h"
-#include "defines.h"
 
 #include "tools/fstring.h"
+
+#include "raylib.h"
 
 #define DATA_TYPE_C_DELIMITER 20
 #define DATA_TYPE_I64_DELIMITER 19
@@ -57,9 +58,9 @@ bool parse_app_settings_ini(const char* filename, app_settings* out_settings) {
   TextCopy(file_str, (char*)_str);
   TextCopy(section_resolution, get_section(file_str, "resolution"));
   TextCopy(section_sound,      get_section(file_str, "sound"));
-  TextCopy(section_window,      get_section(file_str, "window"));
-  out_settings->window_size.x = get_variable_I32(section_resolution, "width");
-  out_settings->window_size.y = get_variable_I32(section_resolution, "height");
+  TextCopy(section_window,     get_section(file_str, "window"));
+  out_settings->window_size.push_back(static_cast<f32>(get_variable_I32(section_resolution, "width")));
+  out_settings->window_size.push_back(static_cast<f32>(get_variable_I32(section_resolution, "height")));
   out_settings->master_sound_volume = get_variable_U16(section_sound, "master");
   const char* str_win_mode = get_value_string(section_window, "mode");
   if (TextIsEqual(str_win_mode, "borderless")) {

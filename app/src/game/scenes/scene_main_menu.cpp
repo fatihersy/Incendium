@@ -54,6 +54,7 @@ void initialize_scene_main_menu(camera_metrics *_camera_metrics) {
   }
   state = (main_menu_scene_state *)allocate_memory_linear(sizeof(main_menu_scene_state), true);
   state->in_camera_metrics = _camera_metrics;
+  
 
   begin_scene_main_menu();
 }

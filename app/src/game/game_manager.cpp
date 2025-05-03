@@ -458,8 +458,8 @@ void set_currency_souls(i32 value) {
 }
 Vector2 gm_get_mouse_pos_world(void) {
   return GetScreenToWorld2D(Vector2{
-    GetMousePosition().x * get_app_settings()->scale_ratio.x,
-    GetMousePosition().y * get_app_settings()->scale_ratio.y
+    GetMousePosition().x * get_app_settings()->scale_ratio.at(0),
+    GetMousePosition().y * get_app_settings()->scale_ratio.at(1)
     }, 
     state->in_camera_metrics->handle
   );

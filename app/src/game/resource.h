@@ -2,7 +2,7 @@
 #ifndef RESOURCE_H
 #define RESOURCE_H
 
-#include "defines.h"
+#include "game_types.h"
 
 bool resource_system_initialize(void);
 

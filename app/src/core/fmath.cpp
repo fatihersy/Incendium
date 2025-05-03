@@ -1,6 +1,5 @@
 #include "fmath.h"
 #include "math.h"
-#include "raymath.h"
 
 Vector2 get_a_point_of_a_circle(Vector2 position, i16 radius, i16 angle) {
   return {
@@ -37,5 +36,5 @@ float get_movement_rotation(Vector2 from, Vector2 to) {
   Vector2 direction = vec2_subtract(to, from);
   return atan2f(direction.y, direction.x) * RAD2DEG;
 }
- Vector2 vec2_zero(void) { return {}; }
+Vector2 vec2_zero(void) { return {}; }
 

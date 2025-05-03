@@ -7,7 +7,7 @@
 #include "core/event.h"
 #include "core/fmemory.h"
 
-#include "defines.h"
+#include "game_types.h"
 #include "game/spritesheet.h"
 #include "game/fshader.h"
 #include "raylib.h"
@@ -271,7 +271,10 @@ void user_interface_system_initialize(void) {
       break;
     }
   }
-  Vector2 window_size = get_app_settings()->window_size;
+  Vector2 window_size = Vector2 {
+    get_app_settings()->window_size.at(0),
+    get_app_settings()->window_size.at(1)
+  };
 
   for (int i=0; i<state->sliders[SDR_ID_SETTINGS_RES_SLIDER].max_value; ++i) {
     if (
@@ -294,8 +297,8 @@ void user_interface_system_initialize(void) {
 }
 
 void update_user_interface(void) {
-  state->mouse_pos.x = GetMousePosition().x * get_app_settings()->scale_ratio.x;
-  state->mouse_pos.y = GetMousePosition().y * get_app_settings()->scale_ratio.y;
+  state->mouse_pos.x = GetMousePosition().x * get_app_settings()->scale_ratio.at(0);
+  state->mouse_pos.y = GetMousePosition().y * get_app_settings()->scale_ratio.at(1);
 
   update_buttons();
   update_sliders();

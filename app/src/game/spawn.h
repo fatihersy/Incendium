@@ -3,7 +3,7 @@
 #ifndef SPAWN_H
 #define SPAWN_H
 
-#include "defines.h"
+#include "game_types.h"
 
 bool spawn_system_initialize(camera_metrics* _camera_metrics);
 bool spawn_character(Character2D _character);

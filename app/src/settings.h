@@ -14,6 +14,6 @@ bool set_master_sound(u32 volume);
 
 app_settings* get_app_settings(void);
 i32 get_window_state(void);
-Vector2 get_screen_offset(void);
+std::vector<f32> get_screen_offset(void);
 
 #endif 

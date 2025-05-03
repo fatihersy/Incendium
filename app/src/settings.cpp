@@ -1,5 +1,5 @@
 #include "settings.h"
-#include "defines.h"
+#include <raylib.h>
 
 #include "core/fmemory.h"
 
@@ -45,9 +45,9 @@ bool set_settings_from_ini_file(const char *file_name) {
              "settings::set_settings_from_ini_file()::parse_app returns false");
     return false;
   }
-  state->settings.normalized_ratio = state->settings.window_size.x / BASE_RENDER_RES.x;
-  state->settings.scale_ratio.x = BASE_RENDER_RES.x / state->settings.window_size.x;
-  state->settings.scale_ratio.y = BASE_RENDER_RES.y / state->settings.window_size.y;
+  state->settings.normalized_ratio = state->settings.window_size.at(0) / BASE_RENDER_RES.x;
+  state->settings.scale_ratio.push_back(BASE_RENDER_RES.x / state->settings.window_size.at(0));
+  state->settings.scale_ratio.push_back(BASE_RENDER_RES.y / state->settings.window_size.at(1));
   state->offset = 5;
 
   return true;
@@ -59,9 +59,9 @@ void set_resolution(u32 width, u32 height) {
     return;
   }
   state->settings.window_size = {(f32)width, (f32)height};
-  state->settings.normalized_ratio = state->settings.window_size.x / BASE_RENDER_RES.x;
-  state->settings.scale_ratio.x = BASE_RENDER_RES.x / state->settings.window_size.x;
-  state->settings.scale_ratio.y = BASE_RENDER_RES.y / state->settings.window_size.y;
+  state->settings.normalized_ratio = state->settings.window_size.at(0) / BASE_RENDER_RES.x;
+  state->settings.scale_ratio.at(0) = BASE_RENDER_RES.x / state->settings.window_size.at(0);
+  state->settings.scale_ratio.at(1) = BASE_RENDER_RES.y / state->settings.window_size.at(1);
   state->offset = 5;
 }
 
@@ -123,8 +123,8 @@ bool save_ini_file(void) {
 
   const char* ini_text = TextFormat("%s %s%.0f%s %s%.0f%s %s %s %s %s%s%s",
     "[resolution]\n",
-    "width = \"", state->settings.window_size.x, "\"\n",
-    "height = \"", state->settings.window_size.y, "\"\n",
+    "width = \"", state->settings.window_size.at(0), "\"\n",
+    "height = \"", state->settings.window_size.at(1), "\"\n",
     "[sound]\n",
     "master = 100\n",
     "[window]\n",

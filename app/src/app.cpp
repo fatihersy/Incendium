@@ -1,14 +1,17 @@
 #include "app.h"
+#include "game/game_types.h"
+
 #include "settings.h"
 #include "sound.h"
 
 #if USE_PAK_FORMAT 
-  #include "tools/pak_parser.h"
+#include "tools/pak_parser.h"
 #endif
 
 #include "core/event.h"
 #include "core/ftime.h"
 #include "core/fmemory.h"
+//#include "core/logger.h"
 
 #include "game/camera.h"
 #include "game/resource.h"
@@ -39,8 +42,8 @@ bool app_initialize(void) {
   state->settings = get_app_settings();
 
   InitWindow(
-    state->settings->window_size.x, 
-    state->settings->window_size.y, 
+    state->settings->window_size.at(0), 
+    state->settings->window_size.at(1), 
     GAME_TITLE);
   SetTargetFPS(TARGET_FPS); 
   SetExitKey(KEY_END);
@@ -151,8 +154,8 @@ bool app_render(void) {
         {0, 0, (f32)state->drawing_target.texture.width, (f32)-state->drawing_target.texture.height},
         {
           -state->settings->normalized_ratio, -state->settings->normalized_ratio, 
-          state->settings->window_size.x + (state->settings->normalized_ratio*2), 
-          state->settings->window_size.y + (state->settings->normalized_ratio*2)
+          state->settings->window_size.at(0) + (state->settings->normalized_ratio*2), 
+          state->settings->window_size.at(1) + (state->settings->normalized_ratio*2)
         }, Vector2 {}, 0, WHITE
       );
     EndMode2D();
@@ -195,7 +198,7 @@ bool application_on_event(u16 code, event_context context) {
       ToggleFullscreen();
       state->settings->window_state = 0;
     }
-    SetWindowSize(get_app_settings()->window_size.x, get_app_settings()->window_size.y);
+    SetWindowSize(get_app_settings()->window_size.at(0), get_app_settings()->window_size.at(1));
     SetWindowPosition(
       (GetMonitorWidth(GetCurrentMonitor())  / 2.f) - (GetScreenWidth()  / 2.f), 
       (GetMonitorHeight(GetCurrentMonitor()) / 2.f) - (GetScreenHeight() / 2.f)

@@ -2,7 +2,7 @@
 #ifndef SPRITESHEET_H
 #define SPRITESHEET_H
 
-#include "defines.h"
+#include "game_types.h"
 #include "raylib.h"
 
 void set_sprite(spritesheet *sheet, bool _play_looped, bool _play_once, bool _center_sprite);

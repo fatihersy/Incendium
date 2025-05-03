@@ -2,7 +2,7 @@
 #ifndef USER_INTERFACE_H
 #define USER_INTERFACE_H
 
-#include "defines.h"
+#include "game_types.h"
 
 
 typedef enum button_state {

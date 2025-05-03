@@ -1,7 +1,7 @@
 #ifndef SAVE_GAME_H
 #define SAVE_GAME_H
 
-#include "defines.h"
+#include "game/game_types.h"
 
 typedef struct save_data {
   u8 file_name[MAX_FILENAME_LENGTH];

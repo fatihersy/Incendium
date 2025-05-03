@@ -2,7 +2,7 @@
 #ifndef TILEMAP_H
 #define TILEMAP_H
 
-#include "defines.h"
+#include "game_types.h"
 
 void create_tilemap(tilesheet_type _type, Vector2 _position, u16 _grid_size, u16 _tile_size, tilemap* out_tilemap);
 void create_tilesheet(tilesheet_type _type, u16 _dest_tile_size, f32 _offset, tilesheet* out_tilesheet);

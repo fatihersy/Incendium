@@ -3,7 +3,7 @@
 #ifndef PLAYER_H
 #define PLAYER_H
 
-#include "defines.h"
+#include "game_types.h"
 
 typedef struct player_update_results {
   Vector2 move_request = Vector2 {};

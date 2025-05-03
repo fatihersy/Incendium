@@ -89,8 +89,8 @@ void update_scene_editor(void) {
     return;
   }
   else state->mouse_focus = MOUSE_FOCUS_MAP;
-  state->mouse_pos_screen.x = GetMousePosition().x * get_app_settings()->scale_ratio.x;
-  state->mouse_pos_screen.y = GetMousePosition().y * get_app_settings()->scale_ratio.y;
+  state->mouse_pos_screen.x = GetMousePosition().x * get_app_settings()->scale_ratio.at(0);
+  state->mouse_pos_screen.y = GetMousePosition().y * get_app_settings()->scale_ratio.at(1);
   state->mouse_pos_world = GetScreenToWorld2D(state->mouse_pos_screen, state->in_camera_metrics->handle);
   state->edit_layer = get_slider_current_value(SDR_ID_EDITOR_MAP_LAYER_SLC_SLIDER)->data.u16[0]; // HACK: Should not updated every frame
   state->in_camera_metrics->frustum = se_get_camera_view_rect(state->in_camera_metrics->handle);

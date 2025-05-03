@@ -1,6 +1,8 @@
 #include "pak_parser.h"
 #include "core/fmemory.h"
 
+#include "raylib.h"
+
 #define TOTAL_PAK_FILE_SIZE 128 * 1024 * 1024
 #define MAX_RESOURCE_FILES 256
 

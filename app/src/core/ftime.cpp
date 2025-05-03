@@ -47,11 +47,6 @@ typedef struct time_system_state {
 
 static time_system_state *state;
 
-#define STATE_ASSERT(FUNCTION_NAME_STR, RETURN) if (!state) {                                     \
-  TraceLog(LOG_ERROR, "scene_in_game::" FUNCTION_NAME_STR "::In game state was not initialized"); \
-  RETURN;                                                                                         \
-}
-
 void time_system_initialize(void) {
   if (state) {
     return;
@@ -67,14 +62,18 @@ void time_system_initialize(void) {
   
 }
 void update_time(void) {
-  STATE_ASSERT("update_time", return;)
+  if(state == nullptr) {
+    return;
+  }
 
   time(&state->time);
   state->parsed_time = localtime(&state->time);
 }
 
 i32 get_random(i32 min, i32 max) {
-  STATE_ASSERT("get_random", return I32_MAX)
+  if(state == nullptr) {
+    return I32_MAX;
+  }
 
   if (state->rand_ind >= RANDOM_TABLE_NUMBER_COUNT-1) {
     state->rand_ind = 0;

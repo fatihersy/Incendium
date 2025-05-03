@@ -3,6 +3,8 @@
 #include <stdlib.h> // Required for: malloc(), free()
 #include <string.h> // Required for: memset(), memcpy()
 
+#include "core/logger.h"
+
 typedef struct memory_system_state {
     u64 linear_memory_total_size;
     u64 linear_memory_allocated;
@@ -22,8 +24,7 @@ void memory_system_initialize(void) {
 
 void* allocate_memory_linear(u64 size, bool will_zero_memory) {
     if (memory_system->linear_memory_allocated + size > memory_system->linear_memory_total_size) {
-        u64 remaining = memory_system->linear_memory_total_size - memory_system->linear_memory_allocated;
-        TraceLog(LOG_ERROR, "Tried to allocate %lluB, only %lluB remaining.", size, remaining);
+        alert("Error","Allocate memory failed!");
         exit(EXIT_FAILURE);
     }
 
@@ -39,7 +40,7 @@ void* allocate_memory(u64 size, bool will_zero_memory) {
     void* block = malloc(size);
 
     if (block == NULL) {
-        TraceLog(LOG_FATAL, "BLOCK WAS NULL");
+        // TODO: 
         exit(EXIT_FAILURE);
     }
 

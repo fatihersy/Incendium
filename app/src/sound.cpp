@@ -1,13 +1,14 @@
 #include "sound.h"
-#include "defines.h"
 #include "raylib.h"
 
 #include "core/fmemory.h"
 #include "core/event.h"
 
 #if USE_PAK_FORMAT 
-  #include "tools/pak_parser.h"
+#include "tools/pak_parser.h"
 #endif
+
+#include "game/game_types.h"
 
 // TODO: Destroy sound system
 

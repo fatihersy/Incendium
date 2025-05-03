@@ -3,7 +3,7 @@
 #ifndef SCENE_MAIN_MENU_H
 #define SCENE_MAIN_MENU_H
 
-#include "defines.h"
+#include "game/game_types.h"
 
 void initialize_scene_main_menu(camera_metrics* _camera_metrics);
 void end_scene_main_menu(void);

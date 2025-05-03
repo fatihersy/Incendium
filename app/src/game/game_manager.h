@@ -3,7 +3,7 @@
 #ifndef GAME_MANAGER_H
 #define GAME_MANAGER_H
 
-#include <defines.h>
+#include <game/game_types.h>
 
 bool game_manager_initialize(camera_metrics* _camera_metrics);
 

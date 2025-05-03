@@ -2,7 +2,7 @@
 #ifndef ABILITY_MANAGER_H
 #define ABILITY_MANAGER_H
 
-#include "defines.h"
+#include "game_types.h"
 
 bool ability_system_initialize(camera_metrics* _camera_metrics, app_settings* settings);
 

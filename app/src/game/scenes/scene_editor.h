@@ -2,7 +2,7 @@
 #ifndef SCENE_EDITOR_H
 #define SCENE_EDITOR_H
 
-#include <defines.h>
+#include <game/game_types.h>
 
 void initialize_scene_editor(camera_metrics* _camera);
 void end_scene_editor(void);

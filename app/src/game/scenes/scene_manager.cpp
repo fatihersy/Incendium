@@ -1,5 +1,5 @@
 #include "scene_manager.h"
-#include "defines.h"
+#include "game/game_types.h"
 
 #include "core/event.h"
 #include "core/fmemory.h"

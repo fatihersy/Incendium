@@ -2,7 +2,7 @@
 #ifndef CAMERA_H
 #define CAMERA_H
 
-#include <defines.h>
+#include <game/game_types.h>
 
 void create_camera(Vector2 position);
 

@@ -3,7 +3,7 @@
 #ifndef SCENE_IN_GAME_H
 #define SCENE_IN_GAME_H
 
-#include <defines.h>
+#include <game/game_types.h>
 
 bool initialize_scene_in_game(camera_metrics* _camera_metrics);
 

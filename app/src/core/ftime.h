@@ -4,6 +4,8 @@
 
 #include "defines.h"
 
+#define RANDOM_TABLE_NUMBER_COUNT 507
+
 void time_system_initialize(void);
 
 void update_time(void);

@@ -3,6 +3,7 @@
 #define MATH_H
 
 #include "defines.h"
+#include "raymath.h"
 
 Vector2 get_a_point_of_a_circle(Vector2 position, i16 radius, i16 angle);
 

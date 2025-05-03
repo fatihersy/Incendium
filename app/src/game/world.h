@@ -2,7 +2,7 @@
 #ifndef WORLD_H
 #define WORLD_H
 
-#include "defines.h"
+#include "game_types.h"
 
 bool world_system_initialize(camera_metrics* _in_camera_metrics);
 

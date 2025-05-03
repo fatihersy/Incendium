@@ -2,7 +2,7 @@
 #ifndef FSHADER_H
 #define FSHADER_H
 
-#include <defines.h>
+#include <game/game_types.h>
 
 typedef struct fshader_location {
   char name[MAX_SHADER_LOCATION_NAME_LENGTH];
