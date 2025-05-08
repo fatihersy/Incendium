@@ -41,7 +41,10 @@ typedef struct scene_in_game_state {
   end_game_results end_game_result;
   u16 hovered_stage;
   u16 hovered_spawn;
+  ability_type hovered_ability;
+  u16 hovered_projectile;
   bool has_game_started;
+
 } scene_in_game_state;
 
 static scene_in_game_state * state;
@@ -73,7 +76,7 @@ void initialize_worldmap_locations(void);
 void draw_in_game_upgrade_panel(ability* abl, ability upg, Rectangle panel_dest);
 void draw_passive_selection_panel(character_stat* stat, Rectangle panel_dest);
 void draw_end_game_panel();
-void start_game(character_stat* stat);
+void start_game(character_stats stat);
 void reset_game();
 Rectangle sig_get_camera_view_rect(Camera2D camera);
 
@@ -120,17 +123,20 @@ void begin_scene_in_game(void) {
 
   state->stage = IN_GAME_STAGE_MAP_CHOICE;
   state->hovered_stage = U16_MAX;
+  state->hovered_spawn = U16_MAX;
+  state->hovered_ability = ABILITY_TYPE_MAX;
+  state->hovered_projectile = U16_MAX;
 
   event_fire(EVENT_CODE_UI_START_FADEIN_EFFECT, event_context((u16)CLOUDS_ANIMATION_DURATION));
 }
-void start_game(character_stat* stat) {
+void start_game(character_stats stat) {
   if (!state) {
     TraceLog(LOG_ERROR, "scene_in_game::start_game()::state returned zero");
     return;
   }
   gm_start_game(*get_active_worldmap());
 
-  upgrade_player_stat(stat);
+  upgrade_dynamic_player_stat(stat);
   _set_player_position(BASE_RENDER_SCALE(.5f));
   state->stage = IN_GAME_STAGE_PLAY;
 }
@@ -173,6 +179,7 @@ void update_scene_in_game(void) {
       if (get_is_game_end()) {
         state->stage = IN_GAME_STAGE_PLAY_RESULTS;
       }
+      // LABEL: DEBUG
       if (IsKeyDown(KEY_LEFT_SHIFT) && IsKeyReleased(KEY_D)) {
         state->stage = IN_GAME_STAGE_PLAY_DEBUG;
       }
@@ -186,6 +193,7 @@ void update_scene_in_game(void) {
       break;
     }
     case IN_GAME_STAGE_PLAY_DEBUG: {
+      // LABEL: DEBUG
       if (IsKeyDown(KEY_LEFT_SHIFT) && IsKeyReleased(KEY_D)) {
         state->stage = IN_GAME_STAGE_PLAY;
       }
@@ -226,13 +234,29 @@ void in_game_update_mouse_bindings(void) {
       break;
     }
     case IN_GAME_STAGE_PLAY_DEBUG: {
+      Vector2* mouse_pos_world = gm_get_mouse_pos_world();
       state->hovered_spawn = U16_MAX;
       for (int i=0; i<get_remaining_enemies(); ++i) {
         Character2D* spawn = get_spawn_info(i);
         if (spawn) {
-          Vector2 mouse_pos_world = gm_get_mouse_pos_world();
-          if (CheckCollisionPointRec(mouse_pos_world, spawn->collision)) {
+          if (CheckCollisionPointRec(*mouse_pos_world, spawn->collision)) {
             state->hovered_spawn = i;
+          }
+        }
+      }
+      player_state* player = _get_dynamic_player_state();
+      state->hovered_ability = ABILITY_TYPE_UNDEFINED;
+      state->hovered_projectile = U16_MAX;
+      for (size_t i=0; i<MAX_ABILITY_SLOT; ++i) {
+        ability* abl = __builtin_addressof(player->ability_system.abilities[i]);
+        if(!abl || !abl->is_active || !abl->is_initialized) { continue; }
+        for (size_t j=0; j < MAX_ABILITY_PROJECTILE_SLOT; j++) {
+          projectile* prj = __builtin_addressof(abl->projectiles[j]);
+          if (!prj || !prj->is_active) { continue; }
+          if (CheckCollisionPointRec(*mouse_pos_world, prj->collision)) {
+            state->hovered_ability = abl->type;
+            state->hovered_projectile = j;
+            break;
           }
         }
       }
@@ -378,10 +402,10 @@ void render_interface_in_game(void) {
           pnl->buffer.u16[0] = get_random(1,CHARACTER_STATS_MAX-1);
         }
         dest.x = dest_x_buffer + ((dest.width + SCREEN_OFFSET.x) * i);
-        character_stat* stat = get_player_in_game_stat(static_cast<character_stats>(pnl->buffer.u16[0]));
+        character_stat* stat = get_dynamic_player_state_stat(static_cast<character_stats>(pnl->buffer.u16[0]));
         if(gui_panel_active(pnl, dest, true)) {
           set_is_game_paused(false);
-          start_game(stat);
+          start_game(stat->id);
           for (int i=0; i<MAX_UPDATE_ABILITY_PANEL_COUNT; ++i) {
             state->passive_selection_panels[i].buffer.u16[0] = 0;
           }
@@ -411,7 +435,7 @@ void render_interface_in_game(void) {
             pnl->buffer.u16[0] = get_random(1,ABILITY_TYPE_MAX-1);
           }
           dest.x = dest_x_buffer + ((dest.width + SCREEN_OFFSET.x) * i);
-          ability* abl = get_player_ability(static_cast<ability_type>(pnl->buffer.u16[0]));
+          ability* abl = get_dynamic_player_state_ability(static_cast<ability_type>(pnl->buffer.u16[0]));
           ability new_ability = {};
           if (abl->type <= ABILITY_TYPE_UNDEFINED || abl->type >= ABILITY_TYPE_MAX) {
             new_ability = _get_ability(static_cast<ability_type>(pnl->buffer.u16[0]));
@@ -426,7 +450,7 @@ void render_interface_in_game(void) {
           }
           if(gui_panel_active(pnl, dest, true)) {
             set_is_game_paused(false);
-            set_player_have_ability_upgrade_points(false);
+            set_dynamic_player_have_ability_upgrade_points(false);
             for (int i=0; i<MAX_UPDATE_ABILITY_PANEL_COUNT; ++i) {
               state->ability_upg_panels[i].buffer.u16[0] = 0;
             }
@@ -444,9 +468,9 @@ void render_interface_in_game(void) {
         gui_label_format(FONT_TYPE_MOOD, 10, BASE_RENDER_SCALE(.75f).x, SCREEN_OFFSET.y, WHITE, false, false, "Remaining: %d", get_remaining_enemies());
         gui_label_format(FONT_TYPE_MOOD, 10, BASE_RENDER_SCALE(.75f).x, SCREEN_OFFSET.y * 5.f, WHITE, false, false, "Souls: %d", get_currency_souls());
 
-        gui_label_format(FONT_TYPE_MOOD, 10, 0, BASE_RENDER_SCALE(.35f).y, WHITE, false, false, "Health: %d", _get_player_in_game_state()->health_max);
-        gui_label_format(FONT_TYPE_MOOD, 10, 0, BASE_RENDER_SCALE(.40f).y, WHITE, false, false, "Current Health: %d", _get_player_in_game_state()->health_current);
-        gui_label_format(FONT_TYPE_MOOD, 10, 0, BASE_RENDER_SCALE(.45f).y, WHITE, false, false, "Damage: %d", _get_player_in_game_state()->damage);
+        gui_label_format(FONT_TYPE_MOOD, 10, 0, BASE_RENDER_SCALE(.35f).y, WHITE, false, false, "Health: %d", _get_dynamic_player_state()->health_max);
+        gui_label_format(FONT_TYPE_MOOD, 10, 0, BASE_RENDER_SCALE(.40f).y, WHITE, false, false, "Current Health: %d", _get_dynamic_player_state()->health_current);
+        gui_label_format(FONT_TYPE_MOOD, 10, 0, BASE_RENDER_SCALE(.45f).y, WHITE, false, false, "Damage: %d", _get_dynamic_player_state()->damage);
       }
       break;
     }
@@ -457,59 +481,86 @@ void render_interface_in_game(void) {
       else {
         gui_label_format(
           FONT_TYPE_MOOD, 15, ui_get_mouse_pos()->x, ui_get_mouse_pos()->y, 
-          WHITE, false, false, "world_pos{%.1f, %.1f}", gm_get_mouse_pos_world().x, gm_get_mouse_pos_world().y
+          WHITE, false, false, "world_pos{%.1f, %.1f}", gm_get_mouse_pos_world()->x, gm_get_mouse_pos_world()->y
         );
-        for (int i=0; i<get_remaining_enemies(); ++i) {
-          if(state->hovered_spawn == i && i != 0){
-            Character2D* spawn = get_spawn_info(i);
-            panel* pnl = &state->debug_info_panel;
-            pnl->dest = Rectangle {
-              ui_get_mouse_pos()->x, ui_get_mouse_pos()->y, 
-              BASE_RENDER_SCALE(.4f).x, BASE_RENDER_SCALE(.3f).y
-            };
-            i32 font_size = 18;
-            i32 line_height = BASE_RENDER_SCALE(.05f).y;
-            Vector2 debug_info_position_buffer = VECTOR2(pnl->dest.x, pnl->dest.y);
-            gui_panel_scissored((*pnl), false, {
-              gui_label_format(
-                FONT_TYPE_MOOD, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
-                WHITE, false, false, "Id: %d", spawn->character_id
-              );
-              debug_info_position_buffer.y += line_height;
-              gui_label_format(
-                FONT_TYPE_MOOD, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
-                WHITE, false, false, "Collision: {%.1f, %.1f, %.1f, %.1f}", spawn->collision.x, spawn->collision.y, spawn->collision.width, spawn->collision.height
-              );
-              debug_info_position_buffer.y += line_height;
-              gui_label_format(
-                FONT_TYPE_MOOD, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
-                WHITE, false, false, "Position: {%.1f, %.1f}", spawn->position.x, spawn->position.y
-              );
-              debug_info_position_buffer.y += line_height;
-              gui_label_format(
-                FONT_TYPE_MOOD, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
-                WHITE, false, false, "Health: %d", spawn->health
-              );
-              debug_info_position_buffer.y += line_height;
-              gui_label_format(
-                FONT_TYPE_MOOD, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
-                WHITE, false, false, "Scale: %.1f", spawn->scale
-              );
-              debug_info_position_buffer.y += line_height;
-              gui_label_format(
-                FONT_TYPE_MOOD, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
-                WHITE, false, false, "Speed: %.1f", spawn->speed
-              );
-            });
-          }
-        }
 
+        if(state->hovered_spawn < get_remaining_enemies()){
+          Character2D* spawn = get_spawn_info(state->hovered_spawn);
+          panel* pnl = &state->debug_info_panel;
+          pnl->dest = Rectangle {
+            ui_get_mouse_pos()->x, ui_get_mouse_pos()->y, 
+            BASE_RENDER_SCALE(.4f).x, BASE_RENDER_SCALE(.3f).y
+          };
+          i32 font_size = 18;
+          i32 line_height = BASE_RENDER_SCALE(.05f).y;
+          Vector2 debug_info_position_buffer = VECTOR2(pnl->dest.x, pnl->dest.y);
+          gui_panel_scissored((*pnl), false, {
+            gui_label_format(
+              FONT_TYPE_MOOD, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
+              WHITE, false, false, "Id: %d", spawn->character_id
+            );
+            debug_info_position_buffer.y += line_height;
+            gui_label_format(
+              FONT_TYPE_MOOD, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
+              WHITE, false, false, "Collision: {%.1f, %.1f, %.1f, %.1f}", spawn->collision.x, spawn->collision.y, spawn->collision.width, spawn->collision.height
+            );
+            debug_info_position_buffer.y += line_height;
+            gui_label_format(
+              FONT_TYPE_MOOD, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
+              WHITE, false, false, "Position: {%.1f, %.1f}", spawn->position.x, spawn->position.y
+            );
+            debug_info_position_buffer.y += line_height;
+            gui_label_format(
+              FONT_TYPE_MOOD, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
+              WHITE, false, false, "Health: %d", spawn->health
+            );
+            debug_info_position_buffer.y += line_height;
+            gui_label_format(
+              FONT_TYPE_MOOD, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
+              WHITE, false, false, "Scale: %.1f", spawn->scale
+            );
+            debug_info_position_buffer.y += line_height;
+            gui_label_format(
+              FONT_TYPE_MOOD, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
+              WHITE, false, false, "Speed: %.1f", spawn->speed
+            );
+          });
+        }
+        if(state->hovered_ability > 0 && state->hovered_ability < MAX_ABILITY_SLOT && state->hovered_projectile >= 0 && state->hovered_projectile < MAX_ABILITY_PROJECTILE_SLOT  ){
+          panel* pnl = &state->debug_info_panel;
+          pnl->dest = Rectangle {
+            ui_get_mouse_pos()->x, ui_get_mouse_pos()->y, 
+            BASE_RENDER_SCALE(.4f).x, BASE_RENDER_SCALE(.3f).y
+          };
+          i32 font_size = 11;
+          i32 line_height = BASE_RENDER_SCALE(.05f).y;
+          Vector2 debug_info_position_buffer = VECTOR2(pnl->dest.x, pnl->dest.y);
+          ability* abl = get_dynamic_player_state_ability(state->hovered_ability);
+          projectile* prj = __builtin_addressof(abl->projectiles[state->hovered_projectile]);
+          gui_panel_scissored((*pnl), false, {
+            gui_label_format(
+              FONT_TYPE_MINI_MOOD, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
+              WHITE, false, false, "Collision: {%.1f, %.1f, %.1f, %.1f}", prj->collision.x, prj->collision.y, prj->collision.width, prj->collision.height
+            );
+            debug_info_position_buffer.y += line_height;
+            gui_label_format(
+              FONT_TYPE_MINI_MOOD, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
+              WHITE, false, false, "Rotation: %.1f", prj->default_animation.rotation
+            );
+            debug_info_position_buffer.y += line_height;
+            gui_label_format(
+              FONT_TYPE_MINI_MOOD, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
+              WHITE, false, false, "Default Anim Should Center: %d", prj->default_animation.should_center
+            );
+          });
+        }
+        
         gui_label_format(FONT_TYPE_MOOD, 10, BASE_RENDER_SCALE(.75f).x, SCREEN_OFFSET.y, WHITE, false, false, "Remaining: %d", get_remaining_enemies());
         gui_label_format(FONT_TYPE_MOOD, 10, BASE_RENDER_SCALE(.75f).x, SCREEN_OFFSET.y * 5.f, WHITE, false, false, "Souls: %d", get_currency_souls());
 
-        gui_label_format(FONT_TYPE_MOOD, 10, 0, BASE_RENDER_SCALE(.35f).y, WHITE, false, false, "Health: %d", _get_player_in_game_state()->health_max);
-        gui_label_format(FONT_TYPE_MOOD, 10, 0, BASE_RENDER_SCALE(.40f).y, WHITE, false, false, "Current Health: %d", _get_player_in_game_state()->health_current);
-        gui_label_format(FONT_TYPE_MOOD, 10, 0, BASE_RENDER_SCALE(.45f).y, WHITE, false, false, "Damage: %d", _get_player_in_game_state()->damage);
+        gui_label_format(FONT_TYPE_MOOD, 10, 0, BASE_RENDER_SCALE(.35f).y, WHITE, false, false, "Health: %d", _get_dynamic_player_state()->health_max);
+        gui_label_format(FONT_TYPE_MOOD, 10, 0, BASE_RENDER_SCALE(.40f).y, WHITE, false, false, "Current Health: %d", _get_dynamic_player_state()->health_current);
+        gui_label_format(FONT_TYPE_MOOD, 10, 0, BASE_RENDER_SCALE(.45f).y, WHITE, false, false, "Damage: %d", _get_dynamic_player_state()->damage);
       }
       break;
     }

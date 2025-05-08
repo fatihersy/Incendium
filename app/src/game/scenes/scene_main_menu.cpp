@@ -195,7 +195,7 @@ void draw_main_menu_upgrade_list_panel(void) {
 
   for (i32 i = 0; i < MAIN_MENU_UPGRADE_PANEL_ROW; ++i) {
     for (i32 j = 0; j < MAIN_MENU_UPGRADE_PANEL_COL; ++j) {
-      character_stat *stat = get_player_default_stat(static_cast<character_stats>((MAIN_MENU_UPGRADE_PANEL_COL * i) + j + 1));
+      character_stat *stat = get_static_player_state_stat(static_cast<character_stats>((MAIN_MENU_UPGRADE_PANEL_COL * i) + j + 1));
       if (!stat || stat->id >= CHARACTER_STATS_MAX ||
         stat->id <= CHARACTER_STATS_UNDEFINED) {
         continue;
@@ -279,7 +279,7 @@ void draw_main_menu_upgrade_details_panel(void) {
   gui_label_wrap(state->hovered_stat->passive_desc.c_str(), FONT_TYPE_MINI_MOOD, 8, description_pos, WHITE, false);
 
   character_stat pseudo_update = *state->hovered_stat;
-  upgrade_player_stat(&pseudo_update);
+  upgrade_stat_pseudo(&pseudo_update);
   Vector2 upg_stat_text_pos = {
     state->upgrade_details_panel.dest.x + state->upgrade_details_panel.dest.width * .5f,
     state->upgrade_details_panel.dest.y + state->upgrade_details_panel.dest.height * .5f,
@@ -342,7 +342,7 @@ void draw_main_menu_upgrade_details_panel(void) {
   if (gui_menu_button("Upgrade", BTN_ID_MAINMENU_UPGRADE_BUY_UPGRADE, Vector2 {5.25f, 17.1f}, 2.7f, false)) {
     if (((i32)get_currency_souls() - state->hovered_stat->upgrade_cost) >= 0) {
       currency_souls_add(-state->hovered_stat->upgrade_cost);
-      upgrade_default_player_stat(state->hovered_stat->id);
+      upgrade_static_player_stat(state->hovered_stat->id);
       gm_save_game();
       event_fire(EVENT_CODE_PLAY_BUTTON_ON_CLICK, event_context((u16)true));
     } else {

@@ -385,10 +385,6 @@ void editor_update_keyboard_bindings(void) {
       state->selection_type = SLC_TYPE_UNSELECTED;
     }
   }
-  if (IsKeyDown(KEY_LEFT_SHIFT) && IsKeyReleased(KEY_D)) {
-    TraceLog(LOG_INFO, "");
-  }
-
 }
 void editor_update_movement(void) {
   f32 speed = 10;

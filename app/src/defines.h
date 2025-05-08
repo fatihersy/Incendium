@@ -38,6 +38,7 @@
 #endif
 
 #define GAME_TITLE "Incendium"
+#define STEAM_APP_ID 3680620
 
 #define RESOURCE_PATH "C:\\Users\\fatih\\repositories\\resources\\"
 #define MAP_LAYER_PATH "map_layers\\"

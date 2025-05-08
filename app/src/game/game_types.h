@@ -87,6 +87,7 @@ typedef enum spawn_type {
 } spawn_type;
 
 typedef enum actor_type {
+  ACTOR_TYPE_UNDEFINED,
   ACTOR_TYPE_SPAWN,
   ACTOR_TYPE_PROJECTILE_SPAWN,
   ACTOR_TYPE_PLAYER,
@@ -295,6 +296,7 @@ typedef struct spritesheet {
   texture_id tex_id;
   Texture2D* tex_handle;
   Vector2 offset;
+  Vector2 origin;
   u16 col_total;
   u16 row_total;
   u16 frame_total;
@@ -342,7 +344,28 @@ typedef struct Character2D {
 
   data128 buffer;
 
-  Character2D() {}
+  Character2D() {
+    this->character_id = 0;
+    this->health = 0;
+    this->damage = 0;
+    this->speed = 0.f;
+    this->type = ACTOR_TYPE_UNDEFINED;
+    this->collision = {};
+    this->w_direction = WORLD_DIRECTION_UNDEFINED;
+    this->move_right_animation = {};
+    this->move_left_animation = {};
+    this->take_damage_right_animation = {};
+    this->take_damage_left_animation = {};
+    this->last_played_animation = nullptr;
+    this->position = {};
+    this->rotation = 0;
+    this->scale = 0.f;
+    this->damage_break_time = 0.f;
+    this->is_dead = false;
+    this->is_damagable = false;
+    this->initialized = false;
+    this->buffer = {};
+  }
   Character2D(u16 spawn_type, u16 player_level, u16 rnd_scale, Vector2 position, f32 speed) : Character2D()
   {
     type = ACTOR_TYPE_SPAWN;
@@ -414,48 +437,64 @@ typedef struct ability {
   u16 level;
   u16 base_damage;
   u16 rotation;
+  bool centered_origin;
   bool center_proj_anim;
   bool is_active;
   bool is_initialized;
 
-  ability(std::string name, std::array<ability_upgradables, ABILITY_UPG_MAX> upgrs, ability_type type, spritesheet_id def_anim_id, spritesheet_id expl_anim_id, movement_pattern pattern, f32 proj_scale, u16 proj_count, 
-    u16 proj_speed, f32 proj_duration, Vector2 proj_dim, Rectangle icon_src, u16 base_damage, bool center_proj_anim, void* in_player = nullptr, bool is_active = false, bool is_initialized = false) 
-    : p_owner(in_player), move_pattern(pattern), type(type), default_animation_id(def_anim_id), explosion_animation_id(expl_anim_id),  proj_scale(proj_scale), proj_count(proj_count), 
-      proj_speed(proj_speed), proj_duration(proj_duration), proj_dim(proj_dim), icon_src(icon_src), base_damage(base_damage), center_proj_anim(center_proj_anim), is_active(is_active), 
-      is_initialized(is_initialized)
-  {
-      for (int i=0; i < MAX_ABILITY_NAME_LENGTH; ++i) {
-        display_name[i] = name[i];
-      }
-      display_name[MAX_ABILITY_NAME_LENGTH-1] = '\0';
-      for (int i=0; i < ABILITY_UPG_MAX; ++i) {
-        upgradables[i] = upgrs[i];
-      }
-  }
-
   ability() {
-    p_owner = nullptr;
-    type = ABILITY_TYPE_UNDEFINED;
-    default_animation_id = SHEET_ID_SPRITESHEET_UNSPECIFIED;
-    explosion_animation_id = SHEET_ID_SPRITESHEET_UNSPECIFIED;
-    move_pattern = MOVE_TYPE_UNDEFINED;
-    proj_scale = 0;
-    proj_count = 0; 
-    proj_speed = 0;
-    proj_duration = 0;
-    proj_dim = {0, 0};
-    rotation = 0;
-    base_damage = 0;
-    center_proj_anim = false;
-    is_active = false;
-    is_initialized = false;
-    level = 0;
-    upgradables.fill(ABILITY_UPG_UNDEFINED);
-    projectiles.fill({});
-    display_name = "";
-    icon_src = {};
-    position = {};
-    ability_play_time = 0;
+    this->p_owner = nullptr;
+    this->display_name = "";
+    this->projectiles = {};
+    this->upgradables = {};
+    this->move_pattern = MOVE_TYPE_UNDEFINED;
+    this->type = ABILITY_TYPE_UNDEFINED;
+    this->default_animation_id = SHEET_ID_SPRITESHEET_UNSPECIFIED;
+    this->explosion_animation_id = SHEET_ID_SPRITESHEET_UNSPECIFIED;
+    this->ability_play_time = 0.f;
+    this->proj_scale = 1.f;
+    this->proj_count = 0;
+    this->proj_speed = 0;
+    this->proj_duration = 0.f;
+    this->proj_dim = {};
+    this->icon_src = {};
+    this->position = {};
+    this->level = 0;
+    this->base_damage = 0;
+    this->rotation = 0;
+    this->centered_origin = false;
+    this->center_proj_anim = false;
+    this->is_active = false;
+    this->is_initialized = false;
+  };
+  ability(
+    std::string name, 
+    std::array<ability_upgradables, ABILITY_UPG_MAX> upgrs, 
+    ability_type type, spritesheet_id def_anim_id, spritesheet_id expl_anim_id, movement_pattern pattern, 
+    f32 proj_scale, u16 proj_count, u16 proj_speed, f32 proj_duration, 
+    Vector2 proj_dim, Rectangle icon_src,
+    u16 base_damage, 
+    bool center_proj_anim, bool centered_origin = false, void* in_player = nullptr, bool is_active = false, bool is_initialized = false) : ability()
+  {
+    this->p_owner = in_player;
+    this->move_pattern = pattern;
+    this->type = type;
+    this->default_animation_id = def_anim_id;
+    this->explosion_animation_id = expl_anim_id;
+    this->proj_scale = proj_scale;
+    this->proj_count = proj_count;
+    this->proj_speed = proj_speed;
+    this->proj_duration = proj_duration;
+    this->proj_dim = proj_dim;
+    this->icon_src = icon_src;
+    this->level = 1;
+    this->base_damage = base_damage;
+    this->center_proj_anim = center_proj_anim;
+    this->is_active = is_active;
+    this->is_initialized = is_initialized;
+    this->display_name = name;
+    this->upgradables = upgrs;
+    this->centered_origin = centered_origin;
   }
 }ability;
 

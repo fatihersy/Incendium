@@ -12,7 +12,7 @@
     "editor.cursorStyle": "block",
     "editor.tabCompletion": "on",
     "editor.parameterHints.enabled": true,
-    "editor.inlayHints.enabled": "off",
+    "editor.inlayHints.enabled": "on",
     "editor.hover.enabled": true,
     "editor.hover.delay": 800,
     "editor.cursorSmoothCaretAnimation" : "off",

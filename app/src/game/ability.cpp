@@ -31,23 +31,34 @@ bool ability_system_initialize(camera_metrics* _camera_metrics, app_settings* se
     TraceLog(LOG_ERROR, "ability::ability_system_initialize()::Failed to allocate memory");
     return false;
   }
-  /* 
-  const char* name, ability_upgradables upgrs[ABILITY_UPG_MAX], ability_type type, spritesheet_id def_anim_id, spritesheet_id expl_anim_id, movement_pattern pattern, f32 proj_scale, u16 proj_count, 
-  u16 proj_speed, f32 proj_duration, Vector2 proj_dim, Rectangle icon_src, u16 base_damage, bool center_proj_anim, void* in_player = nullptr, bool is_active = false, bool is_initialized = false
- */
   state->settings = settings;
   state->in_camera_metrics = _camera_metrics;
   std::array<ability_upgradables, ABILITY_UPG_MAX> fireball_upgr = {ABILITY_UPG_DAMAGE, ABILITY_UPG_SPEED, ABILITY_UPG_AMOUNT, ABILITY_UPG_UNDEFINED, ABILITY_UPG_UNDEFINED};
-  register_ability(ability("Fireball", fireball_upgr, ABILITY_TYPE_FIREBALL,
-    SHEET_ID_FLAME_ENERGY_ANIMATION, SHEET_ID_SPRITESHEET_UNSPECIFIED, MOVE_TYPE_SATELLITE, 3.f, 1, 1, 0.f, Vector2{30.f, 30.f}, Rectangle{704, 768, 32, 32}, 15, true,
+  register_ability(ability("Fireball", 
+    fireball_upgr, 
+    ABILITY_TYPE_FIREBALL,SHEET_ID_FLAME_ENERGY_ANIMATION, SHEET_ID_SPRITESHEET_UNSPECIFIED, MOVE_TYPE_SATELLITE, 
+    3.f, 1, 1, 0.f, 
+    Vector2{30.f, 30.f}, Rectangle{704, 768, 32, 32}, 
+    15, 
+    true,
   ));
   std::array<ability_upgradables, ABILITY_UPG_MAX> bullet_upgr = {ABILITY_UPG_DAMAGE, ABILITY_UPG_HITBOX, ABILITY_UPG_AMOUNT, ABILITY_UPG_UNDEFINED, ABILITY_UPG_UNDEFINED};
-  register_ability(ability("Bullet", bullet_upgr, ABILITY_TYPE_BULLET,
-     SHEET_ID_FLAME_ENERGY_ANIMATION, SHEET_ID_SPRITESHEET_UNSPECIFIED, MOVE_TYPE_BULLET, 3.f, 1, 3, 1.75f, Vector2{30.f, 30.f}, Rectangle{544, 128, 32, 32}, 15, true,
+  register_ability(ability("Bullet", 
+    bullet_upgr, 
+    ABILITY_TYPE_BULLET,SHEET_ID_FLAME_ENERGY_ANIMATION, SHEET_ID_SPRITESHEET_UNSPECIFIED, MOVE_TYPE_BULLET, 
+    3.f, 1, 3, 1.75f, 
+    Vector2{30.f, 30.f}, Rectangle{544, 128, 32, 32}, 
+    15, 
+    true,
   ));
   std::array<ability_upgradables, ABILITY_UPG_MAX> comet_upgr = {ABILITY_UPG_DAMAGE, ABILITY_UPG_HITBOX, ABILITY_UPG_AMOUNT, ABILITY_UPG_UNDEFINED, ABILITY_UPG_UNDEFINED};
-  register_ability(ability("Comet", comet_upgr, ABILITY_TYPE_COMET,
-    SHEET_ID_FIREBALL_ANIMATION,SHEET_ID_FIREBALL_EXPLOTION_ANIMATION,MOVE_TYPE_COMET, 3.f, 2, 4, 0.f, Vector2{30.f, 30.f}, Rectangle{576, 128, 32, 32}, 15, true,
+  register_ability(ability("Comet", 
+    comet_upgr, 
+    ABILITY_TYPE_COMET,SHEET_ID_FIREBALL_ANIMATION,SHEET_ID_FIREBALL_EXPLOTION_ANIMATION,MOVE_TYPE_COMET, 
+    3.f, 2, 4, 0.f, 
+    Vector2{30.f, 30.f}, Rectangle{576, 128, 32, 32}, 
+    15, 
+    false,true
   ));
   return true;
 }
@@ -96,9 +107,12 @@ void render_abilities(ability_play_system* system) {
       if (!system->abilities[i].projectiles[j].is_active) { continue; }
       projectile* proj = &system->abilities[i].projectiles[j];
       proj->is_active = true;
+      Vector2 dim = Vector2 {
+        system->abilities[i].proj_dim.x * system->abilities[i].proj_scale, 
+        system->abilities[i].proj_dim.y * system->abilities[i].proj_scale
+      };
       play_sprite_on_site(&proj->default_animation, WHITE, Rectangle {
-        proj->position.x, proj->position.y,
-        system->abilities[i].proj_dim.x * system->abilities[i].proj_scale, system->abilities[i].proj_dim.y * system->abilities[i].proj_scale
+        proj->position.x, proj->position.y, dim.x, dim.y
       });
       if (proj->play_explosion_animation) {
         play_sprite_on_site(&proj->explotion_animation, WHITE, Rectangle {
@@ -170,18 +184,12 @@ void movement_comet(ability* abl) {
     TraceLog(LOG_WARNING, "ability::movement_comet()::Ability is not active or not initialized");
     return;
   }
-/*   if (!abl->p_owner) {
-    TraceLog(LOG_WARNING, "ability::movement_comet()::Owner is not valid");
-    return;
-  }
-  player_state* player = (player_state*)abl->p_owner; */
   const Rectangle* frustum = &state->in_camera_metrics->frustum;
 
   for (i16 i = 0; i < abl->proj_count; i++) {
     if (vec2_equals(abl->projectiles[i].position, pVECTOR2(abl->projectiles[i].buffer.f32), .1)) {
       abl->projectiles[i].buffer.f32[2] =  abl->projectiles[i].position.x;
       abl->projectiles[i].buffer.f32[3] =  abl->projectiles[i].position.y;
-      abl->projectiles[i].explotion_animation.rotation = abl->projectiles[i].default_animation.rotation;
       abl->projectiles[i].play_explosion_animation = true;
 
       const f32 rand = get_random(frustum->x, frustum->x + frustum->width);
@@ -241,24 +249,6 @@ void register_ability(ability abl) {
     TraceLog(LOG_WARNING, "ability::register_ability()::Ability:'%s's name length is out of bound!", abl.display_name.c_str());
     return;
   }
-  ability _abl = {};
-  _abl.is_initialized = true;
-  _abl.is_active = false;
-  _abl.type = abl.type;
-  _abl.move_pattern = abl.move_pattern;
-  _abl.icon_src = abl.icon_src;
-  _abl.proj_count = abl.proj_count;
-  _abl.proj_duration = abl.proj_duration;
-  _abl.proj_speed = abl.proj_speed;
-  _abl.base_damage = abl.base_damage;
-  _abl.proj_dim = abl.proj_dim;
-  _abl.center_proj_anim = abl.center_proj_anim;
-  _abl.level = 1;
-  _abl.proj_scale = abl.proj_scale;
-  copy_memory(__builtin_addressof(_abl.upgradables), __builtin_addressof(abl.upgradables), sizeof(ability_upgradables) * ABILITY_UPG_MAX);
-  copy_memory(__builtin_addressof(_abl.display_name), __builtin_addressof(abl.display_name), MAX_ABILITY_NAME_LENGTH);
-  _abl.display_name[MAX_ABILITY_NAME_LENGTH - 1] = '\0';
-
   for (int i = 0; i < MAX_ABILITY_PROJECTILE_SLOT; ++i) {
     abl.projectiles[i] = projectile{};
     abl.projectiles[i].collision = Rectangle {0.f, 0.f, abl.proj_dim.x, abl.proj_dim.y};
@@ -272,6 +262,12 @@ void register_ability(ability abl) {
     if (abl.explosion_animation_id != SHEET_ID_SPRITESHEET_UNSPECIFIED) {
       abl.projectiles[i].explotion_animation.sheet_id = abl.explosion_animation_id;
       set_sprite(&abl.projectiles[i].explotion_animation, false, true, abl.center_proj_anim);
+    }
+    if (abl.centered_origin) {
+      abl.projectiles[i].default_animation.origin = VECTOR2(
+        abl.projectiles[i].default_animation.coord.width * .5f, 
+        abl.projectiles[i].default_animation.coord.height * .5f
+      );
     }
   }
 

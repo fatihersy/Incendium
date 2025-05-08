@@ -99,7 +99,7 @@ void player_system_reinit(void) {
   player->level = 1;
   player->exp_to_next_level = level_curve[player->level];
   player->exp_current = 0;
-  player->health_max = 100; // INFO: Modifies by player stats
+  player->health_max = 0; // INFO: Modifies by player stats
   player->health_current = player->health_max;
   player->health_perc = (float) player->health_current / player->health_max;
 
@@ -111,7 +111,7 @@ void player_system_reinit(void) {
 
 player_state* get_player_state(void) {
   if (!player) {
-    return (player_state*)0;
+    return nullptr;
   }
   //TraceLog(LOG_INFO, "player->position:{%f, %f}", player->position.x, player->position.y);
   return player;

@@ -58,7 +58,7 @@ bool ParseCommandLine( const char *pchCmdLine, const char **ppchServerAddress, c
 
 int entry(void) 
 {
-	if ( SteamAPI_RestartAppIfNecessary( k_uAppIdInvalid ) )
+	if ( SteamAPI_RestartAppIfNecessary( STEAM_APP_ID ) )
 	{
 		// if Steam is not running or the game wasn't started through Steam, SteamAPI_RestartAppIfNecessary starts the 
 		// local Steam client and also launches this game again.

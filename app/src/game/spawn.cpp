@@ -100,7 +100,7 @@ bool spawn_character(Character2D _character) {
   // buffer.u16[0] = SPAWN_TYPE
   // buffer.u16[1] = SPAWN_LEVEL
   // buffer.u16[2] = SPAWN_RND_SCALE
-  Character2D *character = &_character;
+  Character2D *character = __builtin_addressof(_character);
   character->scale = SPAWN_RND_SCALE_MIN + (SPAWN_RND_SCALE_MAX * character->buffer.u16[2] / 100.f);
   character->scale += SPAWN_SCALE_INCREASE_BY_LEVEL(character->buffer.u16[1]);
 
@@ -127,7 +127,9 @@ bool spawn_character(Character2D _character) {
   for (u32 i=0; i < state->current_spawn_count; ++i) {
     if(CheckCollisionRecs(state->spawns[i].collision, character->collision)) { return false; }
   }
-  
+  if (character->damage_break_time > 128) {
+    TraceLog(LOG_ERROR, "got 'em");
+  }
   state->spawns[state->current_spawn_count] = *character;
   state->current_spawn_count++;
   return true;
@@ -287,7 +289,6 @@ void spawn_play_anim(Character2D* spawn, spawn_movement_animations movement) {
       spawn->last_played_animation = &spawn->take_damage_right_animation;
       break;
     }
-
     default: {
       TraceLog(LOG_ERROR, "spawn::spawn_play_anim()::Unsupported sheet id");
       break;
