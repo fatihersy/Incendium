@@ -20,7 +20,7 @@ typedef enum save_slots {
 }save_slots;
 
 
-void save_system_initialize(void);
+bool save_system_initialize(void);
 
 bool parse_or_create_save_data_from_file(save_slots slot);
 bool save_save_data(save_slots slot);

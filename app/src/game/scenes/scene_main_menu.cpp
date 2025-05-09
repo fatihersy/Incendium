@@ -121,7 +121,7 @@ void render_interface_main_menu(void) {
     } else if (state->type == MAIN_MENU_SCENE_SETTINGS) {
       if (gui_menu_button("Cancel", BTN_ID_MAINMENU_SETTINGS_CANCEL, VECTOR2(2, 15), 2.7f, true)) {
         state->type = MAIN_MENU_SCENE_DEFAULT;
-        event_fire(EVENT_CODE_UI_SHOW_SETTINGS_MENU, event_context{});
+        event_fire(EVENT_CODE_UI_CLOSE_SETTINGS_MENU, event_context{});
       }
     } else if (state->type == MAIN_MENU_SCENE_UPGRADE) {
       draw_main_menu_upgrade_panel();

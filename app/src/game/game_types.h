@@ -419,7 +419,7 @@ typedef struct projectile {
 typedef struct ability {
   void* p_owner;
   std::string display_name;
-  std::array<projectile, MAX_ABILITY_PROJECTILE_SLOT> projectiles;
+  std::vector<projectile> projectiles;
   std::array<ability_upgradables, ABILITY_UPG_MAX> upgradables;
   movement_pattern move_pattern;
   ability_type type;

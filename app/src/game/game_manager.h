@@ -19,7 +19,7 @@ ability* get_dynamic_player_state_ability(ability_type type);
 character_stat* get_dynamic_player_state_stat(character_stats stat);
 character_stat* get_static_player_state_stat(character_stats stat);
 void set_dynamic_player_have_ability_upgrade_points(bool _b);
-bool get_is_game_paused(void);
+bool* get_is_game_paused(void);
 void set_is_game_paused(bool _is_game_paused);
 void toggle_is_game_paused(void);
 bool get_is_game_end(void);

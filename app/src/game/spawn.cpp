@@ -94,7 +94,6 @@ i32 damage_spawn(u32 _id, i32 damage) {
 
 bool spawn_character(Character2D _character) {
   if (state->current_spawn_count >= MAX_SPAWN_COUNT) {
-    TraceLog(LOG_WARNING, "spawn_character()::Spawn count exceeded");
     return false;
   }
   // buffer.u16[0] = SPAWN_TYPE

@@ -34,8 +34,6 @@ typedef struct user_interface_system_state {
   f32 fade_animation_timer;
   bool fadein;
   bool fade_animation_playing;
-  bool b_show_pause_menu;
-  bool b_show_settings_menu;
 } user_interface_system_state;
 
 static user_interface_system_state * state;
@@ -225,11 +223,10 @@ void user_interface_system_initialize(void) {
 
   // USER INTERFACE
   {
-    register_button(BTN_ID_PAUSEMENU_BUTTON_INVENTORY,   BTN_TYPE_FLAT_BUTTON);
-    register_button(BTN_ID_PAUSEMENU_BUTTON_TECHNOLOGIES,BTN_TYPE_FLAT_BUTTON);
+    register_button(BTN_ID_PAUSEMENU_BUTTON_RESUME,   BTN_TYPE_FLAT_BUTTON);
     register_button(BTN_ID_PAUSEMENU_BUTTON_SETTINGS,    BTN_TYPE_FLAT_BUTTON);
-    register_button(BTN_ID_PAUSEMENU_BUTTON_CREDITS,     BTN_TYPE_FLAT_BUTTON);
-    register_button(BTN_ID_PAUSEMENU_BUTTON_EXIT,        BTN_TYPE_FLAT_BUTTON);
+    register_button(BTN_ID_PAUSEMENU_BUTTON_EXIT_TO_MAIN_MENU,     BTN_TYPE_FLAT_BUTTON);
+    register_button(BTN_ID_PAUSEMENU_BUTTON_EXIT_TO_DESKTOP,        BTN_TYPE_FLAT_BUTTON);
   }
   // USER INTERFACE
 
@@ -258,9 +255,8 @@ void user_interface_system_initialize(void) {
     gui_slider_add_option(SDR_ID_SETTINGS_WIN_MODE_SLIDER, "FULL SCREEN", data_pack(DATA_TYPE_I32, data128((i32)FLAG_FULLSCREEN_MODE), 1));
   }
   // SLIDER OPTIONS
-
-  event_register(EVENT_CODE_UI_SHOW_PAUSE_MENU, user_interface_on_event);
   event_register(EVENT_CODE_UI_SHOW_SETTINGS_MENU, user_interface_on_event);
+  event_register(EVENT_CODE_UI_CLOSE_SETTINGS_MENU, user_interface_on_event);
   event_register(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, user_interface_on_event);
   event_register(EVENT_CODE_UI_START_FADEIN_EFFECT, user_interface_on_event);
   event_register(EVENT_CODE_UI_START_FADEOUT_EFFECT, user_interface_on_event);
@@ -381,13 +377,6 @@ void render_user_interface(void) {
   if (state->fade_animation_playing) {
     draw_fade_effect();
     return;
-  }
-
-  if (state->b_show_pause_menu) {
-    gui_draw_pause_screen();
-  }
-  if (state->b_show_settings_menu) {
-    gui_draw_settings_screen();
   }
 }
 bool gui_menu_button(const char* text, button_id _id, Vector2 grid, f32 grid_scale, bool play_on_click_sound) {
@@ -803,7 +792,7 @@ void gui_draw_settings_screen(void) { // TODO: Return to settings later
     save_ini_file();
   }
 }
-void gui_draw_pause_screen(void) {
+void gui_draw_pause_screen(bool in_game_play_state) {
   Rectangle dest = Rectangle {
     BASE_RENDER_SCALE(.5f).x,
     BASE_RENDER_SCALE(.5f).y,
@@ -812,13 +801,16 @@ void gui_draw_pause_screen(void) {
   };
   gui_panel(state->default_panel, dest, true);
 
-  if (gui_mini_button("Inventory", BTN_ID_PAUSEMENU_BUTTON_INVENTORY, Vector2 {-5.00f, -10.f}, 1.1f, true)) {
-    state->b_show_pause_menu = !state->b_show_pause_menu;
+  if (in_game_play_state) {
+    if (gui_mini_button("Resume", BTN_ID_PAUSEMENU_BUTTON_RESUME, Vector2 {-5.00f, -10.f}, 1.1f, true)) {
+      event_fire(EVENT_CODE_RESUME_GAME, event_context {});
+    }
   }
-  if (gui_mini_button("Update", BTN_ID_PAUSEMENU_BUTTON_TECHNOLOGIES, Vector2 {-2.50f, -10.f}, 1.1f, true)) {}
-  if (gui_mini_button("Settings", BTN_ID_PAUSEMENU_BUTTON_SETTINGS,   Vector2 { 0.00f, -10.f}, 1.1f, true)) {}
-  if (gui_mini_button("Credits", BTN_ID_PAUSEMENU_BUTTON_CREDITS,     Vector2 { 2.50f, -10.f}, 1.1f, true)) {}
-  if (gui_mini_button("Exit", BTN_ID_PAUSEMENU_BUTTON_EXIT,           Vector2 { 5.00f, -10.f}, 1.1f, true)) {
+  if (gui_mini_button("Settings", BTN_ID_PAUSEMENU_BUTTON_SETTINGS, Vector2 {-2.50f, -10.f}, 1.1f, true)) {}
+  if (gui_mini_button("Exit to Main Menu", BTN_ID_PAUSEMENU_BUTTON_EXIT_TO_MAIN_MENU, Vector2 { 0.00f, -10.f}, 1.1f, true)) {
+    event_fire(EVENT_CODE_SCENE_MAIN_MENU, event_context {});
+  }
+  if (gui_mini_button("Exit to Desktop", BTN_ID_PAUSEMENU_BUTTON_EXIT_TO_DESKTOP, Vector2 { 5.00f, -10.f}, 1.1f, true)) {
     event_fire(EVENT_CODE_APPLICATION_QUIT, event_context {});
   }
 }
@@ -1446,21 +1438,10 @@ Font load_font(const char* file_name, [[maybe_unused]] i32 font_size, [[maybe_un
   }
   return font;
 }
-
-void user_interface_system_destroy(void) {
-
-}
+void user_interface_system_destroy(void) {}
 
 bool user_interface_on_event(u16 code, event_context context) {
   switch (code) {
-    case EVENT_CODE_UI_SHOW_PAUSE_MENU: {
-      state->b_show_pause_menu = !state->b_show_pause_menu;
-      return true;
-    }
-    case EVENT_CODE_UI_SHOW_SETTINGS_MENU: {
-      state->b_show_settings_menu = !state->b_show_settings_menu;
-      return true;
-    }
     case EVENT_CODE_UI_UPDATE_PROGRESS_BAR: {
       state->prg_bars[(i32)context.data.f32[0]].progress = context.data.f32[1];
       return true;

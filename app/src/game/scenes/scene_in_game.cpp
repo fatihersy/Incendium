@@ -36,6 +36,7 @@ typedef struct scene_in_game_state {
   panel default_panel;
   
   camera_metrics* in_camera_metrics;
+  bool* is_game_paused;
   
   in_game_stages stage;
   end_game_results end_game_result;
@@ -44,14 +45,14 @@ typedef struct scene_in_game_state {
   ability_type hovered_ability;
   u16 hovered_projectile;
   bool has_game_started;
-
+  bool show_pause_menu;
 } scene_in_game_state;
 
 static scene_in_game_state * state;
 
 #define STATE_ASSERT(FUNCTION) if (!state) {                                              \
   TraceLog(LOG_ERROR, "scene_in_game::" FUNCTION "::In game state was not initialized");  \
-  event_fire(EVENT_CODE_SCENE_MAIN_MENU, event_context{});                             \
+  event_fire(EVENT_CODE_SCENE_MAIN_MENU, event_context{});                                \
   return;                                                                                 \
 }
 #define DRAW_ABL_UPG_STAT_PNL(ABL, UPG, TEXT, STAT){ \
@@ -78,6 +79,7 @@ void draw_passive_selection_panel(character_stat* stat, Rectangle panel_dest);
 void draw_end_game_panel();
 void start_game(character_stats stat);
 void reset_game();
+
 Rectangle sig_get_camera_view_rect(Camera2D camera);
 
 /**
@@ -95,8 +97,10 @@ bool initialize_scene_in_game(camera_metrics* _camera_metrics) {
     TraceLog(LOG_ERROR, "scene_in_game::initialize_scene_in_game()::game_manager_initialize() failed");
     return false;
   }
+  state->is_game_paused = get_is_game_paused();
 
   event_register(EVENT_CODE_ADD_CURRENCY_SOULS, scene_in_game_on_event);
+  event_register(EVENT_CODE_RESUME_GAME, scene_in_game_on_event);
 
   begin_scene_in_game();
   return true;
@@ -143,11 +147,23 @@ void start_game(character_stats stat) {
 void end_scene_in_game(void) {
   gm_reset_game();
 
+  //state->worldmap_locations       = one time set, no need to change every time;
+  //state->default_panel            = no need to set it second time;
+  //state->ability_upg_panels       = same as default_panel;
+  //state->passive_selection_panels = same as default_panel;
+  //state->worldmap_selection_panel = same as default_panel;
+  //state->debug_info_panel         = same as default_panel;
+  //state->in_camera_metrics        = pointer from camera system, do not touch it here.
+  //state->is_game_paused           = Handled by update, each frame fetches from game manager;
+
   state->stage = IN_GAME_STAGE_MAP_CHOICE;
-  state->end_game_result.play_time = 0.f;
-  state->hovered_stage = U16_MAX;
-  state->has_game_started = false; 
   state->end_game_result = end_game_results {};
+  state->hovered_stage = U16_MAX;
+  state->hovered_spawn = U16_MAX;
+  state->hovered_ability = ABILITY_TYPE_MAX;
+  state->hovered_projectile = U16_MAX;
+  state->has_game_started = false;
+  state->show_pause_menu = false;
 }
 
 void update_scene_in_game(void) {
@@ -161,7 +177,8 @@ void update_scene_in_game(void) {
       event_fire(EVENT_CODE_SCENE_MANAGER_SET_CAM_POS, event_context(BASE_RENDER_SCALE(.5f).x, BASE_RENDER_SCALE(.5f).y));
       state->in_camera_metrics->frustum = sig_get_camera_view_rect(state->in_camera_metrics->handle);
 
-      if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON) && state->hovered_stage <= MAX_WORLDMAP_LOCATIONS) {
+      if (state->show_pause_menu) {}
+      else if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON) && state->hovered_stage <= MAX_WORLDMAP_LOCATIONS) {
         set_worldmap_location(state->hovered_stage);
         state->stage = IN_GAME_STAGE_PASSIVE_CHOICE;
       }
@@ -171,7 +188,8 @@ void update_scene_in_game(void) {
       break;
     }
     case IN_GAME_STAGE_PLAY: {
-      if (get_is_game_paused() || !state->has_game_started) { return; }
+      if (!state->has_game_started) { return; }
+      if (*state->is_game_paused) { return; }
       else if (get_remaining_enemies() <= 0 || get_remaining_enemies() > MAX_SPAWN_COUNT) {
         event_fire(EVENT_CODE_END_GAME, event_context {});
         state->end_game_result.is_win = true;
@@ -251,7 +269,7 @@ void in_game_update_mouse_bindings(void) {
         ability* abl = __builtin_addressof(player->ability_system.abilities[i]);
         if(!abl || !abl->is_active || !abl->is_initialized) { continue; }
         for (size_t j=0; j < MAX_ABILITY_PROJECTILE_SLOT; j++) {
-          projectile* prj = __builtin_addressof(abl->projectiles[j]);
+          projectile* prj = __builtin_addressof(abl->projectiles.at(j));
           if (!prj || !prj->is_active) { continue; }
           if (CheckCollisionPointRec(*mouse_pos_world, prj->collision)) {
             state->hovered_ability = abl->type;
@@ -274,12 +292,16 @@ void in_game_update_keyboard_bindings(void) {
   switch (state->stage) {
     case IN_GAME_STAGE_MAP_CHOICE: {
       if (IsKeyReleased(KEY_ESCAPE)) {
-        event_fire(EVENT_CODE_UI_SHOW_PAUSE_MENU, event_context{});
+        state->show_pause_menu = !state->show_pause_menu;
       }
 
       break;
     }
     case IN_GAME_STAGE_PASSIVE_CHOICE: {
+      if (IsKeyReleased(KEY_ESCAPE)) {
+        state->show_pause_menu = !state->show_pause_menu;
+      }
+
       if (IsKeyReleased(KEY_R)) {
         for (int i=0; i<MAX_UPDATE_PASSIVE_PANEL_COUNT; ++i) {
           state->passive_selection_panels[i].buffer.u16[0] = 0;
@@ -288,13 +310,27 @@ void in_game_update_keyboard_bindings(void) {
       break;
     }
     case IN_GAME_STAGE_PLAY: {  
-      if (!state->has_game_started && IsKeyPressed(KEY_SPACE)) {
-        state->has_game_started = true;
-        set_is_game_paused(false);
+      if (!state->has_game_started) {
+        if (IsKeyReleased(KEY_ESCAPE)) {
+          state->show_pause_menu = !state->show_pause_menu;
+        }
+        else if (IsKeyPressed(KEY_SPACE)) {
+          state->has_game_started = true;
+          set_is_game_paused(false);
+        }
+        return; 
       }
-      if (IsKeyReleased(KEY_ESCAPE)) {
-        if(!get_b_player_have_upgrade_points()) toggle_is_game_paused();
-        event_fire(EVENT_CODE_UI_SHOW_PAUSE_MENU, event_context{});
+      if (!(*state->is_game_paused)) {
+        if (IsKeyReleased(KEY_ESCAPE)) {
+          state->show_pause_menu = true;
+          set_is_game_paused(true);
+        }
+      }
+      else {
+        if (IsKeyReleased(KEY_ESCAPE)) {
+          state->show_pause_menu = false;
+          set_is_game_paused(false);
+        }
       }
       break;
     }
@@ -366,61 +402,72 @@ void render_interface_in_game(void) {
   
   switch (state->stage) {
     case IN_GAME_STAGE_MAP_CHOICE: {
-      for (int i=0; i<MAX_WORLDMAP_LOCATIONS; ++i) {
-        if (state->hovered_stage == i) {
-          panel* pnl = &state->worldmap_selection_panel;
-          Rectangle scrloc = Rectangle{
-            state->worldmap_locations[i].screen_location.x * BASE_RENDER_RES.x - WORLDMAP_LOC_PIN_SIZE_DIV2, 
-            state->worldmap_locations[i].screen_location.y * BASE_RENDER_RES.y - WORLDMAP_LOC_PIN_SIZE_DIV2,
-            WORLDMAP_LOC_PIN_SIZE, WORLDMAP_LOC_PIN_SIZE
-          };
-          pnl->dest = Rectangle {scrloc.x + WORLDMAP_LOC_PIN_SIZE, scrloc.y + WORLDMAP_LOC_PIN_SIZE_DIV2, BASE_RENDER_SCALE(.25f).x, BASE_RENDER_SCALE(.25f).y};
-          DrawCircleGradient(scrloc.x + WORLDMAP_LOC_PIN_SIZE_DIV2, scrloc.y + WORLDMAP_LOC_PIN_SIZE_DIV2, 100, Color{236,240,241,50}, Color{});
-          gui_panel_scissored((*pnl), false, {
-            gui_label(state->worldmap_locations[i].displayname.c_str(), FONT_TYPE_MOOD, 10, Vector2 {
-              pnl->dest.x + pnl->dest.width *.5f, pnl->dest.y + pnl->dest.height*.5f
-            }, WHITE, true, true);
-          });
+      if (state->show_pause_menu) {
+        gui_draw_pause_screen(false);
+      }
+      else {
+        for (int i=0; i<MAX_WORLDMAP_LOCATIONS; ++i) {
+          if (state->hovered_stage == i) {
+            panel* pnl = &state->worldmap_selection_panel;
+            Rectangle scrloc = Rectangle{
+              state->worldmap_locations[i].screen_location.x * BASE_RENDER_RES.x - WORLDMAP_LOC_PIN_SIZE_DIV2, 
+              state->worldmap_locations[i].screen_location.y * BASE_RENDER_RES.y - WORLDMAP_LOC_PIN_SIZE_DIV2,
+              WORLDMAP_LOC_PIN_SIZE, WORLDMAP_LOC_PIN_SIZE
+            };
+            pnl->dest = Rectangle {scrloc.x + WORLDMAP_LOC_PIN_SIZE, scrloc.y + WORLDMAP_LOC_PIN_SIZE_DIV2, BASE_RENDER_SCALE(.25f).x, BASE_RENDER_SCALE(.25f).y};
+            DrawCircleGradient(scrloc.x + WORLDMAP_LOC_PIN_SIZE_DIV2, scrloc.y + WORLDMAP_LOC_PIN_SIZE_DIV2, 100, Color{236,240,241,50}, Color{});
+            gui_panel_scissored((*pnl), false, {
+              gui_label(state->worldmap_locations[i].displayname.c_str(), FONT_TYPE_MOOD, 10, Vector2 {
+                pnl->dest.x + pnl->dest.width *.5f, pnl->dest.y + pnl->dest.height*.5f
+              }, WHITE, true, true);
+            });
+          }
         }
       }
       break;
     }
     case IN_GAME_STAGE_PASSIVE_CHOICE: {
-      Rectangle dest = Rectangle {
-        BASE_RENDER_SCALE(.25f).x, BASE_RENDER_SCALE(.5f).y, 
-        BASE_RENDER_SCALE(.25f).x, BASE_RENDER_SCALE(.8f).y 
-      };
-      f32 dest_x_buffer = dest.x;
-      for (int i=0; i<MAX_UPDATE_PASSIVE_PANEL_COUNT; ++i) {
-        panel* pnl = &state->passive_selection_panels[i];
-        if (pnl->frame_tex_id <= ATLAS_TEX_ID_UNSPECIFIED || pnl->frame_tex_id >= ATLAS_TEX_ID_MAX || 
-          pnl->bg_tex_id    <= ATLAS_TEX_ID_UNSPECIFIED || pnl->bg_tex_id    >= ATLAS_TEX_ID_MAX ) 
-        {
-          *pnl = state->default_panel;
-        }
-        if(pnl->buffer.u16[0] <= 0 || pnl->buffer.u16[0] >= CHARACTER_STATS_MAX) {
-          pnl->buffer.u16[0] = get_random(1,CHARACTER_STATS_MAX-1);
-        }
-        dest.x = dest_x_buffer + ((dest.width + SCREEN_OFFSET.x) * i);
-        character_stat* stat = get_dynamic_player_state_stat(static_cast<character_stats>(pnl->buffer.u16[0]));
-        if(gui_panel_active(pnl, dest, true)) {
-          set_is_game_paused(false);
-          start_game(stat->id);
-          for (int i=0; i<MAX_UPDATE_ABILITY_PANEL_COUNT; ++i) {
-            state->passive_selection_panels[i].buffer.u16[0] = 0;
+      if (state->show_pause_menu) {
+        gui_draw_pause_screen(false);
+      }
+      else {
+        Rectangle dest = Rectangle {
+          BASE_RENDER_SCALE(.25f).x, BASE_RENDER_SCALE(.5f).y, 
+          BASE_RENDER_SCALE(.25f).x, BASE_RENDER_SCALE(.8f).y 
+        };
+        f32 dest_x_buffer = dest.x;
+        for (int i=0; i<MAX_UPDATE_PASSIVE_PANEL_COUNT; ++i) {
+          panel* pnl = &state->passive_selection_panels[i];
+          if (pnl->frame_tex_id <= ATLAS_TEX_ID_UNSPECIFIED || pnl->frame_tex_id >= ATLAS_TEX_ID_MAX || 
+            pnl->bg_tex_id    <= ATLAS_TEX_ID_UNSPECIFIED || pnl->bg_tex_id    >= ATLAS_TEX_ID_MAX ) 
+          {
+            *pnl = state->default_panel;
           }
-          break;
+          if(pnl->buffer.u16[0] <= 0 || pnl->buffer.u16[0] >= CHARACTER_STATS_MAX) {
+            pnl->buffer.u16[0] = get_random(1,CHARACTER_STATS_MAX-1);
+          }
+          dest.x = dest_x_buffer + ((dest.width + SCREEN_OFFSET.x) * i);
+          character_stat* stat = get_dynamic_player_state_stat(static_cast<character_stats>(pnl->buffer.u16[0]));
+          if(gui_panel_active(pnl, dest, true)) {
+            set_is_game_paused(false);
+            start_game(stat->id);
+            for (int i=0; i<MAX_UPDATE_ABILITY_PANEL_COUNT; ++i) {
+              state->passive_selection_panels[i].buffer.u16[0] = 0;
+            }
+            break;
+          }
+          draw_passive_selection_panel(stat, dest);
         }
-        draw_passive_selection_panel(stat, dest);
       }
       break;
     }
     case IN_GAME_STAGE_PLAY: {  
       DrawFPS(BASE_RENDER_SCALE(.75f).x, SCREEN_OFFSET.y * 10);
-
-      if (!state->has_game_started) {
+      if (state->show_pause_menu) {
+        gui_draw_pause_screen(state->has_game_started);
+      }
+      else if (!state->has_game_started) {
         gui_label("Press Space to Start!", FONT_TYPE_MOOD_OUTLINE, 10, Vector2 {BASE_RENDER_SCALE(.5f).x, BASE_RENDER_SCALE(.5f).y}, WHITE, true, true);
-        return;
       }
       else if (get_b_player_have_upgrade_points()) {
         set_is_game_paused(true);
@@ -446,7 +493,7 @@ void render_interface_in_game(void) {
           }
           if (new_ability.type <= ABILITY_TYPE_UNDEFINED || new_ability.type >= ABILITY_TYPE_MAX) {
             TraceLog(LOG_WARNING, "scene_in_game::render_interface_in_game()::Upgraded ability is out of bounds"); 
-            return;
+            continue;
           }
           if(gui_panel_active(pnl, dest, true)) {
             set_is_game_paused(false);
@@ -477,7 +524,10 @@ void render_interface_in_game(void) {
     case IN_GAME_STAGE_PLAY_DEBUG: {  
       DrawFPS(BASE_RENDER_SCALE(.75f).x, SCREEN_OFFSET.y * 10);
 
-      if (!state->has_game_started) { return; }
+      if (state->show_pause_menu) {
+        gui_draw_pause_screen(state->has_game_started);
+      }
+      else if (!state->has_game_started) { }
       else {
         gui_label_format(
           FONT_TYPE_MOOD, 15, ui_get_mouse_pos()->x, ui_get_mouse_pos()->y, 
@@ -536,7 +586,7 @@ void render_interface_in_game(void) {
           i32 line_height = BASE_RENDER_SCALE(.05f).y;
           Vector2 debug_info_position_buffer = VECTOR2(pnl->dest.x, pnl->dest.y);
           ability* abl = get_dynamic_player_state_ability(state->hovered_ability);
-          projectile* prj = __builtin_addressof(abl->projectiles[state->hovered_projectile]);
+          projectile* prj = __builtin_addressof(abl->projectiles.at(state->hovered_projectile));
           gui_panel_scissored((*pnl), false, {
             gui_label_format(
               FONT_TYPE_MINI_MOOD, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
@@ -562,6 +612,7 @@ void render_interface_in_game(void) {
         gui_label_format(FONT_TYPE_MOOD, 10, 0, BASE_RENDER_SCALE(.40f).y, WHITE, false, false, "Current Health: %d", _get_dynamic_player_state()->health_current);
         gui_label_format(FONT_TYPE_MOOD, 10, 0, BASE_RENDER_SCALE(.45f).y, WHITE, false, false, "Damage: %d", _get_dynamic_player_state()->damage);
       }
+
       break;
     }
     case IN_GAME_STAGE_PLAY_RESULTS: { 
@@ -704,13 +755,18 @@ bool scene_in_game_on_event(u16 code, event_context context) {
       state->end_game_result.collected_souls += context.data.u32[0];
       return true;
     }
+    case EVENT_CODE_RESUME_GAME: {
+      set_is_game_paused(false);
+      state->show_pause_menu = false;
+      return true;
+    }
     default: {
       TraceLog(LOG_WARNING, "scene_in_game::scene_in_game_on_event()::Unsuppported code.");
       return false;
     }
   }
 
-  TraceLog(LOG_WARNING, "scene_in_game::scene_in_game_on_event()::Fire event ended unexpectedly");
+  TraceLog(LOG_WARNING, "scene_in_game::scene_in_game_on_event()::event handling ended unexpectedly");
   return false;
 }
 

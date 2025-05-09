@@ -47,16 +47,19 @@ encode_string_result encode_string(const char* str, u16 len);
 void parse_data(save_slots slot);
 i32 decode_integer(void);
 
-void save_system_initialize(void) {
+bool save_system_initialize(void) {
   if (state) {
-    TraceLog(LOG_WARNING, "save_game::save_system_initialize()::Init called twice");
-    return;
+    return true;
   }
 
   state = (save_game_system_state*)allocate_memory_linear(sizeof(save_game_system_state), true);
+  if (!state) {
+    TraceLog(LOG_ERROR, "save_game::save_system_initialize()::Save system state allocation failed");
+    return false;
+  }
 
   for (i32 i=0; i<SAVE_SLOT_MAX; ++i) {
-    if (SAVE_DATA_ORDER_START + i == SAVE_SLOT_CURRENT_SESSION) {
+    if (i == SAVE_SLOT_CURRENT_SESSION) {
       const char* file_name = TextFormat("%s%s","save_slot_current", SAVE_GAME_EXTENSION);
       copy_memory(state->save_slots[i].file_name, file_name, TextLength(file_name));
     }
@@ -65,6 +68,8 @@ void save_system_initialize(void) {
       copy_memory(state->save_slots[i].file_name, file_name, TextLength(file_name));
     }
   }
+
+  return true;
 }
 
 bool parse_or_create_save_data_from_file(save_slots slot) {

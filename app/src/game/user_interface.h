@@ -167,7 +167,7 @@ void gui_label_wrap(const char* text, font_type type, i32 font_size, Rectangle p
 void gui_label_grid(const char* text, font_type type, i32 font_size, Vector2 position, Color tint, bool _center_h, bool _center_v, f32 grid_scale);
 void gui_label_wrap_grid(const char* text, font_type type, i32 font_size, Rectangle position, Color tint, bool _should_center, f32 grid_scale);
 
-void gui_draw_pause_screen(void);
+void gui_draw_pause_screen(bool in_game_play_state);
 void gui_draw_atlas_texture_id_pro(atlas_texture_id _id, Rectangle src, Rectangle dest, bool relative, bool should_center); 
 void gui_draw_atlas_texture_id(atlas_texture_id _id, Rectangle dest); 
 void gui_draw_atlas_texture_id_scale(atlas_texture_id _id, Vector2 position, f32 scale, Color tint, bool should_center); 

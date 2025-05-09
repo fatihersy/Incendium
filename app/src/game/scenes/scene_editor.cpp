@@ -36,6 +36,7 @@ typedef struct scene_editor_state {
   bool b_show_tilesheet_tile_selection_screen;
   bool b_show_prop_selection_screen;
   bool b_dragging_prop;
+  bool b_show_pause_menu;
 
   panel prop_selection_panel;
   panel tile_selection_panel;
@@ -106,7 +107,6 @@ void render_scene_editor(void) {
   else {
     render_map();
   }
-
   DrawPixel(0, 0, RED);
 }
 void render_interface_editor(void) {
@@ -186,6 +186,10 @@ void render_interface_editor(void) {
     }
     default: break;
   } 
+  
+  if (state->b_show_pause_menu) {
+    gui_draw_pause_screen(false);
+  }
 
   render_user_interface();
 }
@@ -360,7 +364,7 @@ void editor_update_keyboard_bindings(void) {
   editor_update_movement();
 
   if (IsKeyReleased(KEY_ESCAPE)) {
-    event_fire(EVENT_CODE_UI_SHOW_PAUSE_MENU, event_context{});
+    state->b_show_pause_menu = true;
   }
   if (IsKeyPressed(KEY_F5)) {
     save_current_map();

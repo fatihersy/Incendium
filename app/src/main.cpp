@@ -138,17 +138,17 @@ int entry(void)
 // Purpose: Wrapper around SteamAPI_WriteMiniDump which can be used directly 
 // as a se translator
 //-----------------------------------------------------------------------------
-void MiniDumpFunction( unsigned int nExceptionCode, EXCEPTION_POINTERS *pException )
+void MiniDumpFunction([[maybe_unused]] unsigned int nExceptionCode, [[maybe_unused]] EXCEPTION_POINTERS *pException )
 {
-	MessageBox( nullptr, "Spacewar is crashing now!", "Unhandled Exception", MB_OK );
+	MessageBox( nullptr, GAME_TITLE "is crashing now!", "Unhandled Exception", MB_OK );
 
 	// You can build and set an arbitrary comment to embed in the minidump here,
 	// maybe you want to put what level the user was playing, how many players on the server,
 	// how much memory is free, etc...
-	SteamAPI_SetMiniDumpComment( "Minidump comment: SteamworksExample.exe\n" );
+	//SteamAPI_SetMiniDumpComment( "Minidump comment: SteamworksExample.exe\n" );
 
 	// The 0 here is a build ID, we don't set it
-	SteamAPI_WriteMiniDump( nExceptionCode, pException, 0 );
+	//SteamAPI_WriteMiniDump( nExceptionCode, pException, 0 );
 }
 
 

@@ -21,6 +21,10 @@ bool player_system_initialize(void) {
     return true;
   }
   player = (player_state*)allocate_memory_linear(sizeof(player_state), true);
+  if (!player) {
+    TraceLog(LOG_ERROR, "player::player_system_initialize()::Failed to allocate player state");
+    return false;
+  }
 
   player->move_left_sprite.sheet_id = SHEET_ID_PLAYER_ANIMATION_MOVE_LEFT;
   player->move_right_sprite.sheet_id = SHEET_ID_PLAYER_ANIMATION_MOVE_RIGHT;
@@ -83,8 +87,7 @@ void player_system_reinit(void) {
   player->dimentions.x *= PLAYER_SCALE;
   player->dimentions.y *= PLAYER_SCALE;
   player->dimentions_div2 = Vector2{player->dimentions.x/2.f, player->dimentions.y/2.f};
-  player->collision = Rectangle
-  {
+  player->collision = Rectangle {
     .x = player->position.x - player->dimentions.x / 2.f,
     .y = player->position.y - player->dimentions.y / 2.f,
     .width = player->dimentions.x,
@@ -99,7 +102,7 @@ void player_system_reinit(void) {
   player->level = 1;
   player->exp_to_next_level = level_curve[player->level];
   player->exp_current = 0;
-  player->health_max = 0; // INFO: Modifies by player stats
+  player->health_max = 0; // INFO: Will be Modified by player stats
   player->health_current = player->health_max;
   player->health_perc = (float) player->health_current / player->health_max;
 

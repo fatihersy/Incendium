@@ -78,21 +78,21 @@ void update_abilities(ability_play_system* system) {
     }
 
     for (i32 j = 0; j<MAX_ABILITY_PROJECTILE_SLOT; ++j) {
-      if (!abl->projectiles[j].is_active) { continue; }
+      if (!abl->projectiles.at(j).is_active) { continue; }
       player_state* player = (player_state*)abl->p_owner;
       event_fire(EVENT_CODE_DAMAGE_ANY_SPAWN_IF_COLLIDE, event_context(
-        (i16)abl->projectiles[j].collision.x, (i16)abl->projectiles[j].collision.y,
-        (i16)abl->projectiles[j].collision.width, (i16)abl->projectiles[j].collision.height,
-        static_cast<i16>(abl->projectiles[j].damage + player->damage)
+        (i16)abl->projectiles.at(j).collision.x, (i16)abl->projectiles.at(j).collision.y,
+        (i16)abl->projectiles.at(j).collision.width, (i16)abl->projectiles.at(j).collision.height,
+        static_cast<i16>(abl->projectiles.at(j).damage + player->damage)
       ));
-      update_sprite(&abl->projectiles[j].default_animation);
+      update_sprite(&abl->projectiles.at(j).default_animation);
 
-      if (abl->projectiles[j].play_explosion_animation) {
-        update_sprite(&abl->projectiles[j].explotion_animation);
+      if (abl->projectiles.at(j).play_explosion_animation) {
+        update_sprite(&abl->projectiles.at(j).explotion_animation);
         
-        if (abl->projectiles[j].explotion_animation.current_frame >= abl->projectiles[j].explotion_animation.frame_total - 1) {
-          abl->projectiles[j].play_explosion_animation = false;
-          reset_sprite(&abl->projectiles[j].explotion_animation, true);
+        if (abl->projectiles.at(j).explotion_animation.current_frame >= abl->projectiles.at(j).explotion_animation.frame_total - 1) {
+          abl->projectiles.at(j).play_explosion_animation = false;
+          reset_sprite(&abl->projectiles.at(j).explotion_animation, true);
         }
       }
     }
@@ -104,8 +104,8 @@ void render_abilities(ability_play_system* system) {
     if (!system->abilities[i].is_active || !system->abilities[i].is_initialized) { continue; }
 
     for (int j = 0; j < system->abilities[i].proj_count; ++j) {
-      if (!system->abilities[i].projectiles[j].is_active) { continue; }
-      projectile* proj = &system->abilities[i].projectiles[j];
+      if (!system->abilities[i].projectiles.at(j).is_active) { continue; }
+      projectile* proj = &system->abilities[i].projectiles.at(j);
       proj->is_active = true;
       Vector2 dim = Vector2 {
         system->abilities[i].proj_dim.x * system->abilities[i].proj_scale, 
@@ -142,9 +142,9 @@ void movement_satellite(ability* abl) {
 
     i16 angle = (i32)(((360.f / abl->proj_count) * i) + abl->rotation) % 360;
 
-    abl->projectiles[i].position = get_a_point_of_a_circle( abl->position, (abl->level * 3.f) + player->collision.height + 15, angle);
-    abl->projectiles[i].collision.x = abl->projectiles[i].position.x;
-    abl->projectiles[i].collision.y = abl->projectiles[i].position.y;
+    abl->projectiles.at(i).position = get_a_point_of_a_circle( abl->position, (abl->level * 3.f) + player->collision.height + 15, angle);
+    abl->projectiles.at(i).collision.x = abl->projectiles.at(i).position.x;
+    abl->projectiles.at(i).collision.y = abl->projectiles.at(i).position.y;
   }
 }
 void movement_bullet(ability* abl) {
@@ -159,19 +159,19 @@ void movement_bullet(ability* abl) {
 
   for (i16 i = 0; i < abl->proj_count; i++) {
 
-    if (abl->projectiles[i].duration <= 0) {
-      abl->projectiles[i].position = player->position;
-      abl->projectiles[i].duration = abl->proj_duration;
-      abl->projectiles[i].direction = player->w_direction;
+    if (abl->projectiles.at(i).duration <= 0) {
+      abl->projectiles.at(i).position = player->position;
+      abl->projectiles.at(i).duration = abl->proj_duration;
+      abl->projectiles.at(i).direction = player->w_direction;
     }
     else {
-      abl->projectiles[i].duration -= GetFrameTime();
+      abl->projectiles.at(i).duration -= GetFrameTime();
     }
     
-    abl->projectiles[i].position.x += abl->projectiles[i].direction == WORLD_DIRECTION_RIGHT ? abl->proj_speed : -abl->proj_speed;
+    abl->projectiles.at(i).position.x += abl->projectiles.at(i).direction == WORLD_DIRECTION_RIGHT ? abl->proj_speed : -abl->proj_speed;
 
-    abl->projectiles[i].collision.x = abl->projectiles[i].position.x;
-    abl->projectiles[i].collision.y = abl->projectiles[i].position.y;
+    abl->projectiles.at(i).collision.x = abl->projectiles.at(i).position.x;
+    abl->projectiles.at(i).collision.y = abl->projectiles.at(i).position.y;
     
   }
 }
@@ -187,25 +187,25 @@ void movement_comet(ability* abl) {
   const Rectangle* frustum = &state->in_camera_metrics->frustum;
 
   for (i16 i = 0; i < abl->proj_count; i++) {
-    if (vec2_equals(abl->projectiles[i].position, pVECTOR2(abl->projectiles[i].buffer.f32), .1)) {
-      abl->projectiles[i].buffer.f32[2] =  abl->projectiles[i].position.x;
-      abl->projectiles[i].buffer.f32[3] =  abl->projectiles[i].position.y;
-      abl->projectiles[i].play_explosion_animation = true;
+    if (vec2_equals(abl->projectiles.at(i).position, pVECTOR2(abl->projectiles.at(i).buffer.f32), .1)) {
+      abl->projectiles.at(i).buffer.f32[2] =  abl->projectiles.at(i).position.x;
+      abl->projectiles.at(i).buffer.f32[3] =  abl->projectiles.at(i).position.y;
+      abl->projectiles.at(i).play_explosion_animation = true;
 
       const f32 rand = get_random(frustum->x, frustum->x + frustum->width);
-      abl->projectiles[i].position = VECTOR2(rand, frustum->y - abl->proj_dim.y);
+      abl->projectiles.at(i).position = VECTOR2(rand, frustum->y - abl->proj_dim.y);
       Vector2 new_pos = {
         (f32)get_random(frustum->x + frustum->width * .1f, frustum->x + frustum->width - frustum->width * .1f),
         (f32)get_random(frustum->y + frustum->height * .2f, frustum->y + frustum->height - frustum->height * .2f)
       };
-      abl->projectiles[i].buffer.f32[0] = new_pos.x;
-      abl->projectiles[i].buffer.f32[1] = new_pos.y;
-      abl->projectiles[i].default_animation.rotation = get_movement_rotation(abl->projectiles[i].position, pVECTOR2(abl->projectiles[i].buffer.f32)) + 270.f;
+      abl->projectiles.at(i).buffer.f32[0] = new_pos.x;
+      abl->projectiles.at(i).buffer.f32[1] = new_pos.y;
+      abl->projectiles.at(i).default_animation.rotation = get_movement_rotation(abl->projectiles.at(i).position, pVECTOR2(abl->projectiles.at(i).buffer.f32)) + 270.f;
     }
     else {
-      abl->projectiles[i].position = move_towards(abl->projectiles[i].position, pVECTOR2(abl->projectiles[i].buffer.f32), abl->proj_speed);
-      abl->projectiles[i].collision.x = abl->projectiles[i].position.x;
-      abl->projectiles[i].collision.y = abl->projectiles[i].position.y;
+      abl->projectiles.at(i).position = move_towards(abl->projectiles.at(i).position, pVECTOR2(abl->projectiles.at(i).buffer.f32), abl->proj_speed);
+      abl->projectiles.at(i).collision.x = abl->projectiles.at(i).position.x;
+      abl->projectiles.at(i).collision.y = abl->projectiles.at(i).position.y;
     }
   }
 }
@@ -227,9 +227,9 @@ void upgrade_ability(ability* abl) {
       case ABILITY_UPG_AMOUNT: { 
         u16 new_proj_count = abl->proj_count + 1;
         for (int i = abl->proj_count; i < new_proj_count; ++i) {
-          abl->projectiles[i].collision = Rectangle {0, 0, abl->proj_dim.x, abl->proj_dim.y};
-          abl->projectiles[i].damage = abl->base_damage + abl->level * 2;
-          abl->projectiles[i].is_active = true;
+          abl->projectiles.at(i).collision = Rectangle {0, 0, abl->proj_dim.x, abl->proj_dim.y};
+          abl->projectiles.at(i).damage = abl->base_damage + abl->level * 2;
+          abl->projectiles.at(i).is_active = true;
         }
         abl->proj_count = new_proj_count;
         break;
@@ -250,23 +250,23 @@ void register_ability(ability abl) {
     return;
   }
   for (int i = 0; i < MAX_ABILITY_PROJECTILE_SLOT; ++i) {
-    abl.projectiles[i] = projectile{};
-    abl.projectiles[i].collision = Rectangle {0.f, 0.f, abl.proj_dim.x, abl.proj_dim.y};
-    abl.projectiles[i].damage = abl.base_damage;
-    abl.projectiles[i].is_active = false;
-    abl.projectiles[i].duration = abl.proj_duration;
+    abl.projectiles.push_back(projectile{});
+    abl.projectiles.at(i).collision = Rectangle {0.f, 0.f, abl.proj_dim.x, abl.proj_dim.y};
+    abl.projectiles.at(i).damage = abl.base_damage;
+    abl.projectiles.at(i).is_active = false;
+    abl.projectiles.at(i).duration = abl.proj_duration;
     if (abl.default_animation_id != SHEET_ID_SPRITESHEET_UNSPECIFIED) {
-      abl.projectiles[i].default_animation.sheet_id = abl.default_animation_id;
-      set_sprite(&abl.projectiles[i].default_animation, true, false, abl.center_proj_anim);
+      abl.projectiles.at(i).default_animation.sheet_id = abl.default_animation_id;
+      set_sprite(&abl.projectiles.at(i).default_animation, true, false, abl.center_proj_anim);
     }
     if (abl.explosion_animation_id != SHEET_ID_SPRITESHEET_UNSPECIFIED) {
-      abl.projectiles[i].explotion_animation.sheet_id = abl.explosion_animation_id;
-      set_sprite(&abl.projectiles[i].explotion_animation, false, true, abl.center_proj_anim);
+      abl.projectiles.at(i).explotion_animation.sheet_id = abl.explosion_animation_id;
+      set_sprite(&abl.projectiles.at(i).explotion_animation, false, true, abl.center_proj_anim);
     }
     if (abl.centered_origin) {
-      abl.projectiles[i].default_animation.origin = VECTOR2(
-        abl.projectiles[i].default_animation.coord.width * .5f, 
-        abl.projectiles[i].default_animation.coord.height * .5f
+      abl.projectiles.at(i).default_animation.origin = VECTOR2(
+        abl.projectiles.at(i).default_animation.coord.width * .5f, 
+        abl.projectiles.at(i).default_animation.coord.height * .5f
       );
     }
   }
