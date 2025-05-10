@@ -177,6 +177,7 @@ void gui_draw_spritesheet_id(spritesheet_id _id, Color _tint, Vector2 pos, Vecto
 void gui_draw_atlas_texture_id_center(atlas_texture_id _id, Vector2 pos, Vector2 dim, bool should_center);
 void gui_draw_texture_id(texture_id _id, Rectangle dest); 
 void gui_draw_map_stage_pin(bool have_hovered, Vector2 screen_loc);
+void gui_draw_settings_screen(void);
 
 #define gui_label_format(FONT, FONT_SIZE, X,Y, COLOR, CENTER_H, CENTER_V, TEXT, ...) gui_label(TextFormat(TEXT, __VA_ARGS__), FONT, FONT_SIZE, Vector2{X,Y}, COLOR, CENTER_H, CENTER_V)
 #define gui_label_format_v(FONT, FONT_SIZE, POS, COLOR, CENTER_H, CENTER_V, TEXT, ...) gui_label(TextFormat(TEXT, __VA_ARGS__), FONT, FONT_SIZE, POS, COLOR, CENTER_H, CENTER_V)

@@ -247,16 +247,21 @@ void user_interface_system_initialize(void) {
 
   // SLIDER OPTIONS
   {
-    gui_slider_add_option(SDR_ID_SETTINGS_RES_SLIDER, "960x540", data_pack(DATA_TYPE_U16, data128( (u16)960, (u16)540 ), 2));
-    gui_slider_add_option(SDR_ID_SETTINGS_RES_SLIDER, "1280x720", data_pack(DATA_TYPE_U16, data128( (u16)1280, (u16)720 ), 2));
-    gui_slider_add_option(SDR_ID_SETTINGS_RES_SLIDER, "1920x1080", data_pack(DATA_TYPE_U16, data128(1920, 1080), 2));
+    gui_slider_add_option(SDR_ID_SETTINGS_RES_SLIDER, "960x540", data_pack(
+      DATA_TYPE_U16, data128( (u16)960, (u16)540 ), 2)
+    );
+    gui_slider_add_option(SDR_ID_SETTINGS_RES_SLIDER, "1280x720", data_pack(
+      DATA_TYPE_U16, data128( (u16)1280, (u16)720 ), 2)
+    );
+    gui_slider_add_option(SDR_ID_SETTINGS_RES_SLIDER, "1920x1080", data_pack(
+      DATA_TYPE_U16, data128((u16)1920, (u16)1080), 2)
+    );
+    
     gui_slider_add_option(SDR_ID_SETTINGS_WIN_MODE_SLIDER, "WINDOWED", data_pack(DATA_TYPE_I32, data128((i32)0), 1));
     gui_slider_add_option(SDR_ID_SETTINGS_WIN_MODE_SLIDER, "BORDERLESS", data_pack(DATA_TYPE_I32, data128((i32)FLAG_BORDERLESS_WINDOWED_MODE), 1));
     gui_slider_add_option(SDR_ID_SETTINGS_WIN_MODE_SLIDER, "FULL SCREEN", data_pack(DATA_TYPE_I32, data128((i32)FLAG_FULLSCREEN_MODE), 1));
   }
   // SLIDER OPTIONS
-  event_register(EVENT_CODE_UI_SHOW_SETTINGS_MENU, user_interface_on_event);
-  event_register(EVENT_CODE_UI_CLOSE_SETTINGS_MENU, user_interface_on_event);
   event_register(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, user_interface_on_event);
   event_register(EVENT_CODE_UI_START_FADEIN_EFFECT, user_interface_on_event);
   event_register(EVENT_CODE_UI_START_FADEOUT_EFFECT, user_interface_on_event);
@@ -267,23 +272,15 @@ void user_interface_system_initialize(void) {
       break;
     }
   }
-  Vector2 window_size = Vector2 {
-    get_app_settings()->window_size.at(0),
-    get_app_settings()->window_size.at(1)
-  };
+  Vector2 window_size = Vector2 {get_app_settings()->window_size.at(0), get_app_settings()->window_size.at(1) };
 
   for (int i=0; i<state->sliders[SDR_ID_SETTINGS_RES_SLIDER].max_value; ++i) {
-    if (
-      state->sliders[SDR_ID_SETTINGS_RES_SLIDER].options[i].content.data.u16[0] == window_size.x &&
-      state->sliders[SDR_ID_SETTINGS_RES_SLIDER].options[i].content.data.u16[1] == window_size.y) 
-    {
+    if (state->sliders[SDR_ID_SETTINGS_RES_SLIDER].options[i].content.data.u16[0] == window_size.x && state->sliders[SDR_ID_SETTINGS_RES_SLIDER].options[i].content.data.u16[1] == window_size.y) {
       state->sliders[SDR_ID_SETTINGS_RES_SLIDER].current_value = i;
       break;
     }
   }
-  if (SDR_CURR_VAL(SDR_ID_SETTINGS_RES_SLIDER).content.data.u16[0] != window_size.x ||
-      SDR_CURR_VAL(SDR_ID_SETTINGS_RES_SLIDER).content.data.u16[1] != window_size.y) 
-  {
+  if (SDR_CURR_VAL(SDR_ID_SETTINGS_RES_SLIDER).content.data.u16[0] != window_size.x || SDR_CURR_VAL(SDR_ID_SETTINGS_RES_SLIDER).content.data.u16[1] != window_size.y) {
     const char* new_res_text = TextFormat("%.0fx%.0f", window_size.x, window_size.y);
 
     if(gui_slider_add_option(SDR_ID_SETTINGS_RES_SLIDER, new_res_text, data_pack(DATA_TYPE_U16, data128((u16) window_size.x, (u16) window_size.y), 2))) {

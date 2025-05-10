@@ -249,7 +249,11 @@ typedef struct data_pack {
   u16 array_lenght;
 
   data128 data;
-  data_pack() {};
+  data_pack() {
+    this->type_flag = DATA_TYPE_UNRESERVED;
+    this->array_lenght = 0;
+    this->data = {};
+  };
   data_pack(data_type type, data128 buffer, u16 len) : data_pack()
   {
     this->type_flag = type;

@@ -34,6 +34,8 @@ typedef struct scene_in_game_state {
   panel worldmap_selection_panel;
   panel debug_info_panel;
   panel default_panel;
+  std::array<ability, MAX_UPDATE_ABILITY_PANEL_COUNT> ability_upgrade_choices;
+  bool is_upgrade_choices_ready;
   
   camera_metrics* in_camera_metrics;
   bool* is_game_paused;
@@ -55,14 +57,6 @@ static scene_in_game_state * state;
   event_fire(EVENT_CODE_SCENE_MAIN_MENU, event_context{});                                \
   return;                                                                                 \
 }
-#define DRAW_ABL_UPG_STAT_PNL(ABL, UPG, TEXT, STAT){ \
-if (UPG.level == 1) {\
-  gui_label_format(FONT_TYPE_MINI_MOOD, upgr_font_size, (f32)start_upgradables_x_exis, (f32)upgradables_height_buffer, WHITE, false, false, TEXT, UPG.STAT);\
-  upgradables_height_buffer += btw_space_gap;\
-} else if(UPG.level>1 && UPG.level <= MAX_ABILITY_LEVEL) {\
-  gui_label_format(FONT_TYPE_MINI_MOOD, upgr_font_size, (f32)start_upgradables_x_exis, (f32)upgradables_height_buffer, WHITE, false, false, TEXT, ABL->STAT, UPG.STAT);\
-  upgradables_height_buffer += btw_space_gap;\
-}}
 
 #define ABILITY_UPG_PANEL_ICON_SIZE BASE_RENDER_SCALE(.25f).x*.5f
 #define PASSIVE_SELECTION_PANEL_ICON_SIZE ABILITY_UPG_PANEL_ICON_SIZE
@@ -74,9 +68,12 @@ void in_game_update_bindings(void);
 void in_game_update_mouse_bindings(void);
 void in_game_update_keyboard_bindings(void);
 void initialize_worldmap_locations(void);
-void draw_in_game_upgrade_panel(ability* abl, ability upg, Rectangle panel_dest);
+void draw_in_game_upgrade_panel(u16 which_panel, Rectangle panel_dest);
 void draw_passive_selection_panel(character_stat* stat, Rectangle panel_dest);
-void draw_end_game_panel();
+void draw_end_game_panel(void);
+void prepare_ability_upgrade_state(void);
+void end_ability_upgrade_state(u16 which_panel_chosen);
+
 void start_game(character_stats stat);
 void reset_game();
 
@@ -112,7 +109,7 @@ void begin_scene_in_game(void) {
     Vector4 {6, 6, 6, 6}, Color { 30, 39, 46, 245}, Color { 52, 64, 76, 245},
   );
 
-  copy_memory(&state->worldmap_locations, get_worldmap_locations(), sizeof(state->worldmap_locations));
+  copy_memory(__builtin_addressof(state->worldmap_locations), get_worldmap_locations(), sizeof(state->worldmap_locations));
   _set_player_position(BASE_RENDER_SCALE(.5f));
   set_is_game_paused(true);
   
@@ -268,7 +265,7 @@ void in_game_update_mouse_bindings(void) {
       for (size_t i=0; i<MAX_ABILITY_SLOT; ++i) {
         ability* abl = __builtin_addressof(player->ability_system.abilities[i]);
         if(!abl || !abl->is_active || !abl->is_initialized) { continue; }
-        for (size_t j=0; j < MAX_ABILITY_PROJECTILE_SLOT; j++) {
+        for (size_t j=0; j < abl->projectiles.size(); j++) {
           projectile* prj = __builtin_addressof(abl->projectiles.at(j));
           if (!prj || !prj->is_active) { continue; }
           if (CheckCollisionPointRec(*mouse_pos_world, prj->collision)) {
@@ -408,7 +405,7 @@ void render_interface_in_game(void) {
       else {
         for (int i=0; i<MAX_WORLDMAP_LOCATIONS; ++i) {
           if (state->hovered_stage == i) {
-            panel* pnl = &state->worldmap_selection_panel;
+            panel* pnl = __builtin_addressof(state->worldmap_selection_panel);
             Rectangle scrloc = Rectangle{
               state->worldmap_locations[i].screen_location.x * BASE_RENDER_RES.x - WORLDMAP_LOC_PIN_SIZE_DIV2, 
               state->worldmap_locations[i].screen_location.y * BASE_RENDER_RES.y - WORLDMAP_LOC_PIN_SIZE_DIV2,
@@ -437,7 +434,7 @@ void render_interface_in_game(void) {
         };
         f32 dest_x_buffer = dest.x;
         for (int i=0; i<MAX_UPDATE_PASSIVE_PANEL_COUNT; ++i) {
-          panel* pnl = &state->passive_selection_panels[i];
+          panel* pnl = __builtin_addressof(state->passive_selection_panels[i]);
           if (pnl->frame_tex_id <= ATLAS_TEX_ID_UNSPECIFIED || pnl->frame_tex_id >= ATLAS_TEX_ID_MAX || 
             pnl->bg_tex_id    <= ATLAS_TEX_ID_UNSPECIFIED || pnl->bg_tex_id    >= ATLAS_TEX_ID_MAX ) 
           {
@@ -470,44 +467,24 @@ void render_interface_in_game(void) {
         gui_label("Press Space to Start!", FONT_TYPE_MOOD_OUTLINE, 10, Vector2 {BASE_RENDER_SCALE(.5f).x, BASE_RENDER_SCALE(.5f).y}, WHITE, true, true);
       }
       else if (get_b_player_have_upgrade_points()) {
-        set_is_game_paused(true);
-        Rectangle dest = Rectangle {
-          BASE_RENDER_SCALE(.25f).x, BASE_RENDER_SCALE(.5f).y, 
-          BASE_RENDER_SCALE(.25f).x, BASE_RENDER_SCALE(.5f).y 
-        };
-        f32 dest_x_buffer = dest.x;
-        for (int i=0; i<MAX_UPDATE_ABILITY_PANEL_COUNT; ++i) {
-          panel* pnl = &state->ability_upg_panels[i];
-          if(pnl->buffer.u16[0] <= 0 || pnl->buffer.u16[0] >= ABILITY_TYPE_MAX) {
-            pnl->buffer.u16[0] = get_random(1,ABILITY_TYPE_MAX-1);
-          }
-          dest.x = dest_x_buffer + ((dest.width + SCREEN_OFFSET.x) * i);
-          ability* abl = get_dynamic_player_state_ability(static_cast<ability_type>(pnl->buffer.u16[0]));
-          ability new_ability = {};
-          if (abl->type <= ABILITY_TYPE_UNDEFINED || abl->type >= ABILITY_TYPE_MAX) {
-            new_ability = _get_ability(static_cast<ability_type>(pnl->buffer.u16[0]));
-            *abl = {};
-          }
-          else {
-            new_ability = _get_next_level(*abl);
-          }
-          if (new_ability.type <= ABILITY_TYPE_UNDEFINED || new_ability.type >= ABILITY_TYPE_MAX) {
-            TraceLog(LOG_WARNING, "scene_in_game::render_interface_in_game()::Upgraded ability is out of bounds"); 
-            continue;
-          }
-          if(gui_panel_active(pnl, dest, true)) {
-            set_is_game_paused(false);
-            set_dynamic_player_have_ability_upgrade_points(false);
-            for (int i=0; i<MAX_UPDATE_ABILITY_PANEL_COUNT; ++i) {
-              state->ability_upg_panels[i].buffer.u16[0] = 0;
+        if (state->is_upgrade_choices_ready) {
+          Rectangle dest = Rectangle {
+            BASE_RENDER_SCALE(.25f).x, BASE_RENDER_SCALE(.5f).y, 
+            BASE_RENDER_SCALE(.25f).x, BASE_RENDER_SCALE(.5f).y 
+          };
+          f32 dest_x_buffer = dest.x;
+          for (int i=0; i<MAX_UPDATE_ABILITY_PANEL_COUNT; ++i) {
+            panel* pnl = __builtin_addressof(state->ability_upg_panels[i]);
+            dest.x = dest_x_buffer + ((dest.width + SCREEN_OFFSET.x) * i);
+
+            if(gui_panel_active(pnl, dest, true)) {
+              end_ability_upgrade_state(i);
+              break;
             }
-            if (new_ability.level >= MAX_ABILITY_LEVEL || new_ability.level <= 1) { 
-              _add_ability(new_ability.type); 
-            }
-            else { _upgrade_ability(abl); }
+            draw_in_game_upgrade_panel(i, dest);
           }
-          draw_in_game_upgrade_panel(abl, new_ability, dest);
         }
+        else { prepare_ability_upgrade_state(); }
       }
       else {
         gui_progress_bar(PRG_BAR_ID_PLAYER_EXPERIANCE, Vector2{.x = BASE_RENDER_SCALE(.5f).x, .y = SCREEN_OFFSET.x}, true);
@@ -536,7 +513,7 @@ void render_interface_in_game(void) {
 
         if(state->hovered_spawn < get_remaining_enemies()){
           Character2D* spawn = get_spawn_info(state->hovered_spawn);
-          panel* pnl = &state->debug_info_panel;
+          panel* pnl = __builtin_addressof(state->debug_info_panel);
           pnl->dest = Rectangle {
             ui_get_mouse_pos()->x, ui_get_mouse_pos()->y, 
             BASE_RENDER_SCALE(.4f).x, BASE_RENDER_SCALE(.3f).y
@@ -576,8 +553,10 @@ void render_interface_in_game(void) {
             );
           });
         }
-        if(state->hovered_ability > 0 && state->hovered_ability < MAX_ABILITY_SLOT && state->hovered_projectile >= 0 && state->hovered_projectile < MAX_ABILITY_PROJECTILE_SLOT  ){
-          panel* pnl = &state->debug_info_panel;
+
+        ability* abl = get_dynamic_player_state_ability(state->hovered_ability);
+        if(state->hovered_ability > 0 && state->hovered_ability < MAX_ABILITY_SLOT && state->hovered_projectile >= 0 && state->hovered_projectile < abl->projectiles.size()){
+          panel* pnl = __builtin_addressof(state->debug_info_panel);
           pnl->dest = Rectangle {
             ui_get_mouse_pos()->x, ui_get_mouse_pos()->y, 
             BASE_RENDER_SCALE(.4f).x, BASE_RENDER_SCALE(.3f).y
@@ -585,7 +564,6 @@ void render_interface_in_game(void) {
           i32 font_size = 11;
           i32 line_height = BASE_RENDER_SCALE(.05f).y;
           Vector2 debug_info_position_buffer = VECTOR2(pnl->dest.x, pnl->dest.y);
-          ability* abl = get_dynamic_player_state_ability(state->hovered_ability);
           projectile* prj = __builtin_addressof(abl->projectiles.at(state->hovered_projectile));
           gui_panel_scissored((*pnl), false, {
             gui_label_format(
@@ -634,13 +612,24 @@ void render_interface_in_game(void) {
   render_user_interface();
 }
 
-void draw_in_game_upgrade_panel(ability* abl, ability upg, Rectangle panel_dest) {
-  if (upg.type <= ABILITY_TYPE_UNDEFINED || upg.type >= ABILITY_TYPE_MAX) {
-    TraceLog(LOG_WARNING, "scene_in_game::draw_upgrade_panel()::Upgraded ability is out of bounds"); 
+#define DRAW_ABL_UPG_STAT_PNL(ABL, UPG, TEXT, STAT){ \
+if (UPG->level == 1) {\
+  gui_label_format(FONT_TYPE_MINI_MOOD, upgr_font_size, (f32)start_upgradables_x_exis, (f32)upgradables_height_buffer, WHITE, false, false, TEXT, UPG->STAT);\
+  upgradables_height_buffer += btw_space_gap;\
+} else {\
+  gui_label_format(FONT_TYPE_MINI_MOOD, upgr_font_size, (f32)start_upgradables_x_exis, (f32)upgradables_height_buffer, WHITE, false, false, TEXT, ABL->STAT, UPG->STAT);\
+  upgradables_height_buffer += btw_space_gap;\
+}}
+
+void draw_in_game_upgrade_panel(u16 which_panel, Rectangle panel_dest) {
+  const ability* upg = __builtin_addressof(state->ability_upgrade_choices[which_panel]);
+  const ability* abl = get_dynamic_player_state_ability(upg->type);
+  if (upg->type <= ABILITY_TYPE_UNDEFINED || upg->type >= ABILITY_TYPE_MAX) {
+    TraceLog(LOG_WARNING, "scene_in_game::draw_in_game_upgrade_panel()::Upgraded ability is out of bounds"); 
     return;
   }
-  if (upg.level <= 0 || upg.level >= MAX_ABILITY_LEVEL) {
-    TraceLog(LOG_WARNING, "scene_in_game::draw_upgrade_panel()::Upgraded ability level is out of bounds"); 
+  if (upg->level <= 0 || upg->level >= MAX_ABILITY_LEVEL) {
+    TraceLog(LOG_WARNING, "scene_in_game::draw_in_game_upgrade_panel()::Upgraded ability level is out of bounds"); 
     return;
   }
   const u16 elm_space_gap = 30;
@@ -658,29 +647,31 @@ void draw_in_game_upgrade_panel(ability* abl, ability upg, Rectangle panel_dest)
   const u16 level_ind_font_size = 9; 
   const u16 upgr_font_size = 6; 
 
-  gui_draw_atlas_texture_id_pro(ATLAS_TEX_ID_ICON_ATLAS, upg.icon_src, icon_rect, true, false);
-  gui_label(upg.display_name.c_str(), FONT_TYPE_MOOD, title_font_size, ability_name_pos, WHITE, true, true);
+  gui_draw_atlas_texture_id_pro(ATLAS_TEX_ID_ICON_ATLAS, upg->icon_src, icon_rect, true, false);
+  gui_label(upg->display_name.c_str(), FONT_TYPE_MOOD, title_font_size, ability_name_pos, WHITE, true, true);
 
-  if (upg.level == 1) {
+  if (upg->level == 1) {
     gui_label("NEW!", FONT_TYPE_MOOD_OUTLINE, level_ind_font_size, ability_level_ind, WHITE, true, true);
-  } else if(upg.level>1 && upg.level <= MAX_ABILITY_LEVEL) {
-    gui_label_format_v(FONT_TYPE_MOOD_OUTLINE, level_ind_font_size, ability_level_ind, WHITE, true, true, "%d -> %d", abl->level, upg.level);
+  } else if(upg->level>1 && upg->level <= MAX_ABILITY_LEVEL) {
+    gui_label_format_v(FONT_TYPE_MOOD_OUTLINE, level_ind_font_size, ability_level_ind, WHITE, true, true, "%d -> %d", abl->level, upg->level);
+  } else {
+    TraceLog(LOG_ERROR, "scene_in_game::draw_in_game_upgrade_panel()::Ability level is out of bound");
+    return;
   }
   const u16 start_upgradables_x_exis = panel_dest.x - panel_dest.width*.5f + elm_space_gap;
   u16 upgradables_height_buffer = ability_level_ind.y + elm_space_gap;
   for (int i=0; i<ABILITY_UPG_MAX; ++i) {
-    ability_upgradables abl_upg = upg.upgradables[i];
+    ability_upgradables abl_upg = upg->upgradables.at(i);
     if (abl_upg <= ABILITY_UPG_UNDEFINED  || abl_upg >= ABILITY_UPG_MAX) {
       break;
     }
     switch (abl_upg) {
-      case ABILITY_UPG_DAMAGE: DRAW_ABL_UPG_STAT_PNL(abl, upg, "Damage:%d", base_damage);break;
-      case ABILITY_UPG_AMOUNT: DRAW_ABL_UPG_STAT_PNL(abl, upg, "Amouth:%d", proj_count); break;
+      case ABILITY_UPG_DAMAGE: DRAW_ABL_UPG_STAT_PNL(abl, upg, "Damage:%d", base_damage);  break;
+      case ABILITY_UPG_AMOUNT: DRAW_ABL_UPG_STAT_PNL(abl, upg, "Amouth:%d", proj_count);   break;
       case ABILITY_UPG_HITBOX: DRAW_ABL_UPG_STAT_PNL(abl, upg, "Hitbox:%.1f", proj_dim.x); break;
-      case ABILITY_UPG_SPEED:  DRAW_ABL_UPG_STAT_PNL(abl, upg, "Speed:%d",  proj_speed); break;
-      
+      case ABILITY_UPG_SPEED:  DRAW_ABL_UPG_STAT_PNL(abl, upg, "Speed:%d",  proj_speed);   break;
       default: {
-        TraceLog(LOG_WARNING, "scene_in_game::draw_upgrade_panel()::Unsupported ability upgrade type");
+        TraceLog(LOG_WARNING, "scene_in_game::draw_in_game_upgrade_panel()::Unsupported ability upgrade type");
         break;
       }
     }
@@ -734,6 +725,45 @@ void draw_end_game_panel() {
   gui_label_format_v(FONT_TYPE_MOOD, 15, VECTOR2(BASE_RENDER_SCALE(.5f).x, BASE_RENDER_SCALE(.75f).y), WHITE, true, true, 
     "Collected Souls:%d", state->end_game_result.collected_souls
   );
+}
+void prepare_ability_upgrade_state(void) {
+  set_is_game_paused(true);
+  for (int i=0; i<MAX_UPDATE_ABILITY_PANEL_COUNT; ++i) {
+    panel* pnl = __builtin_addressof(state->ability_upg_panels[i]);
+    ability* pnl_slot = __builtin_addressof(state->ability_upgrade_choices[i]);
+    if(pnl->buffer.u16[0] <= 0 || pnl->buffer.u16[0] >= ABILITY_TYPE_MAX) {
+      pnl->buffer.u16[0] = get_random(ABILITY_TYPE_UNDEFINED+1,ABILITY_TYPE_MAX-1);
+    }
+    ability* player_ability = get_dynamic_player_state_ability(static_cast<ability_type>(pnl->buffer.u16[0])); // INFO: do we need upgrade the ability player already have
+    if (player_ability->type <= ABILITY_TYPE_UNDEFINED || player_ability->type >= ABILITY_TYPE_MAX) {
+      *pnl_slot = _get_ability(static_cast<ability_type>(pnl->buffer.u16[0]));
+    }
+    else {
+      *pnl_slot = _get_next_level(*player_ability);
+    }
+    if (pnl_slot->type <= ABILITY_TYPE_UNDEFINED || pnl_slot->type >= ABILITY_TYPE_MAX) {
+      TraceLog(LOG_WARNING, "scene_in_game::make_passive_selection_panel_ready()::Upgraded ability is out of bounds"); 
+      continue;
+    }
+  }
+  state->is_upgrade_choices_ready = true;
+}
+void end_ability_upgrade_state(u16 which_panel_chosen) {
+  const ability* new_ability = __builtin_addressof(state->ability_upgrade_choices[which_panel_chosen]);
+  if (new_ability->level >= MAX_ABILITY_LEVEL || new_ability->level <= 1) {
+    _add_ability(new_ability->type);
+  }
+  else {
+    _upgrade_ability(get_dynamic_player_state_ability(new_ability->type)); 
+  }
+
+  set_is_game_paused(false);
+  state->ability_upgrade_choices.fill(ability{});
+  set_dynamic_player_have_ability_upgrade_points(false);
+  state->is_upgrade_choices_ready = false;
+  for (int i=0; i<MAX_UPDATE_ABILITY_PANEL_COUNT; ++i) {
+    state->ability_upg_panels[i].buffer.u16[0] = 0;
+  }
 }
 Rectangle sig_get_camera_view_rect(Camera2D camera) {
 

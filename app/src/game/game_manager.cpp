@@ -34,7 +34,7 @@ static game_manager_system_state * state;
 extern const u32 level_curve[MAX_PLAYER_LEVEL+1];
 
 #define SPAWN_TRYING_LIMIT 15
-#define WAVE_COUNT_TO_SPAWN_BOSS 3
+#define WAVE_COUNT_TO_SPAWN_BOSS 2
 
 bool game_manager_on_event(u16 code, event_context context);
 void game_manager_reinit(void);
@@ -126,7 +126,7 @@ void update_game_manager(void) {
       */
       move_player(pur.move_request);
     }
-    update_abilities(&state->player_state_dynamic->ability_system);
+    update_abilities(__builtin_addressof(state->player_state_dynamic->ability_system));
     update_spawns(get_player_position(true));
 
     if (*state->p_spawn_system_spawn_count < 50) {
@@ -161,7 +161,7 @@ void render_game(void) {
     return;
   }
   if (!state->player_state_dynamic->is_dead) {
-    render_abilities(&state->player_state_dynamic->ability_system);
+    render_abilities(__builtin_addressof(state->player_state_dynamic->ability_system));
     render_player();
     render_spawns();
   }
@@ -193,7 +193,7 @@ void gm_start_game(worldmap_stage stage) {
 void gm_reset_game(void) {
   clean_up_spawn_state();
 
-  copy_memory(state->player_state_dynamic, &state->player_state_static, sizeof(player_state));
+  copy_memory(state->player_state_dynamic, __builtin_addressof(state->player_state_static), sizeof(player_state));
   state->is_game_end = false;
   state->is_game_paused = true;
   state->stage = worldmap_stage {};
@@ -259,20 +259,6 @@ void populate_map_with_spawns(void) {
     return;
   }
 
-  u32 spawn_trying_limit = SPAWN_TRYING_LIMIT;
-  for (u16 i = 0; i < MAX_SPAWN_COUNT && (spawn_trying_limit <= SPAWN_TRYING_LIMIT && spawn_trying_limit != 0); ) 
-  {
-    Vector2 position = {
-      (f32) get_random((i32)state->stage.spawning_areas[0].x, (i32)state->stage.spawning_areas[0].x + state->stage.spawning_areas[0].width),
-      (f32) get_random((i32)state->stage.spawning_areas[0].y, (i32)state->stage.spawning_areas[0].y + state->stage.spawning_areas[0].height)
-    };
-    spawn_character(Character2D(
-      (u16) get_random(SPAWN_TYPE_UNDEFINED+1, SPAWN_TYPE_MAX-2), 
-      (u16) state->player_state_dynamic->level, 
-      (u16) get_random(0, 100), position, 1.f)
-    ) ? ++i : --spawn_trying_limit;
-  }
-
   if ((state->remaining_waves_to_spawn_boss <= 0 || state->remaining_waves_to_spawn_boss > WAVE_COUNT_TO_SPAWN_BOSS) && *state->p_spawn_system_spawn_count < MAX_SPAWN_COUNT) {
     for (u16 i = 0; i < SPAWN_TRYING_LIMIT; i++) {
       Vector2 position = {
@@ -290,6 +276,20 @@ void populate_map_with_spawns(void) {
     state->remaining_waves_to_spawn_boss--;
     TraceLog(LOG_INFO, "To boss spawn:%d", state->remaining_waves_to_spawn_boss);
   }
+
+  u32 spawn_trying_limit = SPAWN_TRYING_LIMIT;
+  for (u16 i = 0; i < MAX_SPAWN_COUNT && (spawn_trying_limit <= SPAWN_TRYING_LIMIT && spawn_trying_limit != 0); ) 
+  {
+    Vector2 position = {
+      (f32) get_random((i32)state->stage.spawning_areas[0].x, (i32)state->stage.spawning_areas[0].x + state->stage.spawning_areas[0].width),
+      (f32) get_random((i32)state->stage.spawning_areas[0].y, (i32)state->stage.spawning_areas[0].y + state->stage.spawning_areas[0].height)
+    };
+    spawn_character(Character2D(
+      (u16) get_random(SPAWN_TYPE_UNDEFINED+1, SPAWN_TYPE_MAX-2), 
+      (u16) state->player_state_dynamic->level, 
+      (u16) get_random(0, 100), position, 1.f)
+    ) ? ++i : --spawn_trying_limit;
+  }
 }
 void upgrade_dynamic_player_stat(character_stats stat_id, u16 level) {
   if (!state || !state->player_state_dynamic->is_initialized) {
@@ -300,7 +300,7 @@ void upgrade_dynamic_player_stat(character_stats stat_id, u16 level) {
     TraceLog(LOG_ERROR, "game_manager::upgrade_dynamic_player_stat()::stat id out of bound");
     return;
   }
-  character_stat* stat = &state->player_state_dynamic->stats[stat_id];
+  character_stat* stat = __builtin_addressof(state->player_state_dynamic->stats[stat_id]);
   if (level > 0 && level <= MAX_PASSIVE_UPGRADE_TIER) stat->level = level;
   else {
     if (stat->level > MAX_PASSIVE_UPGRADE_TIER || stat->level < 0) {
@@ -317,6 +317,7 @@ void upgrade_dynamic_player_stat(character_stats stat_id, u16 level) {
     case CHARACTER_STATS_HEALTH: { 
       player->health_max = stat->buffer.u32[0];
       player->health_current = player->health_max;
+      player->health_perc = (f32) player->health_current / (f32) player->health_max;
       return; 
     }
     case CHARACTER_STATS_HP_REGEN: {
@@ -363,7 +364,7 @@ void upgrade_static_player_stat(character_stats stat_id, u16 level) {
     TraceLog(LOG_ERROR, "game_manager::upgrade_static_player_stat()::stat id out of bound");
     return;
   }
-  character_stat* stat = &state->player_state_static.stats[stat_id];
+  character_stat* stat = __builtin_addressof(state->player_state_static.stats[stat_id]);
 
   if (level > 0 && level <= MAX_PASSIVE_UPGRADE_TIER) stat->level = level;
   else {
@@ -375,7 +376,7 @@ void upgrade_static_player_stat(character_stats stat_id, u16 level) {
   }
   game_manager_set_stats(stat, stat->level);
 
-  player_state* player = &state->player_state_static;
+  player_state* player = __builtin_addressof(state->player_state_static);
 
   switch (stat->id) {
     case CHARACTER_STATS_HEALTH: { 
@@ -543,17 +544,17 @@ void currency_souls_add(i32 value) {
 Character2D* get_spawn_info(u16 spawn_id) {
   if (!state) {
     TraceLog(LOG_ERROR, "game_manager::get_spawn_info()::State is not valid");
-    return 0;
+    return nullptr;
   }
   if (spawn_id > *state->p_spawn_system_spawn_count) {
     TraceLog(LOG_ERROR, "game_manager::get_spawn_info()::spawn id is out of bound");
-    return 0;
+    return nullptr;
   }
   if (!state->in_spawns[spawn_id].initialized) {
-    return 0;
+    return nullptr;
   }
 
-  return &state->in_spawns[spawn_id];
+  return __builtin_addressof(state->in_spawns[spawn_id]);
 }
 u32 get_currency_souls(void) {
   return state->game_progression_data->currency_souls_player_have;
@@ -565,21 +566,21 @@ void set_dynamic_player_have_ability_upgrade_points(bool _b) {
   state->player_state_dynamic->is_player_have_ability_upgrade_points = _b;
 }
 ability* get_dynamic_player_state_ability(ability_type type) {
-  return &state->player_state_dynamic->ability_system.abilities[type];
+  return __builtin_addressof(state->player_state_dynamic->ability_system.abilities[type]);
 }
 character_stat* get_dynamic_player_state_stat(character_stats stat) {
   if (stat >= CHARACTER_STATS_MAX || stat <= CHARACTER_STATS_UNDEFINED) {
-    return 0;
+    return nullptr;
   }
   
-  return &state->player_state_dynamic->stats[stat];
+  return __builtin_addressof(state->player_state_dynamic->stats[stat]);
 }
 character_stat* get_static_player_state_stat(character_stats stat) {
   if (stat >= CHARACTER_STATS_MAX || stat <= CHARACTER_STATS_UNDEFINED) {
-    return 0;
+    return nullptr;
   }
   
-  return &state->player_state_static.stats[stat];
+  return __builtin_addressof(state->player_state_static.stats[stat]);
 }
 bool* get_is_game_paused(void) {
   return __builtin_addressof(state->is_game_paused);
@@ -627,21 +628,17 @@ bool _add_ability(ability_type _type) {
     return false;
   }
   ability abl = get_ability(_type);
-  ability_play_system* system = &state->player_state_dynamic->ability_system;
+  ability_play_system* system = __builtin_addressof(state->player_state_dynamic->ability_system);
   if (!system) {
     TraceLog(LOG_WARNING, "game_manager::_add_ability()::Recieved system was NULL");
     return false;
   }
   abl.p_owner = state->player_state_dynamic;
   abl.is_initialized = true;
-
   abl.proj_count += state->player_state_dynamic->projectile_amouth;
-
-  for (i32 i=0; i < abl.proj_count; ++i) {
-    abl.projectiles.at(i).is_active = true;
-  }
   abl.is_active = true;
 
+  refresh_ability(__builtin_addressof(abl));
   system->abilities[_type] = abl;
   
   return true;
@@ -651,16 +648,13 @@ bool _upgrade_ability(ability* abl) {
     TraceLog(LOG_WARNING, "game_manager::_upgrade_ability::Recieved ability has not initialized yet");
     return false;
   }
-  ability_play_system* system = &state->player_state_dynamic->ability_system;
+  ability_play_system* system = __builtin_addressof(state->player_state_dynamic->ability_system);
   if (!system) {
     TraceLog(LOG_WARNING, "game_manager::_add_ability()::Recieved system was NULL");
     return false;
   }
-  u16 _proj_count = abl->proj_count;
   upgrade_ability(abl);
-  for (int i=_proj_count; i<abl->proj_count; ++i) {
-    abl->projectiles.at(i).is_active = true;
-  }
+  refresh_ability(abl);
 
   return true;
 }

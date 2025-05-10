@@ -77,7 +77,7 @@ void update_abilities(ability_play_system* system) {
       }
     }
 
-    for (i32 j = 0; j<MAX_ABILITY_PROJECTILE_SLOT; ++j) {
+    for (size_t j = 0; j< abl->projectiles.size(); ++j) {
       if (!abl->projectiles.at(j).is_active) { continue; }
       player_state* player = (player_state*)abl->p_owner;
       event_fire(EVENT_CODE_DAMAGE_ANY_SPAWN_IF_COLLIDE, event_context(
@@ -103,7 +103,7 @@ void render_abilities(ability_play_system* system) {
   for (int i = 1; i < ABILITY_TYPE_MAX; ++i) {
     if (!system->abilities[i].is_active || !system->abilities[i].is_initialized) { continue; }
 
-    for (int j = 0; j < system->abilities[i].proj_count; ++j) {
+    for (size_t j = 0; j < system->abilities[i].projectiles.size(); ++j) {
       if (!system->abilities[i].projectiles.at(j).is_active) { continue; }
       projectile* proj = &system->abilities[i].projectiles.at(j);
       proj->is_active = true;
@@ -138,9 +138,9 @@ void movement_satellite(ability* abl) {
 
   if (abl->rotation > 359) abl->rotation = 0;
 
-  for (i16 i = 0; i < abl->proj_count; i++) {
+  for (size_t i = 0; i < abl->projectiles.size(); i++) {
 
-    i16 angle = (i32)(((360.f / abl->proj_count) * i) + abl->rotation) % 360;
+    i16 angle = (i32)(((360.f / abl->projectiles.size()) * i) + abl->rotation) % 360;
 
     abl->projectiles.at(i).position = get_a_point_of_a_circle( abl->position, (abl->level * 3.f) + player->collision.height + 15, angle);
     abl->projectiles.at(i).collision.x = abl->projectiles.at(i).position.x;
@@ -157,7 +157,7 @@ void movement_bullet(ability* abl) {
   abl->position.x  = player->collision.x + player->collision.width / 2.f;
   abl->position.y  = player->collision.y + player->collision.height / 2.f;
 
-  for (i16 i = 0; i < abl->proj_count; i++) {
+  for (size_t i = 0; i < abl->projectiles.size(); i++) {
 
     if (abl->projectiles.at(i).duration <= 0) {
       abl->projectiles.at(i).position = player->position;
@@ -186,7 +186,7 @@ void movement_comet(ability* abl) {
   }
   const Rectangle* frustum = &state->in_camera_metrics->frustum;
 
-  for (i16 i = 0; i < abl->proj_count; i++) {
+  for (size_t i = 0; i < abl->projectiles.size(); i++) {
     if (vec2_equals(abl->projectiles.at(i).position, pVECTOR2(abl->projectiles.at(i).buffer.f32), .1)) {
       abl->projectiles.at(i).buffer.f32[2] =  abl->projectiles.at(i).position.x;
       abl->projectiles.at(i).buffer.f32[3] =  abl->projectiles.at(i).position.y;
@@ -218,60 +218,20 @@ void upgrade_ability(ability* abl) {
   ++abl->level;
 
   for (int i=0; i<ABILITY_UPG_MAX; ++i) {
-    switch (abl->upgradables[i]) {
-      // TODO: Complete all cases
-      case ABILITY_UPG_DAMAGE: { 
+    switch (abl->upgradables.at(i)) {
+      case ABILITY_UPG_DAMAGE: {
         abl->base_damage += abl->level * 2;
         break;
       }
       case ABILITY_UPG_AMOUNT: { 
-        u16 new_proj_count = abl->proj_count + 1;
-        for (int i = abl->proj_count; i < new_proj_count; ++i) {
-          abl->projectiles.at(i).collision = Rectangle {0, 0, abl->proj_dim.x, abl->proj_dim.y};
-          abl->projectiles.at(i).damage = abl->base_damage + abl->level * 2;
-          abl->projectiles.at(i).is_active = true;
-        }
-        abl->proj_count = new_proj_count;
+        abl->proj_count++;
         break;
       }
-      case ABILITY_UPG_HITBOX: { break; }
-      case ABILITY_UPG_SPEED:  { break; }
+      case ABILITY_UPG_HITBOX: { break; } // TODO: projectile hitbox upgrade
+      case ABILITY_UPG_SPEED:  { break; } // TODO: projectile speed upgrade
       default: return;
     }
   }
-}
-/**
- * @param proj_duration in secs. affects not to all abilities like fireball ability
- * @param _should_center for projectile spritesheet
- */
-void register_ability(ability abl) {
-  if (abl.display_name.size() >= MAX_ABILITY_NAME_LENGTH) {
-    TraceLog(LOG_WARNING, "ability::register_ability()::Ability:'%s's name length is out of bound!", abl.display_name.c_str());
-    return;
-  }
-  for (int i = 0; i < MAX_ABILITY_PROJECTILE_SLOT; ++i) {
-    abl.projectiles.push_back(projectile{});
-    abl.projectiles.at(i).collision = Rectangle {0.f, 0.f, abl.proj_dim.x, abl.proj_dim.y};
-    abl.projectiles.at(i).damage = abl.base_damage;
-    abl.projectiles.at(i).is_active = false;
-    abl.projectiles.at(i).duration = abl.proj_duration;
-    if (abl.default_animation_id != SHEET_ID_SPRITESHEET_UNSPECIFIED) {
-      abl.projectiles.at(i).default_animation.sheet_id = abl.default_animation_id;
-      set_sprite(&abl.projectiles.at(i).default_animation, true, false, abl.center_proj_anim);
-    }
-    if (abl.explosion_animation_id != SHEET_ID_SPRITESHEET_UNSPECIFIED) {
-      abl.projectiles.at(i).explotion_animation.sheet_id = abl.explosion_animation_id;
-      set_sprite(&abl.projectiles.at(i).explotion_animation, false, true, abl.center_proj_anim);
-    }
-    if (abl.centered_origin) {
-      abl.projectiles.at(i).default_animation.origin = VECTOR2(
-        abl.projectiles.at(i).default_animation.coord.width * .5f, 
-        abl.projectiles.at(i).default_animation.coord.height * .5f
-      );
-    }
-  }
-
-  state->abilities[abl.type] = abl;
 }
 
 ability get_ability(ability_type _type) {
@@ -284,4 +244,41 @@ ability get_ability(ability_type _type) {
 ability get_next_level(ability abl) {
   upgrade_ability(&abl);
   return abl;
+}
+void register_ability(ability abl) { state->abilities[abl.type] = abl; }
+
+void refresh_ability(ability* abl) {
+  if (abl == nullptr) {
+    TraceLog(LOG_WARNING, "ability::refresh_ability()::Ability is null");
+    return;
+  }
+  if (abl->proj_count > MAX_ABILITY_PROJECTILE_COUNT) {
+    TraceLog(LOG_WARNING, "ability::refresh_ability()::Ability projectile count exceed");
+    return;
+  }
+
+  abl->projectiles.clear();
+  abl->projectiles.reserve(abl->proj_count);
+
+  for (int i = 0; i < abl->proj_count; ++i) {
+    projectile* prj = __builtin_addressof(abl->projectiles.emplace_back());
+    prj->collision = Rectangle {0.f, 0.f, abl->proj_dim.x, abl->proj_dim.y};
+    prj->damage = abl->base_damage;
+    prj->is_active = true;
+    prj->duration = abl->proj_duration;
+    if (abl->default_animation_id != SHEET_ID_SPRITESHEET_UNSPECIFIED) {
+      prj->default_animation.sheet_id = abl->default_animation_id;
+      set_sprite(__builtin_addressof(prj->default_animation), true, false, abl->center_proj_anim);
+    }
+    if (abl->explosion_animation_id != SHEET_ID_SPRITESHEET_UNSPECIFIED) {
+      prj->explotion_animation.sheet_id = abl->explosion_animation_id;
+      set_sprite(__builtin_addressof(prj->explotion_animation), false, true, abl->center_proj_anim);
+    }
+    if (abl->centered_origin) {
+      prj->default_animation.origin = VECTOR2(
+        prj->default_animation.coord.width * .5f, 
+        prj->default_animation.coord.height * .5f
+      );
+    }
+  }
 }

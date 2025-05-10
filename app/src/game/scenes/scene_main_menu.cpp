@@ -108,7 +108,6 @@ void render_interface_main_menu(void) {
       }
       if (gui_menu_button("Settings", BTN_ID_MAINMENU_BUTTON_SETTINGS, VECTOR2(0, 8), 2.7f, true)) {
         state->type = MAIN_MENU_SCENE_SETTINGS;
-        event_fire(EVENT_CODE_UI_SHOW_SETTINGS_MENU, event_context{});
       }
       if (gui_menu_button("Editor", BTN_ID_MAINMENU_BUTTON_EDITOR, VECTOR2(0, 12), 2.7f, true)) {
         state->in_scene_changing_process = true;
@@ -119,9 +118,9 @@ void render_interface_main_menu(void) {
         event_fire(EVENT_CODE_APPLICATION_QUIT, event_context{});
       }
     } else if (state->type == MAIN_MENU_SCENE_SETTINGS) {
+      gui_draw_settings_screen();
       if (gui_menu_button("Cancel", BTN_ID_MAINMENU_SETTINGS_CANCEL, VECTOR2(2, 15), 2.7f, true)) {
         state->type = MAIN_MENU_SCENE_DEFAULT;
-        event_fire(EVENT_CODE_UI_CLOSE_SETTINGS_MENU, event_context{});
       }
     } else if (state->type == MAIN_MENU_SCENE_UPGRADE) {
       draw_main_menu_upgrade_panel();
