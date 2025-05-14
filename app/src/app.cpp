@@ -4,8 +4,9 @@
 #include "settings.h"
 #include "sound.h"
 
+#include "tools/loc_parser.h"
 #if USE_PAK_FORMAT 
-#include "tools/pak_parser.h"
+  #include "tools/pak_parser.h"
 #endif
 
 #include "core/event.h"
@@ -40,14 +41,14 @@ bool app_initialize(void) {
   settings_initialize();
   set_settings_from_ini_file(CONFIG_FILE_LOCATION);
   state->settings = get_app_settings();
-
+  
+  SetConfigFlags(FLAG_VSYNC_HINT | FLAG_WINDOW_HIGHDPI);
   InitWindow(
     state->settings->window_size.at(0), 
     state->settings->window_size.at(1), 
     GAME_TITLE);
   SetTargetFPS(TARGET_FPS); 
   SetExitKey(KEY_END);
-  SetConfigFlags(FLAG_VSYNC_HINT | FLAG_WINDOW_HIGHDPI);
   if (state->settings->window_state == FLAG_BORDERLESS_WINDOWED_MODE) {
     ToggleBorderlessWindowed();
     Vector2 res = {(f32)GetMonitorWidth(GetCurrentMonitor()), (f32)GetMonitorHeight(GetCurrentMonitor())};
@@ -88,6 +89,12 @@ bool app_initialize(void) {
       {0, 0, (f32)GetScreenWidth(),  (f32)GetScreenHeight()}, Vector2{}, 0, WHITE);
     EndDrawing();
   #endif
+
+  if (!loc_parser_system_initialize()) {
+    TraceLog(LOG_WARNING, "app::app_initialize()::Localization system init failed");
+  }
+  _loc_parser_parse_localization_data_from_file(state->settings->language.c_str());
+
   resource_system_initialize();
   sound_system_initialize();
   create_camera(BASE_RENDER_SCALE(.5f));

@@ -37,12 +37,18 @@
 #error "Unknown platform!"
 #endif
 
-#define GAME_TITLE "Incendium"
 #define STEAM_APP_ID 3680620
+#define GAME_TITLE "Incendium"
 
-#define RESOURCE_PATH "C:\\Users\\fatih\\repositories\\resources\\"
-#define MAP_LAYER_PATH "map_layers\\"
-#define SHADER_PATH "../app/src/shaders/"
+#define DEFAULT_SETTINGS_WINDOW_WIDTH "1280"
+#define DEFAULT_SETTINGS_WINDOW_HEIGHT "720"
+#define DEFAULT_SETTINGS_WINDOW_MODE "windowed"
+#define DEFAULT_SETTINGS_MASTER_VOLUME "100"
+#define DEFAULT_SETTINGS_LANGUAGE "US_en"
+
+#define RESOURCE_PATH ".\\resources\\"
+#define MAP_LAYER_PATH "map_layers\\" // will look resources
+#define SHADER_PATH ".\\shaders\\"
 
 #define TOTAL_ALLOCATED_MEMORY 512 * 1024 * 1024
 #define TARGET_FPS 60
@@ -62,8 +68,7 @@
 #define MAX_FILENAME_LENGTH 64
 #define MAX_FILENAME_EXT_LENGTH 5
 
-#define FCLAMP(value, min, max)                                                \
-  (value <= min) ? min : (value >= max) ? max : value
+#define FCLAMP(value, min, max) (value <= min) ? min : (value >= max) ? max : value
 #define FMAX(v1, v2) (v1 >= v2) ? v1 : v2
 #define FMIN(v1, v2) (v1 <= v2) ? v1 : v2
 #define FABS(v1) (v1 < 0) ? v1*(-1) : v1
@@ -239,6 +244,14 @@ typedef union data128 {
       c[i] = value[i];
     }
   }
+  data128(const char* value, ::u16 len){
+    if (len < 16) {
+      for (int i=0; i<len; ++i) {
+        this->c[i] = value[i];
+      }
+      this->c[15] = '\0';
+    }
+  }
   data128(void* address){
     this->address = address;
   }
@@ -397,6 +410,8 @@ typedef enum button_id {
   BTN_ID_SETTINGS_SLIDER_RES_RIGHT_BUTTON,
   BTN_ID_SETTINGS_SLIDER_WIN_MODE_LEFT_BUTTON,
   BTN_ID_SETTINGS_SLIDER_WIN_MODE_RIGHT_BUTTON,
+  BTN_ID_SETTINGS_SLIDER_LANGUAGE_LEFT_BUTTON,
+  BTN_ID_SETTINGS_SLIDER_LANGUAGE_RIGHT_BUTTON,
   BTN_ID_SETTINGS_APPLY_SETTINGS_BUTTON,
 
   BTN_ID_MAX
@@ -427,6 +442,7 @@ typedef enum slider_id {
   SDR_ID_SETTINGS_SOUND_SLIDER,
   SDR_ID_SETTINGS_RES_SLIDER,
   SDR_ID_SETTINGS_WIN_MODE_SLIDER,
+  SDR_ID_SETTINGS_LANGUAGE,
   SDR_ID_EDITOR_MAP_LAYER_SLC_SLIDER,
   SDR_ID_MAX
 } slider_id;
@@ -437,6 +453,7 @@ typedef struct app_settings {
   std::vector<f32> scale_ratio;
   u16 master_sound_volume;
   i32 window_state;
+  std::string language;
 } app_settings;
 
 typedef struct file_data {

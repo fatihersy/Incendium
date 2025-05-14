@@ -50,18 +50,21 @@ bool parse_app_settings_ini(const char* filename, app_settings* out_settings) {
   char section_resolution[INI_FILE_MAX_SECTION_LENGTH] = "";
   char section_sound[INI_FILE_MAX_SECTION_LENGTH] = "";
   char section_window[INI_FILE_MAX_SECTION_LENGTH] = "";
+  char section_localization[INI_FILE_MAX_SECTION_LENGTH] = "";
   u8* _str = LoadFileData(filename, &size);
   if (size > INI_FILE_MAX_FILE_SIZE) {
     TraceLog(LOG_ERROR, "lexer_ini::parse_app_settings_ini()::Ini file size exceeded.");
     return false;
   }
   TextCopy(file_str, (char*)_str);
-  TextCopy(section_resolution, get_section(file_str, "resolution"));
-  TextCopy(section_sound,      get_section(file_str, "sound"));
-  TextCopy(section_window,     get_section(file_str, "window"));
+  TextCopy(section_resolution,  get_section(file_str, "resolution"));
+  TextCopy(section_sound,       get_section(file_str, "sound"));
+  TextCopy(section_window,      get_section(file_str, "window"));
+  TextCopy(section_localization,get_section(file_str, "localization"));
   out_settings->window_size.push_back(static_cast<f32>(get_variable_I32(section_resolution, "width")));
   out_settings->window_size.push_back(static_cast<f32>(get_variable_I32(section_resolution, "height")));
   out_settings->master_sound_volume = get_variable_U16(section_sound, "master");
+  out_settings->language = get_value_string(section_localization, "language");
   const char* str_win_mode = get_value_string(section_window, "mode");
   if (TextIsEqual(str_win_mode, "borderless")) {
     out_settings->window_state = FLAG_BORDERLESS_WINDOWED_MODE;

@@ -17,7 +17,9 @@ static app_settings_system_state *state;
 #define TEXT_BORDERLESS "borderless"
 #define TEXT_FULLSCREEN "fullscreen"
 
-bool create_ini_file(void);
+bool write_ini_file(char* _ini);
+bool create_ini_file(const char* title, u32 width, u32  height, u32 master_volume, i32 window_mode, const char * language);
+const char* get_default_ini_file(void);
 
 void settings_initialize(void) {
   if (state) {
@@ -31,14 +33,14 @@ void settings_initialize(void) {
 /**
  * @brief Constantly we assume it is next to where .exe file
  */
-bool set_settings_from_ini_file(const char *file_name) {
+bool set_settings_from_ini_file(const char * file_name) {
   if (!state) {
     TraceLog(LOG_WARNING, "settings::set_settings_from_ini_file()::settings "
                           "state didn't initialized yet");
     return false;
   }
   if (!FileExists(file_name)) {
-    create_ini_file();
+    write_ini_file((char*)get_default_ini_file());
   }
   if (!parse_app_settings_ini(file_name, &state->settings)) {
     TraceLog(LOG_WARNING,
@@ -63,6 +65,15 @@ void set_resolution(u32 width, u32 height) {
   state->settings.scale_ratio.at(0) = BASE_RENDER_RES.x / state->settings.window_size.at(0);
   state->settings.scale_ratio.at(1) = BASE_RENDER_RES.y / state->settings.window_size.at(1);
   state->offset = 5;
+}
+
+void set_language(const char* lang) {
+  if (!state) {
+    TraceLog(LOG_ERROR, "settings::set_language()::State is not valid");
+    return;
+  }
+
+  state->settings.language = lang;
 }
 
 bool set_master_sound(u32 volume) {
@@ -94,42 +105,62 @@ i32 get_window_state(void) {
   return state->settings.window_state;
 }
 
-bool create_ini_file(void) {
-  const char* _ini = 
+const char* get_default_ini_file(void) {
+  return 
   "[title]\n"
-  "title = \"Hello No\"\n"
+  "title = \"" GAME_TITLE "\"\n"
   "[resolution]\n"
-  "width = 1280\n"
-  "height = 720\n"
+  "width = " DEFAULT_SETTINGS_WINDOW_WIDTH "\n"
+  "height = " DEFAULT_SETTINGS_WINDOW_HEIGHT "\n"
   "[sound]\n"
-  "master = 100\n"
+  "master = " DEFAULT_SETTINGS_MASTER_VOLUME "\n"
   "[window]\n"
-  "mode = \"windowed\"\n";
-
-  return SaveFileText(CONFIG_FILE_LOCATION, (char *)_ini);
+  "mode = \"" DEFAULT_SETTINGS_WINDOW_MODE "\"\n"
+  "[localization]\n"
+  "language = \"" DEFAULT_SETTINGS_LANGUAGE "\"\n";
 }
-bool save_ini_file(void) {
+bool create_ini_file(const char* title, u32 width, u32  height, u32 master_volume, i32 window_mode, const char * language) {
+  
+  std::string _window_mode = "";
+  if (window_mode == 0) {
+    _window_mode = "windowed";
+  }
+  else if (window_mode == FLAG_BORDERLESS_WINDOWED_MODE) {
+    _window_mode = "borderless";
+  }
+  else if (window_mode == FLAG_FULLSCREEN_MODE) {
+    _window_mode = "fullscreen";
+  }
+  else {
+    _window_mode = "windowed";
+  }
 
-  i8 windows_state_char[12] = {0};
-  if (state->settings.window_state == 0) {
-    copy_memory(windows_state_char, TEXT_WINDOWED, TextLength(TEXT_WINDOWED));
-  }
-  else if (state->settings.window_state == FLAG_BORDERLESS_WINDOWED_MODE) {
-    copy_memory(windows_state_char, TEXT_BORDERLESS, TextLength(TEXT_BORDERLESS));
-  }
-  else if (state->settings.window_state == FLAG_FULLSCREEN_MODE) {
-    copy_memory(windows_state_char, TEXT_FULLSCREEN, TextLength(TEXT_FULLSCREEN));
-  }
-
-  const char* ini_text = TextFormat("%s %s%.0f%s %s%.0f%s %s %s %s %s%s%s",
+  const char* _ini = TextFormat("%s%s%s%s %s%s%d%s%s%d%s %s%s%d%s %s%s%s%s %s%s%s%s",
+    "[title]\n",
+    "title = \"", title, "\"\n",
     "[resolution]\n",
-    "width = \"", state->settings.window_size.at(0), "\"\n",
-    "height = \"", state->settings.window_size.at(1), "\"\n",
+    "width = ", width, "\n",
+    "height = ", height, "\n",
     "[sound]\n",
-    "master = 100\n",
+    "master = ", master_volume, "\n",
     "[window]\n",
-    "mode = \"", windows_state_char, "\"\n"
+    "mode = \"", _window_mode.c_str(), "\"\n",
+    "[localization]\n",
+    "language = \"", language, "\"\n"
   );
 
-  return SaveFileText(CONFIG_FILE_LOCATION, (char*)ini_text);
+  return write_ini_file((char *)_ini);
+}
+bool write_ini_file(char* _ini) {
+
+  return SaveFileText(CONFIG_FILE_LOCATION, _ini);
+}
+bool save_ini_file(void) {
+  return create_ini_file(
+    GAME_TITLE, 
+    state->settings.window_size.at(0), state->settings.window_size.at(1), 
+    0, 
+    state->settings.window_state, 
+    state->settings.language.c_str()
+  );
 }

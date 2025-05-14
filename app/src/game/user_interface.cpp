@@ -1,6 +1,8 @@
 #include "user_interface.h"
 #include <reasings.h>
 #include <settings.h>
+#include "loc_types.h"
+
 #include <tools/pak_parser.h>
 
 #include "core/fmath.h"
@@ -10,6 +12,7 @@
 #include "game_types.h"
 #include "game/spritesheet.h"
 #include "game/fshader.h"
+
 #include "raylib.h"
 
 typedef struct user_interface_system_state {
@@ -24,6 +27,7 @@ typedef struct user_interface_system_state {
   spritesheet ss_to_draw_bg;
   
   Vector2 mouse_pos;
+  supported_language display_language;
 
   Font mood_font;
   Font mood_outline_font;
@@ -69,12 +73,15 @@ static user_interface_system_state * state;
     text_position.y -= (text_measure.y / 2.f);                                                                    \
   }                                                                                                               \
   DrawTextEx(FONT, TEXT,                                                                                          \
-  Vector2 { text_position.x + TEXT_SHADOW_OFFSET.x, text_position.y + TEXT_SHADOW_OFFSET.y},                    \
+  Vector2 { text_position.x + TEXT_SHADOW_OFFSET.x, text_position.y + TEXT_SHADOW_OFFSET.y},                      \
   FONT_SIZE, UI_FONT_SPACING, TEXT_SHADOW_COLOR);                                                                 \
   DrawTextEx(FONT, TEXT, text_position, FONT_SIZE, UI_FONT_SPACING, COLOR);                                       \
 }
 
 #define SDR_CURR_VAL(ID) state->sliders[ID].options[state->sliders[ID].current_value]
+#define SDR_ASSERT_SET_CURR_VAL(EXPR, ID, INDEX) {\
+  if(EXPR) state->sliders[ID].current_value = INDEX;\
+}
 
 bool user_interface_on_event(u16 code, event_context context);
 
@@ -109,11 +116,17 @@ void user_interface_system_initialize(void) {
     return;
   }
   state = (user_interface_system_state *)allocate_memory_linear(sizeof(user_interface_system_state), true);
+  if (!state) {
+    TraceLog(LOG_ERROR, "user_interface::user_interface_system_initialize()::State allocation failed");
+    return;
+  }
   
   state->mood_font              = load_font("mood.ttf",             32, 0, 0);
   state->mood_outline_font      = load_font("mood_outline.ttf",     32, 0, 0);
   state->mini_mood_font         = load_font("mini_mood.ttf",        32, 0, 0);
   state->mini_mood_outline_font = load_font("mini_mood_outline.ttf",32, 0, 0);
+
+  state->display_language = loc_lang_file_name_to_enum(get_app_settings()->language.c_str());
 
   state->default_panel = panel(
     BTN_STATE_UNDEFINED,
@@ -122,7 +135,6 @@ void user_interface_system_initialize(void) {
     Vector4 {6, 6, 6, 6},
     Color { 30, 39, 46, 245},
   );
-
   initialize_shader_system();
 
   // BUTTON TYPES
@@ -241,25 +253,56 @@ void user_interface_system_initialize(void) {
     register_slider(
       SDR_ID_SETTINGS_WIN_MODE_SLIDER,  SDR_TYPE_OPTION, 
       BTN_ID_SETTINGS_SLIDER_WIN_MODE_LEFT_BUTTON, BTN_ID_SETTINGS_SLIDER_WIN_MODE_RIGHT_BUTTON, false);
+    register_slider(
+      SDR_ID_SETTINGS_LANGUAGE,  SDR_TYPE_OPTION, 
+      BTN_ID_SETTINGS_SLIDER_LANGUAGE_LEFT_BUTTON, BTN_ID_SETTINGS_SLIDER_LANGUAGE_RIGHT_BUTTON, false);
     register_button(BTN_ID_SETTINGS_APPLY_SETTINGS_BUTTON, BTN_TYPE_MENU_BUTTON);
   }
   // SETTINGS
 
   // SLIDER OPTIONS
   {
+    const app_settings* p_app_settings = get_app_settings();
+    Vector2 window_size = Vector2 {p_app_settings->window_size.at(0), p_app_settings->window_size.at(1)};
     gui_slider_add_option(SDR_ID_SETTINGS_RES_SLIDER, "960x540", data_pack(
       DATA_TYPE_U16, data128( (u16)960, (u16)540 ), 2)
     );
+    SDR_ASSERT_SET_CURR_VAL(window_size.x == 960.f && window_size.y == 540.f, SDR_ID_SETTINGS_RES_SLIDER, state->sliders[SDR_ID_SETTINGS_RES_SLIDER].max_value-1)
+    
     gui_slider_add_option(SDR_ID_SETTINGS_RES_SLIDER, "1280x720", data_pack(
       DATA_TYPE_U16, data128( (u16)1280, (u16)720 ), 2)
     );
+    SDR_ASSERT_SET_CURR_VAL(window_size.x == 1280.f && window_size.y == 720.f, SDR_ID_SETTINGS_RES_SLIDER, state->sliders[SDR_ID_SETTINGS_RES_SLIDER].max_value-1)
+
     gui_slider_add_option(SDR_ID_SETTINGS_RES_SLIDER, "1920x1080", data_pack(
       DATA_TYPE_U16, data128((u16)1920, (u16)1080), 2)
     );
+    SDR_ASSERT_SET_CURR_VAL(window_size.x == 1920.f && window_size.y == 1080.f, SDR_ID_SETTINGS_RES_SLIDER, state->sliders[SDR_ID_SETTINGS_RES_SLIDER].max_value-1)
+
+
+    gui_slider_add_option(SDR_ID_SETTINGS_LANGUAGE, "English", data_pack(
+      DATA_TYPE_I32, data128(static_cast<i32>(supported_language::LANGUAGE_ENGLISH), 1), 1)
+    );
+    SDR_ASSERT_SET_CURR_VAL(state->display_language == LANGUAGE_ENGLISH, SDR_ID_SETTINGS_LANGUAGE, state->sliders[SDR_ID_SETTINGS_LANGUAGE].max_value-1)
+
+    gui_slider_add_option(SDR_ID_SETTINGS_LANGUAGE, "Turkish", data_pack(
+      DATA_TYPE_I32, data128(static_cast<i32>(supported_language::LANGUAGE_TURKISH), 1), 1)
+    );
+    SDR_ASSERT_SET_CURR_VAL(state->display_language == LANGUAGE_TURKISH, SDR_ID_SETTINGS_LANGUAGE, state->sliders[SDR_ID_SETTINGS_LANGUAGE].max_value-1)
     
+
     gui_slider_add_option(SDR_ID_SETTINGS_WIN_MODE_SLIDER, "WINDOWED", data_pack(DATA_TYPE_I32, data128((i32)0), 1));
+    SDR_ASSERT_SET_CURR_VAL(p_app_settings->window_state == 0, 
+      SDR_ID_SETTINGS_WIN_MODE_SLIDER, state->sliders[SDR_ID_SETTINGS_WIN_MODE_SLIDER].max_value-1
+    )
     gui_slider_add_option(SDR_ID_SETTINGS_WIN_MODE_SLIDER, "BORDERLESS", data_pack(DATA_TYPE_I32, data128((i32)FLAG_BORDERLESS_WINDOWED_MODE), 1));
+    SDR_ASSERT_SET_CURR_VAL(p_app_settings->window_state == FLAG_BORDERLESS_WINDOWED_MODE, 
+      SDR_ID_SETTINGS_WIN_MODE_SLIDER, state->sliders[SDR_ID_SETTINGS_WIN_MODE_SLIDER].max_value-1
+    )
     gui_slider_add_option(SDR_ID_SETTINGS_WIN_MODE_SLIDER, "FULL SCREEN", data_pack(DATA_TYPE_I32, data128((i32)FLAG_FULLSCREEN_MODE), 1));
+    SDR_ASSERT_SET_CURR_VAL(p_app_settings->window_state == FLAG_FULLSCREEN_MODE, 
+      SDR_ID_SETTINGS_WIN_MODE_SLIDER, state->sliders[SDR_ID_SETTINGS_WIN_MODE_SLIDER].max_value-1
+    )
   }
   // SLIDER OPTIONS
   event_register(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, user_interface_on_event);
@@ -287,6 +330,8 @@ void user_interface_system_initialize(void) {
       state->sliders[SDR_ID_SETTINGS_RES_SLIDER].current_value = state->sliders[SDR_ID_SETTINGS_RES_SLIDER].max_value-1;
     }
   }
+
+
 }
 
 void update_user_interface(void) {
@@ -764,9 +809,11 @@ void gui_draw_settings_screen(void) { // TODO: Return to settings later
 
   gui_slider(SDR_ID_SETTINGS_SOUND_SLIDER, BASE_RENDER_SCALE(.5f), VECTOR2(0,0), 3.f);
 
-  gui_slider(SDR_ID_SETTINGS_RES_SLIDER, BASE_RENDER_SCALE(.5f), VECTOR2(0,5), 3.f);
+  gui_slider(SDR_ID_SETTINGS_RES_SLIDER, BASE_RENDER_SCALE(.5f), VECTOR2(0,4), 3.f);
 
-  gui_slider(SDR_ID_SETTINGS_WIN_MODE_SLIDER, BASE_RENDER_SCALE(.5f), VECTOR2(0,10), 3.f);
+  gui_slider(SDR_ID_SETTINGS_WIN_MODE_SLIDER, BASE_RENDER_SCALE(.5f), VECTOR2(0,8), 3.f);
+
+  gui_slider(SDR_ID_SETTINGS_LANGUAGE, BASE_RENDER_SCALE(.5f), VECTOR2(0,12), 3.f);
 
   if(gui_menu_button("Apply", BTN_ID_SETTINGS_APPLY_SETTINGS_BUTTON, VECTOR2(-2,15), 2.7f, true)) {
     slider sdr_win_mode = state->sliders[SDR_ID_SETTINGS_WIN_MODE_SLIDER];
@@ -780,10 +827,18 @@ void gui_draw_settings_screen(void) { // TODO: Return to settings later
       event_fire(EVENT_CODE_TOGGLE_FULLSCREEN, event_context{});
       set_resolution_slider_native_res();
     }
-    else if (window_mod == 0) {
+    else if (window_mod == 0 && (IsWindowState(FLAG_BORDERLESS_WINDOWED_MODE) || IsWindowFullscreen())) {
       Vector2 res = pVECTOR2(SDR_CURR_VAL(SDR_ID_SETTINGS_RES_SLIDER).content.data.u16);
       set_resolution(res.x, res.y);
       event_fire(EVENT_CODE_TOGGLE_WINDOWED, event_context{});
+    }
+
+    supported_language new_lang = static_cast<supported_language>(SDR_CURR_VAL(SDR_ID_SETTINGS_LANGUAGE).content.data.i32[0]);
+    if (state->display_language != new_lang && (new_lang > LANGUAGE_UNSPECIFIED && new_lang < LANGUAGE_MAX)) {
+      std::string file_name = loc_lang_get_file_name(new_lang);
+      if (loc_parser_parse_localization_data_from_file(file_name.c_str())) {
+        set_language(file_name.c_str());
+      }
     }
 
     save_ini_file();
