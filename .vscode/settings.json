@@ -21,9 +21,9 @@
     "editor.showFoldingControls" :"mouseover",
     "editor.renderWhitespace": "none",
     "editor.quickSuggestionsDelay": 0,
-    "editor.fontFamily": "Iosevka Nerd Font Mono Regular",
+    "editor.fontFamily": "miosevka regular",
     "editor.fontSize": 14,
-    "editor.fontLigatures": "'ss07'",
+    "editor.fontLigatures": true,
     "editor.bracketPairColorization.enabled": true,
     "editor.guides.bracketPairs": "active",
     "editor.guides.bracketPairsHorizontal": "active",
@@ -35,7 +35,7 @@
     "editor.tokenColorCustomizations": {
         "textMateRules": []
     },
-    "terminal.integrated.fontFamily": "IosevkaTermSlab Nerd Font Mono Regular",
+    "terminal.integrated.fontFamily": "miosevka regular",
     "terminal.integrated.defaultProfile.windows": "pwsh7",
     "terminal.integrated.defaultProfile.linux": "zsh",
     "terminal.integrated.profiles.windows": {

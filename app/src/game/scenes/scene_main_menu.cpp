@@ -99,23 +99,23 @@ void render_interface_main_menu(void) {
     if (state->type == MAIN_MENU_SCENE_DEFAULT) {
       gui_label(GAME_TITLE, FONT_TYPE_MOOD, 65, VECTOR2(BASE_RENDER_SCALE(.5f).x, BASE_RENDER_SCALE(.25f).y), WHITE, true, true);
 
-      if (gui_menu_button(lc_txt(0), BTN_ID_MAINMENU_BUTTON_PLAY, VECTOR2(0, 0), 2.7f, true)) {
+      if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_PLAY), BTN_ID_MAINMENU_BUTTON_PLAY, VECTOR2(0, 0), 2.7f, true)) {
         state->in_scene_changing_process = true;
         state->next_scene = SCENE_TYPE_IN_GAME;
         event_fire(EVENT_CODE_UI_START_FADEOUT_EFFECT, event_context((u16)MAIN_MENU_FADE_DURATION));
       }
-      if (gui_menu_button("Upgrade", BTN_ID_MAINMENU_BUTTON_UPGRADE, VECTOR2(0, 4), 2.7f, true)) {
+      if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_UPGRADE), BTN_ID_MAINMENU_BUTTON_UPGRADE, VECTOR2(0, 4), 2.7f, true)) {
         state->type = MAIN_MENU_SCENE_UPGRADE;
       }
-      if (gui_menu_button("Settings", BTN_ID_MAINMENU_BUTTON_SETTINGS, VECTOR2(0, 8), 2.7f, true)) {
+      if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_SETTINGS), BTN_ID_MAINMENU_BUTTON_SETTINGS, VECTOR2(0, 8), 2.7f, true)) {
         state->type = MAIN_MENU_SCENE_SETTINGS;
       }
-      if (gui_menu_button("Editor", BTN_ID_MAINMENU_BUTTON_EDITOR, VECTOR2(0, 12), 2.7f, true)) {
+      if (gui_menu_button("editor", BTN_ID_MAINMENU_BUTTON_EDITOR, VECTOR2(0, 12), 2.7f, true)) {
         state->in_scene_changing_process = true;
         state->next_scene = SCENE_TYPE_EDITOR;
         event_fire(EVENT_CODE_UI_START_FADEOUT_EFFECT, event_context((u16)MAIN_MENU_FADE_DURATION));
       }
-      if (gui_menu_button("Exit", BTN_ID_MAINMENU_BUTTON_EXIT, VECTOR2(0, 16), 2.7f, true)) {
+      if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_EXIT), BTN_ID_MAINMENU_BUTTON_EXIT, VECTOR2(0, 16), 2.7f, true)) {
         event_fire(EVENT_CODE_APPLICATION_QUIT, event_context{});
       }
     } else if (state->type == MAIN_MENU_SCENE_SETTINGS) {
@@ -142,6 +142,7 @@ void begin_scene_main_menu(void) {
   }
   set_worldmap_location(WORLDMAP_MAINMENU_MAP); // NOTE: Worldmap index 0 is mainmenu background now
 
+  state->in_camera_metrics->handle.zoom = 1.f;
   state->type = MAIN_MENU_SCENE_DEFAULT;
   state->next_scene = SCENE_TYPE_UNSPECIFIED;
   state->in_scene_changing_process = false;
@@ -156,6 +157,7 @@ void begin_scene_main_menu(void) {
   };
   gm_save_game();
 
+  event_fire(EVENT_CODE_SCENE_MANAGER_SET_CAM_POS, event_context(data128(BASE_RENDER_RES_DIV2.x, BASE_RENDER_RES_DIV2.y)));
   event_fire(EVENT_CODE_PLAY_MAIN_MENU_THEME, event_context{});
 }
 void end_scene_main_menu(void) {

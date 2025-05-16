@@ -832,12 +832,13 @@ void gui_draw_settings_screen(void) { // TODO: Return to settings later
       set_resolution(res.x, res.y);
       event_fire(EVENT_CODE_TOGGLE_WINDOWED, event_context{});
     }
-
+    
     supported_language new_lang = static_cast<supported_language>(SDR_CURR_VAL(SDR_ID_SETTINGS_LANGUAGE).content.data.i32[0]);
     if (state->display_language != new_lang && (new_lang > LANGUAGE_UNSPECIFIED && new_lang < LANGUAGE_MAX)) {
       std::string file_name = loc_lang_get_file_name(new_lang);
       if (loc_parser_parse_localization_data_from_file(file_name.c_str())) {
         set_language(file_name.c_str());
+        state->display_language = new_lang;
       }
     }
 

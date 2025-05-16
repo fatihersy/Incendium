@@ -5,7 +5,6 @@
 #include "core/fmemory.h"
 #include "loc_types.h"
 
-
 #define SYMBOL_DIGITS_START_SYMBOL 0x21
 #define LOC_FILE_TEXT_SYMBOL_LENGTH 3
 #define LOC_FILE_PATH_PREFIX "./loc/"
@@ -39,6 +38,7 @@ static loc_parser_system_state * state;
 
 loc_content_text loc_parser_get_text(u32& offset);
 loc_content_symbol loc_parser_read_symbol(u32& offset);
+bool is_symbol_allowed(u8& c);
 
 bool loc_parser_system_initialize(void) {
   if (state) {
@@ -92,6 +92,7 @@ bool loc_parser_parse_localization_data_from_file(const char* file_name) {
   loc_content_symbol symbol = {};
   loc_content_text text = {};
   loc_content_map& content_map = state->lang_data.content;
+  content_map.clear();
   for (u32 i=0; i < state->loc_data_size;) {
     switch (reading_order) {
       case LOC_READING_ORDER_SYMBOL: {
@@ -112,12 +113,10 @@ bool loc_parser_parse_localization_data_from_file(const char* file_name) {
     reading_order = static_cast<loc_reading_order>((reading_order % (loc_reading_order::LOC_READING_ORDER_MAX)) + 1);
     if (reading_order == loc_reading_order::LOC_READING_ORDER_MAX) {
       reading_order = static_cast<loc_reading_order>((reading_order % (loc_reading_order::LOC_READING_ORDER_MAX)) + 1);
-      return true;
     }
-    
   }
 
-  return false;
+  return true;
 }
 
 loc_content_text loc_parser_get_text(u32& offset) {
@@ -144,21 +143,19 @@ loc_content_text loc_parser_get_text(u32& offset) {
 
 loc_content_symbol loc_parser_read_symbol(u32& offset) {
   loc_content_symbol symbol = {};
+  char parser = '=';
 
-  bool quote_found = false;
   for (; offset<state->loc_data_size; ++offset) {
-    if (!quote_found) {
-      if (state->file_data.at(offset) == '"') {
-        quote_found = true;
+    if(is_symbol_allowed(state->file_data.at(offset))) {
+      if (symbol.size() < LOC_TEXT_SYMBOL_SIZE) {
+        symbol.push_back(state->file_data.at(offset));
       }
       continue;
-    } 
-    if (state->file_data.at(offset) == '"') {
-      offset++;
-      return symbol; 
     }
-
-    symbol.push_back(state->file_data.at(offset));
+    else if(state->file_data.at(offset) == parser) {
+      offset++;
+      return symbol;
+    }
   }
 
   return symbol;
@@ -206,7 +203,11 @@ supported_language loc_lang_file_name_to_enum(const char* file_name) {
 const char* lc_txt(u32 index) {
   if (!state) {
     TraceLog(LOG_ERROR, "loc_parser::lc_txt()::State is not valid");
-    return {};
+    return "";
+  }
+  if (index > state->lang_data.content.size()) {
+    TraceLog(LOG_ERROR, "loc_parser::lc_txt()::Out of range");
+    return "";
   }
 
   return state->lang_data.content.at(index).c_str();
@@ -218,6 +219,13 @@ u32 symbol_to_index(const char* symbol) {
   u32 third_digit  = static_cast<u32>(symbol[0] - SYMBOL_DIGITS_START_SYMBOL) * 100;
 
   return first_digit + second_digit + third_digit;
+}
+
+bool is_symbol_allowed(u8& c) {
+  if (c >= '!' && c <= '*') {
+    return true;
+  }
+  return false;
 }
 
 #undef loc_content_map

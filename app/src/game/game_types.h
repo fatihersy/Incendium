@@ -250,7 +250,6 @@ typedef struct tilemap_prop {
 	atlas_texture_id atlas_id;
   u16 id;
   Rectangle source;
-  Rectangle relative_source;
   Rectangle dest;
   bool is_initialized;
 } tilemap_prop;

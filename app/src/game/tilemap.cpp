@@ -117,7 +117,7 @@ void render_tilemap(tilemap* _tilemap, Rectangle camera_view) {
       TraceLog(LOG_ERROR, "tilemap::render_tilemap()::Atlas texture:%d is not valid", prop->atlas_id);
       continue;
     }
-    DrawTexturePro(*tex->atlas_handle, prop->relative_source, prop->dest, Vector2 {}, 0.f, WHITE);
+    DrawTexturePro(*tex->atlas_handle, prop->source, prop->dest, Vector2 {}, 0.f, WHITE);
   }
 }
 void render_tilesheet(tilesheet* sheet, f32 zoom) {
@@ -359,16 +359,17 @@ bool load_or_create_map_data(tilemap * map, tilemap_stringtify_package * out_pac
         UnloadFileData(_str_tile);
       }
       else {
-        if (out_package->is_success) {
-          if (!SaveFileData(map_layer_path((const char*)map->filename[i]), out_package->str_tilemap[i], out_package->size_tilemap_str[i])) {
-            TraceLog(LOG_ERROR, "ERROR::tilemap::save_map_data()::Recieving package data returned with failure");
-          }
+        if (!out_package->is_success) {
+          TraceLog(LOG_ERROR, "tilemap::load_or_create_map_data()::map cannot successfully converted to string to save as file");
+        }
+        if (!SaveFileData(map_layer_path((const char*)map->filename[i]), out_package->str_tilemap[i], out_package->size_tilemap_str[i])) {
+          TraceLog(LOG_ERROR, "tilemap::save_map_data()::Recieving package data returned with failure");
         }
       }
     }
   }
   {
-    if (FileExists((const char*)map->propfile)) {
+    if (FileExists(map_layer_path((const char*)map->propfile))) {
       int dataSize = sizeof(out_package->str_props);
       u8* _str_prop = LoadFileData(map_layer_path((const char*)map->propfile), &dataSize);
       if (dataSize <= 0 || dataSize == I32_MAX) {
@@ -379,13 +380,13 @@ bool load_or_create_map_data(tilemap * map, tilemap_stringtify_package * out_pac
     }
     else {
       if (out_package->is_success) {
-        if (!SaveFileData(map_layer_path((const char*)map->propfile), out_package->str_props, out_package->size_props_str)) {
-          TraceLog(LOG_ERROR, "ERROR::tilemap::save_map_data()::Recieving package data returned with failure");
-        }
+        TraceLog(LOG_ERROR, "tilemap::load_or_create_map_data()::map cannot successfully converted to string to save as file");
+      }
+      if (!SaveFileData(map_layer_path((const char*)map->propfile), out_package->str_props, out_package->size_props_str)) {
+        TraceLog(LOG_ERROR, "ERROR::tilemap::save_map_data()::Recieving package data returned with failure");
       }
     }
   }
-  
   str_to_map(map, out_package);
   
   return out_package->is_success;
