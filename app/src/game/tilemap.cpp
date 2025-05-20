@@ -113,11 +113,11 @@ void render_tilemap(tilemap* _tilemap, Rectangle camera_view) {
     Rectangle prop_rect = prop->dest; 
     if (!CheckCollisionRecs(camera_view, prop_rect)) { continue;}
 
-    atlas_texture* tex = get_atlas_texture_by_enum(prop->atlas_id); if (!tex) {
-      TraceLog(LOG_ERROR, "tilemap::render_tilemap()::Atlas texture:%d is not valid", prop->atlas_id);
+    Texture2D* tex = get_texture_by_enum(prop->tex_id); if (!tex) {
+      TraceLog(LOG_ERROR, "tilemap::render_tilemap()::Atlas texture:%d is not valid", prop->tex_id);
       continue;
     }
-    DrawTexturePro(*tex->atlas_handle, prop->source, prop->dest, Vector2 {}, 0.f, WHITE);
+    DrawTexturePro(*tex, prop->source, prop->dest, Vector2 {}, 0.f, WHITE);
   }
 }
 void render_tilesheet(tilesheet* sheet, f32 zoom) {
@@ -228,8 +228,8 @@ void map_to_str(tilemap* map, tilemap_stringtify_package* out_package) {
     if (!map->props[i].is_initialized) continue;
     
     tilemap_prop* prop = &map->props[i];
-    const char* symbol = TextFormat("%.4d,%.4d,%.4d,%.4d,%.4d,%.4d,%.4d,%.4d,%.4d,%.4d",
-      prop->id, prop->atlas_id, 
+    const char* symbol = TextFormat("%.4d,%.4d,%.4d,%.4d,%.4d,%.4d,%.4d,%.4d,%.4d,%.4d,%.4d,%.4d,%.4d",
+      prop->id, prop->tex_id, prop->rotation, prop->scale, prop->prop_type,
       (i32)prop->source.x, (i32)prop->source.y, (i32)prop->source.width, (i32)prop->source.height, 
       (i32)prop->dest.x, (i32)prop->dest.y, (i32)prop->dest.width, (i32)prop->dest.height
     );
@@ -271,20 +271,23 @@ void str_to_map(tilemap* map, tilemap_stringtify_package* out_package) {
       break;
     }
     tilemap_prop* prop = &map->props[map->prop_count];
-    string_parse_result str_par = parse_string((const char*)out_package->str_props[i], ',', 10, TextLength((const char*)out_package->str_props[i]));
+    string_parse_result str_par = parse_string((const char*)out_package->str_props[i], ',', MAX_PARSED_TEXT_ARR_LEN, TextLength((const char*)out_package->str_props[i]));
     if (str_par.count < 10) {
       TraceLog(LOG_ERROR, "str_to_map: Failed to parse prop data, expected 10 values, got %d", str_par.count);
       continue;
     }
     prop->id = TextToInteger((const char*)&str_par.buffer[0]);
-    prop->atlas_id = static_cast<atlas_texture_id>(TextToInteger((const char*)&str_par.buffer[1]));
-    prop->source =   {
-      TextToFloat((const char*)&str_par.buffer[2]), TextToFloat((const char*)&str_par.buffer[3]),
-      TextToFloat((const char*)&str_par.buffer[4]), TextToFloat((const char*)&str_par.buffer[5]),
+    prop->tex_id = static_cast<texture_id>(TextToInteger((const char*)&str_par.buffer[1]));
+    prop->rotation = TextToFloat((const char*)&str_par.buffer[2]);
+    prop->scale = TextToFloat((const char*)&str_par.buffer[3]);
+    prop->prop_type = static_cast<tilemap_prop_types>(TextToInteger((const char*)&str_par.buffer[4]));
+    prop->source = {
+      TextToFloat((const char*)&str_par.buffer[5]), TextToFloat((const char*)&str_par.buffer[6]),
+      TextToFloat((const char*)&str_par.buffer[7]), TextToFloat((const char*)&str_par.buffer[8]),
     };
     prop->dest =   {
-      TextToFloat((const char*)&str_par.buffer[6]), TextToFloat((const char*)&str_par.buffer[7]),
-      TextToFloat((const char*)&str_par.buffer[8]), TextToFloat((const char*)&str_par.buffer[9]),
+      TextToFloat((const char*)&str_par.buffer[9]), TextToFloat((const char*)&str_par.buffer[10]),
+      TextToFloat((const char*)&str_par.buffer[11]), TextToFloat((const char*)&str_par.buffer[12]),
     };
     prop->is_initialized = true;
     map->prop_count++;

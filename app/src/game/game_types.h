@@ -30,7 +30,7 @@
 
 #define UI_FONT_SPACING 1
 
-#define MAX_SLIDER_OPTION_SLOT 10
+#define MAX_SLIDER_OPTION_SLOT 12
 #define MAX_SLIDER_OPTION_TEXT_SLOT 18
 
 #define MAX_RAND 6
@@ -50,7 +50,7 @@
 #define MAX_TILEMAP_TILESLOT MAX_TILEMAP_TILESLOT_X * MAX_TILEMAP_TILESLOT_Y
 #define TILEMAP_TILE_START_SYMBOL 0x21 // Refers to ASCII exclamation mark. First visible character on the chart. To debug.
 #define TILESHEET_TILE_SYMBOL_STR_LEN 2
-#define TILESHEET_PROP_SYMBOL_STR_LEN 60
+#define TILESHEET_PROP_SYMBOL_STR_LEN 72
 #define MAX_TILESHEET_PROPS 1024
 #define MAX_TILEMAP_PROPS 255
 #define MAX_TILEMAP_FILENAME_LEN 20
@@ -191,6 +191,22 @@ typedef enum tilesheet_type {
   TILESHEET_TYPE_MAX
 } tilesheet_type;
 
+typedef enum tilemap_prop_types {
+  TILEMAP_PROP_TYPE_UNDEFINED,
+  TILEMAP_PROP_TYPE_TREE,
+  TILEMAP_PROP_TYPE_TOMBSTONE,
+  TILEMAP_PROP_TYPE_STONE,
+  TILEMAP_PROP_TYPE_SPIKE,
+  TILEMAP_PROP_TYPE_SKULL,
+  TILEMAP_PROP_TYPE_PILLAR,
+  TILEMAP_PROP_TYPE_LAMP,
+  TILEMAP_PROP_TYPE_FENCE,
+  TILEMAP_PROP_TYPE_DETAIL,
+  TILEMAP_PROP_TYPE_CANDLE,
+  TILEMAP_PROP_TYPE_BUILDING,
+  TILEMAP_PROP_TYPE_MAX,
+}tilemap_prop_types;
+
 typedef struct music_data {
   music_id id;
   Music handle;
@@ -247,10 +263,13 @@ typedef struct worldmap_stage {
 } worldmap_stage;
 
 typedef struct tilemap_prop {
-	atlas_texture_id atlas_id;
-  u16 id;
+  u32 id;
+	texture_id tex_id;
+  tilemap_prop_types prop_type;
   Rectangle source;
   Rectangle dest;
+  f32 rotation;
+  f32 scale;
   bool is_initialized;
 } tilemap_prop;
 

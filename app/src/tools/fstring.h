@@ -4,7 +4,7 @@
 
 #include "defines.h"
 
-#define MAX_PARSED_TEXT_ARR_LEN 10
+#define MAX_PARSED_TEXT_ARR_LEN 13
 #define MAX_PARSED_TEXT_TEXT_LEN 10
 
 typedef struct string_parse_result {

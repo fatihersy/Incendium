@@ -15,10 +15,7 @@ string_parse_result parse_string(const char* str, const char parser, u16 parse_c
 
   for (int i = 0; i < parse_count && i < MAX_PARSED_TEXT_ARR_LEN && string_itr_len < delimiter; ++i) {
     int j = 0;
-    while (str[string_itr_len] != parser && 
-           str[string_itr_len] != '\0' && 
-           string_itr_len < delimiter && 
-           j < MAX_PARSED_TEXT_TEXT_LEN - 1) {
+    while (str[string_itr_len] != parser && str[string_itr_len] != '\0' && string_itr_len < delimiter && j < MAX_PARSED_TEXT_TEXT_LEN - 1) {
       result.buffer[i][j++] = str[string_itr_len++];
     }
     result.buffer[i][j] = '\0';

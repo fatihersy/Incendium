@@ -39,7 +39,6 @@ bool resource_system_initialize(void) {
   load_texture_from_atlas(ATLAS_TEX_ID_PROGRESS_BAR_INSIDE_FULL,  Rectangle{1504, 112,    64,    9});
   load_texture_from_atlas(ATLAS_TEX_ID_CRIMSON_FANTASY_PANEL,     Rectangle{1504,  32,    48,   48});
   load_texture_from_atlas(ATLAS_TEX_ID_CRIMSON_FANTASY_PANEL_BG,  Rectangle{1552,  32,    48,   48});
-  load_texture_from_atlas(ATLAS_TEX_ID_MAP_PROPS_ATLAS,           Rectangle{   0,2016,  1248, 1632});
   load_texture_from_atlas(ATLAS_TEX_ID_ICON_ATLAS,                Rectangle{1568, 608,  1024, 1024});
   load_texture_from_atlas(ATLAS_TEX_ID_BG_BLACK,                  Rectangle{1680,  32,    48,   48});
   load_texture_from_atlas(ATLAS_TEX_ID_ZOMBIES_SPRITESHEET,       Rectangle{2224,   0,   256,  480});
@@ -93,7 +92,7 @@ bool resource_system_initialize(void) {
 atlas_texture* get_atlas_texture_by_enum(atlas_texture_id _id) {
   if (_id >= ATLAS_TEX_ID_MAX || _id <= ATLAS_TEX_ID_UNSPECIFIED){
     TraceLog(LOG_WARNING, "resource::get_atlas_texture_by_enum()::Texture type out of bound");
-    return 0;
+    return nullptr;
   }
 
   return &state->atlas_textures[_id];
@@ -101,7 +100,7 @@ atlas_texture* get_atlas_texture_by_enum(atlas_texture_id _id) {
 Texture2D* get_texture_by_enum(texture_id _id) {
   if (_id >= TEX_ID_MAX || _id <= TEX_ID_UNSPECIFIED){
     TraceLog(LOG_WARNING, "resource::get_texture_by_enum()::Texture type out of bound");
-    return 0;
+    return nullptr;
   }
 
   return &state->textures[_id];
@@ -109,7 +108,7 @@ Texture2D* get_texture_by_enum(texture_id _id) {
 Image* get_image_by_enum(image_type type) {
   if (type >= IMAGE_TYPE_MAX || type <= IMAGE_TYPE_UNSPECIFIED){
     TraceLog(LOG_WARNING, "resource::get_image_by_enum()::Image type out of bound");
-    return 0;
+    return nullptr;
   }
 
   return &state->images[type];
@@ -117,14 +116,14 @@ Image* get_image_by_enum(image_type type) {
 spritesheet* get_spritesheet_by_enum(spritesheet_id type) {
   if (type >= SHEET_ID_SPRITESHEET_TYPE_MAX || type <= SHEET_ID_SPRITESHEET_UNSPECIFIED){
     TraceLog(LOG_WARNING, "resource::get_spritesheet_by_enum()::Spritesheet type out of bound");
-    return 0;
+    return nullptr;
   }
   return &state->sprites[type];
 }
 tilesheet* get_tilesheet_by_enum(tilesheet_type type) {
   if (type >= TILESHEET_TYPE_MAX || type <= TILESHEET_TYPE_UNSPECIFIED){
     TraceLog(LOG_WARNING, "resource::get_tilesheet_by_enum()::Tilesheet type out of bound");
-    return 0;
+    return nullptr;
   }
 
   return &state->tilesheets[type];

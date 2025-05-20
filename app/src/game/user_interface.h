@@ -149,6 +149,7 @@ data_pack* get_slider_current_value(slider_id id);
 bool is_ui_fade_anim_complete(void);
 bool is_ui_fade_anim_about_to_complete(void);
 Vector2* ui_get_mouse_pos(void);
+bool ui_set_slider_current_index(slider_id id, u16 index);
 
 bool gui_slider_add_option(slider_id _id, const char* _display_text, data_pack content);
 Rectangle get_atlas_texture_source_rect(atlas_texture_id _id);
@@ -167,17 +168,18 @@ void gui_label_wrap(const char* text, font_type type, i32 font_size, Rectangle p
 void gui_label_grid(const char* text, font_type type, i32 font_size, Vector2 position, Color tint, bool _center_h, bool _center_v, f32 grid_scale);
 void gui_label_wrap_grid(const char* text, font_type type, i32 font_size, Rectangle position, Color tint, bool _should_center, f32 grid_scale);
 
-void gui_draw_pause_screen(bool in_game_play_state);
-void gui_draw_atlas_texture_id_pro(atlas_texture_id _id, Rectangle src, Rectangle dest, bool relative, bool should_center); 
+void gui_draw_atlas_texture_id_pro(atlas_texture_id _id, Rectangle src, Rectangle dest, bool relative, bool should_center);
 void gui_draw_atlas_texture_id(atlas_texture_id _id, Rectangle dest); 
 void gui_draw_atlas_texture_id_scale(atlas_texture_id _id, Vector2 position, f32 scale, Color tint, bool should_center); 
 void gui_draw_atlas_texture_id_pro_grid(atlas_texture_id _id, Rectangle src, Rectangle dest, bool relative, f32 grid_scale); 
 void gui_draw_atlas_texture_id_grid(atlas_texture_id _id, Rectangle dest, f32 grid_scale); 
-void gui_draw_spritesheet_id(spritesheet_id _id, Color _tint, Vector2 pos, Vector2 scale, u16 frame, bool _should_center); 
 void gui_draw_atlas_texture_id_center(atlas_texture_id _id, Vector2 pos, Vector2 dim, bool should_center);
+void gui_draw_texture_id_pro(texture_id _id, Rectangle src, Rectangle dest, bool should_center);
 void gui_draw_texture_id(texture_id _id, Rectangle dest); 
 void gui_draw_map_stage_pin(bool have_hovered, Vector2 screen_loc);
+void gui_draw_spritesheet_id(spritesheet_id _id, Color _tint, Vector2 pos, Vector2 scale, u16 frame, bool _should_center); 
 void gui_draw_settings_screen(void);
+void gui_draw_pause_screen(bool in_game_play_state);
 
 #define gui_label_format(FONT, FONT_SIZE, X,Y, COLOR, CENTER_H, CENTER_V, TEXT, ...) gui_label(TextFormat(TEXT, __VA_ARGS__), FONT, FONT_SIZE, Vector2{X,Y}, COLOR, CENTER_H, CENTER_V)
 #define gui_label_format_v(FONT, FONT_SIZE, POS, COLOR, CENTER_H, CENTER_V, TEXT, ...) gui_label(TextFormat(TEXT, __VA_ARGS__), FONT, FONT_SIZE, POS, COLOR, CENTER_H, CENTER_V)

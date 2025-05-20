@@ -82,6 +82,9 @@ static user_interface_system_state * state;
 #define SDR_ASSERT_SET_CURR_VAL(EXPR, ID, INDEX) {\
   if(EXPR) state->sliders[ID].current_value = INDEX;\
 }
+#define SDR_ASSERT_SET_CURR_VAL_TO_LAST_ADDED(EXPR, ID) {\
+  if(EXPR) state->sliders[ID].current_value = state->sliders[ID].max_value-1;\
+}
 
 bool user_interface_on_event(u16 code, event_context context);
 
@@ -230,6 +233,10 @@ void user_interface_system_initialize(void) {
       BTN_ID_EDITOR_ACTIVE_TILEMAP_EDIT_LAYER_DEC,BTN_ID_EDITOR_ACTIVE_TILEMAP_EDIT_LAYER_INC, false);
     register_button(BTN_ID_EDITOR_BTN_STAGE_MAP_CHANGE_LEFT, BTN_TYPE_SLIDER_LEFT_BUTTON);
     register_button(BTN_ID_EDITOR_BTN_STAGE_MAP_CHANGE_RIGHT, BTN_TYPE_SLIDER_LEFT_BUTTON);
+
+    register_slider(
+      SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER,  SDR_TYPE_OPTION, 
+      BTN_ID_EDITOR_PROP_TYPE_SLC_SLIDER_LEFT, BTN_ID_EDITOR_PROP_TYPE_SLC_SLIDER_RIGHT, false);
   }
   // EDITOR
 
@@ -264,45 +271,41 @@ void user_interface_system_initialize(void) {
   {
     const app_settings* p_app_settings = get_app_settings();
     Vector2 window_size = Vector2 {p_app_settings->window_size.at(0), p_app_settings->window_size.at(1)};
-    gui_slider_add_option(SDR_ID_SETTINGS_RES_SLIDER, "960x540", data_pack(
-      DATA_TYPE_U16, data128( (u16)960, (u16)540 ), 2)
-    );
-    SDR_ASSERT_SET_CURR_VAL(window_size.x == 960.f && window_size.y == 540.f, SDR_ID_SETTINGS_RES_SLIDER, state->sliders[SDR_ID_SETTINGS_RES_SLIDER].max_value-1)
-    
-    gui_slider_add_option(SDR_ID_SETTINGS_RES_SLIDER, "1280x720", data_pack(
-      DATA_TYPE_U16, data128( (u16)1280, (u16)720 ), 2)
-    );
-    SDR_ASSERT_SET_CURR_VAL(window_size.x == 1280.f && window_size.y == 720.f, SDR_ID_SETTINGS_RES_SLIDER, state->sliders[SDR_ID_SETTINGS_RES_SLIDER].max_value-1)
 
-    gui_slider_add_option(SDR_ID_SETTINGS_RES_SLIDER, "1920x1080", data_pack(
-      DATA_TYPE_U16, data128((u16)1920, (u16)1080), 2)
-    );
-    SDR_ASSERT_SET_CURR_VAL(window_size.x == 1920.f && window_size.y == 1080.f, SDR_ID_SETTINGS_RES_SLIDER, state->sliders[SDR_ID_SETTINGS_RES_SLIDER].max_value-1)
+    gui_slider_add_option(SDR_ID_SETTINGS_RES_SLIDER, "960x540", data_pack(DATA_TYPE_U16, data128( (u16)960, (u16)540 ), 2));
+    SDR_ASSERT_SET_CURR_VAL_TO_LAST_ADDED(window_size.x == 960.f && window_size.y == 540.f, SDR_ID_SETTINGS_RES_SLIDER)
+    gui_slider_add_option(SDR_ID_SETTINGS_RES_SLIDER, "1280x720", data_pack(DATA_TYPE_U16, data128( (u16)1280, (u16)720 ), 2));
+    SDR_ASSERT_SET_CURR_VAL_TO_LAST_ADDED(window_size.x == 1280.f && window_size.y == 720.f, SDR_ID_SETTINGS_RES_SLIDER)
+    gui_slider_add_option(SDR_ID_SETTINGS_RES_SLIDER, "1920x1080", data_pack(DATA_TYPE_U16, data128((u16)1920, (u16)1080), 2));
+    SDR_ASSERT_SET_CURR_VAL_TO_LAST_ADDED(window_size.x == 1920.f && window_size.y == 1080.f, SDR_ID_SETTINGS_RES_SLIDER)
 
 
-    gui_slider_add_option(SDR_ID_SETTINGS_LANGUAGE, "English", data_pack(
-      DATA_TYPE_I32, data128(static_cast<i32>(supported_language::LANGUAGE_ENGLISH), 1), 1)
-    );
-    SDR_ASSERT_SET_CURR_VAL(state->display_language == LANGUAGE_ENGLISH, SDR_ID_SETTINGS_LANGUAGE, state->sliders[SDR_ID_SETTINGS_LANGUAGE].max_value-1)
-
-    gui_slider_add_option(SDR_ID_SETTINGS_LANGUAGE, "Turkish", data_pack(
-      DATA_TYPE_I32, data128(static_cast<i32>(supported_language::LANGUAGE_TURKISH), 1), 1)
-    );
-    SDR_ASSERT_SET_CURR_VAL(state->display_language == LANGUAGE_TURKISH, SDR_ID_SETTINGS_LANGUAGE, state->sliders[SDR_ID_SETTINGS_LANGUAGE].max_value-1)
+    gui_slider_add_option(SDR_ID_SETTINGS_LANGUAGE, "English", data_pack(DATA_TYPE_I32, data128(static_cast<i32>(supported_language::LANGUAGE_ENGLISH), 1), 1));
+    SDR_ASSERT_SET_CURR_VAL_TO_LAST_ADDED(state->display_language == LANGUAGE_ENGLISH, SDR_ID_SETTINGS_LANGUAGE)
+    gui_slider_add_option(SDR_ID_SETTINGS_LANGUAGE, "Turkish", data_pack(DATA_TYPE_I32, data128(static_cast<i32>(supported_language::LANGUAGE_TURKISH), 1), 1));
+    SDR_ASSERT_SET_CURR_VAL_TO_LAST_ADDED(state->display_language == LANGUAGE_TURKISH, SDR_ID_SETTINGS_LANGUAGE)
     
 
     gui_slider_add_option(SDR_ID_SETTINGS_WIN_MODE_SLIDER, "WINDOWED", data_pack(DATA_TYPE_I32, data128((i32)0), 1));
-    SDR_ASSERT_SET_CURR_VAL(p_app_settings->window_state == 0, 
-      SDR_ID_SETTINGS_WIN_MODE_SLIDER, state->sliders[SDR_ID_SETTINGS_WIN_MODE_SLIDER].max_value-1
-    )
+    SDR_ASSERT_SET_CURR_VAL_TO_LAST_ADDED(p_app_settings->window_state == 0, SDR_ID_SETTINGS_WIN_MODE_SLIDER)
     gui_slider_add_option(SDR_ID_SETTINGS_WIN_MODE_SLIDER, "BORDERLESS", data_pack(DATA_TYPE_I32, data128((i32)FLAG_BORDERLESS_WINDOWED_MODE), 1));
-    SDR_ASSERT_SET_CURR_VAL(p_app_settings->window_state == FLAG_BORDERLESS_WINDOWED_MODE, 
-      SDR_ID_SETTINGS_WIN_MODE_SLIDER, state->sliders[SDR_ID_SETTINGS_WIN_MODE_SLIDER].max_value-1
-    )
+    SDR_ASSERT_SET_CURR_VAL_TO_LAST_ADDED(p_app_settings->window_state == FLAG_BORDERLESS_WINDOWED_MODE, SDR_ID_SETTINGS_WIN_MODE_SLIDER)
     gui_slider_add_option(SDR_ID_SETTINGS_WIN_MODE_SLIDER, "FULL SCREEN", data_pack(DATA_TYPE_I32, data128((i32)FLAG_FULLSCREEN_MODE), 1));
-    SDR_ASSERT_SET_CURR_VAL(p_app_settings->window_state == FLAG_FULLSCREEN_MODE, 
-      SDR_ID_SETTINGS_WIN_MODE_SLIDER, state->sliders[SDR_ID_SETTINGS_WIN_MODE_SLIDER].max_value-1
-    )
+    SDR_ASSERT_SET_CURR_VAL_TO_LAST_ADDED(p_app_settings->window_state == FLAG_FULLSCREEN_MODE, SDR_ID_SETTINGS_WIN_MODE_SLIDER)
+
+
+    gui_slider_add_option(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER, "TREE",     data_pack(DATA_TYPE_I32, data128((i32)TILEMAP_PROP_TYPE_TREE),      1));
+    gui_slider_add_option(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER, "TOMBSTONE",data_pack(DATA_TYPE_I32, data128((i32)TILEMAP_PROP_TYPE_TOMBSTONE), 1));
+    gui_slider_add_option(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER, "STONE",    data_pack(DATA_TYPE_I32, data128((i32)TILEMAP_PROP_TYPE_STONE),     1));
+    gui_slider_add_option(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER, "SPIKE",    data_pack(DATA_TYPE_I32, data128((i32)TILEMAP_PROP_TYPE_SPIKE),     1));
+    gui_slider_add_option(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER, "SKULL",    data_pack(DATA_TYPE_I32, data128((i32)TILEMAP_PROP_TYPE_SKULL),     1));
+    gui_slider_add_option(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER, "PILLAR",   data_pack(DATA_TYPE_I32, data128((i32)TILEMAP_PROP_TYPE_PILLAR),    1));
+    gui_slider_add_option(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER, "LAMP",     data_pack(DATA_TYPE_I32, data128((i32)TILEMAP_PROP_TYPE_LAMP),      1));
+    gui_slider_add_option(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER, "FENCE",    data_pack(DATA_TYPE_I32, data128((i32)TILEMAP_PROP_TYPE_FENCE),     1));
+    gui_slider_add_option(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER, "DETAIL",   data_pack(DATA_TYPE_I32, data128((i32)TILEMAP_PROP_TYPE_DETAIL),    1));
+    gui_slider_add_option(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER, "CANDLE",   data_pack(DATA_TYPE_I32, data128((i32)TILEMAP_PROP_TYPE_CANDLE),    1));
+    gui_slider_add_option(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER, "BUILDING", data_pack(DATA_TYPE_I32, data128((i32)TILEMAP_PROP_TYPE_BUILDING),  1));
+    SDR_ASSERT_SET_CURR_VAL(1, SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER, 1)
   }
   // SLIDER OPTIONS
   event_register(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, user_interface_on_event);
@@ -1287,12 +1290,12 @@ void draw_fade_effect() {
  */
 void gui_draw_atlas_texture_id_pro(atlas_texture_id _id, Rectangle src, Rectangle dest, bool relative, bool should_center) {
   if (_id >= ATLAS_TEX_ID_MAX || _id <= ATLAS_TEX_ID_UNSPECIFIED) {
-    TraceLog(LOG_WARNING, "user_interface::gui_draw_texture_id_pro()::ID was out of bound"); 
+    TraceLog(LOG_WARNING, "user_interface::gui_draw_atlas_texture_id_pro()::ID was out of bound"); 
     return; 
   }
   atlas_texture* tex = _get_atlas_texture_by_enum(_id);
   if (!tex) { 
-    TraceLog(LOG_WARNING, "user_interface::gui_draw_texture_id_pro()::Tex was null");
+    TraceLog(LOG_WARNING, "user_interface::gui_draw_atlas_texture_id_pro()::Tex was null");
     return; 
   }
   if (relative) {
@@ -1307,24 +1310,24 @@ void gui_draw_atlas_texture_id_pro(atlas_texture_id _id, Rectangle src, Rectangl
 }
 void gui_draw_atlas_texture_id(atlas_texture_id _id, Rectangle dest) {
   if (_id >= ATLAS_TEX_ID_MAX || _id <= ATLAS_TEX_ID_UNSPECIFIED) {
-    TraceLog(LOG_WARNING, "user_interface::gui_draw_texture_id_pro()::ID was out of bound"); 
+    TraceLog(LOG_WARNING, "user_interface::gui_draw_atlas_texture_id()::ID was out of bound"); 
     return; 
   }
   atlas_texture* tex = _get_atlas_texture_by_enum(_id);
   if (!tex) { 
-    TraceLog(LOG_WARNING, "user_interface::gui_draw_texture_id_pro()::Tex was null");
+    TraceLog(LOG_WARNING, "user_interface::gui_draw_atlas_texture_id()::Tex was null");
     return; 
   }
   DrawTexturePro(*tex->atlas_handle, tex->source, dest, Vector2 {}, 0, WHITE);
 }
 void gui_draw_atlas_texture_id_pro_grid(atlas_texture_id _id, Rectangle src, Rectangle dest, bool relative, f32 grid_scale) {
   if (_id >= ATLAS_TEX_ID_MAX || _id <= ATLAS_TEX_ID_UNSPECIFIED) {
-    TraceLog(LOG_WARNING, "user_interface::gui_draw_texture_id_pro()::ID was out of bound"); 
+    TraceLog(LOG_WARNING, "user_interface::gui_draw_atlas_texture_id_pro_grid()::ID was out of bound"); 
     return; 
   }
   atlas_texture* tex = _get_atlas_texture_by_enum(_id);
   if (!tex) { 
-    TraceLog(LOG_WARNING, "user_interface::gui_draw_texture_id_pro()::Tex was null");
+    TraceLog(LOG_WARNING, "user_interface::gui_draw_atlas_texture_id_pro_grid()::Tex was null");
     return; 
   }
   if (relative) {
@@ -1338,12 +1341,12 @@ void gui_draw_atlas_texture_id_pro_grid(atlas_texture_id _id, Rectangle src, Rec
 }
 void gui_draw_atlas_texture_id_grid(atlas_texture_id _id, Rectangle dest, f32 grid_scale) {
   if (_id >= ATLAS_TEX_ID_MAX || _id <= ATLAS_TEX_ID_UNSPECIFIED) {
-    TraceLog(LOG_WARNING, "user_interface::gui_draw_texture_id_pro()::ID was out of bound"); 
+    TraceLog(LOG_WARNING, "user_interface::gui_draw_atlas_texture_id_grid()::ID was out of bound"); 
     return; 
   }
   atlas_texture* tex = _get_atlas_texture_by_enum(_id);
   if (!tex) { 
-    TraceLog(LOG_WARNING, "user_interface::gui_draw_texture_id_pro()::Tex was null");
+    TraceLog(LOG_WARNING, "user_interface::gui_draw_atlas_texture_id_grid()::Tex was null");
     return; 
   }
   Vector2 pos = position_element(VECTOR2(dest.x, dest.y), BASE_RENDER_SCALE(.5f), VECTOR2(dest.width, dest.height), grid_scale);
@@ -1353,19 +1356,19 @@ void gui_draw_atlas_texture_id_grid(atlas_texture_id _id, Rectangle dest, f32 gr
 }
 void gui_draw_spritesheet_id(spritesheet_id _id, Color _tint, Vector2 pos, Vector2 scale, u16 frame, bool _should_center) {
   if (_id >= SHEET_ID_SPRITESHEET_TYPE_MAX || _id <= SHEET_ID_SPRITESHEET_UNSPECIFIED) {
-    TraceLog(LOG_WARNING, "user_interface::gui_draw_texture_id_pro()::ID was out of bound"); 
+    TraceLog(LOG_WARNING, "user_interface::gui_draw_spritesheet_id()::ID was out of bound"); 
     return; 
   }
   draw_sprite_on_site_by_id(_id, _tint, pos, scale, frame, _should_center);
 }
 void gui_draw_atlas_texture_id_center(atlas_texture_id _id, Vector2 pos, Vector2 dim, bool should_center) {
   if (_id >= ATLAS_TEX_ID_MAX || _id <= ATLAS_TEX_ID_UNSPECIFIED) {
-    TraceLog(LOG_WARNING, "user_interface::gui_draw_texture_id_center()::ID was out of bound"); 
+    TraceLog(LOG_WARNING, "user_interface::gui_draw_atlas_texture_id_center()::ID was out of bound"); 
     return; 
   }
   atlas_texture* tex = _get_atlas_texture_by_enum(_id);
   if (!tex) { 
-    TraceLog(LOG_WARNING, "user_interface::gui_draw_texture_id_center()::Tex was null");
+    TraceLog(LOG_WARNING, "user_interface::gui_draw_atlas_texture_id_center()::Tex was null");
     return; 
   }
   if (should_center) {
@@ -1377,6 +1380,22 @@ void gui_draw_atlas_texture_id_center(atlas_texture_id _id, Vector2 pos, Vector2
   tex->source, 
   Rectangle {pos.x, pos.y, dim.x, dim.y}, 
   Vector2 {}, 0, WHITE);
+}
+void gui_draw_texture_id_pro(texture_id _id, Rectangle src, Rectangle dest, bool should_center) {
+  if (_id >= TEX_ID_MAX || _id <= TEX_ID_UNSPECIFIED) {
+    TraceLog(LOG_WARNING, "user_interface::gui_draw_texture_id_pro()::ID was out of bound"); 
+    return; 
+  }
+  Texture2D* tex = _get_texture_by_enum(_id);
+  if (!tex) { 
+    TraceLog(LOG_WARNING, "user_interface::gui_draw_texture_id_pro()::Tex was null");
+    return; 
+  }
+  if (should_center) {
+    dest.x -= dest.width / 2.f;
+    dest.y -= dest.height / 2.f;
+  }
+  DrawTexturePro(*tex, src, dest, Vector2 {}, 0, WHITE);
 }
 void gui_draw_texture_id(texture_id _id, Rectangle dest) {
   if (_id >= TEX_ID_MAX || _id <= TEX_ID_UNSPECIFIED) {
@@ -1439,10 +1458,23 @@ Vector2* ui_get_mouse_pos(void) {
 panel get_default_panel(void) {
   return panel();
 }
+bool ui_set_slider_current_index(slider_id id, u16 index) {
+  if (!state) {
+    TraceLog(LOG_ERROR, "user_interface::ui_set_slider_current_index()::State is not valid");
+    return false;
+  }
+
+  state->sliders[id].current_value = index;
+  return true;
+}
 
 data_pack* get_slider_current_value(slider_id id) {
+  if (!state) {
+    TraceLog(LOG_WARNING, "user_interface::get_slider_current_value()::State is not valid"); 
+    return 0;
+  }
   if (id >= SDR_ID_MAX || id <= SDR_ID_UNDEFINED) {
-    TraceLog(LOG_WARNING, "user_interface::gui_draw_texture_id_pro()::ID was out of bound"); 
+    TraceLog(LOG_WARNING, "user_interface::get_slider_current_value()::ID was out of bound"); 
     return 0;
   }
 
