@@ -414,7 +414,7 @@ void render_interface_in_game(void) {
             pnl->dest = Rectangle {scrloc.x + WORLDMAP_LOC_PIN_SIZE, scrloc.y + WORLDMAP_LOC_PIN_SIZE_DIV2, BASE_RENDER_SCALE(.25f).x, BASE_RENDER_SCALE(.25f).y};
             DrawCircleGradient(scrloc.x + WORLDMAP_LOC_PIN_SIZE_DIV2, scrloc.y + WORLDMAP_LOC_PIN_SIZE_DIV2, 100, Color{236,240,241,50}, Color{});
             gui_panel_scissored((*pnl), false, {
-              gui_label(state->worldmap_locations[i].displayname.c_str(), FONT_TYPE_MOOD, 10, Vector2 {
+              gui_label(state->worldmap_locations[i].displayname.c_str(), FONT_TYPE_MEDIUM, 10, Vector2 {
                 pnl->dest.x + pnl->dest.width *.5f, pnl->dest.y + pnl->dest.height*.5f
               }, WHITE, true, true);
             });
@@ -464,7 +464,7 @@ void render_interface_in_game(void) {
         gui_draw_pause_screen(state->has_game_started);
       }
       else if (!state->has_game_started) {
-        gui_label("Press Space to Start!", FONT_TYPE_MOOD_OUTLINE, 10, Vector2 {BASE_RENDER_SCALE(.5f).x, BASE_RENDER_SCALE(.5f).y}, WHITE, true, true);
+        gui_label("Press Space to Start!", FONT_TYPE_BOLD, 10, Vector2 {BASE_RENDER_SCALE(.5f).x, BASE_RENDER_SCALE(.5f).y}, WHITE, true, true);
       }
       else if (get_b_player_have_upgrade_points()) {
         if (state->is_upgrade_choices_ready) {
@@ -489,12 +489,12 @@ void render_interface_in_game(void) {
       else {
         gui_progress_bar(PRG_BAR_ID_PLAYER_EXPERIANCE, Vector2{.x = BASE_RENDER_SCALE(.5f).x, .y = SCREEN_OFFSET.x}, true);
         gui_progress_bar(PRG_BAR_ID_PLAYER_HEALTH, SCREEN_OFFSET, false);
-        gui_label_format(FONT_TYPE_MOOD, 10, BASE_RENDER_SCALE(.75f).x, SCREEN_OFFSET.y, WHITE, false, false, "Remaining: %d", get_remaining_enemies());
-        gui_label_format(FONT_TYPE_MOOD, 10, BASE_RENDER_SCALE(.75f).x, SCREEN_OFFSET.y * 5.f, WHITE, false, false, "Souls: %d", get_currency_souls());
+        gui_label_format(FONT_TYPE_MEDIUM, 10, BASE_RENDER_SCALE(.75f).x, SCREEN_OFFSET.y, WHITE, false, false, "Remaining: %d", get_remaining_enemies());
+        gui_label_format(FONT_TYPE_MEDIUM, 10, BASE_RENDER_SCALE(.75f).x, SCREEN_OFFSET.y * 5.f, WHITE, false, false, "Souls: %d", get_currency_souls());
 
-        gui_label_format(FONT_TYPE_MOOD, 10, 0, BASE_RENDER_SCALE(.35f).y, WHITE, false, false, "Health: %d", _get_dynamic_player_state()->health_max);
-        gui_label_format(FONT_TYPE_MOOD, 10, 0, BASE_RENDER_SCALE(.40f).y, WHITE, false, false, "Current Health: %d", _get_dynamic_player_state()->health_current);
-        gui_label_format(FONT_TYPE_MOOD, 10, 0, BASE_RENDER_SCALE(.45f).y, WHITE, false, false, "Damage: %d", _get_dynamic_player_state()->damage);
+        gui_label_format(FONT_TYPE_MEDIUM, 10, 0, BASE_RENDER_SCALE(.35f).y, WHITE, false, false, "Health: %d", _get_dynamic_player_state()->health_max);
+        gui_label_format(FONT_TYPE_MEDIUM, 10, 0, BASE_RENDER_SCALE(.40f).y, WHITE, false, false, "Current Health: %d", _get_dynamic_player_state()->health_current);
+        gui_label_format(FONT_TYPE_MEDIUM, 10, 0, BASE_RENDER_SCALE(.45f).y, WHITE, false, false, "Damage: %d", _get_dynamic_player_state()->damage);
       }
       break;
     }
@@ -507,7 +507,7 @@ void render_interface_in_game(void) {
       else if (!state->has_game_started) { }
       else {
         gui_label_format(
-          FONT_TYPE_MOOD, 15, ui_get_mouse_pos()->x, ui_get_mouse_pos()->y, 
+          FONT_TYPE_MEDIUM, 15, ui_get_mouse_pos()->x, ui_get_mouse_pos()->y, 
           WHITE, false, false, "world_pos{%.1f, %.1f}", gm_get_mouse_pos_world()->x, gm_get_mouse_pos_world()->y
         );
 
@@ -523,32 +523,32 @@ void render_interface_in_game(void) {
           Vector2 debug_info_position_buffer = VECTOR2(pnl->dest.x, pnl->dest.y);
           gui_panel_scissored((*pnl), false, {
             gui_label_format(
-              FONT_TYPE_MOOD, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
+              FONT_TYPE_MEDIUM, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
               WHITE, false, false, "Id: %d", spawn->character_id
             );
             debug_info_position_buffer.y += line_height;
             gui_label_format(
-              FONT_TYPE_MOOD, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
+              FONT_TYPE_MEDIUM, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
               WHITE, false, false, "Collision: {%.1f, %.1f, %.1f, %.1f}", spawn->collision.x, spawn->collision.y, spawn->collision.width, spawn->collision.height
             );
             debug_info_position_buffer.y += line_height;
             gui_label_format(
-              FONT_TYPE_MOOD, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
+              FONT_TYPE_MEDIUM, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
               WHITE, false, false, "Position: {%.1f, %.1f}", spawn->position.x, spawn->position.y
             );
             debug_info_position_buffer.y += line_height;
             gui_label_format(
-              FONT_TYPE_MOOD, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
+              FONT_TYPE_MEDIUM, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
               WHITE, false, false, "Health: %d", spawn->health
             );
             debug_info_position_buffer.y += line_height;
             gui_label_format(
-              FONT_TYPE_MOOD, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
+              FONT_TYPE_MEDIUM, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
               WHITE, false, false, "Scale: %.1f", spawn->scale
             );
             debug_info_position_buffer.y += line_height;
             gui_label_format(
-              FONT_TYPE_MOOD, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
+              FONT_TYPE_MEDIUM, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
               WHITE, false, false, "Speed: %.1f", spawn->speed
             );
           });
@@ -567,28 +567,28 @@ void render_interface_in_game(void) {
           projectile* prj = __builtin_addressof(abl->projectiles.at(state->hovered_projectile));
           gui_panel_scissored((*pnl), false, {
             gui_label_format(
-              FONT_TYPE_MINI_MOOD, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
+              FONT_TYPE_LIGHT, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
               WHITE, false, false, "Collision: {%.1f, %.1f, %.1f, %.1f}", prj->collision.x, prj->collision.y, prj->collision.width, prj->collision.height
             );
             debug_info_position_buffer.y += line_height;
             gui_label_format(
-              FONT_TYPE_MINI_MOOD, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
+              FONT_TYPE_LIGHT, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
               WHITE, false, false, "Rotation: %.1f", prj->default_animation.rotation
             );
             debug_info_position_buffer.y += line_height;
             gui_label_format(
-              FONT_TYPE_MINI_MOOD, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
+              FONT_TYPE_LIGHT, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
               WHITE, false, false, "Default Anim Should Center: %d", prj->default_animation.should_center
             );
           });
         }
         
-        gui_label_format(FONT_TYPE_MOOD, 10, BASE_RENDER_SCALE(.75f).x, SCREEN_OFFSET.y, WHITE, false, false, "Remaining: %d", get_remaining_enemies());
-        gui_label_format(FONT_TYPE_MOOD, 10, BASE_RENDER_SCALE(.75f).x, SCREEN_OFFSET.y * 5.f, WHITE, false, false, "Souls: %d", get_currency_souls());
+        gui_label_format(FONT_TYPE_MEDIUM, 10, BASE_RENDER_SCALE(.75f).x, SCREEN_OFFSET.y, WHITE, false, false, "Remaining: %d", get_remaining_enemies());
+        gui_label_format(FONT_TYPE_MEDIUM, 10, BASE_RENDER_SCALE(.75f).x, SCREEN_OFFSET.y * 5.f, WHITE, false, false, "Souls: %d", get_currency_souls());
 
-        gui_label_format(FONT_TYPE_MOOD, 10, 0, BASE_RENDER_SCALE(.35f).y, WHITE, false, false, "Health: %d", _get_dynamic_player_state()->health_max);
-        gui_label_format(FONT_TYPE_MOOD, 10, 0, BASE_RENDER_SCALE(.40f).y, WHITE, false, false, "Current Health: %d", _get_dynamic_player_state()->health_current);
-        gui_label_format(FONT_TYPE_MOOD, 10, 0, BASE_RENDER_SCALE(.45f).y, WHITE, false, false, "Damage: %d", _get_dynamic_player_state()->damage);
+        gui_label_format(FONT_TYPE_MEDIUM, 10, 0, BASE_RENDER_SCALE(.35f).y, WHITE, false, false, "Health: %d", _get_dynamic_player_state()->health_max);
+        gui_label_format(FONT_TYPE_MEDIUM, 10, 0, BASE_RENDER_SCALE(.40f).y, WHITE, false, false, "Current Health: %d", _get_dynamic_player_state()->health_current);
+        gui_label_format(FONT_TYPE_MEDIUM, 10, 0, BASE_RENDER_SCALE(.45f).y, WHITE, false, false, "Damage: %d", _get_dynamic_player_state()->damage);
       }
 
       break;
@@ -614,10 +614,10 @@ void render_interface_in_game(void) {
 
 #define DRAW_ABL_UPG_STAT_PNL(ABL, UPG, TEXT, STAT){ \
 if (UPG->level == 1) {\
-  gui_label_format(FONT_TYPE_MINI_MOOD, upgr_font_size, (f32)start_upgradables_x_exis, (f32)upgradables_height_buffer, WHITE, false, false, TEXT, UPG->STAT);\
+  gui_label_format(FONT_TYPE_LIGHT, upgr_font_size, (f32)start_upgradables_x_exis, (f32)upgradables_height_buffer, WHITE, false, false, TEXT, UPG->STAT);\
   upgradables_height_buffer += btw_space_gap;\
 } else {\
-  gui_label_format(FONT_TYPE_MINI_MOOD, upgr_font_size, (f32)start_upgradables_x_exis, (f32)upgradables_height_buffer, WHITE, false, false, TEXT, ABL->STAT, UPG->STAT);\
+  gui_label_format(FONT_TYPE_LIGHT, upgr_font_size, (f32)start_upgradables_x_exis, (f32)upgradables_height_buffer, WHITE, false, false, TEXT, ABL->STAT, UPG->STAT);\
   upgradables_height_buffer += btw_space_gap;\
 }}
 
@@ -648,12 +648,12 @@ void draw_in_game_upgrade_panel(u16 which_panel, Rectangle panel_dest) {
   const u16 upgr_font_size = 6; 
 
   gui_draw_atlas_texture_id_pro(ATLAS_TEX_ID_ICON_ATLAS, upg->icon_src, icon_rect, true, false);
-  gui_label(upg->display_name.c_str(), FONT_TYPE_MOOD, title_font_size, ability_name_pos, WHITE, true, true);
+  gui_label(upg->display_name.c_str(), FONT_TYPE_MEDIUM, title_font_size, ability_name_pos, WHITE, true, true);
 
   if (upg->level == 1) {
-    gui_label("NEW!", FONT_TYPE_MOOD_OUTLINE, level_ind_font_size, ability_level_ind, WHITE, true, true);
+    gui_label("NEW!", FONT_TYPE_BOLD, level_ind_font_size, ability_level_ind, WHITE, true, true);
   } else if(upg->level>1 && upg->level <= MAX_ABILITY_LEVEL) {
-    gui_label_format_v(FONT_TYPE_MOOD_OUTLINE, level_ind_font_size, ability_level_ind, WHITE, true, true, "%d -> %d", abl->level, upg->level);
+    gui_label_format_v(FONT_TYPE_BOLD, level_ind_font_size, ability_level_ind, WHITE, true, true, "%d -> %d", abl->level, upg->level);
   } else {
     TraceLog(LOG_ERROR, "scene_in_game::draw_in_game_upgrade_panel()::Ability level is out of bound");
     return;
@@ -694,7 +694,7 @@ void draw_passive_selection_panel(character_stat* stat, Rectangle panel_dest) {
   const u16 title_font_size = 10; 
   
   gui_draw_atlas_texture_id_pro(ATLAS_TEX_ID_ICON_ATLAS, stat->passive_icon_src, icon_rect, true, false);
-  gui_label(stat->passive_display_name.c_str(), FONT_TYPE_MOOD, title_font_size, passive_name_pos, WHITE, true, true);
+  gui_label(stat->passive_display_name.c_str(), FONT_TYPE_MEDIUM, title_font_size, passive_name_pos, WHITE, true, true);
   
   const u16 desc_font_size = 6;
   const f32 desc_box_height = panel_dest.y + (panel_dest.height * .5f) - passive_name_pos.y - elm_space_gap;
@@ -705,7 +705,7 @@ void draw_passive_selection_panel(character_stat* stat, Rectangle panel_dest) {
     .width  = panel_dest.width - padding.x,
     .height = desc_box_height - padding.y,
   };
-  gui_label_wrap(stat->passive_desc.c_str(), FONT_TYPE_MINI_MOOD, desc_font_size, desc_box, WHITE, false);
+  gui_label_wrap(stat->passive_desc.c_str(), FONT_TYPE_LIGHT, desc_font_size, desc_box, WHITE, false);
 
 }
 void draw_end_game_panel() {
@@ -713,16 +713,16 @@ void draw_end_game_panel() {
   gui_panel(state->default_panel, Rectangle{ BASE_RENDER_SCALE(.5f).x, BASE_RENDER_SCALE(.5f).y, BASE_RENDER_SCALE(.75f).x, BASE_RENDER_SCALE(.75f).y}, true);
 
   if (state->end_game_result.is_win) {
-    gui_label("Stage Cleared", FONT_TYPE_MOOD, 20, BASE_RENDER_SCALE(.5f), WHITE, true, true);
+    gui_label("Stage Cleared", FONT_TYPE_MEDIUM, 20, BASE_RENDER_SCALE(.5f), WHITE, true, true);
   }
   else {
-    gui_label("Dead", FONT_TYPE_MOOD, 20, BASE_RENDER_SCALE(.5f), RED, true, true);
+    gui_label("Dead", FONT_TYPE_MEDIUM, 20, BASE_RENDER_SCALE(.5f), RED, true, true);
   }
   u32 min  = (i32)state->end_game_result.play_time/60;
   u32 secs = (i32)state->end_game_result.play_time%60;
-  gui_label_format_v(FONT_TYPE_MOOD, 15, VECTOR2(BASE_RENDER_SCALE(.5f).x, BASE_RENDER_SCALE(.55f).y), WHITE, true, true, "%d:%d", min, secs);
+  gui_label_format_v(FONT_TYPE_MEDIUM, 15, VECTOR2(BASE_RENDER_SCALE(.5f).x, BASE_RENDER_SCALE(.55f).y), WHITE, true, true, "%d:%d", min, secs);
 
-  gui_label_format_v(FONT_TYPE_MOOD, 15, VECTOR2(BASE_RENDER_SCALE(.5f).x, BASE_RENDER_SCALE(.75f).y), WHITE, true, true, 
+  gui_label_format_v(FONT_TYPE_MEDIUM, 15, VECTOR2(BASE_RENDER_SCALE(.5f).x, BASE_RENDER_SCALE(.75f).y), WHITE, true, true, 
     "Collected Souls:%d", state->end_game_result.collected_souls
   );
 }

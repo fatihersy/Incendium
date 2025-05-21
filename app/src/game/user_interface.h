@@ -63,7 +63,6 @@ typedef struct panel {
     Vector2 dest_frame_dim;
     f32 scale;
     Vector2 text_offset_on_click;
-    bool play_reflection;
     bool should_center;
   } button_type;
   
@@ -72,7 +71,6 @@ typedef struct panel {
     button_type btn_type;
     button_state state;
     Rectangle dest;
-    spritesheet reflection_anim = spritesheet {};
     bool on_screen;
     bool is_registered;
   } button;

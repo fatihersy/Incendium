@@ -36,9 +36,16 @@ bool app_initialize(void) {
   event_system_initialize();
   time_system_initialize();
   state = (app_system_state*)allocate_memory_linear(sizeof(app_system_state), true);
+  if (!state) {
+    TraceLog(LOG_FATAL, "app::app_initialize()::App state allocation has failed");
+    return false;
+  }
   
   // Platform    
-  settings_initialize();
+  if(!settings_initialize()) {
+    TraceLog(LOG_ERROR, "app::app_initialize()::Settings state allocation has failed");
+    return false; // TODO: Set default settings instead
+  }
   set_settings_from_ini_file(CONFIG_FILE_LOCATION);
   state->settings = get_app_settings();
   
@@ -92,15 +99,31 @@ bool app_initialize(void) {
 
   if (!loc_parser_system_initialize()) {
     TraceLog(LOG_WARNING, "app::app_initialize()::Localization system init failed");
+    return false; // TODO: Set default language instead
   }
   _loc_parser_parse_localization_data_from_file(state->settings->language.c_str());
 
-  resource_system_initialize();
-  sound_system_initialize();
-  create_camera(BASE_RENDER_SCALE(.5f));
+  if(!resource_system_initialize()) {
+    TraceLog(LOG_WARNING, "app::app_initialize()::Resource system init failed");
+    return false;
+  }
+  if(!sound_system_initialize()) {
+    TraceLog(LOG_WARNING, "app::app_initialize()::Sound system init failed");
+    return false;
+  }
+  if(!create_camera(BASE_RENDER_SCALE(.5f))) {
+    TraceLog(LOG_WARNING, "app::app_initialize()::Creating camera failed");
+    return false;
+  }
 
-  world_system_initialize(get_in_game_camera());
-  scene_manager_initialize();
+  if(!world_system_initialize(get_in_game_camera())) {
+    TraceLog(LOG_WARNING, "app::app_initialize()::World initialize failed");
+    return false;
+  }
+  if(!scene_manager_initialize()) {
+    TraceLog(LOG_WARNING, "app::app_initialize()::Scene manager initialize failed");
+    return false;
+  }
 
   event_register(EVENT_CODE_APPLICATION_QUIT, application_on_event);
   event_register(EVENT_CODE_TOGGLE_BORDERLESS, application_on_event);

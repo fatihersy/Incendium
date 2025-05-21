@@ -21,12 +21,16 @@ void begin_scene(scene_id scene_id);
 void end_scene(scene_id scene_id);
 void scene_manager_reinit(void);
 
-void scene_manager_initialize(void) {
+bool scene_manager_initialize(void) {
   if (scene_manager_state) {
     scene_manager_reinit();
-    return;
+    return true;
   }
   scene_manager_state = (scene_manager_system_state *)allocate_memory_linear(sizeof(scene_manager_system_state), true);
+  if (!scene_manager_state) {
+    TraceLog(LOG_ERROR, "scene_manager::scene_manager_initialize()::State allocation failed");
+    return false;
+  }
 
   event_register(EVENT_CODE_SCENE_IN_GAME, scene_manager_on_event);
   event_register(EVENT_CODE_SCENE_EDITOR, scene_manager_on_event);
@@ -36,6 +40,8 @@ void scene_manager_initialize(void) {
   event_register(EVENT_CODE_SCENE_MANAGER_SET_ZOOM, scene_manager_on_event);
 
   scene_manager_reinit();
+
+  return true;
 }
 void scene_manager_reinit(void) {
   event_fire(EVENT_CODE_SCENE_MAIN_MENU, event_context {});

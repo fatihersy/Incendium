@@ -602,7 +602,7 @@ void render_scene_editor(void) {
 void render_interface_editor(void) {
   
   if(state->b_show_tilesheet_tile_selection_screen && !state->b_show_prop_selection_screen) 
-  { 
+  {
     gui_panel_scissored(state->tile_selection_panel, false, {
       render_map_palette(state->tile_selection_panel.zoom);
       gui_slider(SDR_ID_EDITOR_MAP_LAYER_SLC_SLIDER, SCREEN_OFFSET, VECTOR2(4,3), 3.f);
@@ -614,7 +614,7 @@ void render_interface_editor(void) {
         }
       }
 
-      gui_label_format_v(FONT_TYPE_MOOD, 10, SCREEN_POS(14.f,10.f), WHITE, true, true, "%d", state->selected_stage);
+      gui_label_format_v(FONT_TYPE_MEDIUM, 10, SCREEN_POS(14.f,10.f), WHITE, true, true, "%d", state->selected_stage);
 
       if(gui_slider_button(BTN_ID_EDITOR_BTN_STAGE_MAP_CHANGE_RIGHT, SCREEN_POS(17.f,9.f))) {
         if (state->selected_stage < MAX_WORLDMAP_LOCATIONS-1) {
@@ -660,23 +660,21 @@ void render_interface_editor(void) {
       break;
     }
     case SLC_TYPE_SLC_PROP: {
-      Vector2 prop_pos = GetWorldToScreen2D(Vector2{state->selected_prop.dest.x, state->selected_prop.dest.y}, 
-        state->in_camera_metrics->handle
-      );
+      Vector2 prop_pos = GetWorldToScreen2D(Vector2{state->selected_prop.dest.x, state->selected_prop.dest.y}, state->in_camera_metrics->handle);
       f32 relative_width = state->selected_prop.dest.width * state->in_camera_metrics->handle.zoom;
       f32 relative_height = state->selected_prop.dest.height * state->in_camera_metrics->handle.zoom;
-      DrawRectangleLines(
-        prop_pos.x, prop_pos.y, 
-        relative_width, 
-        relative_height, 
-        WHITE);
+      
+      prop_pos.x -= relative_width * 0.5f; // To center to its origin
+      prop_pos.y -= relative_height * 0.5f;
+
+      DrawRectangleLines(prop_pos.x, prop_pos.y, relative_width, relative_height, WHITE);
       prop_pos.x += relative_width / 2.f - PROP_DRAG_HANDLE_DIM_DIV2;
       prop_pos.y += relative_height / 2.f - PROP_DRAG_HANDLE_DIM_DIV2;
       DrawRectangle(prop_pos.x, prop_pos.y, PROP_DRAG_HANDLE_DIM, PROP_DRAG_HANDLE_DIM, WHITE);
       break;
     }
     default: break;
-  } 
+  }
   
   if (state->b_show_pause_menu) {
     gui_draw_pause_screen(false);
@@ -703,12 +701,16 @@ void add_prop(texture_id source_tex, tilemap_prop_types type, Rectangle source, 
   
   tilemap_prop prop = {};
 
+  prop.id = state->next_prop_id++;
   prop.tex_id = source_tex;
+  prop.prop_type = type;
+  
   prop.source = source;
   prop.dest = Rectangle {0, 0, source.width * scale, source.height * scale};
-  prop.id = state->next_prop_id++;
+  prop.scale = 1.f;
+  prop.rotation = 0.f;
+
   prop.is_initialized = true;
-  prop.prop_type = type;
 
   switch (type) {
     case TILEMAP_PROP_TYPE_TREE:      { state->tilemap_props_trees.push_back(prop); break; }
@@ -774,7 +776,6 @@ void editor_update_mouse_bindings(void) {
     if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON) && state->selection_type == SLC_TYPE_UNSELECTED && !pnl->is_dragging_scroll) {
       i32 h = (pnl->scroll * pnl->buffer.f32[0] * (-1)) + state->mouse_pos_screen.y - pnl->buffer.f32[1];
       for (size_t i=0; i< state->tilemap_props_selected->size() && h > 0; ++i) {
-        tilemap_prop  __prop__ [[maybe_unused]] =  state->tilemap_props_selected->at(i);
         if(h - state->tilemap_props_selected->at(i).source.height < 0) {
           state->selected_prop = state->tilemap_props_selected->at(i);
           state->selection_type = SLC_TYPE_DROP_PROP;
@@ -815,15 +816,15 @@ void editor_update_mouse_bindings(void) {
       case SLC_TYPE_SLC_PROP: {
         tilemap_prop* prop = get_map_prop_by_id(state->selected_prop.id);
         Rectangle drag_handle = Rectangle {
-          prop->dest.x + prop->dest.width/2.f - PROP_DRAG_HANDLE_DIM_DIV2, prop->dest.y + prop->dest.height/2.f - PROP_DRAG_HANDLE_DIM_DIV2, 
+          prop->dest.x - PROP_DRAG_HANDLE_DIM_DIV2, prop->dest.y - PROP_DRAG_HANDLE_DIM_DIV2, 
           PROP_DRAG_HANDLE_DIM, PROP_DRAG_HANDLE_DIM
         };
         if(!state->b_dragging_prop && CheckCollisionPointRec(state->mouse_pos_world, drag_handle)) {
           state->b_dragging_prop = true;
         }
         if (state->b_dragging_prop) {
-          prop->dest.x = state->mouse_pos_world.x - prop->dest.width/2.f;
-          prop->dest.y = state->mouse_pos_world.y - prop->dest.height/2.f;
+          prop->dest.x = state->mouse_pos_world.x;
+          prop->dest.y = state->mouse_pos_world.y;
           state->selected_prop.dest = prop->dest;
         }
         break;

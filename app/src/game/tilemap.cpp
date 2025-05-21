@@ -111,13 +111,15 @@ void render_tilemap(tilemap* _tilemap, Rectangle camera_view) {
       continue;
     }
     Rectangle prop_rect = prop->dest; 
-    if (!CheckCollisionRecs(camera_view, prop_rect)) { continue;}
+    if (!CheckCollisionRecs(camera_view, prop_rect)) { continue; }
 
     Texture2D* tex = get_texture_by_enum(prop->tex_id); if (!tex) {
       TraceLog(LOG_ERROR, "tilemap::render_tilemap()::Atlas texture:%d is not valid", prop->tex_id);
       continue;
     }
-    DrawTexturePro(*tex, prop->source, prop->dest, Vector2 {}, 0.f, WHITE);
+    Vector2 origin = VECTOR2(prop->source.width / 2.f, prop->source.height / 2.f);
+
+    DrawTexturePro(*tex, prop->source, prop->dest, origin, prop->rotation, WHITE);
   }
 }
 void render_tilesheet(tilesheet* sheet, f32 zoom) {

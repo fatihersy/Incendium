@@ -21,13 +21,18 @@ bool write_ini_file(char* _ini);
 bool create_ini_file(const char* title, u32 width, u32  height, u32 master_volume, i32 window_mode, const char * language);
 const char* get_default_ini_file(void);
 
-void settings_initialize(void) {
+bool settings_initialize(void) {
   if (state) {
-    TraceLog(LOG_ERROR,
-             "settings::settings_initialize()::Called twice. Aborted");
-    return;
+    TraceLog(LOG_WARNING, "settings::settings_initialize()::Called twice");
+    return false;
   }
   state = (app_settings_system_state *)allocate_memory_linear(sizeof(app_settings_system_state), true);
+  if (!state) {
+    TraceLog(LOG_ERROR, "settings::settings_initialize()::State allocation failed");
+    return false;
+  }
+
+  return true;
 }
 
 /**

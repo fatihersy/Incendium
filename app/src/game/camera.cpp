@@ -15,13 +15,17 @@ typedef struct main_camera_system_state {
 
 static main_camera_system_state *state;
 
-void create_camera(Vector2 position) {
+bool create_camera(Vector2 position) {
   if (state) {
-    TraceLog(LOG_ERROR, "camera::create_camera()::Called twice");
-    return;
+    TraceLog(LOG_WARNING, "camera::create_camera()::Called twice");
+    return false;
   }
 
   state = (main_camera_system_state *)allocate_memory_linear(sizeof(main_camera_system_state), true);
+  if (!state) {
+    TraceLog(LOG_ERROR, "camera::create_camera()::State allocation failed");
+    return false;
+  }
 
   state->in_camera_metrics.handle.offset = BASE_RENDER_SCALE(.5f);
   state->in_camera_metrics.handle.target = Vector2 {position.x, position.y};
@@ -30,6 +34,8 @@ void create_camera(Vector2 position) {
   state->camera_min_speed = 30;
   state->camera_min_effect_lenght = 10;
   state->camera_fraction_speed = 5.f;
+
+  return true;
 }
 
 camera_metrics* get_in_game_camera(void) { return &state->in_camera_metrics; }

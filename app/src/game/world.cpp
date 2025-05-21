@@ -37,6 +37,10 @@ bool world_system_initialize(camera_metrics* _in_camera_metrics) {
     return false;
   }
   state = (world_system_state*)allocate_memory_linear(sizeof(world_system_state), true);
+  if (!state) {
+    TraceLog(LOG_ERROR, "world::world_system_initialize()::State allocation failed");
+    return false;
+  }
   state->in_camera_metrics = _in_camera_metrics;
   create_tilesheet(TILESHEET_TYPE_MAP, 16*2, 1.1, &state->palette);
   if(!state->palette.is_initialized) {
@@ -73,7 +77,7 @@ bool world_system_initialize(camera_metrics* _in_camera_metrics) {
       copy_memory(state->map[i].filename[j], TextFormat("%s_layer%d.txt", state->worldmap_locations[i].filename.c_str(), j), sizeof(i8) * MAX_TILEMAP_FILENAME_LEN);
     }
     copy_memory(state->map[i].propfile,    TextFormat("%s_prop.txt", state->worldmap_locations[i].filename.c_str()), sizeof(i8) * MAX_TILEMAP_FILENAME_LEN);
-    create_tilemap(TILESHEET_TYPE_MAP, Vector2 {}, 100, 16*3, &state->map[i]);
+    create_tilemap(TILESHEET_TYPE_MAP, Vector2 {}, 100, 60, &state->map[i]);
     if(!state->map[i].is_initialized) {
       TraceLog(LOG_WARNING, "WARNING::scene_in_game_edit::initialize_scene_in_game_edit()::tilemap initialization failed");
     }
@@ -121,7 +125,10 @@ void set_map_tile(i32 layer, tile src, tile dst) {
 }
 tilemap_prop* get_map_prop_by_pos(Vector2 pos) {
   for (int i=0; i<CURR_MAP.prop_count; ++i) {
-    if(CheckCollisionPointRec(pos, CURR_MAP.props[i].dest)) {
+    Rectangle prop_dest = CURR_MAP.props[i].dest;
+    prop_dest.x -= prop_dest.width  * .5f;
+    prop_dest.y -= prop_dest.height * .5f;
+    if(CheckCollisionPointRec(pos, prop_dest)) { // Props are always centered
       return &CURR_MAP.props[i];
       break;
     }
@@ -152,6 +159,7 @@ void load_current_map(void) {
 void update_map(void) {
 
 }
+
 void drag_tilesheet(Vector2 vec) {
   state->palette.position.x += vec.x;
   state->palette.position.y += vec.y;

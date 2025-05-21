@@ -30,12 +30,16 @@ bool sound_system_on_event(u16 code, event_context context);
 /**
  * @brief Depends on pak_parser, init after that
  */
-void sound_system_initialize(void) {
+bool sound_system_initialize(void) {
   if (state) {
     TraceLog(LOG_WARNING, "sound::sound_system_initialize()::Init called twice");
-    return;
+    return false;
   }
   state = (sound_system_state*)allocate_memory_linear(sizeof(sound_system_state), true);
+  if (!state) {
+    TraceLog(LOG_WARNING, "sound::sound_system_initialize()::State allocation failed");
+    return false;
+  }
 
   InitAudioDevice();
   
@@ -55,6 +59,8 @@ void sound_system_initialize(void) {
   event_register(EVENT_CODE_PLAY_MUSIC, sound_system_on_event);
   event_register(EVENT_CODE_RESET_SOUND, sound_system_on_event);
   event_register(EVENT_CODE_RESET_MUSIC, sound_system_on_event);
+
+  return true;
 }
 
 void update_sound_system(void) {

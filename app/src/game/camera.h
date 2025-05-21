@@ -4,7 +4,7 @@
 
 #include <game/game_types.h>
 
-void create_camera(Vector2 position);
+bool create_camera(Vector2 position);
 
 camera_metrics* get_in_game_camera(void);
 

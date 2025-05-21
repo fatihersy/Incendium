@@ -3,7 +3,7 @@
 
 #include "defines.h"
 
-void sound_system_initialize(void);
+bool sound_system_initialize(void);
 
 void update_sound_system(void);
 
