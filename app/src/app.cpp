@@ -101,7 +101,7 @@ bool app_initialize(void) {
     TraceLog(LOG_WARNING, "app::app_initialize()::Localization system init failed");
     return false; // TODO: Set default language instead
   }
-  _loc_parser_parse_localization_data_from_file(state->settings->language.c_str());
+  _loc_parser_parse_localization_data();
 
   if(!resource_system_initialize()) {
     TraceLog(LOG_WARNING, "app::app_initialize()::Resource system init failed");
