@@ -156,7 +156,7 @@ void begin_scene_main_menu(void) {
     BASE_RENDER_SCALE(.295f).x, BASE_RENDER_SCALE(.850f).y
   };
   gm_save_game();
-  event_fire(EVENT_CODE_PLAY_MAIN_MENU_THEME, event_context{});
+  //event_fire(EVENT_CODE_PLAY_MAIN_MENU_THEME, event_context{}); TODO: Uncomment later
 }
 void end_scene_main_menu(void) {
   event_fire(EVENT_CODE_RESET_MUSIC, event_context((i32)MUSIC_ID_MAIN_MENU_THEME));

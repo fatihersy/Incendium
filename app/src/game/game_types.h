@@ -593,6 +593,16 @@ typedef struct camera_metrics {
   Rectangle frustum;
 } camera_metrics;
 
+typedef struct localization_package {
+  std::string language_name;
+  u32 language_index;
+  i32 * codepoints;
+  Font light_font;
+  Font bold_font;
+  Font medium_font;
+  Font italic_font;
+} localization_package;
+
 static const u32 level_curve[MAX_PLAYER_LEVEL + 1] = {
     0, //	0
     300,         800,        1500,       2500,       4300,

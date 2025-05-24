@@ -408,6 +408,7 @@ bool loc_parser_set_active_language_by_name(std::string language_name) {
     std::string _str = state->lang_data.at(iter).language_name;
     if(_str == language_name) {
       state->active_loc = &state->lang_data.at(iter);
+      return true;
     }
   }
 

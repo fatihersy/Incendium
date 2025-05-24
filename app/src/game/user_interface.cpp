@@ -17,8 +17,8 @@
 
 typedef struct user_interface_system_state {
   const app_settings * in_app_settings;
-  i32 * in_codepoints;
-
+  localization_package * display_language;
+  
   button      buttons[BTN_ID_MAX];
   button_type button_types[BTN_TYPE_MAX];
   slider      sliders[SDR_ID_MAX];
@@ -30,12 +30,7 @@ typedef struct user_interface_system_state {
   spritesheet ss_to_draw_bg;
   
   Vector2 mouse_pos;
-  u32 display_language_index;
-
-  Font light_font;
-  Font bold_font;
-  Font medium_font;
-  Font italic_font;
+  std::vector<localization_package> localization_info = {};
 
   u16 fade_animation_duration;
   f32 fade_animation_timer;
@@ -54,14 +49,14 @@ static user_interface_system_state * state;
 #define MAX_UI_WORDWRAP_WORD_LENGTH 20
 #define MAX_UI_WORDWRAP_SENTENCE_LENGTH 300
 
-#define UI_LIGHT_FONT state->light_font
-#define UI_LIGHT_FONT_SIZE state->light_font.baseSize * .1f
-#define UI_MEDIUM_FONT state->medium_font
-#define UI_MEDIUM_FONT_SIZE state->medium_font.baseSize * .1f
-#define UI_BOLD_FONT state->bold_font
-#define UI_BOLD_FONT_SIZE state->bold_font.baseSize * .1f
-#define UI_ITALIC_FONT state->italic_font
-#define UI_ITALIC_FONT_SIZE state->italic_font.baseSize * .1f
+#define UI_LIGHT_FONT state->display_language->light_font
+#define UI_LIGHT_FONT_SIZE state->display_language->light_font.baseSize * .1f
+#define UI_MEDIUM_FONT state->display_language->medium_font
+#define UI_MEDIUM_FONT_SIZE state->display_language->medium_font.baseSize * .1f
+#define UI_BOLD_FONT state->display_language->bold_font
+#define UI_BOLD_FONT_SIZE state->display_language->bold_font.baseSize * .1f
+#define UI_ITALIC_FONT state->display_language->italic_font
+#define UI_ITALIC_FONT_SIZE state->display_language->italic_font.baseSize * .1f
 
 #define MENU_BUTTON_FONT UI_MEDIUM_FONT
 #define MENU_BUTTON_FONT_SIZE UI_MEDIUM_FONT_SIZE * .5f
@@ -121,7 +116,9 @@ void register_slider_type(slider_type_id _sdr_type_id, spritesheet_id _ss_sdr_bo
 void DrawTextBoxed(Font font, const char *text, Rectangle rec, float fontSize, float spacing, bool wordWrap, Color tint);
 const char* wrap_text(const char* text, Font font, i32 font_size, Rectangle bounds, bool center_x);
 void set_resolution_slider_native_res(void);
-Font load_font(const char* file_name, i32 font_size, const char* _codepoints);
+Font load_font(const char* file_name, i32 font_size, i32* _codepoints, i32 _codepoint_count);
+localization_package* load_localization(std::string language_name, u32 loc_index, std::string _codepoints, i32 font_size);
+localization_package* ui_get_localization_by_name(std::string language_name);
 
 Vector2 make_vector(f32 x, f32 y);
 
@@ -137,20 +134,30 @@ void user_interface_system_initialize(void) {
   }
   state->in_app_settings = get_app_settings();
 
-  if(!loc_parser_set_active_language_by_name(state->in_app_settings->language)) {
-    TraceLog(LOG_ERROR, "user_interface::user_interface_system_initialize()::Setting language failed");
+  localized_languages langs = loc_parser_get_loc_langs();
+  for (size_t iter = 0; iter < langs.lang.size(); ++iter) {
+    loc_data& data = langs.lang.at(iter);
+    localization_package* _loc_data = load_localization(data.language_name, data.index, data.codepoints, 34);
+    if (_loc_data == nullptr) {
+      TraceLog(LOG_ERROR, "user_interface::user_interface_system_initialize()::Loading localization:%s is failed", _loc_data->language_name.c_str());
+      continue;
+    }
+  }
+  localization_package* settings_loc_lang = ui_get_localization_by_name(state->in_app_settings->language);
+  if (settings_loc_lang == nullptr) {
+    TraceLog(LOG_ERROR, "user_interface::user_interface_system_initialize()::Settings language:%s cannot found", settings_loc_lang->language_name.c_str());
     if(!loc_parser_set_active_language_by_index(0)) {
       TraceLog(LOG_FATAL, "user_interface::user_interface_system_initialize()::No language found");
       return;
     }
   }
-  loc_data* active_lang = loc_parser_get_active_language();
-  state->display_language_index = active_lang->index;
-
-  state->light_font  = load_font("miosevka_light.ttf",        32, active_lang->codepoints.c_str());
-  state->bold_font   = load_font("miosevka_bold.ttf",         32, active_lang->codepoints.c_str());
-  state->medium_font = load_font("miosevka_medium.ttf",       32, active_lang->codepoints.c_str());
-  state->italic_font = load_font("miosevka_medium_italic.ttf",32, active_lang->codepoints.c_str());
+  loc_parser_set_active_language_by_index(settings_loc_lang->language_index);
+  loc_data * _loc_data = loc_parser_get_active_language();
+  state->display_language = ui_get_localization_by_name(_loc_data->language_name);
+  if (state->display_language == nullptr) {
+    TraceLog(LOG_ERROR, "user_interface::user_interface_system_initialize()::Language:%s cannot found on the UI", state->display_language->language_name.c_str());
+    return;
+  }
 
   state->default_panel = panel(
     BTN_STATE_UNDEFINED,
@@ -304,7 +311,7 @@ void user_interface_system_initialize(void) {
 
     for (size_t iter = 0; iter < langs.lang.size(); iter++) {
       gui_slider_add_option(SDR_ID_SETTINGS_LANGUAGE, langs.lang.at(iter).language_name.c_str(), data_pack(DATA_TYPE_U32, data128(static_cast<u32>(iter), 1u), 1));
-      SDR_ASSERT_SET_CURR_VAL_TO_LAST_ADDED(state->display_language_index == iter, SDR_ID_SETTINGS_LANGUAGE)
+      SDR_ASSERT_SET_CURR_VAL_TO_LAST_ADDED(state->display_language->language_index == iter, SDR_ID_SETTINGS_LANGUAGE)
     }
 
     gui_slider_add_option(SDR_ID_SETTINGS_WIN_MODE_SLIDER, "WINDOWED", data_pack(DATA_TYPE_I32, data128((i32)0), 1));
@@ -849,12 +856,11 @@ void gui_draw_settings_screen(void) { // TODO: Return to settings later
     }
     
     u32 language_index = SDR_CURR_VAL(SDR_ID_SETTINGS_LANGUAGE).content.data.u32[0];
-    if (state->display_language_index != language_index) {
+    if (state->display_language->language_index != language_index) {
       if(loc_parser_set_active_language_by_index(language_index)) {
         loc_data* loc = loc_parser_get_active_language();
-        UnloadCodepoints(state->in_codepoints);
-        int codepoint_count = 1;
-        state->in_codepoints = LoadCodepoints(loc->codepoints.c_str(), &codepoint_count);
+        state->display_language = ui_get_localization_by_name(loc->language_name);
+        set_language(loc->language_name.c_str());
       }
       else {
         TraceLog(LOG_ERROR, "user_interface::gui_draw_settings_screen()::Language changing failed");
@@ -1517,20 +1523,16 @@ void set_resolution_slider_native_res(void) {
     }
   }
 }
-Font load_font(const char* file_name, i32 font_size, const char* _codepoints) {
+Font load_font(const char* file_name, i32 font_size, i32* _codepoints, i32 _codepoint_count) {
+  if (!state) {
+    TraceLog(LOG_ERROR, "user_interface::load_font()::State is not valid");
+    return {};
+  }
+
   Font font = {};
-  i32 code_point_count = 1;
-  i32* codepoints = LoadCodepoints(_codepoints, &code_point_count);
-  state->in_codepoints = codepoints;
-  #if USE_PAK_FORMAT
-  file_data font_file_data = get_file_data(file_name);
-  Font font = LoadFontFromMemory(
-    (const char*)font_file_data.file_extension, font_file_data.data, font_file_data.size, font_size, code_points, code_point_count
-  );
-  #else
-    const char* path = TextFormat("%s%s", RESOURCE_PATH, file_name);
-    font = LoadFontEx(path, font_size, codepoints, code_point_count);
-  #endif
+
+  const char* path = TextFormat("%s%s", RESOURCE_PATH, file_name);
+  font = LoadFontEx(path, font_size, _codepoints, _codepoint_count);
 
   if (font.baseSize == 0) { // If custom font load failed
     TraceLog(LOG_WARNING, "user_interface::load_font()::Font cannot loading, returning default");
@@ -1538,6 +1540,46 @@ Font load_font(const char* file_name, i32 font_size, const char* _codepoints) {
   }
   return font;
 }
+
+localization_package* load_localization(std::string language_name, u32 loc_index, std::string _codepoints, i32 font_size) {
+  if (!state) {
+    TraceLog(LOG_ERROR, "user_interface::load_localization()::State is not valid");
+    return nullptr;
+  }
+  localization_package loc_pack = {};
+
+  i32 codepoint_count = 1;
+  i32* codepoints = LoadCodepoints(_codepoints.c_str(), &codepoint_count);
+  
+  loc_pack.language_index = loc_index;
+  loc_pack.language_name = language_name;
+  loc_pack.codepoints = codepoints;
+  loc_pack.light_font  = load_font("miosevka_light.ttf",        font_size, codepoints, codepoint_count);
+  loc_pack.bold_font   = load_font("miosevka_bold.ttf",         font_size, codepoints, codepoint_count);
+  loc_pack.medium_font = load_font("miosevka_medium.ttf",       font_size, codepoints, codepoint_count);
+  loc_pack.italic_font = load_font("miosevka_medium_italic.ttf",font_size, codepoints, codepoint_count);
+
+  state->localization_info.push_back(loc_pack);
+
+  return &state->localization_info.at(
+    state->localization_info.size()-1
+  );
+}
+localization_package* ui_get_localization_by_name(std::string language_name) {
+  if (!state) {
+    TraceLog(LOG_ERROR, "user_interface::ui_get_localization_by_name()::State is not valid");
+    return nullptr;
+  }
+
+  for (size_t iter = 0; iter < state->localization_info.size(); iter++) {
+    if (state->localization_info.at(iter).language_name == language_name) {
+      return &state->localization_info.at(iter);
+    }
+  }
+
+  return nullptr;
+}
+
 void user_interface_system_destroy(void) {}
 
 bool user_interface_on_event(u16 code, event_context context) {
