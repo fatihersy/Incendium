@@ -1,6 +1,7 @@
 #include "scene_editor.h"
 #include <defines.h>
 #include <settings.h>
+#include <loc_types.h>
 
 #include "core/event.h"
 #include "core/fmemory.h"
@@ -566,7 +567,7 @@ void initialize_scene_editor(camera_metrics* _camera_metrics) {
   // Buildings
 
   for (int i=0; i<MAX_TILEMAP_LAYERS; ++i) {
-    gui_slider_add_option(SDR_ID_EDITOR_MAP_LAYER_SLC_SLIDER, TextFormat("%d",(i+1)), data_pack(DATA_TYPE_U16, data128( (u16) i ), 1));
+    gui_slider_add_option(SDR_ID_EDITOR_MAP_LAYER_SLC_SLIDER, static_cast<i32>(LOC_TEXT_MAINMENU_NUMBERS_1)+i, data_pack(DATA_TYPE_U16, data128( (u16) i ), 1));
   }
   
   begin_scene_editor();

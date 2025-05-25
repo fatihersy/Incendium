@@ -110,7 +110,7 @@ void render_interface_main_menu(void) {
       if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_SETTINGS), BTN_ID_MAINMENU_BUTTON_SETTINGS, VECTOR2(0, 2), grid_scale, true)) {
         state->type = MAIN_MENU_SCENE_SETTINGS;
       }
-      if (gui_menu_button("Editor", BTN_ID_MAINMENU_BUTTON_EDITOR, VECTOR2(0, 3), grid_scale, true)) {
+      if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_EDITOR), BTN_ID_MAINMENU_BUTTON_EDITOR, VECTOR2(0, 3), grid_scale, true)) {
         state->in_scene_changing_process = true;
         state->next_scene = SCENE_TYPE_EDITOR;
         event_fire(EVENT_CODE_UI_START_FADEOUT_EFFECT, event_context((u16)MAIN_MENU_FADE_DURATION));
@@ -120,12 +120,12 @@ void render_interface_main_menu(void) {
       }
     } else if (state->type == MAIN_MENU_SCENE_SETTINGS) {
       gui_draw_settings_screen();
-      if (gui_menu_button("Cancel", BTN_ID_MAINMENU_SETTINGS_CANCEL, VECTOR2(2, 25), 3.f, true)) {
+      if (gui_menu_button(lc_txt(LOC_TEXT_SETTINGS_BUTTON_CANCEL), BTN_ID_MAINMENU_SETTINGS_CANCEL, VECTOR2(2, 25), 3.f, true)) {
         state->type = MAIN_MENU_SCENE_DEFAULT;
       }
     } else if (state->type == MAIN_MENU_SCENE_UPGRADE) {
       draw_main_menu_upgrade_panel();
-      if (gui_menu_button("Back", BTN_ID_MAINMENU_UPGRADE_BACK, VECTOR2(2, 25), 3.f, true)) {
+      if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_UPGRADE_BUTTON_BACK), BTN_ID_MAINMENU_UPGRADE_BACK, VECTOR2(2, 25), 3.f, true)) {
         state->type = MAIN_MENU_SCENE_DEFAULT;
       }
     }

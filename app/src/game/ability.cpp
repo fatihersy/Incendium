@@ -34,12 +34,12 @@ bool ability_system_initialize(camera_metrics* _camera_metrics, app_settings* se
   state->settings = settings;
   state->in_camera_metrics = _camera_metrics;
   std::array<ability_upgradables, ABILITY_UPG_MAX> fireball_upgr = {ABILITY_UPG_DAMAGE, ABILITY_UPG_SPEED, ABILITY_UPG_AMOUNT, ABILITY_UPG_UNDEFINED, ABILITY_UPG_UNDEFINED};
-  register_ability(ability("Fireball", 
-    fireball_upgr, 
-    ABILITY_TYPE_FIREBALL,SHEET_ID_FLAME_ENERGY_ANIMATION, SHEET_ID_SPRITESHEET_UNSPECIFIED, MOVE_TYPE_SATELLITE, 
-    3.f, 1, 1, 0.f, 
-    Vector2{30.f, 30.f}, Rectangle{704, 768, 32, 32}, 
-    15, 
+  register_ability(ability("Fireball",
+    fireball_upgr,
+    ABILITY_TYPE_FIREBALL,SHEET_ID_FLAME_ENERGY_ANIMATION, SHEET_ID_SPRITESHEET_UNSPECIFIED, MOVE_TYPE_SATELLITE,
+    3.f, 1, 1, 0.f,
+    Vector2{30.f, 30.f}, Rectangle{704, 768, 32, 32},
+    15,
     true,
   ));
   std::array<ability_upgradables, ABILITY_UPG_MAX> bullet_upgr = {ABILITY_UPG_DAMAGE, ABILITY_UPG_HITBOX, ABILITY_UPG_AMOUNT, ABILITY_UPG_UNDEFINED, ABILITY_UPG_UNDEFINED};
@@ -52,12 +52,12 @@ bool ability_system_initialize(camera_metrics* _camera_metrics, app_settings* se
     true,
   ));
   std::array<ability_upgradables, ABILITY_UPG_MAX> comet_upgr = {ABILITY_UPG_DAMAGE, ABILITY_UPG_HITBOX, ABILITY_UPG_AMOUNT, ABILITY_UPG_UNDEFINED, ABILITY_UPG_UNDEFINED};
-  register_ability(ability("Comet", 
-    comet_upgr, 
-    ABILITY_TYPE_COMET,SHEET_ID_FIREBALL_ANIMATION,SHEET_ID_FIREBALL_EXPLOTION_ANIMATION,MOVE_TYPE_COMET, 
-    3.f, 2, 4, 0.f, 
-    Vector2{30.f, 30.f}, Rectangle{576, 128, 32, 32}, 
-    15, 
+  register_ability(ability("Comet",
+    comet_upgr,
+    ABILITY_TYPE_COMET,SHEET_ID_FIREBALL_ANIMATION,SHEET_ID_FIREBALL_EXPLOTION_ANIMATION,MOVE_TYPE_COMET,
+    3.f, 2, 4, 0.f,
+    Vector2{30.f, 30.f}, Rectangle{576, 128, 32, 32},
+    15,
     false,true
   ));
   return true;

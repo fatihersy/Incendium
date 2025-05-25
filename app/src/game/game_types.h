@@ -603,6 +603,32 @@ typedef struct localization_package {
   Font italic_font;
 } localization_package;
 
+typedef struct text_spec {
+  std::string text;
+  Vector2 text_pos;
+  Font* font;
+  i32 font_size;
+  Color color;
+  u32 language_index;
+
+  text_spec() {
+    this->text = "This is default";
+    this->text_pos = VECTOR2(960,540);
+    this->font = nullptr;
+    this->font_size = 32;
+    this->color = Color{0,0,0,255};
+    this->language_index = 0;
+  }
+  text_spec(std::string _display_text, Vector2 _text_pos, Font* _font, i32 _font_size, Color _color, u32 _language_index) : text_spec() {
+    this->text = _display_text;
+    this->text_pos = _text_pos;
+    this->font = _font;
+    this->font_size = _font_size;
+    this->color = _color;
+    this->language_index = _language_index;
+  }
+}text_spec;
+
 static const u32 level_curve[MAX_PLAYER_LEVEL + 1] = {
     0, //	0
     300,         800,        1500,       2500,       4300,

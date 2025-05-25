@@ -76,7 +76,7 @@ typedef struct panel {
   } button;
   
   typedef struct slider_option {
-    std::string display_text;
+    u32 display_text_symbol;
     data_pack content;
   } slider_option;
   
@@ -149,7 +149,7 @@ bool is_ui_fade_anim_about_to_complete(void);
 Vector2* ui_get_mouse_pos(void);
 bool ui_set_slider_current_index(slider_id id, u16 index);
 
-bool gui_slider_add_option(slider_id _id, const char* _display_text, data_pack content);
+bool gui_slider_add_option(slider_id _id, u32 _display_text_symbol, data_pack content);
 Rectangle get_atlas_texture_source_rect(atlas_texture_id _id);
 
 bool gui_menu_button(const char* text, button_id _id, Vector2 grid, f32 grid_scale, bool play_on_click_sound);

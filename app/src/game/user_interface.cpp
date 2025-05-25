@@ -19,12 +19,12 @@ typedef struct user_interface_system_state {
   const app_settings * in_app_settings;
   localization_package * display_language;
   
-  button      buttons[BTN_ID_MAX];
-  button_type button_types[BTN_TYPE_MAX];
-  slider      sliders[SDR_ID_MAX];
-  slider_type slider_types[SDR_TYPE_MAX];
-  progress_bar prg_bars[PRG_BAR_ID_MAX];
-  progress_bar_type prg_bar_types[PRG_BAR_TYPE_ID_MAX];
+  std::array<button, BTN_ID_MAX> buttons;
+  std::array<button_type, BTN_TYPE_MAX> button_types;
+  std::array<slider, SDR_ID_MAX> sliders;
+  std::array<slider_type, SDR_TYPE_MAX> slider_types;
+  std::array<progress_bar, PRG_BAR_ID_MAX> prg_bars;
+  std::array<progress_bar_type, PRG_BAR_TYPE_ID_MAX> prg_bar_types;
   
   panel default_panel;
   spritesheet ss_to_draw_bg;
@@ -85,12 +85,12 @@ static user_interface_system_state * state;
   DrawTextEx(FONT, TEXT, text_position, FONT_SIZE, UI_FONT_SPACING, COLOR);                                       \
 }
 
-#define SDR_CURR_VAL(ID) state->sliders[ID].options[state->sliders[ID].current_value]
+#define SDR_CURR_VAL(ID) state->sliders.at(ID).options[state->sliders.at(ID).current_value]
 #define SDR_ASSERT_SET_CURR_VAL(EXPR, ID, INDEX) {\
-  if(EXPR) state->sliders[ID].current_value = INDEX;\
+  if(EXPR) state->sliders.at(ID).current_value = INDEX;\
 }
 #define SDR_ASSERT_SET_CURR_VAL_TO_LAST_ADDED(EXPR, ID) {\
-  if(EXPR) state->sliders[ID].current_value = state->sliders[ID].max_value-1;\
+  if(EXPR) state->sliders.at(ID).current_value = state->sliders.at(ID).max_value-1;\
 }
 
 bool user_interface_on_event(u16 code, event_context context);
@@ -119,6 +119,7 @@ void set_resolution_slider_native_res(void);
 Font load_font(const char* file_name, i32 font_size, i32* _codepoints, i32 _codepoint_count);
 localization_package* load_localization(std::string language_name, u32 loc_index, std::string _codepoints, i32 font_size);
 localization_package* ui_get_localization_by_name(std::string language_name);
+localization_package* ui_get_localization_by_index(u32 _language_index);
 
 Vector2 make_vector(f32 x, f32 y);
 
@@ -300,39 +301,38 @@ void user_interface_system_initialize(void) {
   {
     Vector2 window_size = Vector2 {state->in_app_settings->window_size.at(0), state->in_app_settings->window_size.at(1)};
 
-    gui_slider_add_option(SDR_ID_SETTINGS_RES_SLIDER, "960x540", data_pack(DATA_TYPE_U16, data128( (u16)960, (u16)540 ), 2));
+    gui_slider_add_option(SDR_ID_SETTINGS_RES_SLIDER, LOC_TEXT_SETTINGS_SDR_RESOLUTION_960x540, data_pack(DATA_TYPE_U16, data128( (u16)960, (u16)540 ), 2));
     SDR_ASSERT_SET_CURR_VAL_TO_LAST_ADDED(window_size.x == 960.f && window_size.y == 540.f, SDR_ID_SETTINGS_RES_SLIDER)
-    gui_slider_add_option(SDR_ID_SETTINGS_RES_SLIDER, "1280x720", data_pack(DATA_TYPE_U16, data128( (u16)1280, (u16)720 ), 2));
+    gui_slider_add_option(SDR_ID_SETTINGS_RES_SLIDER, LOC_TEXT_SETTINGS_SDR_RESOLUTION_1280x720, data_pack(DATA_TYPE_U16, data128( (u16)1280, (u16)720 ), 2));
     SDR_ASSERT_SET_CURR_VAL_TO_LAST_ADDED(window_size.x == 1280.f && window_size.y == 720.f, SDR_ID_SETTINGS_RES_SLIDER)
-    gui_slider_add_option(SDR_ID_SETTINGS_RES_SLIDER, "1920x1080", data_pack(DATA_TYPE_U16, data128((u16)1920, (u16)1080), 2));
+    gui_slider_add_option(SDR_ID_SETTINGS_RES_SLIDER, LOC_TEXT_SETTINGS_SDR_RESOLUTION_1920x1080, data_pack(DATA_TYPE_U16, data128((u16)1920, (u16)1080), 2));
     SDR_ASSERT_SET_CURR_VAL_TO_LAST_ADDED(window_size.x == 1920.f && window_size.y == 1080.f, SDR_ID_SETTINGS_RES_SLIDER)
 
     localized_languages langs = loc_parser_get_loc_langs();
 
     for (size_t iter = 0; iter < langs.lang.size(); iter++) {
-      gui_slider_add_option(SDR_ID_SETTINGS_LANGUAGE, langs.lang.at(iter).language_name.c_str(), data_pack(DATA_TYPE_U32, data128(static_cast<u32>(iter), 1u), 1));
+      gui_slider_add_option(SDR_ID_SETTINGS_LANGUAGE, LOC_TEXT_SETTINGS_BUTTON_ENGLISH+iter, data_pack(DATA_TYPE_U32, data128(static_cast<u32>(iter), 1u), 1));
       SDR_ASSERT_SET_CURR_VAL_TO_LAST_ADDED(state->display_language->language_index == iter, SDR_ID_SETTINGS_LANGUAGE)
     }
 
-    gui_slider_add_option(SDR_ID_SETTINGS_WIN_MODE_SLIDER, "WINDOWED", data_pack(DATA_TYPE_I32, data128((i32)0), 1));
+    gui_slider_add_option(SDR_ID_SETTINGS_WIN_MODE_SLIDER, LOC_TEXT_SETTINGS_SDR_WINDOW_MODE_WINDOWED, data_pack(DATA_TYPE_I32, data128((i32)0), 1));
     SDR_ASSERT_SET_CURR_VAL_TO_LAST_ADDED(state->in_app_settings->window_state == 0, SDR_ID_SETTINGS_WIN_MODE_SLIDER)
-    gui_slider_add_option(SDR_ID_SETTINGS_WIN_MODE_SLIDER, "BORDERLESS", data_pack(DATA_TYPE_I32, data128((i32)FLAG_BORDERLESS_WINDOWED_MODE), 1));
+    gui_slider_add_option(SDR_ID_SETTINGS_WIN_MODE_SLIDER, LOC_TEXT_SETTINGS_SDR_WINDOW_MODE_BORDERLESS, data_pack(DATA_TYPE_I32, data128((i32)FLAG_BORDERLESS_WINDOWED_MODE), 1));
     SDR_ASSERT_SET_CURR_VAL_TO_LAST_ADDED(state->in_app_settings->window_state == FLAG_BORDERLESS_WINDOWED_MODE, SDR_ID_SETTINGS_WIN_MODE_SLIDER)
-    gui_slider_add_option(SDR_ID_SETTINGS_WIN_MODE_SLIDER, "FULL SCREEN", data_pack(DATA_TYPE_I32, data128((i32)FLAG_FULLSCREEN_MODE), 1));
+    gui_slider_add_option(SDR_ID_SETTINGS_WIN_MODE_SLIDER, LOC_TEXT_SETTINGS_SDR_WINDOW_MODE_FULLSCREEN, data_pack(DATA_TYPE_I32, data128((i32)FLAG_FULLSCREEN_MODE), 1));
     SDR_ASSERT_SET_CURR_VAL_TO_LAST_ADDED(state->in_app_settings->window_state == FLAG_FULLSCREEN_MODE, SDR_ID_SETTINGS_WIN_MODE_SLIDER)
 
-
-    gui_slider_add_option(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER, "TREE",     data_pack(DATA_TYPE_I32, data128((i32)TILEMAP_PROP_TYPE_TREE),      1));
-    gui_slider_add_option(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER, "TOMBSTONE",data_pack(DATA_TYPE_I32, data128((i32)TILEMAP_PROP_TYPE_TOMBSTONE), 1));
-    gui_slider_add_option(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER, "STONE",    data_pack(DATA_TYPE_I32, data128((i32)TILEMAP_PROP_TYPE_STONE),     1));
-    gui_slider_add_option(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER, "SPIKE",    data_pack(DATA_TYPE_I32, data128((i32)TILEMAP_PROP_TYPE_SPIKE),     1));
-    gui_slider_add_option(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER, "SKULL",    data_pack(DATA_TYPE_I32, data128((i32)TILEMAP_PROP_TYPE_SKULL),     1));
-    gui_slider_add_option(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER, "PILLAR",   data_pack(DATA_TYPE_I32, data128((i32)TILEMAP_PROP_TYPE_PILLAR),    1));
-    gui_slider_add_option(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER, "LAMP",     data_pack(DATA_TYPE_I32, data128((i32)TILEMAP_PROP_TYPE_LAMP),      1));
-    gui_slider_add_option(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER, "FENCE",    data_pack(DATA_TYPE_I32, data128((i32)TILEMAP_PROP_TYPE_FENCE),     1));
-    gui_slider_add_option(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER, "DETAIL",   data_pack(DATA_TYPE_I32, data128((i32)TILEMAP_PROP_TYPE_DETAIL),    1));
-    gui_slider_add_option(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER, "CANDLE",   data_pack(DATA_TYPE_I32, data128((i32)TILEMAP_PROP_TYPE_CANDLE),    1));
-    gui_slider_add_option(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER, "BUILDING", data_pack(DATA_TYPE_I32, data128((i32)TILEMAP_PROP_TYPE_BUILDING),  1));
+    gui_slider_add_option(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER, LOC_TEXT_EDITOR_SDR_PROP_CHANGE_TREE, data_pack(DATA_TYPE_I32, data128((i32)TILEMAP_PROP_TYPE_TREE),      1));
+    gui_slider_add_option(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER, LOC_TEXT_EDITOR_SDR_PROP_CHANGE_TOMBSTONE, data_pack(DATA_TYPE_I32, data128((i32)TILEMAP_PROP_TYPE_TOMBSTONE), 1));
+    gui_slider_add_option(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER, LOC_TEXT_EDITOR_SDR_PROP_CHANGE_STONE, data_pack(DATA_TYPE_I32, data128((i32)TILEMAP_PROP_TYPE_STONE),     1));
+    gui_slider_add_option(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER, LOC_TEXT_EDITOR_SDR_PROP_CHANGE_SPIKE, data_pack(DATA_TYPE_I32, data128((i32)TILEMAP_PROP_TYPE_SPIKE),     1));
+    gui_slider_add_option(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER, LOC_TEXT_EDITOR_SDR_PROP_CHANGE_SKULL, data_pack(DATA_TYPE_I32, data128((i32)TILEMAP_PROP_TYPE_SKULL),     1));
+    gui_slider_add_option(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER, LOC_TEXT_EDITOR_SDR_PROP_CHANGE_PILLAR, data_pack(DATA_TYPE_I32, data128((i32)TILEMAP_PROP_TYPE_PILLAR),    1));
+    gui_slider_add_option(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER, LOC_TEXT_EDITOR_SDR_PROP_CHANGE_LAMP, data_pack(DATA_TYPE_I32, data128((i32)TILEMAP_PROP_TYPE_LAMP),      1));
+    gui_slider_add_option(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER, LOC_TEXT_EDITOR_SDR_PROP_CHANGE_FENCE, data_pack(DATA_TYPE_I32, data128((i32)TILEMAP_PROP_TYPE_FENCE),     1));
+    gui_slider_add_option(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER, LOC_TEXT_EDITOR_SDR_PROP_CHANGE_DETAIL, data_pack(DATA_TYPE_I32, data128((i32)TILEMAP_PROP_TYPE_DETAIL),    1));
+    gui_slider_add_option(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER, LOC_TEXT_EDITOR_SDR_PROP_CHANGE_CANDLE, data_pack(DATA_TYPE_I32, data128((i32)TILEMAP_PROP_TYPE_CANDLE),    1));
+    gui_slider_add_option(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER, LOC_TEXT_EDITOR_SDR_PROP_CHANGE_BUILDING, data_pack(DATA_TYPE_I32, data128((i32)TILEMAP_PROP_TYPE_BUILDING),  1));
     SDR_ASSERT_SET_CURR_VAL(1, SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER, 1)
   }
   // SLIDER OPTIONS
@@ -340,27 +340,35 @@ void user_interface_system_initialize(void) {
   event_register(EVENT_CODE_UI_START_FADEIN_EFFECT, user_interface_on_event);
   event_register(EVENT_CODE_UI_START_FADEOUT_EFFECT, user_interface_on_event);
 
-  for (int i=0; i<state->sliders[SDR_ID_SETTINGS_WIN_MODE_SLIDER].max_value; ++i) {
-    if (state->sliders[SDR_ID_SETTINGS_WIN_MODE_SLIDER].options[i].content.data.i32[0] == state->in_app_settings->window_state && i != 0) {
-      state->sliders[SDR_ID_SETTINGS_WIN_MODE_SLIDER].current_value = i;
+  for (size_t iter = 0; iter < state->sliders.at(SDR_ID_SETTINGS_WIN_MODE_SLIDER).max_value; ++iter) {
+    if (state->sliders.at(SDR_ID_SETTINGS_WIN_MODE_SLIDER).options.at(iter).content.data.i32[0] == state->in_app_settings->window_state && iter != 0) {
+      state->sliders.at(SDR_ID_SETTINGS_WIN_MODE_SLIDER).current_value = iter;
       break;
     }
   }
-  Vector2 window_size = Vector2 {state->in_app_settings->window_size.at(0), state->in_app_settings->window_size.at(1) };
+  
+  const std::vector<f32>& window_size = state->in_app_settings->window_size;
 
-  for (int i=0; i<state->sliders[SDR_ID_SETTINGS_RES_SLIDER].max_value; ++i) {
-    if (state->sliders[SDR_ID_SETTINGS_RES_SLIDER].options[i].content.data.u16[0] == window_size.x && state->sliders[SDR_ID_SETTINGS_RES_SLIDER].options[i].content.data.u16[1] == window_size.y) {
-      state->sliders[SDR_ID_SETTINGS_RES_SLIDER].current_value = i;
+  for (size_t iter = 0; iter < state->sliders.at(SDR_ID_SETTINGS_RES_SLIDER).max_value; ++iter) {
+    slider_option& option = state->sliders.at(SDR_ID_SETTINGS_RES_SLIDER).options.at(iter);
+    if (option.content.data.u16[0] == window_size.at(0) && option.content.data.u16[1] == window_size.at(1)) {
+      state->sliders.at(SDR_ID_SETTINGS_RES_SLIDER).current_value = iter;
       break;
     }
   }
-  if (SDR_CURR_VAL(SDR_ID_SETTINGS_RES_SLIDER).content.data.u16[0] != window_size.x || SDR_CURR_VAL(SDR_ID_SETTINGS_RES_SLIDER).content.data.u16[1] != window_size.y) {
-    const char* new_res_text = TextFormat("%.0fx%.0f", window_size.x, window_size.y);
-
-    if(gui_slider_add_option(SDR_ID_SETTINGS_RES_SLIDER, new_res_text, data_pack(DATA_TYPE_U16, data128((u16) window_size.x, (u16) window_size.y), 2))) {
-      state->sliders[SDR_ID_SETTINGS_RES_SLIDER].current_value = state->sliders[SDR_ID_SETTINGS_RES_SLIDER].max_value-1;
+  
+  if (SDR_CURR_VAL(SDR_ID_SETTINGS_RES_SLIDER).content.data.u16[0] != window_size.at(0) || SDR_CURR_VAL(SDR_ID_SETTINGS_RES_SLIDER).content.data.u16[1] != window_size.at(1)) {
+    TraceLog(LOG_ERROR, "user_interface::user_interface_system_initialize()::Unsupported resolution: {%d:%d}", window_size.at(0), window_size.at(1));
+    set_resolution(1920, 1080);
+    for (size_t iter = 0; iter < state->sliders.at(SDR_ID_SETTINGS_RES_SLIDER).max_value; ++iter) {
+      slider_option& option = state->sliders.at(SDR_ID_SETTINGS_RES_SLIDER).options.at(iter);
+      if (option.content.data.u16[0] == window_size.at(0) && option.content.data.u16[1] == window_size.at(1)) {
+        state->sliders.at(SDR_ID_SETTINGS_RES_SLIDER).current_value = iter;
+        break;
+      }
     }
   }
+  
 }
 
 void update_user_interface(void) {
@@ -664,7 +672,7 @@ void draw_slider_body(slider* sdr) {
       f32 each_body_scale = (float)each_body_width / sdr_type.origin_body_width;
       Vector2 draw_sprite_scale = Vector2 {each_body_scale, sdr_type.scale};
       Vector2 _pos_temp = Vector2 {sdr->position.x + SCREEN_OFFSET.x, sdr->position.y};
-      const char* text = TextFormat("%s", sdr->options[sdr->current_value].display_text.c_str());
+      const char* text = lc_txt(sdr->options.at(sdr->current_value).display_text_symbol);
       Vector2 text_measure = MeasureTextEx(UI_BOLD_FONT, text, DEFAULT_SLIDER_FONT_SIZE, UI_FONT_SPACING);
 
       for (int i = 1; i < sdr->max_value; ++i) {
@@ -837,7 +845,7 @@ void gui_draw_settings_screen(void) { // TODO: Return to settings later
 
   gui_slider(SDR_ID_SETTINGS_LANGUAGE, BASE_RENDER_SCALE(.5f), VECTOR2(0,12), 3.f);
 
-  if(gui_menu_button("Apply", BTN_ID_SETTINGS_APPLY_SETTINGS_BUTTON, VECTOR2(-2,25), 3.f, true)) {
+  if(gui_menu_button(lc_txt(LOC_TEXT_SETTINGS_BUTTON_APPLY), BTN_ID_SETTINGS_APPLY_SETTINGS_BUTTON, VECTOR2(-2,25), 3.f, true)) {
     slider sdr_win_mode = state->sliders[SDR_ID_SETTINGS_WIN_MODE_SLIDER];
     i32 window_mod = sdr_win_mode.options[sdr_win_mode.current_value].content.data.i32[0];
     
@@ -859,12 +867,11 @@ void gui_draw_settings_screen(void) { // TODO: Return to settings later
     if (state->display_language->language_index != language_index) {
       if(loc_parser_set_active_language_by_index(language_index)) {
         loc_data* loc = loc_parser_get_active_language();
-        state->display_language = ui_get_localization_by_name(loc->language_name);
+        state->display_language = ui_get_localization_by_index(loc->index);
         set_language(loc->language_name.c_str());
       }
       else {
         TraceLog(LOG_ERROR, "user_interface::gui_draw_settings_screen()::Language changing failed");
-        return;
       }
     }
 
@@ -893,22 +900,22 @@ void gui_draw_pause_screen(bool in_game_play_state) {
     event_fire(EVENT_CODE_APPLICATION_QUIT, event_context {});
   }
 }
-bool gui_slider_add_option(slider_id _id, const char* _display_text, data_pack content) {
+bool gui_slider_add_option(slider_id _id, u32 _display_text_symbol, data_pack content) {
   if (_id >= SDR_ID_MAX || _id <= SDR_ID_UNDEFINED || !state) {
     TraceLog(LOG_WARNING, "user_interface::gui_slider_add_option()::Slider ids was out of bound");
     return false;
   }
-  slider* sdr = &state->sliders[_id];
+  slider* sdr = &state->sliders.at(_id);
   if (!sdr->is_registered) {
     TraceLog(LOG_WARNING, "user_interface::gui_slider_add_option()::Given slider didn't registered");
     return false;
   }
   if (sdr->max_value < MAX_SLIDER_OPTION_SLOT) {
-    sdr->options[sdr->max_value] = slider_option {
-      .display_text = {},
+    sdr->options.at(sdr->max_value) = slider_option {
+      .display_text_symbol = {},
       .content = content
     };
-    TextCopy((char*)sdr->options[sdr->max_value].display_text.c_str(), _display_text);
+    sdr->options.at(sdr->max_value).display_text_symbol = _display_text_symbol;
     sdr->max_value++;
     return true;
   }
@@ -1573,6 +1580,20 @@ localization_package* ui_get_localization_by_name(std::string language_name) {
 
   for (size_t iter = 0; iter < state->localization_info.size(); iter++) {
     if (state->localization_info.at(iter).language_name == language_name) {
+      return &state->localization_info.at(iter);
+    }
+  }
+
+  return nullptr;
+}
+localization_package* ui_get_localization_by_index(u32 _language_index) {
+  if (!state) {
+    TraceLog(LOG_ERROR, "user_interface::ui_get_localization_by_index()::State is not valid");
+    return nullptr;
+  }
+
+  for (size_t iter = 0; iter < state->localization_info.size(); iter++) {
+    if (state->localization_info.at(iter).language_index == _language_index) {
       return &state->localization_info.at(iter);
     }
   }

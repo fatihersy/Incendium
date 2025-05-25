@@ -2,6 +2,7 @@
 
 #include "core/event.h"
 #include "core/fmemory.h"
+#include "loc_types.h"
 
 #include "game/spritesheet.h"
 
@@ -46,28 +47,28 @@ bool player_system_initialize(void) {
   {
     player->stats[CHARACTER_STATS_UNDEFINED] = {};
     player->stats[CHARACTER_STATS_HEALTH] = character_stat(CHARACTER_STATS_HEALTH, 
-      "Life Essance", "Essential", Rectangle{512, 320, 32, 32}, (i32) level_curve[1]
+      lc_txt(LOC_TEXT_PLAYER_STAT_LIFE_ESSENCE), lc_txt(LOC_TEXT_PLAYER_STAT_DESC_LIFE_ESSENCE), Rectangle{512, 320, 32, 32}, (i32) level_curve[1]
     );
     player->stats[CHARACTER_STATS_HP_REGEN] = character_stat(CHARACTER_STATS_HP_REGEN, 
-      "Bread", "Keeps you fed", Rectangle{288, 288, 32, 32}, (i32) level_curve[1]
+      lc_txt(LOC_TEXT_PLAYER_STAT_BREAD), lc_txt(LOC_TEXT_PLAYER_STAT_DESC_BREAD), Rectangle{288, 288, 32, 32}, (i32) level_curve[1]
     );
     player->stats[CHARACTER_STATS_MOVE_SPEED] = character_stat(CHARACTER_STATS_MOVE_SPEED, 
-      "Cardinal Boots", "Increases move speed", Rectangle{64, 352, 32, 32}, (i32) level_curve[1]
+      lc_txt(LOC_TEXT_PLAYER_STAT_CARDINAL_BOOTS), lc_txt(LOC_TEXT_PLAYER_STAT_DESC_CARDINAL_BOOTS), Rectangle{64, 352, 32, 32}, (i32) level_curve[1]
     );
     player->stats[CHARACTER_STATS_AOE] =  character_stat(CHARACTER_STATS_AOE, 
-      "Blast Scroll", "Increase the area", Rectangle{320, 32, 32, 32}, (i32)  level_curve[1]
+      lc_txt(LOC_TEXT_PLAYER_STAT_BLAST_SCROLL), lc_txt(LOC_TEXT_PLAYER_STAT_DESC_BLAST_SCROLL), Rectangle{320, 32, 32, 32}, (i32)  level_curve[1]
     );
     player->stats[CHARACTER_STATS_DAMAGE] =  character_stat(CHARACTER_STATS_DAMAGE, 
-      "Heavy Cross", "Increases Damage", Rectangle{288, 32, 32, 32}, (i32) level_curve[1]
+      lc_txt(LOC_TEXT_PLAYER_STAT_HEAVY_CROSS), lc_txt(LOC_TEXT_PLAYER_STAT_DESC_HEAVY_CROSS), Rectangle{288, 32, 32, 32}, (i32) level_curve[1]
     );
     player->stats[CHARACTER_STATS_ABILITY_CD] = character_stat(CHARACTER_STATS_ABILITY_CD, 
-      "Hourglass", "Reduce CD", Rectangle{128, 64, 32, 32}, (i32)level_curve[1]
+      lc_txt(LOC_TEXT_PLAYER_STAT_HOURGLASS), lc_txt(LOC_TEXT_PLAYER_STAT_DESC_HOURGLASS), Rectangle{128, 64, 32, 32}, (i32)level_curve[1]
     );
     player->stats[CHARACTER_STATS_PROJECTILE_AMOUTH] = character_stat(CHARACTER_STATS_PROJECTILE_AMOUTH, 
-      "Second Hand", "Increases projectile amouth", Rectangle{64, 448, 32, 32}, (i32) level_curve[1]
+      lc_txt(LOC_TEXT_PLAYER_STAT_SECOND_HAND), lc_txt(LOC_TEXT_PLAYER_STAT_DESC_SECOND_HAND), Rectangle{64, 448, 32, 32}, (i32) level_curve[1]
     );
     player->stats[CHARACTER_STATS_EXP_GAIN] =  character_stat(CHARACTER_STATS_EXP_GAIN, 
-      "Seeing Eyes", "Increases experiance gain", Rectangle{192, 32, 32, 32}, (i32) level_curve[1]
+      lc_txt(LOC_TEXT_PLAYER_STAT_SEEING_EYES), lc_txt(LOC_TEXT_PLAYER_STAT_DESC_SEEING_EYES), Rectangle{192, 32, 32, 32}, (i32) level_curve[1]
     );
   }
 

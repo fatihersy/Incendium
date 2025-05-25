@@ -489,12 +489,9 @@ void render_interface_in_game(void) {
       else {
         gui_progress_bar(PRG_BAR_ID_PLAYER_EXPERIANCE, Vector2{.x = BASE_RENDER_SCALE(.5f).x, .y = SCREEN_OFFSET.x}, true);
         gui_progress_bar(PRG_BAR_ID_PLAYER_HEALTH, SCREEN_OFFSET, false);
-        gui_label_format(FONT_TYPE_MEDIUM, 10, BASE_RENDER_SCALE(.75f).x, SCREEN_OFFSET.y, WHITE, false, false, "Remaining: %d", get_remaining_enemies());
-        gui_label_format(FONT_TYPE_MEDIUM, 10, BASE_RENDER_SCALE(.75f).x, SCREEN_OFFSET.y * 5.f, WHITE, false, false, "Souls: %d", get_currency_souls());
 
-        gui_label_format(FONT_TYPE_MEDIUM, 10, 0, BASE_RENDER_SCALE(.35f).y, WHITE, false, false, "Health: %d", _get_dynamic_player_state()->health_max);
-        gui_label_format(FONT_TYPE_MEDIUM, 10, 0, BASE_RENDER_SCALE(.40f).y, WHITE, false, false, "Current Health: %d", _get_dynamic_player_state()->health_current);
-        gui_label_format(FONT_TYPE_MEDIUM, 10, 0, BASE_RENDER_SCALE(.45f).y, WHITE, false, false, "Damage: %d", _get_dynamic_player_state()->damage);
+        // TODO: Display currency
+        //gui_label_format(FONT_TYPE_MEDIUM, 10, BASE_RENDER_SCALE(.75f).x, SCREEN_OFFSET.y * 5.f, WHITE, false, false, "Souls: %d", get_currency_souls());
       }
       break;
     }
@@ -508,7 +505,7 @@ void render_interface_in_game(void) {
       else {
         gui_label_format(
           FONT_TYPE_MEDIUM, 15, ui_get_mouse_pos()->x, ui_get_mouse_pos()->y, 
-          WHITE, false, false, "world_pos{%.1f, %.1f}", gm_get_mouse_pos_world()->x, gm_get_mouse_pos_world()->y
+          WHITE, false, false, "world_pos {%.1f, %.1f}", gm_get_mouse_pos_world()->x, gm_get_mouse_pos_world()->y
         );
 
         if(state->hovered_spawn < get_remaining_enemies()){
@@ -574,11 +571,6 @@ void render_interface_in_game(void) {
             gui_label_format(
               FONT_TYPE_LIGHT, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
               WHITE, false, false, "Rotation: %.1f", prj->default_animation.rotation
-            );
-            debug_info_position_buffer.y += line_height;
-            gui_label_format(
-              FONT_TYPE_LIGHT, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
-              WHITE, false, false, "Default Anim Should Center: %d", prj->default_animation.should_center
             );
           });
         }
