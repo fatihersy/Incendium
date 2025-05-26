@@ -233,7 +233,7 @@ void draw_main_menu_upgrade_list_panel(void) {
       gui_draw_atlas_texture_id_pro(ATLAS_TEX_ID_ICON_ATLAS, stat->passive_icon_src, icon_pos, true, false);
 
       Vector2 title_pos = VECTOR2(showcase_position.x + showcase_new_dim / 2.f, showcase_position.y + showcase_new_dim * 0.8f);
-      gui_label(stat->passive_display_name.c_str(), FONT_TYPE_LIGHT, 8, title_pos, WHITE, true, true);
+      gui_label(lc_txt(stat->passive_display_name_symbol), FONT_TYPE_MEDIUM, 8, title_pos, WHITE, true, true);
     }
   }
 }
@@ -270,13 +270,13 @@ void draw_main_menu_upgrade_details_panel(void) {
     state->upgrade_details_panel.dest.x + state->upgrade_details_panel.dest.width * .5f,
     tier_symbols_vertical_position + tier_symbol_src_rect.height + detail_panel_element_spacing * .5f
   );
-  gui_label(state->hovered_stat->passive_display_name.c_str(), FONT_TYPE_LIGHT, 12, title_pos, WHITE, true, true);
+  gui_label(lc_txt(state->hovered_stat->passive_display_name_symbol), FONT_TYPE_MEDIUM, 12, title_pos, WHITE, true, true);
 
   Rectangle description_pos = {
     state->upgrade_details_panel.dest.x +state->upgrade_details_panel.dest.width * .05f, title_pos.y + detail_panel_element_spacing * .75f,
     state->upgrade_details_panel.dest.width * .9f, state->upgrade_details_panel.dest.width * .35f
   };
-  gui_label_wrap(state->hovered_stat->passive_desc.c_str(), FONT_TYPE_LIGHT, 8, description_pos, WHITE, false);
+  gui_label_wrap(lc_txt(state->hovered_stat->passive_desc_symbol), FONT_TYPE_MEDIUM, 8, description_pos, WHITE, false);
 
   character_stat pseudo_update = *state->hovered_stat;
   upgrade_stat_pseudo(&pseudo_update);

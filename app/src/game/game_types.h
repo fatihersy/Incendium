@@ -522,19 +522,19 @@ typedef struct ability_play_system {
 typedef struct character_stat {
   character_stats id;
   u16 level;
-  std::string passive_display_name;
-  std::string passive_desc;
+  u32 passive_display_name_symbol;
+  u32 passive_desc_symbol;
   Rectangle passive_icon_src;
   i32 upgrade_cost;
 
   data128 buffer;
 
   character_stat() {}
-  character_stat(character_stats id, std::string display_name, std::string desc, Rectangle icon_src, i32 upgrade_cost, data128 buffer = {}) : character_stat() 
+  character_stat(character_stats id, u32 display_name_symbol, u32 desc_symbol, Rectangle icon_src, i32 upgrade_cost, data128 buffer = {}) : character_stat()
   {
     this->id = id;
-    this->passive_display_name = display_name;
-    this->passive_desc = desc;
+    this->passive_display_name_symbol = display_name_symbol;
+    this->passive_desc_symbol = desc_symbol;
     this->passive_icon_src = icon_src;
     this->upgrade_cost = upgrade_cost;
     this->buffer = buffer;

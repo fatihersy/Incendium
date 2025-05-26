@@ -1,6 +1,7 @@
 #include "scene_in_game.h"
 #include <reasings.h>
 #include <settings.h>
+#include <loc_types.h>
 
 #include <core/fmath.h>
 #include <core/event.h>
@@ -604,12 +605,12 @@ void render_interface_in_game(void) {
   render_user_interface();
 }
 
-#define DRAW_ABL_UPG_STAT_PNL(ABL, UPG, TEXT, STAT){ \
+#define DRAW_ABL_UPG_STAT_PNL(UPG, TEXT, ...){ \
 if (UPG->level == 1) {\
-  gui_label_format(FONT_TYPE_LIGHT, upgr_font_size, (f32)start_upgradables_x_exis, (f32)upgradables_height_buffer, WHITE, false, false, TEXT, UPG->STAT);\
+  gui_label_format(FONT_TYPE_LIGHT, upgr_font_size, (f32)start_upgradables_x_exis, (f32)upgradables_height_buffer, WHITE, false, false, TEXT, __VA_ARGS__);\
   upgradables_height_buffer += btw_space_gap;\
 } else {\
-  gui_label_format(FONT_TYPE_LIGHT, upgr_font_size, (f32)start_upgradables_x_exis, (f32)upgradables_height_buffer, WHITE, false, false, TEXT, ABL->STAT, UPG->STAT);\
+  gui_label_format(FONT_TYPE_LIGHT, upgr_font_size, (f32)start_upgradables_x_exis, (f32)upgradables_height_buffer, WHITE, false, false, TEXT, __VA_ARGS__);\
   upgradables_height_buffer += btw_space_gap;\
 }}
 
@@ -658,10 +659,10 @@ void draw_in_game_upgrade_panel(u16 which_panel, Rectangle panel_dest) {
       break;
     }
     switch (abl_upg) {
-      case ABILITY_UPG_DAMAGE: DRAW_ABL_UPG_STAT_PNL(abl, upg, "Damage:%d", base_damage);  break;
-      case ABILITY_UPG_AMOUNT: DRAW_ABL_UPG_STAT_PNL(abl, upg, "Amouth:%d", proj_count);   break;
-      case ABILITY_UPG_HITBOX: DRAW_ABL_UPG_STAT_PNL(abl, upg, "Hitbox:%.1f", proj_dim.x); break;
-      case ABILITY_UPG_SPEED:  DRAW_ABL_UPG_STAT_PNL(abl, upg, "Speed:%d",  proj_speed);   break;
+      case ABILITY_UPG_DAMAGE: DRAW_ABL_UPG_STAT_PNL(upg, "%s%d",    lc_txt(LOC_TEXT_INGAME_UPGRADE_ABILITY_DAMAGE), abl->base_damage);  break;
+      case ABILITY_UPG_AMOUNT: DRAW_ABL_UPG_STAT_PNL(upg, "%s%d",    lc_txt(LOC_TEXT_INGAME_UPGRADE_ABILITY_AMOUTH), abl->proj_count);   break;
+      case ABILITY_UPG_HITBOX: DRAW_ABL_UPG_STAT_PNL(upg, "%s%.1f",  lc_txt(LOC_TEXT_INGAME_UPGRADE_ABILITY_HITBOX), abl->proj_dim.x); break;
+      case ABILITY_UPG_SPEED:  DRAW_ABL_UPG_STAT_PNL(upg, "%s%d",    lc_txt(LOC_TEXT_INGAME_UPGRADE_ABILITY_SPEED),  abl->proj_speed);   break;
       default: {
         TraceLog(LOG_WARNING, "scene_in_game::draw_in_game_upgrade_panel()::Unsupported ability upgrade type");
         break;
@@ -686,7 +687,7 @@ void draw_passive_selection_panel(character_stat* stat, Rectangle panel_dest) {
   const u16 title_font_size = 10; 
   
   gui_draw_atlas_texture_id_pro(ATLAS_TEX_ID_ICON_ATLAS, stat->passive_icon_src, icon_rect, true, false);
-  gui_label(stat->passive_display_name.c_str(), FONT_TYPE_MEDIUM, title_font_size, passive_name_pos, WHITE, true, true);
+  gui_label(lc_txt(stat->passive_display_name_symbol), FONT_TYPE_MEDIUM, title_font_size, passive_name_pos, WHITE, true, true);
   
   const u16 desc_font_size = 6;
   const f32 desc_box_height = panel_dest.y + (panel_dest.height * .5f) - passive_name_pos.y - elm_space_gap;
@@ -697,7 +698,7 @@ void draw_passive_selection_panel(character_stat* stat, Rectangle panel_dest) {
     .width  = panel_dest.width - padding.x,
     .height = desc_box_height - padding.y,
   };
-  gui_label_wrap(stat->passive_desc.c_str(), FONT_TYPE_LIGHT, desc_font_size, desc_box, WHITE, false);
+  gui_label_wrap(lc_txt(stat->passive_desc_symbol), FONT_TYPE_LIGHT, desc_font_size, desc_box, WHITE, false);
 
 }
 void draw_end_game_panel() {
@@ -705,17 +706,17 @@ void draw_end_game_panel() {
   gui_panel(state->default_panel, Rectangle{ BASE_RENDER_SCALE(.5f).x, BASE_RENDER_SCALE(.5f).y, BASE_RENDER_SCALE(.75f).x, BASE_RENDER_SCALE(.75f).y}, true);
 
   if (state->end_game_result.is_win) {
-    gui_label("Stage Cleared", FONT_TYPE_MEDIUM, 20, BASE_RENDER_SCALE(.5f), WHITE, true, true);
+    gui_label(lc_txt(LOC_TEXT_INGAME_STAGE_RESULT_CLEARED), FONT_TYPE_MEDIUM, 20, BASE_RENDER_SCALE(.5f), WHITE, true, true);
   }
   else {
-    gui_label("Dead", FONT_TYPE_MEDIUM, 20, BASE_RENDER_SCALE(.5f), RED, true, true);
+    gui_label(lc_txt(LOC_TEXT_INGAME_STAGE_RESULT_DEAD), FONT_TYPE_MEDIUM, 20, BASE_RENDER_SCALE(.5f), RED, true, true);
   }
   u32 min  = (i32)state->end_game_result.play_time/60;
   u32 secs = (i32)state->end_game_result.play_time%60;
   gui_label_format_v(FONT_TYPE_MEDIUM, 15, VECTOR2(BASE_RENDER_SCALE(.5f).x, BASE_RENDER_SCALE(.55f).y), WHITE, true, true, "%d:%d", min, secs);
 
   gui_label_format_v(FONT_TYPE_MEDIUM, 15, VECTOR2(BASE_RENDER_SCALE(.5f).x, BASE_RENDER_SCALE(.75f).y), WHITE, true, true, 
-    "Collected Souls:%d", state->end_game_result.collected_souls
+    "%s%d", lc_txt(LOC_TEXT_INGAME_STAGE_RESULT_COLLECTED_SOULS), state->end_game_result.collected_souls
   );
 }
 void prepare_ability_upgrade_state(void) {

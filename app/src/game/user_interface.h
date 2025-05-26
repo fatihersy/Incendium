@@ -76,7 +76,8 @@ typedef struct panel {
   } button;
   
   typedef struct slider_option {
-    u32 display_text_symbol;
+    std::string no_localized_text;
+    u32 localization_symbol;
     data_pack content;
   } slider_option;
   
@@ -109,6 +110,7 @@ typedef struct panel {
     u16 max_value;
     u16 min_value;
   
+    bool localize_text; // Flag for sliders displaying only numbers, 
     bool is_clickable;
     bool on_screen;
     bool is_registered;  
@@ -149,7 +151,7 @@ bool is_ui_fade_anim_about_to_complete(void);
 Vector2* ui_get_mouse_pos(void);
 bool ui_set_slider_current_index(slider_id id, u16 index);
 
-bool gui_slider_add_option(slider_id _id, u32 _display_text_symbol, data_pack content);
+bool gui_slider_add_option(slider_id _id, data_pack content, u32 _localization_symbol, std::string _no_localized_text);
 Rectangle get_atlas_texture_source_rect(atlas_texture_id _id);
 
 bool gui_menu_button(const char* text, button_id _id, Vector2 grid, f32 grid_scale, bool play_on_click_sound);

@@ -446,7 +446,6 @@ const char* lc_txt(u32 index) {
     TraceLog(LOG_ERROR, "loc_parser::lc_txt()::Out of range");
     return "";
   }
-
   return state->active_loc->content.at(index).c_str();
 }
 
