@@ -119,7 +119,14 @@ void render_tilemap(tilemap* _tilemap, Rectangle camera_view) {
     }
     Vector2 origin = VECTOR2(prop->source.width / 2.f, prop->source.height / 2.f);
 
-    DrawTexturePro(*tex, prop->source, prop->dest, origin, prop->rotation, WHITE);
+    Rectangle _dest = Rectangle {
+      .x = prop->dest.x,
+      .y = prop->dest.y,
+      .width = prop->dest.width * prop->scale,
+      .height = prop->dest.height * prop->scale,
+    };
+
+    DrawTexturePro(*tex, prop->source, _dest, origin, prop->rotation, WHITE);
   }
 }
 void render_tilesheet(tilesheet* sheet, f32 zoom) {

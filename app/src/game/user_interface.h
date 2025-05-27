@@ -104,6 +104,9 @@ typedef struct panel {
     slider_id id;
     slider_type sdr_type;
     Vector2 position;
+    bool (*on_click)();
+    bool (*on_left_button_trigger)();
+    bool (*on_right_button_trigger)();
   
     std::array<slider_option, MAX_SLIDER_OPTION_SLOT> options = {};
     u16 current_value;
@@ -143,12 +146,16 @@ void render_user_interface(void);
 
 Vector2 position_element(Vector2 grid, Vector2 pos, Vector2 dim, f32 f);
 
-Font* ui_get_font(font_type font);
+void register_slider(slider_id _sdr_id, slider_type_id _sdr_type_id, button_id _left_btn_id, button_id _right_btn_id, bool _is_clickable, bool _localize_text);
+
 panel get_default_panel(void);
 data_pack* get_slider_current_value(slider_id id);
+Vector2* ui_get_mouse_pos(void);
+Font* ui_get_font(font_type font);
+slider* get_slider_by_id(slider_id sdr_id);
 bool is_ui_fade_anim_complete(void);
 bool is_ui_fade_anim_about_to_complete(void);
-Vector2* ui_get_mouse_pos(void);
+
 bool ui_set_slider_current_index(slider_id id, u16 index);
 
 bool gui_slider_add_option(slider_id _id, data_pack content, u32 _localization_symbol, std::string _no_localized_text);

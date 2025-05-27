@@ -37,6 +37,7 @@ typedef struct scene_editor_state {
 
   bool b_show_tilesheet_tile_selection_screen;
   bool b_show_prop_selection_screen;
+  bool b_show_prop_edit_screen;
   bool b_dragging_prop;
   bool b_show_pause_menu;
 
@@ -54,8 +55,9 @@ typedef struct scene_editor_state {
 
   panel prop_selection_panel;
   panel tile_selection_panel;
+  panel prop_edit_panel;
   tile selected_tile;
-  tilemap_prop selected_prop;
+  tilemap_prop* selected_prop;
   tilesheet* selected_sheet;
   u16 edit_layer;
   u16 selected_stage;
@@ -76,6 +78,10 @@ i32 map_prop_id_to_index(u16 id);
 Rectangle se_get_camera_view_rect(Camera2D camera);
 void update_tilemap_prop_type(void);
 
+bool scene_editor_scale_slider_on_click();
+bool scene_editor_scale_slider_on_left_button_trigger();
+bool scene_editor_scale_slider_on_right_button_trigger();
+
 void add_prop(texture_id source_tex, tilemap_prop_types type, Rectangle source, f32 scale);
 #define add_prop_tree(...) add_prop(TEX_ID_ASSET_ATLAS, TILEMAP_PROP_TYPE_TREE, __VA_ARGS__)
 #define add_prop_tombstone(...) add_prop(TEX_ID_ASSET_ATLAS, TILEMAP_PROP_TYPE_TOMBSTONE, __VA_ARGS__)
@@ -95,6 +101,10 @@ void initialize_scene_editor(camera_metrics* _camera_metrics) {
     return;
   }
   state = (scene_editor_state*)allocate_memory_linear(sizeof(scene_editor_state), true);
+  if (!state) {
+    TraceLog(LOG_ERROR, "scene_editor::initialize_scene_editor()::State allocation failed!");
+    return;
+  }
 
   if (!_camera_metrics) {
     TraceLog(LOG_ERROR, "scene_editor::initialize_scene_editor()::Camera metrics recieved NULL");
@@ -106,19 +116,28 @@ void initialize_scene_editor(camera_metrics* _camera_metrics) {
   user_interface_system_initialize();
 
   copy_memory(&state->worldmap_locations, get_worldmap_locations(), sizeof(state->worldmap_locations));
+  state->selected_sheet = get_tilesheet_by_enum(TILESHEET_TYPE_MAP);
+
   state->tile_selection_panel = get_default_panel();
   state->tile_selection_panel.signal_state = BTN_STATE_HOVER;
   state->tile_selection_panel.dest = Rectangle {0, 0, BASE_RENDER_SCALE(.3f).x, BASE_RENDER_RES.y};
-  state->selected_sheet = get_tilesheet_by_enum(TILESHEET_TYPE_MAP);
-  panel* prop_pnl = &state->prop_selection_panel;
-  *prop_pnl = get_default_panel();
-  prop_pnl->signal_state = BTN_STATE_HOVER;
-  prop_pnl->dest = Rectangle {0, 0, BASE_RENDER_SCALE(.3f).x, BASE_RENDER_RES.y};
-  prop_pnl->scroll_handle = Rectangle{
-    .x = prop_pnl->dest.x + prop_pnl->dest.width - PROP_DRAG_HANDLE_DIM - 10, .y = 0,
+  
+  state->prop_selection_panel = get_default_panel();
+  state->prop_selection_panel.signal_state = BTN_STATE_HOVER;
+  state->prop_selection_panel.dest = Rectangle {0, 0, BASE_RENDER_SCALE(.3f).x, BASE_RENDER_RES.y};
+  state->prop_selection_panel.scroll_handle = Rectangle{
+    .x = state->prop_selection_panel.dest.x + state->prop_selection_panel.dest.width - PROP_DRAG_HANDLE_DIM - 10, .y = 0,
     .width = PROP_DRAG_HANDLE_DIM, .height = PROP_DRAG_HANDLE_DIM * 5,
   };
-  prop_pnl->buffer.f32[1] = PROP_PANEL_PROP_DRAW_STARTING_HEIGHT;
+  state->prop_selection_panel.buffer.f32[1] = PROP_PANEL_PROP_DRAW_STARTING_HEIGHT;
+
+  state->prop_edit_panel = get_default_panel();
+  state->prop_edit_panel.signal_state = BTN_STATE_HOVER;
+  Vector2 _prop_edit_panel_dim = Vector2 {BASE_RENDER_SCALE(.3f).x, BASE_RENDER_RES.y};
+  state->prop_edit_panel.dest = Rectangle { 
+    BASE_RENDER_RES.x - _prop_edit_panel_dim.x, 0, 
+    _prop_edit_panel_dim.x, _prop_edit_panel_dim.y
+  };
 
   update_tilemap_prop_type();
 
@@ -569,6 +588,20 @@ void initialize_scene_editor(camera_metrics* _camera_metrics) {
   for (int i=0; i<MAX_TILEMAP_LAYERS; ++i) {
     gui_slider_add_option(SDR_ID_EDITOR_MAP_LAYER_SLC_SLIDER, data_pack(DATA_TYPE_U16, data128( (u16) i ), 1), 0, std::to_string(LOC_TEXT_MAINMENU_NUMBERS_1+i).c_str());
   }
+
+  register_slider(
+    SDR_ID_EDITOR_PROP_SCALE_SLIDER,  SDR_TYPE_NUMBER, 
+    BTN_ID_EDITOR_PROP_SCALE_SLIDER_LEFT, BTN_ID_EDITOR_PROP_SCALE_SLIDER_RIGHT, 
+    true, true
+  );
+  slider * scale_slider = get_slider_by_id(SDR_ID_EDITOR_PROP_SCALE_SLIDER);
+  if (scale_slider == nullptr) {
+    TraceLog(LOG_ERROR, "scene_editor::initialize_scene_editor()::Scale slider couldn't be registered");
+    return;
+  }
+  scale_slider->on_left_button_trigger = scene_editor_scale_slider_on_left_button_trigger;
+  scale_slider->on_right_button_trigger = scene_editor_scale_slider_on_right_button_trigger;
+  scale_slider->on_click = scene_editor_scale_slider_on_click;
   
   begin_scene_editor();
 }
@@ -647,6 +680,15 @@ void render_interface_editor(void) {
     });
   }
 
+  if(state->selection_type == SLC_TYPE_SLC_PROP) 
+  {
+    panel* pnl = &state->prop_edit_panel;
+    gui_panel_scissored((*pnl), false, {
+      gui_slider(SDR_ID_EDITOR_PROP_SCALE_SLIDER, VECTOR2(pnl->dest.x,pnl->dest.y), VECTOR2(5,3), 3.f);
+      
+    });
+  }
+
   switch (state->selection_type) {
     case SLC_TYPE_TILE: {
       _render_tile_on_pos(&state->selected_tile, state->mouse_pos_screen, state->selected_sheet);
@@ -654,16 +696,16 @@ void render_interface_editor(void) {
     }
     case SLC_TYPE_DROP_PROP: {
       gui_draw_texture_id_pro(
-        state->selected_prop.tex_id, state->selected_prop.source,
-        Rectangle { state->mouse_pos_screen.x, state->mouse_pos_screen.y, state->selected_prop.dest.width, state->selected_prop.dest.height}, 
+        state->selected_prop->tex_id, state->selected_prop->source,
+        Rectangle { state->mouse_pos_screen.x, state->mouse_pos_screen.y, state->selected_prop->dest.width, state->selected_prop->dest.height}, 
         false
       );
       break;
     }
     case SLC_TYPE_SLC_PROP: {
-      Vector2 prop_pos = GetWorldToScreen2D(Vector2{state->selected_prop.dest.x, state->selected_prop.dest.y}, state->in_camera_metrics->handle);
-      f32 relative_width = state->selected_prop.dest.width * state->in_camera_metrics->handle.zoom;
-      f32 relative_height = state->selected_prop.dest.height * state->in_camera_metrics->handle.zoom;
+      Vector2 prop_pos = GetWorldToScreen2D(Vector2{state->selected_prop->dest.x, state->selected_prop->dest.y}, state->in_camera_metrics->handle);
+      f32 relative_width = state->selected_prop->dest.width * state->in_camera_metrics->handle.zoom;
+      f32 relative_height = state->selected_prop->dest.height * state->in_camera_metrics->handle.zoom;
       
       prop_pos.x -= relative_width * 0.5f; // To center to its origin
       prop_pos.y -= relative_height * 0.5f;
@@ -778,7 +820,7 @@ void editor_update_mouse_bindings(void) {
       i32 h = (pnl->scroll * pnl->buffer.f32[0] * (-1)) + state->mouse_pos_screen.y - pnl->buffer.f32[1];
       for (size_t i=0; i< state->tilemap_props_selected->size() && h > 0; ++i) {
         if(h - state->tilemap_props_selected->at(i).source.height < 0) {
-          state->selected_prop = state->tilemap_props_selected->at(i);
+          state->selected_prop = &state->tilemap_props_selected->at(i);
           state->selection_type = SLC_TYPE_DROP_PROP;
           break;
         }
@@ -791,17 +833,17 @@ void editor_update_mouse_bindings(void) {
     switch (state->selection_type) {
       case SLC_TYPE_UNSELECTED: {
         tilemap_prop* prop = get_map_prop_by_pos(state->mouse_pos_world);
-        if (prop) {
-          state->selected_prop = *prop;
+        if (prop != nullptr) {
+          state->selected_prop = prop;
           state->selection_type = SLC_TYPE_SLC_PROP;
         }
         break;
       }
       case SLC_TYPE_DROP_PROP: {
         Vector2 coord = GetScreenToWorld2D(state->mouse_pos_screen, state->in_camera_metrics->handle);
-        state->selected_prop.dest.x = coord.x;
-        state->selected_prop.dest.y = coord.y;
-        add_prop_curr_map(&state->selected_prop);
+        state->selected_prop->dest.x = coord.x;
+        state->selected_prop->dest.y = coord.y;
+        add_prop_curr_map(state->selected_prop);
         break;
       }
       case SLC_TYPE_SLC_PROP: {
@@ -815,7 +857,7 @@ void editor_update_mouse_bindings(void) {
   {
     switch (state->selection_type) {
       case SLC_TYPE_SLC_PROP: {
-        tilemap_prop* prop = get_map_prop_by_id(state->selected_prop.id);
+        tilemap_prop* prop = get_map_prop_by_id(state->selected_prop->id);
         Rectangle drag_handle = Rectangle {
           prop->dest.x - PROP_DRAG_HANDLE_DIM_DIV2, prop->dest.y - PROP_DRAG_HANDLE_DIM_DIV2, 
           PROP_DRAG_HANDLE_DIM, PROP_DRAG_HANDLE_DIM
@@ -826,7 +868,7 @@ void editor_update_mouse_bindings(void) {
         if (state->b_dragging_prop) {
           prop->dest.x = state->mouse_pos_world.x;
           prop->dest.y = state->mouse_pos_world.y;
-          state->selected_prop.dest = prop->dest;
+          state->selected_prop->dest = prop->dest;
         }
         break;
       }
@@ -889,10 +931,10 @@ void editor_update_keyboard_bindings(void) {
   }
   if (IsKeyReleased(KEY_DELETE)) {
     if (state->mouse_focus == MOUSE_FOCUS_MAP && state->selection_type == SLC_TYPE_SLC_PROP && !state->b_dragging_prop) {
-      if(!remove_prop_cur_map_by_id(state->selected_prop.id)) {
+      if(!remove_prop_cur_map_by_id(state->selected_prop->id)) {
         TraceLog(LOG_WARNING, "scene_editor::editor_update_keyboard_bindings()::Removing property failed.");
       }
-      state->selected_prop = tilemap_prop {};
+      state->selected_prop = nullptr;
       state->selection_type = SLC_TYPE_UNSELECTED;
     }
   }
@@ -979,4 +1021,27 @@ void update_tilemap_prop_type(void) {
       break; 
     }
   }
+}
+
+
+bool scene_editor_scale_slider_on_click() {
+  TraceLog(LOG_INFO, "scene_editor::scene_editor_scale_slider_on_click()::You clicked on slider");
+
+  return true;
+}
+
+bool scene_editor_scale_slider_on_left_button_trigger() {
+  state->selected_prop->scale -= .25f;
+  get_slider_by_id(SDR_ID_EDITOR_PROP_SCALE_SLIDER)->options.at(0).no_localized_text = TextFormat("%.2f", state->selected_prop->scale);
+  TraceLog(LOG_INFO, "scene_editor::scene_editor_scale_slider_on_left_button_trigger()::New Prop Scale: %.2f", state->selected_prop->scale);
+
+  return true;
+}
+
+bool scene_editor_scale_slider_on_right_button_trigger() {
+  state->selected_prop->scale += .25f;
+  get_slider_by_id(SDR_ID_EDITOR_PROP_SCALE_SLIDER)->options.at(0).no_localized_text = TextFormat("%.2f", state->selected_prop->scale);
+  TraceLog(LOG_INFO, "scene_editor::scene_editor_scale_slider_on_right_button_trigger()::New Prop Scale: %.2f", state->selected_prop->scale);
+
+  return true;
 }
