@@ -37,10 +37,10 @@ bool ability_system_initialize(camera_metrics* _camera_metrics, app_settings* se
   register_ability(ability("Fireball",
     fireball_upgr,
     ABILITY_TYPE_FIREBALL,SHEET_ID_FLAME_ENERGY_ANIMATION, SHEET_ID_SPRITESHEET_UNSPECIFIED, MOVE_TYPE_SATELLITE,
-    3.f, 1, 1, 0.f,
+    1.86f, 1, 1, 0.f,
     Vector2{30.f, 30.f}, Rectangle{704, 768, 32, 32},
     15,
-    true,
+    false,
   ));
   std::array<ability_upgradables, ABILITY_UPG_MAX> bullet_upgr = {ABILITY_UPG_DAMAGE, ABILITY_UPG_HITBOX, ABILITY_UPG_AMOUNT, ABILITY_UPG_UNDEFINED, ABILITY_UPG_UNDEFINED};
   register_ability(ability("Bullet", 
@@ -49,7 +49,7 @@ bool ability_system_initialize(camera_metrics* _camera_metrics, app_settings* se
     3.f, 1, 3, 1.75f, 
     Vector2{30.f, 30.f}, Rectangle{544, 128, 32, 32}, 
     15, 
-    true,
+    false,
   ));
   std::array<ability_upgradables, ABILITY_UPG_MAX> comet_upgr = {ABILITY_UPG_DAMAGE, ABILITY_UPG_HITBOX, ABILITY_UPG_AMOUNT, ABILITY_UPG_UNDEFINED, ABILITY_UPG_UNDEFINED};
   register_ability(ability("Comet",
@@ -102,23 +102,26 @@ void render_abilities(ability_play_system* system) {
 
   for (int i = 1; i < ABILITY_TYPE_MAX; ++i) {
     if (!system->abilities[i].is_active || !system->abilities[i].is_initialized) { continue; }
+    ability abl = system->abilities[i];
 
     for (size_t j = 0; j < system->abilities[i].projectiles.size(); ++j) {
-      if (!system->abilities[i].projectiles.at(j).is_active) { continue; }
-      projectile* proj = &system->abilities[i].projectiles.at(j);
-      proj->is_active = true;
+      if (!abl.projectiles.at(j).is_active) { continue; }
+      projectile& proj = abl.projectiles.at(j);
+      proj.is_active = true;
       Vector2 dim = Vector2 {
-        system->abilities[i].proj_dim.x * system->abilities[i].proj_scale, 
-        system->abilities[i].proj_dim.y * system->abilities[i].proj_scale
+        proj.default_animation.current_frame_rect.width * abl.proj_scale, 
+        proj.default_animation.current_frame_rect.height * abl.proj_scale
       };
-      play_sprite_on_site(&proj->default_animation, WHITE, Rectangle {
-        proj->position.x, proj->position.y, dim.x, dim.y
+      proj.default_animation.origin.x = dim.x / 2.f;
+      proj.default_animation.origin.y = dim.y / 2.f;
+      play_sprite_on_site(&proj.default_animation, WHITE, Rectangle {
+        proj.position.x, proj.position.y, dim.x, dim.y
       });
-      if (proj->play_explosion_animation) {
-        play_sprite_on_site(&proj->explotion_animation, WHITE, Rectangle {
-          proj->buffer.f32[2], proj->buffer.f32[3],
-          system->abilities[i].proj_dim.x * system->abilities[i].proj_scale, system->abilities[i].proj_dim.y * system->abilities[i].proj_scale
-        });
+
+      if (proj.play_explosion_animation) {
+        proj.explotion_animation.origin.x = dim.x / 2.f;
+        proj.explotion_animation.origin.y = dim.y / 2.f;
+        play_sprite_on_site(&proj.explotion_animation, WHITE, Rectangle { proj.buffer.f32[2], proj.buffer.f32[3], dim.x, dim.y });
       }
     }
   }
@@ -136,15 +139,15 @@ void movement_satellite(ability* abl) {
 
   abl->rotation += abl->proj_speed;
 
-  if (abl->rotation > 359) abl->rotation = 0;
+  if (abl->rotation > 360) abl->rotation = 0;
 
   for (size_t i = 0; i < abl->projectiles.size(); i++) {
-
+    projectile& proj = abl->projectiles.at(i);
     i16 angle = (i32)(((360.f / abl->projectiles.size()) * i) + abl->rotation) % 360;
 
-    abl->projectiles.at(i).position = get_a_point_of_a_circle( abl->position, (abl->level * 3.f) + player->collision.height + 15, angle);
-    abl->projectiles.at(i).collision.x = abl->projectiles.at(i).position.x;
-    abl->projectiles.at(i).collision.y = abl->projectiles.at(i).position.y;
+    proj.position = get_a_point_of_a_circle( abl->position, (abl->level * 3.f) + player->collision.height + 15, angle);
+    proj.collision.x = proj.position.x + ((abl->proj_dim.x * abl->proj_scale) / 2.f) - ((proj.default_animation.current_frame_rect.width  * abl->proj_scale) / 2.f);
+    proj.collision.y = proj.position.y + ((abl->proj_dim.y * abl->proj_scale) / 2.f) - ((proj.default_animation.current_frame_rect.height * abl->proj_scale) / 2.f);
   }
 }
 void movement_bullet(ability* abl) {

@@ -117,7 +117,6 @@ void render_tilemap(tilemap* _tilemap, Rectangle camera_view) {
       TraceLog(LOG_ERROR, "tilemap::render_tilemap()::Atlas texture:%d is not valid", prop->tex_id);
       continue;
     }
-    Vector2 origin = VECTOR2(prop->source.width / 2.f, prop->source.height / 2.f);
 
     Rectangle _dest = Rectangle {
       .x = prop->dest.x,
@@ -125,6 +124,8 @@ void render_tilemap(tilemap* _tilemap, Rectangle camera_view) {
       .width = prop->dest.width * prop->scale,
       .height = prop->dest.height * prop->scale,
     };
+
+    Vector2 origin = VECTOR2(_dest.width / 2.f, _dest.height / 2.f);
 
     DrawTexturePro(*tex, prop->source, _dest, origin, prop->rotation, WHITE);
   }
@@ -237,10 +238,10 @@ void map_to_str(tilemap* map, tilemap_stringtify_package* out_package) {
     if (!map->props[i].is_initialized) continue;
     
     tilemap_prop* prop = &map->props[i];
-    const char* symbol = TextFormat("%.4d,%.4d,%.4d,%.4d,%.4d,%.4d,%.4d,%.4d,%.4d,%.4d,%.4d,%.4d,%.4d",
-      prop->id, prop->tex_id, prop->rotation, prop->scale, prop->prop_type,
-      (i32)prop->source.x, (i32)prop->source.y, (i32)prop->source.width, (i32)prop->source.height, 
-      (i32)prop->dest.x, (i32)prop->dest.y, (i32)prop->dest.width, (i32)prop->dest.height
+    const char* symbol = TextFormat("%.4d,%.4d,%.4d,%.4d,%.4d,%.4d,%.4d,%.4d,%.4d,%.4d,%.4d,%.4d,%.4d,%.4d",
+           prop->id,            prop->tex_id,       prop->prop_type,   (i32)prop->rotation, (i32)prop->scale, prop->zindex,
+      (i32)prop->source.x, (i32)prop->source.y,(i32)prop->source.width,(i32)prop->source.height, 
+      (i32)prop->dest.x,   (i32)prop->dest.y,  (i32)prop->dest.width,  (i32)prop->dest.height
     );
     u32 symbol_len = TextLength(symbol);
     u32 copy_len = symbol_len < TILESHEET_PROP_SYMBOL_STR_LEN ? symbol_len : TILESHEET_PROP_SYMBOL_STR_LEN - 1;
@@ -287,16 +288,17 @@ void str_to_map(tilemap* map, tilemap_stringtify_package* out_package) {
     }
     prop->id = TextToInteger((const char*)&str_par.buffer[0]);
     prop->tex_id = static_cast<texture_id>(TextToInteger((const char*)&str_par.buffer[1]));
-    prop->rotation = TextToFloat((const char*)&str_par.buffer[2]);
-    prop->scale = TextToFloat((const char*)&str_par.buffer[3]);
-    prop->prop_type = static_cast<tilemap_prop_types>(TextToInteger((const char*)&str_par.buffer[4]));
+    prop->prop_type = static_cast<tilemap_prop_types>(TextToInteger((const char*)&str_par.buffer[2]));
+    prop->rotation = TextToFloat((const char*)&str_par.buffer[3]);
+    prop->scale = TextToFloat((const char*)&str_par.buffer[4]);
+    prop->zindex = TextToInteger((const char*)&str_par.buffer[5]);
     prop->source = {
-      TextToFloat((const char*)&str_par.buffer[5]), TextToFloat((const char*)&str_par.buffer[6]),
-      TextToFloat((const char*)&str_par.buffer[7]), TextToFloat((const char*)&str_par.buffer[8]),
+      TextToFloat((const char*)&str_par.buffer[6]), TextToFloat((const char*)&str_par.buffer[7]),
+      TextToFloat((const char*)&str_par.buffer[8]), TextToFloat((const char*)&str_par.buffer[9]),
     };
     prop->dest =   {
-      TextToFloat((const char*)&str_par.buffer[9]), TextToFloat((const char*)&str_par.buffer[10]),
-      TextToFloat((const char*)&str_par.buffer[11]), TextToFloat((const char*)&str_par.buffer[12]),
+      TextToFloat((const char*)&str_par.buffer[10]), TextToFloat((const char*)&str_par.buffer[11]),
+      TextToFloat((const char*)&str_par.buffer[12]), TextToFloat((const char*)&str_par.buffer[13]),
     };
     prop->is_initialized = true;
     map->prop_count++;

@@ -82,6 +82,14 @@ bool scene_editor_scale_slider_on_click();
 bool scene_editor_scale_slider_on_left_button_trigger();
 bool scene_editor_scale_slider_on_right_button_trigger();
 
+bool scene_editor_rotation_slider_on_click();
+bool scene_editor_rotation_slider_on_left_button_trigger();
+bool scene_editor_rotation_slider_on_right_button_trigger();
+
+bool scene_editor_zindex_slider_on_click();
+bool scene_editor_zindex_slider_on_left_button_trigger();
+bool scene_editor_zindex_slider_on_right_button_trigger();
+
 void add_prop(texture_id source_tex, tilemap_prop_types type, Rectangle source, f32 scale);
 #define add_prop_tree(...) add_prop(TEX_ID_ASSET_ATLAS, TILEMAP_PROP_TYPE_TREE, __VA_ARGS__)
 #define add_prop_tombstone(...) add_prop(TEX_ID_ASSET_ATLAS, TILEMAP_PROP_TYPE_TOMBSTONE, __VA_ARGS__)
@@ -141,8 +149,10 @@ void initialize_scene_editor(camera_metrics* _camera_metrics) {
 
   update_tilemap_prop_type();
 
-  // Trees
+  // Prop init
   {
+    // Trees
+    {
     add_prop_tree(Rectangle{  11, 2056, 166, 152}, 1);
     add_prop_tree(Rectangle{ 193, 2117, 122,  91}, 1);
     add_prop_tree(Rectangle{ 321, 2059, 127, 149}, 1);
@@ -166,11 +176,11 @@ void initialize_scene_editor(camera_metrics* _camera_metrics) {
     add_prop_tree(Rectangle{ 800, 2272,  32,  32}, 1);
     add_prop_tree(Rectangle{ 832, 2272,  64,  32}, 1);
     add_prop_tree(Rectangle{ 896, 2272,  32,  32}, 1);
-  }
-  // Trees
+    }
+    // Trees
 
-  // Tombstones
-  {
+    // Tombstones
+    {
     add_prop_tombstone(Rectangle{  0, 2400, 32, 32}, 1);
     add_prop_tombstone(Rectangle{ 32, 2400, 32, 32}, 1);
     add_prop_tombstone(Rectangle{ 64, 2400, 32, 32}, 1);
@@ -212,11 +222,11 @@ void initialize_scene_editor(camera_metrics* _camera_metrics) {
     add_prop_tombstone(Rectangle{352, 2464, 32, 32}, 1);
     add_prop_tombstone(Rectangle{384, 2464, 32, 32}, 1);
     add_prop_tombstone(Rectangle{416, 2464, 32, 32}, 1);
-  }
-  // Tombstones
+    }
+    // Tombstones
 
-  // Stones
-  {
+    // Stones
+    {
     add_prop_stone(Rectangle{1024, 2272,  64,  32}, 1);
     add_prop_stone(Rectangle{1088, 2272,  32,  32}, 1);
     add_prop_stone(Rectangle{1120, 2272,  64,  32}, 1);
@@ -267,11 +277,11 @@ void initialize_scene_editor(camera_metrics* _camera_metrics) {
     add_prop_stone(Rectangle{1024, 2720,  32,  32}, 1);
     add_prop_stone(Rectangle{1056, 2720,  64,  48}, 1);
     add_prop_stone(Rectangle{1216, 2752,  32,  32}, 1);
-  }
-  // Stones
+    }
+    // Stones
 
-  // Spikes
-  {
+    // Spikes
+    {
     add_prop_spike(Rectangle{ 928, 3232, 32, 64}, 1);
     add_prop_spike(Rectangle{ 960, 3232, 32, 64}, 1);
     add_prop_spike(Rectangle{ 992, 3232, 32, 64}, 1);
@@ -291,11 +301,11 @@ void initialize_scene_editor(camera_metrics* _camera_metrics) {
     add_prop_spike(Rectangle{ 992, 3360, 32, 32}, 1);
     add_prop_spike(Rectangle{1024, 3360, 32, 32}, 1);
     add_prop_spike(Rectangle{1056, 3360, 32, 32}, 1);
-  } 
-  // Spikes
+    } 
+    // Spikes
 
-  // Skulls
-  {
+    // Skulls
+    {
     add_prop_skull(Rectangle{  0, 3104, 32, 32}, 1);
     add_prop_skull(Rectangle{ 32, 3104, 32, 32}, 1);
     add_prop_skull(Rectangle{ 64, 3104, 32, 32}, 1);
@@ -396,11 +406,11 @@ void initialize_scene_editor(camera_metrics* _camera_metrics) {
     add_prop_skull(Rectangle{224, 3392, 32, 32}, 1);
     add_prop_skull(Rectangle{256, 3392, 32, 32}, 1);
     add_prop_skull(Rectangle{288, 3392, 32, 32}, 1);
-  }
-  // Skulls
+    }
+    // Skulls
 
-  // Pillar
-  {
+    // Pillar
+    {
     add_prop_pillar(Rectangle{   928, 3232, 32, 64}, 1);
     add_prop_pillar(Rectangle{   960, 3232, 32, 64}, 1);
     add_prop_pillar(Rectangle{   992, 3232, 32, 64}, 1);
@@ -425,11 +435,11 @@ void initialize_scene_editor(camera_metrics* _camera_metrics) {
     add_prop_pillar(Rectangle{   992, 3392, 32, 32}, 1);
     add_prop_pillar(Rectangle{  1024, 3392, 32, 32}, 1);
     add_prop_pillar(Rectangle{  1056, 3392, 32, 32}, 1);
-  } 
-  // Pillar 
+    } 
+    // Pillar 
 
-  // Lamps
-  {
+    // Lamps
+    {
     add_prop_lamp(Rectangle{  576, 3072, 64, 96}, 1);
     add_prop_lamp(Rectangle{  640, 3072, 64, 96}, 1);
     add_prop_lamp(Rectangle{  704, 3072, 64, 96}, 1);
@@ -450,11 +460,11 @@ void initialize_scene_editor(camera_metrics* _camera_metrics) {
     add_prop_lamp(Rectangle{  704, 3360, 64, 96}, 1);
     add_prop_lamp(Rectangle{  768, 3360, 64, 96}, 1);
     add_prop_lamp(Rectangle{  832, 3360, 64, 96}, 1);
-  }
-  // Lamps
+    }
+    // Lamps
 
-  // Fence
-  {
+    // Fence
+    {
     add_prop_fence(Rectangle{ 32, 2528, 32, 32}, 1);
     add_prop_fence(Rectangle{ 64, 2528, 32, 64}, 1);
     add_prop_fence(Rectangle{ 96, 2528, 32, 32}, 1);
@@ -516,11 +526,11 @@ void initialize_scene_editor(camera_metrics* _camera_metrics) {
     add_prop_fence(Rectangle{528, 3008, 64, 64}, 1);
     add_prop_fence(Rectangle{672, 3008, 64, 64}, 1);
 
-  }
-  // Fence 
+    }
+    // Fence 
 
-  // Detail
-  {
+    // Detail
+    {
     add_prop_detail(Rectangle{ 480, 2592, 32, 32}, 1);
     add_prop_detail(Rectangle{ 512, 2592, 32, 32}, 1);
     add_prop_detail(Rectangle{ 544, 2592, 32, 32}, 1);
@@ -535,11 +545,11 @@ void initialize_scene_editor(camera_metrics* _camera_metrics) {
     add_prop_detail(Rectangle{ 544, 2688, 32, 64}, 1);
     add_prop_detail(Rectangle{ 576, 2688, 32, 64}, 1);
     add_prop_detail(Rectangle{ 624, 2704, 48, 48}, 1);
-  }
-  // Detail 
+    }
+    // Detail 
 
-  // Candle
-  {
+    // Candle
+    {
     add_prop_candle(Rectangle{ 320, 3104, 32, 32}, 1);
     add_prop_candle(Rectangle{ 352, 3104, 32, 32}, 1);
     add_prop_candle(Rectangle{ 384, 3104, 32, 32}, 1);
@@ -567,11 +577,11 @@ void initialize_scene_editor(camera_metrics* _camera_metrics) {
     add_prop_candle(Rectangle{ 384, 3264, 32, 32}, 1);
     add_prop_candle(Rectangle{ 416, 3264, 32, 32}, 1);
     add_prop_candle(Rectangle{ 448, 3264, 32, 32}, 1);
-  }
-  // Candle 
+    }
+    // Candle 
 
-  // Buildings
-  {
+    // Buildings
+    {
     add_prop_building(Rectangle{   0, 2800, 160, 208}, 1);
     add_prop_building(Rectangle{ 160, 2800, 160, 208}, 1);
     add_prop_building(Rectangle{ 320, 2800, 160, 208}, 1);
@@ -582,8 +592,9 @@ void initialize_scene_editor(camera_metrics* _camera_metrics) {
     add_prop_building(Rectangle{1088, 2848, 128, 160}, 1);
     add_prop_building(Rectangle{ 928, 3024, 160, 208}, 1);
     add_prop_building(Rectangle{1088, 3024, 160, 208}, 1);
+    }
+    // Buildings
   }
-  // Buildings
 
   for (int i=0; i<MAX_TILEMAP_LAYERS; ++i) {
     gui_slider_add_option(SDR_ID_EDITOR_MAP_LAYER_SLC_SLIDER, data_pack(DATA_TYPE_U16, data128( (u16) i ), 1), 0, std::to_string(LOC_TEXT_MAINMENU_NUMBERS_1+i).c_str());
@@ -594,14 +605,43 @@ void initialize_scene_editor(camera_metrics* _camera_metrics) {
     BTN_ID_EDITOR_PROP_SCALE_SLIDER_LEFT, BTN_ID_EDITOR_PROP_SCALE_SLIDER_RIGHT, 
     true, true
   );
+  register_slider(
+    SDR_ID_EDITOR_PROP_ROTATION_SLIDER,  SDR_TYPE_NUMBER, 
+    BTN_ID_EDITOR_PROP_ROTATION_SLIDER_LEFT, BTN_ID_EDITOR_PROP_ROTATION_SLIDER_RIGHT, 
+    true, true
+  );
+  register_slider(
+    SDR_ID_EDITOR_PROP_ZINDEX_SLIDER,  SDR_TYPE_NUMBER, 
+    BTN_ID_EDITOR_PROP_ZINDEX_SLIDER_LEFT, BTN_ID_EDITOR_PROP_ZINDEX_SLIDER_RIGHT, 
+    true, true
+  );
+  
   slider * scale_slider = get_slider_by_id(SDR_ID_EDITOR_PROP_SCALE_SLIDER);
   if (scale_slider == nullptr) {
     TraceLog(LOG_ERROR, "scene_editor::initialize_scene_editor()::Scale slider couldn't be registered");
     return;
   }
-  scale_slider->on_left_button_trigger = scene_editor_scale_slider_on_left_button_trigger;
+  scale_slider->on_left_button_trigger =  scene_editor_scale_slider_on_left_button_trigger;
   scale_slider->on_right_button_trigger = scene_editor_scale_slider_on_right_button_trigger;
-  scale_slider->on_click = scene_editor_scale_slider_on_click;
+  scale_slider->on_click =                scene_editor_scale_slider_on_click;
+
+  slider * rotation_slider = get_slider_by_id(SDR_ID_EDITOR_PROP_ROTATION_SLIDER);
+  if (rotation_slider == nullptr) {
+    TraceLog(LOG_ERROR, "scene_editor::initialize_scene_editor()::Rotation slider couldn't be registered");
+    return;
+  }
+  rotation_slider->on_left_button_trigger =  scene_editor_rotation_slider_on_left_button_trigger;
+  rotation_slider->on_right_button_trigger = scene_editor_rotation_slider_on_right_button_trigger;
+  rotation_slider->on_click =                scene_editor_rotation_slider_on_click;
+
+  slider * zindex_slider = get_slider_by_id(SDR_ID_EDITOR_PROP_ZINDEX_SLIDER);
+  if (zindex_slider == nullptr) {
+    TraceLog(LOG_ERROR, "scene_editor::initialize_scene_editor()::Z-index slider couldn't be registered");
+    return;
+  }
+  zindex_slider->on_left_button_trigger =  scene_editor_zindex_slider_on_left_button_trigger;
+  zindex_slider->on_right_button_trigger = scene_editor_zindex_slider_on_right_button_trigger;
+  zindex_slider->on_click =                scene_editor_zindex_slider_on_click;
   
   begin_scene_editor();
 }
@@ -684,8 +724,9 @@ void render_interface_editor(void) {
   {
     panel* pnl = &state->prop_edit_panel;
     gui_panel_scissored((*pnl), false, {
-      gui_slider(SDR_ID_EDITOR_PROP_SCALE_SLIDER, VECTOR2(pnl->dest.x,pnl->dest.y), VECTOR2(5,3), 3.f);
-      
+      gui_slider(SDR_ID_EDITOR_PROP_SCALE_SLIDER,    VECTOR2(pnl->dest.x,pnl->dest.y), VECTOR2(5,1),  3.f);
+      gui_slider(SDR_ID_EDITOR_PROP_ROTATION_SLIDER, VECTOR2(pnl->dest.x,pnl->dest.y), VECTOR2(5,5),  3.f);
+      gui_slider(SDR_ID_EDITOR_PROP_ZINDEX_SLIDER,   VECTOR2(pnl->dest.x,pnl->dest.y), VECTOR2(5,10), 3.f);
     });
   }
 
@@ -704,8 +745,8 @@ void render_interface_editor(void) {
     }
     case SLC_TYPE_SLC_PROP: {
       Vector2 prop_pos = GetWorldToScreen2D(Vector2{state->selected_prop->dest.x, state->selected_prop->dest.y}, state->in_camera_metrics->handle);
-      f32 relative_width = state->selected_prop->dest.width * state->in_camera_metrics->handle.zoom;
-      f32 relative_height = state->selected_prop->dest.height * state->in_camera_metrics->handle.zoom;
+      f32 relative_width = state->selected_prop->dest.width * state->selected_prop->scale * state->in_camera_metrics->handle.zoom;
+      f32 relative_height = state->selected_prop->dest.height * state->selected_prop->scale * state->in_camera_metrics->handle.zoom;
       
       prop_pos.x -= relative_width * 0.5f; // To center to its origin
       prop_pos.y -= relative_height * 0.5f;
@@ -752,6 +793,7 @@ void add_prop(texture_id source_tex, tilemap_prop_types type, Rectangle source, 
   prop.dest = Rectangle {0, 0, source.width * scale, source.height * scale};
   prop.scale = 1.f;
   prop.rotation = 0.f;
+  prop.zindex = 0;
 
   prop.is_initialized = true;
 
@@ -1024,24 +1066,83 @@ void update_tilemap_prop_type(void) {
 }
 
 
-bool scene_editor_scale_slider_on_click() {
-  TraceLog(LOG_INFO, "scene_editor::scene_editor_scale_slider_on_click()::You clicked on slider");
-
-  return true;
-}
-
+bool scene_editor_scale_slider_on_click() { return true; }
 bool scene_editor_scale_slider_on_left_button_trigger() {
-  state->selected_prop->scale -= .25f;
-  get_slider_by_id(SDR_ID_EDITOR_PROP_SCALE_SLIDER)->options.at(0).no_localized_text = TextFormat("%.2f", state->selected_prop->scale);
-  TraceLog(LOG_INFO, "scene_editor::scene_editor_scale_slider_on_left_button_trigger()::New Prop Scale: %.2f", state->selected_prop->scale);
+  if (state->selected_prop != nullptr) {
+    state->selected_prop->scale -= 0.15f;
+    if(state->selected_prop->scale < 0.1f) {
+      state->selected_prop->scale = 0.1f;
+    }
+    
+    get_slider_by_id(SDR_ID_EDITOR_PROP_SCALE_SLIDER)->options.at(0).no_localized_text = TextFormat("%.2f", state->selected_prop->scale);
+    return true;
+  }
 
-  return true;
+  return false;
+}
+bool scene_editor_scale_slider_on_right_button_trigger() {
+  if (state->selected_prop != nullptr) {
+    state->selected_prop->scale += 0.15f;
+
+    get_slider_by_id(SDR_ID_EDITOR_PROP_SCALE_SLIDER)->options.at(0).no_localized_text = TextFormat("%.2f", state->selected_prop->scale);
+    return true;
+  }
+
+  return false;
 }
 
-bool scene_editor_scale_slider_on_right_button_trigger() {
-  state->selected_prop->scale += .25f;
-  get_slider_by_id(SDR_ID_EDITOR_PROP_SCALE_SLIDER)->options.at(0).no_localized_text = TextFormat("%.2f", state->selected_prop->scale);
-  TraceLog(LOG_INFO, "scene_editor::scene_editor_scale_slider_on_right_button_trigger()::New Prop Scale: %.2f", state->selected_prop->scale);
+bool scene_editor_rotation_slider_on_click() { return true; }
+bool scene_editor_rotation_slider_on_left_button_trigger() {
+  if (state->selected_prop != nullptr) {
+    state->selected_prop->rotation -= 10.f;
+    if(state->selected_prop->rotation < 0.f) {
+      state->selected_prop->rotation += 360.f;
+    }
+    
+    get_slider_by_id(SDR_ID_EDITOR_PROP_ROTATION_SLIDER)->options.at(0).no_localized_text = TextFormat("%.1f", state->selected_prop->rotation);
+    return true;
+  }
 
-  return true;
+  return false;
+}
+bool scene_editor_rotation_slider_on_right_button_trigger() {
+  if (state->selected_prop != nullptr) {
+    state->selected_prop->rotation += 10.f;
+    if(state->selected_prop->rotation > 360.f) {
+      state->selected_prop->rotation -= 360.f;
+    }
+    
+    get_slider_by_id(SDR_ID_EDITOR_PROP_ROTATION_SLIDER)->options.at(0).no_localized_text = TextFormat("%.1f", state->selected_prop->rotation);
+    return true;
+  }
+
+  return false;
+}
+
+bool scene_editor_zindex_slider_on_click() { return true; }
+bool scene_editor_zindex_slider_on_left_button_trigger() {
+  if (state->selected_prop != nullptr) {
+    state->selected_prop->zindex -= 1;
+    if(state->selected_prop->zindex > MAX_Z_INDEX_SLOT) {
+      state->selected_prop->zindex += MAX_Z_INDEX_SLOT;
+    }
+    
+    get_slider_by_id(SDR_ID_EDITOR_PROP_ZINDEX_SLIDER)->options.at(0).no_localized_text = TextFormat("%d", state->selected_prop->zindex);
+    return true;
+  }
+
+  return false;
+}
+bool scene_editor_zindex_slider_on_right_button_trigger() {
+  if (state->selected_prop != nullptr) {
+    state->selected_prop->zindex += 1;
+    if(state->selected_prop->zindex > MAX_Z_INDEX_SLOT) {
+      state->selected_prop->zindex -= MAX_Z_INDEX_SLOT;
+    }
+    
+    get_slider_by_id(SDR_ID_EDITOR_PROP_ZINDEX_SLIDER)->options.at(0).no_localized_text = TextFormat("%d", state->selected_prop->zindex);
+    return true;
+  }
+
+  return false;
 }

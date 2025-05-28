@@ -62,7 +62,6 @@ typedef struct panel {
     Vector2 source_frame_dim;
     Vector2 dest_frame_dim;
     f32 scale;
-    Vector2 text_offset_on_click;
     bool should_center;
   } button_type;
   

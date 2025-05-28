@@ -203,7 +203,7 @@ bool load_image(const char *filename, bool resize, Vector2 new_size, image_type 
   return true;
 }
 void load_spritesheet(texture_id _source_tex, spritesheet_id handle_id, Vector2 offset, u16 _fps, u16 _frame_width, u16 _frame_height, u16 _total_row, u16 _total_col) {
-  if ((handle_id >= MAX_SPRITESHEET_SLOTS  ||  handle_id <= SHEET_ID_SPRITESHEET_UNSPECIFIED) ||
+  if ((handle_id >= SHEET_ID_SPRITESHEET_TYPE_MAX  ||  handle_id <= SHEET_ID_SPRITESHEET_UNSPECIFIED) ||
       (_source_tex >= TEX_ID_MAX  || _source_tex <= TEX_ID_UNSPECIFIED)) 
   {
     TraceLog(LOG_ERROR, "resource::load_spritesheet()::Out of bound ID recieved");
@@ -233,7 +233,7 @@ void load_spritesheet(texture_id _source_tex, spritesheet_id handle_id, Vector2 
   state->sprites[handle_id] = _sheet;
 }
 void load_tilesheet(tilesheet_type sheet_id, atlas_texture_id _atlas_tex_id, u16 _tile_count_x, u16 _tile_count_y, u16 _tile_size) {
-  if ((i32)sheet_id >= MAX_TILESHEET_SLOTS || sheet_id <= 0) {
+  if ((i32)sheet_id >= TILESHEET_TYPE_MAX || sheet_id <= TILESHEET_TYPE_UNSPECIFIED) {
     TraceLog(LOG_ERROR, "resource::load_tilesheet()::Sheet type out of bound");
     return;
   }

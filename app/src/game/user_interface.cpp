@@ -5,7 +5,6 @@
 
 #include <tools/pak_parser.h>
 
-#include "core/fmath.h"
 #include "core/event.h"
 #include "core/fmemory.h"
 
@@ -107,7 +106,7 @@ void gui_draw_settings_screen(void);
 bool gui_button(const char* text, button_id _id, Font font, f32 font_size_scale, Vector2 pos, bool play_on_click_sound);
 
 void register_button(button_id _btn_id, button_type_id _btn_type_id);
-void register_button_type(button_type_id _btn_type_id, spritesheet_id _ss_type, Vector2 frame_dim, Vector2 on_click_text_offset, f32 _scale, bool _should_center);
+void register_button_type(button_type_id _btn_type_id, spritesheet_id _ss_type, Vector2 frame_dim, f32 _scale, bool _should_center);
 void register_progress_bar(progress_bar_id _id, progress_bar_type_id _type_id, f32 width_multiply, Vector2 scale);
 void register_progress_bar_type(progress_bar_type_id _type_id, atlas_texture_id _body_inside, atlas_texture_id _body_outside, shader_id _mask_shader_id);
 void register_slider_type(slider_type_id _sdr_type_id, spritesheet_id _ss_sdr_body_type, f32 _scale, u16 _width_multiply, button_type_id _left_btn_type_id, button_type_id _right_btn_type_id, u16 _char_limit);
@@ -172,19 +171,19 @@ void user_interface_system_initialize(void) {
   {
   register_button_type(
     BTN_TYPE_MENU_BUTTON, SHEET_ID_MENU_BUTTON,
-    Vector2{88, 13}, Vector2{0, 2},
+    Vector2{88, 13},
     DEFAULT_MENU_BUTTON_SCALE, false);
   register_button_type(
     BTN_TYPE_SLIDER_LEFT_BUTTON, SHEET_ID_SLIDER_LEFT_BUTTON,
-    Vector2{12, 12}, Vector2{0, 0},
+    Vector2{12, 12},
     DEFAULT_MENU_BUTTON_SCALE, false);
   register_button_type(
     BTN_TYPE_SLIDER_RIGHT_BUTTON, SHEET_ID_SLIDER_RIGHT_BUTTON,
-    Vector2{12, 12}, Vector2{0, 0},
+    Vector2{12, 12},
     DEFAULT_MENU_BUTTON_SCALE, false);
   register_button_type(
     BTN_TYPE_FLAT_BUTTON, SHEET_ID_FLAT_BUTTON,
-    Vector2{44, 14}, Vector2{0, 0},
+    Vector2{44, 14},
     2, false);
   }
   // BUTTON TYPES
@@ -512,7 +511,6 @@ bool gui_button(const char* text, button_id _id, Font font, f32 font_size_scale,
     TraceLog(LOG_WARNING, "user_interface::gui_button()::The button is not registered");
     return false;
   }
-  button_type* _btn_type = &_btn->btn_type;
   _btn->on_screen = true;
   _btn->dest.x = pos.x;
   _btn->dest.y = pos.y;
@@ -533,8 +531,7 @@ bool gui_button(const char* text, button_id _id, Font font, f32 font_size_scale,
   if (_btn->state == BTN_STATE_PRESSED) {
     draw_sprite_on_site_by_id(_btn->btn_type.ss_type, WHITE, VECTOR2(_btn->dest.x,_btn->dest.y), draw_sprite_scale, 0, false);
     if (!TextIsEqual(text, "")) {
-      Vector2 pressed_text_pos = vec2_add(text_pos, _btn_type->text_offset_on_click);
-      draw_text(text, pressed_text_pos, font, font.baseSize * font_size_scale, BUTTON_TEXT_PRESSED_COLOR, false, false, false, 0.f);
+      draw_text(text, text_pos, font, font.baseSize * font_size_scale, BUTTON_TEXT_PRESSED_COLOR, false, false, false, 0.f);
     }
     if (play_on_click_sound) event_fire(EVENT_CODE_PLAY_BUTTON_ON_CLICK, event_context((u16)true));
   } else {
@@ -994,7 +991,7 @@ bool gui_slider_add_option(slider_id _id, data_pack content, u32 _localization_s
     return false;
   }
 }
-void register_button_type(button_type_id _btn_type_id, spritesheet_id _ss_type, Vector2 frame_dim, Vector2 on_click_text_offset, f32 _scale, bool _should_center) {
+void register_button_type(button_type_id _btn_type_id, spritesheet_id _ss_type, Vector2 frame_dim, f32 _scale, bool _should_center) {
   if (_ss_type     >= SHEET_ID_SPRITESHEET_TYPE_MAX || _ss_type <= SHEET_ID_SPRITESHEET_UNSPECIFIED || 
       _btn_type_id >= BTN_TYPE_MAX         || _btn_type_id <= BTN_TYPE_UNDEFINED  ||
       !state) {
@@ -1010,7 +1007,6 @@ void register_button_type(button_type_id _btn_type_id, spritesheet_id _ss_type, 
       .y = frame_dim.y * _scale,
     },
     .scale = _scale,
-    .text_offset_on_click = Vector2 { .x = on_click_text_offset.x * _scale, .y = on_click_text_offset.y * _scale},
     .should_center = _should_center,
   };
   state->button_types[_btn_type_id] = btn_type;
