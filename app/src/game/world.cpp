@@ -4,8 +4,8 @@
 #include "tilemap.h"
 
 typedef struct world_system_state {
-  tilemap map[MAX_WORLDMAP_LOCATIONS];
-  tilemap_stringtify_package map_stringtify[MAX_WORLDMAP_LOCATIONS];
+  std::array<tilemap, MAX_WORLDMAP_LOCATIONS> map;
+  std::array<tilemap_stringtify_package, MAX_WORLDMAP_LOCATIONS>  map_stringtify;
   std::array<worldmap_stage, MAX_WORLDMAP_LOCATIONS> worldmap_locations;
   tilesheet palette;
 
@@ -16,7 +16,7 @@ typedef struct world_system_state {
 
 static world_system_state * state; 
 
-#define CURR_MAP state->map[state->active_stage.map_id]
+#define CURR_MAP state->map.at(state->active_stage.map_id)
 
 // 3840x2160 is the dimentions of map selection screen background picture
 #define CREATE_WORLDMAP_STAGE_CENTERED(ID, DISPLAY_NAME, FILENAME, SELECTION_SCREEN_LOCATION, WILL_BE_ON_SELECTION_SCREEN) state->worldmap_locations.at(ID) = \
@@ -74,22 +74,22 @@ bool world_system_initialize(camera_metrics* _in_camera_metrics) {
   }
   for (int i=0; i<MAX_WORLDMAP_LOCATIONS; ++i) {
     for (int j=0; j<MAX_TILEMAP_LAYERS; ++j) {
-      copy_memory(state->map[i].filename[j], TextFormat("%s_layer%d.txt", state->worldmap_locations[i].filename.c_str(), j), sizeof(i8) * MAX_TILEMAP_FILENAME_LEN);
+      state->map.at(i).filename.at(j) = TextFormat("%s_layer%d.txt", state->worldmap_locations.at(i).filename.c_str(), j);
     }
-    copy_memory(state->map[i].propfile,    TextFormat("%s_prop.txt", state->worldmap_locations[i].filename.c_str()), sizeof(i8) * MAX_TILEMAP_FILENAME_LEN);
-    create_tilemap(TILESHEET_TYPE_MAP, Vector2 {}, 100, 60, &state->map[i]);
-    if(!state->map[i].is_initialized) {
+    state->map.at(i).propfile = TextFormat("%s_prop.txt", state->worldmap_locations.at(i).filename.c_str());
+    create_tilemap(TILESHEET_TYPE_MAP, Vector2 {}, 100, 60, &state->map.at(i));
+    if(!state->map.at(i).is_initialized) {
       TraceLog(LOG_WARNING, "WARNING::scene_in_game_edit::initialize_scene_in_game_edit()::tilemap initialization failed");
     }
-    load_or_create_map_data(&state->map[i], &state->map_stringtify[i]);
+    load_or_create_map_data(&state->map.at(i), &state->map_stringtify.at(i));
 
-    if (!state->map_stringtify[i].is_success) {
+    if (!state->map_stringtify.at(i).is_success) {
       TraceLog(LOG_ERROR, "game_manager_initialize::game manager unable to load map");
       return false;
     }
-    state->worldmap_locations[i].spawning_areas[0] = {
-      state->map[i].position.x, state->map[i].position.y,
-      (f32) (state->map[i].map_dim * state->map[i].tile_size), (f32) (state->map[i].map_dim * state->map[i].tile_size)
+    state->worldmap_locations.at(i).spawning_areas.at(0) = {
+      state->map.at(i).position.x, state->map.at(i).position.y,
+      (f32) (state->map.at(i).map_dim * state->map.at(i).tile_size), (f32) (state->map.at(i).map_dim * state->map.at(i).tile_size)
     };
   }
   return true;
@@ -109,7 +109,7 @@ void set_worldmap_location(u16 id) {
     TraceLog(LOG_WARNING, "world::set_worldmap_location()::Recieved id was out of bound");
     return;
   }
-  state->active_stage = state->worldmap_locations[id];
+  state->active_stage = state->worldmap_locations.at(id);
 }
 void set_map_tile(i32 layer, tile src, tile dst) {
   if (layer < 0 || layer >= MAX_TILEMAP_LAYERS) {
@@ -123,35 +123,59 @@ void set_map_tile(i32 layer, tile src, tile dst) {
   CURR_MAP.tiles[layer][src.position.x][src.position.y].c[0] = dst.symbol.c[0];
   CURR_MAP.tiles[layer][src.position.x][src.position.y].c[1] = dst.symbol.c[1];
 }
-tilemap_prop* get_map_prop_by_pos(Vector2 pos) {
-  for (int i=0; i<CURR_MAP.prop_count; ++i) {
-    Rectangle prop_dest = CURR_MAP.props[i].dest;
+tilemap_prop get_map_prop_by_pos(Vector2 pos) {
+  for (auto iter = CURR_MAP.static_props.begin(); iter != CURR_MAP.static_props.end(); ++iter) {
+    Rectangle prop_dest = iter->dest;
     prop_dest.x -= prop_dest.width  * .5f;
     prop_dest.y -= prop_dest.height * .5f;
     if(CheckCollisionPointRec(pos, prop_dest)) { // Props are always centered
-      return &CURR_MAP.props[i];
-      break;
+      tilemap_prop prop = {};
+      prop.data.prop_static = iter;
+      prop.type = prop.data.prop_static->prop_type;
+      return prop;
     }
   }
-  return nullptr;
+  for (size_t iter = 0; iter < CURR_MAP.sprite_props.size(); ++iter) {
+    Rectangle prop_dest = CURR_MAP.sprite_props.at(iter).sprite.coord;
+    prop_dest.x -= prop_dest.width  * .5f;
+    prop_dest.y -= prop_dest.height * .5f;
+    if(CheckCollisionPointRec(pos, prop_dest)) { // Props are always centered
+      tilemap_prop prop = {};
+      prop.data.prop_sprite = &CURR_MAP.sprite_props.at(iter);
+      prop.type = prop.data.prop_sprite->prop_type;
+      return prop;
+    }
+  }
+
+  return tilemap_prop {};
 }
-tilemap_prop* get_map_prop_by_id(u16 id) {
-  for (int i=0; i<CURR_MAP.prop_count; ++i) {
-    if (CURR_MAP.props[i].id == id) {
-      return &CURR_MAP.props[i];
+tilemap_prop_static* get_map_prop_static_by_id(u16 id) {
+  for (size_t iter = 0; iter < CURR_MAP.static_props.size(); ++iter) {
+    if (CURR_MAP.static_props.at(iter).id == id) {
+      return &CURR_MAP.static_props.at(iter);
+    }
+  }
+  TraceLog(LOG_WARNING, "world::get_map_prop_by_id()::No match found");
+  return nullptr;  
+}
+tilemap_prop_sprite* get_map_prop_sprite_by_id(u16 id) {
+  for (size_t iter = 0; iter < CURR_MAP.sprite_props.size(); ++iter) {
+    if (CURR_MAP.sprite_props.at(iter).id == id) {
+      return &CURR_MAP.sprite_props.at(iter);
     }
   }
   TraceLog(LOG_WARNING, "world::get_map_prop_by_id()::No match found");
   return nullptr;  
 }
 
+
 void save_current_map(void) {
-  if(!save_map_data(&CURR_MAP, &state->map_stringtify[state->active_stage.map_id])) {
+  if(!save_map_data(&CURR_MAP, &state->map_stringtify.at(state->active_stage.map_id))) {
     TraceLog(LOG_WARNING, "world::save_current_map()::save_map_data returned false");
   }
 }
 void load_current_map(void) {
-  if(!load_map_data(&CURR_MAP, &state->map_stringtify[state->active_stage.map_id])) {
+  if(!load_map_data(&CURR_MAP, &state->map_stringtify.at(state->active_stage.map_id))) {
     TraceLog(LOG_WARNING, "world::load_current_map()::load_map_data returned false");
   }
 }
@@ -193,31 +217,54 @@ void _render_tile_on_pos(tile* _tile, Vector2 pos, tilesheet* sheet) {
   }
   render_tile(&_tile->symbol, Rectangle {pos.x, pos.y, (f32) CURR_MAP.tile_size, (f32) CURR_MAP.tile_size }, sheet);
 }
-bool add_prop_curr_map(tilemap_prop* prop) {
-  if (!prop) {
-    TraceLog(LOG_WARNING, "world::add_prop_curr_map()::Recieved prop was empty");
-    return false;
-  }
+bool add_prop_curr_map(tilemap_prop prop) {
+  if (prop.type != TILEMAP_PROP_TYPE_SPRITE) {
+    if (prop.data.prop_static == nullptr) {
+      TraceLog(LOG_WARNING, "world::add_prop_curr_map()::Recieved static prop was empty");
+      return false;
+    }
 
-  CURR_MAP.props[CURR_MAP.prop_count] = *prop;
-  CURR_MAP.props[CURR_MAP.prop_count].id = CURR_MAP.prop_count;
-  CURR_MAP.prop_count++;
+    CURR_MAP.static_props.at(CURR_MAP.static_prop_count) = *prop.data.prop_static;
+    CURR_MAP.static_props.at(CURR_MAP.static_prop_count).id = CURR_MAP.static_prop_count;
+    CURR_MAP.static_prop_count++;
+  }
+  if (prop.type == TILEMAP_PROP_TYPE_SPRITE) {
+    if (prop.data.prop_sprite == nullptr) {
+      TraceLog(LOG_WARNING, "world::add_prop_curr_map()::Recieved sprite prop was empty");
+      return false;
+    }
+    prop.data.prop_sprite->id = CURR_MAP.sprite_prop_count;
+
+    CURR_MAP.sprite_props.push_back(*prop.data.prop_sprite);
+    CURR_MAP.sprite_prop_count++;
+  }
   return true;
 }
-bool remove_prop_cur_map_by_id(u16 id) {
+bool remove_prop_cur_map_by_id(u16 id, tilemap_prop_types type) {
   if (id >= MAX_TILEMAP_PROPS) {
     TraceLog(LOG_WARNING, "world::remove_prop_cur_map_by_id()::Recieved id was out of bound");
     return false;
   }
-
-  for (int i=0; i<CURR_MAP.prop_count; ++i) {
-    if (CURR_MAP.props[i].id == id) {
-      CURR_MAP.prop_count--;
-      CURR_MAP.props[i] = CURR_MAP.props[CURR_MAP.prop_count];
-      CURR_MAP.props[CURR_MAP.prop_count] = tilemap_prop{};
-      return true;
+  if (type != TILEMAP_PROP_TYPE_SPRITE) {
+    for (auto iter = CURR_MAP.static_props.begin(); iter != CURR_MAP.static_props.end(); ++iter) {
+      if (iter->id == id) {
+        CURR_MAP.static_prop_count--;
+        *iter = CURR_MAP.static_props.at(CURR_MAP.static_prop_count);
+        CURR_MAP.static_props.at(CURR_MAP.static_prop_count) = tilemap_prop_static{};
+        return true;
+      }
     }
   }
+  if (type == TILEMAP_PROP_TYPE_SPRITE) {
+    for (auto iter = CURR_MAP.sprite_props.begin(); iter != CURR_MAP.sprite_props.end(); iter++) {
+      if (iter->id == id) {
+        CURR_MAP.sprite_prop_count--;
+        CURR_MAP.sprite_props.erase(iter);
+        return true;
+      }
+    }
+  }
+
   TraceLog(LOG_WARNING, "world::remove_prop_cur_map_by_id()::No match found");
   return false;
 }

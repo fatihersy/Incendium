@@ -51,6 +51,7 @@ bool resource_system_initialize(void) {
   load_texture_from_atlas(ATLAS_TEX_ID_CURRENCY_SOUL_ICON_5000,   Rectangle{1888, 736,    32,   32});
   load_texture_from_atlas(ATLAS_TEX_ID_CURRENCY_SOUL_ICON_15000,  Rectangle{1920, 736,    32,   32});
   load_texture_from_atlas(ATLAS_TEX_ID_CURRENCY_SOUL_ICON_45000,  Rectangle{1952, 736,    32,   32});
+  load_texture_from_atlas(ATLAS_TEX_ID_FOG,                       Rectangle{1152,3296,   400,   64});
 
   load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_PLAYER_ANIMATION_IDLE_LEFT,         VECTOR2(1584, 288), 15,   22,  32, 1,  4);
   load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_PLAYER_ANIMATION_IDLE_RIGHT,        VECTOR2(1584, 224), 15,   22,  32, 1,  4);
@@ -87,6 +88,11 @@ bool resource_system_initialize(void) {
   load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_FLAME_ENERGY_ANIMATION,             VECTOR2(1584, 352), 13,   48,  48, 1, 18);
   load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_FIREBALL_ANIMATION,                 VECTOR2(1584, 400), 10,   64,  64, 1,  6);
   load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_FIREBALL_EXPLOTION_ANIMATION,       VECTOR2(1584, 464),  6,   64,  64, 1,  7);
+
+  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_ENVIRONMENTAL_PARTICLES, VECTOR2( 576, 3456), 5, 160,  96, 1, 12);
+  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_LIGHT_INSECTS,           VECTOR2(1248, 2400), 5,  58,  71, 1, 12);
+  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_CANDLE_FX,               VECTOR2(1088, 3360), 5,  64,  64, 1, 12);
+  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_GENERIC_LIGHT,           VECTOR2(1248, 2272),15, 128, 128, 1,  4);
   
   load_tilesheet(TILESHEET_TYPE_MAP, ATLAS_TEX_ID_MAP_TILESET_TEXTURE, 49, 63, 32);
   return true;
@@ -222,7 +228,6 @@ void load_spritesheet(texture_id _source_tex, spritesheet_id handle_id, Vector2 
   _sheet.current_col = 0;
   _sheet.current_row = 0;
   _sheet.current_frame = 0;
-  _sheet.attached_spawn = 0;
   _sheet.current_frame_rect = {
       .x = 0.f, .y = 0.f, .width = (f32)  _frame_width, .height = (f32) _frame_height};
   _sheet.coord = {

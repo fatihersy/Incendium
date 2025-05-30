@@ -78,6 +78,26 @@ typedef struct panel {
     std::string no_localized_text;
     u32 localization_symbol;
     data_pack content;
+    slider_option() {
+      this->no_localized_text = "NULL";
+      this-> localization_symbol = 0;
+      this->content = data_pack();
+    }
+    slider_option(const char* _str, u32 symbol, data_pack content) : slider_option() {
+      this->no_localized_text = _str;
+      this->localization_symbol = symbol;
+      this->content = content;
+    }
+    slider_option(const char* _str, data_pack content) : slider_option() {
+      this->localization_symbol = 0;
+      this->no_localized_text = _str;
+      this->content = content;
+    }
+    slider_option(u32 symbol, data_pack content) : slider_option() {
+      this->no_localized_text = "::ERROR";
+      this->localization_symbol = symbol;
+      this->content = content;
+    }
   } slider_option;
   
   typedef struct slider_type {
@@ -156,6 +176,7 @@ bool is_ui_fade_anim_complete(void);
 bool is_ui_fade_anim_about_to_complete(void);
 
 bool ui_set_slider_current_index(slider_id id, u16 index);
+bool ui_set_slider_current_value(slider_id id, slider_option value);
 
 bool gui_slider_add_option(slider_id _id, data_pack content, u32 _localization_symbol, std::string _no_localized_text);
 Rectangle get_atlas_texture_source_rect(atlas_texture_id _id);

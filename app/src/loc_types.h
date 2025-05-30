@@ -50,6 +50,7 @@ typedef enum loc_text_editor {
   LOC_TEXT_EDITOR_SDR_PROP_CHANGE_DETAIL,
   LOC_TEXT_EDITOR_SDR_PROP_CHANGE_CANDLE,
   LOC_TEXT_EDITOR_SDR_PROP_CHANGE_BUILDING,
+  LOC_TEXT_EDITOR_SDR_PROP_CHANGE_SPRITE,
 }loc_text_editor;
 
 typedef enum loc_text_ingame {

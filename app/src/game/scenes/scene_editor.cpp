@@ -17,8 +17,10 @@
 typedef enum editor_state_selection_type {
   SLC_TYPE_UNSELECTED,
   SLC_TYPE_TILE,
-  SLC_TYPE_DROP_PROP,
-  SLC_TYPE_SLC_PROP,
+  SLC_TYPE_DROP_PROP_STATIC,
+  SLC_TYPE_SLC_PROP_STATIC,
+  SLC_TYPE_DROP_PROP_SPRITE,
+  SLC_TYPE_SLC_PROP_SPRITE,
 } editor_state_selection_type;
 
 typedef enum editor_state_mouse_focus {
@@ -31,9 +33,11 @@ typedef enum editor_state_mouse_focus {
 typedef struct scene_editor_state {
   camera_metrics * in_camera_metrics;
   Vector2 target;
-  worldmap_stage worldmap_locations[MAX_WORLDMAP_LOCATIONS];
-  u32 next_prop_id;
-  std::vector<tilemap_prop> * tilemap_props_selected;
+  std::array<worldmap_stage, MAX_WORLDMAP_LOCATIONS> worldmap_locations;
+  u32 next_prop_static_id;
+  u32 next_prop_sprite_id;
+  std::vector<tilemap_prop_static> * tilemap_props_static_selected;
+  std::vector<tilemap_prop_sprite> * tilemap_props_sprite_selected;
 
   bool b_show_tilesheet_tile_selection_screen;
   bool b_show_prop_selection_screen;
@@ -41,23 +45,26 @@ typedef struct scene_editor_state {
   bool b_dragging_prop;
   bool b_show_pause_menu;
 
-  std::vector<tilemap_prop> tilemap_props_trees;
-  std::vector<tilemap_prop> tilemap_props_tombstones;
-  std::vector<tilemap_prop> tilemap_props_stones;
-  std::vector<tilemap_prop> tilemap_props_spikes;
-  std::vector<tilemap_prop> tilemap_props_skulls;
-  std::vector<tilemap_prop> tilemap_props_pillars;
-  std::vector<tilemap_prop> tilemap_props_lamps;
-  std::vector<tilemap_prop> tilemap_props_fence;
-  std::vector<tilemap_prop> tilemap_props_details;
-  std::vector<tilemap_prop> tilemap_props_candles;
-  std::vector<tilemap_prop> tilemap_props_buildings;
+  std::vector<tilemap_prop_static> tilemap_props_trees;
+  std::vector<tilemap_prop_static> tilemap_props_tombstones;
+  std::vector<tilemap_prop_static> tilemap_props_stones;
+  std::vector<tilemap_prop_static> tilemap_props_spikes;
+  std::vector<tilemap_prop_static> tilemap_props_skulls;
+  std::vector<tilemap_prop_static> tilemap_props_pillars;
+  std::vector<tilemap_prop_static> tilemap_props_lamps;
+  std::vector<tilemap_prop_static> tilemap_props_fence;
+  std::vector<tilemap_prop_static> tilemap_props_details;
+  std::vector<tilemap_prop_static> tilemap_props_candles;
+  std::vector<tilemap_prop_static> tilemap_props_buildings;
+
+  std::vector<tilemap_prop_sprite> tilemap_props_sprite;
 
   panel prop_selection_panel;
   panel tile_selection_panel;
   panel prop_edit_panel;
   tile selected_tile;
-  tilemap_prop* selected_prop;
+  tilemap_prop_static* selected_prop_static;
+  tilemap_prop_sprite* selected_prop_sprite;
   tilesheet* selected_sheet;
   u16 edit_layer;
   u16 selected_stage;
@@ -78,19 +85,21 @@ i32 map_prop_id_to_index(u16 id);
 Rectangle se_get_camera_view_rect(Camera2D camera);
 void update_tilemap_prop_type(void);
 
-bool scene_editor_scale_slider_on_click();
 bool scene_editor_scale_slider_on_left_button_trigger();
 bool scene_editor_scale_slider_on_right_button_trigger();
-
-bool scene_editor_rotation_slider_on_click();
 bool scene_editor_rotation_slider_on_left_button_trigger();
 bool scene_editor_rotation_slider_on_right_button_trigger();
-
-bool scene_editor_zindex_slider_on_click();
 bool scene_editor_zindex_slider_on_left_button_trigger();
 bool scene_editor_zindex_slider_on_right_button_trigger();
+bool scene_editor_map_layer_slc_slider_on_left_button_trigger();
+bool scene_editor_map_layer_slc_slider_on_right_button_trigger();
+bool scene_editor_map_stage_slc_slider_on_left_button_trigger();
+bool scene_editor_map_stage_slc_slider_on_right_button_trigger();
+bool scene_editor_map_prop_type_slc_slider_on_left_button_trigger();
+bool scene_editor_map_prop_type_slc_slider_on_right_button_trigger();
 
 void add_prop(texture_id source_tex, tilemap_prop_types type, Rectangle source, f32 scale);
+void add_prop(tilemap_prop_types type, spritesheet_id sprite_id, f32 scale);
 #define add_prop_tree(...) add_prop(TEX_ID_ASSET_ATLAS, TILEMAP_PROP_TYPE_TREE, __VA_ARGS__)
 #define add_prop_tombstone(...) add_prop(TEX_ID_ASSET_ATLAS, TILEMAP_PROP_TYPE_TOMBSTONE, __VA_ARGS__)
 #define add_prop_stone(...) add_prop(TEX_ID_ASSET_ATLAS, TILEMAP_PROP_TYPE_STONE, __VA_ARGS__)
@@ -102,9 +111,11 @@ void add_prop(texture_id source_tex, tilemap_prop_types type, Rectangle source, 
 #define add_prop_detail(...) add_prop(TEX_ID_ASSET_ATLAS, TILEMAP_PROP_TYPE_DETAIL, __VA_ARGS__)
 #define add_prop_candle(...) add_prop(TEX_ID_ASSET_ATLAS, TILEMAP_PROP_TYPE_CANDLE, __VA_ARGS__)
 #define add_prop_building(...) add_prop(TEX_ID_ASSET_ATLAS, TILEMAP_PROP_TYPE_BUILDING, __VA_ARGS__)
+#define add_prop_sprite(SPRITE_ID, ...) add_prop(TILEMAP_PROP_TYPE_SPRITE, SPRITE_ID, __VA_ARGS__)
 
 void initialize_scene_editor(camera_metrics* _camera_metrics) {
   if (state) {
+    update_tilemap_prop_type();
     begin_scene_editor();
     return;
   }
@@ -123,7 +134,7 @@ void initialize_scene_editor(camera_metrics* _camera_metrics) {
 
   user_interface_system_initialize();
 
-  copy_memory(&state->worldmap_locations, get_worldmap_locations(), sizeof(state->worldmap_locations));
+  copy_memory(state->worldmap_locations.data(), get_worldmap_locations(), MAX_WORLDMAP_LOCATIONS * sizeof(worldmap_stage));
   state->selected_sheet = get_tilesheet_by_enum(TILESHEET_TYPE_MAP);
 
   state->tile_selection_panel = get_default_panel();
@@ -146,8 +157,6 @@ void initialize_scene_editor(camera_metrics* _camera_metrics) {
     BASE_RENDER_RES.x - _prop_edit_panel_dim.x, 0, 
     _prop_edit_panel_dim.x, _prop_edit_panel_dim.y
   };
-
-  update_tilemap_prop_type();
 
   // Prop init
   {
@@ -545,6 +554,7 @@ void initialize_scene_editor(camera_metrics* _camera_metrics) {
     add_prop_detail(Rectangle{ 544, 2688, 32, 64}, 1);
     add_prop_detail(Rectangle{ 576, 2688, 32, 64}, 1);
     add_prop_detail(Rectangle{ 624, 2704, 48, 48}, 1);
+    add_prop_detail(Rectangle{1152, 3296,400, 64}, 1);
     }
     // Detail 
 
@@ -594,60 +604,123 @@ void initialize_scene_editor(camera_metrics* _camera_metrics) {
     add_prop_building(Rectangle{1088, 3024, 160, 208}, 1);
     }
     // Buildings
+
+    // Sprites
+    {
+      add_prop_sprite(SHEET_ID_ENVIRONMENTAL_PARTICLES, 1);
+      add_prop_sprite(SHEET_ID_LIGHT_INSECTS,           1);
+      add_prop_sprite(SHEET_ID_CANDLE_FX,               1);
+      add_prop_sprite(SHEET_ID_GENERIC_LIGHT,           1);
+    }
+    // Sprites
   }
 
-  for (int i=0; i<MAX_TILEMAP_LAYERS; ++i) {
-    gui_slider_add_option(SDR_ID_EDITOR_MAP_LAYER_SLC_SLIDER, data_pack(DATA_TYPE_U16, data128( (u16) i ), 1), 0, std::to_string(LOC_TEXT_MAINMENU_NUMBERS_1+i).c_str());
+  // Registering sliders
+  {
+    register_slider(
+      SDR_ID_EDITOR_PROP_SCALE_SLIDER,  SDR_TYPE_NUMBER, 
+      BTN_ID_EDITOR_PROP_SCALE_SLIDER_LEFT, BTN_ID_EDITOR_PROP_SCALE_SLIDER_RIGHT, 
+      true, true
+    );
+    register_slider(
+      SDR_ID_EDITOR_PROP_ROTATION_SLIDER,  SDR_TYPE_NUMBER, 
+      BTN_ID_EDITOR_PROP_ROTATION_SLIDER_LEFT, BTN_ID_EDITOR_PROP_ROTATION_SLIDER_RIGHT, 
+      true, true
+    );
+    register_slider(
+      SDR_ID_EDITOR_PROP_ZINDEX_SLIDER,  SDR_TYPE_NUMBER, 
+      BTN_ID_EDITOR_PROP_ZINDEX_SLIDER_LEFT, BTN_ID_EDITOR_PROP_ZINDEX_SLIDER_RIGHT, 
+      true, true
+    );
+    register_slider(
+      SDR_ID_EDITOR_MAP_STAGE_SLC_SLIDER, SDR_TYPE_NUMBER, 
+      BTN_ID_EDITOR_SDR_ACTIVE_STAGE_INDEX_DEC,BTN_ID_EDITOR_SDR_ACTIVE_STAGE_INDEX_INC, false, false);
+    register_slider(
+      SDR_ID_EDITOR_MAP_LAYER_SLC_SLIDER, SDR_TYPE_NUMBER, 
+      BTN_ID_EDITOR_ACTIVE_TILEMAP_EDIT_LAYER_DEC,BTN_ID_EDITOR_ACTIVE_TILEMAP_EDIT_LAYER_INC, false, false);
+    register_slider(
+      SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER,  SDR_TYPE_OPTION, 
+      BTN_ID_EDITOR_PROP_TYPE_SLC_SLIDER_LEFT, BTN_ID_EDITOR_PROP_TYPE_SLC_SLIDER_RIGHT, false, true);
+
+    gui_slider_add_option(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER, data_pack(DATA_TYPE_I32, data128((i32)TILEMAP_PROP_TYPE_TREE),      1), LOC_TEXT_EDITOR_SDR_PROP_CHANGE_TREE,      "");
+    gui_slider_add_option(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER, data_pack(DATA_TYPE_I32, data128((i32)TILEMAP_PROP_TYPE_TOMBSTONE), 1), LOC_TEXT_EDITOR_SDR_PROP_CHANGE_TOMBSTONE, "");
+    gui_slider_add_option(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER, data_pack(DATA_TYPE_I32, data128((i32)TILEMAP_PROP_TYPE_STONE),     1), LOC_TEXT_EDITOR_SDR_PROP_CHANGE_STONE,     "");
+    gui_slider_add_option(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER, data_pack(DATA_TYPE_I32, data128((i32)TILEMAP_PROP_TYPE_SPIKE),     1), LOC_TEXT_EDITOR_SDR_PROP_CHANGE_SPIKE,     "");
+    gui_slider_add_option(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER, data_pack(DATA_TYPE_I32, data128((i32)TILEMAP_PROP_TYPE_SKULL),     1), LOC_TEXT_EDITOR_SDR_PROP_CHANGE_SKULL,     "");
+    gui_slider_add_option(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER, data_pack(DATA_TYPE_I32, data128((i32)TILEMAP_PROP_TYPE_PILLAR),    1), LOC_TEXT_EDITOR_SDR_PROP_CHANGE_PILLAR,    "");
+    gui_slider_add_option(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER, data_pack(DATA_TYPE_I32, data128((i32)TILEMAP_PROP_TYPE_LAMP),      1), LOC_TEXT_EDITOR_SDR_PROP_CHANGE_LAMP,      "");
+    gui_slider_add_option(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER, data_pack(DATA_TYPE_I32, data128((i32)TILEMAP_PROP_TYPE_FENCE),     1), LOC_TEXT_EDITOR_SDR_PROP_CHANGE_FENCE,     "");
+    gui_slider_add_option(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER, data_pack(DATA_TYPE_I32, data128((i32)TILEMAP_PROP_TYPE_DETAIL),    1), LOC_TEXT_EDITOR_SDR_PROP_CHANGE_DETAIL,    "");
+    gui_slider_add_option(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER, data_pack(DATA_TYPE_I32, data128((i32)TILEMAP_PROP_TYPE_CANDLE),    1), LOC_TEXT_EDITOR_SDR_PROP_CHANGE_CANDLE,    "");
+    gui_slider_add_option(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER, data_pack(DATA_TYPE_I32, data128((i32)TILEMAP_PROP_TYPE_BUILDING),  1), LOC_TEXT_EDITOR_SDR_PROP_CHANGE_BUILDING,  "");
+    gui_slider_add_option(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER, data_pack(DATA_TYPE_I32, data128((i32)TILEMAP_PROP_TYPE_SPRITE),    1), LOC_TEXT_EDITOR_SDR_PROP_CHANGE_SPRITE,    "");
+    ui_set_slider_current_value(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER, slider_option {LOC_TEXT_EDITOR_SDR_PROP_CHANGE_TREE, data_pack(DATA_TYPE_I32, data128((i32)TILEMAP_PROP_TYPE_TREE), 1)});
+    
+    slider * scale_slider = get_slider_by_id(SDR_ID_EDITOR_PROP_SCALE_SLIDER);
+    if (scale_slider == nullptr) {
+      TraceLog(LOG_ERROR, "scene_editor::initialize_scene_editor()::Cannot found Scale slider");
+      return;
+    }
+    scale_slider->on_left_button_trigger  = scene_editor_scale_slider_on_left_button_trigger;
+    scale_slider->on_right_button_trigger = scene_editor_scale_slider_on_right_button_trigger;
+    scale_slider->on_click =                nullptr;
+
+    slider * rotation_slider = get_slider_by_id(SDR_ID_EDITOR_PROP_ROTATION_SLIDER);
+    if (rotation_slider == nullptr) {
+      TraceLog(LOG_ERROR, "scene_editor::initialize_scene_editor()::Cannot found Rotation slider");
+      return;
+    }
+    rotation_slider->on_left_button_trigger  = scene_editor_rotation_slider_on_left_button_trigger;
+    rotation_slider->on_right_button_trigger = scene_editor_rotation_slider_on_right_button_trigger;
+    rotation_slider->on_click =                nullptr;
+
+    slider * zindex_slider = get_slider_by_id(SDR_ID_EDITOR_PROP_ZINDEX_SLIDER);
+    if (zindex_slider == nullptr) {
+      TraceLog(LOG_ERROR, "scene_editor::initialize_scene_editor()::Cannot found Z-index slider");
+      return;
+    }
+    zindex_slider->on_left_button_trigger  = scene_editor_zindex_slider_on_left_button_trigger;
+    zindex_slider->on_right_button_trigger = scene_editor_zindex_slider_on_right_button_trigger;
+    zindex_slider->on_click =                nullptr;
+
+    slider * layer_slider = get_slider_by_id(SDR_ID_EDITOR_MAP_LAYER_SLC_SLIDER);
+    if (layer_slider == nullptr) {
+      TraceLog(LOG_ERROR, "scene_editor::initialize_scene_editor()::Cannot found map layer slider");
+      return;
+    }
+    layer_slider->on_left_button_trigger  = scene_editor_map_layer_slc_slider_on_left_button_trigger;
+    layer_slider->on_right_button_trigger = scene_editor_map_layer_slc_slider_on_right_button_trigger;
+    layer_slider->on_click =                nullptr;
+
+    slider * stage_slider = get_slider_by_id(SDR_ID_EDITOR_MAP_STAGE_SLC_SLIDER);
+    if (stage_slider == nullptr) {
+      TraceLog(LOG_ERROR, "scene_editor::initialize_scene_editor()::Cannot found map stage slider");
+      return;
+    }
+    stage_slider->on_left_button_trigger =  scene_editor_map_stage_slc_slider_on_left_button_trigger;
+    stage_slider->on_right_button_trigger = scene_editor_map_stage_slc_slider_on_right_button_trigger;
+    stage_slider->on_click =                nullptr;
+
+    slider * prop_type_slider = get_slider_by_id(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER);
+    if (prop_type_slider == nullptr) {
+      TraceLog(LOG_ERROR, "scene_editor::initialize_scene_editor()::Cannot found map prop type slider");
+      return;
+    }
+    prop_type_slider->on_left_button_trigger =  scene_editor_map_prop_type_slc_slider_on_left_button_trigger;
+    prop_type_slider->on_right_button_trigger = scene_editor_map_prop_type_slc_slider_on_right_button_trigger;
+    prop_type_slider->on_click =                nullptr;
   }
 
-  register_slider(
-    SDR_ID_EDITOR_PROP_SCALE_SLIDER,  SDR_TYPE_NUMBER, 
-    BTN_ID_EDITOR_PROP_SCALE_SLIDER_LEFT, BTN_ID_EDITOR_PROP_SCALE_SLIDER_RIGHT, 
-    true, true
-  );
-  register_slider(
-    SDR_ID_EDITOR_PROP_ROTATION_SLIDER,  SDR_TYPE_NUMBER, 
-    BTN_ID_EDITOR_PROP_ROTATION_SLIDER_LEFT, BTN_ID_EDITOR_PROP_ROTATION_SLIDER_RIGHT, 
-    true, true
-  );
-  register_slider(
-    SDR_ID_EDITOR_PROP_ZINDEX_SLIDER,  SDR_TYPE_NUMBER, 
-    BTN_ID_EDITOR_PROP_ZINDEX_SLIDER_LEFT, BTN_ID_EDITOR_PROP_ZINDEX_SLIDER_RIGHT, 
-    true, true
-  );
-  
-  slider * scale_slider = get_slider_by_id(SDR_ID_EDITOR_PROP_SCALE_SLIDER);
-  if (scale_slider == nullptr) {
-    TraceLog(LOG_ERROR, "scene_editor::initialize_scene_editor()::Scale slider couldn't be registered");
-    return;
-  }
-  scale_slider->on_left_button_trigger =  scene_editor_scale_slider_on_left_button_trigger;
-  scale_slider->on_right_button_trigger = scene_editor_scale_slider_on_right_button_trigger;
-  scale_slider->on_click =                scene_editor_scale_slider_on_click;
-
-  slider * rotation_slider = get_slider_by_id(SDR_ID_EDITOR_PROP_ROTATION_SLIDER);
-  if (rotation_slider == nullptr) {
-    TraceLog(LOG_ERROR, "scene_editor::initialize_scene_editor()::Rotation slider couldn't be registered");
-    return;
-  }
-  rotation_slider->on_left_button_trigger =  scene_editor_rotation_slider_on_left_button_trigger;
-  rotation_slider->on_right_button_trigger = scene_editor_rotation_slider_on_right_button_trigger;
-  rotation_slider->on_click =                scene_editor_rotation_slider_on_click;
-
-  slider * zindex_slider = get_slider_by_id(SDR_ID_EDITOR_PROP_ZINDEX_SLIDER);
-  if (zindex_slider == nullptr) {
-    TraceLog(LOG_ERROR, "scene_editor::initialize_scene_editor()::Z-index slider couldn't be registered");
-    return;
-  }
-  zindex_slider->on_left_button_trigger =  scene_editor_zindex_slider_on_left_button_trigger;
-  zindex_slider->on_right_button_trigger = scene_editor_zindex_slider_on_right_button_trigger;
-  zindex_slider->on_click =                scene_editor_zindex_slider_on_click;
-  
+  update_tilemap_prop_type();
   begin_scene_editor();
 }
 
 // UPDATE / RENDER
 void update_scene_editor(void) {
+  if (!state) {
+    TraceLog(LOG_ERROR, "scene_editor::update_scene_editor()::State is not valid");
+    return;
+  }
   if(!IsWindowFocused()) {
     state->mouse_focus = MOUSE_FOCUS_UNFOCUSED;
     return;
@@ -656,13 +729,11 @@ void update_scene_editor(void) {
   state->mouse_pos_screen.x = GetMousePosition().x * get_app_settings()->scale_ratio.at(0);
   state->mouse_pos_screen.y = GetMousePosition().y * get_app_settings()->scale_ratio.at(1);
   state->mouse_pos_world = GetScreenToWorld2D(state->mouse_pos_screen, state->in_camera_metrics->handle);
-  state->edit_layer = get_slider_current_value(SDR_ID_EDITOR_MAP_LAYER_SLC_SLIDER)->data.u16[0]; // HACK: Should not updated every frame
   state->in_camera_metrics->frustum = se_get_camera_view_rect(state->in_camera_metrics->handle);
 
   editor_update_bindings();
   update_map();
   update_user_interface();
-  update_tilemap_prop_type();
 }
 void render_scene_editor(void) {
   if (state->selected_stage == WORLDMAP_MAINMENU_MAP) {
@@ -674,43 +745,43 @@ void render_scene_editor(void) {
   DrawPixel(0, 0, RED);
 }
 void render_interface_editor(void) {
-  
+  if (!state) {
+    TraceLog(LOG_ERROR, "scene_editor::render_interface_editor()::State is not valid");
+    return;
+  }
   if(state->b_show_tilesheet_tile_selection_screen && !state->b_show_prop_selection_screen) 
   {
     gui_panel_scissored(state->tile_selection_panel, false, {
       render_map_palette(state->tile_selection_panel.zoom);
-      gui_slider(SDR_ID_EDITOR_MAP_LAYER_SLC_SLIDER, SCREEN_OFFSET, VECTOR2(4,3), 3.f);
-
-      if(gui_slider_button(BTN_ID_EDITOR_BTN_STAGE_MAP_CHANGE_LEFT, SCREEN_POS(6.5f,9.f))){
-        if (state->selected_stage > 0) {
-          state->selected_stage -= 1;
-          set_worldmap_location(state->selected_stage);
-        }
-      }
-
-      gui_label_format_v(FONT_TYPE_MEDIUM, 10, SCREEN_POS(14.f,10.f), WHITE, true, true, "%d", state->selected_stage);
-
-      if(gui_slider_button(BTN_ID_EDITOR_BTN_STAGE_MAP_CHANGE_RIGHT, SCREEN_POS(17.f,9.f))) {
-        if (state->selected_stage < MAX_WORLDMAP_LOCATIONS-1) {
-          state->selected_stage += 1;
-          set_worldmap_location(state->selected_stage);
-        }
-      }
+      gui_slider(SDR_ID_EDITOR_MAP_LAYER_SLC_SLIDER, Vector2{
+        state->tile_selection_panel.dest.x,state->tile_selection_panel.dest.y}, VECTOR2(4,5), 3.f
+      );
+      gui_slider(SDR_ID_EDITOR_MAP_STAGE_SLC_SLIDER, Vector2{
+        state->tile_selection_panel.dest.x,state->tile_selection_panel.dest.y}, VECTOR2(4,10), 3.f
+      );
     }); 
   }
   else if(state->b_show_prop_selection_screen && !state->b_show_tilesheet_tile_selection_screen) 
   {
     panel* pnl = &state->prop_selection_panel;
     gui_panel_scissored((*pnl), false, {
-      gui_slider(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER, VECTOR2(0,0), VECTOR2(5,3), 3.f);
+      gui_slider(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER, VECTOR2(pnl->dest.x,pnl->dest.y), VECTOR2(4,3), 3.f);
       f32 prop_height_count = pnl->buffer.f32[1];
-      for (size_t i = 0; i < state->tilemap_props_selected->size(); ++i) {
-        const tilemap_prop& prop = state->tilemap_props_selected->at(i);
-        Rectangle dest = prop.dest;
-        dest.x = 0;
-        dest.y = (pnl->scroll * pnl->buffer.f32[0]) + prop_height_count;
-        gui_draw_texture_id_pro(prop.tex_id, prop.source, dest, false);
-        prop_height_count += prop.dest.height;
+      if (get_slider_current_value(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER)->data.i32[0] == TILEMAP_PROP_TYPE_SPRITE) {
+        for (size_t iter = 0; iter < state->tilemap_props_sprite_selected->size(); ++iter) {
+          const tilemap_prop_sprite& prop = state->tilemap_props_sprite_selected->at(iter);
+          gui_draw_spritesheet_id(prop.sprite_id, WHITE, VECTOR2(0.f, ((pnl->scroll * pnl->buffer.f32[0]) + prop_height_count)), VECTOR2(prop.scale, prop.scale), 0, false);
+          prop_height_count += prop.sprite.coord.height;
+        }
+      } else {
+        for (size_t i = 0; i < state->tilemap_props_static_selected->size(); ++i) {
+          const tilemap_prop_static& prop = state->tilemap_props_static_selected->at(i);
+          Rectangle dest = prop.dest;
+          dest.x = 0;
+          dest.y = (pnl->scroll * pnl->buffer.f32[0]) + prop_height_count;
+          gui_draw_texture_id_pro(prop.tex_id, prop.source, dest, false);
+          prop_height_count += prop.dest.height;
+        }
       }
       pnl->buffer.f32[0] = prop_height_count;
       pnl->scroll_handle.y = FMAX(pnl->scroll_handle.y, pnl->dest.y + SCREEN_OFFSET.x);
@@ -720,12 +791,16 @@ void render_interface_editor(void) {
     });
   }
 
-  if(state->selection_type == SLC_TYPE_SLC_PROP) 
+  if(state->selection_type == SLC_TYPE_SLC_PROP_STATIC) 
   {
     panel* pnl = &state->prop_edit_panel;
     gui_panel_scissored((*pnl), false, {
+      ui_set_slider_current_value(SDR_ID_EDITOR_PROP_SCALE_SLIDER, slider_option(TextFormat("%.2f", state->selected_prop_static->scale), data_pack()));
+      get_slider_by_id(SDR_ID_EDITOR_PROP_SCALE_SLIDER)->options.at(0).no_localized_text = TextFormat("%.2f", state->selected_prop_static->scale);
       gui_slider(SDR_ID_EDITOR_PROP_SCALE_SLIDER,    VECTOR2(pnl->dest.x,pnl->dest.y), VECTOR2(5,1),  3.f);
+      get_slider_by_id(SDR_ID_EDITOR_PROP_ROTATION_SLIDER)->options.at(0).no_localized_text = TextFormat("%.1f", state->selected_prop_static->rotation);
       gui_slider(SDR_ID_EDITOR_PROP_ROTATION_SLIDER, VECTOR2(pnl->dest.x,pnl->dest.y), VECTOR2(5,5),  3.f);
+      get_slider_by_id(SDR_ID_EDITOR_PROP_ZINDEX_SLIDER)->options.at(0).no_localized_text = TextFormat("%d", state->selected_prop_static->zindex);
       gui_slider(SDR_ID_EDITOR_PROP_ZINDEX_SLIDER,   VECTOR2(pnl->dest.x,pnl->dest.y), VECTOR2(5,10), 3.f);
     });
   }
@@ -735,18 +810,18 @@ void render_interface_editor(void) {
       _render_tile_on_pos(&state->selected_tile, state->mouse_pos_screen, state->selected_sheet);
       break;
     }
-    case SLC_TYPE_DROP_PROP: {
+    case SLC_TYPE_DROP_PROP_STATIC: {
       gui_draw_texture_id_pro(
-        state->selected_prop->tex_id, state->selected_prop->source,
-        Rectangle { state->mouse_pos_screen.x, state->mouse_pos_screen.y, state->selected_prop->dest.width, state->selected_prop->dest.height}, 
+        state->selected_prop_static->tex_id, state->selected_prop_static->source,
+        Rectangle { state->mouse_pos_screen.x, state->mouse_pos_screen.y, state->selected_prop_static->dest.width, state->selected_prop_static->dest.height}, 
         false
       );
       break;
     }
-    case SLC_TYPE_SLC_PROP: {
-      Vector2 prop_pos = GetWorldToScreen2D(Vector2{state->selected_prop->dest.x, state->selected_prop->dest.y}, state->in_camera_metrics->handle);
-      f32 relative_width = state->selected_prop->dest.width * state->selected_prop->scale * state->in_camera_metrics->handle.zoom;
-      f32 relative_height = state->selected_prop->dest.height * state->selected_prop->scale * state->in_camera_metrics->handle.zoom;
+    case SLC_TYPE_SLC_PROP_STATIC: {
+      Vector2 prop_pos = GetWorldToScreen2D(Vector2{state->selected_prop_static->dest.x, state->selected_prop_static->dest.y}, state->in_camera_metrics->handle);
+      f32 relative_width = state->selected_prop_static->dest.width * state->selected_prop_static->scale * state->in_camera_metrics->handle.zoom;
+      f32 relative_height = state->selected_prop_static->dest.height * state->selected_prop_static->scale * state->in_camera_metrics->handle.zoom;
       
       prop_pos.x -= relative_width * 0.5f; // To center to its origin
       prop_pos.y -= relative_height * 0.5f;
@@ -783,15 +858,15 @@ void add_prop(texture_id source_tex, tilemap_prop_types type, Rectangle source, 
     return;
   }
   
-  tilemap_prop prop = {};
+  tilemap_prop_static prop = {};
 
-  prop.id = state->next_prop_id++;
+  prop.id = state->next_prop_static_id++;
   prop.tex_id = source_tex;
   prop.prop_type = type;
   
   prop.source = source;
   prop.dest = Rectangle {0, 0, source.width * scale, source.height * scale};
-  prop.scale = 1.f;
+  prop.scale = scale;
   prop.rotation = 0.f;
   prop.zindex = 0;
 
@@ -815,6 +890,36 @@ void add_prop(texture_id source_tex, tilemap_prop_types type, Rectangle source, 
     }
   }
 }
+void add_prop(tilemap_prop_types type, spritesheet_id sprite_id, f32 scale) {
+  if (sprite_id >= SHEET_ID_SPRITESHEET_TYPE_MAX || sprite_id <= SHEET_ID_SPRITESHEET_UNSPECIFIED) {
+    TraceLog(LOG_WARNING, "scene_editor::add_prop()::Provided sprite id out of bound");
+    return;
+  }
+  const spritesheet * _sprite = get_spritesheet_by_enum(sprite_id);
+  if (!_sprite) {
+    TraceLog(LOG_WARNING, "scene_editor::add_prop()::Invalid sprite");
+    return;
+  }
+  
+  tilemap_prop_sprite prop = {};
+
+  prop.id = state->next_prop_sprite_id++;
+  prop.sprite_id = sprite_id;
+  prop.sprite = *_sprite;
+  prop.prop_type = type;
+  prop.sprite.rotation = 0.f;
+  prop.scale = scale;
+
+  prop.is_initialized = true;
+
+  switch (type) {
+    case TILEMAP_PROP_TYPE_SPRITE:      { state->tilemap_props_sprite.push_back(prop); break; }
+    default: { 
+      TraceLog(LOG_WARNING, "scene_editor::add_prop()::Unsupported tilemap sprite type");
+      return;
+    }
+  }
+}
 
 // BINDINGS
 void editor_update_bindings(void) {
@@ -829,15 +934,13 @@ void editor_update_mouse_bindings(void) {
 
     if (state->tile_selection_panel.zoom > 3.0f) state->tile_selection_panel.zoom = 3.0f;
     else if (state->tile_selection_panel.zoom < 0.1f) state->tile_selection_panel.zoom = 0.1f;
+
     if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON) && state->selection_type == SLC_TYPE_UNSELECTED) {
       tile _tile = _get_tile_from_sheet_by_mouse_pos(state->mouse_pos_screen);
       if (_tile.is_initialized) {
         state->selected_tile = _tile;
         state->selection_type = SLC_TYPE_TILE;
-      } else {
-        TraceLog(LOG_WARNING, "scene_editor::editor_update_mouse_bindings()::Tile selection failed");
-        return;
-      }
+      } else { return; }
     }
     if (IsMouseButtonDown(MOUSE_MIDDLE_BUTTON)) {
       drag_tilesheet(GetMouseDelta());
@@ -860,13 +963,13 @@ void editor_update_mouse_bindings(void) {
  
     if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON) && state->selection_type == SLC_TYPE_UNSELECTED && !pnl->is_dragging_scroll) {
       i32 h = (pnl->scroll * pnl->buffer.f32[0] * (-1)) + state->mouse_pos_screen.y - pnl->buffer.f32[1];
-      for (size_t i=0; i< state->tilemap_props_selected->size() && h > 0; ++i) {
-        if(h - state->tilemap_props_selected->at(i).source.height < 0) {
-          state->selected_prop = &state->tilemap_props_selected->at(i);
-          state->selection_type = SLC_TYPE_DROP_PROP;
+      for (size_t i=0; i< state->tilemap_props_static_selected->size() && h > 0; ++i) {
+        if(h - state->tilemap_props_static_selected->at(i).source.height < 0) {
+          state->selected_prop_static = &state->tilemap_props_static_selected->at(i);
+          state->selection_type = SLC_TYPE_DROP_PROP_STATIC;
           break;
         }
-        h -= state->tilemap_props_selected->at(i).source.height;
+        h -= state->tilemap_props_static_selected->at(i).source.height;
       }
     }
   }
@@ -874,21 +977,25 @@ void editor_update_mouse_bindings(void) {
   {
     switch (state->selection_type) {
       case SLC_TYPE_UNSELECTED: {
-        tilemap_prop* prop = get_map_prop_by_pos(state->mouse_pos_world);
-        if (prop != nullptr) {
-          state->selected_prop = prop;
-          state->selection_type = SLC_TYPE_SLC_PROP;
+        tilemap_prop _prop = get_map_prop_by_pos(state->mouse_pos_world);
+        if (_prop.type != TILEMAP_PROP_TYPE_SPRITE && _prop.data.prop_static != nullptr) {
+          state->selected_prop_static = _prop.data.prop_static;
+          state->selection_type = SLC_TYPE_SLC_PROP_STATIC;
+        }
+        if (_prop.type == TILEMAP_PROP_TYPE_SPRITE && _prop.data.prop_sprite != nullptr) {
+          state->selected_prop_sprite = _prop.data.prop_sprite;
+          state->selection_type = SLC_TYPE_SLC_PROP_SPRITE;
         }
         break;
       }
-      case SLC_TYPE_DROP_PROP: {
+      case SLC_TYPE_DROP_PROP_STATIC: {
         Vector2 coord = GetScreenToWorld2D(state->mouse_pos_screen, state->in_camera_metrics->handle);
-        state->selected_prop->dest.x = coord.x;
-        state->selected_prop->dest.y = coord.y;
-        add_prop_curr_map(state->selected_prop);
+        state->selected_prop_static->dest.x = coord.x;
+        state->selected_prop_static->dest.y = coord.y;
+        add_prop_curr_map(state->selected_prop_static);
         break;
       }
-      case SLC_TYPE_SLC_PROP: {
+      case SLC_TYPE_SLC_PROP_STATIC: {
         state->b_dragging_prop = false;
         break;
       }     
@@ -898,8 +1005,12 @@ void editor_update_mouse_bindings(void) {
   else if (IsMouseButtonDown(MOUSE_LEFT_BUTTON) && state->mouse_focus == MOUSE_FOCUS_MAP) 
   {
     switch (state->selection_type) {
-      case SLC_TYPE_SLC_PROP: {
-        tilemap_prop* prop = get_map_prop_by_id(state->selected_prop->id);
+      case SLC_TYPE_SLC_PROP_STATIC: {
+        tilemap_prop_static* prop = get_map_prop_static_by_id(state->selected_prop_static->id);
+        if (prop == nullptr) {
+          TraceLog(LOG_ERROR, "scene_editor::editor_update_mouse_bindings()::Prop static:%d cannot found", state->selected_prop_sprite->id);
+          break;
+        }
         Rectangle drag_handle = Rectangle {
           prop->dest.x - PROP_DRAG_HANDLE_DIM_DIV2, prop->dest.y - PROP_DRAG_HANDLE_DIM_DIV2, 
           PROP_DRAG_HANDLE_DIM, PROP_DRAG_HANDLE_DIM
@@ -910,7 +1021,27 @@ void editor_update_mouse_bindings(void) {
         if (state->b_dragging_prop) {
           prop->dest.x = state->mouse_pos_world.x;
           prop->dest.y = state->mouse_pos_world.y;
-          state->selected_prop->dest = prop->dest;
+          state->selected_prop_static->dest = prop->dest;
+        }
+        break;
+      }
+      case SLC_TYPE_SLC_PROP_SPRITE: {
+        tilemap_prop_sprite* prop = get_map_prop_sprite_by_id(state->selected_prop_sprite->id);
+        if (prop == nullptr) {
+          TraceLog(LOG_ERROR, "scene_editor::editor_update_mouse_bindings()::Prop sprite:%d cannot found", state->selected_prop_sprite->id);
+          break;
+        }
+        Rectangle drag_handle = Rectangle {
+          prop->sprite.coord.x - PROP_DRAG_HANDLE_DIM_DIV2, prop->sprite.coord.y - PROP_DRAG_HANDLE_DIM_DIV2, 
+          PROP_DRAG_HANDLE_DIM, PROP_DRAG_HANDLE_DIM
+        };
+        if(!state->b_dragging_prop && CheckCollisionPointRec(state->mouse_pos_world, drag_handle)) {
+          state->b_dragging_prop = true;
+        }
+        if (state->b_dragging_prop) {
+          prop->sprite.coord.x = state->mouse_pos_world.x;
+          prop->sprite.coord.y = state->mouse_pos_world.y;
+          state->selected_prop_sprite->sprite.coord = prop->sprite.coord;
         }
         break;
       }
@@ -941,7 +1072,7 @@ void editor_update_mouse_bindings(void) {
   if (IsMouseButtonReleased(MOUSE_RIGHT_BUTTON) && state->selection_type != SLC_TYPE_UNSELECTED) 
   {
     state->selected_tile = {};
-    state->selected_prop = {};
+    state->selected_prop_static = {};
     state->selection_type = SLC_TYPE_UNSELECTED;
   }
   if (state->mouse_focus == MOUSE_FOCUS_MAP) {
@@ -972,11 +1103,11 @@ void editor_update_keyboard_bindings(void) {
     state->b_show_tilesheet_tile_selection_screen = false;
   }
   if (IsKeyReleased(KEY_DELETE)) {
-    if (state->mouse_focus == MOUSE_FOCUS_MAP && state->selection_type == SLC_TYPE_SLC_PROP && !state->b_dragging_prop) {
-      if(!remove_prop_cur_map_by_id(state->selected_prop->id)) {
+    if (state->mouse_focus == MOUSE_FOCUS_MAP && state->selection_type == SLC_TYPE_SLC_PROP_STATIC && !state->b_dragging_prop) {
+      if(!_remove_prop_cur_map_by_id(state->selected_prop_static)) {
         TraceLog(LOG_WARNING, "scene_editor::editor_update_keyboard_bindings()::Removing property failed.");
       }
-      state->selected_prop = nullptr;
+      state->selected_prop_static = nullptr;
       state->selection_type = SLC_TYPE_UNSELECTED;
     }
   }
@@ -1006,6 +1137,8 @@ void editor_update_movement(void) {
 void begin_scene_editor(void) {
 
   event_fire(EVENT_CODE_SCENE_MANAGER_SET_CAM_POS, event_context(data128(state->target.x, state->target.y)));
+  get_slider_by_id(SDR_ID_EDITOR_MAP_STAGE_SLC_SLIDER)->options.at(0).no_localized_text = TextFormat("%d", state->selected_stage);
+  get_slider_by_id(SDR_ID_EDITOR_MAP_LAYER_SLC_SLIDER)->options.at(0).no_localized_text = TextFormat("%d", state->edit_layer);
 }
 void end_scene_editor(void) {
   if (!state) {
@@ -1018,7 +1151,7 @@ void end_scene_editor(void) {
   state->b_dragging_prop = false;
   state->b_show_pause_menu = false;
   state->selected_tile = {};
-  state->selected_prop = {};
+  state->selected_prop_static = {};
   state->target = {};
   state->selection_type = editor_state_selection_type::SLC_TYPE_UNSELECTED;
   state->mouse_focus = editor_state_mouse_focus::MOUSE_FOCUS_UNFOCUSED;
@@ -1042,107 +1175,193 @@ void update_tilemap_prop_type(void) {
     TraceLog(LOG_WARNING, "scene_editor::update_tilemap_prop_type()::State is not valid");
     return;
   }
-  
-  tilemap_prop_types selected_prop_type = static_cast<tilemap_prop_types>(get_slider_current_value(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER)->data.i32[0]);
+  i32 prop_type_value = get_slider_current_value(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER)->data.i32[0];
+  tilemap_prop_types selected_prop_type = static_cast<tilemap_prop_types>(prop_type_value);
   switch (selected_prop_type) {
-    case TILEMAP_PROP_TYPE_TREE:      { state->tilemap_props_selected = &state->tilemap_props_trees;      break; }
-    case TILEMAP_PROP_TYPE_TOMBSTONE: { state->tilemap_props_selected = &state->tilemap_props_tombstones; break; }
-    case TILEMAP_PROP_TYPE_STONE:     { state->tilemap_props_selected = &state->tilemap_props_stones;     break; }
-    case TILEMAP_PROP_TYPE_SPIKE:     { state->tilemap_props_selected = &state->tilemap_props_spikes;     break; }
-    case TILEMAP_PROP_TYPE_SKULL:     { state->tilemap_props_selected = &state->tilemap_props_skulls;     break; }
-    case TILEMAP_PROP_TYPE_PILLAR:    { state->tilemap_props_selected = &state->tilemap_props_pillars;    break; }
-    case TILEMAP_PROP_TYPE_LAMP:      { state->tilemap_props_selected = &state->tilemap_props_lamps;      break; }
-    case TILEMAP_PROP_TYPE_FENCE:     { state->tilemap_props_selected = &state->tilemap_props_fence;      break; }
-    case TILEMAP_PROP_TYPE_DETAIL:    { state->tilemap_props_selected = &state->tilemap_props_details;    break; }
-    case TILEMAP_PROP_TYPE_CANDLE:    { state->tilemap_props_selected = &state->tilemap_props_candles;    break; }
-    case TILEMAP_PROP_TYPE_BUILDING:  { state->tilemap_props_selected = &state->tilemap_props_buildings;  break; }
+    case TILEMAP_PROP_TYPE_TREE:      { state->tilemap_props_static_selected = &state->tilemap_props_trees;      break; }
+    case TILEMAP_PROP_TYPE_TOMBSTONE: { state->tilemap_props_static_selected = &state->tilemap_props_tombstones; break; }
+    case TILEMAP_PROP_TYPE_STONE:     { state->tilemap_props_static_selected = &state->tilemap_props_stones;     break; }
+    case TILEMAP_PROP_TYPE_SPIKE:     { state->tilemap_props_static_selected = &state->tilemap_props_spikes;     break; }
+    case TILEMAP_PROP_TYPE_SKULL:     { state->tilemap_props_static_selected = &state->tilemap_props_skulls;     break; }
+    case TILEMAP_PROP_TYPE_PILLAR:    { state->tilemap_props_static_selected = &state->tilemap_props_pillars;    break; }
+    case TILEMAP_PROP_TYPE_LAMP:      { state->tilemap_props_static_selected = &state->tilemap_props_lamps;      break; }
+    case TILEMAP_PROP_TYPE_FENCE:     { state->tilemap_props_static_selected = &state->tilemap_props_fence;      break; }
+    case TILEMAP_PROP_TYPE_DETAIL:    { state->tilemap_props_static_selected = &state->tilemap_props_details;    break; }
+    case TILEMAP_PROP_TYPE_CANDLE:    { state->tilemap_props_static_selected = &state->tilemap_props_candles;    break; }
+    case TILEMAP_PROP_TYPE_BUILDING:  { state->tilemap_props_static_selected = &state->tilemap_props_buildings;  break; }
+    case TILEMAP_PROP_TYPE_SPRITE:    { state->tilemap_props_sprite_selected = &state->tilemap_props_sprite;     break; }
     default: { 
       TraceLog(LOG_WARNING, "scene_editor::initialize_scene_editor()::Unsupported tilemap prop type");
       ui_set_slider_current_index(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER, 1);
-      state->tilemap_props_selected = &state->tilemap_props_trees;
+      state->tilemap_props_static_selected = &state->tilemap_props_trees;
       break; 
     }
   }
 }
 
-
-bool scene_editor_scale_slider_on_click() { return true; }
 bool scene_editor_scale_slider_on_left_button_trigger() {
-  if (state->selected_prop != nullptr) {
-    state->selected_prop->scale -= 0.15f;
-    if(state->selected_prop->scale < 0.1f) {
-      state->selected_prop->scale = 0.1f;
-    }
-    
-    get_slider_by_id(SDR_ID_EDITOR_PROP_SCALE_SLIDER)->options.at(0).no_localized_text = TextFormat("%.2f", state->selected_prop->scale);
+  if (!state) {
+    TraceLog(LOG_ERROR, "scene_editor::scene_editor_scale_slider_on_left_button_trigger():: State is not valid");
+    return false;
+  }
+  if (state->selected_prop_static != nullptr) {
+    state->selected_prop_static->scale -= .15f;
     return true;
   }
 
   return false;
 }
 bool scene_editor_scale_slider_on_right_button_trigger() {
-  if (state->selected_prop != nullptr) {
-    state->selected_prop->scale += 0.15f;
-
-    get_slider_by_id(SDR_ID_EDITOR_PROP_SCALE_SLIDER)->options.at(0).no_localized_text = TextFormat("%.2f", state->selected_prop->scale);
+  if (!state) {
+    TraceLog(LOG_ERROR, "scene_editor::scene_editor_scale_slider_on_right_button_trigger():: State is not valid");
+    return false;
+  }
+  if (state->selected_prop_static != nullptr) {
+    state->selected_prop_static->scale += .15f;
     return true;
   }
 
   return false;
 }
-
-bool scene_editor_rotation_slider_on_click() { return true; }
 bool scene_editor_rotation_slider_on_left_button_trigger() {
-  if (state->selected_prop != nullptr) {
-    state->selected_prop->rotation -= 10.f;
-    if(state->selected_prop->rotation < 0.f) {
-      state->selected_prop->rotation += 360.f;
+  if (!state) {
+    TraceLog(LOG_ERROR, "scene_editor::scene_editor_zindex_slider_on_left_button_trigger():: State is not valid");
+    return false;
+  }
+  if (state->selected_prop_static != nullptr) {
+    state->selected_prop_static->rotation -= 10.f;
+    if(state->selected_prop_static->rotation < 0.f) {
+      state->selected_prop_static->rotation += 360.f;
     }
-    
-    get_slider_by_id(SDR_ID_EDITOR_PROP_ROTATION_SLIDER)->options.at(0).no_localized_text = TextFormat("%.1f", state->selected_prop->rotation);
+    state->selected_prop_static->rotation = FCLAMP(state->selected_prop_static->rotation, 0, 360);
     return true;
   }
 
   return false;
 }
 bool scene_editor_rotation_slider_on_right_button_trigger() {
-  if (state->selected_prop != nullptr) {
-    state->selected_prop->rotation += 10.f;
-    if(state->selected_prop->rotation > 360.f) {
-      state->selected_prop->rotation -= 360.f;
+  if (state->selected_prop_static != nullptr) {
+    state->selected_prop_static->rotation += 10.f;
+    if(state->selected_prop_static->rotation > 360.f) {
+      state->selected_prop_static->rotation -= 360.f;
     }
-    
-    get_slider_by_id(SDR_ID_EDITOR_PROP_ROTATION_SLIDER)->options.at(0).no_localized_text = TextFormat("%.1f", state->selected_prop->rotation);
+    state->selected_prop_static->rotation = FCLAMP(state->selected_prop_static->rotation, 0, 360);
     return true;
   }
 
   return false;
 }
-
-bool scene_editor_zindex_slider_on_click() { return true; }
 bool scene_editor_zindex_slider_on_left_button_trigger() {
-  if (state->selected_prop != nullptr) {
-    state->selected_prop->zindex -= 1;
-    if(state->selected_prop->zindex > MAX_Z_INDEX_SLOT) {
-      state->selected_prop->zindex += MAX_Z_INDEX_SLOT;
+  if (!state) {
+    TraceLog(LOG_ERROR, "scene_editor::scene_editor_zindex_slider_on_left_button_trigger():: State is not valid");
+    return false;
+  }
+  if (state->selected_prop_static != nullptr) {
+    state->selected_prop_static->zindex -= 1;
+    if(state->selected_prop_static->zindex < 0) {
+      state->selected_prop_static->zindex = 0;
     }
-    
-    get_slider_by_id(SDR_ID_EDITOR_PROP_ZINDEX_SLIDER)->options.at(0).no_localized_text = TextFormat("%d", state->selected_prop->zindex);
     return true;
   }
 
   return false;
 }
 bool scene_editor_zindex_slider_on_right_button_trigger() {
-  if (state->selected_prop != nullptr) {
-    state->selected_prop->zindex += 1;
-    if(state->selected_prop->zindex > MAX_Z_INDEX_SLOT) {
-      state->selected_prop->zindex -= MAX_Z_INDEX_SLOT;
+  if (!state) {
+    TraceLog(LOG_ERROR, "scene_editor::scene_editor_zindex_slider_on_right_button_trigger():: State is not valid");
+    return false;
+  }
+  if (state->selected_prop_static != nullptr) {
+    state->selected_prop_static->zindex += 1;
+    if(state->selected_prop_static->zindex > MAX_Z_INDEX_SLOT) {
+      state->selected_prop_static->zindex = MAX_Z_INDEX_SLOT;
     }
-    
-    get_slider_by_id(SDR_ID_EDITOR_PROP_ZINDEX_SLIDER)->options.at(0).no_localized_text = TextFormat("%d", state->selected_prop->zindex);
     return true;
   }
 
   return false;
+}
+bool scene_editor_map_layer_slc_slider_on_left_button_trigger() {
+  if (!state) {
+    TraceLog(LOG_ERROR, "scene_editor::scene_editor_map_layer_slc_slider_on_left_button_trigger():: State is not valid");
+    return false;
+  }
+  state->edit_layer--;
+  if (state->edit_layer > MAX_TILEMAP_LAYERS-1) {
+    state->edit_layer = MAX_TILEMAP_LAYERS-1;
+  }
+  FCLAMP(state->edit_layer, 0, MAX_TILEMAP_LAYERS-1);
+  get_slider_by_id(SDR_ID_EDITOR_MAP_LAYER_SLC_SLIDER)->options.at(0).no_localized_text = TextFormat("%d", state->edit_layer);
+  return true; 
+}
+bool scene_editor_map_layer_slc_slider_on_right_button_trigger() { 
+  if (!state) {
+    TraceLog(LOG_ERROR, "scene_editor::scene_editor_map_layer_slc_slider_on_right_button_trigger():: State is not valid");
+    return false;
+  }
+  state->edit_layer++;
+  if (state->edit_layer > MAX_TILEMAP_LAYERS-1) {
+    state->edit_layer = 0;
+  }
+  FCLAMP(state->edit_layer, 0, MAX_TILEMAP_LAYERS-1);
+  get_slider_by_id(SDR_ID_EDITOR_MAP_LAYER_SLC_SLIDER)->options.at(0).no_localized_text = TextFormat("%d", state->edit_layer);
+  return true; 
+}
+bool scene_editor_map_stage_slc_slider_on_left_button_trigger() {
+  if (!state) {
+    TraceLog(LOG_ERROR, "scene_editor::scene_editor_map_stage_slc_slider_on_left_button_trigger():: State is not valid");
+    return false;
+  }
+  state->selected_stage--;
+  if (state->selected_stage >= MAX_WORLDMAP_LOCATIONS) {
+    state->selected_stage = MAX_WORLDMAP_LOCATIONS-1;
+  }
+  FCLAMP(state->selected_stage, 0, MAX_WORLDMAP_LOCATIONS-1);
+  set_worldmap_location(state->selected_stage);
+  get_slider_by_id(SDR_ID_EDITOR_MAP_STAGE_SLC_SLIDER)->options.at(0).no_localized_text = TextFormat("%d", state->selected_stage);
+  return true; 
+}
+bool scene_editor_map_stage_slc_slider_on_right_button_trigger() {
+  if (!state) {
+    TraceLog(LOG_ERROR, "scene_editor::scene_editor_map_stage_slc_slider_on_right_button_trigger():: State is not valid");
+    return false;
+  }
+  state->selected_stage++;
+  if (state->selected_stage >= MAX_WORLDMAP_LOCATIONS) {
+    state->selected_stage = 0;
+  }
+  FCLAMP(state->selected_stage, 0, MAX_WORLDMAP_LOCATIONS-1);
+  set_worldmap_location(state->selected_stage);
+  get_slider_by_id(SDR_ID_EDITOR_MAP_STAGE_SLC_SLIDER)->options.at(0).no_localized_text = TextFormat("%d", state->selected_stage);
+  return true; 
+}
+bool scene_editor_map_prop_type_slc_slider_on_left_button_trigger() {
+  if (!state) {
+    TraceLog(LOG_ERROR, "scene_editor::scene_editor_map_prop_type_slc_slider_on_right_button_trigger():: State is not valid");
+    return false;
+  }
+  u16& current_index = get_slider_by_id(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER)->current_value;
+
+  current_index--;
+  if (current_index < get_slider_by_id(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER)->min_value) {
+    current_index = get_slider_by_id(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER)->min_value;
+  }
+
+  update_tilemap_prop_type();
+  return true; 
+}
+bool scene_editor_map_prop_type_slc_slider_on_right_button_trigger() {
+  if (!state) {
+    TraceLog(LOG_ERROR, "scene_editor::scene_editor_map_prop_type_slc_slider_on_right_button_trigger():: State is not valid");
+    return false;
+  }
+  u16& current_index = get_slider_by_id(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER)->current_value;
+
+  current_index++;
+  if (current_index >= get_slider_by_id(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER)->max_value) {
+    current_index = get_slider_by_id(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER)->max_value-1;
+  }
+
+  update_tilemap_prop_type();
+  return true;
 }

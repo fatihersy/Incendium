@@ -27,7 +27,7 @@
 
 #define UI_FONT_SPACING 1
 
-#define MAX_SLIDER_OPTION_SLOT 12
+#define MAX_SLIDER_OPTION_SLOT 16
 
 #define MAX_Z_INDEX_SLOT 10
 
@@ -43,8 +43,9 @@
 #define MAX_TILEMAP_TILESLOT MAX_TILEMAP_TILESLOT_X * MAX_TILEMAP_TILESLOT_Y
 #define TILEMAP_TILE_START_SYMBOL 0x21 // Refers to ASCII exclamation mark. First visible character on the chart. To debug.
 #define TILESHEET_TILE_SYMBOL_STR_LEN 2
-#define TILESHEET_PROP_SYMBOL_STR_LEN 72
+#define TILESHEET_PROP_SYMBOL_STR_LEN 128
 #define MAX_TILEMAP_PROPS 255
+#define MAX_TILEMAP_SPRITES 50
 #define MAX_TILEMAP_FILENAME_LEN 20
 
 #define MAX_PLAYER_LEVEL 100
@@ -191,8 +192,37 @@ typedef enum tilemap_prop_types {
   TILEMAP_PROP_TYPE_DETAIL,
   TILEMAP_PROP_TYPE_CANDLE,
   TILEMAP_PROP_TYPE_BUILDING,
+  TILEMAP_PROP_TYPE_SPRITE,
   TILEMAP_PROP_TYPE_MAX,
 }tilemap_prop_types;
+
+typedef struct spritesheet {
+  spritesheet_id sheet_id;
+  texture_id tex_id;
+  Texture2D* tex_handle;
+  Vector2 offset;
+  Vector2 origin;
+  u16 col_total;
+  u16 row_total;
+  u16 frame_total;
+  u16 current_col;
+  u16 current_row;
+  u16 current_frame;
+  Rectangle current_frame_rect;
+  Rectangle coord;
+
+  Color tint;
+  f32 rotation;
+  i16 fps;
+  i16 counter;
+  world_direction w_direction;
+  spritesheet_playmod playmod;
+  bool should_center;
+  bool is_started;
+  bool is_played;
+  bool play_looped;
+  bool play_once;
+} spritesheet;
 
 typedef struct music_data {
   music_id id;
@@ -249,7 +279,7 @@ typedef struct worldmap_stage {
   bool is_active;
 } worldmap_stage;
 
-typedef struct tilemap_prop {
+typedef struct tilemap_prop_static {
   u32 id;
 	texture_id tex_id;
   tilemap_prop_types prop_type;
@@ -259,7 +289,37 @@ typedef struct tilemap_prop {
   f32 rotation;
   f32 scale;
   bool is_initialized;
-} tilemap_prop;
+} tilemap_prop_static;
+
+typedef struct tilemap_prop_sprite {
+  u32 id;
+	spritesheet_id sprite_id;
+  tilemap_prop_types prop_type;
+  spritesheet sprite;
+  i16 zindex;
+  f32 scale;
+  bool is_initialized;
+} tilemap_prop_sprite;
+
+typedef struct tilemap_prop {
+  tilemap_prop_types type;
+  union {
+    tilemap_prop_static* prop_static;
+    tilemap_prop_sprite* prop_sprite;
+  }data;
+  tilemap_prop() {
+    this->type = TILEMAP_PROP_TYPE_UNDEFINED;
+    this->data.prop_static = nullptr;
+  }
+  tilemap_prop(tilemap_prop_static* _prop) {
+    this->data.prop_static = _prop;
+    this->type = _prop->prop_type;
+  }
+  tilemap_prop(tilemap_prop_sprite* _prop) {
+    this->data.prop_sprite = _prop;
+    this->type = _prop->prop_type;
+  }
+}tilemap_prop;
 
 typedef struct tile_position {
   u16 layer;
@@ -274,16 +334,18 @@ typedef struct tile {
 } tile;
 
 typedef struct tilemap {
-  i8 filename[MAX_TILEMAP_LAYERS][MAX_TILEMAP_FILENAME_LEN];
-  i8 propfile[MAX_TILEMAP_FILENAME_LEN];
+  std::array<std::string, MAX_TILEMAP_LAYERS> filename;
+  std::string propfile;
   Vector2 position;
   u16 map_dim_total;
   u16 map_dim;
 
   tile_symbol tiles[MAX_TILEMAP_LAYERS][MAX_TILEMAP_TILESLOT_X][MAX_TILEMAP_TILESLOT_Y];
-  tilemap_prop props[MAX_TILEMAP_PROPS];
+  std::array<tilemap_prop_static, MAX_TILEMAP_PROPS> static_props;
+  std::vector<tilemap_prop_sprite> sprite_props;
   u16 tile_size;
-  u16 prop_count;
+  u16 static_prop_count;
+  u16 sprite_prop_count;
 
   bool is_initialized;
 } tilemap;
@@ -295,36 +357,6 @@ typedef struct tilemap_stringtify_package {
   i32 size_props_str;
   bool is_success;
 }tilemap_stringtify_package;
-
-typedef struct spritesheet {
-  spritesheet_id sheet_id;
-  texture_id tex_id;
-  Texture2D* tex_handle;
-  Vector2 offset;
-  Vector2 origin;
-  u16 col_total;
-  u16 row_total;
-  u16 frame_total;
-  u16 current_col;
-  u16 current_row;
-  u16 current_frame;
-  Rectangle current_frame_rect;
-  Rectangle coord;
-
-  Color tint;
-  f32 rotation;
-  i16 fps;
-  i16 counter;
-  u16 render_queue_index;
-  u16 attached_spawn;
-  world_direction w_direction;
-  spritesheet_playmod playmod;
-  bool should_center;
-  bool is_started;
-  bool is_played;
-  bool play_looped;
-  bool play_once;
-} spritesheet;
 
 typedef struct Character2D {
   u32 character_id;

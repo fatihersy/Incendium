@@ -256,15 +256,6 @@ void user_interface_system_initialize(void) {
 
   // EDITOR
   {
-    register_slider(
-      SDR_ID_EDITOR_MAP_LAYER_SLC_SLIDER, SDR_TYPE_OPTION, 
-      BTN_ID_EDITOR_ACTIVE_TILEMAP_EDIT_LAYER_DEC,BTN_ID_EDITOR_ACTIVE_TILEMAP_EDIT_LAYER_INC, false, false);
-    register_button(BTN_ID_EDITOR_BTN_STAGE_MAP_CHANGE_LEFT, BTN_TYPE_SLIDER_LEFT_BUTTON);
-    register_button(BTN_ID_EDITOR_BTN_STAGE_MAP_CHANGE_RIGHT, BTN_TYPE_SLIDER_LEFT_BUTTON);
-
-    register_slider(
-      SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER,  SDR_TYPE_OPTION, 
-      BTN_ID_EDITOR_PROP_TYPE_SLC_SLIDER_LEFT, BTN_ID_EDITOR_PROP_TYPE_SLC_SLIDER_RIGHT, false, true);
   }
   // EDITOR
 
@@ -319,19 +310,6 @@ void user_interface_system_initialize(void) {
     SDR_ASSERT_SET_CURR_VAL_TO_LAST_ADDED(state->in_app_settings->window_state == FLAG_BORDERLESS_WINDOWED_MODE, SDR_ID_SETTINGS_WIN_MODE_SLIDER)
     gui_slider_add_option(SDR_ID_SETTINGS_WIN_MODE_SLIDER, data_pack(DATA_TYPE_I32, data128((i32)FLAG_FULLSCREEN_MODE), 1         ),  LOC_TEXT_SETTINGS_SDR_WINDOW_MODE_FULLSCREEN, "");
     SDR_ASSERT_SET_CURR_VAL_TO_LAST_ADDED(state->in_app_settings->window_state == FLAG_FULLSCREEN_MODE, SDR_ID_SETTINGS_WIN_MODE_SLIDER)
-
-    gui_slider_add_option(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER, data_pack(DATA_TYPE_I32, data128((i32)TILEMAP_PROP_TYPE_TREE),      1), LOC_TEXT_EDITOR_SDR_PROP_CHANGE_TREE,      "");
-    gui_slider_add_option(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER, data_pack(DATA_TYPE_I32, data128((i32)TILEMAP_PROP_TYPE_TOMBSTONE), 1), LOC_TEXT_EDITOR_SDR_PROP_CHANGE_TOMBSTONE, "");
-    gui_slider_add_option(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER, data_pack(DATA_TYPE_I32, data128((i32)TILEMAP_PROP_TYPE_STONE),     1), LOC_TEXT_EDITOR_SDR_PROP_CHANGE_STONE,     "");
-    gui_slider_add_option(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER, data_pack(DATA_TYPE_I32, data128((i32)TILEMAP_PROP_TYPE_SPIKE),     1), LOC_TEXT_EDITOR_SDR_PROP_CHANGE_SPIKE,     "");
-    gui_slider_add_option(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER, data_pack(DATA_TYPE_I32, data128((i32)TILEMAP_PROP_TYPE_SKULL),     1), LOC_TEXT_EDITOR_SDR_PROP_CHANGE_SKULL,     "");
-    gui_slider_add_option(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER, data_pack(DATA_TYPE_I32, data128((i32)TILEMAP_PROP_TYPE_PILLAR),    1), LOC_TEXT_EDITOR_SDR_PROP_CHANGE_PILLAR,    "");
-    gui_slider_add_option(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER, data_pack(DATA_TYPE_I32, data128((i32)TILEMAP_PROP_TYPE_LAMP),      1), LOC_TEXT_EDITOR_SDR_PROP_CHANGE_LAMP,      "");
-    gui_slider_add_option(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER, data_pack(DATA_TYPE_I32, data128((i32)TILEMAP_PROP_TYPE_FENCE),     1), LOC_TEXT_EDITOR_SDR_PROP_CHANGE_FENCE,     "");
-    gui_slider_add_option(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER, data_pack(DATA_TYPE_I32, data128((i32)TILEMAP_PROP_TYPE_DETAIL),    1), LOC_TEXT_EDITOR_SDR_PROP_CHANGE_DETAIL,    "");
-    gui_slider_add_option(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER, data_pack(DATA_TYPE_I32, data128((i32)TILEMAP_PROP_TYPE_CANDLE),    1), LOC_TEXT_EDITOR_SDR_PROP_CHANGE_CANDLE,    "");
-    gui_slider_add_option(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER, data_pack(DATA_TYPE_I32, data128((i32)TILEMAP_PROP_TYPE_BUILDING),  1), LOC_TEXT_EDITOR_SDR_PROP_CHANGE_BUILDING,  "");
-    SDR_ASSERT_SET_CURR_VAL(1, SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER, 1)
   }
   // SLIDER OPTIONS
   event_register(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, user_interface_on_event);
@@ -735,7 +713,7 @@ void draw_slider_body(slider* sdr) {
       f32 each_body_scale = (float)each_body_width / sdr_type.origin_body_width;
       Vector2 draw_sprite_scale = Vector2 {each_body_scale, sdr_type.scale};
       Vector2 _pos_temp = Vector2 {sdr->position.x + SCREEN_OFFSET.x, sdr->position.y};
-      std::string text = std::to_string(sdr->current_value);
+      std::string text = sdr->options.at(0).no_localized_text;
       
       Vector2 text_measure = MeasureTextEx(UI_BOLD_FONT, text.c_str(), DEFAULT_SLIDER_FONT_SIZE, UI_FONT_SPACING);
 
@@ -978,11 +956,7 @@ bool gui_slider_add_option(slider_id _id, data_pack content, u32 _localization_s
     return false;
   }
   if (sdr->max_value < MAX_SLIDER_OPTION_SLOT) {
-    sdr->options.at(sdr->max_value) = slider_option {
-      .no_localized_text = _no_localized_text,
-      .localization_symbol = _localization_symbol,
-      .content = content
-    };
+    sdr->options.at(sdr->max_value) = slider_option(_no_localized_text.c_str(), _localization_symbol, content);
     sdr->max_value++;
     return true;
   }
@@ -1570,19 +1544,36 @@ bool ui_set_slider_current_index(slider_id id, u16 index) {
     TraceLog(LOG_ERROR, "user_interface::ui_set_slider_current_index()::State is not valid");
     return false;
   }
+  if (id >= SDR_ID_MAX || id <= SDR_ID_UNDEFINED) {
+    TraceLog(LOG_WARNING, "user_interface::ui_set_slider_current_index()::ID was out of bound"); 
+    return false;
+  }
 
   state->sliders[id].current_value = index;
+  return true;
+}
+bool ui_set_slider_current_value(slider_id id, slider_option value) {
+  if (!state) {
+    TraceLog(LOG_ERROR, "user_interface::ui_set_slider_current_value()::State is not valid");
+    return false;
+  }
+  if (id >= SDR_ID_MAX || id <= SDR_ID_UNDEFINED) {
+    TraceLog(LOG_WARNING, "user_interface::ui_set_slider_current_value()::ID was out of bound"); 
+    return false;
+  }
+
+  SDR_CURR_VAL(id) = value;
   return true;
 }
 
 data_pack* get_slider_current_value(slider_id id) {
   if (!state) {
     TraceLog(LOG_WARNING, "user_interface::get_slider_current_value()::State is not valid"); 
-    return 0;
+    return nullptr;
   }
   if (id >= SDR_ID_MAX || id <= SDR_ID_UNDEFINED) {
     TraceLog(LOG_WARNING, "user_interface::get_slider_current_value()::ID was out of bound"); 
-    return 0;
+    return nullptr;
   }
 
   return &state->sliders[id].options[state->sliders[id].current_value].content;

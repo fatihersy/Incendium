@@ -29,9 +29,9 @@ typedef struct end_game_results{
 }end_game_results;
 
 typedef struct scene_in_game_state {
-  worldmap_stage worldmap_locations[MAX_WORLDMAP_LOCATIONS];
-  panel ability_upg_panels[MAX_UPDATE_ABILITY_PANEL_COUNT];
-  panel passive_selection_panels[MAX_UPDATE_PASSIVE_PANEL_COUNT];
+  std::array<worldmap_stage, MAX_WORLDMAP_LOCATIONS>  worldmap_locations;
+  std::array<panel, MAX_UPDATE_ABILITY_PANEL_COUNT> ability_upg_panels;
+  std::array<panel, MAX_UPDATE_PASSIVE_PANEL_COUNT> passive_selection_panels;
   panel worldmap_selection_panel;
   panel debug_info_panel;
   panel default_panel;
@@ -109,8 +109,7 @@ void begin_scene_in_game(void) {
   state->default_panel = panel( BTN_STATE_RELEASED, ATLAS_TEX_ID_CRIMSON_FANTASY_PANEL_BG, ATLAS_TEX_ID_CRIMSON_FANTASY_PANEL, 
     Vector4 {6, 6, 6, 6}, Color { 30, 39, 46, 245}, Color { 52, 64, 76, 245},
   );
-
-  copy_memory(__builtin_addressof(state->worldmap_locations), get_worldmap_locations(), sizeof(state->worldmap_locations));
+  copy_memory(state->worldmap_locations.data(), get_worldmap_locations(), MAX_WORLDMAP_LOCATIONS * sizeof(worldmap_stage));
   _set_player_position(BASE_RENDER_SCALE(.5f));
   set_is_game_paused(true);
   
@@ -233,8 +232,8 @@ void in_game_update_mouse_bindings(void) {
       state->hovered_stage = U16_MAX;
       for (int i=0; i<MAX_WORLDMAP_LOCATIONS; ++i) {
         Rectangle scrloc = Rectangle{
-          state->worldmap_locations[i].screen_location.x * BASE_RENDER_RES.x - WORLDMAP_LOC_PIN_SIZE_DIV2, 
-          state->worldmap_locations[i].screen_location.y * BASE_RENDER_RES.y - WORLDMAP_LOC_PIN_SIZE_DIV2,
+          state->worldmap_locations.at(i).screen_location.x * BASE_RENDER_RES.x - WORLDMAP_LOC_PIN_SIZE_DIV2, 
+          state->worldmap_locations.at(i).screen_location.y * BASE_RENDER_RES.y - WORLDMAP_LOC_PIN_SIZE_DIV2,
           WORLDMAP_LOC_PIN_SIZE, WORLDMAP_LOC_PIN_SIZE
         };
         if (CheckCollisionPointRec(*ui_get_mouse_pos(), scrloc)) {
@@ -361,10 +360,10 @@ void render_scene_in_game(void) {
  
       gui_draw_texture_id(TEX_ID_WORLDMAP_WO_CLOUDS, Rectangle {0, 0, BASE_RENDER_RES.x, BASE_RENDER_RES.y});
       for (int i=0; i<MAX_WORLDMAP_LOCATIONS; ++i) {
-        if (state->worldmap_locations[i].is_active) {
+        if (state->worldmap_locations.at(i).is_active) {
           Vector2 scrloc = Vector2 {
-            state->worldmap_locations[i].screen_location.x * BASE_RENDER_RES.x, 
-            state->worldmap_locations[i].screen_location.y * BASE_RENDER_RES.y
+            state->worldmap_locations.at(i).screen_location.x * BASE_RENDER_RES.x, 
+            state->worldmap_locations.at(i).screen_location.y * BASE_RENDER_RES.y
           };
           gui_draw_map_stage_pin(state->hovered_stage == i, scrloc);
         }
@@ -408,14 +407,14 @@ void render_interface_in_game(void) {
           if (state->hovered_stage == i) {
             panel* pnl = __builtin_addressof(state->worldmap_selection_panel);
             Rectangle scrloc = Rectangle{
-              state->worldmap_locations[i].screen_location.x * BASE_RENDER_RES.x - WORLDMAP_LOC_PIN_SIZE_DIV2, 
-              state->worldmap_locations[i].screen_location.y * BASE_RENDER_RES.y - WORLDMAP_LOC_PIN_SIZE_DIV2,
+              state->worldmap_locations.at(i).screen_location.x * BASE_RENDER_RES.x - WORLDMAP_LOC_PIN_SIZE_DIV2, 
+              state->worldmap_locations.at(i).screen_location.y * BASE_RENDER_RES.y - WORLDMAP_LOC_PIN_SIZE_DIV2,
               WORLDMAP_LOC_PIN_SIZE, WORLDMAP_LOC_PIN_SIZE
             };
             pnl->dest = Rectangle {scrloc.x + WORLDMAP_LOC_PIN_SIZE, scrloc.y + WORLDMAP_LOC_PIN_SIZE_DIV2, BASE_RENDER_SCALE(.25f).x, BASE_RENDER_SCALE(.25f).y};
             DrawCircleGradient(scrloc.x + WORLDMAP_LOC_PIN_SIZE_DIV2, scrloc.y + WORLDMAP_LOC_PIN_SIZE_DIV2, 100, Color{236,240,241,50}, Color{});
             gui_panel_scissored((*pnl), false, {
-              gui_label(state->worldmap_locations[i].displayname.c_str(), FONT_TYPE_MEDIUM, 10, Vector2 {
+              gui_label(state->worldmap_locations.at(i).displayname.c_str(), FONT_TYPE_MEDIUM, 10, Vector2 {
                 pnl->dest.x + pnl->dest.width *.5f, pnl->dest.y + pnl->dest.height*.5f
               }, WHITE, true, true);
             });
