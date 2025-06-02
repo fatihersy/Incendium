@@ -20,7 +20,7 @@ typedef struct resource_system_state {
 static resource_system_state *state;
 
 unsigned int load_texture(const char* filename, bool resize, Vector2 new_size, texture_id _id);
-unsigned int load_texture_from_atlas(atlas_texture_id _id, Rectangle texture_area);
+void load_texture_from_atlas(atlas_texture_id _id, Rectangle texture_area);
 bool load_image(const char *filename, bool resize, Vector2 new_size, image_type type);
 void load_spritesheet(texture_id _source_tex, spritesheet_id handle_id, Vector2 offset, u16 _fps, u16 _frame_width, u16 _frame_height, u16 _total_row, u16 _total_col);
 void load_tilesheet(tilesheet_type _sheet_sheet_type, atlas_texture_id _atlas_tex_id, u16 _tile_count_x, u16 _tile_count_y, u16 _tile_size);
@@ -38,20 +38,23 @@ bool resource_system_initialize(void) {
   load_texture("atlas.png", false, Vector2{}, TEX_ID_ASSET_ATLAS);
   load_texture("worldmap_wo_clouds.png",       false, Vector2{}, TEX_ID_WORLDMAP_WO_CLOUDS);
 
-  load_texture_from_atlas(ATLAS_TEX_ID_MAP_TILESET_TEXTURE,       Rectangle{   0,   0,  1568, 2016});
-  load_texture_from_atlas(ATLAS_TEX_ID_PROGRESS_BAR_OUTSIDE_FULL, Rectangle{1568, 112,    64,    9});
-  load_texture_from_atlas(ATLAS_TEX_ID_PROGRESS_BAR_INSIDE_FULL,  Rectangle{1504, 112,    64,    9});
-  load_texture_from_atlas(ATLAS_TEX_ID_CRIMSON_FANTASY_PANEL,     Rectangle{1504,  32,    48,   48});
-  load_texture_from_atlas(ATLAS_TEX_ID_CRIMSON_FANTASY_PANEL_BG,  Rectangle{1552,  32,    48,   48});
-  load_texture_from_atlas(ATLAS_TEX_ID_ICON_ATLAS,                Rectangle{1568, 608,  1024, 1024});
-  load_texture_from_atlas(ATLAS_TEX_ID_BG_BLACK,                  Rectangle{1680,  32,    48,   48});
-  load_texture_from_atlas(ATLAS_TEX_ID_ZOMBIES_SPRITESHEET,       Rectangle{2224,   0,   256,  480});
-  load_texture_from_atlas(ATLAS_TEX_ID_CRIMSON_FANTASY_SHOWCASE,  Rectangle{1568,1088,    68,   68});
-  load_texture_from_atlas(ATLAS_TEX_ID_PASSIVE_UPGRADE_TIER_STAR, Rectangle{1648,1088,    28,   28});
-  load_texture_from_atlas(ATLAS_TEX_ID_CURRENCY_SOUL_ICON_5000,   Rectangle{1888, 736,    32,   32});
-  load_texture_from_atlas(ATLAS_TEX_ID_CURRENCY_SOUL_ICON_15000,  Rectangle{1920, 736,    32,   32});
-  load_texture_from_atlas(ATLAS_TEX_ID_CURRENCY_SOUL_ICON_45000,  Rectangle{1952, 736,    32,   32});
-  load_texture_from_atlas(ATLAS_TEX_ID_FOG,                       Rectangle{1152,3296,   400,   64});
+  load_texture_from_atlas(ATLAS_TEX_ID_MAP_TILESET_TEXTURE,        Rectangle{   0,   0,  1568, 2016});
+  load_texture_from_atlas(ATLAS_TEX_ID_PROGRESS_BAR_OUTSIDE_FULL,  Rectangle{1568, 112,    48,    4});
+  load_texture_from_atlas(ATLAS_TEX_ID_PROGRESS_BAR_INSIDE_FULL,   Rectangle{1504, 112,    58,    3});
+  load_texture_from_atlas(ATLAS_TEX_ID_CRIMSON_FANTASY_PANEL,      Rectangle{1504,  32,    48,   48});
+  load_texture_from_atlas(ATLAS_TEX_ID_CRIMSON_FANTASY_PANEL_BG,   Rectangle{1552,  32,    48,   48});
+  load_texture_from_atlas(ATLAS_TEX_ID_DARK_FANTASY_PANEL,         Rectangle{1728,   0,    80,   64});
+  load_texture_from_atlas(ATLAS_TEX_ID_DARK_FANTASY_PANEL_SELECTED,Rectangle{1808,   0,    80,   64});
+  load_texture_from_atlas(ATLAS_TEX_ID_DARK_FANTASY_PANEL_BG,      Rectangle{1888,   0,    48,   44});
+  load_texture_from_atlas(ATLAS_TEX_ID_ICON_ATLAS,                 Rectangle{1568, 608,  1024, 1024});
+  load_texture_from_atlas(ATLAS_TEX_ID_BG_BLACK,                   Rectangle{1680,  32,    48,   48});
+  load_texture_from_atlas(ATLAS_TEX_ID_ZOMBIES_SPRITESHEET,        Rectangle{2224,   0,   256,  480});
+  load_texture_from_atlas(ATLAS_TEX_ID_CRIMSON_FANTASY_SHOWCASE,   Rectangle{1568,1088,    68,   68});
+  load_texture_from_atlas(ATLAS_TEX_ID_PASSIVE_UPGRADE_TIER_STAR,  Rectangle{1648,1088,    28,   28});
+  load_texture_from_atlas(ATLAS_TEX_ID_CURRENCY_SOUL_ICON_5000,    Rectangle{1888, 736,    32,   32});
+  load_texture_from_atlas(ATLAS_TEX_ID_CURRENCY_SOUL_ICON_15000,   Rectangle{1920, 736,    32,   32});
+  load_texture_from_atlas(ATLAS_TEX_ID_CURRENCY_SOUL_ICON_45000,   Rectangle{1952, 736,    32,   32});
+  load_texture_from_atlas(ATLAS_TEX_ID_FOG,                        Rectangle{1152,3296,   400,   64});
 
   load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_PLAYER_ANIMATION_IDLE_LEFT,         VECTOR2(1584, 288), 15,   22,  32, 1,  4);
   load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_PLAYER_ANIMATION_IDLE_RIGHT,        VECTOR2(1584, 224), 15,   22,  32, 1,  4);
@@ -79,12 +82,12 @@ bool resource_system_initialize(void) {
   load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_SPAWN_RED_ZOMBIE_ANIMATION_TAKE_DAMAGE_LEFT,     VECTOR2(1776, 296), 15,   32,  40, 1,  4);
   load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_SPAWN_RED_ZOMBIE_ANIMATION_TAKE_DAMAGE_RIGHT,    VECTOR2(1936, 296), 15,   32,  40, 1,  4);
 
-  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_SLIDER_PERCENT,                     VECTOR2(1664,  16),  0,   20,  10, 1, 11);
-  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_SLIDER_OPTION,                      VECTOR2(1632,  32),  0,   21,  10, 1,  2);
+  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_SLIDER_OPTION,                      VECTOR2(1632,  32),  0,   16,  10, 1,  2);
   load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_SLIDER_LEFT_BUTTON,                 VECTOR2(1600,  32),  0,   12,  12, 1,  2);
-  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_SLIDER_RIGHT_BUTTON,                VECTOR2(1600,  48),  0,   12,  12, 1,  2);
-  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_MENU_BUTTON,                        VECTOR2(1584,   0),  0,   88,  13, 1,  2);
-  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_FLAT_BUTTON,                        VECTOR2(1504,  96),  0,   44,  14, 1,  2);
+  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_SLIDER_RIGHT_BUTTON,                VECTOR2(1600,  44),  0,   12,  12, 1,  2);
+  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_MENU_BUTTON,                        VECTOR2(1504,   0),  0,   88,  13, 1,  2);
+  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_FLAT_BUTTON,                        VECTOR2(1504,  16),  0,   88,  13, 1,  2);
+  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_SLIDER_PERCENT,                     VECTOR2(1600,  64),  0,    9,   9, 1,  2);
   load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_FLAME_ENERGY_ANIMATION,             VECTOR2(1584, 352), 13,   48,  48, 1, 18);
   load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_FIREBALL_ANIMATION,                 VECTOR2(1584, 400), 10,   64,  64, 1,  6);
   load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_FIREBALL_EXPLOTION_ANIMATION,       VECTOR2(1584, 464),  6,   64,  64, 1,  7);
@@ -266,16 +269,15 @@ void load_tilesheet(tilesheet_type sheet_id, atlas_texture_id _atlas_tex_id, u16
 
   state->tilesheet_amouth++;
 }
-unsigned int load_texture_from_atlas(atlas_texture_id _id, Rectangle texture_area) {
+void load_texture_from_atlas(atlas_texture_id _id, Rectangle texture_area) {
   if (_id >= ATLAS_TEX_ID_MAX || _id <= ATLAS_TEX_ID_UNSPECIFIED) { 
     TraceLog(LOG_ERROR, "resource::load_texture()::texture type out of bound");
-    return INVALID_ID32;
+    return;
   }
   atlas_texture tex = {};
   tex.source = texture_area;
   tex.atlas_handle = &state->textures[ATLAS_TEXTURE_ID];
 
   state->atlas_textures[_id] = tex;
-
-  return state->textures[_id].id;
+  return;
 }

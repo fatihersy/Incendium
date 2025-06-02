@@ -6,6 +6,8 @@
 
 bool settings_initialize(void);
 
+bool update_app_settings_state(void);
+
 bool set_settings_from_ini_file(const char* file_name);
 bool save_ini_file(void);
 

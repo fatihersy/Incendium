@@ -85,18 +85,18 @@ i32 map_prop_id_to_index(u16 id);
 Rectangle se_get_camera_view_rect(Camera2D camera);
 void update_tilemap_prop_type(void);
 
-bool scene_editor_scale_slider_on_left_button_trigger();
-bool scene_editor_scale_slider_on_right_button_trigger();
-bool scene_editor_rotation_slider_on_left_button_trigger();
-bool scene_editor_rotation_slider_on_right_button_trigger();
-bool scene_editor_zindex_slider_on_left_button_trigger();
-bool scene_editor_zindex_slider_on_right_button_trigger();
-bool scene_editor_map_layer_slc_slider_on_left_button_trigger();
-bool scene_editor_map_layer_slc_slider_on_right_button_trigger();
-bool scene_editor_map_stage_slc_slider_on_left_button_trigger();
-bool scene_editor_map_stage_slc_slider_on_right_button_trigger();
-bool scene_editor_map_prop_type_slc_slider_on_left_button_trigger();
-bool scene_editor_map_prop_type_slc_slider_on_right_button_trigger();
+bool scene_editor_scale_slider_on_left_button_trigger(void);
+bool scene_editor_scale_slider_on_right_button_trigger(void);
+bool scene_editor_rotation_slider_on_left_button_trigger(void);
+bool scene_editor_rotation_slider_on_right_button_trigger(void);
+bool scene_editor_zindex_slider_on_left_button_trigger(void);
+bool scene_editor_zindex_slider_on_right_button_trigger(void);
+bool scene_editor_map_layer_slc_slider_on_left_button_trigger(void);
+bool scene_editor_map_layer_slc_slider_on_right_button_trigger(void);
+bool scene_editor_map_stage_slc_slider_on_left_button_trigger(void);
+bool scene_editor_map_stage_slc_slider_on_right_button_trigger(void);
+bool scene_editor_map_prop_type_slc_slider_on_left_button_trigger(void);
+bool scene_editor_map_prop_type_slc_slider_on_right_button_trigger(void);
 
 void add_prop(texture_id source_tex, tilemap_prop_types type, Rectangle source, f32 scale);
 void add_prop(tilemap_prop_types type, spritesheet_id sprite_id, f32 scale);
@@ -137,11 +137,11 @@ void initialize_scene_editor(camera_metrics* _camera_metrics) {
   copy_memory(state->worldmap_locations.data(), get_worldmap_locations(), MAX_WORLDMAP_LOCATIONS * sizeof(worldmap_stage));
   state->selected_sheet = get_tilesheet_by_enum(TILESHEET_TYPE_MAP);
 
-  state->tile_selection_panel = get_default_panel();
+  state->tile_selection_panel = panel();
   state->tile_selection_panel.signal_state = BTN_STATE_HOVER;
   state->tile_selection_panel.dest = Rectangle {0, 0, BASE_RENDER_SCALE(.3f).x, BASE_RENDER_RES.y};
   
-  state->prop_selection_panel = get_default_panel();
+  state->prop_selection_panel = panel();
   state->prop_selection_panel.signal_state = BTN_STATE_HOVER;
   state->prop_selection_panel.dest = Rectangle {0, 0, BASE_RENDER_SCALE(.3f).x, BASE_RENDER_RES.y};
   state->prop_selection_panel.scroll_handle = Rectangle{
@@ -150,7 +150,7 @@ void initialize_scene_editor(camera_metrics* _camera_metrics) {
   };
   state->prop_selection_panel.buffer.f32[1] = PROP_PANEL_PROP_DRAW_STARTING_HEIGHT;
 
-  state->prop_edit_panel = get_default_panel();
+  state->prop_edit_panel = panel();
   state->prop_edit_panel.signal_state = BTN_STATE_HOVER;
   Vector2 _prop_edit_panel_dim = Vector2 {BASE_RENDER_SCALE(.3f).x, BASE_RENDER_RES.y};
   state->prop_edit_panel.dest = Rectangle { 
@@ -764,31 +764,33 @@ void render_interface_editor(void) {
   else if(state->b_show_prop_selection_screen && !state->b_show_tilesheet_tile_selection_screen) 
   {
     panel* pnl = &state->prop_selection_panel;
-    gui_panel_scissored((*pnl), false, {
-      gui_slider(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER, VECTOR2(pnl->dest.x,pnl->dest.y), VECTOR2(4,3), 3.f);
-      f32 prop_height_count = pnl->buffer.f32[1];
-      if (get_slider_current_value(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER)->data.i32[0] == TILEMAP_PROP_TYPE_SPRITE) {
-        for (size_t iter = 0; iter < state->tilemap_props_sprite_selected->size(); ++iter) {
-          const tilemap_prop_sprite& prop = state->tilemap_props_sprite_selected->at(iter);
-          gui_draw_spritesheet_id(prop.sprite_id, WHITE, VECTOR2(0.f, ((pnl->scroll * pnl->buffer.f32[0]) + prop_height_count)), VECTOR2(prop.scale, prop.scale), 0, false);
-          prop_height_count += prop.sprite.coord.height;
-        }
-      } else {
-        for (size_t i = 0; i < state->tilemap_props_static_selected->size(); ++i) {
-          const tilemap_prop_static& prop = state->tilemap_props_static_selected->at(i);
-          Rectangle dest = prop.dest;
-          dest.x = 0;
-          dest.y = (pnl->scroll * pnl->buffer.f32[0]) + prop_height_count;
-          gui_draw_texture_id_pro(prop.tex_id, prop.source, dest, false);
-          prop_height_count += prop.dest.height;
-        }
+    gui_panel_scissored((*pnl), false, {});
+    gui_slider(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER, VECTOR2(pnl->dest.x,pnl->dest.y), VECTOR2(4,3), 3.f);
+    f32 prop_height_count = pnl->buffer.f32[1];
+    if (get_slider_current_value(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER)->data.i32[0] == TILEMAP_PROP_TYPE_SPRITE) {
+      for (size_t iter = 0; iter < state->tilemap_props_sprite_selected->size(); ++iter) {
+        tilemap_prop_sprite& prop = state->tilemap_props_sprite_selected->at(iter);
+        Rectangle dest = prop.sprite.coord;
+        dest.x = 0;
+        dest.y = (pnl->scroll * pnl->buffer.f32[0]) + prop_height_count;
+        _play_sprite_on_site(&prop.sprite, WHITE, dest);
+        prop_height_count += dest.height;
       }
-      pnl->buffer.f32[0] = prop_height_count;
-      pnl->scroll_handle.y = FMAX(pnl->scroll_handle.y, pnl->dest.y + SCREEN_OFFSET.x);
-      pnl->scroll_handle.y = FMIN(pnl->scroll_handle.y, pnl->dest.y + pnl->dest.height);
-      pnl->scroll = (pnl->scroll_handle.y - pnl->dest.y - SCREEN_OFFSET.x) / (pnl->dest.height - pnl->scroll_handle.height) * -1;
-      DrawRectangleRec(pnl->scroll_handle, WHITE);
-    });
+    } else {
+      for (size_t iter = 0; iter < state->tilemap_props_static_selected->size(); ++iter) {
+        const tilemap_prop_static& prop = state->tilemap_props_static_selected->at(iter);
+        Rectangle dest = prop.dest;
+        dest.x = 0;
+        dest.y = (pnl->scroll * pnl->buffer.f32[0]) + prop_height_count;
+        gui_draw_texture_id_pro(prop.tex_id, prop.source, dest, false);
+        prop_height_count += prop.dest.height;
+      }
+    }
+    pnl->buffer.f32[0] = prop_height_count;
+    pnl->scroll_handle.y = FMAX(pnl->scroll_handle.y, pnl->dest.y + SCREEN_OFFSET.x);
+    pnl->scroll_handle.y = FMIN(pnl->scroll_handle.y, pnl->dest.y + pnl->dest.height);
+    pnl->scroll = (pnl->scroll_handle.y - pnl->dest.y - SCREEN_OFFSET.x) / (pnl->dest.height - pnl->scroll_handle.height) * -1;
+    DrawRectangleRec(pnl->scroll_handle, WHITE);
   }
 
   if(state->selection_type == SLC_TYPE_SLC_PROP_STATIC) 

@@ -142,6 +142,12 @@ bool window_should_close(void) {
 
 bool app_update(void) {
   if (GetFPS() > TARGET_FPS) return true;
+  if (!state) {
+    TraceLog(LOG_FATAL, "app::app_update()::App state is not valid!");
+    return false;
+  }
+  update_app_settings_state();
+
   if ((IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_W)) || (IsKeyDown(KEY_LEFT_ALT) && IsKeyPressed(KEY_F4))) {
     // TODO: handle destruction ops
     state->app_runing = false;

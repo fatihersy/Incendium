@@ -60,6 +60,18 @@ bool set_settings_from_ini_file(const char * file_name) {
   return true;
 }
 
+bool update_app_settings_state(void) {
+  if (!state) {
+    TraceLog(LOG_ERROR, "settings::update_app_settings_state()::State is not valid");
+    return false;
+  }
+
+  state->settings.master_sound_volume = FCLAMP(state->settings.master_sound_volume, 0, 100);
+
+  return true;
+}
+
+
 void set_resolution(u32 width, u32 height) {
   if (!state) {
     TraceLog(LOG_WARNING, "settings::set_resolution()::settings state didn't initialized yet");

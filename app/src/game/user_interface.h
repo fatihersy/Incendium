@@ -4,7 +4,6 @@
 
 #include "game_types.h"
 
-
 typedef enum button_state {
   BTN_STATE_UNDEFINED,
   BTN_STATE_UP,
@@ -104,6 +103,7 @@ typedef struct panel {
     slider_type_id id;
     spritesheet_id ss_sdr_body;
     Vector2 source_frame_dim;
+    Vector2 dest_frame_dim = {};
     f32 scale;
     u16 width_multiply;
     u16 char_limit;
@@ -115,8 +115,6 @@ typedef struct panel {
     u16 right_btn_width;
     u16 origin_body_width;
     u16 body_width;
-    u16 body_height;
-    Vector2 whole_body_width = Vector2 {};
   } slider_type;
   
   typedef struct slider {
@@ -167,13 +165,13 @@ Vector2 position_element(Vector2 grid, Vector2 pos, Vector2 dim, f32 f);
 
 void register_slider(slider_id _sdr_id, slider_type_id _sdr_type_id, button_id _left_btn_id, button_id _right_btn_id, bool _is_clickable, bool _localize_text);
 
-panel get_default_panel(void);
 data_pack* get_slider_current_value(slider_id id);
 Vector2* ui_get_mouse_pos(void);
 Font* ui_get_font(font_type font);
 slider* get_slider_by_id(slider_id sdr_id);
 bool is_ui_fade_anim_complete(void);
 bool is_ui_fade_anim_about_to_complete(void);
+void ui_refresh_setting_sliders_to_default(void);
 
 bool ui_set_slider_current_index(slider_id id, u16 index);
 bool ui_set_slider_current_value(slider_id id, slider_option value);
@@ -207,6 +205,9 @@ void gui_draw_map_stage_pin(bool have_hovered, Vector2 screen_loc);
 void gui_draw_spritesheet_id(spritesheet_id _id, Color _tint, Vector2 pos, Vector2 scale, u16 frame, bool _should_center); 
 void gui_draw_settings_screen(void);
 void gui_draw_pause_screen(bool in_game_play_state);
+
+// Exposed
+void _play_sprite_on_site(spritesheet *sheet, Color _tint, Rectangle dest);
 
 #define gui_label_format(FONT, FONT_SIZE, X,Y, COLOR, CENTER_H, CENTER_V, TEXT, ...) gui_label(TextFormat(TEXT, __VA_ARGS__), FONT, FONT_SIZE, Vector2{X,Y}, COLOR, CENTER_H, CENTER_V)
 #define gui_label_format_v(FONT, FONT_SIZE, POS, COLOR, CENTER_H, CENTER_V, TEXT, ...) gui_label(TextFormat(TEXT, __VA_ARGS__), FONT, FONT_SIZE, POS, COLOR, CENTER_H, CENTER_V)

@@ -99,33 +99,36 @@ void render_interface_main_menu(void) {
     f32 grid_scale = 1.f;
     if (state->type == MAIN_MENU_SCENE_DEFAULT) {
       gui_label(GAME_TITLE, FONT_TYPE_BOLD, 72, VECTOR2(BASE_RENDER_SCALE(.5f).x, BASE_RENDER_SCALE(.25f).y), WHITE, true, true);
-      if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_PLAY), BTN_ID_MAINMENU_BUTTON_PLAY, VECTOR2(0, 0), grid_scale, true)) {
+      if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_PLAY), BTN_ID_MAINMENU_BUTTON_PLAY, VECTOR2(0.f, -2.f), grid_scale, true)) {
         state->in_scene_changing_process = true;
         state->next_scene = SCENE_TYPE_IN_GAME;
         event_fire(EVENT_CODE_UI_START_FADEOUT_EFFECT, event_context((u16)MAIN_MENU_FADE_DURATION));
       }
-      if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_UPGRADE), BTN_ID_MAINMENU_BUTTON_UPGRADE, VECTOR2(0, 1), grid_scale, true)) {
+      if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_UPGRADE), BTN_ID_MAINMENU_BUTTON_UPGRADE, VECTOR2(0.f, -1.f), grid_scale, true)) {
         state->type = MAIN_MENU_SCENE_UPGRADE;
       }
-      if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_SETTINGS), BTN_ID_MAINMENU_BUTTON_SETTINGS, VECTOR2(0, 2), grid_scale, true)) {
+      if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_SETTINGS), BTN_ID_MAINMENU_BUTTON_SETTINGS, VECTOR2(0.f, 0.f), grid_scale, true)) {
+        ui_refresh_setting_sliders_to_default();
         state->type = MAIN_MENU_SCENE_SETTINGS;
       }
-      if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_EDITOR), BTN_ID_MAINMENU_BUTTON_EDITOR, VECTOR2(0, 3), grid_scale, true)) {
+      if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_EDITOR), BTN_ID_MAINMENU_BUTTON_EDITOR, VECTOR2(0.f, 1.f), grid_scale, true)) {
         state->in_scene_changing_process = true;
         state->next_scene = SCENE_TYPE_EDITOR;
         event_fire(EVENT_CODE_UI_START_FADEOUT_EFFECT, event_context((u16)MAIN_MENU_FADE_DURATION));
       }
-      if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_EXIT), BTN_ID_MAINMENU_BUTTON_EXIT, VECTOR2(0, 4), grid_scale, true)) {
+      if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_EXIT), BTN_ID_MAINMENU_BUTTON_EXIT, VECTOR2(0.f, 2.f), grid_scale, true)) {
         event_fire(EVENT_CODE_APPLICATION_QUIT, event_context{});
       }
-    } else if (state->type == MAIN_MENU_SCENE_SETTINGS) {
+    } 
+    else if (state->type == MAIN_MENU_SCENE_SETTINGS) {
       gui_draw_settings_screen();
-      if (gui_menu_button(lc_txt(LOC_TEXT_SETTINGS_BUTTON_CANCEL), BTN_ID_MAINMENU_SETTINGS_CANCEL, VECTOR2(2, 25), 3.f, true)) {
+      if (gui_menu_button(lc_txt(LOC_TEXT_SETTINGS_BUTTON_CANCEL), BTN_ID_MAINMENU_SETTINGS_CANCEL, VECTOR2(2.f, 25.f), 3.f, true)) {
         state->type = MAIN_MENU_SCENE_DEFAULT;
       }
-    } else if (state->type == MAIN_MENU_SCENE_UPGRADE) {
+    } 
+    else if (state->type == MAIN_MENU_SCENE_UPGRADE) {
       draw_main_menu_upgrade_panel();
-      if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_UPGRADE_BUTTON_BACK), BTN_ID_MAINMENU_UPGRADE_BACK, VECTOR2(2, 25), 3.f, true)) {
+      if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_UPDATE_BUTTON_BACK), BTN_ID_MAINMENU_UPGRADE_BACK, VECTOR2(0.f, 28.f), 3.f, true)) {
         state->type = MAIN_MENU_SCENE_DEFAULT;
       }
     }
@@ -147,8 +150,8 @@ void begin_scene_main_menu(void) {
   state->next_scene = SCENE_TYPE_UNSPECIFIED;
   state->in_scene_changing_process = false;
   state->scene_changing_process_complete = false;
-  state->upgrade_list_panel = get_default_panel();
-  state->upgrade_details_panel = get_default_panel();
+  state->upgrade_list_panel = panel();
+  state->upgrade_details_panel = panel();
   state->upgrade_list_panel.dest = Rectangle{ BASE_RENDER_SCALE(.025f).x, BASE_RENDER_SCALE(.075f).y, BASE_RENDER_SCALE(.65f).x, BASE_RENDER_SCALE(.850f).y};
   state->upgrade_details_panel.dest = Rectangle{
     state->upgrade_list_panel.dest.x + state->upgrade_list_panel.dest.width + BASE_RENDER_SCALE(.005f).x,
@@ -339,7 +342,7 @@ void draw_main_menu_upgrade_details_panel(void) {
   );
   gui_label_format_v(FONT_TYPE_MEDIUM, 25, cost_label_pos, cost_label_color, true, true, "%d", state->hovered_stat->upgrade_cost);
 
-  if (gui_menu_button("Upgrade", BTN_ID_MAINMENU_UPGRADE_BUY_UPGRADE, Vector2 {5.25f, 17.1f}, 2.7f, false)) {
+  if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_UPDATE_BUTTON_UPGRADE), BTN_ID_MAINMENU_UPGRADE_BUY_UPGRADE, Vector2 {5.35f, 23.f}, 3.f, false)) {
     if (((i32)get_currency_souls() - state->hovered_stat->upgrade_cost) >= 0) {
       currency_souls_add(-state->hovered_stat->upgrade_cost);
       upgrade_static_player_stat(state->hovered_stat->id);
