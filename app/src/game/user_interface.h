@@ -202,12 +202,14 @@ void gui_draw_atlas_texture_id_center(atlas_texture_id _id, Vector2 pos, Vector2
 void gui_draw_texture_id_pro(texture_id _id, Rectangle src, Rectangle dest, bool should_center);
 void gui_draw_texture_id(texture_id _id, Rectangle dest); 
 void gui_draw_map_stage_pin(bool have_hovered, Vector2 screen_loc);
-void gui_draw_spritesheet_id(spritesheet_id _id, Color _tint, Vector2 pos, Vector2 scale, u16 frame, bool _should_center); 
+void gui_draw_spritesheet_id(spritesheet_id _id, Color _tint, Vector2 pos, Vector2 scale, u16 frame); 
 void gui_draw_settings_screen(void);
 void gui_draw_pause_screen(bool in_game_play_state);
 
 // Exposed
-void _play_sprite_on_site(spritesheet *sheet, Color _tint, Rectangle dest);
+void ui_play_sprite_on_site(spritesheet *sheet, Color _tint, Rectangle dest);
+void ui_set_sprite(spritesheet *sheet, bool _play_looped, bool _play_once, bool _center_sprite);
+void ui_update_sprite(spritesheet *sheet);
 
 #define gui_label_format(FONT, FONT_SIZE, X,Y, COLOR, CENTER_H, CENTER_V, TEXT, ...) gui_label(TextFormat(TEXT, __VA_ARGS__), FONT, FONT_SIZE, Vector2{X,Y}, COLOR, CENTER_H, CENTER_V)
 #define gui_label_format_v(FONT, FONT_SIZE, POS, COLOR, CENTER_H, CENTER_V, TEXT, ...) gui_label(TextFormat(TEXT, __VA_ARGS__), FONT, FONT_SIZE, POS, COLOR, CENTER_H, CENTER_V)

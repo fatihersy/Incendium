@@ -124,13 +124,13 @@ void set_map_tile(i32 layer, tile src, tile dst) {
   CURR_MAP.tiles[layer][src.position.x][src.position.y].c[1] = dst.symbol.c[1];
 }
 tilemap_prop get_map_prop_by_pos(Vector2 pos) {
-  for (auto iter = CURR_MAP.static_props.begin(); iter != CURR_MAP.static_props.end(); ++iter) {
-    Rectangle prop_dest = iter->dest;
+  for (size_t iter = 0; iter < CURR_MAP.static_props.size(); ++iter) {
+    Rectangle prop_dest = CURR_MAP.static_props.at(iter).dest;
     prop_dest.x -= prop_dest.width  * .5f;
     prop_dest.y -= prop_dest.height * .5f;
     if(CheckCollisionPointRec(pos, prop_dest)) { // Props are always centered
       tilemap_prop prop = {};
-      prop.data.prop_static = iter;
+      prop.data.prop_static = __builtin_addressof(CURR_MAP.static_props.at(iter));
       prop.type = prop.data.prop_static->prop_type;
       return prop;
     }
@@ -181,7 +181,7 @@ void load_current_map(void) {
 }
 
 void update_map(void) {
-
+  update_tilemap(&state->map.at(state->active_stage.map_id));
 }
 
 void drag_tilesheet(Vector2 vec) {
@@ -200,23 +200,6 @@ void render_map_palette(f32 zoom) {
   state->palette_zoom = zoom;
 }
 
-tile _get_tile_from_sheet_by_mouse_pos(Vector2 _mouse_pos) {
-  return get_tile_from_sheet_by_mouse_pos(&state->palette, _mouse_pos, state->palette_zoom);
-}
-tile _get_tile_from_map_by_mouse_pos(u16 from_layer, Vector2 _mouse_pos) {
-  if (from_layer >= MAX_TILEMAP_LAYERS) {
-    TraceLog(LOG_WARNING, "world::_get_tile_from_map_by_mouse_pos()::Recieved layer was out of bound");
-    return tile {};
-  }
-  return get_tile_from_map_by_mouse_pos(&CURR_MAP, GetScreenToWorld2D(_mouse_pos, state->in_camera_metrics->handle), from_layer);
-}
-void _render_tile_on_pos(tile* _tile, Vector2 pos, tilesheet* sheet) {
-  if (!_tile || !_tile->is_initialized || !sheet) {
-    TraceLog(LOG_WARNING, "world::_render_tile()::One of pointers is not valid");
-    return;
-  }
-  render_tile(&_tile->symbol, Rectangle {pos.x, pos.y, (f32) CURR_MAP.tile_size, (f32) CURR_MAP.tile_size }, sheet);
-}
 bool add_prop_curr_map(tilemap_prop prop) {
   if (prop.type != TILEMAP_PROP_TYPE_SPRITE) {
     if (prop.data.prop_static == nullptr) {
@@ -224,8 +207,8 @@ bool add_prop_curr_map(tilemap_prop prop) {
       return false;
     }
 
-    CURR_MAP.static_props.at(CURR_MAP.static_prop_count) = *prop.data.prop_static;
-    CURR_MAP.static_props.at(CURR_MAP.static_prop_count).id = CURR_MAP.static_prop_count;
+    prop.data.prop_static->id = CURR_MAP.static_prop_count;
+    CURR_MAP.static_props.push_back(*prop.data.prop_static);
     CURR_MAP.static_prop_count++;
   }
   if (prop.type == TILEMAP_PROP_TYPE_SPRITE) {
@@ -234,18 +217,17 @@ bool add_prop_curr_map(tilemap_prop prop) {
       return false;
     }
     prop.data.prop_sprite->id = CURR_MAP.sprite_prop_count;
-
     CURR_MAP.sprite_props.push_back(*prop.data.prop_sprite);
     CURR_MAP.sprite_prop_count++;
   }
   return true;
 }
 bool remove_prop_cur_map_by_id(u16 id, tilemap_prop_types type) {
-  if (id >= MAX_TILEMAP_PROPS) {
-    TraceLog(LOG_WARNING, "world::remove_prop_cur_map_by_id()::Recieved id was out of bound");
-    return false;
-  }
   if (type != TILEMAP_PROP_TYPE_SPRITE) {
+    if (id >= CURR_MAP.static_props.size()) {
+      TraceLog(LOG_WARNING, "world::remove_prop_cur_map_by_id()::Recieved id was out of bound");
+      return false;
+    }
     for (auto iter = CURR_MAP.static_props.begin(); iter != CURR_MAP.static_props.end(); ++iter) {
       if (iter->id == id) {
         CURR_MAP.static_prop_count--;
@@ -256,6 +238,10 @@ bool remove_prop_cur_map_by_id(u16 id, tilemap_prop_types type) {
     }
   }
   if (type == TILEMAP_PROP_TYPE_SPRITE) {
+    if (id >= CURR_MAP.sprite_props.size()) {
+      TraceLog(LOG_WARNING, "world::remove_prop_cur_map_by_id()::Recieved id was out of bound");
+      return false;
+    }
     for (auto iter = CURR_MAP.sprite_props.begin(); iter != CURR_MAP.sprite_props.end(); iter++) {
       if (iter->id == id) {
         CURR_MAP.sprite_prop_count--;
@@ -283,3 +269,23 @@ Rectangle get_position_view_rect(Camera2D camera, Vector2 pos, f32 zoom) {
   
   return Rectangle{ x, y, view_width, view_height };
 }
+
+// EXPOSED
+tile _get_tile_from_sheet_by_mouse_pos(Vector2 _mouse_pos) {
+  return get_tile_from_sheet_by_mouse_pos(&state->palette, _mouse_pos, state->palette_zoom);
+}
+tile _get_tile_from_map_by_mouse_pos(u16 from_layer, Vector2 _mouse_pos) {
+  if (from_layer >= MAX_TILEMAP_LAYERS) {
+    TraceLog(LOG_WARNING, "world::_get_tile_from_map_by_mouse_pos()::Recieved layer was out of bound");
+    return tile {};
+  }
+  return get_tile_from_map_by_mouse_pos(&CURR_MAP, GetScreenToWorld2D(_mouse_pos, state->in_camera_metrics->handle), from_layer);
+}
+void _render_tile_on_pos(tile* _tile, Vector2 pos, tilesheet* sheet) {
+  if (!_tile || !_tile->is_initialized || !sheet) {
+    TraceLog(LOG_WARNING, "world::_render_tile()::One of pointers is not valid");
+    return;
+  }
+  render_tile(&_tile->symbol, Rectangle {pos.x, pos.y, (f32) CURR_MAP.tile_size, (f32) CURR_MAP.tile_size }, sheet);
+}
+// EXPOSED

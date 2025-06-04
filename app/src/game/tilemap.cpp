@@ -3,6 +3,13 @@
 
 #include "tools/fstring.h"
 #include "game/resource.h"
+#include "game/spritesheet.h"
+
+#define PROP_PARSE_PROP_BUFFER_PARSE_SYMBOL_STR "_"
+#define PROP_PARSE_PROP_BUFFER_PARSE_SYMBOL_C '_'
+#define PROP_PARSE_PROP_MEMBER_PARSE_SYMBOL ','
+#define PROP_BUFFER_PARSE_TOP_LIMIT 999
+#define PROP_MEMBER_PARSE_TOP_LIMIT 99
 
 void map_to_str(tilemap* map, tilemap_stringtify_package* out_package);
 void str_to_map(tilemap* map, tilemap_stringtify_package* out_package);
@@ -69,11 +76,17 @@ void create_tilesheet(tilesheet_type _type, u16 _dest_tile_size, f32 _offset, ti
   out_tilesheet->is_initialized = true;
 }
 
-void update_tilemap(void) {}
+void update_tilemap(tilemap* _tilemap) {
+  if (_tilemap) {
+    for (size_t iter = 0; iter < _tilemap->sprite_props.size(); ++iter) {
+      update_sprite(&_tilemap->sprite_props.at(iter).sprite);
+    }
+  }
+}
 
 void render_tilemap(tilemap* _tilemap, Rectangle camera_view) {
   if (!_tilemap) {
-    TraceLog(LOG_ERROR, "ERROR::tilemap::render_tilemap()::Provided map was null");
+    TraceLog(LOG_ERROR, "tilemap::render_tilemap()::Provided map was null");
     return;
   }
   tilesheet* sheet = get_tilesheet_by_enum(TILESHEET_TYPE_MAP);
@@ -117,17 +130,24 @@ void render_tilemap(tilemap* _tilemap, Rectangle camera_view) {
       TraceLog(LOG_ERROR, "tilemap::render_tilemap()::Atlas texture:%d is not valid", prop->tex_id);
       continue;
     }
+    prop_rect.width = prop->dest.width * prop->scale;
+    prop_rect.height = prop->dest.height * prop->scale;
+  
+    Vector2 origin = VECTOR2(prop_rect.width / 2.f, prop_rect.height / 2.f);
 
-    Rectangle _dest = Rectangle {
-      .x = prop->dest.x,
-      .y = prop->dest.y,
-      .width = prop->dest.width * prop->scale,
-      .height = prop->dest.height * prop->scale,
-    };
+    DrawTexturePro(*tex, prop->source, prop_rect, origin, prop->rotation, WHITE);
+  }
+  
+  for (size_t iter = 0; iter < _tilemap->sprite_props.size(); ++iter) {
+    if (!_tilemap->sprite_props.at(iter).is_initialized) continue;
 
-    Vector2 origin = VECTOR2(_dest.width / 2.f, _dest.height / 2.f);
+    tilemap_prop_sprite* prop = &_tilemap->sprite_props.at(iter); if (!prop) {
+      TraceLog(LOG_ERROR, "tilemap::render_tilemap()::Prop:%d is not valid", iter);
+      continue;
+    }
+    if (!CheckCollisionRecs(camera_view, prop->sprite.coord)) { continue; }
 
-    DrawTexturePro(*tex, prop->source, _dest, origin, prop->rotation, WHITE);
+    play_sprite_on_site(&prop->sprite, WHITE, prop->sprite.coord);
   }
 }
 void render_tilesheet(tilesheet* sheet, f32 zoom) {
@@ -234,21 +254,31 @@ void map_to_str(tilemap* map, tilemap_stringtify_package* out_package) {
     }
   }
 
-  for (size_t iter = 0; iter < map->static_props.size() && iter < MAX_TILEMAP_PROPS; ++iter) {
-    if (!map->static_props.at(iter).is_initialized) continue;
+  for (size_t iter = 0; iter < map->static_props.size(); ++iter) {
+    tilemap_prop_static& _prop = map->static_props.at(iter);
+    if (!_prop.is_initialized) continue;
     
     tilemap_prop_static* prop = &map->static_props.at(iter);
     i32 _prop_scale = prop->scale * 100.f;
     i32 _prop_rotation = prop->rotation * 10.f;
-    const char* symbol = TextFormat("%.4d,%.4d,%.4d,%.4d,%.4d,%.4d,%.4d,%.4d,%.4d,%.4d,%.4d,%.4d,%.4d,%.4d",
+    const char* symbol = TextFormat("%.4d,%.4d,%.4d,%.4d,%.4d,%.4d,%.4d,%.4d,%.4d,%.4d,%.4d,%.4d,%.4d,%.4d," PROP_PARSE_PROP_BUFFER_PARSE_SYMBOL_STR,
       prop->id,            prop->tex_id,       prop->prop_type,   _prop_rotation, _prop_scale, prop->zindex,
       (i32)prop->source.x, (i32)prop->source.y,(i32)prop->source.width,(i32)prop->source.height, 
       (i32)prop->dest.x,   (i32)prop->dest.y,  (i32)prop->dest.width,  (i32)prop->dest.height
     );
-    u32 symbol_len = TextLength(symbol);
-    u32 copy_len = symbol_len < TILESHEET_PROP_SYMBOL_STR_LEN ? symbol_len : TILESHEET_PROP_SYMBOL_STR_LEN - 1;
-    copy_memory(out_package->str_props[iter], symbol, copy_len);
-    out_package->str_props[iter][copy_len] = '\0';
+    out_package->str_props.append(symbol);
+  }
+  for (size_t iter = 0; iter < map->sprite_props.size(); ++iter) {
+    if (!map->sprite_props.at(iter).is_initialized) continue;
+    
+    tilemap_prop_sprite* prop = &map->sprite_props.at(iter);
+    i32 _prop_scale = prop->scale * 100.f;
+    i32 _prop_rotation = prop->sprite.rotation * 10.f;
+    const char* symbol = TextFormat("%.4d,%.4d,%.4d,%.4d,%.4d,%.4d,%.4d,%.4d,%.4d,%.4d,%.4d,%.4d,%.4d,%.4d," PROP_PARSE_PROP_BUFFER_PARSE_SYMBOL_STR,
+      prop->id, prop->sprite.sheet_id, prop->prop_type, _prop_rotation, _prop_scale, prop->zindex,
+      0, 0, 0, 0, (i32)prop->sprite.coord.x,   (i32)prop->sprite.coord.y,  (i32)prop->sprite.coord.width,  (i32)prop->sprite.coord.height
+    );
+    out_package->str_props.append(symbol);
   }
   out_package->size_props_str = sizeof(out_package->str_props);
   out_package->is_success = true;
@@ -272,42 +302,63 @@ void str_to_map(tilemap* map, tilemap_stringtify_package* out_package) {
     }
   }
 
-  for (int i = 0; i < MAX_TILEMAP_PROPS; ++i) {
-    u32 len = TextLength((const char*)out_package->str_props[i]);
-    if (len <= 0 || len > TILESHEET_PROP_SYMBOL_STR_LEN) {
-      TraceLog(LOG_INFO, "tilemap::str_to_map()::Loaded prop amount:%d", i);
-      break;
-    }
-    if (map->static_prop_count >= MAX_TILEMAP_PROPS) {
-      TraceLog(LOG_WARNING, "str_to_map: Maximum number of static props exceed");
-      break;
-    }
-    tilemap_prop_static* prop = &map->static_props.at(i);
-    string_parse_result str_par = parse_string((const char*)out_package->str_props[i], ',', MAX_PARSED_TEXT_ARR_LEN, TextLength((const char*)out_package->str_props[i]));
-    if (str_par.count < 10) {
-      TraceLog(LOG_ERROR, "str_to_map: Failed to parse prop data, expected 10 values, got %d", str_par.count);
+  string_parse_result str_par_buffer = parse_string(out_package->str_props.c_str(), PROP_PARSE_PROP_BUFFER_PARSE_SYMBOL_C, PROP_BUFFER_PARSE_TOP_LIMIT);
+  for (size_t iter = 0; iter < str_par_buffer.buffer.size(); ++iter) {
+    string_parse_result str_par_prop_member = parse_string(str_par_buffer.buffer.at(iter), PROP_PARSE_PROP_MEMBER_PARSE_SYMBOL, PROP_MEMBER_PARSE_TOP_LIMIT);
+    if (str_par_prop_member.buffer.size() < 10u) {
+      TraceLog(LOG_ERROR, "str_to_map: Failed to parse prop data, expected 10 values, got %zu", str_par_prop_member.buffer.size());
       continue;
     }
-    prop->id = TextToInteger((const char*)&str_par.buffer[0]);
-    prop->tex_id = static_cast<texture_id>(TextToInteger((const char*)&str_par.buffer[1]));
-    prop->prop_type = static_cast<tilemap_prop_types>(TextToInteger((const char*)&str_par.buffer[2]));
-    prop->rotation = TextToFloat((const char*)&str_par.buffer[3]);
-    prop->scale = TextToFloat((const char*)&str_par.buffer[4]);
-    prop->zindex = TextToInteger((const char*)&str_par.buffer[5]);
-    prop->source = {
-      TextToFloat((const char*)&str_par.buffer[6]), TextToFloat((const char*)&str_par.buffer[7]),
-      TextToFloat((const char*)&str_par.buffer[8]), TextToFloat((const char*)&str_par.buffer[9]),
-    };
-    prop->dest =   {
-      TextToFloat((const char*)&str_par.buffer[10]), TextToFloat((const char*)&str_par.buffer[11]),
-      TextToFloat((const char*)&str_par.buffer[12]), TextToFloat((const char*)&str_par.buffer[13]),
-    };
+    tilemap_prop_types type = static_cast<tilemap_prop_types>(TextToInteger(str_par_prop_member.buffer.at(2).c_str()));
+    if (type == TILEMAP_PROP_TYPE_SPRITE ) {
+      tilemap_prop_sprite prop = {};
+      prop.id = TextToInteger(str_par_prop_member.buffer.at(0).c_str());
+      prop.sprite.sheet_id = static_cast<spritesheet_id>(TextToInteger(str_par_prop_member.buffer.at(1).c_str()));
+      set_sprite(&prop.sprite, true, false, true);
+      prop.prop_type = type;
+      prop.sprite.rotation  = TextToFloat(str_par_prop_member.buffer.at(3).c_str());
+      prop.scale            = TextToFloat(str_par_prop_member.buffer.at(4).c_str());
+      prop.zindex         = TextToInteger(str_par_prop_member.buffer.at(5).c_str());
+      prop.sprite.coord =   {
+        TextToFloat(str_par_prop_member.buffer.at(10).c_str()), TextToFloat(str_par_prop_member.buffer.at(11).c_str()),
+        TextToFloat(str_par_prop_member.buffer.at(12).c_str()), TextToFloat(str_par_prop_member.buffer.at(13).c_str()),
+      };
+      prop.scale = prop.scale / 100.f;
+      prop.sprite.rotation = prop.sprite.rotation / 10.f;
 
-    prop->scale = prop->scale / 100.f;
-    prop->rotation = prop->rotation / 10.f;
+      prop.sprite.coord.width  = prop.sprite.coord.width  * prop.scale;
+      prop.sprite.coord.height = prop.sprite.coord.height * prop.scale;
+      Vector2 origin = VECTOR2(prop.sprite.coord.width / 2.f, prop.sprite.coord.height / 2.f);
+      prop.sprite.origin = origin;
 
-    prop->is_initialized = true;
-    map->static_prop_count++;
+      prop.is_initialized = true;
+      map->sprite_props.push_back(prop);
+      map->sprite_prop_count++;
+    }
+    else {
+      tilemap_prop_static prop = {};
+      prop.id     = TextToInteger(str_par_prop_member.buffer.at(0).c_str());
+      prop.tex_id = static_cast<texture_id>(TextToInteger(str_par_prop_member.buffer.at(1).c_str()));
+      prop.prop_type = type;
+      prop.rotation = TextToFloat(str_par_prop_member.buffer.at(3).c_str());
+      prop.scale    = TextToFloat(str_par_prop_member.buffer.at(4).c_str());
+      prop.zindex = TextToInteger(str_par_prop_member.buffer.at(5).c_str());
+      prop.source = {
+        TextToFloat(str_par_prop_member.buffer.at(6).c_str()), TextToFloat(str_par_prop_member.buffer.at(7).c_str()),
+        TextToFloat(str_par_prop_member.buffer.at(8).c_str()), TextToFloat(str_par_prop_member.buffer.at(9).c_str()),
+      };
+      prop.dest =   {
+        TextToFloat(str_par_prop_member.buffer.at(10).c_str()), TextToFloat(str_par_prop_member.buffer.at(11).c_str()),
+        TextToFloat(str_par_prop_member.buffer.at(12).c_str()), TextToFloat(str_par_prop_member.buffer.at(13).c_str()),
+      };
+
+      prop.scale = prop.scale / 100.f;
+      prop.rotation = prop.rotation / 10.f;
+
+      prop.is_initialized = true;
+      map->static_props.push_back(prop);
+      map->static_prop_count++;
+    }
   }
 
   out_package->is_success = true;
@@ -323,11 +374,11 @@ bool save_map_data(tilemap* map, tilemap_stringtify_package* out_package) {
   if (out_package->is_success) {
     for (int i=0; i<MAX_TILEMAP_LAYERS; ++i) {
       if (!SaveFileData(map_layer_path(map->filename.at(i).c_str()), out_package->str_tilemap[i], out_package->size_tilemap_str[i])) {
-        TraceLog(LOG_ERROR, "ERROR::tilemap::save_map_data()::Recieving package data returned with failure");
+        TraceLog(LOG_ERROR, "tilemap::save_map_data()::Recieving package data returned with failure");
         return false;
       }
     }
-    return SaveFileData(map_layer_path(map->propfile.c_str()), out_package->str_props, out_package->size_props_str);
+    return SaveFileData(map_layer_path(map->propfile.c_str()), out_package->str_props.data(), out_package->str_props.size());
   }
 
   return false;
@@ -356,7 +407,7 @@ bool load_map_data(tilemap * map, tilemap_stringtify_package * out_package) {
     if (dataSize <= 0 || dataSize == I32_MAX) {
       TraceLog(LOG_ERROR, "tilemap::load_map_data()::Reading data returned null");
     }
-    copy_memory(out_package->str_props, _str_prop, dataSize);
+    out_package->str_props.assign((char*)_str_prop, dataSize);
     UnloadFileData(_str_prop);
   }
   
@@ -395,14 +446,14 @@ bool load_or_create_map_data(tilemap * map, tilemap_stringtify_package * out_pac
       if (dataSize <= 0 || dataSize == I32_MAX) {
         TraceLog(LOG_ERROR, "tilemap::load_map_data()::Reading data returned null");
       }
-      copy_memory(out_package->str_props, _str_prop, dataSize);
+      out_package->str_props.assign((char*)_str_prop, dataSize);
       UnloadFileData(_str_prop);
     }
     else {
       if (!out_package->is_success) {
         TraceLog(LOG_ERROR, "tilemap::load_or_create_map_data()::map cannot successfully converted to string to save as file");
       }
-      if (!SaveFileData(map_layer_path(map->propfile.c_str()), out_package->str_props, out_package->size_props_str)) {
+      if (!SaveFileData(map_layer_path(map->propfile.c_str()), out_package->str_props.data(), out_package->size_props_str)) {
         TraceLog(LOG_ERROR, "tilemap::save_map_data()::Recieving package data returned with failure");
       }
     }

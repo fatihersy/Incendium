@@ -228,6 +228,7 @@ void load_spritesheet(texture_id _source_tex, spritesheet_id handle_id, Vector2 
   _sheet.row_total = _total_row;
   _sheet.col_total = _total_col;
   _sheet.frame_total = _total_col * _total_row;
+  _sheet.tint = WHITE;
   _sheet.current_col = 0;
   _sheet.current_row = 0;
   _sheet.current_frame = 0;

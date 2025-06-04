@@ -62,6 +62,7 @@ void initialize_scene_main_menu(camera_metrics *_camera_metrics) {
 
 void update_scene_main_menu(void) {
   update_user_interface();
+  update_map();
   state->in_camera_metrics->frustum = smm_get_camera_view_rect(state->in_camera_metrics->handle);
 
   event_fire(EVENT_CODE_SCENE_MANAGER_SET_CAM_POS, event_context(30.f, 30.f));

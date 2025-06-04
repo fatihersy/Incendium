@@ -502,21 +502,21 @@ bool gui_button(const char* text, button_id _id, Font font, f32 font_size_scale,
   Vector2 draw_sprite_scale = Vector2 {_btn->btn_type.scale,_btn->btn_type.scale};
 
   if (_btn->state == BTN_STATE_PRESSED) {
-    draw_sprite_on_site_by_id(_btn->btn_type.ss_type, WHITE, VECTOR2(_btn->dest.x,_btn->dest.y), draw_sprite_scale, 0, false);
+    draw_sprite_on_site_by_id(_btn->btn_type.ss_type, WHITE, VECTOR2(_btn->dest.x,_btn->dest.y), draw_sprite_scale, 0);
     if (!TextIsEqual(text, "")) {
       draw_text(text, text_pos, font, font.baseSize * font_size_scale, BUTTON_TEXT_PRESSED_COLOR, false, false, false, 0.f);
     }
     if (play_on_click_sound) event_fire(EVENT_CODE_PLAY_BUTTON_ON_CLICK, event_context((u16)true));
   } else {
     if (_btn->state == BTN_STATE_HOVER) {
-      draw_sprite_on_site_by_id(_btn->btn_type.ss_type, WHITE, VECTOR2(_btn->dest.x,_btn->dest.y), draw_sprite_scale, 1, false);
+      draw_sprite_on_site_by_id(_btn->btn_type.ss_type, WHITE, VECTOR2(_btn->dest.x,_btn->dest.y), draw_sprite_scale, 1);
       if (!TextIsEqual(text, "")) {
         draw_text(text, text_pos, font, font.baseSize * font_size_scale, BUTTON_TEXT_HOVER_COLOR, false, false, false, 0.f);
       }
       event_fire(EVENT_CODE_RESET_SOUND, event_context((i32)SOUND_ID_BUTTON_ON_CLICK));
     }
     else {
-      draw_sprite_on_site_by_id(_btn->btn_type.ss_type, WHITE, VECTOR2(_btn->dest.x,_btn->dest.y), draw_sprite_scale, 0, false);
+      draw_sprite_on_site_by_id(_btn->btn_type.ss_type, WHITE, VECTOR2(_btn->dest.x,_btn->dest.y), draw_sprite_scale, 0);
       if (_btn->state != BTN_STATE_HOVER) {
         draw_text(text, text_pos, font, font.baseSize * font_size_scale, BUTTON_TEXT_UP_COLOR, false, false, false, 0.f);
       }
@@ -535,8 +535,8 @@ void gui_progress_bar(progress_bar_id bar_id, Vector2 pos, bool _should_center) 
     TraceLog(LOG_ERROR, "user_interface::gui_player_experiance_process()::Player experiance process bar didn't initialized");
     return;
   }
-  atlas_texture* inside_tex = _get_atlas_texture_by_enum(prg_bar.type.body_inside);
-  Texture2D* atlas = _get_texture_by_enum(ATLAS_TEXTURE_ID);
+  atlas_texture* inside_tex = ss_get_atlas_texture_by_enum(prg_bar.type.body_inside);
+  Texture2D* atlas = ss_get_texture_by_enum(ATLAS_TEXTURE_ID);
   if (!inside_tex) {
     TraceLog(LOG_ERROR, "user_interface::gui_player_experiance_process()::progress bar atlas is null");
     return;
@@ -573,7 +573,7 @@ void draw_atlas_texture_stretch(atlas_texture_id body, Vector2 pos, Vector2 scal
     TraceLog(LOG_ERROR, "user_interface::draw_repetitive_body_tex()::Recieved texture out of bound");
     return;
   }
-  atlas_texture* body_tex = _get_atlas_texture_by_enum(body);
+  atlas_texture* body_tex = ss_get_atlas_texture_by_enum(body);
   if (!body_tex) {
     TraceLog(LOG_ERROR, "user_interface::draw_repetitive_body_tex()::Recieved texture returned NULL");
     return;
@@ -659,7 +659,7 @@ void draw_slider_body(slider* sdr) {
 
   switch (sdr->sdr_type.id) {
     case SDR_TYPE_PERCENT: {
-      spritesheet * circle_sprite = _get_spritesheet_by_enum(SHEET_ID_SLIDER_PERCENT);
+      spritesheet * circle_sprite = ss_get_spritesheet_by_enum(SHEET_ID_SLIDER_PERCENT);
       u16 total_body_width = sdr_type.body_width * sdr_type.width_multiply;
       u16 each_body_width = (total_body_width - ((DEFAULT_PERCENT_SLIDER_CIRCLE_AMOUTH) * SCREEN_OFFSET.x)) / DEFAULT_PERCENT_SLIDER_CIRCLE_AMOUTH;
       f32 each_body_scale = (float)each_body_width / sdr_type.origin_body_width;
@@ -671,7 +671,7 @@ void draw_slider_body(slider* sdr) {
       for (i32 iter = 0; iter < DEFAULT_PERCENT_SLIDER_CIRCLE_AMOUTH; ++iter) {
         Vector2 _pos = _pos_temp;
         _pos.x += (each_body_width + SCREEN_OFFSET.x) * (iter-1); 
-        draw_sprite_on_site_by_id(SHEET_ID_SLIDER_PERCENT, WHITE, _pos, draw_sprite_scale, (iter < sdr->current_value) ? 1 : 0, false);
+        draw_sprite_on_site_by_id(SHEET_ID_SLIDER_PERCENT, WHITE, _pos, draw_sprite_scale, (iter < sdr->current_value) ? 1 : 0);
       }
       break;
     }
@@ -692,7 +692,7 @@ void draw_slider_body(slider* sdr) {
       for (int i = 1; i < sdr->max_value; ++i) {
         Vector2 _pos = _pos_temp;
         _pos.x += (each_body_width + SCREEN_OFFSET.x) * (i-1); 
-        draw_sprite_on_site_by_id(sdr_type.ss_sdr_body, WHITE, _pos, draw_sprite_scale, (i == sdr->current_value) ? 1 : 0, false);
+        draw_sprite_on_site_by_id(sdr_type.ss_sdr_body, WHITE, _pos, draw_sprite_scale, (i == sdr->current_value) ? 1 : 0);
       }
       Vector2 text_pos = Vector2 {
         sdr->position.x + total_body_width/2.f - text_measure.x / 2.f,
@@ -714,7 +714,7 @@ void draw_slider_body(slider* sdr) {
       for (int i = 1; i < sdr->max_value; ++i) {
         Vector2 _pos = _pos_temp;
         _pos.x += (each_body_width + SCREEN_OFFSET.x) * (i-1); 
-        draw_sprite_on_site_by_id(sdr_type.ss_sdr_body, WHITE, _pos, draw_sprite_scale, (i == sdr->current_value) ? 1 : 0, false);
+        draw_sprite_on_site_by_id(sdr_type.ss_sdr_body, WHITE, _pos, draw_sprite_scale, (i == sdr->current_value) ? 1 : 0);
       }
       Vector2 text_pos = Vector2 {
         sdr->position.x + total_body_width/2.f - text_measure.x / 2.f,
@@ -1096,7 +1096,7 @@ void register_slider_type(
       return;
     }
 
-  spritesheet ss_body = *_get_spritesheet_by_enum(_ss_sdr_body_type);
+  spritesheet ss_body = *ss_get_spritesheet_by_enum(_ss_sdr_body_type);
   button_type* left_btn_type = &state->button_types[_left_btn_type_id]; 
   button_type* right_btn_type = &state->button_types[_right_btn_type_id]; 
 
@@ -1178,7 +1178,7 @@ void gui_draw_spritesheet_to_background(spritesheet_id _id, Color _tint) {
     return;
   }
   if (state->ss_to_draw_bg.sheet_id != _id) {
-    state->ss_to_draw_bg = *_get_spritesheet_by_enum(_id);
+    state->ss_to_draw_bg = *ss_get_spritesheet_by_enum(_id);
     set_sprite(&state->ss_to_draw_bg, true, false, false);
   }
   Rectangle dest = Rectangle {0, 0, BASE_RENDER_RES.x, BASE_RENDER_RES.y};
@@ -1189,7 +1189,7 @@ void gui_draw_spritesheet_to_background(spritesheet_id _id, Color _tint) {
  * @return Rectangle { .x = 0, .y = 0, .width = tex->width, .height = tex->height}; 
  */
  Rectangle get_atlas_texture_source_rect(atlas_texture_id _id) {
-  atlas_texture* tex = _get_atlas_texture_by_enum(_id);
+  atlas_texture* tex = ss_get_atlas_texture_by_enum(_id);
   if (!tex) { 
     TraceLog(LOG_WARNING, "user_interface::get_atlas_texture_source_rect()::Requested type was null");
     return Rectangle {}; 
@@ -1206,7 +1206,7 @@ void gui_draw_spritesheet_to_background(spritesheet_id _id, Color _tint) {
     "user_interface::draw_texture_regular()::ID was out of bound"); 
     return; 
   }
-  atlas_texture* tex = _get_atlas_texture_by_enum(_id);
+  atlas_texture* tex = ss_get_atlas_texture_by_enum(_id);
   if (!tex) { TraceLog(
   LOG_WARNING, "user_interface::draw_texture_regular()::Tex was null");
     return; 
@@ -1228,7 +1228,7 @@ void gui_draw_spritesheet_to_background(spritesheet_id _id, Color _tint) {
     TraceLog(LOG_WARNING, "user_interface::draw_atlas_texture_npatch()::ID was out of bound"); 
     return; 
   }
-  atlas_texture* tex = _get_atlas_texture_by_enum(_id);
+  atlas_texture* tex = ss_get_atlas_texture_by_enum(_id);
   if (!tex) { 
     TraceLog(LOG_WARNING, "user_interface::draw_atlas_texture_npatch()::Tex was null"); 
     return; 
@@ -1400,7 +1400,7 @@ void gui_draw_atlas_texture_id_pro(atlas_texture_id _id, Rectangle src, Rectangl
     TraceLog(LOG_WARNING, "user_interface::gui_draw_atlas_texture_id_pro()::ID was out of bound"); 
     return; 
   }
-  atlas_texture* tex = _get_atlas_texture_by_enum(_id);
+  atlas_texture* tex = ss_get_atlas_texture_by_enum(_id);
   if (!tex) { 
     TraceLog(LOG_WARNING, "user_interface::gui_draw_atlas_texture_id_pro()::Tex was null");
     return; 
@@ -1420,7 +1420,7 @@ void gui_draw_atlas_texture_id(atlas_texture_id _id, Rectangle dest) {
     TraceLog(LOG_WARNING, "user_interface::gui_draw_atlas_texture_id()::ID was out of bound"); 
     return; 
   }
-  atlas_texture* tex = _get_atlas_texture_by_enum(_id);
+  atlas_texture* tex = ss_get_atlas_texture_by_enum(_id);
   if (!tex) { 
     TraceLog(LOG_WARNING, "user_interface::gui_draw_atlas_texture_id()::Tex was null");
     return; 
@@ -1432,7 +1432,7 @@ void gui_draw_atlas_texture_id_pro_grid(atlas_texture_id _id, Rectangle src, Rec
     TraceLog(LOG_WARNING, "user_interface::gui_draw_atlas_texture_id_pro_grid()::ID was out of bound"); 
     return; 
   }
-  atlas_texture* tex = _get_atlas_texture_by_enum(_id);
+  atlas_texture* tex = ss_get_atlas_texture_by_enum(_id);
   if (!tex) { 
     TraceLog(LOG_WARNING, "user_interface::gui_draw_atlas_texture_id_pro_grid()::Tex was null");
     return; 
@@ -1451,7 +1451,7 @@ void gui_draw_atlas_texture_id_grid(atlas_texture_id _id, Rectangle dest, f32 gr
     TraceLog(LOG_WARNING, "user_interface::gui_draw_atlas_texture_id_grid()::ID was out of bound"); 
     return; 
   }
-  atlas_texture* tex = _get_atlas_texture_by_enum(_id);
+  atlas_texture* tex = ss_get_atlas_texture_by_enum(_id);
   if (!tex) { 
     TraceLog(LOG_WARNING, "user_interface::gui_draw_atlas_texture_id_grid()::Tex was null");
     return; 
@@ -1461,19 +1461,19 @@ void gui_draw_atlas_texture_id_grid(atlas_texture_id _id, Rectangle dest, f32 gr
   dest.y = pos.y;
   DrawTexturePro(*tex->atlas_handle, tex->source, dest, Vector2 {}, 0, WHITE);
 }
-void gui_draw_spritesheet_id(spritesheet_id _id, Color _tint, Vector2 pos, Vector2 scale, u16 frame, bool _should_center) {
+void gui_draw_spritesheet_id(spritesheet_id _id, Color _tint, Vector2 pos, Vector2 scale, u16 frame) {
   if (_id >= SHEET_ID_SPRITESHEET_TYPE_MAX || _id <= SHEET_ID_SPRITESHEET_UNSPECIFIED) {
     TraceLog(LOG_WARNING, "user_interface::gui_draw_spritesheet_id()::ID was out of bound"); 
     return; 
   }
-  draw_sprite_on_site_by_id(_id, _tint, pos, scale, frame, _should_center);
+  draw_sprite_on_site_by_id(_id, _tint, pos, scale, frame);
 }
 void gui_draw_atlas_texture_id_center(atlas_texture_id _id, Vector2 pos, Vector2 dim, bool should_center) {
   if (_id >= ATLAS_TEX_ID_MAX || _id <= ATLAS_TEX_ID_UNSPECIFIED) {
     TraceLog(LOG_WARNING, "user_interface::gui_draw_atlas_texture_id_center()::ID was out of bound"); 
     return; 
   }
-  atlas_texture* tex = _get_atlas_texture_by_enum(_id);
+  atlas_texture* tex = ss_get_atlas_texture_by_enum(_id);
   if (!tex) { 
     TraceLog(LOG_WARNING, "user_interface::gui_draw_atlas_texture_id_center()::Tex was null");
     return; 
@@ -1493,7 +1493,7 @@ void gui_draw_texture_id_pro(texture_id _id, Rectangle src, Rectangle dest, bool
     TraceLog(LOG_WARNING, "user_interface::gui_draw_texture_id_pro()::ID was out of bound"); 
     return; 
   }
-  Texture2D* tex = _get_texture_by_enum(_id);
+  Texture2D* tex = ss_get_texture_by_enum(_id);
   if (!tex) { 
     TraceLog(LOG_WARNING, "user_interface::gui_draw_texture_id_pro()::Tex was null");
     return; 
@@ -1509,7 +1509,7 @@ void gui_draw_texture_id(texture_id _id, Rectangle dest) {
     TraceLog(LOG_WARNING, "user_interface::gui_draw_texture_id()::ID was out of bound"); 
     return; 
   }
-  Texture2D* tex = _get_texture_by_enum(_id);
+  Texture2D* tex = ss_get_texture_by_enum(_id);
   if (!tex) { 
     TraceLog(LOG_WARNING, "user_interface::gui_draw_texture_id()::Tex was null");
     return; 
@@ -1524,7 +1524,7 @@ void gui_draw_atlas_texture_id_scale(atlas_texture_id _id, Vector2 position, f32
     TraceLog(LOG_WARNING, "user_interface::gui_draw_atlas_texture_id_scale()::ID was out of bound"); 
     return; 
   }
-  atlas_texture* tex = _get_atlas_texture_by_enum(_id);
+  atlas_texture* tex = ss_get_atlas_texture_by_enum(_id);
   if (!tex) { 
     TraceLog(LOG_WARNING, "user_interface::gui_draw_atlas_texture_id_scale()::Tex was null");
     return; 
@@ -1735,9 +1735,17 @@ localization_package* ui_get_localization_by_index(u32 _language_index) {
   return nullptr;
 }
 
-void _play_sprite_on_site(spritesheet *sheet, Color _tint, Rectangle dest) {
+// EXPOSED
+void ui_play_sprite_on_site(spritesheet *sheet, Color _tint, Rectangle dest) {
   play_sprite_on_site(sheet, _tint, dest);
 }
+void ui_set_sprite(spritesheet *sheet, bool _play_looped, bool _play_once, bool _center_sprite) {
+  set_sprite(sheet, _play_looped, _play_once, _center_sprite);
+}
+void ui_update_sprite(spritesheet *sheet) {
+  update_sprite(sheet);
+}
+// EXPOSED
 
 void user_interface_system_destroy(void) {}
 

@@ -43,8 +43,6 @@
 #define MAX_TILEMAP_TILESLOT MAX_TILEMAP_TILESLOT_X * MAX_TILEMAP_TILESLOT_Y
 #define TILEMAP_TILE_START_SYMBOL 0x21 // Refers to ASCII exclamation mark. First visible character on the chart. To debug.
 #define TILESHEET_TILE_SYMBOL_STR_LEN 2
-#define TILESHEET_PROP_SYMBOL_STR_LEN 128
-#define MAX_TILEMAP_PROPS 255
 #define MAX_TILEMAP_SPRITES 50
 #define MAX_TILEMAP_FILENAME_LEN 20
 
@@ -217,7 +215,6 @@ typedef struct spritesheet {
   i16 counter;
   world_direction w_direction;
   spritesheet_playmod playmod;
-  bool should_center;
   bool is_started;
   bool is_played;
   bool play_looped;
@@ -293,7 +290,6 @@ typedef struct tilemap_prop_static {
 
 typedef struct tilemap_prop_sprite {
   u32 id;
-	spritesheet_id sprite_id;
   tilemap_prop_types prop_type;
   spritesheet sprite;
   i16 zindex;
@@ -307,7 +303,7 @@ typedef struct tilemap_prop {
     tilemap_prop_static* prop_static;
     tilemap_prop_sprite* prop_sprite;
   }data;
-  tilemap_prop() {
+  tilemap_prop(void) {
     this->type = TILEMAP_PROP_TYPE_UNDEFINED;
     this->data.prop_static = nullptr;
   }
@@ -341,7 +337,7 @@ typedef struct tilemap {
   u16 map_dim;
 
   tile_symbol tiles[MAX_TILEMAP_LAYERS][MAX_TILEMAP_TILESLOT_X][MAX_TILEMAP_TILESLOT_Y];
-  std::array<tilemap_prop_static, MAX_TILEMAP_PROPS> static_props;
+  std::vector<tilemap_prop_static> static_props;
   std::vector<tilemap_prop_sprite> sprite_props;
   u16 tile_size;
   u16 static_prop_count;
@@ -351,11 +347,11 @@ typedef struct tilemap {
 } tilemap;
 
 typedef struct tilemap_stringtify_package {
-  u8 str_tilemap[MAX_TILEMAP_LAYERS][MAX_TILEMAP_TILESLOT * TILESHEET_TILE_SYMBOL_STR_LEN];
-  u8 str_props[MAX_TILEMAP_PROPS][TILESHEET_PROP_SYMBOL_STR_LEN];
-  i32 size_tilemap_str[MAX_TILEMAP_LAYERS];
-  i32 size_props_str;
-  bool is_success;
+  u8 str_tilemap[MAX_TILEMAP_LAYERS][MAX_TILEMAP_TILESLOT * TILESHEET_TILE_SYMBOL_STR_LEN] = {};
+  i32 size_tilemap_str[MAX_TILEMAP_LAYERS] = {};
+  std::string str_props = "";
+  i32 size_props_str = 0;
+  bool is_success = false;
 }tilemap_stringtify_package;
 
 typedef struct Character2D {
@@ -381,7 +377,7 @@ typedef struct Character2D {
 
   data128 buffer;
 
-  Character2D() {
+  Character2D(void) {
     this->character_id = 0;
     this->health = 0;
     this->damage = 0;
@@ -479,7 +475,7 @@ typedef struct ability {
   bool is_active;
   bool is_initialized;
 
-  ability() {
+  ability(void) {
     this->p_owner = nullptr;
     this->display_name = "";
     this->projectiles = {};
@@ -549,7 +545,15 @@ typedef struct character_stat {
 
   data128 buffer;
 
-  character_stat() {}
+  character_stat(void) {
+    this->id = CHARACTER_STATS_UNDEFINED;
+    this->level = 0;
+    this->passive_display_name_symbol = 0;
+    this->passive_desc_symbol = 0;
+    this->passive_icon_src = {};
+    this->upgrade_cost = 0;
+    this->buffer = data128();
+  }
   character_stat(character_stats id, u32 display_name_symbol, u32 desc_symbol, Rectangle icon_src, i32 upgrade_cost, data128 buffer = {}) : character_stat()
   {
     this->id = id;
@@ -631,7 +635,7 @@ typedef struct text_spec {
   Color color;
   u32 language_index;
 
-  text_spec() {
+  text_spec(void) {
     this->text = "This is default";
     this->text_pos = VECTOR2(960,540);
     this->font = nullptr;

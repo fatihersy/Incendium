@@ -40,6 +40,7 @@ typedef struct scene_editor_state {
   std::vector<tilemap_prop_sprite> * tilemap_props_sprite_selected;
 
   bool b_show_tilesheet_tile_selection_screen;
+  bool b_prop_selection_screen_update_prop_sprites;
   bool b_show_prop_selection_screen;
   bool b_show_prop_edit_screen;
   bool b_dragging_prop;
@@ -731,6 +732,14 @@ void update_scene_editor(void) {
   state->mouse_pos_world = GetScreenToWorld2D(state->mouse_pos_screen, state->in_camera_metrics->handle);
   state->in_camera_metrics->frustum = se_get_camera_view_rect(state->in_camera_metrics->handle);
 
+  if (state->b_prop_selection_screen_update_prop_sprites) {
+    for (size_t iter = 0; iter < state->tilemap_props_sprite.size(); iter++) {
+      spritesheet * sprite = __builtin_addressof(state->tilemap_props_sprite.at(iter).sprite);
+      ui_update_sprite(sprite);
+    }
+    state->b_prop_selection_screen_update_prop_sprites = false;
+  }
+
   editor_update_bindings();
   update_map();
   update_user_interface();
@@ -768,12 +777,13 @@ void render_interface_editor(void) {
     gui_slider(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER, VECTOR2(pnl->dest.x,pnl->dest.y), VECTOR2(4,3), 3.f);
     f32 prop_height_count = pnl->buffer.f32[1];
     if (get_slider_current_value(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER)->data.i32[0] == TILEMAP_PROP_TYPE_SPRITE) {
+      state->b_prop_selection_screen_update_prop_sprites = true;
       for (size_t iter = 0; iter < state->tilemap_props_sprite_selected->size(); ++iter) {
         tilemap_prop_sprite& prop = state->tilemap_props_sprite_selected->at(iter);
         Rectangle dest = prop.sprite.coord;
         dest.x = 0;
         dest.y = (pnl->scroll * pnl->buffer.f32[0]) + prop_height_count;
-        _play_sprite_on_site(&prop.sprite, WHITE, dest);
+        ui_play_sprite_on_site(&prop.sprite, WHITE, dest);
         prop_height_count += dest.height;
       }
     } else {
@@ -807,17 +817,42 @@ void render_interface_editor(void) {
     });
   }
 
+  if(state->selection_type == SLC_TYPE_SLC_PROP_SPRITE) 
+  {
+    panel* pnl = &state->prop_edit_panel;
+    gui_panel_scissored((*pnl), false, {
+      ui_set_slider_current_value(SDR_ID_EDITOR_PROP_SCALE_SLIDER, slider_option(TextFormat("%.2f", state->selected_prop_sprite->scale), data_pack()));
+      get_slider_by_id(SDR_ID_EDITOR_PROP_SCALE_SLIDER)->options.at(0).no_localized_text = TextFormat("%.2f", state->selected_prop_sprite->scale);
+      gui_slider(SDR_ID_EDITOR_PROP_SCALE_SLIDER,    VECTOR2(pnl->dest.x,pnl->dest.y), VECTOR2(5,1),  3.f);
+      get_slider_by_id(SDR_ID_EDITOR_PROP_ROTATION_SLIDER)->options.at(0).no_localized_text = TextFormat("%.1f", state->selected_prop_sprite->sprite.rotation);
+      gui_slider(SDR_ID_EDITOR_PROP_ROTATION_SLIDER, VECTOR2(pnl->dest.x,pnl->dest.y), VECTOR2(5,5),  3.f);
+      get_slider_by_id(SDR_ID_EDITOR_PROP_ZINDEX_SLIDER)->options.at(0).no_localized_text = TextFormat("%d", state->selected_prop_sprite->zindex);
+      gui_slider(SDR_ID_EDITOR_PROP_ZINDEX_SLIDER,   VECTOR2(pnl->dest.x,pnl->dest.y), VECTOR2(5,10), 3.f);
+    });
+  }
+
   switch (state->selection_type) {
     case SLC_TYPE_TILE: {
       _render_tile_on_pos(&state->selected_tile, state->mouse_pos_screen, state->selected_sheet);
       break;
     }
     case SLC_TYPE_DROP_PROP_STATIC: {
-      gui_draw_texture_id_pro(
-        state->selected_prop_static->tex_id, state->selected_prop_static->source,
-        Rectangle { state->mouse_pos_screen.x, state->mouse_pos_screen.y, state->selected_prop_static->dest.width, state->selected_prop_static->dest.height}, 
-        false
-      );
+      if (state->selected_prop_static) {
+        gui_draw_texture_id_pro(
+          state->selected_prop_static->tex_id, state->selected_prop_static->source,
+          Rectangle { state->mouse_pos_screen.x, state->mouse_pos_screen.y, state->selected_prop_static->dest.width, state->selected_prop_static->dest.height}, 
+          false
+        );
+      }
+      break;
+    }
+    case SLC_TYPE_DROP_PROP_SPRITE: {
+      if (state->selected_prop_sprite) {
+        ui_play_sprite_on_site(
+          &state->selected_prop_sprite->sprite, state->selected_prop_sprite->sprite.tint,
+          Rectangle { state->mouse_pos_screen.x, state->mouse_pos_screen.y, state->selected_prop_sprite->sprite.coord.width, state->selected_prop_sprite->sprite.coord.width}
+        );
+      }
       break;
     }
     case SLC_TYPE_SLC_PROP_STATIC: {
@@ -897,20 +932,16 @@ void add_prop(tilemap_prop_types type, spritesheet_id sprite_id, f32 scale) {
     TraceLog(LOG_WARNING, "scene_editor::add_prop()::Provided sprite id out of bound");
     return;
   }
-  const spritesheet * _sprite = get_spritesheet_by_enum(sprite_id);
-  if (!_sprite) {
-    TraceLog(LOG_WARNING, "scene_editor::add_prop()::Invalid sprite");
-    return;
-  }
   
   tilemap_prop_sprite prop = {};
 
   prop.id = state->next_prop_sprite_id++;
-  prop.sprite_id = sprite_id;
-  prop.sprite = *_sprite;
   prop.prop_type = type;
-  prop.sprite.rotation = 0.f;
   prop.scale = scale;
+  prop.sprite.sheet_id = sprite_id;
+  
+  ui_set_sprite(&prop.sprite, true, false, false);
+  prop.sprite.rotation = 0.f;
 
   prop.is_initialized = true;
 
@@ -965,13 +996,25 @@ void editor_update_mouse_bindings(void) {
  
     if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON) && state->selection_type == SLC_TYPE_UNSELECTED && !pnl->is_dragging_scroll) {
       i32 h = (pnl->scroll * pnl->buffer.f32[0] * (-1)) + state->mouse_pos_screen.y - pnl->buffer.f32[1];
-      for (size_t i=0; i< state->tilemap_props_static_selected->size() && h > 0; ++i) {
-        if(h - state->tilemap_props_static_selected->at(i).source.height < 0) {
-          state->selected_prop_static = &state->tilemap_props_static_selected->at(i);
-          state->selection_type = SLC_TYPE_DROP_PROP_STATIC;
-          break;
+      if (get_slider_current_value(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER)->data.i32[0] == TILEMAP_PROP_TYPE_SPRITE) {
+        for (size_t iter=0; iter< state->tilemap_props_sprite_selected->size() && h > 0; ++iter) {
+          if(h - state->tilemap_props_sprite_selected->at(iter).sprite.current_frame_rect.height < 0) {
+            state->selected_prop_sprite = &state->tilemap_props_sprite_selected->at(iter);
+            state->selection_type = SLC_TYPE_DROP_PROP_SPRITE;
+            break;
+          }
+          h -= state->tilemap_props_sprite_selected->at(iter).sprite.current_frame_rect.height;
         }
-        h -= state->tilemap_props_static_selected->at(i).source.height;
+      }
+      else {
+        for (size_t iter=0; iter < state->tilemap_props_static_selected->size() && h > 0; ++iter) {
+          if(h - state->tilemap_props_static_selected->at(iter).source.height < 0) {
+            state->selected_prop_static = &state->tilemap_props_static_selected->at(iter);
+            state->selection_type = SLC_TYPE_DROP_PROP_STATIC;
+            break;
+          }
+          h -= state->tilemap_props_static_selected->at(iter).source.height;
+        }
       }
     }
   }
@@ -991,10 +1034,15 @@ void editor_update_mouse_bindings(void) {
         break;
       }
       case SLC_TYPE_DROP_PROP_STATIC: {
-        Vector2 coord = GetScreenToWorld2D(state->mouse_pos_screen, state->in_camera_metrics->handle);
-        state->selected_prop_static->dest.x = coord.x;
-        state->selected_prop_static->dest.y = coord.y;
-        add_prop_curr_map(state->selected_prop_static);
+        state->selected_prop_static->dest.x = state->mouse_pos_world.x;
+        state->selected_prop_static->dest.y = state->mouse_pos_world.y;
+        add_prop_curr_map(tilemap_prop(state->selected_prop_static));
+        break;
+      }
+      case SLC_TYPE_DROP_PROP_SPRITE: {
+        state->selected_prop_sprite->sprite.coord.x = state->mouse_pos_world.x;
+        state->selected_prop_sprite->sprite.coord.y = state->mouse_pos_world.y;
+        add_prop_curr_map(tilemap_prop(state->selected_prop_sprite));
         break;
       }
       case SLC_TYPE_SLC_PROP_STATIC: {
