@@ -40,7 +40,7 @@ bool ability_system_initialize(camera_metrics* _camera_metrics, app_settings* se
     1.86f, 1, 1, 0.f,
     Vector2{30.f, 30.f}, Rectangle{704, 768, 32, 32},
     15,
-    false,
+    false
   ));
   std::array<ability_upgradables, ABILITY_UPG_MAX> bullet_upgr = {ABILITY_UPG_DAMAGE, ABILITY_UPG_HITBOX, ABILITY_UPG_AMOUNT, ABILITY_UPG_UNDEFINED, ABILITY_UPG_UNDEFINED};
   register_ability(ability("Bullet", 
@@ -49,7 +49,7 @@ bool ability_system_initialize(camera_metrics* _camera_metrics, app_settings* se
     3.f, 1, 3, 1.75f, 
     Vector2{30.f, 30.f}, Rectangle{544, 128, 32, 32}, 
     15, 
-    false,
+    false
   ));
   std::array<ability_upgradables, ABILITY_UPG_MAX> comet_upgr = {ABILITY_UPG_DAMAGE, ABILITY_UPG_HITBOX, ABILITY_UPG_AMOUNT, ABILITY_UPG_UNDEFINED, ABILITY_UPG_UNDEFINED};
   register_ability(ability("Comet",

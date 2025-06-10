@@ -193,7 +193,7 @@ bool update_spawns(Vector2 player_position) {
     event_fire(EVENT_CODE_DAMAGE_PLAYER_IF_COLLIDE, event_context(
       (i16) character->collision.x, (i16) character->collision.y, 
       (i16) character->collision.width, (i16) character->collision.height, 
-      (i16) character->damage,
+      (i16) character->damage
     ));
   }
   return true;
