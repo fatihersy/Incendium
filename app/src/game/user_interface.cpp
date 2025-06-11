@@ -1415,7 +1415,7 @@ void gui_draw_atlas_texture_id_pro(atlas_texture_id _id, Rectangle src, Rectangl
   }
   DrawTexturePro(*tex->atlas_handle, src, dest, Vector2 {}, 0, WHITE);
 }
-void gui_draw_atlas_texture_id(atlas_texture_id _id, Rectangle dest) {
+void gui_draw_atlas_texture_id(atlas_texture_id _id, Rectangle dest, Vector2 origin, f32 rotation) {
   if (_id >= ATLAS_TEX_ID_MAX || _id <= ATLAS_TEX_ID_UNSPECIFIED) {
     TraceLog(LOG_WARNING, "user_interface::gui_draw_atlas_texture_id()::ID was out of bound"); 
     return; 
@@ -1425,7 +1425,8 @@ void gui_draw_atlas_texture_id(atlas_texture_id _id, Rectangle dest) {
     TraceLog(LOG_WARNING, "user_interface::gui_draw_atlas_texture_id()::Tex was null");
     return; 
   }
-  DrawTexturePro(*tex->atlas_handle, tex->source, dest, Vector2 {}, 0, WHITE);
+
+  DrawTexturePro(*tex->atlas_handle, tex->source, dest, origin, rotation, WHITE);
 }
 void gui_draw_atlas_texture_id_pro_grid(atlas_texture_id _id, Rectangle src, Rectangle dest, bool relative, f32 grid_scale) {
   if (_id >= ATLAS_TEX_ID_MAX || _id <= ATLAS_TEX_ID_UNSPECIFIED) {
@@ -1467,26 +1468,6 @@ void gui_draw_spritesheet_id(spritesheet_id _id, Color _tint, Vector2 pos, Vecto
     return; 
   }
   draw_sprite_on_site_by_id(_id, _tint, pos, scale, frame);
-}
-void gui_draw_atlas_texture_id_center(atlas_texture_id _id, Vector2 pos, Vector2 dim, bool should_center) {
-  if (_id >= ATLAS_TEX_ID_MAX || _id <= ATLAS_TEX_ID_UNSPECIFIED) {
-    TraceLog(LOG_WARNING, "user_interface::gui_draw_atlas_texture_id_center()::ID was out of bound"); 
-    return; 
-  }
-  atlas_texture* tex = ss_get_atlas_texture_by_enum(_id);
-  if (!tex) { 
-    TraceLog(LOG_WARNING, "user_interface::gui_draw_atlas_texture_id_center()::Tex was null");
-    return; 
-  }
-  if (should_center) {
-    pos.x -= dim.x / 2.f; 
-    pos.y -= dim.y / 2.f; 
-  }
-
-  DrawTexturePro(*tex->atlas_handle, 
-  tex->source, 
-  Rectangle {pos.x, pos.y, dim.x, dim.y}, 
-  Vector2 {}, 0, WHITE);
 }
 void gui_draw_texture_id_pro(texture_id _id, Rectangle src, Rectangle dest, bool should_center) {
   if (_id >= TEX_ID_MAX || _id <= TEX_ID_UNSPECIFIED) {

@@ -16,6 +16,8 @@
   .x = BASE_RENDER_RES.x  * (X / 100), \
   .y = BASE_RENDER_RES.y * (Y / 100)  \
 })
+#define ZEROVEC2 Vector2{0.f, 0.f}
+#define ZERORECT Rectangle{0.f, 0.f, 0.f, 0.f}
 
 #define ATLAS_TEXTURE_ID TEX_ID_ASSET_ATLAS
 
@@ -87,15 +89,6 @@ typedef enum scene_id {
   SCENE_TYPE_MAX
 } scene_id;
 
-// LABEL: Move Type
-typedef enum movement_pattern {
-  MOVE_TYPE_UNDEFINED,
-  MOVE_TYPE_SATELLITE,
-  MOVE_TYPE_BULLET,
-  MOVE_TYPE_COMET,
-  MOVE_TYPE_MAX,
-} movement_pattern;
-
 typedef enum ability_upgradables {
   ABILITY_UPG_UNDEFINED,
   ABILITY_UPG_DAMAGE,
@@ -112,6 +105,7 @@ typedef enum ability_type {
   ABILITY_TYPE_BULLET,
   //ABILITY_TYPE_RADIATION,
   ABILITY_TYPE_COMET,
+  ABILITY_TYPE_CODEX,
   ABILITY_TYPE_MAX,
 } ability_type;
 
@@ -219,6 +213,32 @@ typedef struct spritesheet {
   bool is_played;
   bool play_looped;
   bool play_once;
+
+  spritesheet() {
+    this->sheet_id = SHEET_ID_SPRITESHEET_UNSPECIFIED;
+    this->tex_id = TEX_ID_UNSPECIFIED;
+    this->tex_handle = nullptr;
+    this->offset = ZEROVEC2;
+    this->origin = ZEROVEC2;
+    this->col_total = 0u;
+    this->row_total = 0u;
+    this->frame_total = 0u;
+    this->current_col = 0u;
+    this->current_row = 0u;
+    this->current_frame = 0u;
+    this->current_frame_rect = ZERORECT;
+    this->coord = ZERORECT;
+    this->tint = WHITE;
+    this->rotation = 0.f;
+    this->fps = 0;
+    this->counter = 0;
+    this->w_direction = WORLD_DIRECTION_UNDEFINED;
+    this->playmod = SPRITESHEET_PLAYMOD_UNSPECIFIED;
+    this->is_started = false;
+    this->is_played = false;
+    this->play_looped = false;
+    this->play_once = false;
+  }
 } spritesheet;
 
 typedef struct music_data {
@@ -417,6 +437,10 @@ typedef struct Character2D {
   }
 } Character2D;
 
+/**
+ * @brief vec_ex buffer summary: {f32[0], f32[1]}, {f32[2], f32[3]} = {target x, target y}, {explosion.x, explosion.y}
+ * @brief mm_ex buffer  summary: {u16[0]} = {counter, }
+ */
 typedef struct projectile {
   u16 id;
   spritesheet default_animation;
@@ -426,27 +450,28 @@ typedef struct projectile {
   world_direction direction;
 
   // 128 byte buffer
-  union {
-    i64 i64[2];
-    u64 u64[2];
-    f64 f64[2];
+  data128 vec_ex;
+  data128 mm_ex;
 
-    i32 i32[4];
-    u32 u32[4];
-    f32 f32[4];
-
-    i16 i16[8];
-    u16 u16[8];
-
-    i8 i8[16];
-    u8 u8[16];
-
-    char c[16];
-  } buffer;
   u16 damage;
   f32 duration;
   bool is_active;
   bool play_explosion_animation;
+
+  projectile(void) {
+    this->id = 0u;
+    this->default_animation = spritesheet();
+    this->explotion_animation = spritesheet();
+    this->position = ZEROVEC2;
+    this->collision = ZERORECT;
+    this->direction = WORLD_DIRECTION_UNDEFINED;
+    this->vec_ex = data128();
+    this->mm_ex = data128();
+    this->damage = 0u;
+    this->duration = 0.f;
+    this->is_active = false;
+    this->play_explosion_animation = false;
+  }
 } projectile;
 
 typedef struct ability {
@@ -454,7 +479,6 @@ typedef struct ability {
   std::string display_name;
   std::vector<projectile> projectiles;
   std::array<ability_upgradables, ABILITY_UPG_MAX> upgradables;
-  movement_pattern move_pattern;
   ability_type type;
   spritesheet_id default_animation_id;
   spritesheet_id explosion_animation_id;
@@ -480,7 +504,6 @@ typedef struct ability {
     this->display_name = "";
     this->projectiles = {};
     this->upgradables = {};
-    this->move_pattern = MOVE_TYPE_UNDEFINED;
     this->type = ABILITY_TYPE_UNDEFINED;
     this->default_animation_id = SHEET_ID_SPRITESHEET_UNSPECIFIED;
     this->explosion_animation_id = SHEET_ID_SPRITESHEET_UNSPECIFIED;
@@ -503,14 +526,12 @@ typedef struct ability {
   ability(
     std::string name, 
     std::array<ability_upgradables, ABILITY_UPG_MAX> upgrs, 
-    ability_type type, spritesheet_id def_anim_id, spritesheet_id expl_anim_id, movement_pattern pattern, 
+    ability_type type, spritesheet_id def_anim_id, spritesheet_id expl_anim_id, 
     f32 proj_scale, u16 proj_count, u16 proj_speed, f32 proj_duration, 
     Vector2 proj_dim, Rectangle icon_src,
     u16 base_damage, 
-    bool center_proj_anim, bool centered_origin = false, void* in_player = nullptr, bool is_active = false, bool is_initialized = false) : ability()
+    bool center_proj_anim, bool centered_origin = false) : ability()
   {
-    this->p_owner = in_player;
-    this->move_pattern = pattern;
     this->type = type;
     this->default_animation_id = def_anim_id;
     this->explosion_animation_id = expl_anim_id;
@@ -523,8 +544,6 @@ typedef struct ability {
     this->level = 1;
     this->base_damage = base_damage;
     this->center_proj_anim = center_proj_anim;
-    this->is_active = is_active;
-    this->is_initialized = is_initialized;
     this->display_name = name;
     this->upgradables = upgrs;
     this->centered_origin = centered_origin;
@@ -532,7 +551,7 @@ typedef struct ability {
 }ability;
 
 typedef struct ability_play_system {
-  ability abilities[MAX_ABILITY_SLOT];
+  std::array<ability, MAX_ABILITY_SLOT> abilities;
 } ability_play_system;
 
 typedef struct character_stat {
@@ -610,6 +629,26 @@ typedef struct player_state {
   bool is_dead;
   bool is_damagable;
 } player_state;
+
+typedef struct ingame_info {
+  Character2D* in_spawns;
+  u32* p_spawn_system_spawn_count;
+  Character2D* nearest_spawn;
+
+  player_state* player_state_dynamic;
+  
+  Vector2* mouse_pos_world;
+  u16* remaining_waves_to_spawn_boss;
+  bool* is_game_end;
+  bool* is_game_paused;
+
+  ingame_info(void) {
+    this->in_spawns = nullptr;
+    this->p_spawn_system_spawn_count = nullptr;
+    this->nearest_spawn = nullptr;
+    this->player_state_dynamic = nullptr;
+  }
+} ingame_info;
 
 typedef struct camera_metrics {
   Camera2D handle;

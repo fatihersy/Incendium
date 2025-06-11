@@ -112,7 +112,7 @@ void set_shader_uniform(shader_id _id, i32 index, data128 _data_pack) {
     break;
   }
   case SHADER_UNIFORM_SAMPLER2D: {
-    shader->locations[index].data.address = _data_pack.address;
+    shader->locations[index].data.address[0] = _data_pack.address;
     SetShaderValue(
       state->shaders[_id].handle, 
       index, 

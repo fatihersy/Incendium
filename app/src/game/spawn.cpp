@@ -160,7 +160,7 @@ bool update_spawns(Vector2 player_position) {
 
     if (character->is_dead) { continue; }
 
-    Vector2 new_position = move_towards(character->position, player_position,character->speed);
+    Vector2 new_position = move_towards(character->position, player_position, character->speed);
     bool x0_collide = false;
     bool y0_collide = false;
     for (u32 j=0; j<state->current_spawn_count; ++j) {

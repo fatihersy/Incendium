@@ -3,7 +3,7 @@
 #define MATH_H
 
 #include "defines.h"
-#include "raymath.h"
+#include "raylib.h"
 
 Vector2 get_a_point_of_a_circle(Vector2 position, i16 radius, i16 angle);
 
@@ -14,6 +14,7 @@ bool vec2_equals(Vector2 v1, Vector2 v2, f32 tolerans);
 Vector2 vec2_subtract(Vector2 v1, Vector2 v2);
 Vector2 vec2_add(Vector2 v1, Vector2 v2);
 Vector2 vec2_scale(Vector2 v1, float f1);
+float vec2_distance(Vector2 v1, Vector2 v2);
 float vec2_lenght(Vector2 v1);
 float get_movement_rotation(Vector2 from, Vector2 to);
 

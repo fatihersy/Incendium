@@ -1,6 +1,8 @@
 #include "fmath.h"
 #include "math.h"
 
+#include "raymath.h"
+
 Vector2 get_a_point_of_a_circle(Vector2 position, i16 radius, i16 angle) {
   return {
     position.x + (radius * cos(angle * 3.1415f / 180.f)),
@@ -28,6 +30,9 @@ bool vec2_equals(Vector2 v1, Vector2 v2, f32 tolerans) {
 }
  Vector2 vec2_scale(Vector2 v1, float f1) {
   return Vector2Scale(v1, f1);
+}
+float vec2_distance(Vector2 v1, Vector2 v2) {
+  return Vector2Distance(v1, v2);
 }
  float vec2_lenght(Vector2 v1) { 
   return Vector2Length(v1); 

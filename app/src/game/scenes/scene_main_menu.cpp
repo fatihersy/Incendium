@@ -147,6 +147,7 @@ void begin_scene_main_menu(void) {
   set_worldmap_location(WORLDMAP_MAINMENU_MAP); // NOTE: Worldmap index 0 is mainmenu background now
 
   state->in_camera_metrics->handle.zoom = .975f;
+
   state->type = MAIN_MENU_SCENE_DEFAULT;
   state->next_scene = SCENE_TYPE_UNSPECIFIED;
   state->in_scene_changing_process = false;
@@ -174,8 +175,15 @@ void draw_main_menu_upgrade_panel(void) {
   
   atlas_texture_id icon_tex_id = ATLAS_TEX_ID_CURRENCY_SOUL_ICON_5000;
   f32 cost_icon_dim = header_loc.height;
-  Vector2 cost_icon_pos = VECTOR2(BASE_RENDER_SCALE(.5f).x - cost_icon_dim * .3f, BASE_RENDER_SCALE(.05f).y);
-  gui_draw_atlas_texture_id_center(icon_tex_id, cost_icon_pos, VECTOR2(cost_icon_dim, cost_icon_dim), true);
+  Rectangle cost_icon_pos = Rectangle {
+    BASE_RENDER_SCALE(.5f).x - cost_icon_dim * .3f, BASE_RENDER_SCALE(.05f).y,
+    cost_icon_dim, cost_icon_dim
+  };
+  Vector2 icon_tex_origin = Vector2 {
+    cost_icon_pos.width / 2.f,
+    cost_icon_pos.height / 2.f,
+  };
+  gui_draw_atlas_texture_id(icon_tex_id, cost_icon_pos, icon_tex_origin, 0.f);
 
   Vector2 cost_label_pos = VECTOR2(BASE_RENDER_SCALE(.5f).x + cost_icon_dim * .3f, BASE_RENDER_SCALE(.05f).y);
   gui_label_format_v(FONT_TYPE_MEDIUM, 25, cost_label_pos, WHITE, true, true, "%d", get_currency_souls());
@@ -197,16 +205,19 @@ void draw_main_menu_upgrade_list_panel(void) {
     state->upgrade_list_panel.dest.y + (state->upgrade_list_panel.dest.height / 2.f) - (total_showcases_height / 2.f)
   );
 
-  for (i32 i = 0; i < MAIN_MENU_UPGRADE_PANEL_ROW; ++i) {
+  for (i32 iter = 0; iter < MAIN_MENU_UPGRADE_PANEL_ROW; ++iter) {
     for (i32 j = 0; j < MAIN_MENU_UPGRADE_PANEL_COL; ++j) {
-      character_stat *stat = get_static_player_state_stat(static_cast<character_stats>((MAIN_MENU_UPGRADE_PANEL_COL * i) + j + 1));
+      character_stat *stat = get_static_player_state_stat(static_cast<character_stats>((MAIN_MENU_UPGRADE_PANEL_COL * iter) + j + 1));
       if (!stat || stat->id >= CHARACTER_STATS_MAX ||
         stat->id <= CHARACTER_STATS_UNDEFINED) {
         continue;
       }
-      Vector2 showcase_position = VECTOR2(showcase_start_pos.x + j * showcase_spacing, showcase_start_pos.y + i * showcase_spacing);
+      bool hovered = false;
+
+      Vector2 showcase_position = VECTOR2(showcase_start_pos.x + j * showcase_spacing, showcase_start_pos.y + iter * showcase_spacing);
       f32 showcase_new_dim = showcase_base_dim;
       if (CheckCollisionPointRec( *ui_get_mouse_pos(), Rectangle {showcase_position.x, showcase_position.y, showcase_base_dim, showcase_base_dim})) {
+        hovered = true;
         showcase_new_dim *= showcase_hover_scale;
         showcase_position.x -= (showcase_new_dim - showcase_base_dim) / 2.f;
         showcase_position.y -= (showcase_new_dim - showcase_base_dim) / 2.f;
@@ -214,13 +225,41 @@ void draw_main_menu_upgrade_list_panel(void) {
           state->hovered_stat = stat;
         }
       }
+      
+      // TITLE
+      Rectangle header_tex_src_rect = get_atlas_texture_source_rect(ATLAS_TEX_ID_HEADER);
+      header_tex_src_rect.width  *= 1.75f;
+      header_tex_src_rect.height *= 1.75f;
+      Rectangle header_tex_pos = {
+        showcase_position.x + showcase_new_dim * .5f, showcase_position.y + (showcase_new_dim * .05f), 
+        header_tex_src_rect.width, header_tex_src_rect.height
+      };
+      if (hovered) {
+        header_tex_pos.width *= showcase_hover_scale;
+        header_tex_pos.height *= showcase_hover_scale;
+      }
+      Vector2 header_tex_origin = Vector2 {header_tex_pos.width * .5f, header_tex_pos.height * .5f * (-0.15f)};
 
-      gui_draw_atlas_texture_id(ATLAS_TEX_ID_CRIMSON_FANTASY_SHOWCASE, Rectangle {showcase_position.x, showcase_position.y, showcase_new_dim, showcase_new_dim});
+      Vector2 title_pos = VECTOR2(showcase_position.x + showcase_new_dim * .5f, header_tex_pos.y + header_tex_pos.height * 0.5f);
+      // TITLE
+      
+      // STARS
       Rectangle tier_symbol_src_rect = get_atlas_texture_source_rect(ATLAS_TEX_ID_PASSIVE_UPGRADE_TIER_STAR);
       f32 star_spacing = tier_symbol_src_rect.width * 1.25f;
       f32 tier_symbols_total_width = tier_symbol_src_rect.width + (MAX_PASSIVE_UPGRADE_TIER - 1.f) * star_spacing;
       f32 tier_symbols_left_edge = showcase_position.x + (showcase_new_dim - tier_symbols_total_width) / 2.f;
-      f32 tier_symbols_vertical_center = showcase_position.y + showcase_new_dim / 5.f;
+      f32 tier_symbols_vertical_center = showcase_position.y + showcase_new_dim * .8f;
+      // STARS
+
+      // ICON POS
+      Rectangle icon_pos = {
+        showcase_position.x + showcase_new_dim * .25f, showcase_position.y + showcase_new_dim * .25f,
+        showcase_new_dim * .5f, showcase_new_dim * .5f
+      };
+      // ICON POS
+
+      gui_draw_atlas_texture_id(ATLAS_TEX_ID_DARK_FANTASY_PANEL_BG, Rectangle {showcase_position.x, showcase_position.y, showcase_new_dim, showcase_new_dim}, VECTOR2(0, 0), 0.f);
+      gui_draw_atlas_texture_id(ATLAS_TEX_ID_DARK_FANTASY_PANEL,    Rectangle {showcase_position.x, showcase_position.y, showcase_new_dim, showcase_new_dim}, VECTOR2(0, 0), 0.f);
 
       for (i32 i = 0; i < MAX_PASSIVE_UPGRADE_TIER; ++i) {
         Vector2 tier_pos = {tier_symbols_left_edge + i * star_spacing, tier_symbols_vertical_center};
@@ -231,16 +270,14 @@ void draw_main_menu_upgrade_list_panel(void) {
         }
       }
 
-      Rectangle icon_pos = {
-        showcase_position.x + showcase_new_dim * .25f, showcase_position.y + showcase_new_dim * .25f,
-        showcase_new_dim * .5f, showcase_new_dim * .5f};
       gui_draw_atlas_texture_id_pro(ATLAS_TEX_ID_ICON_ATLAS, stat->passive_icon_src, icon_pos, true, false);
 
-      Vector2 title_pos = VECTOR2(showcase_position.x + showcase_new_dim / 2.f, showcase_position.y + showcase_new_dim * 0.8f);
-      gui_label(lc_txt(stat->passive_display_name_symbol), FONT_TYPE_MEDIUM, 8, title_pos, WHITE, true, true);
+      gui_label(lc_txt(stat->passive_display_name_symbol), FONT_TYPE_MEDIUM, 10, title_pos, WHITE, true, true);
+      gui_draw_atlas_texture_id(ATLAS_TEX_ID_HEADER, header_tex_pos, header_tex_origin, 0.f);
     }
   }
 }
+
 void draw_main_menu_upgrade_details_panel(void) {
   gui_panel(state->upgrade_details_panel, state->upgrade_details_panel.dest, false);
   if (!state->hovered_stat) {
@@ -321,12 +358,17 @@ void draw_main_menu_upgrade_details_panel(void) {
   }
 
   atlas_texture_id icon_tex_id = ATLAS_TEX_ID_CURRENCY_SOUL_ICON_5000;
-  f32 cost_icon_dim = state->upgrade_details_panel.dest.width * .25f;
-  Vector2 cost_icon_pos = VECTOR2(
+  Rectangle cost_icon_dest = Rectangle(
     state->upgrade_details_panel.dest.x + state->upgrade_details_panel.dest.width * .425f,
-    state->upgrade_details_panel.dest.y + state->upgrade_details_panel.dest.height * .85f
+    state->upgrade_details_panel.dest.y + state->upgrade_details_panel.dest.height * .85f,
+    state->upgrade_details_panel.dest.width * .25f,
+    state->upgrade_details_panel.dest.width * .25f
   );
-  gui_draw_atlas_texture_id_center(icon_tex_id, cost_icon_pos, VECTOR2(cost_icon_dim, cost_icon_dim), true);
+  Vector2 cost_icon_origin = Vector2(
+    cost_icon_dest.width / 2.f,
+    cost_icon_dest.height / 2.f
+  );
+  gui_draw_atlas_texture_id(icon_tex_id, cost_icon_dest, cost_icon_origin, true);
 
   if (state->deny_notify_timer > DENY_NOTIFY_TIME) {
     state->deny_notify_timer = DENY_NOTIFY_TIME;

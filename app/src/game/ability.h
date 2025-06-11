@@ -4,7 +4,7 @@
 
 #include "game_types.h"
 
-bool ability_system_initialize(camera_metrics* _camera_metrics, app_settings* settings);
+bool ability_system_initialize(camera_metrics* _camera_metrics, app_settings* settings, ingame_info* _ingame_info);
 
 ability get_ability(ability_type _type);
 ability get_next_level(ability abl);
