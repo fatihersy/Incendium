@@ -262,8 +262,8 @@ void in_game_update_mouse_bindings(void) {
       player_state* player = _get_dynamic_player_state();
       state->hovered_ability = ABILITY_TYPE_UNDEFINED;
       state->hovered_projectile = U16_MAX;
-      for (size_t i=0; i<MAX_ABILITY_SLOT; ++i) {
-        ability* abl = __builtin_addressof(player->ability_system.abilities[i]);
+      for (size_t iter = 0; iter < player->ability_system.abilities.size(); ++iter) {
+        ability* abl = __builtin_addressof(player->ability_system.abilities.at(iter));
         if(!abl || !abl->is_active || !abl->is_initialized) { continue; }
         for (size_t j=0; j < abl->projectiles.size(); j++) {
           projectile* prj = __builtin_addressof(abl->projectiles.at(j));
@@ -377,6 +377,11 @@ void render_scene_in_game(void) {
     case IN_GAME_STAGE_PLAY: {
       render_map();
       render_game();
+
+      ingame_info* iginf = gm_get_ingame_info();
+      Character2D* chr = iginf->nearest_spawn;
+      
+      if (chr) DrawRectangleLines(chr->collision.x, chr->collision.y, chr->collision.width, chr->collision.height, RED);
       break;
     }
     case IN_GAME_STAGE_PLAY_DEBUG: {
@@ -459,7 +464,7 @@ void render_interface_in_game(void) {
       break;
     }
     case IN_GAME_STAGE_PLAY: {  
-      DrawFPS(BASE_RENDER_SCALE(.75f).x, SCREEN_OFFSET.y * 10);
+
       if (state->show_pause_menu) {
         gui_draw_pause_screen(state->has_game_started);
       }
@@ -489,6 +494,8 @@ void render_interface_in_game(void) {
       else {
         gui_progress_bar(PRG_BAR_ID_PLAYER_EXPERIANCE, Vector2{.x = BASE_RENDER_SCALE(.5f).x, .y = SCREEN_OFFSET.x}, true);
         gui_progress_bar(PRG_BAR_ID_PLAYER_HEALTH, SCREEN_OFFSET, false);
+
+        gui_label_format_v(FONT_TYPE_MEDIUM, 18, SCREEN_POS(5.f, 50.f), WHITE, true, true, "%d", gm_get_ingame_info()->nearest_spawn->character_id);
 
         // TODO: Display currency
         //gui_label_format(FONT_TYPE_MEDIUM, 10, BASE_RENDER_SCALE(.75f).x, SCREEN_OFFSET.y * 5.f, WHITE, false, false, "Souls: %d", get_currency_souls());
@@ -552,7 +559,7 @@ void render_interface_in_game(void) {
         }
 
         ability* abl = get_dynamic_player_state_ability(state->hovered_ability);
-        if(state->hovered_ability > 0 && state->hovered_ability < MAX_ABILITY_SLOT && state->hovered_projectile >= 0 && state->hovered_projectile < abl->projectiles.size()){
+        if(state->hovered_ability > 0 && state->hovered_ability < ABILITY_TYPE_MAX && state->hovered_projectile >= 0 && state->hovered_projectile < abl->projectiles.size()){
           panel* pnl = __builtin_addressof(state->debug_info_panel);
           pnl->dest = Rectangle {
             ui_get_mouse_pos()->x, ui_get_mouse_pos()->y, 
@@ -602,6 +609,8 @@ void render_interface_in_game(void) {
   }
 
   render_user_interface();
+
+  DrawFPS(BASE_RENDER_SCALE(.75f).x, SCREEN_OFFSET.y * 10);
 }
 
 #define DRAW_ABL_UPG_STAT_PNL(UPG, TEXT, ...){ \
@@ -721,8 +730,8 @@ void draw_end_game_panel() {
 void prepare_ability_upgrade_state(void) {
   set_is_game_paused(true);
   for (int i=0; i<MAX_UPDATE_ABILITY_PANEL_COUNT; ++i) {
-    panel* pnl = __builtin_addressof(state->ability_upg_panels[i]);
-    ability* pnl_slot = __builtin_addressof(state->ability_upgrade_choices[i]);
+    panel* pnl = __builtin_addressof(state->ability_upg_panels.at(i));
+    ability* pnl_slot = __builtin_addressof(state->ability_upgrade_choices.at(i));
     if(pnl->buffer.u16[0] <= 0 || pnl->buffer.u16[0] >= ABILITY_TYPE_MAX) {
       pnl->buffer.u16[0] = get_random(ABILITY_TYPE_UNDEFINED+1,ABILITY_TYPE_MAX-1);
     }
@@ -734,7 +743,7 @@ void prepare_ability_upgrade_state(void) {
       *pnl_slot = _get_next_level(*player_ability);
     }
     if (pnl_slot->type <= ABILITY_TYPE_UNDEFINED || pnl_slot->type >= ABILITY_TYPE_MAX) {
-      TraceLog(LOG_WARNING, "scene_in_game::make_passive_selection_panel_ready()::Upgraded ability is out of bounds"); 
+      TraceLog(LOG_WARNING, "scene_in_game::make_passive_selection_panel_ready()::Ability didn't registered yet"); 
       continue;
     }
   }

@@ -54,7 +54,7 @@ bool app_initialize(void) {
     state->settings->window_size.at(0), 
     state->settings->window_size.at(1), 
     GAME_TITLE);
-  SetTargetFPS(TARGET_FPS); 
+  //SetTargetFPS(TARGET_FPS); 
   SetExitKey(KEY_END);
   if (state->settings->window_state == FLAG_BORDERLESS_WINDOWED_MODE) {
     ToggleBorderlessWindowed();

@@ -53,7 +53,6 @@
 #define MAX_SPAWN_HEALTH 100000
 #define MAX_SPAWN_COLLISIONS 1
 
-#define MAX_ABILITY_SLOT 5
 #define MAX_ABILITY_LEVEL 7
 #define MAX_ABILITY_PROJECTILE_COUNT 32
 
@@ -63,6 +62,20 @@
 #define WORLDMAP_LOC_PIN_SIZE 32 // Also check the SHEET_ID_ICON_ATLAS frame sizes.
 #define WORLDMAP_LOC_PIN_SIZE_DIV2 WORLDMAP_LOC_PIN_SIZE * .5f // Needed?
 #define WORLDMAP_MAINMENU_MAP 0
+
+typedef enum collision_type {
+  COLLISION_TYPE_UNDEFINED,
+  COLLISION_TYPE_RECTANGLE_RECTANGLE,
+  COLLISION_TYPE_CIRCLE_CIRCLE,
+  COLLISION_TYPE_CIRCLE_RECTANGLE,
+  COLLISION_TYPE_CIRCLE_LINE,
+  COLLISION_TYPE_POINT_RECTANGLE,
+  COLLISION_TYPE_POINT_CIRCLE,
+  COLLISION_TYPE_POINT_TRIANGLE,
+  COLLISION_TYPE_POINT_LINE,
+  COLLISION_TYPE_POINT_POLY,
+  COLLISION_TYPE_MAX,
+} collision_type;
 
 typedef enum spawn_type {
   SPAWN_TYPE_UNDEFINED,
@@ -103,7 +116,7 @@ typedef enum ability_type {
   ABILITY_TYPE_UNDEFINED,
   ABILITY_TYPE_FIREBALL,
   ABILITY_TYPE_BULLET,
-  //ABILITY_TYPE_RADIATION,
+  ABILITY_TYPE_RADIANCE,
   ABILITY_TYPE_COMET,
   ABILITY_TYPE_CODEX,
   ABILITY_TYPE_MAX,
@@ -450,7 +463,7 @@ typedef struct projectile {
   world_direction direction;
 
   // 128 byte buffer
-  data128 vec_ex;
+  data256 vec_ex;
   data128 mm_ex;
 
   u16 damage;
@@ -465,7 +478,7 @@ typedef struct projectile {
     this->position = ZEROVEC2;
     this->collision = ZERORECT;
     this->direction = WORLD_DIRECTION_UNDEFINED;
-    this->vec_ex = data128();
+    this->vec_ex = data256();
     this->mm_ex = data128();
     this->damage = 0u;
     this->duration = 0.f;
@@ -484,7 +497,8 @@ typedef struct ability {
   spritesheet_id explosion_animation_id;
   
   f32 ability_play_time;
-  f32 proj_scale;
+  f32 proj_sprite_scale;
+  f32 proj_collision_scale;
   u16 proj_count;
   u16 proj_speed;
   f32 proj_duration;
@@ -508,7 +522,8 @@ typedef struct ability {
     this->default_animation_id = SHEET_ID_SPRITESHEET_UNSPECIFIED;
     this->explosion_animation_id = SHEET_ID_SPRITESHEET_UNSPECIFIED;
     this->ability_play_time = 0.f;
-    this->proj_scale = 1.f;
+    this->proj_sprite_scale = 1.f;
+    this->proj_collision_scale = 1.f;
     this->proj_count = 0;
     this->proj_speed = 0;
     this->proj_duration = 0.f;
@@ -527,7 +542,7 @@ typedef struct ability {
     std::string name, 
     std::array<ability_upgradables, ABILITY_UPG_MAX> upgrs, 
     ability_type type, spritesheet_id def_anim_id, spritesheet_id expl_anim_id, 
-    f32 proj_scale, u16 proj_count, u16 proj_speed, f32 proj_duration, 
+    f32 proj_sprite_scale, f32 proj_collision_scale, u16 proj_count, u16 proj_speed, f32 proj_duration, 
     Vector2 proj_dim, Rectangle icon_src,
     u16 base_damage, 
     bool center_proj_anim, bool centered_origin = false) : ability()
@@ -535,7 +550,8 @@ typedef struct ability {
     this->type = type;
     this->default_animation_id = def_anim_id;
     this->explosion_animation_id = expl_anim_id;
-    this->proj_scale = proj_scale;
+    this->proj_sprite_scale = proj_sprite_scale;
+    this->proj_collision_scale = proj_collision_scale;
     this->proj_count = proj_count;
     this->proj_speed = proj_speed;
     this->proj_duration = proj_duration;
@@ -551,7 +567,7 @@ typedef struct ability {
 }ability;
 
 typedef struct ability_play_system {
-  std::array<ability, MAX_ABILITY_SLOT> abilities;
+  std::array<ability, ABILITY_TYPE_MAX> abilities;
 } ability_play_system;
 
 typedef struct character_stat {

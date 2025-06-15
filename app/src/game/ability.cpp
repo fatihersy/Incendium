@@ -16,6 +16,9 @@
   Rectangle { ABILITY_POS.x, ABILITY_POS.y, 32, 32 }\
 }
 
+#define RADIENCE_COLOR_TRANSPARENT  CLITERAL(Color){ 253, 203, 110, 0 }
+#define RADIENCE_COLOR_INNER_CIRCLE_BRIGHT_YARROW  CLITERAL(Color){ 253, 203, 110, 128 }
+
 typedef struct ability_system_state {
   std::array<ability, ABILITY_TYPE_MAX> abilities;
 
@@ -32,11 +35,13 @@ void update_fireball(ability* abl);
 void update_bullet(ability* abl);
 void update_comet(ability* abl);
 void update_codex(ability* abl);
+void update_radience(ability* abl);
 
 void render_fireball(ability* abl);
 void render_bullet(ability* abl);
 void render_comet(ability* abl);
 void render_codex(ability* abl);
+void render_radience(ability* abl);
 
 bool ability_system_initialize(camera_metrics* _camera_metrics, app_settings* _settings, ingame_info* _ingame_info) {
   if (state) {
@@ -55,7 +60,7 @@ bool ability_system_initialize(camera_metrics* _camera_metrics, app_settings* _s
   register_ability(ability("Fireball",
     fireball_upgr,
     ABILITY_TYPE_FIREBALL,SHEET_ID_FLAME_ENERGY_ANIMATION, SHEET_ID_SPRITESHEET_UNSPECIFIED,
-    1.f, 1, 1, 0.f,
+    1.f, 1.f, 1, 1, 0.f,
     Vector2{30.f, 30.f}, Rectangle{704, 768, 32, 32},
     15,
     false
@@ -64,7 +69,7 @@ bool ability_system_initialize(camera_metrics* _camera_metrics, app_settings* _s
   register_ability(ability("Bullet",
     bullet_upgr,
     ABILITY_TYPE_BULLET,SHEET_ID_FLAME_ENERGY_ANIMATION, SHEET_ID_SPRITESHEET_UNSPECIFIED,
-    1.f, 1, 3, 1.75f,
+    1.f, 1.f, 1, 3, 1.75f,
     Vector2{30.f, 30.f}, Rectangle{544, 128, 32, 32},
     15,
     false
@@ -73,7 +78,7 @@ bool ability_system_initialize(camera_metrics* _camera_metrics, app_settings* _s
   register_ability(ability("Comet",
     comet_upgr,
     ABILITY_TYPE_COMET,SHEET_ID_FIREBALL_ANIMATION,SHEET_ID_FIREBALL_EXPLOTION_ANIMATION,
-    1.2f, 1, 7, 0.f,
+    1.2f, 1.2f, 1, 7, 0.f,
     Vector2{30.f, 30.f}, Rectangle{576, 128, 32, 32},
     15,
     false,true
@@ -82,8 +87,17 @@ bool ability_system_initialize(camera_metrics* _camera_metrics, app_settings* _s
   register_ability(ability("Arcane Codex",
     codex_upgr,
     ABILITY_TYPE_CODEX, SHEET_ID_FLAME_ENERGY_ANIMATION, SHEET_ID_SPRITESHEET_UNSPECIFIED,
-    0.8f, 1, 3, 0.f,
+    0.8f, 0.8f, 1, 3, 0.f,
     Vector2{30.f, 30.f}, Rectangle{832, 0, 32, 32},
+    11,
+    false,true
+  ));
+  std::array<ability_upgradables, ABILITY_UPG_MAX> radience_upgr = {ABILITY_UPG_DAMAGE, ABILITY_UPG_HITBOX, ABILITY_UPG_UNDEFINED, ABILITY_UPG_UNDEFINED, ABILITY_UPG_UNDEFINED};
+  register_ability(ability("Radience",
+    radience_upgr,
+    ABILITY_TYPE_RADIANCE, SHEET_ID_GENERIC_LIGHT, SHEET_ID_SPRITESHEET_UNSPECIFIED,
+    2.0f, 1.f, 1, 0, 0.f,
+    Vector2{128.f, 128.f}, Rectangle{2080, 1240, 32, 32},
     11,
     false,true
   ));
@@ -100,29 +114,10 @@ void update_abilities(ability_play_system* system) {
       case ABILITY_TYPE_BULLET:    update_bullet(abl); break;
       case ABILITY_TYPE_COMET:     update_comet(abl); break;
       case ABILITY_TYPE_CODEX:     update_codex(abl); break;
+      case ABILITY_TYPE_RADIANCE:  update_radience(abl); break;
       default: {
         TraceLog(LOG_ERROR, "ability::update_abilities()::Unsuppported ability movement type");
         break;
-      }
-    }
-
-    for (size_t j = 0; j< abl->projectiles.size(); ++j) {
-      if (!abl->projectiles.at(j).is_active) { continue; }
-      player_state* player = (player_state*)abl->p_owner;
-      event_fire(EVENT_CODE_DAMAGE_ANY_SPAWN_IF_COLLIDE, event_context(
-        (i16)abl->projectiles.at(j).collision.x, (i16)abl->projectiles.at(j).collision.y,
-        (i16)abl->projectiles.at(j).collision.width, (i16)abl->projectiles.at(j).collision.height,
-        static_cast<i16>(abl->projectiles.at(j).damage + player->damage)
-      ));
-      update_sprite(&abl->projectiles.at(j).default_animation);
-
-      if (abl->projectiles.at(j).play_explosion_animation) {
-        update_sprite(&abl->projectiles.at(j).explotion_animation);
-        
-        if (abl->projectiles.at(j).explotion_animation.current_frame >= abl->projectiles.at(j).explotion_animation.frame_total - 1) {
-          abl->projectiles.at(j).play_explosion_animation = false;
-          reset_sprite(&abl->projectiles.at(j).explotion_animation, true);
-        }
       }
     }
   }
@@ -134,9 +129,10 @@ void render_abilities(ability_play_system* system) {
 
     switch (abl->type) {
       case ABILITY_TYPE_FIREBALL:  render_fireball(abl); break;
-      case ABILITY_TYPE_BULLET:    render_bullet(abl); break;
-      case ABILITY_TYPE_COMET:     render_comet(abl); break;
-      case ABILITY_TYPE_CODEX:     render_codex(abl); break;
+      case ABILITY_TYPE_BULLET:    render_bullet(abl);   break;
+      case ABILITY_TYPE_COMET:     render_comet(abl);    break;
+      case ABILITY_TYPE_CODEX:     render_codex(abl);    break;
+      case ABILITY_TYPE_RADIANCE:  render_radience(abl); break;
       default: {
         TraceLog(LOG_ERROR, "ability::update_abilities()::Unsuppported ability movement type");
         break;
@@ -171,7 +167,7 @@ void upgrade_ability(ability* abl) {
 
 ability get_ability(ability_type _type) {
   if (!state) {
-    return ability{};
+    return ability();
   }
   ability abl = state->abilities.at(_type);
   return abl;
@@ -196,7 +192,7 @@ void refresh_ability(ability* abl) {
 
   for (int i = 0; i < abl->proj_count; ++i) {
     projectile* prj = __builtin_addressof(abl->projectiles.emplace_back());
-    prj->collision = Rectangle {0.f, 0.f, abl->proj_dim.x, abl->proj_dim.y};
+    prj->collision = Rectangle {0.f, 0.f, abl->proj_dim.x * abl->proj_collision_scale, abl->proj_dim.y * abl->proj_collision_scale};
     prj->damage = abl->base_damage;
     prj->is_active = true;
     prj->duration = abl->proj_duration;
@@ -225,23 +221,39 @@ void update_fireball(ability* abl) {
   if (abl->p_owner == nullptr) {
     return;
   }
+  player_state* player = reinterpret_cast<player_state*>(abl->p_owner);
 
-  player_state* player = (player_state*)abl->p_owner;
-
-  abl->position.x  = player->collision.x + player->collision.width / 2.f;
-  abl->position.y  = player->collision.y + player->collision.height / 2.f;
-
+  abl->position.x  = player->position.x + player->dimentions_div2.x;
+  abl->position.y  = player->position.y + player->dimentions_div2.y;
   abl->rotation += abl->proj_speed;
 
   if (abl->rotation > 360) abl->rotation = 0;
 
   for (size_t iter = 0; iter < abl->projectiles.size(); iter++) {
     projectile& prj = abl->projectiles.at(iter);
+    if (!prj.is_active) { continue; }
+
     i16 angle = (i32)(((360.f / abl->projectiles.size()) * iter) + abl->rotation) % 360;
 
     prj.position = get_a_point_of_a_circle( abl->position, (abl->level * 3.f) + player->collision.height + 15, angle);
-    prj.collision.x = prj.position.x + ((abl->proj_dim.x * abl->proj_scale) / 2.f) - ((prj.default_animation.current_frame_rect.width  * abl->proj_scale) / 2.f);
-    prj.collision.y = prj.position.y + ((abl->proj_dim.y * abl->proj_scale) / 2.f) - ((prj.default_animation.current_frame_rect.height * abl->proj_scale) / 2.f);
+    prj.collision.x = prj.position.x - (prj.collision.width * .5f);
+    prj.collision.y = prj.position.y - (prj.collision.width * .5f);
+
+    event_fire(EVENT_CODE_DAMAGE_ANY_SPAWN_IF_COLLIDE, event_context(
+      static_cast<i16>(prj.collision.x),     static_cast<i16>(prj.collision.y), static_cast<i16>(prj.collision.width), static_cast<i16>(prj.collision.height),
+      static_cast<i16>(prj.damage + player->damage),
+      static_cast<i16>(COLLISION_TYPE_RECTANGLE_RECTANGLE)
+    ));
+    update_sprite(&prj.default_animation);
+
+    if (prj.play_explosion_animation) {
+      update_sprite(&prj.explotion_animation);
+
+      if (prj.explotion_animation.current_frame >= prj.explotion_animation.frame_total - 1) {
+        prj.play_explosion_animation = false;
+        reset_sprite(&prj.explotion_animation, true);
+      }
+    }
   }
 }
 void update_bullet(ability* abl) {
@@ -254,11 +266,13 @@ void update_bullet(ability* abl) {
   }
   player_state* player = reinterpret_cast<player_state*>(abl->p_owner);
 
-  abl->position.x  = player->collision.x + player->collision.width / 2.f;
-  abl->position.y  = player->collision.y + player->collision.height / 2.f;
+  abl->position.x  = player->position.x + player->dimentions_div2.x;
+  abl->position.y  = player->position.y + player->dimentions_div2.y;
 
   for (size_t iter = 0; iter < abl->projectiles.size(); iter++) {
     projectile& prj = abl->projectiles.at(iter);
+    if (!prj.is_active) { continue; }
+
     if (prj.duration <= 0) {
       prj.position = player->position;
       prj.duration = abl->proj_duration;
@@ -267,12 +281,25 @@ void update_bullet(ability* abl) {
     else {
      prj.duration -= GetFrameTime();
     }
-    
     prj.position.x += prj.direction == WORLD_DIRECTION_RIGHT ? abl->proj_speed : -abl->proj_speed;
 
-    prj.collision.x = prj.position.x;
-    prj.collision.y = prj.position.y;
-    
+    prj.collision.x = prj.position.x - prj.collision.width  * .5f;
+    prj.collision.y = prj.position.y - prj.collision.height * .5f;
+
+    event_fire(EVENT_CODE_DAMAGE_ANY_SPAWN_IF_COLLIDE, event_context(
+      static_cast<i16>(prj.collision.x), static_cast<i16>(prj.collision.y), static_cast<i16>(prj.collision.width), static_cast<i16>(prj.collision.height),
+      static_cast<i16>(prj.damage + player->damage),
+      static_cast<i16>(COLLISION_TYPE_RECTANGLE_RECTANGLE)
+    ));
+    update_sprite(&prj.default_animation);
+
+    if (prj.play_explosion_animation) {
+      update_sprite(&prj.explotion_animation);
+      if (prj.explotion_animation.current_frame >= prj.explotion_animation.frame_total - 1) {
+        prj.play_explosion_animation = false;
+        reset_sprite(&prj.explotion_animation, true);
+      }
+    }
   }
 }
 void update_comet(ability* abl) {
@@ -280,13 +307,16 @@ void update_comet(ability* abl) {
     TraceLog(LOG_WARNING, "ability::update_comet()::Ability is not active or not initialized");
     return;
   }
-  if (state->in_camera_metrics == nullptr) {
+  player_state* p_player = reinterpret_cast<player_state*>(abl->p_owner);
+
+  if (state->in_camera_metrics == nullptr || p_player == nullptr) {
     return;
   }
   const Rectangle* frustum = __builtin_addressof(state->in_camera_metrics->frustum);
 
   for (size_t iter = 0; iter < abl->projectiles.size(); iter++) {
     projectile& prj = abl->projectiles.at(iter);
+    if (!prj.is_active) { continue; }
     if (vec2_equals(prj.position, pVECTOR2(prj.vec_ex.f32), .1)) {
       prj.vec_ex.f32[2] =  prj.position.x;
       prj.vec_ex.f32[3] =  prj.position.y;
@@ -295,7 +325,7 @@ void update_comet(ability* abl) {
       const f32 rand = get_random(frustum->x, frustum->x + frustum->width);
       prj.position = VECTOR2(rand, frustum->y - abl->proj_dim.y);
       Vector2 new_pos = {
-        (f32)get_random(frustum->x + frustum->width * .1f, frustum->x + frustum->width - frustum->width * .1f),
+        (f32)get_random(frustum->x + frustum->width  * .1f, frustum->x + frustum->width  - frustum->width  * .1f),
         (f32)get_random(frustum->y + frustum->height * .2f, frustum->y + frustum->height - frustum->height * .2f)
       };
       prj.vec_ex.f32[0] = new_pos.x;
@@ -304,8 +334,24 @@ void update_comet(ability* abl) {
     }
     else {
       prj.position = move_towards(prj.position, pVECTOR2(prj.vec_ex.f32), abl->proj_speed);
-      prj.collision.x = prj.position.x;
-      prj.collision.y = prj.position.y;
+
+      prj.collision.x = prj.position.x - prj.collision.width  * .5f;
+      prj.collision.y = prj.position.y - prj.collision.height * .5f;
+    }
+
+    event_fire(EVENT_CODE_DAMAGE_ANY_SPAWN_IF_COLLIDE, event_context(
+      static_cast<i16>(prj.collision.x), static_cast<i16>(prj.collision.y), static_cast<i16>(prj.collision.width), static_cast<i16>(prj.collision.height), 
+      static_cast<i16>(prj.damage + p_player->damage),
+      static_cast<i16>(COLLISION_TYPE_RECTANGLE_RECTANGLE)
+    ));
+    update_sprite(&prj.default_animation);
+    if (prj.play_explosion_animation) {
+      update_sprite(&prj.explotion_animation);
+
+      if (prj.explotion_animation.current_frame >= prj.explotion_animation.frame_total - 1) {
+        prj.play_explosion_animation = false;
+        reset_sprite(&prj.explotion_animation, true);
+      }
     }
   }
 }
@@ -323,35 +369,76 @@ void update_codex(ability* abl) {
   abl->position.x = book_position.x;
   abl->position.y = book_position.y;
 
-  for (size_t iter = 0; iter < abl->projectiles.size(); iter++) {
+  for (size_t iter = 0; iter < 1; iter++) {
     projectile& prj = abl->projectiles.at(iter);
+    if (!prj.is_active) { continue; }
     prj.is_active = true;
 
     u16& frame_counter = prj.mm_ex.u16[0];
-
-    if (vec2_equals(prj.position, pVECTOR2(prj.vec_ex.f32), .1) || frame_counter == 0) {
+    if ((frame_counter >= frame_counter_max || frame_counter < 0) && !state->in_ingame_info->nearest_spawn->is_dead ) {
       prj.position = abl->position;
-      prj.vec_ex.f32[0] = state->in_ingame_info->nearest_spawn->position.x;
-      prj.vec_ex.f32[1] = state->in_ingame_info->nearest_spawn->position.y;
+      
+      prj.vec_ex.f32[0]  = state->in_ingame_info->nearest_spawn->collision.x + state->in_ingame_info->nearest_spawn->collision.width  * .5f;
+      prj.vec_ex.f32[1]  = state->in_ingame_info->nearest_spawn->collision.y + state->in_ingame_info->nearest_spawn->collision.height * .5f;
+      prj.vec_ex.f32[2]  = prj.position.x;
+      prj.vec_ex.f32[3]  = prj.position.y;
 
-      prj.mm_ex.u16[0] = frame_counter_max;
+      prj.mm_ex.u16[0] = 0;
+      prj.mm_ex.u16[1] = state->in_ingame_info->nearest_spawn->character_id;
     }
     else {
-      //prj.position.x = EaseQuadIn(frame_counter, prj.position.x,  prj.vec_ex.f32[0], frame_counter_max);
-      //prj.position.y = EaseQuadIn(frame_counter, prj.position.y,  prj.vec_ex.f32[1], frame_counter_max);
-      prj.position.x = EaseQuadIn(frame_counter, book_position.x-100,  book_position.x, frame_counter_max);
-      prj.position.y = EaseQuadIn(frame_counter, book_position.y-100,  book_position.y, frame_counter_max);
-
-      prj.position = move_towards(prj.position, pVECTOR2(prj.vec_ex.f32), abl->proj_speed);
+      Vector2 distance = vec2_subtract(pVECTOR2(prj.vec_ex.f32), Vector2 {prj.vec_ex.f32[2], prj.vec_ex.f32[3]});
+      prj.position.x = EaseQuadIn(frame_counter, prj.vec_ex.f32[2],  distance.x, frame_counter_max);
+      prj.position.y = EaseQuadIn(frame_counter, prj.vec_ex.f32[3],  distance.y, frame_counter_max);
 
       prj.collision.x = prj.position.x;
       prj.collision.y = prj.position.y;
-      prj.default_animation.rotation = get_movement_rotation(prj.position, pVECTOR2(prj.vec_ex.f32)) + 270.f;
 
-      if (frame_counter > 0) frame_counter--;
+      if (frame_counter < frame_counter_max) frame_counter++;
       frame_counter = FCLAMP(frame_counter, 0, frame_counter_max);
     }
+    event_fire(EVENT_CODE_DAMAGE_ANY_SPAWN_IF_COLLIDE, event_context(
+      static_cast<i16>(prj.collision.x), static_cast<i16>(prj.collision.y), static_cast<i16>(prj.collision.width), static_cast<i16>(prj.collision.height),
+      static_cast<i16>(prj.damage + p_player->damage),
+      static_cast<i16>(COLLISION_TYPE_RECTANGLE_RECTANGLE)
+    ));
+    update_sprite(&prj.default_animation);
+    if (prj.play_explosion_animation) {
+      update_sprite(&prj.explotion_animation);
+      if (prj.explotion_animation.current_frame >= prj.explotion_animation.frame_total - 1) {
+        prj.play_explosion_animation = false;
+        reset_sprite(&prj.explotion_animation, true);
+      }
+    }
   }
+}
+void update_radience(ability* abl) {
+  if (!abl->is_active || !abl->is_initialized) {
+    TraceLog(LOG_WARNING, "ability::update_codex()::Ability is not active or not initialized");
+    return;
+  }
+  if (abl->p_owner == nullptr || state->in_ingame_info == nullptr || state->in_ingame_info->nearest_spawn == nullptr) {
+    return;
+  }
+  player_state* p_player = reinterpret_cast<player_state*>(abl->p_owner);
+  abl->position = p_player->position;
+  abl->position.x += p_player->dimentions_div2.x;
+  abl->position.y += p_player->dimentions_div2.y;
+
+  projectile& prj = abl->projectiles.at(0);
+  if (!prj.is_active) { return; }
+
+  prj.position = abl->position;
+  prj.collision.x = prj.position.x;
+  prj.collision.y = prj.position.y;
+
+  event_fire(EVENT_CODE_DAMAGE_ANY_SPAWN_IF_COLLIDE, event_context(
+    static_cast<i16>(prj.collision.x), static_cast<i16>(prj.collision.y), static_cast<i16>(prj.collision.width), static_cast<i16>(prj.collision.height),
+    static_cast<i16>(prj.damage + p_player->damage),
+    static_cast<i16>(COLLISION_TYPE_CIRCLE_RECTANGLE)
+  ));
+
+  update_sprite(&prj.default_animation);
 }
 
 void render_fireball(ability* abl){
@@ -362,7 +449,7 @@ void render_fireball(ability* abl){
 
   for (size_t iter = 0; iter < abl->projectiles.size(); ++iter) {
     if (!abl->projectiles.at(iter).is_active) { continue; }
-    render_projectile(__builtin_addressof(abl->projectiles.at(iter)), abl->proj_scale);
+    render_projectile(__builtin_addressof(abl->projectiles.at(iter)), abl->proj_sprite_scale);
   }
 }
 void render_bullet(ability* abl){
@@ -373,7 +460,7 @@ void render_bullet(ability* abl){
 
   for (size_t iter = 0; iter < abl->projectiles.size(); ++iter) {
     if (!abl->projectiles.at(iter).is_active) { continue; }
-    render_projectile(__builtin_addressof(abl->projectiles.at(iter)), abl->proj_scale);
+    render_projectile(__builtin_addressof(abl->projectiles.at(iter)), abl->proj_sprite_scale);
   }
 }
 void render_comet(ability* abl){
@@ -384,7 +471,7 @@ void render_comet(ability* abl){
 
   for (size_t iter = 0; iter < abl->projectiles.size(); ++iter) {
     if (!abl->projectiles.at(iter).is_active) { continue; }
-    render_projectile(__builtin_addressof(abl->projectiles.at(iter)), abl->proj_scale);
+    render_projectile(__builtin_addressof(abl->projectiles.at(iter)), abl->proj_sprite_scale);
   }
 }
 void render_codex(ability* abl){
@@ -394,7 +481,7 @@ void render_codex(ability* abl){
   }
   for (size_t iter = 0; iter < abl->projectiles.size(); ++iter) {
     if (!abl->projectiles.at(iter).is_active) { continue; }
-    render_projectile(__builtin_addressof(abl->projectiles.at(iter)), abl->proj_scale);
+    render_projectile(__builtin_addressof(abl->projectiles.at(iter)), abl->proj_sprite_scale);
   }
   atlas_texture * icon_atlas = ss_get_atlas_texture_by_enum(ATLAS_TEX_ID_ICON_ATLAS);
   Rectangle codex_book_source = Rectangle {icon_atlas->source.x, icon_atlas->source.y, 32, 32};
@@ -402,6 +489,17 @@ void render_codex(ability* abl){
   Rectangle codex_book_dest = CODEX_BOOK_POSITION_BY_ABILITY(abl->position);
 
   DrawTexturePro(*icon_atlas->atlas_handle, codex_book_source, codex_book_dest, VECTOR2(0, 0), 0.f, WHITE);
+}
+void render_radience(ability* abl){
+  if (!abl->is_active || !abl->is_initialized) {
+    TraceLog(LOG_WARNING, "ability::render_codex()::Ability is not active or not initialized");
+    return;
+  }
+  if (!abl->projectiles.at(0).is_active) { return; }
+  projectile * prj = __builtin_addressof(abl->projectiles.at(0));
+  render_projectile(prj, abl->proj_sprite_scale);
+  
+  DrawCircleGradient(prj->collision.x, prj->collision.y, prj->collision.width, RADIENCE_COLOR_INNER_CIRCLE_BRIGHT_YARROW, RADIENCE_COLOR_TRANSPARENT);
 }
 
 void render_projectile(projectile* prj, f32 scale) {

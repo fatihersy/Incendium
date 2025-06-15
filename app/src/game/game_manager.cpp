@@ -103,14 +103,16 @@ void update_game_manager(void) {
   if (!state) {
     return;
   }
+  state->mouse_pos_world = GetScreenToWorld2D( 
+    Vector2{ GetMousePosition().x * get_app_settings()->scale_ratio.at(0), GetMousePosition().y * get_app_settings()->scale_ratio.at(1) }, 
+    state->in_camera_metrics->handle
+  );
+
+  if(state->is_game_paused || state->is_game_end) {
+    return;
+  }
 
   if (!state->game_info.player_state_dynamic->is_dead) {
-    state->mouse_pos_world = GetScreenToWorld2D(Vector2{
-      GetMousePosition().x * get_app_settings()->scale_ratio.at(0),
-      GetMousePosition().y * get_app_settings()->scale_ratio.at(1)
-      }, 
-      state->in_camera_metrics->handle
-    );
     const player_update_results pur = update_player();
     if (pur.is_success) { // TODO: Player-Map collision detection system
       /*
@@ -125,7 +127,7 @@ void update_game_manager(void) {
         move_player(VECTOR2(pur.move_request.x, 0));
       } 
       */
-      move_player(pur.move_request);
+      player_move_player(pur.move_request);
     }
     update_abilities(__builtin_addressof(state->game_info.player_state_dynamic->ability_system));
     update_spawns(get_player_position(true));
@@ -156,7 +158,7 @@ void update_game_manager_debug(void) {
 
   const player_update_results pur = update_player();
   if (pur.is_success) { 
-    move_player(pur.move_request);
+    player_move_player(pur.move_request);
   }
 }
 void render_game(void) {
@@ -215,28 +217,70 @@ void gm_load_game(void) {
 
   refresh_player_stats(false, true);
 }
-void damage_any_spawn(Character2D *projectile) {
-  if (!projectile) {
-    TraceLog(LOG_ERROR, 
-    "game_manager::damage_any_spawn()::Recieved actor was NULL");
-    return;
-  }
-  
-  for (u16 i = 0; i <= *state->game_info.p_spawn_system_spawn_count; ++i) {
-    if (!state->game_info.in_spawns[i].is_dead){
-      if (CheckCollisionRecs(state->game_info.in_spawns[i].collision, projectile->collision)) {
-        damage_spawn(state->game_info.in_spawns[i].character_id, projectile->damage);
+void gm_damage_spawn_if_collide(data128 coll_data, i32 damage, collision_type coll_check) {
+  switch (coll_check) {
+    case COLLISION_TYPE_RECTANGLE_RECTANGLE: {
+      Rectangle rect = Rectangle { (f32)coll_data.i16[0],  (f32)coll_data.i16[1], (f32)coll_data.i16[2], (f32)coll_data.i16[3] };
+
+      for (u32 iter = 0; iter < * state->game_info.p_spawn_system_spawn_count; ++iter) {
+        if (!state->game_info.in_spawns[iter].is_dead){
+          if (CheckCollisionRecs(state->game_info.in_spawns[iter].collision, rect)) {
+            damage_spawn(state->game_info.in_spawns[iter].character_id, damage);
+          }
+        }
       }
+      return; 
+    }
+    case COLLISION_TYPE_CIRCLE_RECTANGLE: { 
+      Vector2 circle_center = Vector2 { (f32)coll_data.i16[0],  (f32)coll_data.i16[1] };
+      f32 circle_radius = (f32) coll_data.i16[2];
+
+      for (u32 iter = 0; iter < * state->game_info.p_spawn_system_spawn_count; ++iter) {
+        if (!state->game_info.in_spawns[iter].is_dead){
+          if (CheckCollisionCircleRec(circle_center, circle_radius, state->game_info.in_spawns[iter].collision)) {
+            damage_spawn(state->game_info.in_spawns[iter].character_id, damage);
+          }
+        }
+      }
+      return; 
+    }
+    default: {
+      TraceLog(LOG_WARNING, "game_manager::gm_damage_spawn_if_collide()::Unsupported collision check type");
+      return;
     }
   }
+
+  TraceLog(LOG_WARNING, "game_manager::gm_damage_spawn_if_collide()::Function terminated unexpectedly");
 }
-void damage_any_collider_by_type(Character2D from_actor, actor_type to_type) {
-  if (!from_actor.initialized) {
-    TraceLog(LOG_ERROR, "game_manager::damage_any_collider_by_type()::Recieved actor has not initialized");
-    return;
+void gm_damage_player_if_collide(data128 coll_data, i32 damage, collision_type coll_check) {
+  switch (coll_check) {
+    case COLLISION_TYPE_RECTANGLE_RECTANGLE: {
+      Rectangle rect = Rectangle { (f32)coll_data.i16[0],  (f32)coll_data.i16[1], (f32)coll_data.i16[2], (f32)coll_data.i16[3] };
+
+      if (CheckCollisionRecs(state->game_info.player_state_dynamic->collision, rect)) {
+        player_take_damage(damage);
+      }
+      return; 
+    }
+    
+    case COLLISION_TYPE_CIRCLE_RECTANGLE: { 
+      Vector2 circle_center = Vector2 { (f32)coll_data.i16[0],  (f32)coll_data.i16[1] };
+      f32 circle_radius = (f32) coll_data.i16[2];
+
+      if (CheckCollisionCircleRec(circle_center, circle_radius, state->game_info.player_state_dynamic->collision)) {
+        player_take_damage(damage);
+      }
+      return; 
+    }
+
+    default: TraceLog(LOG_WARNING, "game_manager::gm_damage_player_if_collide()::Unsupported collision check type"); return;
   }
-  switch (to_type) {
-    case ACTOR_TYPE_SPAWN: {
+
+  TraceLog(LOG_WARNING, "game_manager::gm_damage_player_if_collide()::Function terminated unexpectedly");
+}
+
+[[__deprecated__("DEPRECATED!")]] void damage_any_collider_by_type() {
+/*     case ACTOR_TYPE_SPAWN: {
     for (u32 i = 0; i < *state->game_info.p_spawn_system_spawn_count; ++i) {
       if (!state->game_info.in_spawns[i].is_dead){
         if (CheckCollisionRecs(state->game_info.in_spawns[i].collision, from_actor.collision)) {
@@ -258,9 +302,7 @@ void damage_any_collider_by_type(Character2D from_actor, actor_type to_type) {
     default:{
       TraceLog(LOG_WARNING, "game_manager::damage_any_collider_by_type()::Actor type is not supported");
       return;
-    }
-  }
-  TraceLog(LOG_WARNING, "game_manager::damage_any_collider_by_type()::Function terminated unexpectedly");
+    } */
 }
 void populate_map_with_spawns(void) {
   if (!state->game_info.in_spawns) {
@@ -566,6 +608,7 @@ void generate_in_game_info(void) {
     f32 dist = vec2_distance(player_position, spw->position);
     if (dist < dist_cache) {
       spw_nearest = spw;
+      dist_cache = dist;
     }
   }
   state->game_info.nearest_spawn = spw_nearest;
@@ -598,7 +641,15 @@ void set_dynamic_player_have_ability_upgrade_points(bool _b) {
   state->game_info.player_state_dynamic->is_player_have_ability_upgrade_points = _b;
 }
 ability* get_dynamic_player_state_ability(ability_type type) {
-  return __builtin_addressof(state->game_info.player_state_dynamic->ability_system.abilities[type]);
+  if (!state) {
+    TraceLog(LOG_ERROR, "game_manager::get_dynamic_player_state_ability()::State is not valid");
+    return nullptr;
+  }
+  if (type >= ABILITY_TYPE_MAX || type <= ABILITY_TYPE_UNDEFINED) {
+    TraceLog(LOG_ERROR, "game_manager::get_dynamic_player_state_ability()::Ability type is out of bound");
+    return nullptr;
+  }
+  return __builtin_addressof(state->game_info.player_state_dynamic->ability_system.abilities.at(type));
 }
 character_stat* get_dynamic_player_state_stat(character_stats stat) {
   if (stat >= CHARACTER_STATS_MAX || stat <= CHARACTER_STATS_UNDEFINED) {
@@ -641,6 +692,13 @@ void set_currency_souls(i32 value) {
 Vector2* gm_get_mouse_pos_world(void) {
   return &state->mouse_pos_world;
 }
+ingame_info* gm_get_ingame_info(void){
+  if (!state) {
+    TraceLog(LOG_ERROR, "game_manager::gm_get_ingame_info()::State is not valid");
+    return nullptr;
+  }
+  return __builtin_addressof(state->game_info); 
+}
 // GET / SET
 
 // Exposed functions
@@ -671,8 +729,7 @@ bool _add_ability(ability_type _type) {
   abl.is_active = true;
 
   refresh_ability(__builtin_addressof(abl));
-  system->abilities[_type] = abl;
-  
+  system->abilities.at(_type) = abl;
   return true;
 }
 bool _upgrade_ability(ability* abl) {
@@ -719,25 +776,25 @@ bool game_manager_on_event(u16 code, event_context context) {
       return true;
     }
     case EVENT_CODE_DAMAGE_PLAYER_IF_COLLIDE: {
-      Character2D from_actor = Character2D(Rectangle {
-          (f32) context.data.i16[0], (f32) context.data.i16[1], 
-          (f32) context.data.i16[2], (f32) context.data.i16[3]
-        },
-        (i32)context.data.i16[4]
+      data128 coll_data = data128( 
+        static_cast<i16>(context.data.i16[0]),
+        static_cast<i16>(context.data.i16[1]),
+        static_cast<i16>(context.data.i16[2]),
+        static_cast<i16>(context.data.i16[3])
       );
-      damage_any_collider_by_type(from_actor, ACTOR_TYPE_PLAYER);
-
+      
+      gm_damage_player_if_collide(coll_data, static_cast<i32>(context.data.i16[4]), static_cast<collision_type>(context.data.i16[5]));
       return true;
     }
     case EVENT_CODE_DAMAGE_ANY_SPAWN_IF_COLLIDE: {
-      Character2D from_actor = Character2D(Rectangle {
-          (f32) context.data.i16[0], (f32) context.data.i16[1], 
-          (f32) context.data.i16[2], (f32) context.data.i16[3]
-        },
-        (i32)context.data.i16[4]
+      data128 coll_data = data128( 
+        static_cast<i16>(context.data.i16[0]),
+        static_cast<i16>(context.data.i16[1]),
+        static_cast<i16>(context.data.i16[2]),
+        static_cast<i16>(context.data.i16[3])
       );
-      damage_any_collider_by_type(from_actor, ACTOR_TYPE_SPAWN);
-
+      
+      gm_damage_spawn_if_collide(coll_data, static_cast<i32>(context.data.i16[4]), static_cast<collision_type>(context.data.i16[5]));
       return true;
     }
     default: {

@@ -72,6 +72,11 @@ typedef enum system_event_code {
   // game_manager
   EVENT_CODE_END_GAME,
   EVENT_CODE_DAMAGE_PLAYER_IF_COLLIDE,
+
+  /**
+   * @brief coll_data data128(i16[0], i16[1], i16[2], i16[3])
+   * @brief gm_damage_spawn_if_collide(coll_data, damage i16[4], collision_type i16[5]);
+   */
   EVENT_CODE_DAMAGE_ANY_SPAWN_IF_COLLIDE,
 
   // scene_manager

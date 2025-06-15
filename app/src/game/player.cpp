@@ -87,10 +87,10 @@ void player_system_reinit(void) {
   player->dimentions = Vector2{22, 32};
   player->dimentions.x *= PLAYER_SCALE;
   player->dimentions.y *= PLAYER_SCALE;
-  player->dimentions_div2 = Vector2{player->dimentions.x/2.f, player->dimentions.y/2.f};
+  player->dimentions_div2 = Vector2{ player->dimentions.x * .5f, player->dimentions.y * .5f };
   player->collision = Rectangle {
-    .x = player->position.x - player->dimentions.x / 2.f,
-    .y = player->position.y - player->dimentions.y / 2.f,
+    .x = player->position.x - player->dimentions_div2.x,
+    .y = player->position.y - player->dimentions_div2.y,
     .width = player->dimentions.x,
     .height = player->dimentions.y
   };
@@ -109,7 +109,7 @@ void player_system_reinit(void) {
 
   player->last_played_animation = &player->idle_left_sprite; // The position player starts. To avoid from the error when move firstly called
   
-  player->starter_ability = ABILITY_TYPE_CODEX;
+  player->starter_ability = ABILITY_TYPE_RADIANCE;
   player->is_initialized = true;
 }
 
@@ -136,7 +136,7 @@ Vector2 get_player_position(bool centered) {
   return pos;
 }
 
-void add_exp_to_player(u32 exp) {
+void player_add_exp_to_player(u32 exp) {
   u32 curr = player->exp_current;
   u32 to_next = player->exp_to_next_level;
   if ( curr + exp >= to_next) 
@@ -152,7 +152,7 @@ void add_exp_to_player(u32 exp) {
   }
   player->exp_perc = (float) player->exp_current / player->exp_to_next_level;
 }
-void take_damage(u16 damage) {
+void player_take_damage(u16 damage) {
   if(!player->is_damagable || player->is_dead) return;
   if((player->health_current - damage) > 0 && (player->health_current - damage) <= player->health_max) {
     player->health_current -= damage;
@@ -166,7 +166,7 @@ void take_damage(u16 damage) {
   }
   player->health_perc = (float) player->health_current / player->health_max;
 }
-void heal_player(u16 amouth){
+void player_heal_player(u16 amouth){
   if(player->is_dead) return;
   if(player->health_current + amouth <= player->health_max) {
     player->health_current += amouth;
@@ -206,7 +206,7 @@ player_update_results update_player(void) {
     .is_success = true
   };
 }
-void move_player(Vector2 new_pos) {
+void player_move_player(Vector2 new_pos) {
   if (!player) {
     TraceLog(LOG_ERROR, "player::move_player()::Player state is null");
   }
@@ -347,7 +347,7 @@ void play_anim(spritesheet_id player_anim_sheet) {
 bool player_system_on_event(u16 code, event_context context) {
     switch (code) {
         case EVENT_CODE_PLAYER_ADD_EXP: {
-          add_exp_to_player(context.data.u32[0]);
+          player_add_exp_to_player(context.data.u32[0]);
           event_fire(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, event_context((f32)PRG_BAR_ID_PLAYER_EXPERIANCE, (f32)player->exp_perc));
           return true;
         }
@@ -359,7 +359,7 @@ bool player_system_on_event(u16 code, event_context context) {
           return true;
         }
         case EVENT_CODE_PLAYER_TAKE_DAMAGE: {
-          take_damage(context.data.u8[0]);
+          player_take_damage(context.data.i32[0]);
           event_fire(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, event_context((f32)PRG_BAR_ID_PLAYER_HEALTH, (f32)player->health_perc));
           return true;
         }
