@@ -503,7 +503,6 @@ void render_interface_in_game(void) {
       break;
     }
     case IN_GAME_STAGE_PLAY_DEBUG: {  
-      DrawFPS(BASE_RENDER_SCALE(.75f).x, SCREEN_OFFSET.y * 10);
 
       if (state->show_pause_menu) {
         gui_draw_pause_screen(state->has_game_started);
@@ -609,8 +608,6 @@ void render_interface_in_game(void) {
   }
 
   render_user_interface();
-
-  DrawFPS(BASE_RENDER_SCALE(.75f).x, SCREEN_OFFSET.y * 10);
 }
 
 #define DRAW_ABL_UPG_STAT_PNL(UPG, TEXT, ...){ \

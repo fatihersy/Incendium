@@ -17,7 +17,8 @@
 }
 
 #define RADIENCE_COLOR_TRANSPARENT  CLITERAL(Color){ 253, 203, 110, 0 }
-#define RADIENCE_COLOR_INNER_CIRCLE_BRIGHT_YARROW  CLITERAL(Color){ 253, 203, 110, 128 }
+#define RADIENCE_COLOR_INNER_CIRCLE_BRIGHT_YARROW  CLITERAL(Color){ 253, 203, 110, 32 }
+#define RADIENCE_CIRCLE_RADIUS_CHANGE 50.f
 
 typedef struct ability_system_state {
   std::array<ability, ABILITY_TYPE_MAX> abilities;
@@ -42,6 +43,12 @@ void render_bullet(ability* abl);
 void render_comet(ability* abl);
 void render_codex(ability* abl);
 void render_radience(ability* abl);
+
+void refresh_ability_fireball(ability* abl);
+void refresh_ability_bullet(ability* abl);
+void refresh_ability_comet(ability* abl);
+void refresh_ability_codex(ability* abl);
+void refresh_ability_radience(ability* abl);
 
 bool ability_system_initialize(camera_metrics* _camera_metrics, app_settings* _settings, ingame_info* _ingame_info) {
   if (state) {
@@ -96,7 +103,7 @@ bool ability_system_initialize(camera_metrics* _camera_metrics, app_settings* _s
   register_ability(ability("Radience",
     radience_upgr,
     ABILITY_TYPE_RADIANCE, SHEET_ID_GENERIC_LIGHT, SHEET_ID_SPRITESHEET_UNSPECIFIED,
-    2.0f, 1.f, 1, 0, 0.f,
+    2.2f, 0.8f, 1, 0, 0.f,
     Vector2{128.f, 128.f}, Rectangle{2080, 1240, 32, 32},
     11,
     false,true
@@ -104,6 +111,32 @@ bool ability_system_initialize(camera_metrics* _camera_metrics, app_settings* _s
   return true;
 }
 
+void refresh_ability(ability* abl) {
+  if (abl == nullptr) {
+    TraceLog(LOG_WARNING, "ability::refresh_ability()::Ability is not valid");
+    return;
+  }
+  if (!abl->is_active || !abl->is_initialized) {
+    TraceLog(LOG_WARNING, "ability::refresh_ability()::Ability is not initialized or activated");
+    return;
+  }
+  if (abl->proj_count > MAX_ABILITY_PROJECTILE_COUNT) {
+    TraceLog(LOG_WARNING, "ability::refresh_ability()::Ability projectile count exceed");
+    return;
+  }
+
+  switch (abl->type) {
+    case ABILITY_TYPE_FIREBALL:  refresh_ability_fireball(abl); break;
+    case ABILITY_TYPE_BULLET:    refresh_ability_bullet(abl); break;
+    case ABILITY_TYPE_COMET:     refresh_ability_comet(abl); break;
+    case ABILITY_TYPE_CODEX:     refresh_ability_codex(abl); break;
+    case ABILITY_TYPE_RADIANCE:  refresh_ability_radience(abl); break;
+    default: {
+      TraceLog(LOG_ERROR, "ability::refresh_ability()::Unsuppported ability type");
+      break;
+    }
+  }
+}
 void update_abilities(ability_play_system* system) {
   for (size_t iter=0; iter<ABILITY_TYPE_MAX; ++iter) {
     ability* abl = __builtin_addressof(system->abilities.at(iter));
@@ -140,6 +173,20 @@ void render_abilities(ability_play_system* system) {
     }
   }
 }
+void render_projectile(projectile* prj, f32 scale) {
+  Vector2 dim = Vector2 {
+    prj->default_animation.current_frame_rect.width  * scale,
+    prj->default_animation.current_frame_rect.height * scale
+  };
+  prj->default_animation.origin.x = dim.x / 2.f;
+  prj->default_animation.origin.y = dim.y / 2.f;
+  play_sprite_on_site(__builtin_addressof(prj->default_animation), WHITE, Rectangle { prj->position.x, prj->position.y, dim.x, dim.y });
+  if (prj->play_explosion_animation) {
+    prj->explotion_animation.origin.x = dim.x / 2.f;
+    prj->explotion_animation.origin.y = dim.y / 2.f;
+    play_sprite_on_site(__builtin_addressof(prj->explotion_animation), WHITE, Rectangle { prj->vec_ex.f32[2], prj->vec_ex.f32[3], dim.x, dim.y });
+  }
+}
 
 void upgrade_ability(ability* abl) {
   if (abl->type <= ABILITY_TYPE_UNDEFINED || abl->type >= ABILITY_TYPE_MAX) {
@@ -164,7 +211,6 @@ void upgrade_ability(ability* abl) {
     }
   }
 }
-
 ability get_ability(ability_type _type) {
   if (!state) {
     return ability();
@@ -177,41 +223,6 @@ ability get_next_level(ability abl) {
   return abl;
 }
 
-void refresh_ability(ability* abl) {
-  if (abl == nullptr) {
-    TraceLog(LOG_WARNING, "ability::refresh_ability()::Ability is null");
-    return;
-  }
-  if (abl->proj_count > MAX_ABILITY_PROJECTILE_COUNT) {
-    TraceLog(LOG_WARNING, "ability::refresh_ability()::Ability projectile count exceed");
-    return;
-  }
-
-  abl->projectiles.clear();
-  abl->projectiles.reserve(abl->proj_count);
-
-  for (int i = 0; i < abl->proj_count; ++i) {
-    projectile* prj = __builtin_addressof(abl->projectiles.emplace_back());
-    prj->collision = Rectangle {0.f, 0.f, abl->proj_dim.x * abl->proj_collision_scale, abl->proj_dim.y * abl->proj_collision_scale};
-    prj->damage = abl->base_damage;
-    prj->is_active = true;
-    prj->duration = abl->proj_duration;
-    if (abl->default_animation_id != SHEET_ID_SPRITESHEET_UNSPECIFIED) {
-      prj->default_animation.sheet_id = abl->default_animation_id;
-      set_sprite(__builtin_addressof(prj->default_animation), true, false, abl->center_proj_anim);
-    }
-    if (abl->explosion_animation_id != SHEET_ID_SPRITESHEET_UNSPECIFIED) {
-      prj->explotion_animation.sheet_id = abl->explosion_animation_id;
-      set_sprite(__builtin_addressof(prj->explotion_animation), false, true, abl->center_proj_anim);
-    }
-    if (abl->centered_origin) {
-      prj->default_animation.origin = VECTOR2(
-        prj->default_animation.coord.width * .5f, 
-        prj->default_animation.coord.height * .5f
-      );
-    }
-  }
-}
 
 void update_fireball(ability* abl) {
   if (!abl->is_active || !abl->is_initialized) {
@@ -421,16 +432,44 @@ void update_radience(ability* abl) {
     return;
   }
   player_state* p_player = reinterpret_cast<player_state*>(abl->p_owner);
-  abl->position = p_player->position;
+  abl->position    = p_player->position;
   abl->position.x += p_player->dimentions_div2.x;
   abl->position.y += p_player->dimentions_div2.y;
 
-  projectile& prj = abl->projectiles.at(0);
+  projectile& prj  = abl->projectiles.at(0);
   if (!prj.is_active) { return; }
 
-  prj.position = abl->position;
+  prj.position    = abl->position;
   prj.collision.x = prj.position.x;
   prj.collision.y = prj.position.y;
+
+  u16  frame_counter_max           = TARGET_FPS * 1;
+  u16  circle_inner_radius_base    = prj.mm_ex.u16[0];
+  u16  circle_outer_radius_base    = prj.mm_ex.u16[1];
+  u16& frame_counter               = prj.mm_ex.u16[2];
+  //f32  circle_inner_radius_current = static_cast<f32>(prj.mm_ex.u16[3]);
+  //f32  circle_outer_radius_current = static_cast<f32>(prj.mm_ex.u16[4]);
+  bool  is_increment               = static_cast<bool>(prj.mm_ex.u16[5]);
+  
+  f32 distance_inner = RADIENCE_CIRCLE_RADIUS_CHANGE;
+  f32 distance_outer = RADIENCE_CIRCLE_RADIUS_CHANGE;
+
+  frame_counter++;
+  frame_counter = FCLAMP(frame_counter, 0, frame_counter_max);
+  if (frame_counter >= frame_counter_max) {
+    frame_counter = 0;
+    prj.mm_ex.u16[5] = !is_increment;
+    is_increment = prj.mm_ex.u16[5];
+  }
+
+  if (is_increment) {
+    prj.mm_ex.u16[3] = EaseCircIn((f32)frame_counter, circle_inner_radius_base, distance_inner, (f32)frame_counter_max);
+    prj.mm_ex.u16[4] = EaseCircIn((f32)frame_counter, circle_outer_radius_base, distance_outer, (f32)frame_counter_max);
+  }
+  else {
+    prj.mm_ex.u16[3] = EaseQuadOut((f32)frame_counter, circle_inner_radius_base + distance_inner, -distance_inner,  (f32)frame_counter_max);
+    prj.mm_ex.u16[4] = EaseQuadOut((f32)frame_counter, circle_outer_radius_base + distance_outer, -distance_outer,  (f32)frame_counter_max);
+  }
 
   event_fire(EVENT_CODE_DAMAGE_ANY_SPAWN_IF_COLLIDE, event_context(
     static_cast<i16>(prj.collision.x), static_cast<i16>(prj.collision.y), static_cast<i16>(prj.collision.width), static_cast<i16>(prj.collision.height),
@@ -485,7 +524,7 @@ void render_codex(ability* abl){
   }
   atlas_texture * icon_atlas = ss_get_atlas_texture_by_enum(ATLAS_TEX_ID_ICON_ATLAS);
   Rectangle codex_book_source = Rectangle {icon_atlas->source.x, icon_atlas->source.y, 32, 32};
-  codex_book_source.x += 832.f;
+  codex_book_source.x += 832.f; // HACK: The position of the book sprite at atlas, make dynamic later 
   Rectangle codex_book_dest = CODEX_BOOK_POSITION_BY_ABILITY(abl->position);
 
   DrawTexturePro(*icon_atlas->atlas_handle, codex_book_source, codex_book_dest, VECTOR2(0, 0), 0.f, WHITE);
@@ -498,21 +537,247 @@ void render_radience(ability* abl){
   if (!abl->projectiles.at(0).is_active) { return; }
   projectile * prj = __builtin_addressof(abl->projectiles.at(0));
   render_projectile(prj, abl->proj_sprite_scale);
-  
-  DrawCircleGradient(prj->collision.x, prj->collision.y, prj->collision.width, RADIENCE_COLOR_INNER_CIRCLE_BRIGHT_YARROW, RADIENCE_COLOR_TRANSPARENT);
+
+  //u16  frame_counter_max     = TARGET_FPS * 1;
+  //u16& circle_inner_radius_base = prj->mm_ex.u16[0];
+  //u16& circle_outer_radius_base = prj->mm_ex.u16[1];
+  //u16& frame_counter         = prj->mm_ex.u16[2];
+  f32  circle_inner_radius_current = static_cast<f32>(prj->mm_ex.u16[3]);
+  f32  circle_outer_radius_current = static_cast<f32>(prj->mm_ex.u16[4]);
+  //bool  is_increment = static_cast<bool>(prj->mm_ex.u16[5]);
+
+  DrawCircleGradient(prj->collision.x, prj->collision.y, circle_outer_radius_current, RADIENCE_COLOR_INNER_CIRCLE_BRIGHT_YARROW, RADIENCE_COLOR_TRANSPARENT);
+  DrawCircleGradient(prj->collision.x, prj->collision.y, circle_inner_radius_current, RADIENCE_COLOR_INNER_CIRCLE_BRIGHT_YARROW, RADIENCE_COLOR_TRANSPARENT);
 }
 
-void render_projectile(projectile* prj, f32 scale) {
-  Vector2 dim = Vector2 {
-    prj->default_animation.current_frame_rect.width  * scale,
-    prj->default_animation.current_frame_rect.height * scale
-  };
-  prj->default_animation.origin.x = dim.x / 2.f;
-  prj->default_animation.origin.y = dim.y / 2.f;
-  play_sprite_on_site(__builtin_addressof(prj->default_animation), WHITE, Rectangle { prj->position.x, prj->position.y, dim.x, dim.y });
-  if (prj->play_explosion_animation) {
-    prj->explotion_animation.origin.x = dim.x / 2.f;
-    prj->explotion_animation.origin.y = dim.y / 2.f;
-    play_sprite_on_site(__builtin_addressof(prj->explotion_animation), WHITE, Rectangle { prj->vec_ex.f32[2], prj->vec_ex.f32[3], dim.x, dim.y });
+void refresh_ability_fireball(ability* abl) { 
+  if (abl == nullptr) {
+    TraceLog(LOG_WARNING, "ability::refresh_ability_fireball()::Ability is null");
+    return;
   }
+  if (abl->proj_count > MAX_ABILITY_PROJECTILE_COUNT) {
+    TraceLog(LOG_WARNING, "ability::refresh_ability_fireball()::Ability projectile count exceed");
+    return;
+  }
+  if (abl->type != ABILITY_TYPE_FIREBALL) {
+    TraceLog(LOG_WARNING, "ability::refresh_ability_fireball()::Refresh ability function is incorrect. Expected: %d, Recieved:%d", ABILITY_TYPE_FIREBALL, abl->type);
+    return;
+  }
+
+  abl->projectiles.clear();
+  abl->projectiles.reserve(abl->proj_count);
+
+  for (int i = 0; i < abl->proj_count; ++i) {
+    projectile* prj = __builtin_addressof(abl->projectiles.emplace_back());
+    prj->collision = Rectangle {0.f, 0.f, abl->proj_dim.x * abl->proj_collision_scale, abl->proj_dim.y * abl->proj_collision_scale};
+    prj->damage = abl->base_damage;
+    prj->is_active = true;
+    prj->duration = abl->proj_duration;
+    if (abl->default_animation_id != SHEET_ID_SPRITESHEET_UNSPECIFIED) {
+      prj->default_animation.sheet_id = abl->default_animation_id;
+      set_sprite(__builtin_addressof(prj->default_animation), true, false, abl->center_proj_anim);
+    }
+    if (abl->explosion_animation_id != SHEET_ID_SPRITESHEET_UNSPECIFIED) {
+      prj->explotion_animation.sheet_id = abl->explosion_animation_id;
+      set_sprite(__builtin_addressof(prj->explotion_animation), false, true, abl->center_proj_anim);
+    }
+    if (abl->centered_origin) {
+      prj->default_animation.origin = VECTOR2(
+        prj->default_animation.coord.width * .5f, 
+        prj->default_animation.coord.height * .5f
+      );
+      prj->explotion_animation.origin = VECTOR2(
+        prj->explotion_animation.coord.width * .5f, 
+        prj->explotion_animation.coord.height * .5f
+      );
+    }
+  }
+}
+void refresh_ability_bullet(ability* abl) { 
+  if (abl == nullptr) {
+    TraceLog(LOG_WARNING, "ability::refresh_ability_bullet()::Ability is null");
+    return;
+  }
+  if (abl->proj_count > MAX_ABILITY_PROJECTILE_COUNT) {
+    TraceLog(LOG_WARNING, "ability::refresh_ability_bullet()::Ability projectile count exceed");
+    return;
+  }
+  if (abl->type != ABILITY_TYPE_BULLET) {
+    TraceLog(LOG_WARNING, "ability::refresh_ability_bullet()::Refresh ability function is incorrect. Expected: %d, Recieved:%d", ABILITY_TYPE_BULLET, abl->type);
+    return;
+  }
+
+  abl->projectiles.clear();
+  abl->projectiles.reserve(abl->proj_count);
+
+  for (int i = 0; i < abl->proj_count; ++i) {
+    projectile* prj = __builtin_addressof(abl->projectiles.emplace_back());
+    prj->collision = Rectangle {0.f, 0.f, abl->proj_dim.x * abl->proj_collision_scale, abl->proj_dim.y * abl->proj_collision_scale};
+    prj->damage = abl->base_damage;
+    prj->is_active = true;
+    prj->duration = abl->proj_duration;
+    if (abl->default_animation_id != SHEET_ID_SPRITESHEET_UNSPECIFIED) {
+      prj->default_animation.sheet_id = abl->default_animation_id;
+      set_sprite(__builtin_addressof(prj->default_animation), true, false, abl->center_proj_anim);
+    }
+    if (abl->explosion_animation_id != SHEET_ID_SPRITESHEET_UNSPECIFIED) {
+      prj->explotion_animation.sheet_id = abl->explosion_animation_id;
+      set_sprite(__builtin_addressof(prj->explotion_animation), false, true, abl->center_proj_anim);
+    }
+    if (abl->centered_origin) {
+      prj->default_animation.origin = VECTOR2(
+        prj->default_animation.coord.width * .5f, 
+        prj->default_animation.coord.height * .5f
+      );
+      prj->explotion_animation.origin = VECTOR2(
+        prj->explotion_animation.coord.width * .5f, 
+        prj->explotion_animation.coord.height * .5f
+      );
+    }
+  }
+}
+void refresh_ability_comet(ability* abl) { 
+  if (abl == nullptr) {
+    TraceLog(LOG_WARNING, "ability::refresh_ability_comet()::Ability is null");
+    return;
+  }
+  if (abl->proj_count > MAX_ABILITY_PROJECTILE_COUNT) {
+    TraceLog(LOG_WARNING, "ability::refresh_ability_comet()::Ability projectile count exceed");
+    return;
+  }
+  if (abl->type != ABILITY_TYPE_COMET) {
+    TraceLog(LOG_WARNING, "ability::refresh_ability_comet()::Refresh ability function is incorrect. Expected: %d, Recieved:%d", ABILITY_TYPE_COMET, abl->type);
+    return;
+  }
+
+  abl->projectiles.clear();
+  abl->projectiles.reserve(abl->proj_count);
+
+  for (int i = 0; i < abl->proj_count; ++i) {
+    projectile* prj = __builtin_addressof(abl->projectiles.emplace_back());
+    prj->collision = Rectangle {0.f, 0.f, abl->proj_dim.x * abl->proj_collision_scale, abl->proj_dim.y * abl->proj_collision_scale};
+    prj->damage = abl->base_damage;
+    prj->is_active = true;
+    prj->duration = abl->proj_duration;
+    if (abl->default_animation_id != SHEET_ID_SPRITESHEET_UNSPECIFIED) {
+      prj->default_animation.sheet_id = abl->default_animation_id;
+      set_sprite(__builtin_addressof(prj->default_animation), true, false, abl->center_proj_anim);
+    }
+    if (abl->explosion_animation_id != SHEET_ID_SPRITESHEET_UNSPECIFIED) {
+      prj->explotion_animation.sheet_id = abl->explosion_animation_id;
+      set_sprite(__builtin_addressof(prj->explotion_animation), false, true, abl->center_proj_anim);
+    }
+    if (abl->centered_origin) {
+      prj->default_animation.origin = VECTOR2(
+        prj->default_animation.coord.width * .5f, 
+        prj->default_animation.coord.height * .5f
+      );
+      prj->explotion_animation.origin = VECTOR2(
+        prj->explotion_animation.coord.width * .5f, 
+        prj->explotion_animation.coord.height * .5f
+      );
+    }
+  }
+}
+void refresh_ability_codex(ability* abl) { 
+  if (abl == nullptr) {
+    TraceLog(LOG_WARNING, "ability::refresh_ability()::Ability is null");
+    return;
+  }
+  if (abl->proj_count > MAX_ABILITY_PROJECTILE_COUNT) {
+    TraceLog(LOG_WARNING, "ability::refresh_ability()::Ability projectile count exceed");
+    return;
+  }
+  if (abl->type != ABILITY_TYPE_CODEX) {
+    TraceLog(LOG_WARNING, "ability::refresh_ability_codex()::Refresh ability function is incorrect. Expected: %d, Recieved:%d", ABILITY_TYPE_CODEX, abl->type);
+    return;
+  }
+
+  abl->projectiles.clear();
+  abl->projectiles.reserve(abl->proj_count);
+
+  for (int i = 0; i < abl->proj_count; ++i) {
+    projectile* prj = __builtin_addressof(abl->projectiles.emplace_back());
+    prj->collision = Rectangle {0.f, 0.f, abl->proj_dim.x * abl->proj_collision_scale, abl->proj_dim.y * abl->proj_collision_scale};
+    prj->damage = abl->base_damage;
+    prj->is_active = true;
+    prj->duration = abl->proj_duration;
+    if (abl->default_animation_id != SHEET_ID_SPRITESHEET_UNSPECIFIED) {
+      prj->default_animation.sheet_id = abl->default_animation_id;
+      set_sprite(__builtin_addressof(prj->default_animation), true, false, abl->center_proj_anim);
+    }
+    if (abl->explosion_animation_id != SHEET_ID_SPRITESHEET_UNSPECIFIED) {
+      prj->explotion_animation.sheet_id = abl->explosion_animation_id;
+      set_sprite(__builtin_addressof(prj->explotion_animation), false, true, abl->center_proj_anim);
+    }
+    if (abl->centered_origin) {
+      prj->default_animation.origin = VECTOR2(
+        prj->default_animation.coord.width * .5f, 
+        prj->default_animation.coord.height * .5f
+      );
+      prj->explotion_animation.origin = VECTOR2(
+        prj->explotion_animation.coord.width * .5f, 
+        prj->explotion_animation.coord.height * .5f
+      );
+    }
+  }
+}
+void refresh_ability_radience(ability* abl) { 
+    if (abl == nullptr) {
+    TraceLog(LOG_WARNING, "ability::refresh_ability()::Ability is null");
+    return;
+  }
+  if (abl->proj_count > MAX_ABILITY_PROJECTILE_COUNT) {
+    TraceLog(LOG_WARNING, "ability::refresh_ability()::Ability projectile count exceed");
+    return;
+  }
+  if (abl->type != ABILITY_TYPE_RADIANCE) {
+    TraceLog(LOG_WARNING, "ability::refresh_ability_radience()::Refresh ability function is incorrect. Expected: %d, Recieved:%d", ABILITY_TYPE_RADIANCE, abl->type);
+    return;
+  }
+
+  abl->projectiles.clear();
+  abl->projectiles.reserve(abl->proj_count);
+  {
+    projectile* prj = __builtin_addressof(abl->projectiles.emplace_back());
+    prj->collision = Rectangle {0.f, 0.f, abl->proj_dim.x * abl->proj_collision_scale, abl->proj_dim.y * abl->proj_collision_scale};
+    prj->damage = abl->base_damage;
+    prj->is_active = true;
+    prj->duration = abl->proj_duration;
+    if (abl->default_animation_id != SHEET_ID_SPRITESHEET_UNSPECIFIED) {
+      prj->default_animation.sheet_id = abl->default_animation_id;
+      set_sprite(__builtin_addressof(prj->default_animation), true, false, abl->center_proj_anim);
+    }
+    if (abl->explosion_animation_id != SHEET_ID_SPRITESHEET_UNSPECIFIED) {
+      prj->explotion_animation.sheet_id = abl->explosion_animation_id;
+      set_sprite(__builtin_addressof(prj->explotion_animation), false, true, abl->center_proj_anim);
+    }
+    if (abl->centered_origin) {
+      prj->default_animation.origin = VECTOR2(
+        prj->default_animation.coord.width * .5f, 
+        prj->default_animation.coord.height * .5f
+      );
+      prj->explotion_animation.origin = VECTOR2(
+        prj->explotion_animation.coord.width * .5f, 
+        prj->explotion_animation.coord.height * .5f
+      );
+    }
+  }
+
+  projectile& prj = abl->projectiles.at(0);
+
+  u16& circle_inner_radius_base = prj.mm_ex.u16[0];
+  u16& circle_outer_radius_base = prj.mm_ex.u16[1];
+  u16& frame_counter            = prj.mm_ex.u16[2];
+  //f32  circle_inner_radius_current = static_cast<f32>(prj.mm_ex.u16[3]);
+  //f32  circle_outer_radius_current = static_cast<f32>(prj.mm_ex.u16[4]);
+  u16&  is_increment            = prj.mm_ex.u16[5];
+
+  circle_inner_radius_base = (abl->proj_dim.x * abl->proj_collision_scale * 1.0f) + (abl->level * .1f);
+  circle_outer_radius_base = (abl->proj_dim.x * abl->proj_collision_scale * 1.2f) + (abl->level * .1f);
+  prj.mm_ex.u16[3] = circle_inner_radius_base;
+  prj.mm_ex.u16[4] = circle_outer_radius_base;
+
+  frame_counter = 0;
+  is_increment = true;
 }
