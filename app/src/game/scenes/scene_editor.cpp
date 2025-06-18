@@ -932,7 +932,6 @@ void add_prop(tilemap_prop_types type, spritesheet_id sprite_id, f32 scale) {
     TraceLog(LOG_WARNING, "scene_editor::add_prop()::Provided sprite id out of bound");
     return;
   }
-  
   tilemap_prop_sprite prop = {};
 
   prop.id = state->next_prop_sprite_id++;
@@ -940,7 +939,7 @@ void add_prop(tilemap_prop_types type, spritesheet_id sprite_id, f32 scale) {
   prop.scale = scale;
   prop.sprite.sheet_id = sprite_id;
   
-  ui_set_sprite(&prop.sprite, true, false, false);
+  ui_set_sprite(&prop.sprite, true, false);
   prop.sprite.rotation = 0.f;
 
   prop.is_initialized = true;

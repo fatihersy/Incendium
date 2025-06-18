@@ -1179,7 +1179,7 @@ void gui_draw_spritesheet_to_background(spritesheet_id _id, Color _tint) {
   }
   if (state->ss_to_draw_bg.sheet_id != _id) {
     state->ss_to_draw_bg = *ss_get_spritesheet_by_enum(_id);
-    set_sprite(&state->ss_to_draw_bg, true, false, false);
+    set_sprite(&state->ss_to_draw_bg, true, false);
   }
   Rectangle dest = Rectangle {0, 0, BASE_RENDER_RES.x, BASE_RENDER_RES.y};
   play_sprite_on_site(&state->ss_to_draw_bg, _tint, dest);
@@ -1720,8 +1720,8 @@ localization_package* ui_get_localization_by_index(u32 _language_index) {
 void ui_play_sprite_on_site(spritesheet *sheet, Color _tint, Rectangle dest) {
   play_sprite_on_site(sheet, _tint, dest);
 }
-void ui_set_sprite(spritesheet *sheet, bool _play_looped, bool _play_once, bool _center_sprite) {
-  set_sprite(sheet, _play_looped, _play_once, _center_sprite);
+void ui_set_sprite(spritesheet *sheet, bool _play_looped, bool _play_once) {
+  set_sprite(sheet, _play_looped, _play_once);
 }
 void ui_update_sprite(spritesheet *sheet) {
   update_sprite(sheet);

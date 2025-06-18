@@ -376,12 +376,14 @@ void render_scene_in_game(void) {
     }
     case IN_GAME_STAGE_PLAY: {
       render_map();
+      if (!state->has_game_started) { return; }
+      if (*state->is_game_paused) { return; }
       render_game();
 
       ingame_info* iginf = gm_get_ingame_info();
       Character2D* chr = iginf->nearest_spawn;
       
-      if (chr) DrawRectangleLines(chr->collision.x, chr->collision.y, chr->collision.width, chr->collision.height, RED);
+      if (chr) DrawRectangleLines(chr->collision.x, chr->collision.y, chr->collision.width, chr->collision.height, RED); // TODO: Nearest spawn indicator. Remove later
       break;
     }
     case IN_GAME_STAGE_PLAY_DEBUG: {
@@ -576,7 +578,7 @@ void render_interface_in_game(void) {
             debug_info_position_buffer.y += line_height;
             gui_label_format(
               FONT_TYPE_LIGHT, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
-              WHITE, false, false, "Rotation: %.1f", prj->default_animation.rotation
+              WHITE, false, false, "Rotation: %.1f", prj->animations.at(prj->active_sprite).rotation
             );
           });
         }

@@ -4,7 +4,7 @@
 
 #include "game_types.h"
 
-void set_sprite(spritesheet *sheet, bool _play_looped, bool _play_once, bool _center_sprite);
+void set_sprite(spritesheet *sheet, bool _play_looped, bool _play_once);
 void update_sprite(spritesheet *sheet);
 void play_sprite_on_site(spritesheet *sheet, Color _tint, Rectangle dest);
 void draw_sprite_on_site(spritesheet *sheet, Color _tint, Vector2 pos, Vector2 scale, u16 frame);

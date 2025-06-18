@@ -119,6 +119,7 @@ typedef enum ability_type {
   ABILITY_TYPE_RADIANCE,
   ABILITY_TYPE_COMET,
   ABILITY_TYPE_CODEX,
+  ABILITY_TYPE_FIRETRAIL,
   ABILITY_TYPE_MAX,
 } ability_type;
 
@@ -456,8 +457,8 @@ typedef struct Character2D {
  */
 typedef struct projectile {
   u16 id;
-  spritesheet default_animation;
-  spritesheet explotion_animation; // Explotion animation etc.
+  std::vector<spritesheet> animations;
+  i16 active_sprite;
   Vector2 position;
   Rectangle collision;
   world_direction direction;
@@ -469,12 +470,11 @@ typedef struct projectile {
   u16 damage;
   f32 duration;
   bool is_active;
-  bool play_explosion_animation;
 
   projectile(void) {
     this->id = 0u;
-    this->default_animation = spritesheet();
-    this->explotion_animation = spritesheet();
+    this->animations = {};
+    this->active_sprite = -1;
     this->position = ZEROVEC2;
     this->collision = ZERORECT;
     this->direction = WORLD_DIRECTION_UNDEFINED;
@@ -483,18 +483,16 @@ typedef struct projectile {
     this->damage = 0u;
     this->duration = 0.f;
     this->is_active = false;
-    this->play_explosion_animation = false;
   }
 } projectile;
 
 typedef struct ability {
-  void* p_owner;
+  ability_type type;
   std::string display_name;
   std::vector<projectile> projectiles;
+  std::vector<spritesheet_id> animation_ids;
+  void* p_owner;
   std::array<ability_upgradables, ABILITY_UPG_MAX> upgradables;
-  ability_type type;
-  spritesheet_id default_animation_id;
-  spritesheet_id explosion_animation_id;
   
   f32 ability_play_time;
   f32 proj_sprite_scale;
@@ -508,7 +506,6 @@ typedef struct ability {
   u16 level;
   u16 base_damage;
   u16 rotation;
-  bool centered_origin;
   bool center_proj_anim;
   bool is_active;
   bool is_initialized;
@@ -518,9 +515,8 @@ typedef struct ability {
     this->display_name = "";
     this->projectiles = {};
     this->upgradables = {};
+    this->animation_ids = {};
     this->type = ABILITY_TYPE_UNDEFINED;
-    this->default_animation_id = SHEET_ID_SPRITESHEET_UNSPECIFIED;
-    this->explosion_animation_id = SHEET_ID_SPRITESHEET_UNSPECIFIED;
     this->ability_play_time = 0.f;
     this->proj_sprite_scale = 1.f;
     this->proj_collision_scale = 1.f;
@@ -533,23 +529,19 @@ typedef struct ability {
     this->level = 0;
     this->base_damage = 0;
     this->rotation = 0;
-    this->centered_origin = false;
     this->center_proj_anim = false;
     this->is_active = false;
     this->is_initialized = false;
   };
   ability(
-    std::string name, 
+    std::string name, ability_type type, 
     std::array<ability_upgradables, ABILITY_UPG_MAX> upgrs, 
-    ability_type type, spritesheet_id def_anim_id, spritesheet_id expl_anim_id, 
     f32 proj_sprite_scale, f32 proj_collision_scale, u16 proj_count, u16 proj_speed, f32 proj_duration, 
     Vector2 proj_dim, Rectangle icon_src,
     u16 base_damage, 
-    bool center_proj_anim, bool centered_origin = false) : ability()
+    bool center_proj_anim) : ability()
   {
     this->type = type;
-    this->default_animation_id = def_anim_id;
-    this->explosion_animation_id = expl_anim_id;
     this->proj_sprite_scale = proj_sprite_scale;
     this->proj_collision_scale = proj_collision_scale;
     this->proj_count = proj_count;
@@ -562,7 +554,6 @@ typedef struct ability {
     this->center_proj_anim = center_proj_anim;
     this->display_name = name;
     this->upgradables = upgrs;
-    this->centered_origin = centered_origin;
   }
 }ability;
 

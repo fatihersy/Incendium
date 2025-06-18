@@ -35,14 +35,14 @@ bool player_system_initialize(void) {
   player->take_damage_right_sprite.sheet_id = SHEET_ID_PLAYER_ANIMATION_TAKE_DAMAGE_RIGHT;
   player->wreck_left_sprite.sheet_id = SHEET_ID_PLAYER_ANIMATION_WRECK_LEFT;
   player->wreck_right_sprite.sheet_id = SHEET_ID_PLAYER_ANIMATION_WRECK_RIGHT;
-  set_sprite(&player->move_left_sprite, true, false, false);
-  set_sprite(&player->move_right_sprite, true, false, false);
-  set_sprite(&player->idle_left_sprite, true, false, false);
-  set_sprite(&player->idle_right_sprite, true, false, false);
-  set_sprite(&player->take_damage_left_sprite, true, false, false);
-  set_sprite(&player->take_damage_right_sprite, true, false, false);
-  set_sprite(&player->wreck_left_sprite, true, false, false);
-  set_sprite(&player->wreck_right_sprite, true, false, false);
+  set_sprite(&player->move_left_sprite,         true, false);
+  set_sprite(&player->move_right_sprite,        true, false);
+  set_sprite(&player->idle_left_sprite,         true, false);
+  set_sprite(&player->idle_right_sprite,        true, false);
+  set_sprite(&player->take_damage_left_sprite,  true, false);
+  set_sprite(&player->take_damage_right_sprite, true, false);
+  set_sprite(&player->wreck_left_sprite,        true, false);
+  set_sprite(&player->wreck_right_sprite,       true, false);
 
   {
     player->stats[CHARACTER_STATS_UNDEFINED] = {};
@@ -109,7 +109,7 @@ void player_system_reinit(void) {
 
   player->last_played_animation = &player->idle_left_sprite; // The position player starts. To avoid from the error when move firstly called
   
-  player->starter_ability = ABILITY_TYPE_RADIANCE;
+  player->starter_ability = ABILITY_TYPE_COMET;
   player->is_initialized = true;
 }
 

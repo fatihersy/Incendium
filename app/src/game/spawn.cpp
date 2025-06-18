@@ -126,9 +126,10 @@ bool spawn_character(Character2D _character) {
   for (u32 i=0; i < state->current_spawn_count; ++i) {
     if(CheckCollisionRecs(state->spawns[i].collision, character->collision)) { return false; }
   }
-  if (character->damage_break_time > 128) {
-    TraceLog(LOG_ERROR, "got 'em");
+  if(character->damage_break_time > character->take_damage_left_animation.fps * (f32)TARGET_FPS) {
+    character->damage_break_time = character->take_damage_left_animation.fps * (f32)TARGET_FPS;
   }
+
   state->spawns[state->current_spawn_count] = *character;
   state->current_spawn_count++;
   return true;
@@ -156,7 +157,6 @@ bool update_spawns(Vector2 player_position) {
       remove_spawn(i);
       continue;
     }
-    update_sprite(character->last_played_animation);
 
     if (character->is_dead) { continue; }
 
@@ -195,6 +195,10 @@ bool update_spawns(Vector2 player_position) {
       static_cast<i16>(character->damage),
       static_cast<i16>(COLLISION_TYPE_RECTANGLE_RECTANGLE)
     ));
+
+    if (character->last_played_animation) {
+      update_sprite(character->last_played_animation);
+    }
   }
   return true;
 }
@@ -325,22 +329,22 @@ void register_spawn_animation(Character2D* spawn, spawn_movement_animations move
       switch (spawn->buffer.u16[0]) {
         case SPAWN_TYPE_BROWN: {
           spawn->move_left_animation.sheet_id = SHEET_ID_SPAWN_BROWN_ZOMBIE_ANIMATION_MOVE_LEFT;
-          set_sprite(&spawn->move_left_animation, true, false, false);
+          set_sprite(&spawn->move_left_animation, true, false);
           return;
         }
         case SPAWN_TYPE_ORANGE: {
           spawn->move_left_animation.sheet_id = SHEET_ID_SPAWN_ORANGE_ZOMBIE_ANIMATION_MOVE_LEFT;
-          set_sprite(&spawn->move_left_animation, true, false, false);
+          set_sprite(&spawn->move_left_animation, true, false);
           return;
         }
         case SPAWN_TYPE_YELLOW: {
           spawn->move_left_animation.sheet_id = SHEET_ID_SPAWN_YELLOW_ZOMBIE_ANIMATION_MOVE_LEFT;
-          set_sprite(&spawn->move_left_animation, true, false, false);
+          set_sprite(&spawn->move_left_animation, true, false);
           return;
         } 
         case SPAWN_TYPE_RED: {
           spawn->move_left_animation.sheet_id = SHEET_ID_SPAWN_RED_ZOMBIE_ANIMATION_MOVE_LEFT;
-          set_sprite(&spawn->move_left_animation, true, false, false);
+          set_sprite(&spawn->move_left_animation, true, false);
           return;
         }
         default: {
@@ -354,22 +358,22 @@ void register_spawn_animation(Character2D* spawn, spawn_movement_animations move
       switch (spawn->buffer.u16[0]) {
         case SPAWN_TYPE_BROWN: {
           spawn->move_right_animation.sheet_id = SHEET_ID_SPAWN_BROWN_ZOMBIE_ANIMATION_MOVE_RIGHT;
-          set_sprite(&spawn->move_right_animation, true, false, false);
+          set_sprite(&spawn->move_right_animation, true, false);
           return;
         }
         case SPAWN_TYPE_ORANGE: {
           spawn->move_right_animation.sheet_id = SHEET_ID_SPAWN_ORANGE_ZOMBIE_ANIMATION_MOVE_RIGHT;
-          set_sprite(&spawn->move_right_animation, true, false, false);
+          set_sprite(&spawn->move_right_animation, true, false);
           return;
         }
         case SPAWN_TYPE_YELLOW: {
           spawn->move_right_animation.sheet_id = SHEET_ID_SPAWN_YELLOW_ZOMBIE_ANIMATION_MOVE_RIGHT;
-          set_sprite(&spawn->move_right_animation, true, false, false);
+          set_sprite(&spawn->move_right_animation, true, false);
           return;
         } 
         case SPAWN_TYPE_RED: {
           spawn->move_right_animation.sheet_id = SHEET_ID_SPAWN_RED_ZOMBIE_ANIMATION_MOVE_RIGHT;
-          set_sprite(&spawn->move_right_animation, true, false, false);
+          set_sprite(&spawn->move_right_animation, true, false);
           return;
         }
         default: {
@@ -383,22 +387,22 @@ void register_spawn_animation(Character2D* spawn, spawn_movement_animations move
       switch (spawn->buffer.u16[0]) {
         case SPAWN_TYPE_BROWN: {
           spawn->take_damage_left_animation.sheet_id = SHEET_ID_SPAWN_BROWN_ZOMBIE_ANIMATION_TAKE_DAMAGE_LEFT;
-          set_sprite(&spawn->take_damage_left_animation, true, false, false);
+          set_sprite(&spawn->take_damage_left_animation, true, false);
           return;
         }
         case SPAWN_TYPE_ORANGE: {
           spawn->take_damage_left_animation.sheet_id = SHEET_ID_SPAWN_ORANGE_ZOMBIE_ANIMATION_TAKE_DAMAGE_LEFT;
-          set_sprite(&spawn->take_damage_left_animation, true, false, false);
+          set_sprite(&spawn->take_damage_left_animation, true, false);
           return;
         }
         case SPAWN_TYPE_YELLOW: {
           spawn->take_damage_left_animation.sheet_id = SHEET_ID_SPAWN_YELLOW_ZOMBIE_ANIMATION_TAKE_DAMAGE_LEFT;
-          set_sprite(&spawn->take_damage_left_animation, true, false, false);
+          set_sprite(&spawn->take_damage_left_animation, true, false);
           return;
         }
         case SPAWN_TYPE_RED: {
           spawn->take_damage_left_animation.sheet_id = SHEET_ID_SPAWN_RED_ZOMBIE_ANIMATION_TAKE_DAMAGE_LEFT;
-          set_sprite(&spawn->take_damage_left_animation, true, false, false);
+          set_sprite(&spawn->take_damage_left_animation, true, false);
           return;
         }
         default: {
@@ -412,22 +416,22 @@ void register_spawn_animation(Character2D* spawn, spawn_movement_animations move
       switch (spawn->buffer.u16[0]) {
         case SPAWN_TYPE_BROWN: {
           spawn->take_damage_right_animation.sheet_id = SHEET_ID_SPAWN_BROWN_ZOMBIE_ANIMATION_TAKE_DAMAGE_RIGHT;
-          set_sprite(&spawn->take_damage_right_animation, true, false, false);
+          set_sprite(&spawn->take_damage_right_animation, true, false);
           return;
         }
         case SPAWN_TYPE_ORANGE: {
           spawn->take_damage_right_animation.sheet_id = SHEET_ID_SPAWN_ORANGE_ZOMBIE_ANIMATION_TAKE_DAMAGE_RIGHT;
-          set_sprite(&spawn->take_damage_right_animation, true, false, false);
+          set_sprite(&spawn->take_damage_right_animation, true, false);
           return;
         }
         case SPAWN_TYPE_YELLOW: {
           spawn->take_damage_right_animation.sheet_id = SHEET_ID_SPAWN_YELLOW_ZOMBIE_ANIMATION_TAKE_DAMAGE_RIGHT;
-          set_sprite(&spawn->take_damage_right_animation, true, false, false);
+          set_sprite(&spawn->take_damage_right_animation, true, false);
           return;
         }
         case SPAWN_TYPE_RED: {
           spawn->take_damage_right_animation.sheet_id = SHEET_ID_SPAWN_RED_ZOMBIE_ANIMATION_TAKE_DAMAGE_RIGHT;
-          set_sprite(&spawn->take_damage_right_animation, true, false, false);
+          set_sprite(&spawn->take_damage_right_animation, true, false);
           return;
         }
         default: {

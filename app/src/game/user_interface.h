@@ -206,7 +206,7 @@ void gui_draw_pause_screen(bool in_game_play_state);
 
 // Exposed
 void ui_play_sprite_on_site(spritesheet *sheet, Color _tint, Rectangle dest);
-void ui_set_sprite(spritesheet *sheet, bool _play_looped, bool _play_once, bool _center_sprite);
+void ui_set_sprite(spritesheet *sheet, bool _play_looped, bool _play_once);
 void ui_update_sprite(spritesheet *sheet);
 
 #define gui_label_format(FONT, FONT_SIZE, X,Y, COLOR, CENTER_H, CENTER_V, TEXT, ...) gui_label(TextFormat(TEXT, __VA_ARGS__), FONT, FONT_SIZE, Vector2{X,Y}, COLOR, CENTER_H, CENTER_V)

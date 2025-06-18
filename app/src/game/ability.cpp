@@ -64,49 +64,52 @@ bool ability_system_initialize(camera_metrics* _camera_metrics, app_settings* _s
   state->in_ingame_info = _ingame_info;
 
   std::array<ability_upgradables, ABILITY_UPG_MAX> fireball_upgr = {ABILITY_UPG_DAMAGE, ABILITY_UPG_SPEED, ABILITY_UPG_AMOUNT, ABILITY_UPG_UNDEFINED, ABILITY_UPG_UNDEFINED};
-  register_ability(ability("Fireball",
+  register_ability(ability("Fireball", ABILITY_TYPE_FIREBALL,
     fireball_upgr,
-    ABILITY_TYPE_FIREBALL,SHEET_ID_FLAME_ENERGY_ANIMATION, SHEET_ID_SPRITESHEET_UNSPECIFIED,
     1.f, 1.f, 1, 1, 0.f,
     Vector2{30.f, 30.f}, Rectangle{704, 768, 32, 32},
     15,
     false
   ));
   std::array<ability_upgradables, ABILITY_UPG_MAX> bullet_upgr = {ABILITY_UPG_DAMAGE, ABILITY_UPG_HITBOX, ABILITY_UPG_AMOUNT, ABILITY_UPG_UNDEFINED, ABILITY_UPG_UNDEFINED};
-  register_ability(ability("Bullet",
+  register_ability(ability("Bullet", ABILITY_TYPE_BULLET,
     bullet_upgr,
-    ABILITY_TYPE_BULLET,SHEET_ID_FLAME_ENERGY_ANIMATION, SHEET_ID_SPRITESHEET_UNSPECIFIED,
     1.f, 1.f, 1, 3, 1.75f,
     Vector2{30.f, 30.f}, Rectangle{544, 128, 32, 32},
     15,
     false
   ));
   std::array<ability_upgradables, ABILITY_UPG_MAX> comet_upgr = {ABILITY_UPG_DAMAGE, ABILITY_UPG_HITBOX, ABILITY_UPG_AMOUNT, ABILITY_UPG_UNDEFINED, ABILITY_UPG_UNDEFINED};
-  register_ability(ability("Comet",
+  register_ability(ability("Comet", ABILITY_TYPE_COMET,
     comet_upgr,
-    ABILITY_TYPE_COMET,SHEET_ID_FIREBALL_ANIMATION,SHEET_ID_FIREBALL_EXPLOTION_ANIMATION,
     1.2f, 1.2f, 1, 7, 0.f,
     Vector2{30.f, 30.f}, Rectangle{576, 128, 32, 32},
     15,
-    false,true
+    false
   ));
   std::array<ability_upgradables, ABILITY_UPG_MAX> codex_upgr = {ABILITY_UPG_DAMAGE, ABILITY_UPG_AMOUNT, ABILITY_UPG_UNDEFINED, ABILITY_UPG_UNDEFINED, ABILITY_UPG_UNDEFINED};
-  register_ability(ability("Arcane Codex",
+  register_ability(ability("Arcane Codex", ABILITY_TYPE_CODEX,
     codex_upgr,
-    ABILITY_TYPE_CODEX, SHEET_ID_FLAME_ENERGY_ANIMATION, SHEET_ID_SPRITESHEET_UNSPECIFIED,
     0.8f, 0.8f, 1, 3, 0.f,
     Vector2{30.f, 30.f}, Rectangle{832, 0, 32, 32},
     11,
-    false,true
+    false
   ));
   std::array<ability_upgradables, ABILITY_UPG_MAX> radience_upgr = {ABILITY_UPG_DAMAGE, ABILITY_UPG_HITBOX, ABILITY_UPG_UNDEFINED, ABILITY_UPG_UNDEFINED, ABILITY_UPG_UNDEFINED};
-  register_ability(ability("Radience",
+  register_ability(ability("Radience", ABILITY_TYPE_RADIANCE,
     radience_upgr,
-    ABILITY_TYPE_RADIANCE, SHEET_ID_GENERIC_LIGHT, SHEET_ID_SPRITESHEET_UNSPECIFIED,
     2.2f, 0.8f, 1, 0, 0.f,
     Vector2{128.f, 128.f}, Rectangle{2080, 1240, 32, 32},
     11,
-    false,true
+    false
+  ));
+  std::array<ability_upgradables, ABILITY_UPG_MAX> fire_trail_upgr = {ABILITY_UPG_DAMAGE, ABILITY_UPG_HITBOX, ABILITY_UPG_UNDEFINED, ABILITY_UPG_UNDEFINED, ABILITY_UPG_UNDEFINED};
+  register_ability(ability("Fire Trail", ABILITY_TYPE_FIRETRAIL,
+    fire_trail_upgr,
+    2.2f, 0.8f, 1, 0, 0.f,
+    Vector2{128.f, 128.f}, Rectangle{2080, 1240, 32, 32},
+    11,
+    false
   ));
   return true;
 }
@@ -175,17 +178,12 @@ void render_abilities(ability_play_system* system) {
 }
 void render_projectile(projectile* prj, f32 scale) {
   Vector2 dim = Vector2 {
-    prj->default_animation.current_frame_rect.width  * scale,
-    prj->default_animation.current_frame_rect.height * scale
+    prj->animations.at(prj->active_sprite).current_frame_rect.width  * scale,
+    prj->animations.at(prj->active_sprite).current_frame_rect.height * scale
   };
-  prj->default_animation.origin.x = dim.x / 2.f;
-  prj->default_animation.origin.y = dim.y / 2.f;
-  play_sprite_on_site(__builtin_addressof(prj->default_animation), WHITE, Rectangle { prj->position.x, prj->position.y, dim.x, dim.y });
-  if (prj->play_explosion_animation) {
-    prj->explotion_animation.origin.x = dim.x / 2.f;
-    prj->explotion_animation.origin.y = dim.y / 2.f;
-    play_sprite_on_site(__builtin_addressof(prj->explotion_animation), WHITE, Rectangle { prj->vec_ex.f32[2], prj->vec_ex.f32[3], dim.x, dim.y });
-  }
+  prj->animations.at(prj->active_sprite).origin.x = dim.x / 2.f;
+  prj->animations.at(prj->active_sprite).origin.y = dim.y / 2.f;
+  play_sprite_on_site(__builtin_addressof(prj->animations.at(prj->active_sprite)), WHITE, Rectangle { prj->position.x, prj->position.y, dim.x, dim.y });
 }
 
 void upgrade_ability(ability* abl) {
@@ -255,16 +253,7 @@ void update_fireball(ability* abl) {
       static_cast<i16>(prj.damage + player->damage),
       static_cast<i16>(COLLISION_TYPE_RECTANGLE_RECTANGLE)
     ));
-    update_sprite(&prj.default_animation);
-
-    if (prj.play_explosion_animation) {
-      update_sprite(&prj.explotion_animation);
-
-      if (prj.explotion_animation.current_frame >= prj.explotion_animation.frame_total - 1) {
-        prj.play_explosion_animation = false;
-        reset_sprite(&prj.explotion_animation, true);
-      }
-    }
+    update_sprite(&prj.animations.at(0));
   }
 }
 void update_bullet(ability* abl) {
@@ -302,15 +291,7 @@ void update_bullet(ability* abl) {
       static_cast<i16>(prj.damage + player->damage),
       static_cast<i16>(COLLISION_TYPE_RECTANGLE_RECTANGLE)
     ));
-    update_sprite(&prj.default_animation);
-
-    if (prj.play_explosion_animation) {
-      update_sprite(&prj.explotion_animation);
-      if (prj.explotion_animation.current_frame >= prj.explotion_animation.frame_total - 1) {
-        prj.play_explosion_animation = false;
-        reset_sprite(&prj.explotion_animation, true);
-      }
-    }
+    update_sprite(&prj.animations.at(0));
   }
 }
 void update_comet(ability* abl) {
@@ -328,22 +309,25 @@ void update_comet(ability* abl) {
   for (size_t iter = 0; iter < abl->projectiles.size(); iter++) {
     projectile& prj = abl->projectiles.at(iter);
     if (!prj.is_active) { continue; }
-    if (vec2_equals(prj.position, pVECTOR2(prj.vec_ex.f32), .1)) {
-      prj.vec_ex.f32[2] =  prj.position.x;
-      prj.vec_ex.f32[3] =  prj.position.y;
-      prj.play_explosion_animation = true;
-
-      const f32 rand = get_random(frustum->x, frustum->x + frustum->width);
-      prj.position = VECTOR2(rand, frustum->y - abl->proj_dim.y);
-      Vector2 new_pos = {
-        (f32)get_random(frustum->x + frustum->width  * .1f, frustum->x + frustum->width  - frustum->width  * .1f),
-        (f32)get_random(frustum->y + frustum->height * .2f, frustum->y + frustum->height - frustum->height * .2f)
-      };
-      prj.vec_ex.f32[0] = new_pos.x;
-      prj.vec_ex.f32[1] = new_pos.y;
-      prj.default_animation.rotation = get_movement_rotation(prj.position, pVECTOR2(prj.vec_ex.f32)) + 270.f;
+    if (vec2_equals(prj.position, pVECTOR2(prj.vec_ex.f32), .1) || prj.active_sprite == 1) {
+      prj.active_sprite = 1;
+      if (prj.animations.at(prj.active_sprite).current_frame >= prj.animations.at(prj.active_sprite).fps) {
+        reset_sprite(&prj.animations.at(prj.active_sprite), true);      
+        prj.active_sprite = 0;
+        
+        const f32 rand = get_random(frustum->x, frustum->x + frustum->width);
+        prj.position = VECTOR2(rand, frustum->y - abl->proj_dim.y);
+        Vector2 new_pos = {
+          (f32)get_random(frustum->x + frustum->width  * .1f, frustum->x + frustum->width  - frustum->width  * .1f),
+          (f32)get_random(frustum->y + frustum->height * .2f, frustum->y + frustum->height - frustum->height * .2f)
+        };
+        prj.vec_ex.f32[0] = new_pos.x;
+        prj.vec_ex.f32[1] = new_pos.y;
+        prj.animations.at(prj.active_sprite).rotation = get_movement_rotation(prj.position, pVECTOR2(prj.vec_ex.f32)) + 270.f;
+      }
     }
     else {
+      prj.active_sprite = 0;
       prj.position = move_towards(prj.position, pVECTOR2(prj.vec_ex.f32), abl->proj_speed);
 
       prj.collision.x = prj.position.x - prj.collision.width  * .5f;
@@ -355,15 +339,8 @@ void update_comet(ability* abl) {
       static_cast<i16>(prj.damage + p_player->damage),
       static_cast<i16>(COLLISION_TYPE_RECTANGLE_RECTANGLE)
     ));
-    update_sprite(&prj.default_animation);
-    if (prj.play_explosion_animation) {
-      update_sprite(&prj.explotion_animation);
-
-      if (prj.explotion_animation.current_frame >= prj.explotion_animation.frame_total - 1) {
-        prj.play_explosion_animation = false;
-        reset_sprite(&prj.explotion_animation, true);
-      }
-    }
+    
+    update_sprite(&prj.animations.at(prj.active_sprite));
   }
 }
 void update_codex(ability* abl) {
@@ -413,14 +390,7 @@ void update_codex(ability* abl) {
       static_cast<i16>(prj.damage + p_player->damage),
       static_cast<i16>(COLLISION_TYPE_RECTANGLE_RECTANGLE)
     ));
-    update_sprite(&prj.default_animation);
-    if (prj.play_explosion_animation) {
-      update_sprite(&prj.explotion_animation);
-      if (prj.explotion_animation.current_frame >= prj.explotion_animation.frame_total - 1) {
-        prj.play_explosion_animation = false;
-        reset_sprite(&prj.explotion_animation, true);
-      }
-    }
+    update_sprite(&prj.animations.at(0));
   }
 }
 void update_radience(ability* abl) {
@@ -477,7 +447,7 @@ void update_radience(ability* abl) {
     static_cast<i16>(COLLISION_TYPE_CIRCLE_RECTANGLE)
   ));
 
-  update_sprite(&prj.default_animation);
+  update_sprite(&prj.animations.at(prj.active_sprite));
 }
 
 void render_fireball(ability* abl){
@@ -563,9 +533,9 @@ void refresh_ability_fireball(ability* abl) {
     TraceLog(LOG_WARNING, "ability::refresh_ability_fireball()::Refresh ability function is incorrect. Expected: %d, Recieved:%d", ABILITY_TYPE_FIREBALL, abl->type);
     return;
   }
-
   abl->projectiles.clear();
   abl->projectiles.reserve(abl->proj_count);
+  abl->animation_ids.push_back(SHEET_ID_FLAME_ENERGY_ANIMATION);
 
   for (int i = 0; i < abl->proj_count; ++i) {
     projectile* prj = __builtin_addressof(abl->projectiles.emplace_back());
@@ -573,23 +543,18 @@ void refresh_ability_fireball(ability* abl) {
     prj->damage = abl->base_damage;
     prj->is_active = true;
     prj->duration = abl->proj_duration;
-    if (abl->default_animation_id != SHEET_ID_SPRITESHEET_UNSPECIFIED) {
-      prj->default_animation.sheet_id = abl->default_animation_id;
-      set_sprite(__builtin_addressof(prj->default_animation), true, false, abl->center_proj_anim);
-    }
-    if (abl->explosion_animation_id != SHEET_ID_SPRITESHEET_UNSPECIFIED) {
-      prj->explotion_animation.sheet_id = abl->explosion_animation_id;
-      set_sprite(__builtin_addressof(prj->explotion_animation), false, true, abl->center_proj_anim);
-    }
-    if (abl->centered_origin) {
-      prj->default_animation.origin = VECTOR2(
-        prj->default_animation.coord.width * .5f, 
-        prj->default_animation.coord.height * .5f
-      );
-      prj->explotion_animation.origin = VECTOR2(
-        prj->explotion_animation.coord.width * .5f, 
-        prj->explotion_animation.coord.height * .5f
-      );
+    for (size_t iter = 0; iter < abl->animation_ids.size(); ++iter) {
+      if (abl->animation_ids.at(iter) == SHEET_ID_SPRITESHEET_UNSPECIFIED) {
+        TraceLog(LOG_WARNING, "ability::refresh_ability_fireball()::Ability don't have any sprite");
+        return;
+      }
+      spritesheet spr = {};
+      spr.sheet_id = abl->animation_ids.at(iter);
+      set_sprite(__builtin_addressof(spr), true, false);
+      spr.origin = VECTOR2( spr.coord.width * .5f,  spr.coord.height * .5f );
+
+      prj->animations.push_back(spr);
+      prj->active_sprite = 0;
     }
   }
 }
@@ -609,6 +574,7 @@ void refresh_ability_bullet(ability* abl) {
 
   abl->projectiles.clear();
   abl->projectiles.reserve(abl->proj_count);
+  abl->animation_ids.push_back(SHEET_ID_FLAME_ENERGY_ANIMATION);
 
   for (int i = 0; i < abl->proj_count; ++i) {
     projectile* prj = __builtin_addressof(abl->projectiles.emplace_back());
@@ -616,23 +582,18 @@ void refresh_ability_bullet(ability* abl) {
     prj->damage = abl->base_damage;
     prj->is_active = true;
     prj->duration = abl->proj_duration;
-    if (abl->default_animation_id != SHEET_ID_SPRITESHEET_UNSPECIFIED) {
-      prj->default_animation.sheet_id = abl->default_animation_id;
-      set_sprite(__builtin_addressof(prj->default_animation), true, false, abl->center_proj_anim);
-    }
-    if (abl->explosion_animation_id != SHEET_ID_SPRITESHEET_UNSPECIFIED) {
-      prj->explotion_animation.sheet_id = abl->explosion_animation_id;
-      set_sprite(__builtin_addressof(prj->explotion_animation), false, true, abl->center_proj_anim);
-    }
-    if (abl->centered_origin) {
-      prj->default_animation.origin = VECTOR2(
-        prj->default_animation.coord.width * .5f, 
-        prj->default_animation.coord.height * .5f
-      );
-      prj->explotion_animation.origin = VECTOR2(
-        prj->explotion_animation.coord.width * .5f, 
-        prj->explotion_animation.coord.height * .5f
-      );
+    for (size_t iter = 0; iter < abl->animation_ids.size(); ++iter) {
+      if (abl->animation_ids.at(iter) == SHEET_ID_SPRITESHEET_UNSPECIFIED) {
+        TraceLog(LOG_WARNING, "ability::refresh_ability_fireball()::Ability don't have any sprite");
+        return;
+      }
+      spritesheet spr = {};
+      spr.sheet_id = abl->animation_ids.at(iter);
+      set_sprite(__builtin_addressof(spr), true, false);
+      spr.origin = VECTOR2( spr.coord.width * .5f,  spr.coord.height * .5f );
+
+      prj->animations.push_back(spr); 
+      prj->active_sprite = 0;
     }
   }
 }
@@ -652,6 +613,8 @@ void refresh_ability_comet(ability* abl) {
 
   abl->projectiles.clear();
   abl->projectiles.reserve(abl->proj_count);
+  abl->animation_ids.push_back(SHEET_ID_FIREBALL_ANIMATION);
+  abl->animation_ids.push_back(SHEET_ID_FIREBALL_EXPLOTION_ANIMATION);
 
   for (int i = 0; i < abl->proj_count; ++i) {
     projectile* prj = __builtin_addressof(abl->projectiles.emplace_back());
@@ -659,24 +622,29 @@ void refresh_ability_comet(ability* abl) {
     prj->damage = abl->base_damage;
     prj->is_active = true;
     prj->duration = abl->proj_duration;
-    if (abl->default_animation_id != SHEET_ID_SPRITESHEET_UNSPECIFIED) {
-      prj->default_animation.sheet_id = abl->default_animation_id;
-      set_sprite(__builtin_addressof(prj->default_animation), true, false, abl->center_proj_anim);
+    for (size_t iter = 0; iter < abl->animation_ids.size(); ++iter) {
+      if (abl->animation_ids.at(iter) == SHEET_ID_SPRITESHEET_UNSPECIFIED) {
+        TraceLog(LOG_WARNING, "ability::refresh_ability_fireball()::Ability don't have any sprite");
+        return;
+      }
+      spritesheet spr = {};
+      spr.sheet_id = abl->animation_ids.at(iter);
+      set_sprite(__builtin_addressof(spr), true, false);
+      spr.origin = VECTOR2( spr.coord.width * .5f,  spr.coord.height * .5f );
+
+      prj->animations.push_back(spr); 
     }
-    if (abl->explosion_animation_id != SHEET_ID_SPRITESHEET_UNSPECIFIED) {
-      prj->explotion_animation.sheet_id = abl->explosion_animation_id;
-      set_sprite(__builtin_addressof(prj->explotion_animation), false, true, abl->center_proj_anim);
-    }
-    if (abl->centered_origin) {
-      prj->default_animation.origin = VECTOR2(
-        prj->default_animation.coord.width * .5f, 
-        prj->default_animation.coord.height * .5f
-      );
-      prj->explotion_animation.origin = VECTOR2(
-        prj->explotion_animation.coord.width * .5f, 
-        prj->explotion_animation.coord.height * .5f
-      );
-    }
+    const Rectangle* frustum = __builtin_addressof(state->in_camera_metrics->frustum);
+    const f32 rand = get_random(frustum->x, frustum->x + frustum->width);
+    prj->position = VECTOR2(rand, frustum->y - abl->proj_dim.y);
+    Vector2 new_pos = {
+      (f32)get_random(frustum->x + frustum->width  * .1f, frustum->x + frustum->width  - frustum->width  * .1f),
+      (f32)get_random(frustum->y + frustum->height * .2f, frustum->y + frustum->height - frustum->height * .2f)
+    };
+    prj->vec_ex.f32[0] = new_pos.x;
+    prj->vec_ex.f32[1] = new_pos.y;
+    prj->active_sprite = 0;
+    prj->animations.at(prj->active_sprite).rotation = get_movement_rotation(prj->position, pVECTOR2(prj->vec_ex.f32)) + 270.f;
   }
 }
 void refresh_ability_codex(ability* abl) { 
@@ -695,6 +663,7 @@ void refresh_ability_codex(ability* abl) {
 
   abl->projectiles.clear();
   abl->projectiles.reserve(abl->proj_count);
+  abl->animation_ids.push_back(SHEET_ID_FLAME_ENERGY_ANIMATION);
 
   for (int i = 0; i < abl->proj_count; ++i) {
     projectile* prj = __builtin_addressof(abl->projectiles.emplace_back());
@@ -702,23 +671,18 @@ void refresh_ability_codex(ability* abl) {
     prj->damage = abl->base_damage;
     prj->is_active = true;
     prj->duration = abl->proj_duration;
-    if (abl->default_animation_id != SHEET_ID_SPRITESHEET_UNSPECIFIED) {
-      prj->default_animation.sheet_id = abl->default_animation_id;
-      set_sprite(__builtin_addressof(prj->default_animation), true, false, abl->center_proj_anim);
-    }
-    if (abl->explosion_animation_id != SHEET_ID_SPRITESHEET_UNSPECIFIED) {
-      prj->explotion_animation.sheet_id = abl->explosion_animation_id;
-      set_sprite(__builtin_addressof(prj->explotion_animation), false, true, abl->center_proj_anim);
-    }
-    if (abl->centered_origin) {
-      prj->default_animation.origin = VECTOR2(
-        prj->default_animation.coord.width * .5f, 
-        prj->default_animation.coord.height * .5f
-      );
-      prj->explotion_animation.origin = VECTOR2(
-        prj->explotion_animation.coord.width * .5f, 
-        prj->explotion_animation.coord.height * .5f
-      );
+    for (size_t iter = 0; iter < abl->animation_ids.size(); ++iter) {
+      if (abl->animation_ids.at(iter) == SHEET_ID_SPRITESHEET_UNSPECIFIED) {
+        TraceLog(LOG_WARNING, "ability::refresh_ability_fireball()::Ability don't have any sprite");
+        return;
+      }
+      spritesheet spr = {};
+      spr.sheet_id = abl->animation_ids.at(iter);
+      set_sprite(__builtin_addressof(spr), true, false);
+      spr.origin = VECTOR2( spr.coord.width * .5f,  spr.coord.height * .5f );
+
+      prj->animations.push_back(spr);
+      prj->active_sprite = 0;
     }
   }
 }
@@ -738,33 +702,30 @@ void refresh_ability_radience(ability* abl) {
 
   abl->projectiles.clear();
   abl->projectiles.reserve(abl->proj_count);
+  abl->animation_ids.push_back(SHEET_ID_GENERIC_LIGHT);
+
   {
     projectile* prj = __builtin_addressof(abl->projectiles.emplace_back());
     prj->collision = Rectangle {0.f, 0.f, abl->proj_dim.x * abl->proj_collision_scale, abl->proj_dim.y * abl->proj_collision_scale};
     prj->damage = abl->base_damage;
     prj->is_active = true;
     prj->duration = abl->proj_duration;
-    if (abl->default_animation_id != SHEET_ID_SPRITESHEET_UNSPECIFIED) {
-      prj->default_animation.sheet_id = abl->default_animation_id;
-      set_sprite(__builtin_addressof(prj->default_animation), true, false, abl->center_proj_anim);
-    }
-    if (abl->explosion_animation_id != SHEET_ID_SPRITESHEET_UNSPECIFIED) {
-      prj->explotion_animation.sheet_id = abl->explosion_animation_id;
-      set_sprite(__builtin_addressof(prj->explotion_animation), false, true, abl->center_proj_anim);
-    }
-    if (abl->centered_origin) {
-      prj->default_animation.origin = VECTOR2(
-        prj->default_animation.coord.width * .5f, 
-        prj->default_animation.coord.height * .5f
-      );
-      prj->explotion_animation.origin = VECTOR2(
-        prj->explotion_animation.coord.width * .5f, 
-        prj->explotion_animation.coord.height * .5f
-      );
+    for (size_t iter = 0; iter < abl->animation_ids.size(); ++iter) {
+      if (abl->animation_ids.at(iter) == SHEET_ID_SPRITESHEET_UNSPECIFIED) {
+        TraceLog(LOG_WARNING, "ability::refresh_ability_fireball()::Ability don't have any sprite");
+        return;
+      }
+      spritesheet spr = {};
+      spr.sheet_id = abl->animation_ids.at(iter);
+      set_sprite(__builtin_addressof(spr), true, false);
+      spr.origin = VECTOR2( spr.coord.width * .5f,  spr.coord.height * .5f );
+
+      prj->animations.push_back(spr); 
     }
   }
 
   projectile& prj = abl->projectiles.at(0);
+  prj.active_sprite = 0;
 
   u16& circle_inner_radius_base = prj.mm_ex.u16[0];
   u16& circle_outer_radius_base = prj.mm_ex.u16[1];

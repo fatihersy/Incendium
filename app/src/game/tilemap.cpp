@@ -314,7 +314,7 @@ void str_to_map(tilemap* map, tilemap_stringtify_package* out_package) {
       tilemap_prop_sprite prop = {};
       prop.id = TextToInteger(str_par_prop_member.buffer.at(0).c_str());
       prop.sprite.sheet_id = static_cast<spritesheet_id>(TextToInteger(str_par_prop_member.buffer.at(1).c_str()));
-      set_sprite(&prop.sprite, true, false, true);
+      set_sprite(&prop.sprite, true, false);
       prop.prop_type = type;
       prop.sprite.rotation  = TextToFloat(str_par_prop_member.buffer.at(3).c_str());
       prop.scale            = TextToFloat(str_par_prop_member.buffer.at(4).c_str());

@@ -63,17 +63,12 @@ void render_sprite(spritesheet *sheet, Color _tint, Rectangle dest) {
       WHITE);
   #endif
 }
-void set_sprite(spritesheet *sheet, bool _play_looped, bool _play_once, bool _center_sprite) {
+void set_sprite(spritesheet *sheet, bool _play_looped, bool _play_once) {
   if (!sheet || sheet->sheet_id >= SHEET_ID_SPRITESHEET_TYPE_MAX || sheet->sheet_id <= SHEET_ID_SPRITESHEET_UNSPECIFIED) {
     TraceLog(LOG_ERROR, "spritesheet::register_sprite()::Sheet is not valid");
     return;
   }
   *sheet = *get_spritesheet_by_enum(sheet->sheet_id);
-
-  if (_center_sprite) {
-    sheet->coord.x -= sheet->coord.width / 2.f;
-    sheet->coord.y -= sheet->coord.height / 2.f;
-  }
   
   sheet->play_looped = _play_looped;
   sheet->play_once = _play_once;
