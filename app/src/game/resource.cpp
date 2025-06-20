@@ -3,18 +3,11 @@
 #include <core/fmemory.h>
 
 typedef struct resource_system_state {
-  u16 texture_amouth;
-  u16 sprite_amouth;
-  u16 image_amouth;
-  u16 tilesheet_amouth;
-
-  Texture2D textures[TEX_ID_MAX];
-  atlas_texture atlas_textures[ATLAS_TEX_ID_MAX];
-  spritesheet sprites[SHEET_ID_SPRITESHEET_TYPE_MAX];
-  Image images[IMAGE_TYPE_MAX];
-  tilesheet tilesheets[TILESHEET_TYPE_MAX];
-
-  scene_id game_on_scene;
+  std::array<Texture2D, TEX_ID_MAX> textures;
+  std::array<atlas_texture, ATLAS_TEX_ID_MAX> atlas_textures;
+  std::array<spritesheet, SHEET_ID_SPRITESHEET_TYPE_MAX> sprites;
+  std::array<Image, IMAGE_TYPE_MAX> images;
+  std::array<tilesheet, TILESHEET_TYPE_MAX> tilesheets;
 } resource_system_state;
 
 static resource_system_state *state;
@@ -35,8 +28,8 @@ bool resource_system_initialize(void) {
   }
 
   // NOTE: resource files inside the pak file
-  load_texture("atlas.png", false, Vector2{}, TEX_ID_ASSET_ATLAS);
-  load_texture("worldmap_wo_clouds.png",       false, Vector2{}, TEX_ID_WORLDMAP_WO_CLOUDS);
+  load_texture("atlas.png", false, VECTOR2(0.f, 0.f), TEX_ID_ASSET_ATLAS);
+  load_texture("worldmap_wo_clouds.png",       false, VECTOR2(0.f, 0.f), TEX_ID_WORLDMAP_WO_CLOUDS);
 
   load_texture_from_atlas(ATLAS_TEX_ID_MAP_TILESET_TEXTURE,        Rectangle{   0,   0,  1568, 2016});
   load_texture_from_atlas(ATLAS_TEX_ID_PROGRESS_BAR_OUTSIDE_FULL,  Rectangle{1568, 112,    48,    4});
@@ -46,7 +39,6 @@ bool resource_system_initialize(void) {
   load_texture_from_atlas(ATLAS_TEX_ID_DARK_FANTASY_PANEL,         Rectangle{1728,   0,    80,   64});
   load_texture_from_atlas(ATLAS_TEX_ID_DARK_FANTASY_PANEL_SELECTED,Rectangle{1808,   0,    80,   64});
   load_texture_from_atlas(ATLAS_TEX_ID_DARK_FANTASY_PANEL_BG,      Rectangle{1888,   0,    48,   44});
-  load_texture_from_atlas(ATLAS_TEX_ID_ICON_ATLAS,                 Rectangle{1568, 608,  1024, 1024});
   load_texture_from_atlas(ATLAS_TEX_ID_BG_BLACK,                   Rectangle{1680,  32,    48,   48});
   load_texture_from_atlas(ATLAS_TEX_ID_ZOMBIES_SPRITESHEET,        Rectangle{2224,   0,   256,  480});
   load_texture_from_atlas(ATLAS_TEX_ID_CRIMSON_FANTASY_SHOWCASE,   Rectangle{1568,1088,    68,   68});
@@ -83,15 +75,18 @@ bool resource_system_initialize(void) {
   load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_SPAWN_RED_ZOMBIE_ANIMATION_TAKE_DAMAGE_LEFT,     VECTOR2(1776, 296), 15,   32,  40, 1,  4);
   load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_SPAWN_RED_ZOMBIE_ANIMATION_TAKE_DAMAGE_RIGHT,    VECTOR2(1936, 296), 15,   32,  40, 1,  4);
 
-  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_SLIDER_OPTION,                      VECTOR2(1632,  32),  0,   16,  10, 1,  2);
-  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_SLIDER_LEFT_BUTTON,                 VECTOR2(1600,  32),  0,   12,  12, 1,  2);
-  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_SLIDER_RIGHT_BUTTON,                VECTOR2(1600,  44),  0,   12,  12, 1,  2);
-  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_MENU_BUTTON,                        VECTOR2(1504,   0),  0,   88,  13, 1,  2);
-  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_FLAT_BUTTON,                        VECTOR2(1504,  16),  0,   88,  13, 1,  2);
-  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_SLIDER_PERCENT,                     VECTOR2(1600,  64),  0,    9,   9, 1,  2);
-  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_FLAME_ENERGY_ANIMATION,             VECTOR2(1584, 352), 13,   48,  48, 1, 18);
-  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_FIREBALL_ANIMATION,                 VECTOR2(1584, 400), 10,   64,  64, 1,  6);
-  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_FIREBALL_EXPLOTION_ANIMATION,       VECTOR2(1584, 464),  6,   64,  64, 1,  7);
+  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_SLIDER_OPTION,                      VECTOR2(1632,  32),  0,  16,  10, 1,  2);
+  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_SLIDER_LEFT_BUTTON,                 VECTOR2(1600,  32),  0,  12,  12, 1,  2);
+  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_SLIDER_RIGHT_BUTTON,                VECTOR2(1600,  44),  0,  12,  12, 1,  2);
+  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_MENU_BUTTON,                        VECTOR2(1504,   0),  0,  88,  13, 1,  2);
+  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_FLAT_BUTTON,                        VECTOR2(1504,  16),  0,  88,  13, 1,  2);
+  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_SLIDER_PERCENT,                     VECTOR2(1600,  64),  0,   9,   9, 1,  2);
+  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_FLAME_ENERGY_ANIMATION,             VECTOR2(1584, 352), 13,  48,  48, 1, 18);
+  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_FIREBALL_ANIMATION,                 VECTOR2(1584, 400), 10,  64,  64, 1,  6);
+  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_FIREBALL_EXPLOTION_ANIMATION,       VECTOR2(1584, 464),  6,  64,  64, 1,  7);
+  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_ABILITY_FIRETRAIL_START_ANIMATION,  VECTOR2(1584, 528), 15,  24,  32, 1,  4);
+  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_ABILITY_FIRETRAIL_LOOP_ANIMATION,   VECTOR2(1584, 560), 10,  24,  32, 1,  8);
+  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_ABILITY_FIRETRAIL_END_ANIMATION,    VECTOR2(1680, 528), 15,  24,  32, 1,  5);
 
   load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_ENVIRONMENTAL_PARTICLES, VECTOR2( 576, 3456), 5, 160,  96, 1, 12);
   load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_LIGHT_INSECTS,           VECTOR2(1248, 2400), 5,  58,  71, 1, 12);
@@ -108,7 +103,7 @@ atlas_texture* get_atlas_texture_by_enum(atlas_texture_id _id) {
     return nullptr;
   }
 
-  return &state->atlas_textures[_id];
+  return __builtin_addressof(state->atlas_textures.at(_id));
 }
 Texture2D* get_texture_by_enum(texture_id _id) {
   if (_id >= TEX_ID_MAX || _id <= TEX_ID_UNSPECIFIED){
@@ -116,7 +111,7 @@ Texture2D* get_texture_by_enum(texture_id _id) {
     return nullptr;
   }
 
-  return &state->textures[_id];
+  return __builtin_addressof(state->textures.at(_id));
 }
 Image* get_image_by_enum(image_type type) {
   if (type >= IMAGE_TYPE_MAX || type <= IMAGE_TYPE_UNSPECIFIED){
@@ -124,14 +119,14 @@ Image* get_image_by_enum(image_type type) {
     return nullptr;
   }
 
-  return &state->images[type];
+  return __builtin_addressof(state->images.at(type));
 }
 spritesheet* get_spritesheet_by_enum(spritesheet_id type) {
   if (type >= SHEET_ID_SPRITESHEET_TYPE_MAX || type <= SHEET_ID_SPRITESHEET_UNSPECIFIED){
     TraceLog(LOG_WARNING, "resource::get_spritesheet_by_enum()::Spritesheet type out of bound");
     return nullptr;
   }
-  return &state->sprites[type];
+  return __builtin_addressof(state->sprites.at(type));
 }
 tilesheet* get_tilesheet_by_enum(tilesheet_type type) {
   if (type >= TILESHEET_TYPE_MAX || type <= TILESHEET_TYPE_UNSPECIFIED){
@@ -139,7 +134,7 @@ tilesheet* get_tilesheet_by_enum(tilesheet_type type) {
     return nullptr;
   }
 
-  return &state->tilesheets[type];
+  return __builtin_addressof(state->tilesheets.at(type));
 }
 const char *rs_path(const char *filename) {
   return TextFormat("%s%s", RESOURCE_PATH, filename);
@@ -179,9 +174,8 @@ unsigned int load_texture(const char *filename, bool resize, Vector2 new_size, t
     }
   #endif
 
-  state->texture_amouth++;
-  state->textures[_id] = tex;
-  return state->textures[_id].id;
+  state->textures.at(_id) = tex;
+  return state->textures.at(_id).id;
 }
 bool load_image(const char *filename, bool resize, Vector2 new_size, image_type type) {
   if (type >= IMAGE_TYPE_MAX || type <= IMAGE_TYPE_UNSPECIFIED) { 
@@ -208,8 +202,7 @@ bool load_image(const char *filename, bool resize, Vector2 new_size, image_type 
     }
   #endif
 
-  state->image_amouth++;
-  state->images[type] = img;
+  state->images.at(type) = img;
   return true;
 }
 void load_spritesheet(texture_id _source_tex, spritesheet_id handle_id, Vector2 offset, u16 _fps, u16 _frame_width, u16 _frame_height, u16 _total_row, u16 _total_col) {
@@ -223,7 +216,7 @@ void load_spritesheet(texture_id _source_tex, spritesheet_id handle_id, Vector2 
 
   _sheet.sheet_id = handle_id;
   _sheet.tex_id = _source_tex;
-  _sheet.tex_handle = &state->textures[_source_tex];
+  _sheet.tex_handle = __builtin_addressof(state->textures.at(_source_tex));
   _sheet.offset = offset;
   _sheet.is_started = false;
   _sheet.row_total = _total_row;
@@ -239,8 +232,7 @@ void load_spritesheet(texture_id _source_tex, spritesheet_id handle_id, Vector2 
       .x = 0.f, .y = 0.f, .width = (f32)  _frame_width, .height = (f32) _frame_height};
   _sheet.fps = _fps;
 
-  state->sprite_amouth++;
-  state->sprites[handle_id] = _sheet;
+  state->sprites.at(handle_id) = _sheet;
 }
 void load_tilesheet(tilesheet_type sheet_id, atlas_texture_id _atlas_tex_id, u16 _tile_count_x, u16 _tile_count_y, u16 _tile_size) {
   if ((i32)sheet_id >= TILESHEET_TYPE_MAX || sheet_id <= TILESHEET_TYPE_UNSPECIFIED) {
@@ -250,11 +242,11 @@ void load_tilesheet(tilesheet_type sheet_id, atlas_texture_id _atlas_tex_id, u16
   if (_atlas_tex_id >= ATLAS_TEX_ID_MAX || _atlas_tex_id <= ATLAS_TEX_ID_UNSPECIFIED) {
     TraceLog(LOG_ERROR,"resource::load_tilesheet()::texture type out of bound");
   }
-  tilesheet* _tilesheet = &state->tilesheets[sheet_id];
+  tilesheet* _tilesheet = __builtin_addressof(state->tilesheets.at(sheet_id));
 
-  _tilesheet->atlas_source = state->atlas_textures[_atlas_tex_id];
+  _tilesheet->atlas_source = state->atlas_textures.at(_atlas_tex_id);
   _tilesheet->sheet_id = sheet_id;
-  _tilesheet->atlas_handle = &state->textures[ATLAS_TEXTURE_ID];
+  _tilesheet->atlas_handle = &state->textures.at(ATLAS_TEXTURE_ID);
   _tilesheet->tile_count_x = _tile_count_x;
   _tilesheet->tile_count_y = _tile_count_y;
   _tilesheet->tile_count = _tilesheet->tile_count_x * _tilesheet->tile_count_y;
@@ -268,8 +260,6 @@ void load_tilesheet(tilesheet_type sheet_id, atlas_texture_id _atlas_tex_id, u16
 
     _tilesheet->tile_symbols[x][y] = tile_symbol { x_symbol, y_symbol };
   }
-
-  state->tilesheet_amouth++;
 }
 void load_texture_from_atlas(atlas_texture_id _id, Rectangle texture_area) {
   if (_id >= ATLAS_TEX_ID_MAX || _id <= ATLAS_TEX_ID_UNSPECIFIED) { 
@@ -278,8 +268,8 @@ void load_texture_from_atlas(atlas_texture_id _id, Rectangle texture_area) {
   }
   atlas_texture tex = {};
   tex.source = texture_area;
-  tex.atlas_handle = &state->textures[ATLAS_TEXTURE_ID];
+  tex.atlas_handle = __builtin_addressof(state->textures.at(ATLAS_TEXTURE_ID));
 
-  state->atlas_textures[_id] = tex;
+  state->atlas_textures.at(_id) = tex;
   return;
 }

@@ -66,11 +66,11 @@ static user_interface_system_state * state;
 #define DEFAULT_SLIDER_FONT_SIZE 32
 #define DEFAULT_PERCENT_SLIDER_CIRCLE_AMOUTH 10
 
-#define draw_text(TEXT, TEXT_POS, FONT, FONT_SIZE, COLOR, CENTER_HORIZONTAL, CENTER_VERTICAL, USE_GRID_POS, GRID_SCALE) {\
+#define DRAW_TEXT(TEXT, POSITION, FONT, FONT_SIZE, COLOR, CENTER_HORIZONTAL, CENTER_VERTICAL, USE_GRID_ALIGN, GRID_COORD) {\
   Vector2 text_measure = MeasureTextEx(FONT, TEXT, FONT_SIZE, UI_FONT_SPACING);                                   \
-  Vector2 text_position = TEXT_POS;                                                                               \
-  if (USE_GRID_POS) {                                                                                             \
-    text_position = position_element(text_position, BASE_RENDER_SCALE(.5f), text_measure, GRID_SCALE);            \
+  Vector2 text_position = POSITION;                                                                               \
+  if (USE_GRID_ALIGN) {                                                                                             \
+    text_position = position_element_by_grid(text_position, GRID_COORD, SCREEN_OFFSET);                                \
   }                                                                                                               \
   if (CENTER_HORIZONTAL) {                                                                                        \
     text_position.x -= (text_measure.x / 2.f);                                                                    \
@@ -455,17 +455,19 @@ void render_user_interface(void) {
     return;
   }
 }
-bool gui_menu_button(const char* text, button_id _id, Vector2 grid, f32 grid_scale, bool play_on_click_sound) {
+bool gui_menu_button(const char* text, button_id _id, Vector2 grid, Vector2 grid_location, bool play_on_click_sound) {
+  grid_location.x -= state->buttons.at(_id).btn_type.dest_frame_dim.x * .5f;
+  grid_location.y -= state->buttons.at(_id).btn_type.dest_frame_dim.y * .5f;
   return gui_button(text, _id,
     MENU_BUTTON_FONT, MENU_BUTTON_FONT_SIZE,
-    position_element(grid, BASE_RENDER_SCALE(.5f), state->buttons[_id].btn_type.dest_frame_dim, grid_scale),
+    position_element_by_grid(grid_location, grid, SCREEN_OFFSET),
     play_on_click_sound
   );
 }
-bool gui_mini_button(const char* text, button_id _id, Vector2 grid, f32 grid_scale, bool play_on_click_sound) {
+bool gui_mini_button(const char* text, button_id _id, Vector2 grid, bool play_on_click_sound) {
   return gui_button(text, _id, 
     MINI_BUTTON_FONT, MINI_BUTTON_FONT_SIZE, 
-    position_element(grid, BASE_RENDER_SCALE(.5f), state->buttons[_id].btn_type.dest_frame_dim, grid_scale),
+    position_element_by_grid(BASE_RENDER_SCALE(.5f), grid, SCREEN_OFFSET),
     play_on_click_sound
   );
 }
@@ -504,21 +506,21 @@ bool gui_button(const char* text, button_id _id, Font font, f32 font_size_scale,
   if (_btn->state == BTN_STATE_PRESSED) {
     draw_sprite_on_site_by_id(_btn->btn_type.ss_type, WHITE, VECTOR2(_btn->dest.x,_btn->dest.y), draw_sprite_scale, 0);
     if (!TextIsEqual(text, "")) {
-      draw_text(text, text_pos, font, font.baseSize * font_size_scale, BUTTON_TEXT_PRESSED_COLOR, false, false, false, 0.f);
+      DRAW_TEXT(text, text_pos, font, font.baseSize * font_size_scale, BUTTON_TEXT_PRESSED_COLOR, false, false, false, VECTOR2(0.f, 0.f));
     }
     if (play_on_click_sound) event_fire(EVENT_CODE_PLAY_BUTTON_ON_CLICK, event_context((u16)true));
   } else {
     if (_btn->state == BTN_STATE_HOVER) {
       draw_sprite_on_site_by_id(_btn->btn_type.ss_type, WHITE, VECTOR2(_btn->dest.x,_btn->dest.y), draw_sprite_scale, 1);
       if (!TextIsEqual(text, "")) {
-        draw_text(text, text_pos, font, font.baseSize * font_size_scale, BUTTON_TEXT_HOVER_COLOR, false, false, false, 0.f);
+        DRAW_TEXT(text, text_pos, font, font.baseSize * font_size_scale, BUTTON_TEXT_HOVER_COLOR, false, false, false, VECTOR2(0.f, 0.f));
       }
       event_fire(EVENT_CODE_RESET_SOUND, event_context((i32)SOUND_ID_BUTTON_ON_CLICK));
     }
     else {
       draw_sprite_on_site_by_id(_btn->btn_type.ss_type, WHITE, VECTOR2(_btn->dest.x,_btn->dest.y), draw_sprite_scale, 0);
       if (_btn->state != BTN_STATE_HOVER) {
-        draw_text(text, text_pos, font, font.baseSize * font_size_scale, BUTTON_TEXT_UP_COLOR, false, false, false, 0.f);
+        DRAW_TEXT(text, text_pos, font, font.baseSize * font_size_scale, BUTTON_TEXT_UP_COLOR, false, false, false, VECTOR2(0.f, 0.f));
       }
     }
   }
@@ -609,19 +611,22 @@ void draw_atlas_texture_stretch(atlas_texture_id body, Vector2 pos, Vector2 scal
   gui_draw_atlas_texture_id_pro(body, third_source, third_dest, true, false);
 }
 
-void gui_slider(slider_id _id, Vector2 pos, Vector2 grid, f32 grid_scale) {
+void gui_slider(slider_id _id, Vector2 pos, Vector2 grid) {
   if (_id >= SDR_ID_MAX || _id <= SDR_ID_UNDEFINED || !state) {
     TraceLog(LOG_WARNING, "user_interface::gui_slider()::One of recieved ids was out of bound");
     return;
   }
-  slider* sdr = &state->sliders[_id];
+  slider* sdr = __builtin_addressof(state->sliders.at(_id));
   if (!sdr) {
     TraceLog(LOG_WARNING, "user_interface::gui_slider()::Slider %d returned NULL", _id);
     return;
   }
-  slider_type* sdr_type = &sdr->sdr_type;
+  slider_type* sdr_type = __builtin_addressof(sdr->sdr_type);
 
-  sdr->position = position_element(grid, pos, sdr_type->dest_frame_dim, grid_scale);
+  pos.x -= sdr_type->dest_frame_dim.x * .5f;
+  pos.y -= sdr_type->dest_frame_dim.y * .5f;
+
+  sdr->position = position_element_by_grid(pos, grid, SCREEN_OFFSET);
   if (!sdr->is_registered || (sdr_type->id == SDR_TYPE_OPTION && sdr->max_value <= 0)) return;
  
   Vector2 btn_left_dest = Vector2 { 
@@ -698,7 +703,7 @@ void draw_slider_body(slider* sdr) {
         sdr->position.x + total_body_width/2.f - text_measure.x / 2.f,
         sdr->position.y + sdr_type.dest_frame_dim.y/2.f - text_measure.y / 2.f
       };
-      draw_text(text.c_str(), text_pos, UI_BOLD_FONT, DEFAULT_SLIDER_FONT_SIZE, BUTTON_TEXT_UP_COLOR, false, false, false, 0.f);
+      DRAW_TEXT(text.c_str(), text_pos, UI_BOLD_FONT, DEFAULT_SLIDER_FONT_SIZE, BUTTON_TEXT_UP_COLOR, false, false, false, VECTOR2(0.f, 0.f));
       break;
     }
     case SDR_TYPE_NUMBER: {
@@ -720,7 +725,7 @@ void draw_slider_body(slider* sdr) {
         sdr->position.x + total_body_width/2.f - text_measure.x / 2.f,
         sdr->position.y + sdr_type.dest_frame_dim.y/2.f - text_measure.y / 2.f
       };
-      draw_text(text.c_str(), text_pos, UI_BOLD_FONT, DEFAULT_SLIDER_FONT_SIZE, BUTTON_TEXT_UP_COLOR, false, false, false, 0.f);
+      DRAW_TEXT(text.c_str(), text_pos, UI_BOLD_FONT, DEFAULT_SLIDER_FONT_SIZE, BUTTON_TEXT_UP_COLOR, false, false, false, VECTOR2(0.f, 0.f));
       break;
     }
     default: TraceLog(LOG_WARNING, "user_interface::render_slider_body()::Unsupported slider type");
@@ -772,19 +777,19 @@ bool gui_panel_active(panel* pan, Rectangle dest, bool _should_center) {
 void gui_label(const char* text, font_type type, i32 font_size, Vector2 position, Color tint, bool _center_h, bool _center_v) {
   switch (type) {
     case FONT_TYPE_MEDIUM: {
-      draw_text(text, position, UI_MEDIUM_FONT, font_size * UI_MEDIUM_FONT_SIZE, tint, _center_h, _center_v, false, 0.f);
+      DRAW_TEXT(text, position, UI_MEDIUM_FONT, font_size * UI_MEDIUM_FONT_SIZE, tint, _center_h, _center_v, false, VECTOR2(0.f, 0.f));
       break;
     }
     case FONT_TYPE_BOLD: {
-      draw_text(text, position, UI_BOLD_FONT, font_size * UI_BOLD_FONT_SIZE, tint, _center_h, _center_v, false, 0.f);
+      DRAW_TEXT(text, position, UI_BOLD_FONT, font_size * UI_BOLD_FONT_SIZE, tint, _center_h, _center_v, false, VECTOR2(0.f, 0.f));
       break;
     }
     case FONT_TYPE_LIGHT: {
-      draw_text(text, position, UI_LIGHT_FONT, font_size * UI_LIGHT_FONT_SIZE, tint, _center_h, _center_v, false, 0.f);
+      DRAW_TEXT(text, position, UI_LIGHT_FONT, font_size * UI_LIGHT_FONT_SIZE, tint, _center_h, _center_v, false, VECTOR2(0.f, 0.f));
       break;
     }
     case FONT_TYPE_ITALIC: {
-      draw_text(text, position, UI_ITALIC_FONT, font_size * UI_ITALIC_FONT_SIZE, tint, _center_h, _center_v, false, 0.f);
+      DRAW_TEXT(text, position, UI_ITALIC_FONT, font_size * UI_ITALIC_FONT_SIZE, tint, _center_h, _center_v, false, VECTOR2(0.f, 0.f));
       break;
     }
     default: TraceLog(LOG_WARNING, "user_interface::gui_label()::Unsupported font type");
@@ -817,30 +822,32 @@ void gui_label_wrap(const char* text, font_type type, i32 font_size, Rectangle p
     break;
   }
 }
-void gui_label_grid(const char* text, font_type type, i32 font_size, Vector2 position, Color tint, bool _center_h, bool _center_v, f32 grid_scale) {
+void gui_label_grid(const char* text, font_type type, i32 font_size, Vector2 position, Color tint, bool _center_h, bool _center_v, Vector2 grid_coord) {
+
+
   switch (type) {
     case FONT_TYPE_MEDIUM: {
-      draw_text(text, position, UI_MEDIUM_FONT, font_size * UI_MEDIUM_FONT_SIZE, tint, _center_h, _center_v, true, grid_scale);
+      DRAW_TEXT(text, position, UI_MEDIUM_FONT, font_size * UI_MEDIUM_FONT_SIZE, tint, _center_h, _center_v, true, grid_coord);
       break;
     }
     case FONT_TYPE_BOLD: {
-      draw_text(text, position, UI_BOLD_FONT, font_size * UI_BOLD_FONT_SIZE, tint, _center_h, _center_v, true, grid_scale);
+      DRAW_TEXT(text, position, UI_BOLD_FONT, font_size * UI_BOLD_FONT_SIZE, tint, _center_h, _center_v, true, grid_coord);
       break;
     }
     case FONT_TYPE_LIGHT: {
-      draw_text(text, position, UI_LIGHT_FONT, font_size * UI_LIGHT_FONT_SIZE, tint, _center_h, _center_v, true, grid_scale);
+      DRAW_TEXT(text, position, UI_LIGHT_FONT, font_size * UI_LIGHT_FONT_SIZE, tint, _center_h, _center_v, true, grid_coord);
       break;
     }
     case FONT_TYPE_ITALIC: {
-      draw_text(text, position, UI_ITALIC_FONT, font_size * UI_ITALIC_FONT_SIZE, tint, _center_h, _center_v, true, grid_scale);
+      DRAW_TEXT(text, position, UI_ITALIC_FONT, font_size * UI_ITALIC_FONT_SIZE, tint, _center_h, _center_v, true, grid_coord);
       break;
     }
     default: TraceLog(LOG_WARNING, "user_interface::gui_label()::Unsupported font type");
     break;
   }
 }
-void gui_label_wrap_grid(const char* text, font_type type, i32 font_size, Rectangle position, Color tint, bool _should_center, f32 grid_scale) {
-  Vector2 _position = position_element(VECTOR2(position.x, position.y), BASE_RENDER_SCALE(.5f), VECTOR2(position.width, position.height), grid_scale);
+void gui_label_wrap_grid(const char* text, font_type type, i32 font_size, Rectangle position, Color tint, bool _should_center, Vector2 grid_pos) {
+  Vector2 _position = position_element_by_grid(grid_pos, VECTOR2(position.x, position.y), SCREEN_OFFSET);
   position.x = _position.x;
   position.y = _position.y;
 
@@ -873,16 +880,23 @@ void gui_label_wrap_grid(const char* text, font_type type, i32 font_size, Rectan
 
 
 void gui_draw_settings_screen(void) { // TODO: Return to settings later
+  Rectangle settings_bg_pnl_dest = Rectangle{ BASE_RENDER_SCALE(.025f).x, BASE_RENDER_SCALE(.075f).y, BASE_RENDER_SCALE(.950f).x, BASE_RENDER_SCALE(.850f).y};
+  Rectangle header_loc = {0, 0, BASE_RENDER_RES.x, BASE_RENDER_SCALE(.1f).y};
+  Rectangle footer_loc = {0, BASE_RENDER_RES.y - BASE_RENDER_SCALE(.1f).y, BASE_RENDER_RES.x, BASE_RENDER_SCALE(.1f).y};
+  DrawRectangleRec(header_loc, Color{0, 0, 0, 50});
+  DrawRectangleRec(footer_loc, Color{0, 0, 0, 50});
 
-  gui_slider(SDR_ID_SETTINGS_SOUND_SLIDER, BASE_RENDER_SCALE(.5f), VECTOR2(0,0), 3.f);
+  gui_panel(panel(), settings_bg_pnl_dest, false);
 
-  gui_slider(SDR_ID_SETTINGS_RES_SLIDER, BASE_RENDER_SCALE(.5f), VECTOR2(0,4), 3.f);
+  gui_slider(SDR_ID_SETTINGS_SOUND_SLIDER, BASE_RENDER_SCALE(.5f), VECTOR2(0.f,-20.f));
 
-  gui_slider(SDR_ID_SETTINGS_WIN_MODE_SLIDER, BASE_RENDER_SCALE(.5f), VECTOR2(0,8), 3.f);
+  gui_slider(SDR_ID_SETTINGS_RES_SLIDER, BASE_RENDER_SCALE(.5f), VECTOR2(0.f, -10.f));
 
-  gui_slider(SDR_ID_SETTINGS_LANGUAGE, BASE_RENDER_SCALE(.5f), VECTOR2(0,12), 3.f);
+  gui_slider(SDR_ID_SETTINGS_WIN_MODE_SLIDER, BASE_RENDER_SCALE(.5f), VECTOR2(0.f, 0.f));
 
-  if(gui_menu_button(lc_txt(LOC_TEXT_SETTINGS_BUTTON_APPLY), BTN_ID_SETTINGS_APPLY_SETTINGS_BUTTON, VECTOR2(-2,25), 3.f, true)) {
+  gui_slider(SDR_ID_SETTINGS_LANGUAGE, BASE_RENDER_SCALE(.5f), VECTOR2(0.f, 10.f));
+
+  if(gui_menu_button(lc_txt(LOC_TEXT_SETTINGS_BUTTON_APPLY), BTN_ID_SETTINGS_APPLY_SETTINGS_BUTTON, VECTOR2(50.f, 100.f), BASE_RENDER_RES_DIV2, true)) {
     slider sdr_win_mode = state->sliders[SDR_ID_SETTINGS_WIN_MODE_SLIDER];
     i32 window_mod = sdr_win_mode.options[sdr_win_mode.current_value].content.data.i32[0];
     
@@ -969,21 +983,19 @@ void gui_draw_pause_screen(bool in_game_play_state) {
   };
   gui_panel(panel(), dest, true);
 
-  f32 grid_scale = 1.f;
   if (in_game_play_state) {
-    if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_PAUSE_BUTTON_TEXT_RESUME), BTN_ID_PAUSEMENU_BUTTON_RESUME, Vector2 {0.f, -2.f}, grid_scale, true)) {
+    if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_PAUSE_BUTTON_TEXT_RESUME), BTN_ID_PAUSEMENU_BUTTON_RESUME, Vector2 {0.f, -15.f}, BASE_RENDER_RES_DIV2, true)) {
       event_fire(EVENT_CODE_RESUME_GAME, event_context {});
     }
   }
-  if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_SETTINGS), BTN_ID_PAUSEMENU_BUTTON_SETTINGS, Vector2 {0.f, -1.f}, grid_scale, true)) {}
-  if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_PAUSE_BUTTON_TEXT_EXIT_TO_MAINMENU), BTN_ID_PAUSEMENU_BUTTON_EXIT_TO_MAIN_MENU, Vector2 { 0.f, 0.f}, grid_scale, true)) {
+  if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_SETTINGS), BTN_ID_PAUSEMENU_BUTTON_SETTINGS, Vector2 {0.f, -5.f}, BASE_RENDER_RES_DIV2, true)) {}
+  if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_PAUSE_BUTTON_TEXT_EXIT_TO_MAINMENU), BTN_ID_PAUSEMENU_BUTTON_EXIT_TO_MAIN_MENU, Vector2 { 0.f, 5.f}, BASE_RENDER_RES_DIV2, true)) {
     event_fire(EVENT_CODE_SCENE_MAIN_MENU, event_context {});
   }
-  if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_PAUSE_BUTTON_TEXT_EXIT_TO_DESKTOP), BTN_ID_PAUSEMENU_BUTTON_EXIT_TO_DESKTOP, Vector2 { 0.f, 1.f}, grid_scale, true)) {
+  if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_PAUSE_BUTTON_TEXT_EXIT_TO_DESKTOP), BTN_ID_PAUSEMENU_BUTTON_EXIT_TO_DESKTOP, Vector2 { 0.f, 15.f}, BASE_RENDER_RES_DIV2, true)) {
     event_fire(EVENT_CODE_APPLICATION_QUIT, event_context {});
   }
 }
-
 
 bool gui_slider_add_option(slider_id _id, data_pack content, u32 _localization_symbol, std::string _no_localized_text) {
   if (_id >= SDR_ID_MAX || _id <= SDR_ID_UNDEFINED || !state) {
@@ -1260,16 +1272,19 @@ void gui_draw_spritesheet_to_background(spritesheet_id _id, Color _tint) {
   icon_loc.y -= icon_loc.height * .5f;
   
   if(have_hovered) {
-    gui_draw_atlas_texture_id_pro(ATLAS_TEX_ID_ICON_ATLAS, Rectangle{64, 320, 32, 32}, icon_loc, true, false);
+    gui_draw_texture_id_pro(TEX_ID_ASSET_ATLAS, Rectangle{1632, 928, 32, 32}, icon_loc, false); // INFO: MAP PIN TEXTURES
   }
   else {
-    gui_draw_atlas_texture_id_pro(ATLAS_TEX_ID_ICON_ATLAS, Rectangle{32, 320, 32, 32}, icon_loc, true, false);
+    gui_draw_texture_id_pro(TEX_ID_ASSET_ATLAS, Rectangle{1600, 928, 32, 32}, icon_loc, false);
   }
 }
- Vector2 position_element(Vector2 grid, Vector2 pos, Vector2 dim, f32 f) {
+/**
+ * @brief grid_pos, grid_coord, grid_dim 
+ */
+Vector2 position_element_by_grid(Vector2 grid_pos, Vector2 grid_coord, Vector2 grid_dim) {
   return Vector2{
-      .x = pos.x - (dim.x / 2.0f) + ((dim.x / f) * grid.x),
-      .y = pos.y - (dim.y / 2.0f) + ((dim.y / f) * grid.y)
+      .x = grid_pos.x + (grid_coord.x * grid_dim.x) ,
+      .y = grid_pos.y + (grid_coord.y * grid_dim.y) 
   };
 }
 
@@ -1428,7 +1443,7 @@ void gui_draw_atlas_texture_id(atlas_texture_id _id, Rectangle dest, Vector2 ori
 
   DrawTexturePro(*tex->atlas_handle, tex->source, dest, origin, rotation, WHITE);
 }
-void gui_draw_atlas_texture_id_pro_grid(atlas_texture_id _id, Rectangle src, Rectangle dest, bool relative, f32 grid_scale) {
+void gui_draw_atlas_texture_id_pro_grid(atlas_texture_id _id, Rectangle src, Rectangle dest, bool relative) {
   if (_id >= ATLAS_TEX_ID_MAX || _id <= ATLAS_TEX_ID_UNSPECIFIED) {
     TraceLog(LOG_WARNING, "user_interface::gui_draw_atlas_texture_id_pro_grid()::ID was out of bound"); 
     return; 
@@ -1442,12 +1457,12 @@ void gui_draw_atlas_texture_id_pro_grid(atlas_texture_id _id, Rectangle src, Rec
     src.x += tex->source.x;
     src.y += tex->source.y;
   }
-  Vector2 pos = position_element(VECTOR2(dest.x, dest.y), BASE_RENDER_SCALE(.5f), VECTOR2(dest.width, dest.height), grid_scale);
+  Vector2 pos = position_element_by_grid(BASE_RENDER_SCALE(.5f), VECTOR2(dest.x, dest.y), SCREEN_OFFSET);
   dest.x = pos.x;
   dest.y = pos.y;
-  DrawTexturePro(*tex->atlas_handle, src, dest, Vector2 {}, 0, WHITE);
+  DrawTexturePro(*tex->atlas_handle, src, dest, Vector2 { tex->source.width * .5f, tex->source.height *.5f }, 0, WHITE);
 }
-void gui_draw_atlas_texture_id_grid(atlas_texture_id _id, Rectangle dest, f32 grid_scale) {
+void gui_draw_atlas_texture_id_grid(atlas_texture_id _id, Rectangle dest) {
   if (_id >= ATLAS_TEX_ID_MAX || _id <= ATLAS_TEX_ID_UNSPECIFIED) {
     TraceLog(LOG_WARNING, "user_interface::gui_draw_atlas_texture_id_grid()::ID was out of bound"); 
     return; 
@@ -1457,7 +1472,7 @@ void gui_draw_atlas_texture_id_grid(atlas_texture_id _id, Rectangle dest, f32 gr
     TraceLog(LOG_WARNING, "user_interface::gui_draw_atlas_texture_id_grid()::Tex was null");
     return; 
   }
-  Vector2 pos = position_element(VECTOR2(dest.x, dest.y), BASE_RENDER_SCALE(.5f), VECTOR2(dest.width, dest.height), grid_scale);
+  Vector2 pos = position_element_by_grid(BASE_RENDER_SCALE(.5f), VECTOR2(dest.x, dest.y), SCREEN_OFFSET);
   dest.x = pos.x;
   dest.y = pos.y;
   DrawTexturePro(*tex->atlas_handle, tex->source, dest, Vector2 {}, 0, WHITE);
@@ -1765,7 +1780,7 @@ bool user_interface_on_event(u16 code, event_context context) {
 #undef LABEL_MOOD_OUTLINE_FONT_SIZE
 #undef LABEL_MINI_FONT_SIZE
 #undef LABEL_MINI_OUTLINE_FONT_SIZE
-#undef draw_text
+#undef DRAW_TEXT
 #undef SDR_CURR_VAL
 #undef FADE_ANIMATION_DURATION
 #undef SCREEN_POS

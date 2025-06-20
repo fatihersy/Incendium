@@ -37,18 +37,21 @@ void update_bullet(ability* abl);
 void update_comet(ability* abl);
 void update_codex(ability* abl);
 void update_radience(ability* abl);
+void update_firetrail(ability* abl);
 
 void render_fireball(ability* abl);
 void render_bullet(ability* abl);
 void render_comet(ability* abl);
 void render_codex(ability* abl);
 void render_radience(ability* abl);
+void render_firetrail(ability* abl);
 
 void refresh_ability_fireball(ability* abl);
 void refresh_ability_bullet(ability* abl);
 void refresh_ability_comet(ability* abl);
 void refresh_ability_codex(ability* abl);
 void refresh_ability_radience(ability* abl);
+void refresh_ability_firetrail(ability* abl);
 
 bool ability_system_initialize(camera_metrics* _camera_metrics, app_settings* _settings, ingame_info* _ingame_info) {
   if (state) {
@@ -66,50 +69,38 @@ bool ability_system_initialize(camera_metrics* _camera_metrics, app_settings* _s
   std::array<ability_upgradables, ABILITY_UPG_MAX> fireball_upgr = {ABILITY_UPG_DAMAGE, ABILITY_UPG_SPEED, ABILITY_UPG_AMOUNT, ABILITY_UPG_UNDEFINED, ABILITY_UPG_UNDEFINED};
   register_ability(ability("Fireball", ABILITY_TYPE_FIREBALL,
     fireball_upgr,
-    1.f, 1.f, 1, 1, 0.f,
-    Vector2{30.f, 30.f}, Rectangle{704, 768, 32, 32},
-    15,
-    false
+    0.f, 1.f, 1.f, 1, 1, 0.f, 15,
+    Vector2{30.f, 30.f}, Rectangle{2176, 736, 32, 32}
   ));
   std::array<ability_upgradables, ABILITY_UPG_MAX> bullet_upgr = {ABILITY_UPG_DAMAGE, ABILITY_UPG_HITBOX, ABILITY_UPG_AMOUNT, ABILITY_UPG_UNDEFINED, ABILITY_UPG_UNDEFINED};
   register_ability(ability("Bullet", ABILITY_TYPE_BULLET,
     bullet_upgr,
-    1.f, 1.f, 1, 3, 1.75f,
-    Vector2{30.f, 30.f}, Rectangle{544, 128, 32, 32},
-    15,
-    false
+    0.f, 1.f, 1.f, 1, 3, 1.75f, 15,
+    Vector2{30.f, 30.f}, Rectangle{2368, 736, 32, 32}
   ));
   std::array<ability_upgradables, ABILITY_UPG_MAX> comet_upgr = {ABILITY_UPG_DAMAGE, ABILITY_UPG_HITBOX, ABILITY_UPG_AMOUNT, ABILITY_UPG_UNDEFINED, ABILITY_UPG_UNDEFINED};
   register_ability(ability("Comet", ABILITY_TYPE_COMET,
     comet_upgr,
-    1.2f, 1.2f, 1, 7, 0.f,
-    Vector2{30.f, 30.f}, Rectangle{576, 128, 32, 32},
-    15,
-    false
+    0.f, 1.2f, 1.2f, 1, 7, 0.f, 15,
+    Vector2{30.f, 30.f}, Rectangle{2144, 736, 32, 32}
   ));
   std::array<ability_upgradables, ABILITY_UPG_MAX> codex_upgr = {ABILITY_UPG_DAMAGE, ABILITY_UPG_AMOUNT, ABILITY_UPG_UNDEFINED, ABILITY_UPG_UNDEFINED, ABILITY_UPG_UNDEFINED};
   register_ability(ability("Arcane Codex", ABILITY_TYPE_CODEX,
     codex_upgr,
-    0.8f, 0.8f, 1, 3, 0.f,
-    Vector2{30.f, 30.f}, Rectangle{832, 0, 32, 32},
-    11,
-    false
+    0.f, 0.8f, 0.8f, 1, 3, 0.f, 11,
+    Vector2{30.f, 30.f}, Rectangle{2560, 992, 32, 32}
   ));
   std::array<ability_upgradables, ABILITY_UPG_MAX> radience_upgr = {ABILITY_UPG_DAMAGE, ABILITY_UPG_HITBOX, ABILITY_UPG_UNDEFINED, ABILITY_UPG_UNDEFINED, ABILITY_UPG_UNDEFINED};
   register_ability(ability("Radience", ABILITY_TYPE_RADIANCE,
     radience_upgr,
-    2.2f, 0.8f, 1, 0, 0.f,
-    Vector2{128.f, 128.f}, Rectangle{2080, 1240, 32, 32},
-    11,
-    false
+    0.f, 2.2f, 0.8f, 1, 0, 0.f, 11,
+    Vector2{128.f, 128.f}, Rectangle{2272, 1376, 32, 32}
   ));
   std::array<ability_upgradables, ABILITY_UPG_MAX> fire_trail_upgr = {ABILITY_UPG_DAMAGE, ABILITY_UPG_HITBOX, ABILITY_UPG_UNDEFINED, ABILITY_UPG_UNDEFINED, ABILITY_UPG_UNDEFINED};
   register_ability(ability("Fire Trail", ABILITY_TYPE_FIRETRAIL,
     fire_trail_upgr,
-    2.2f, 0.8f, 1, 0, 0.f,
-    Vector2{128.f, 128.f}, Rectangle{2080, 1240, 32, 32},
-    11,
-    false
+    .5f, 1.0f, 1.0f, 0, 0, 3.f, 11,
+    Vector2{128.f, 128.f}, Rectangle{2304, 736, 32, 32}
   ));
   return true;
 }
@@ -134,6 +125,7 @@ void refresh_ability(ability* abl) {
     case ABILITY_TYPE_COMET:     refresh_ability_comet(abl); break;
     case ABILITY_TYPE_CODEX:     refresh_ability_codex(abl); break;
     case ABILITY_TYPE_RADIANCE:  refresh_ability_radience(abl); break;
+    case ABILITY_TYPE_FIRETRAIL: refresh_ability_radience(abl); break;
     default: {
       TraceLog(LOG_ERROR, "ability::refresh_ability()::Unsuppported ability type");
       break;
@@ -141,8 +133,16 @@ void refresh_ability(ability* abl) {
   }
 }
 void update_abilities(ability_play_system* system) {
+  if (!system) {
+    TraceLog(LOG_WARNING, "ability::update_abilities()::Ability system is not valid");
+    return;
+  }
   for (size_t iter=0; iter<ABILITY_TYPE_MAX; ++iter) {
     ability* abl = __builtin_addressof(system->abilities.at(iter));
+    if (abl == nullptr) {
+      TraceLog(LOG_WARNING, "ability::update_abilities()::Ability is not valid");
+      return;
+    }
     if (!abl->is_active || !abl->is_initialized) continue;
 
     switch (abl->type) {
@@ -151,6 +151,7 @@ void update_abilities(ability_play_system* system) {
       case ABILITY_TYPE_COMET:     update_comet(abl); break;
       case ABILITY_TYPE_CODEX:     update_codex(abl); break;
       case ABILITY_TYPE_RADIANCE:  update_radience(abl); break;
+      case ABILITY_TYPE_FIRETRAIL: update_radience(abl); break;
       default: {
         TraceLog(LOG_ERROR, "ability::update_abilities()::Unsuppported ability movement type");
         break;
@@ -169,6 +170,7 @@ void render_abilities(ability_play_system* system) {
       case ABILITY_TYPE_COMET:     render_comet(abl);    break;
       case ABILITY_TYPE_CODEX:     render_codex(abl);    break;
       case ABILITY_TYPE_RADIANCE:  render_radience(abl); break;
+      case ABILITY_TYPE_FIRETRAIL: render_radience(abl); break;
       default: {
         TraceLog(LOG_ERROR, "ability::update_abilities()::Unsuppported ability movement type");
         break;
@@ -223,6 +225,14 @@ ability get_next_level(ability abl) {
 
 
 void update_fireball(ability* abl) {
+  if (abl == nullptr) {
+    TraceLog(LOG_WARNING, "ability::update_fireball()::Ability is not valid");
+    return;
+  }
+  if (abl->type != ABILITY_TYPE_FIREBALL) {
+    TraceLog(LOG_WARNING, "ability::update_fireball()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_TYPE_FIREBALL, abl->type);
+    return;
+  }
   if (!abl->is_active || !abl->is_initialized) {
     TraceLog(LOG_WARNING, "ability::update_fireball()::Ability is not active or not initialized");
     return;
@@ -257,6 +267,14 @@ void update_fireball(ability* abl) {
   }
 }
 void update_bullet(ability* abl) {
+  if (abl == nullptr) {
+    TraceLog(LOG_WARNING, "ability::update_bullet()::Ability is not valid");
+    return;
+  }
+  if (abl->type != ABILITY_TYPE_BULLET) {
+    TraceLog(LOG_WARNING, "ability::update_bullet()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_TYPE_BULLET, abl->type);
+    return;
+  }
   if (!abl->is_active || !abl->is_initialized) {
     TraceLog(LOG_WARNING, "ability::update_bullet()::Ability is not active or not initialized");
     return;
@@ -295,6 +313,14 @@ void update_bullet(ability* abl) {
   }
 }
 void update_comet(ability* abl) {
+  if (abl == nullptr) {
+    TraceLog(LOG_WARNING, "ability::update_comet()::Ability is not valid");
+    return;
+  }
+  if (abl->type != ABILITY_TYPE_COMET) {
+    TraceLog(LOG_WARNING, "ability::update_comet()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_TYPE_COMET, abl->type);
+    return;
+  }
   if (!abl->is_active || !abl->is_initialized) {
     TraceLog(LOG_WARNING, "ability::update_comet()::Ability is not active or not initialized");
     return;
@@ -344,6 +370,14 @@ void update_comet(ability* abl) {
   }
 }
 void update_codex(ability* abl) {
+  if (abl == nullptr) {
+    TraceLog(LOG_WARNING, "ability::update_codex()::Ability is not valid");
+    return;
+  }
+  if (abl->type != ABILITY_TYPE_CODEX) {
+    TraceLog(LOG_WARNING, "ability::update_codex()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_TYPE_CODEX, abl->type);
+    return;
+  }
   if (!abl->is_active || !abl->is_initialized) {
     TraceLog(LOG_WARNING, "ability::update_codex()::Ability is not active or not initialized");
     return;
@@ -394,8 +428,16 @@ void update_codex(ability* abl) {
   }
 }
 void update_radience(ability* abl) {
+  if (abl == nullptr) {
+    TraceLog(LOG_WARNING, "ability::update_radience()::Ability is not valid");
+    return;
+  }
+  if (abl->type != ABILITY_TYPE_RADIANCE) {
+    TraceLog(LOG_WARNING, "ability::update_radience()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_TYPE_RADIANCE, abl->type);
+    return;
+  }
   if (!abl->is_active || !abl->is_initialized) {
-    TraceLog(LOG_WARNING, "ability::update_codex()::Ability is not active or not initialized");
+    TraceLog(LOG_WARNING, "ability::update_radience()::Ability is not active or not initialized");
     return;
   }
   if (abl->p_owner == nullptr || state->in_ingame_info == nullptr || state->in_ingame_info->nearest_spawn == nullptr) {
@@ -449,8 +491,52 @@ void update_radience(ability* abl) {
 
   update_sprite(&prj.animations.at(prj.active_sprite));
 }
+void update_firetrail(ability* abl) {
+  if (abl == nullptr) {
+    TraceLog(LOG_WARNING, "ability::update_firetrail()::Ability is not valid");
+    return;
+  }
+  if (abl->type != ABILITY_TYPE_FIRETRAIL) {
+    TraceLog(LOG_WARNING, "ability::update_firetrail()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_TYPE_FIRETRAIL, abl->type);
+    return;
+  }
+  if (!abl->is_active || !abl->is_initialized) {
+    TraceLog(LOG_WARNING, "ability::update_firetrail()::Ability is not active or not initialized");
+    return;
+  }
+  if (abl->p_owner == nullptr || state->in_ingame_info == nullptr || state->in_ingame_info->nearest_spawn == nullptr) {
+    return;
+  }
+  player_state* p_player = reinterpret_cast<player_state*>(abl->p_owner);
+  Vector2 ability_position = VECTOR2(p_player->collision.x + p_player->dimentions_div2.x, p_player->collision.y + p_player->collision.height);
+  abl->position = ability_position;
+
+  for (size_t itr_000 = 0; itr_000 < abl->projectiles.size(); itr_000++) {
+    projectile* prj = __builtin_addressof(abl->projectiles.at(itr_000));
+
+    if (prj->mm_ex.u16[0] >= abl->ability_cooldown_duration) {
+      
+    }
+
+    event_fire(EVENT_CODE_DAMAGE_ANY_SPAWN_IF_COLLIDE, event_context(
+      static_cast<i16>(prj->collision.x), static_cast<i16>(prj->collision.y), static_cast<i16>(prj->collision.width), static_cast<i16>(prj->collision.height), 
+      static_cast<i16>(prj->damage + p_player->damage),
+      static_cast<i16>(COLLISION_TYPE_RECTANGLE_RECTANGLE)
+    ));
+    
+    update_sprite(&prj->animations.at(prj->active_sprite));
+  }
+}
 
 void render_fireball(ability* abl){
+  if (abl == nullptr) {
+    TraceLog(LOG_WARNING, "ability::render_fireball()::Ability is not valid");
+    return;
+  }
+  if (abl->type != ABILITY_TYPE_FIREBALL) {
+    TraceLog(LOG_WARNING, "ability::render_fireball()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_TYPE_FIREBALL, abl->type);
+    return;
+  }
   if (!abl->is_active || !abl->is_initialized) {
     TraceLog(LOG_WARNING, "ability::render_fireball()::Ability is not active or not initialized");
     return;
@@ -462,6 +548,14 @@ void render_fireball(ability* abl){
   }
 }
 void render_bullet(ability* abl){
+  if (abl == nullptr) {
+    TraceLog(LOG_WARNING, "ability::render_bullet()::Ability is not valid");
+    return;
+  }
+  if (abl->type != ABILITY_TYPE_BULLET) {
+    TraceLog(LOG_WARNING, "ability::render_bullet()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_TYPE_BULLET, abl->type);
+    return;
+  }
   if (!abl->is_active || !abl->is_initialized) {
     TraceLog(LOG_WARNING, "ability::render_bullet()::Ability is not active or not initialized");
     return;
@@ -473,6 +567,14 @@ void render_bullet(ability* abl){
   }
 }
 void render_comet(ability* abl){
+  if (abl == nullptr) {
+    TraceLog(LOG_WARNING, "ability::render_comet()::Ability is not valid");
+    return;
+  }
+  if (abl->type != ABILITY_TYPE_COMET) {
+    TraceLog(LOG_WARNING, "ability::render_comet()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_TYPE_COMET, abl->type);
+    return;
+  }
   if (!abl->is_active || !abl->is_initialized) {
     TraceLog(LOG_WARNING, "ability::render_comet()::Ability is not active or not initialized");
     return;
@@ -484,6 +586,14 @@ void render_comet(ability* abl){
   }
 }
 void render_codex(ability* abl){
+  if (abl == nullptr) {
+    TraceLog(LOG_WARNING, "ability::render_codex()::Ability is not valid");
+    return;
+  }
+  if (abl->type != ABILITY_TYPE_CODEX) {
+    TraceLog(LOG_WARNING, "ability::render_codex()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_TYPE_CODEX, abl->type);
+    return;
+  }
   if (!abl->is_active || !abl->is_initialized) {
     TraceLog(LOG_WARNING, "ability::render_codex()::Ability is not active or not initialized");
     return;
@@ -492,16 +602,22 @@ void render_codex(ability* abl){
     if (!abl->projectiles.at(iter).is_active) { continue; }
     render_projectile(__builtin_addressof(abl->projectiles.at(iter)), abl->proj_sprite_scale);
   }
-  atlas_texture * icon_atlas = ss_get_atlas_texture_by_enum(ATLAS_TEX_ID_ICON_ATLAS);
-  Rectangle codex_book_source = Rectangle {icon_atlas->source.x, icon_atlas->source.y, 32, 32};
-  codex_book_source.x += 832.f; // HACK: The position of the book sprite at atlas, make dynamic later 
+  Texture2D * icon_tex = ss_get_texture_by_enum(TEX_ID_ASSET_ATLAS);
   Rectangle codex_book_dest = CODEX_BOOK_POSITION_BY_ABILITY(abl->position);
 
-  DrawTexturePro(*icon_atlas->atlas_handle, codex_book_source, codex_book_dest, VECTOR2(0, 0), 0.f, WHITE);
+  DrawTexturePro(*icon_tex, abl->icon_src, codex_book_dest, VECTOR2(0, 0), 0.f, WHITE);
 }
 void render_radience(ability* abl){
+  if (abl == nullptr) {
+    TraceLog(LOG_WARNING, "ability::render_radience()::Ability is not valid");
+    return;
+  }
+  if (abl->type != ABILITY_TYPE_RADIANCE) {
+    TraceLog(LOG_WARNING, "ability::render_radience()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_TYPE_RADIANCE, abl->type);
+    return;
+  }
   if (!abl->is_active || !abl->is_initialized) {
-    TraceLog(LOG_WARNING, "ability::render_codex()::Ability is not active or not initialized");
+    TraceLog(LOG_WARNING, "ability::render_radience()::Ability is not active or not initialized");
     return;
   }
   if (!abl->projectiles.at(0).is_active) { return; }
@@ -519,22 +635,42 @@ void render_radience(ability* abl){
   DrawCircleGradient(prj->collision.x, prj->collision.y, circle_outer_radius_current, RADIENCE_COLOR_INNER_CIRCLE_BRIGHT_YARROW, RADIENCE_COLOR_TRANSPARENT);
   DrawCircleGradient(prj->collision.x, prj->collision.y, circle_inner_radius_current, RADIENCE_COLOR_INNER_CIRCLE_BRIGHT_YARROW, RADIENCE_COLOR_TRANSPARENT);
 }
+void render_firetrail(ability* abl){
+  if (abl == nullptr) {
+    TraceLog(LOG_WARNING, "ability::render_firetrail()::Ability is not valid");
+    return;
+  }
+  if (abl->type != ABILITY_TYPE_FIRETRAIL) {
+    TraceLog(LOG_WARNING, "ability::render_firetrail()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_TYPE_FIRETRAIL, abl->type);
+    return;
+  }
+  if (!abl->is_active || !abl->is_initialized) {
+    TraceLog(LOG_WARNING, "ability::render_firetrail()::Ability is not active or not initialized");
+    return;
+  }
+  
+  for (size_t iter = 0; iter < abl->projectiles.size(); ++iter) {
+    if (!abl->projectiles.at(iter).is_active) { continue; }
+    render_projectile(__builtin_addressof(abl->projectiles.at(iter)), abl->proj_sprite_scale);
+  }
+}
 
 void refresh_ability_fireball(ability* abl) { 
   if (abl == nullptr) {
     TraceLog(LOG_WARNING, "ability::refresh_ability_fireball()::Ability is null");
     return;
   }
+  if (abl->type != ABILITY_TYPE_FIREBALL) {
+    TraceLog(LOG_WARNING, "ability::refresh_ability_fireball()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_TYPE_FIREBALL, abl->type);
+    return;
+  }
   if (abl->proj_count > MAX_ABILITY_PROJECTILE_COUNT) {
     TraceLog(LOG_WARNING, "ability::refresh_ability_fireball()::Ability projectile count exceed");
     return;
   }
-  if (abl->type != ABILITY_TYPE_FIREBALL) {
-    TraceLog(LOG_WARNING, "ability::refresh_ability_fireball()::Refresh ability function is incorrect. Expected: %d, Recieved:%d", ABILITY_TYPE_FIREBALL, abl->type);
-    return;
-  }
   abl->projectiles.clear();
   abl->projectiles.reserve(abl->proj_count);
+  abl->animation_ids.clear();
   abl->animation_ids.push_back(SHEET_ID_FLAME_ENERGY_ANIMATION);
 
   for (int i = 0; i < abl->proj_count; ++i) {
@@ -563,16 +699,17 @@ void refresh_ability_bullet(ability* abl) {
     TraceLog(LOG_WARNING, "ability::refresh_ability_bullet()::Ability is null");
     return;
   }
+  if (abl->type != ABILITY_TYPE_BULLET) {
+    TraceLog(LOG_WARNING, "ability::refresh_ability_bullet()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_TYPE_BULLET, abl->type);
+    return;
+  }
   if (abl->proj_count > MAX_ABILITY_PROJECTILE_COUNT) {
     TraceLog(LOG_WARNING, "ability::refresh_ability_bullet()::Ability projectile count exceed");
     return;
   }
-  if (abl->type != ABILITY_TYPE_BULLET) {
-    TraceLog(LOG_WARNING, "ability::refresh_ability_bullet()::Refresh ability function is incorrect. Expected: %d, Recieved:%d", ABILITY_TYPE_BULLET, abl->type);
-    return;
-  }
 
   abl->projectiles.clear();
+  abl->animation_ids.clear();
   abl->projectiles.reserve(abl->proj_count);
   abl->animation_ids.push_back(SHEET_ID_FLAME_ENERGY_ANIMATION);
 
@@ -584,7 +721,7 @@ void refresh_ability_bullet(ability* abl) {
     prj->duration = abl->proj_duration;
     for (size_t iter = 0; iter < abl->animation_ids.size(); ++iter) {
       if (abl->animation_ids.at(iter) == SHEET_ID_SPRITESHEET_UNSPECIFIED) {
-        TraceLog(LOG_WARNING, "ability::refresh_ability_fireball()::Ability don't have any sprite");
+        TraceLog(LOG_WARNING, "ability::refresh_ability_bullet()::Ability don't have any sprite");
         return;
       }
       spritesheet spr = {};
@@ -602,16 +739,18 @@ void refresh_ability_comet(ability* abl) {
     TraceLog(LOG_WARNING, "ability::refresh_ability_comet()::Ability is null");
     return;
   }
+  if (abl->type != ABILITY_TYPE_COMET) {
+    TraceLog(LOG_WARNING, "ability::refresh_ability_comet()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_TYPE_COMET, abl->type);
+    return;
+  }
   if (abl->proj_count > MAX_ABILITY_PROJECTILE_COUNT) {
     TraceLog(LOG_WARNING, "ability::refresh_ability_comet()::Ability projectile count exceed");
     return;
   }
-  if (abl->type != ABILITY_TYPE_COMET) {
-    TraceLog(LOG_WARNING, "ability::refresh_ability_comet()::Refresh ability function is incorrect. Expected: %d, Recieved:%d", ABILITY_TYPE_COMET, abl->type);
-    return;
-  }
+
 
   abl->projectiles.clear();
+  abl->animation_ids.clear();
   abl->projectiles.reserve(abl->proj_count);
   abl->animation_ids.push_back(SHEET_ID_FIREBALL_ANIMATION);
   abl->animation_ids.push_back(SHEET_ID_FIREBALL_EXPLOTION_ANIMATION);
@@ -624,7 +763,7 @@ void refresh_ability_comet(ability* abl) {
     prj->duration = abl->proj_duration;
     for (size_t iter = 0; iter < abl->animation_ids.size(); ++iter) {
       if (abl->animation_ids.at(iter) == SHEET_ID_SPRITESHEET_UNSPECIFIED) {
-        TraceLog(LOG_WARNING, "ability::refresh_ability_fireball()::Ability don't have any sprite");
+        TraceLog(LOG_WARNING, "ability::refresh_ability_comet()::Ability don't have any sprite");
         return;
       }
       spritesheet spr = {};
@@ -649,35 +788,36 @@ void refresh_ability_comet(ability* abl) {
 }
 void refresh_ability_codex(ability* abl) { 
   if (abl == nullptr) {
-    TraceLog(LOG_WARNING, "ability::refresh_ability()::Ability is null");
+    TraceLog(LOG_WARNING, "ability::refresh_ability_codex()::Ability is null");
     return;
   }
   if (abl->proj_count > MAX_ABILITY_PROJECTILE_COUNT) {
-    TraceLog(LOG_WARNING, "ability::refresh_ability()::Ability projectile count exceed");
+    TraceLog(LOG_WARNING, "ability::refresh_ability_codex()::Ability projectile count exceed");
     return;
   }
   if (abl->type != ABILITY_TYPE_CODEX) {
-    TraceLog(LOG_WARNING, "ability::refresh_ability_codex()::Refresh ability function is incorrect. Expected: %d, Recieved:%d", ABILITY_TYPE_CODEX, abl->type);
+    TraceLog(LOG_WARNING, "ability::refresh_ability_codex()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_TYPE_CODEX, abl->type);
     return;
   }
 
   abl->projectiles.clear();
+  abl->animation_ids.clear();
   abl->projectiles.reserve(abl->proj_count);
   abl->animation_ids.push_back(SHEET_ID_FLAME_ENERGY_ANIMATION);
 
-  for (int i = 0; i < abl->proj_count; ++i) {
+  for (size_t itr_000 = 0; itr_000 < abl->proj_count; ++itr_000) {
     projectile* prj = __builtin_addressof(abl->projectiles.emplace_back());
     prj->collision = Rectangle {0.f, 0.f, abl->proj_dim.x * abl->proj_collision_scale, abl->proj_dim.y * abl->proj_collision_scale};
     prj->damage = abl->base_damage;
     prj->is_active = true;
     prj->duration = abl->proj_duration;
-    for (size_t iter = 0; iter < abl->animation_ids.size(); ++iter) {
-      if (abl->animation_ids.at(iter) == SHEET_ID_SPRITESHEET_UNSPECIFIED) {
-        TraceLog(LOG_WARNING, "ability::refresh_ability_fireball()::Ability don't have any sprite");
+    for (size_t itr_111 = 0; itr_111 < abl->animation_ids.size(); ++itr_111) {
+      if (abl->animation_ids.at(itr_111) == SHEET_ID_SPRITESHEET_UNSPECIFIED) {
+        TraceLog(LOG_WARNING, "ability::refresh_ability_codex()::Ability don't have any sprite");
         return;
       }
       spritesheet spr = {};
-      spr.sheet_id = abl->animation_ids.at(iter);
+      spr.sheet_id = abl->animation_ids.at(itr_111);
       set_sprite(__builtin_addressof(spr), true, false);
       spr.origin = VECTOR2( spr.coord.width * .5f,  spr.coord.height * .5f );
 
@@ -687,20 +827,21 @@ void refresh_ability_codex(ability* abl) {
   }
 }
 void refresh_ability_radience(ability* abl) { 
-    if (abl == nullptr) {
-    TraceLog(LOG_WARNING, "ability::refresh_ability()::Ability is null");
-    return;
-  }
-  if (abl->proj_count > MAX_ABILITY_PROJECTILE_COUNT) {
-    TraceLog(LOG_WARNING, "ability::refresh_ability()::Ability projectile count exceed");
+  if (abl == nullptr) {
+    TraceLog(LOG_WARNING, "ability::refresh_ability_radience()::Ability is null");
     return;
   }
   if (abl->type != ABILITY_TYPE_RADIANCE) {
-    TraceLog(LOG_WARNING, "ability::refresh_ability_radience()::Refresh ability function is incorrect. Expected: %d, Recieved:%d", ABILITY_TYPE_RADIANCE, abl->type);
+    TraceLog(LOG_WARNING, "ability::refresh_ability_radience()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_TYPE_RADIANCE, abl->type);
+    return;
+  }
+  if (abl->proj_count > MAX_ABILITY_PROJECTILE_COUNT) {
+    TraceLog(LOG_WARNING, "ability::refresh_ability_radience()::Ability projectile count exceed");
     return;
   }
 
   abl->projectiles.clear();
+  abl->animation_ids.clear();
   abl->projectiles.reserve(abl->proj_count);
   abl->animation_ids.push_back(SHEET_ID_GENERIC_LIGHT);
 
@@ -712,7 +853,7 @@ void refresh_ability_radience(ability* abl) {
     prj->duration = abl->proj_duration;
     for (size_t iter = 0; iter < abl->animation_ids.size(); ++iter) {
       if (abl->animation_ids.at(iter) == SHEET_ID_SPRITESHEET_UNSPECIFIED) {
-        TraceLog(LOG_WARNING, "ability::refresh_ability_fireball()::Ability don't have any sprite");
+        TraceLog(LOG_WARNING, "ability::refresh_ability_radience()::Ability don't have any sprite");
         return;
       }
       spritesheet spr = {};
@@ -741,4 +882,48 @@ void refresh_ability_radience(ability* abl) {
 
   frame_counter = 0;
   is_increment = true;
+}
+void refresh_ability_firetrail(ability* abl) { 
+  if (abl == nullptr) {
+    TraceLog(LOG_WARNING, "ability::refresh_ability_firetrail()::Ability is null");
+    return;
+  }
+  if (abl->type != ABILITY_TYPE_FIRETRAIL) {
+    TraceLog(LOG_WARNING, "ability::refresh_ability_firetrail()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_TYPE_FIRETRAIL, abl->type);
+    return;
+  }
+  if (abl->proj_count > MAX_ABILITY_PROJECTILE_COUNT) {
+    TraceLog(LOG_WARNING, "ability::refresh_ability_firetrail()::Ability projectile count exceed");
+    return;
+  }
+
+  abl->projectiles.clear();
+  abl->animation_ids.clear();
+  abl->projectiles.reserve(abl->proj_count);
+  abl->animation_ids.push_back(SHEET_ID_ABILITY_FIRETRAIL_START_ANIMATION);
+  abl->animation_ids.push_back(SHEET_ID_ABILITY_FIRETRAIL_LOOP_ANIMATION);
+  abl->animation_ids.push_back(SHEET_ID_ABILITY_FIRETRAIL_END_ANIMATION);
+
+  for (size_t itr_000 = 0; itr_000 < abl->proj_count; ++itr_000) {
+    projectile* prj = __builtin_addressof(abl->projectiles.emplace_back());
+    prj->collision = Rectangle {0.f, 0.f, abl->proj_dim.x * abl->proj_collision_scale, abl->proj_dim.y * abl->proj_collision_scale};
+    prj->damage = abl->base_damage;
+    prj->is_active = false;
+    prj->duration = abl->proj_duration;
+
+    if (abl->animation_ids.at(0) == SHEET_ID_SPRITESHEET_UNSPECIFIED) {
+      TraceLog(LOG_WARNING, "ability::refresh_ability_firetrail()::Ability don't have any sprite");
+      continue;
+    }
+    prj->active_sprite = 0;
+
+    for (size_t itr_111 = 0; itr_111 < abl->animation_ids.size(); ++itr_111) {
+      spritesheet spr = {};
+      spr.sheet_id = abl->animation_ids.at(itr_111);
+      set_sprite(__builtin_addressof(spr), true, false);
+      spr.origin = VECTOR2( spr.coord.width * .5f,  spr.coord.height * .5f );
+
+      prj->animations.push_back(spr);
+    }
+  }
 }

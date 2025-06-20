@@ -160,7 +160,7 @@ void user_interface_system_initialize(void);
 void update_user_interface(void);
 void render_user_interface(void);
 
-Vector2 position_element(Vector2 grid, Vector2 pos, Vector2 dim, f32 f);
+Vector2 position_element_by_grid(Vector2 grid_pos, Vector2 grid_coord, Vector2 grid_dim);
 
 void register_slider(slider_id _sdr_id, slider_type_id _sdr_type_id, button_id _left_btn_id, button_id _right_btn_id, bool _is_clickable, bool _localize_text);
 
@@ -178,10 +178,10 @@ bool ui_set_slider_current_value(slider_id id, slider_option value);
 bool gui_slider_add_option(slider_id _id, data_pack content, u32 _localization_symbol, std::string _no_localized_text);
 Rectangle get_atlas_texture_source_rect(atlas_texture_id _id);
 
-bool gui_menu_button(const char* text, button_id _id, Vector2 grid, f32 grid_scale, bool play_on_click_sound);
-bool gui_mini_button(const char* text, button_id _id, Vector2 grid, f32 grid_scale, bool play_on_click_sound);
+bool gui_menu_button(const char* text, button_id _id, Vector2 grid, Vector2 grid_location, bool play_on_click_sound);
+bool gui_mini_button(const char* text, button_id _id, Vector2 grid, bool play_on_click_sound);
 bool gui_slider_button(button_id _id, Vector2 pos);
-void gui_slider(slider_id _id, Vector2 pos, Vector2 grid, f32 grid_scale);
+void gui_slider(slider_id _id, Vector2 pos, Vector2 grid);
 void gui_draw_texture_to_background(texture_id _id);
 void gui_draw_spritesheet_to_background(spritesheet_id _id, Color _tint);
 void gui_progress_bar(progress_bar_id bar_id, Vector2 pos, bool _should_center);
@@ -189,14 +189,14 @@ void gui_panel(panel pan, Rectangle dest, bool _should_center);
 bool gui_panel_active(panel* panel, Rectangle dest, bool _should_center);
 void gui_label(const char* text, font_type type, i32 font_size, Vector2 position, Color tint, bool _center_h, bool _center_v);
 void gui_label_wrap(const char* text, font_type type, i32 font_size, Rectangle position, Color tint, bool _should_center);
-void gui_label_grid(const char* text, font_type type, i32 font_size, Vector2 position, Color tint, bool _center_h, bool _center_v, f32 grid_scale);
-void gui_label_wrap_grid(const char* text, font_type type, i32 font_size, Rectangle position, Color tint, bool _should_center, f32 grid_scale);
+void gui_label_grid(const char* text, font_type type, i32 font_size, Vector2 position, Color tint, bool _center_h, bool _center_v, Vector2 grid_coord);
+void gui_label_wrap_grid(const char* text, font_type type, i32 font_size, Rectangle position, Color tint, bool _should_center, Vector2 grid_pos);
 
 void gui_draw_atlas_texture_id_pro(atlas_texture_id _id, Rectangle src, Rectangle dest, bool relative, bool should_center);
 void gui_draw_atlas_texture_id(atlas_texture_id _id, Rectangle dest, Vector2 origin, f32 rotation); 
 void gui_draw_atlas_texture_id_scale(atlas_texture_id _id, Vector2 position, f32 scale, Color tint, bool should_center); 
-void gui_draw_atlas_texture_id_pro_grid(atlas_texture_id _id, Rectangle src, Rectangle dest, bool relative, f32 grid_scale); 
-void gui_draw_atlas_texture_id_grid(atlas_texture_id _id, Rectangle dest, f32 grid_scale); 
+void gui_draw_atlas_texture_id_pro_grid(atlas_texture_id _id, Rectangle src, Rectangle dest, bool relative); 
+void gui_draw_atlas_texture_id_grid(atlas_texture_id _id, Rectangle dest); 
 void gui_draw_texture_id_pro(texture_id _id, Rectangle src, Rectangle dest, bool should_center);
 void gui_draw_texture_id(texture_id _id, Rectangle dest); 
 void gui_draw_map_stage_pin(bool have_hovered, Vector2 screen_loc);

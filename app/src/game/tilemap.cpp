@@ -275,7 +275,7 @@ void map_to_str(tilemap* map, tilemap_stringtify_package* out_package) {
     i32 _prop_scale = prop->scale * 100.f;
     i32 _prop_rotation = prop->sprite.rotation * 10.f;
     const char* symbol = TextFormat("%.4d,%.4d,%.4d,%.4d,%.4d,%.4d,%.4d,%.4d,%.4d,%.4d,%.4d,%.4d,%.4d,%.4d," PROP_PARSE_PROP_BUFFER_PARSE_SYMBOL_STR,
-      prop->id, prop->sprite.sheet_id, prop->prop_type, _prop_rotation, _prop_scale, prop->zindex,
+      prop->id, prop->sprite.sheet_id - SHEET_ENUM_MAP_SPRITE_START, prop->prop_type, _prop_rotation, _prop_scale, prop->zindex,
       0, 0, 0, 0, (i32)prop->sprite.coord.x,   (i32)prop->sprite.coord.y,  (i32)prop->sprite.coord.width,  (i32)prop->sprite.coord.height
     );
     out_package->str_props.append(symbol);
@@ -313,7 +313,7 @@ void str_to_map(tilemap* map, tilemap_stringtify_package* out_package) {
     if (type == TILEMAP_PROP_TYPE_SPRITE ) {
       tilemap_prop_sprite prop = {};
       prop.id = TextToInteger(str_par_prop_member.buffer.at(0).c_str());
-      prop.sprite.sheet_id = static_cast<spritesheet_id>(TextToInteger(str_par_prop_member.buffer.at(1).c_str()));
+      prop.sprite.sheet_id = static_cast<spritesheet_id>(TextToInteger(str_par_prop_member.buffer.at(1).c_str()) + SHEET_ENUM_MAP_SPRITE_START);
       set_sprite(&prop.sprite, true, false);
       prop.prop_type = type;
       prop.sprite.rotation  = TextToFloat(str_par_prop_member.buffer.at(3).c_str());

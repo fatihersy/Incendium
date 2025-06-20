@@ -494,19 +494,19 @@ typedef struct ability {
   void* p_owner;
   std::array<ability_upgradables, ABILITY_UPG_MAX> upgradables;
   
+  Vector2 proj_dim;
+  Vector2 position;
+  f32 ability_cooldown_duration;
   f32 ability_play_time;
   f32 proj_sprite_scale;
   f32 proj_collision_scale;
+  f32 proj_duration;
   u16 proj_count;
   u16 proj_speed;
-  f32 proj_duration;
-  Vector2 proj_dim;
-  Rectangle icon_src;
-  Vector2 position;
   u16 level;
   u16 base_damage;
   u16 rotation;
-  bool center_proj_anim;
+  Rectangle icon_src;
   bool is_active;
   bool is_initialized;
 
@@ -529,31 +529,28 @@ typedef struct ability {
     this->level = 0;
     this->base_damage = 0;
     this->rotation = 0;
-    this->center_proj_anim = false;
     this->is_active = false;
     this->is_initialized = false;
   };
   ability(
     std::string name, ability_type type, 
     std::array<ability_upgradables, ABILITY_UPG_MAX> upgrs, 
-    f32 proj_sprite_scale, f32 proj_collision_scale, u16 proj_count, u16 proj_speed, f32 proj_duration, 
-    Vector2 proj_dim, Rectangle icon_src,
-    u16 base_damage, 
-    bool center_proj_anim) : ability()
+    f32 ability_cooldown, f32 proj_sprite_scale, f32 proj_collision_scale, u16 proj_count, u16 proj_speed, f32 proj_duration, u16 base_damage,
+    Vector2 proj_dim, Rectangle icon_src) : ability()
   {
+    this->display_name = name;
     this->type = type;
+    this->upgradables = upgrs;
+    this->ability_cooldown_duration = ability_cooldown;
     this->proj_sprite_scale = proj_sprite_scale;
     this->proj_collision_scale = proj_collision_scale;
     this->proj_count = proj_count;
     this->proj_speed = proj_speed;
     this->proj_duration = proj_duration;
+    this->base_damage = base_damage;
     this->proj_dim = proj_dim;
     this->icon_src = icon_src;
     this->level = 1;
-    this->base_damage = base_damage;
-    this->center_proj_anim = center_proj_anim;
-    this->display_name = name;
-    this->upgradables = upgrs;
   }
 }ability;
 
