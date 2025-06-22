@@ -85,7 +85,7 @@ static user_interface_system_state * state;
 }
 
 #define SDR_AT(ID) state->sliders.at(ID)
-#define SDR_CURR_OPT_VAL(ID) state->sliders.at(ID).options[state->sliders.at(ID).current_value]
+#define SDR_CURR_OPT_VAL(ID) state->sliders.at(ID).options.at(state->sliders.at(ID).current_value)
 #define SDR_ASSERT_SET_CURR_VAL(EXPR, ID, INDEX) {\
   if(EXPR) state->sliders.at(ID).current_value = INDEX;\
 }
@@ -358,13 +358,13 @@ void update_user_interface(void) {
 }
 
 void update_buttons(void) {
-  for (int i = 0; i < BTN_ID_MAX; ++i) {
-    if (state->buttons[i].id == BTN_ID_UNDEFINED) {
+  for (size_t itr_000 = 0; itr_000 < BTN_ID_MAX; ++itr_000) {
+    if (state->buttons.at(itr_000).id == BTN_ID_UNDEFINED) {
       continue;
     }
-    if (!state->buttons[i].on_screen) { continue; }
+    if (!state->buttons.at(itr_000).on_screen) { continue; }
 
-    button* btn = &state->buttons[i];
+    button* btn = __builtin_addressof(state->buttons.at(itr_000));
     if (CheckCollisionPointRec(state->mouse_pos, btn->dest)) {
       if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
         btn->state = BTN_STATE_PRESSED;
@@ -385,10 +385,10 @@ void update_buttons(void) {
   }
 }
 void update_sliders(void) {
-  for (int i = 0; i < SDR_ID_MAX; ++i) {
-    if ((state->sliders[i].id <= SDR_ID_UNDEFINED || state->sliders[i].id >= SDR_ID_MAX) || !state->sliders[i].on_screen) continue;
+  for (size_t itr_000 = 0; itr_000 < SDR_ID_MAX; ++itr_000) {
+    if ((state->sliders.at(itr_000).id <= SDR_ID_UNDEFINED || state->sliders.at(itr_000).id >= SDR_ID_MAX) || !state->sliders.at(itr_000).on_screen) continue;
     
-    slider* sdr = &state->sliders[i];
+    slider* sdr = __builtin_addressof(state->sliders.at(itr_000));
     if (!sdr && !sdr->is_registered) {
       TraceLog(LOG_WARNING, "user_interface::update_sliders()::Using slider didn't registered");
       sdr->on_screen = false;
@@ -480,8 +480,8 @@ bool gui_button(const char* text, button_id _id, Font font, f32 font_size_scale,
     TraceLog(LOG_WARNING, "user_interface::gui_button()::Recieved button type out of bound");
     return false;
   }
+  button* _btn = __builtin_addressof(state->buttons.at(_id));
 
-  button* _btn = &state->buttons[_id];
   if (!_btn->is_registered) {
     TraceLog(LOG_WARNING, "user_interface::gui_button()::The button is not registered");
     return false;
@@ -532,7 +532,8 @@ void gui_progress_bar(progress_bar_id bar_id, Vector2 pos, bool _should_center) 
     TraceLog(LOG_ERROR, "user_interface::gui_player_experiance_process()::ui system didn't initialized");
     return;
   }
-  progress_bar prg_bar = state->prg_bars[bar_id];
+  progress_bar prg_bar = state->prg_bars.at(bar_id);
+
   if (!prg_bar.is_initialized) {
     TraceLog(LOG_ERROR, "user_interface::gui_player_experiance_process()::Player experiance process bar didn't initialized");
     return;
@@ -897,8 +898,8 @@ void gui_draw_settings_screen(void) { // TODO: Return to settings later
   gui_slider(SDR_ID_SETTINGS_LANGUAGE, BASE_RENDER_SCALE(.5f), VECTOR2(0.f, 10.f));
 
   if(gui_menu_button(lc_txt(LOC_TEXT_SETTINGS_BUTTON_APPLY), BTN_ID_SETTINGS_APPLY_SETTINGS_BUTTON, VECTOR2(50.f, 100.f), BASE_RENDER_RES_DIV2, true)) {
-    slider sdr_win_mode = state->sliders[SDR_ID_SETTINGS_WIN_MODE_SLIDER];
-    i32 window_mod = sdr_win_mode.options[sdr_win_mode.current_value].content.data.i32[0];
+    slider sdr_win_mode = state->sliders.at(SDR_ID_SETTINGS_WIN_MODE_SLIDER);
+    i32 window_mod = sdr_win_mode.options.at(sdr_win_mode.current_value).content.data.i32[0];
     
     if (window_mod == FLAG_BORDERLESS_WINDOWED_MODE && !IsWindowState(FLAG_BORDERLESS_WINDOWED_MODE)) {
       event_fire(EVENT_CODE_TOGGLE_BORDERLESS, event_context{});
@@ -1035,7 +1036,7 @@ void register_button_type(button_type_id _btn_type_id, spritesheet_id _ss_type, 
     .scale = _scale,
     .should_center = _should_center,
   };
-  state->button_types[_btn_type_id] = btn_type;
+  state->button_types.at(_btn_type_id) = btn_type;
 }
 void register_button(button_id _btn_id, button_type_id _btn_type_id) {
   if (_btn_id      >= BTN_ID_MAX   || _btn_id      <= BTN_ID_UNDEFINED   || 
@@ -1044,12 +1045,11 @@ void register_button(button_id _btn_id, button_type_id _btn_type_id) {
     TraceLog(LOG_WARNING, "user_interface::register_button()::One of recieved ids was out of bound");
     return;
   }
-
-  button_type* _btn_type = &state->button_types[_btn_type_id];
+  button_type* _btn_type = __builtin_addressof(state->button_types.at(_btn_type_id));
 
   button btn = {
     .id = _btn_id,
-    .btn_type = state->button_types[_btn_type_id],
+    .btn_type = state->button_types.at(_btn_type_id),
     .state = BTN_STATE_UP,
     .dest = Rectangle{
       .x = 0.f, .y = 0.f,
@@ -1059,7 +1059,7 @@ void register_button(button_id _btn_id, button_type_id _btn_type_id) {
     .is_registered = true,
   };
 
-  state->buttons[_btn_id] = btn;
+  state->buttons.at(_btn_id) = btn;
 }
 void register_progress_bar(progress_bar_id _id, progress_bar_type_id _type_id, f32 width_multiply, Vector2 scale) {
   if (_id     >= PRG_BAR_ID_MAX      || _id      <= PRG_BAR_ID_UNDEFINED      ||
@@ -1070,13 +1070,13 @@ void register_progress_bar(progress_bar_id _id, progress_bar_type_id _type_id, f
   }
   progress_bar prg_bar = {};
 
-  prg_bar.type = state->prg_bar_types[_type_id];
+  prg_bar.type = state->prg_bar_types.at(_type_id);
   prg_bar.id = _id;
   prg_bar.scale = scale;
   prg_bar.width_multiply = width_multiply;
   prg_bar.is_initialized = true;
 
-  state->prg_bars[_id] = prg_bar;
+  state->prg_bars.at(_id) = prg_bar;
 }
 void register_progress_bar_type(progress_bar_type_id _type_id, atlas_texture_id _body_inside, atlas_texture_id _body_outside, shader_id _mask_shader_id) {
   if (_type_id       >= PRG_BAR_TYPE_ID_MAX || _type_id       <= PRG_BAR_TYPE_ID_UNDEFINED ||
@@ -1087,14 +1087,13 @@ void register_progress_bar_type(progress_bar_type_id _type_id, atlas_texture_id 
     TraceLog(LOG_WARNING, "user_interface::register_progress_bar_type()::Recieved id was out of bound");
     return;
   }
-
   progress_bar_type prg_type = {};
 
   prg_type.body_inside     = _body_inside;
   prg_type.body_outside    = _body_outside;
   prg_type.mask_shader_id  = _mask_shader_id;
 
-  state->prg_bar_types[_type_id] = prg_type;
+  state->prg_bar_types.at(_type_id) = prg_type;
 }
 void register_slider_type(
   slider_type_id _sdr_type_id, spritesheet_id _ss_sdr_body_type, f32 _scale, u16 _width_multiply,
@@ -1109,8 +1108,8 @@ void register_slider_type(
     }
 
   spritesheet ss_body = *ss_get_spritesheet_by_enum(_ss_sdr_body_type);
-  button_type* left_btn_type = &state->button_types[_left_btn_type_id]; 
-  button_type* right_btn_type = &state->button_types[_right_btn_type_id]; 
+  button_type* left_btn_type = __builtin_addressof(state->button_types.at(_left_btn_type_id)); 
+  button_type* right_btn_type = __builtin_addressof(state->button_types.at(_right_btn_type_id)); 
 
   slider_type sdr_type = {
     .id = _sdr_type_id,
@@ -1130,7 +1129,7 @@ void register_slider_type(
   };
   sdr_type.dest_frame_dim = Vector2 { (f32) sdr_type.body_width * sdr_type.width_multiply, ss_body.current_frame_rect.height * _scale };
 
-  state->slider_types[_sdr_type_id] = sdr_type;
+  state->slider_types.at(_sdr_type_id) = sdr_type;
 }
 /**
  * @param _is_clickable for SDR_TYPE_PERCENT type sliders. Does not affect others
@@ -1148,7 +1147,7 @@ void register_slider(
     return;
   }
 
-  slider_type* _sdr_type = &state->slider_types[_sdr_type_id];
+  slider_type* _sdr_type = __builtin_addressof(state->slider_types.at(_sdr_type_id));
   
   slider sdr = {
     .id = _sdr_id,
@@ -1179,7 +1178,7 @@ void register_slider(
     );
   }
 
-  state->sliders[_sdr_id] = sdr;
+  state->sliders.at(_sdr_id) = sdr;
 }
 void gui_draw_atlas_texture_to_background(atlas_texture_id _id) {
   draw_atlas_texture_regular(_id, Rectangle {0, 0, BASE_RENDER_RES.x, BASE_RENDER_RES.y}, WHITE, false);
@@ -1580,7 +1579,7 @@ bool ui_set_slider_current_index(slider_id id, u16 index) {
     return false;
   }
 
-  state->sliders[id].current_value = index;
+  state->sliders.at(id).current_value = index;
   return true;
 }
 bool ui_set_slider_current_value(slider_id id, slider_option value) {
@@ -1632,8 +1631,11 @@ data_pack* get_slider_current_value(slider_id id) {
     TraceLog(LOG_WARNING, "user_interface::get_slider_current_value()::ID was out of bound"); 
     return nullptr;
   }
-
-  return &state->sliders[id].options[state->sliders[id].current_value].content;
+  return __builtin_addressof(state->sliders
+    .at(id).options
+    .at(state->sliders
+      .at(id).current_value).content
+  );
 }
 bool is_ui_fade_anim_complete(void) {
   return state->fade_animation_timer == 0;
@@ -1650,12 +1652,12 @@ void set_resolution_slider_native_res(void) {
   i32 monitor = GetCurrentMonitor();
   Vector2 res = Vector2 { (f32) GetMonitorWidth(monitor), (f32) GetMonitorHeight(monitor)};
 
-  for (int i=0; i<state->sliders[SDR_ID_SETTINGS_RES_SLIDER].max_value; ++i) {
+  for (int i=0; i<state->sliders.at(SDR_ID_SETTINGS_RES_SLIDER).max_value; ++i) {
     if (
-      state->sliders[SDR_ID_SETTINGS_RES_SLIDER].options[i].content.data.u16[0] == res.x &&
-      state->sliders[SDR_ID_SETTINGS_RES_SLIDER].options[i].content.data.u16[1] == res.y) 
-    {
-      state->sliders[SDR_ID_SETTINGS_RES_SLIDER].current_value = i;
+      state->sliders.at(SDR_ID_SETTINGS_RES_SLIDER).options.at(i).content.data.u16[0] == res.x &&
+      state->sliders.at(SDR_ID_SETTINGS_RES_SLIDER).options.at(i).content.data.u16[1] == res.y
+    ) {
+      state->sliders.at(SDR_ID_SETTINGS_RES_SLIDER).current_value = i;
       break;
     }
   }
@@ -1748,7 +1750,7 @@ void user_interface_system_destroy(void) {}
 bool user_interface_on_event(u16 code, event_context context) {
   switch (code) {
     case EVENT_CODE_UI_UPDATE_PROGRESS_BAR: {
-      state->prg_bars[(i32)context.data.f32[0]].progress = context.data.f32[1];
+      state->prg_bars.at((i32)context.data.f32[0]).progress = context.data.f32[1];
       return true;
     }
     case EVENT_CODE_UI_START_FADEIN_EFFECT: {

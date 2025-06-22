@@ -113,11 +113,11 @@ void begin_scene_in_game(void) {
   _set_player_position(BASE_RENDER_SCALE(.5f));
   set_is_game_paused(true);
   
-  for (int i=0; i<MAX_UPDATE_ABILITY_PANEL_COUNT; ++i) {
-    state->ability_upg_panels[i] = state->default_panel;
+  for (size_t itr_000 = 0; itr_000 < MAX_UPDATE_ABILITY_PANEL_COUNT; ++itr_000) {
+    state->ability_upg_panels.at(itr_000) = state->default_panel;
   }
-  for (int i=0; i<MAX_UPDATE_PASSIVE_PANEL_COUNT; ++i) {
-    state->passive_selection_panels[i] = state->default_panel;
+  for (size_t itr_000 = 0; itr_000 < MAX_UPDATE_PASSIVE_PANEL_COUNT; ++itr_000) {
+    state->passive_selection_panels.at(itr_000) = state->default_panel;
   }
   state->worldmap_selection_panel = state->default_panel;
   state->debug_info_panel = state->default_panel;
@@ -300,8 +300,8 @@ void in_game_update_keyboard_bindings(void) {
       }
 
       if (IsKeyReleased(KEY_R)) {
-        for (int i=0; i<MAX_UPDATE_PASSIVE_PANEL_COUNT; ++i) {
-          state->passive_selection_panels[i].buffer.u16[0] = 0;
+        for (size_t itr_000 = 0; itr_000 < MAX_UPDATE_PASSIVE_PANEL_COUNT; ++itr_000) {
+          state->passive_selection_panels.at(itr_000).buffer.u16[0] = 0;
         }
       }
       break;
@@ -440,8 +440,8 @@ void render_interface_in_game(void) {
           BASE_RENDER_SCALE(.25f).x, BASE_RENDER_SCALE(.8f).y 
         };
         f32 dest_x_buffer = dest.x;
-        for (int i=0; i<MAX_UPDATE_PASSIVE_PANEL_COUNT; ++i) {
-          panel* pnl = __builtin_addressof(state->passive_selection_panels[i]);
+        for (size_t itr_000 = 0; itr_000 < MAX_UPDATE_PASSIVE_PANEL_COUNT; ++itr_000) {
+          panel* pnl = __builtin_addressof(state->passive_selection_panels.at(itr_000));
           if (pnl->frame_tex_id <= ATLAS_TEX_ID_UNSPECIFIED || pnl->frame_tex_id >= ATLAS_TEX_ID_MAX || 
             pnl->bg_tex_id    <= ATLAS_TEX_ID_UNSPECIFIED || pnl->bg_tex_id    >= ATLAS_TEX_ID_MAX ) 
           {
@@ -450,13 +450,13 @@ void render_interface_in_game(void) {
           if(pnl->buffer.u16[0] <= 0 || pnl->buffer.u16[0] >= CHARACTER_STATS_MAX) {
             pnl->buffer.u16[0] = get_random(1,CHARACTER_STATS_MAX-1);
           }
-          dest.x = dest_x_buffer + ((dest.width + SCREEN_OFFSET.x) * i);
+          dest.x = dest_x_buffer + ((dest.width + SCREEN_OFFSET.x) * itr_000);
           character_stat* stat = get_dynamic_player_state_stat(static_cast<character_stats>(pnl->buffer.u16[0]));
           if(gui_panel_active(pnl, dest, true)) {
             set_is_game_paused(false);
             start_game(stat->id);
-            for (int i=0; i<MAX_UPDATE_ABILITY_PANEL_COUNT; ++i) {
-              state->passive_selection_panels[i].buffer.u16[0] = 0;
+            for (size_t itr_111 = 0; itr_111 < MAX_UPDATE_ABILITY_PANEL_COUNT; ++itr_111) {
+              state->passive_selection_panels.at(itr_111).buffer.u16[0] = 0;
             }
             break;
           }
@@ -480,15 +480,15 @@ void render_interface_in_game(void) {
             BASE_RENDER_SCALE(.25f).x, BASE_RENDER_SCALE(.5f).y 
           };
           f32 dest_x_buffer = dest.x;
-          for (int i=0; i<MAX_UPDATE_ABILITY_PANEL_COUNT; ++i) {
-            panel* pnl = __builtin_addressof(state->ability_upg_panels[i]);
-            dest.x = dest_x_buffer + ((dest.width + SCREEN_OFFSET.x) * i);
+          for (size_t itr_000 = 0; itr_000 < MAX_UPDATE_ABILITY_PANEL_COUNT; ++itr_000) {
+            panel* pnl = __builtin_addressof(state->ability_upg_panels.at(itr_000));
+            dest.x = dest_x_buffer + ((dest.width + SCREEN_OFFSET.x) * itr_000);
 
             if(gui_panel_active(pnl, dest, true)) {
-              end_ability_upgrade_state(i);
+              end_ability_upgrade_state(itr_000);
               break;
             }
-            draw_in_game_upgrade_panel(i, dest);
+            draw_in_game_upgrade_panel(itr_000, dest);
           }
         }
         else { prepare_ability_upgrade_state(); }
@@ -622,7 +622,7 @@ if (UPG->level == 1) {\
 }}
 
 void draw_in_game_upgrade_panel(u16 which_panel, Rectangle panel_dest) {
-  const ability* upg = __builtin_addressof(state->ability_upgrade_choices[which_panel]);
+  const ability* upg = __builtin_addressof(state->ability_upgrade_choices.at(which_panel));
   const ability* abl = get_dynamic_player_state_ability(upg->type);
   if (upg->type <= ABILITY_TYPE_UNDEFINED || upg->type >= ABILITY_TYPE_MAX) {
     TraceLog(LOG_WARNING, "scene_in_game::draw_in_game_upgrade_panel()::Upgraded ability is out of bounds"); 
@@ -749,7 +749,7 @@ void prepare_ability_upgrade_state(void) {
   state->is_upgrade_choices_ready = true;
 }
 void end_ability_upgrade_state(u16 which_panel_chosen) {
-  const ability* new_ability = __builtin_addressof(state->ability_upgrade_choices[which_panel_chosen]);
+  const ability* new_ability = __builtin_addressof(state->ability_upgrade_choices.at(which_panel_chosen));
   if (new_ability->level >= MAX_ABILITY_LEVEL || new_ability->level <= 1) {
     _add_ability(new_ability->type);
   }
@@ -758,11 +758,11 @@ void end_ability_upgrade_state(u16 which_panel_chosen) {
   }
 
   set_is_game_paused(false);
-  state->ability_upgrade_choices.fill(ability{});
+  state->ability_upgrade_choices.fill(ability());
   set_dynamic_player_have_ability_upgrade_points(false);
   state->is_upgrade_choices_ready = false;
-  for (int i=0; i<MAX_UPDATE_ABILITY_PANEL_COUNT; ++i) {
-    state->ability_upg_panels[i].buffer.u16[0] = 0;
+  for (size_t itr_000 = 0; itr_000 < MAX_UPDATE_ABILITY_PANEL_COUNT; ++itr_000) {
+    state->ability_upg_panels.at(itr_000).buffer.u16[0] = 0;
   }
 }
 Rectangle sig_get_camera_view_rect(Camera2D camera) {

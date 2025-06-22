@@ -7,9 +7,9 @@
 bool world_system_initialize(camera_metrics* _in_camera_metrics);
 
 void set_worldmap_location(u16 id);
+worldmap_stage* get_worldmap_locations(void);
 worldmap_stage* get_active_worldmap(void);
 void set_map_tile(i32 layer, tile src, tile dst);
-worldmap_stage* get_worldmap_locations(void);
 tilemap* get_active_map(void);
 tilemap_prop get_map_prop_by_pos(Vector2 pos);
 tilemap_prop_static* get_map_prop_static_by_id(u16 id);

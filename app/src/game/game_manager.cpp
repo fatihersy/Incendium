@@ -136,9 +136,9 @@ void update_game_manager(void) {
       populate_map_with_spawns();
     }
 
-    for (int i=0; i<ABILITY_TYPE_MAX; ++i) {
-      if (state->game_info.player_state_dynamic->ability_system.abilities[i].is_active) {
-        state->game_info.player_state_dynamic->ability_system.abilities[i].ability_play_time += GetFrameTime();
+    for (size_t itr_000 = 0; itr_000 < ABILITY_TYPE_MAX; ++itr_000) {
+      if (state->game_info.player_state_dynamic->ability_system.abilities.at(itr_000).is_active) {
+        state->game_info.player_state_dynamic->ability_system.abilities.at(itr_000).ability_play_time += GetFrameTime();
       }
     }
 
@@ -313,8 +313,8 @@ void populate_map_with_spawns(void) {
   if ((state->remaining_waves_to_spawn_boss <= 0 || state->remaining_waves_to_spawn_boss > WAVE_COUNT_TO_SPAWN_BOSS) && *state->game_info.p_spawn_system_spawn_count < MAX_SPAWN_COUNT) {
     for (u16 i = 0; i < SPAWN_TRYING_LIMIT; i++) {
       Vector2 position = {
-        (f32) get_random((i32)state->stage.spawning_areas[0].x, (i32)state->stage.spawning_areas[0].x + state->stage.spawning_areas[0].width),
-        (f32) get_random((i32)state->stage.spawning_areas[0].y, (i32)state->stage.spawning_areas[0].y + state->stage.spawning_areas[0].height)
+        (f32) get_random((i32)state->stage.spawning_areas.at(0).x, (i32)state->stage.spawning_areas.at(0).x + state->stage.spawning_areas.at(0).width),
+        (f32) get_random((i32)state->stage.spawning_areas.at(0).y, (i32)state->stage.spawning_areas.at(0).y + state->stage.spawning_areas.at(0).height)
       };
       if(spawn_character(Character2D(SPAWN_TYPE_RED, (u16) state->game_info.player_state_dynamic->level + 5, 150, position, 1.f))) {
         state->remaining_waves_to_spawn_boss = WAVE_COUNT_TO_SPAWN_BOSS;
@@ -332,8 +332,8 @@ void populate_map_with_spawns(void) {
   for (u16 i = 0; i < MAX_SPAWN_COUNT && (spawn_trying_limit <= SPAWN_TRYING_LIMIT && spawn_trying_limit != 0); ) 
   {
     Vector2 position = {
-      (f32) get_random((i32)state->stage.spawning_areas[0].x, (i32)state->stage.spawning_areas[0].x + state->stage.spawning_areas[0].width),
-      (f32) get_random((i32)state->stage.spawning_areas[0].y, (i32)state->stage.spawning_areas[0].y + state->stage.spawning_areas[0].height)
+      (f32) get_random((i32)state->stage.spawning_areas.at(0).x, (i32)state->stage.spawning_areas.at(0).x + state->stage.spawning_areas.at(0).width),
+      (f32) get_random((i32)state->stage.spawning_areas.at(0).y, (i32)state->stage.spawning_areas.at(0).y + state->stage.spawning_areas.at(0).height)
     };
     spawn_character(Character2D(
       (u16) get_random(SPAWN_TYPE_UNDEFINED+1, SPAWN_TYPE_MAX-2), 

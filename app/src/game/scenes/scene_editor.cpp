@@ -141,11 +141,11 @@ void initialize_scene_editor(camera_metrics* _camera_metrics) {
 
   state->tile_selection_panel = panel();
   state->tile_selection_panel.signal_state = BTN_STATE_HOVER;
-  state->tile_selection_panel.dest = Rectangle {0, 0, BASE_RENDER_SCALE(.3f).x, BASE_RENDER_RES.y};
+  state->tile_selection_panel.dest = Rectangle {0, 0, BASE_RENDER_SCALE(.45f).x, BASE_RENDER_RES.y};
   
   state->prop_selection_panel = panel();
   state->prop_selection_panel.signal_state = BTN_STATE_HOVER;
-  state->prop_selection_panel.dest = Rectangle {0, 0, BASE_RENDER_SCALE(.3f).x, BASE_RENDER_RES.y};
+  state->prop_selection_panel.dest = Rectangle {0, 0, BASE_RENDER_SCALE(.35f).x, BASE_RENDER_RES.y};
   state->prop_selection_panel.scroll_handle = Rectangle{
     .x = state->prop_selection_panel.dest.x + state->prop_selection_panel.dest.width - PROP_DRAG_HANDLE_DIM - 10, .y = 0,
     .width = PROP_DRAG_HANDLE_DIM, .height = PROP_DRAG_HANDLE_DIM * 5,
@@ -761,47 +761,55 @@ void render_interface_editor(void) {
   }
   if(state->b_show_tilesheet_tile_selection_screen && !state->b_show_prop_selection_screen) 
   {
+    Rectangle& panel_dest = state->tile_selection_panel.dest; 
     gui_panel_scissored(state->tile_selection_panel, false, {
       render_map_palette(state->tile_selection_panel.zoom);
-      gui_slider(SDR_ID_EDITOR_MAP_LAYER_SLC_SLIDER, Vector2{
-        state->tile_selection_panel.dest.x,state->tile_selection_panel.dest.y}, VECTOR2(4,5)
-      );
-      gui_slider(SDR_ID_EDITOR_MAP_STAGE_SLC_SLIDER, Vector2{
-        state->tile_selection_panel.dest.x,state->tile_selection_panel.dest.y}, VECTOR2(4,10)
-      );
+      Vector2 label_anchor  = VECTOR2(panel_dest.x + panel_dest.width * .5f, panel_dest.y + panel_dest.height * .05f);
+      Vector2 slider_anchor = VECTOR2(panel_dest.x + panel_dest.width * .5f, panel_dest.y + panel_dest.height * .05f);
+
+      gui_label_grid("Layer", FONT_TYPE_MEDIUM, 10, label_anchor, WHITE, true, true, VECTOR2(-15.f, -4.f));
+      gui_slider(SDR_ID_EDITOR_MAP_LAYER_SLC_SLIDER, slider_anchor, VECTOR2(15.f,-4.f));
+
+      gui_label_grid("Stage", FONT_TYPE_MEDIUM, 10, label_anchor, WHITE, true, true, VECTOR2(-15.f, 4.f));
+      gui_slider(SDR_ID_EDITOR_MAP_STAGE_SLC_SLIDER, slider_anchor, VECTOR2(15.f,4.f));
     }); 
   }
   else if(state->b_show_prop_selection_screen && !state->b_show_tilesheet_tile_selection_screen) 
   {
     panel* pnl = &state->prop_selection_panel;
-    gui_panel_scissored((*pnl), false, {});
-    gui_slider(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER, VECTOR2(pnl->dest.x,pnl->dest.y), VECTOR2(4,3));
-    f32 prop_height_count = pnl->buffer.f32[1];
-    if (get_slider_current_value(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER)->data.i32[0] == TILEMAP_PROP_TYPE_SPRITE) {
-      state->b_prop_selection_screen_update_prop_sprites = true;
-      for (size_t iter = 0; iter < state->tilemap_props_sprite_selected->size(); ++iter) {
-        tilemap_prop_sprite& prop = state->tilemap_props_sprite_selected->at(iter);
-        Rectangle dest = prop.sprite.coord;
-        dest.x = 0;
-        dest.y = (pnl->scroll * pnl->buffer.f32[0]) + prop_height_count;
-        ui_play_sprite_on_site(&prop.sprite, WHITE, dest);
-        prop_height_count += dest.height;
+    gui_panel_scissored((*pnl), false, {
+      Vector2 label_anchor = VECTOR2(pnl->dest.x + pnl->dest.width * .25f, pnl->dest.y + pnl->dest.height * .05f);
+      Vector2 slider_anchor = VECTOR2(pnl->dest.x + pnl->dest.width * .675f, pnl->dest.y + pnl->dest.height * .05f);
+      gui_label_grid("Prop Type", FONT_TYPE_MEDIUM, 10, label_anchor, WHITE, true, true, VECTOR2(0.f, 0.f));
+      gui_slider(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER, slider_anchor, VECTOR2(0.f, 0.f));
+
+      f32 prop_height_count = pnl->buffer.f32[1];
+      if (get_slider_current_value(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER)->data.i32[0] == TILEMAP_PROP_TYPE_SPRITE) {
+        state->b_prop_selection_screen_update_prop_sprites = true;
+        for (size_t iter = 0; iter < state->tilemap_props_sprite_selected->size(); ++iter) {
+          tilemap_prop_sprite& prop = state->tilemap_props_sprite_selected->at(iter);
+          Rectangle dest = prop.sprite.coord;
+          dest.x = 0;
+          dest.y = (pnl->scroll * pnl->buffer.f32[0]) + prop_height_count;
+          ui_play_sprite_on_site(&prop.sprite, WHITE, dest);
+          prop_height_count += dest.height;
+        }
+      } else {
+        for (size_t iter = 0; iter < state->tilemap_props_static_selected->size(); ++iter) {
+          const tilemap_prop_static& prop = state->tilemap_props_static_selected->at(iter);
+          Rectangle dest = prop.dest;
+          dest.x = 0;
+          dest.y = (pnl->scroll * pnl->buffer.f32[0]) + prop_height_count;
+          gui_draw_texture_id_pro(prop.tex_id, prop.source, dest, false);
+          prop_height_count += prop.dest.height;
+        }
       }
-    } else {
-      for (size_t iter = 0; iter < state->tilemap_props_static_selected->size(); ++iter) {
-        const tilemap_prop_static& prop = state->tilemap_props_static_selected->at(iter);
-        Rectangle dest = prop.dest;
-        dest.x = 0;
-        dest.y = (pnl->scroll * pnl->buffer.f32[0]) + prop_height_count;
-        gui_draw_texture_id_pro(prop.tex_id, prop.source, dest, false);
-        prop_height_count += prop.dest.height;
-      }
-    }
-    pnl->buffer.f32[0] = prop_height_count;
-    pnl->scroll_handle.y = FMAX(pnl->scroll_handle.y, pnl->dest.y + SCREEN_OFFSET.x);
-    pnl->scroll_handle.y = FMIN(pnl->scroll_handle.y, pnl->dest.y + pnl->dest.height);
-    pnl->scroll = (pnl->scroll_handle.y - pnl->dest.y - SCREEN_OFFSET.x) / (pnl->dest.height - pnl->scroll_handle.height) * -1;
-    DrawRectangleRec(pnl->scroll_handle, WHITE);
+      pnl->buffer.f32[0] = prop_height_count;
+      pnl->scroll_handle.y = FMAX(pnl->scroll_handle.y, pnl->dest.y + SCREEN_OFFSET.x);
+      pnl->scroll_handle.y = FMIN(pnl->scroll_handle.y, pnl->dest.y + pnl->dest.height);
+      pnl->scroll = (pnl->scroll_handle.y - pnl->dest.y - SCREEN_OFFSET.x) / (pnl->dest.height - pnl->scroll_handle.height) * -1;
+      DrawRectangleRec(pnl->scroll_handle, WHITE);
+    });
   }
 
   if(state->selection_type == SLC_TYPE_SLC_PROP_STATIC) 
@@ -826,15 +834,15 @@ void render_interface_editor(void) {
       Vector2 sdr_center = VECTOR2( pnl->dest.x + pnl->dest.width * .75f, pnl->dest.y + pnl->dest.height * .5f);
       Vector2 label_center = VECTOR2( pnl->dest.x + pnl->dest.width * .25f, pnl->dest.y + pnl->dest.height * .5f);
 
-      gui_label_grid("Scale", FONT_TYPE_MEDIUM, 9, label_center, WHITE, true, true, VECTOR2(0.f, -10.f));
+      gui_label_grid("Scale", FONT_TYPE_MEDIUM, 10, label_center, WHITE, true, true, VECTOR2(0.f, -10.f));
       get_slider_by_id(SDR_ID_EDITOR_PROP_SCALE_SLIDER)->options.at(0).no_localized_text = TextFormat("%.2f", state->selected_prop_sprite->scale);
       gui_slider(SDR_ID_EDITOR_PROP_SCALE_SLIDER, sdr_center, VECTOR2(0.f, -10.f));
 
-      gui_label_grid("Rotation", FONT_TYPE_MEDIUM, 9, label_center, WHITE, true, true, VECTOR2(0.f, 0.f));
+      gui_label_grid("Rotation", FONT_TYPE_MEDIUM, 10, label_center, WHITE, true, true, VECTOR2(0.f, 0.f));
       get_slider_by_id(SDR_ID_EDITOR_PROP_ROTATION_SLIDER)->options.at(0).no_localized_text = TextFormat("%.1f", state->selected_prop_sprite->sprite.rotation);
       gui_slider(SDR_ID_EDITOR_PROP_ROTATION_SLIDER, sdr_center, VECTOR2(0.f, 0.f));
 
-      gui_label_grid("Z-Index", FONT_TYPE_MEDIUM, 9, label_center, WHITE, true, true, VECTOR2(0.f, 10.f));
+      gui_label_grid("Z-Index", FONT_TYPE_MEDIUM, 10, label_center, WHITE, true, true, VECTOR2(0.f, 10.f));
       get_slider_by_id(SDR_ID_EDITOR_PROP_ZINDEX_SLIDER)->options.at(0).no_localized_text = TextFormat("%d", state->selected_prop_sprite->zindex);
       gui_slider(SDR_ID_EDITOR_PROP_ZINDEX_SLIDER, sdr_center, VECTOR2(0.f, 10.f));
     });

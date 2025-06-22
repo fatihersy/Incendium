@@ -46,7 +46,7 @@ bool world_system_initialize(camera_metrics* _in_camera_metrics) {
   if(!state->palette.is_initialized) {
     TraceLog(LOG_WARNING, "scene_in_game_edit::initialize_scene_in_game_edit()::palette initialization failed");
   }
-  state->palette.position = {_in_camera_metrics->screen_offset.x, _in_camera_metrics->screen_offset.y + 50};
+  state->palette.position = {_in_camera_metrics->screen_offset.x, _in_camera_metrics->screen_offset.y + 100}; // INFO: Tilesheet start position
 
   { // WORLD LOCATIONS
     CREATE_WORLDMAP_STAGE_CENTERED( 0, "Stage 1",  "stage1",  VECTOR2(   0,    0), false); // main menu background
@@ -95,6 +95,9 @@ bool world_system_initialize(camera_metrics* _in_camera_metrics) {
   return true;
 }
 
+/**
+ * @brief The size is MAX_WORLDMAP_LOCATIONS
+ */
 worldmap_stage* get_worldmap_locations(void) {
   return state->worldmap_locations.data();
 }
