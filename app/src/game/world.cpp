@@ -72,24 +72,24 @@ bool world_system_initialize(camera_metrics* _in_camera_metrics) {
     CREATE_WORLDMAP_STAGE_CENTERED(20, "Stage 21", "stage21", VECTOR2(1977,  385), true);
     CREATE_WORLDMAP_STAGE_CENTERED(21, "Stage 22", "stage22", VECTOR2(1661,  410), true);
   }
-  for (int i=0; i<MAX_WORLDMAP_LOCATIONS; ++i) {
-    for (int j=0; j<MAX_TILEMAP_LAYERS; ++j) {
-      state->map.at(i).filename.at(j) = TextFormat("%s_layer%d.txt", state->worldmap_locations.at(i).filename.c_str(), j);
+  for (int itr_000 = 0; itr_000 < MAX_WORLDMAP_LOCATIONS; ++itr_000) {
+    for (int itr_111 = 0; itr_111 < MAX_TILEMAP_LAYERS; ++itr_111) {
+      state->map.at(itr_000).filename.at(itr_111) = TextFormat("%s_layer%d.txt", state->worldmap_locations.at(itr_000).filename.c_str(), itr_111);
     }
-    state->map.at(i).propfile = TextFormat("%s_prop.txt", state->worldmap_locations.at(i).filename.c_str());
-    create_tilemap(TILESHEET_TYPE_MAP, Vector2 {}, 100, 60, &state->map.at(i));
-    if(!state->map.at(i).is_initialized) {
+    state->map.at(itr_000).propfile = TextFormat("%s_prop.txt", state->worldmap_locations.at(itr_000).filename.c_str());
+    create_tilemap(TILESHEET_TYPE_MAP, Vector2 {}, 100, 60, &state->map.at(itr_000));
+    if(!state->map.at(itr_000).is_initialized) {
       TraceLog(LOG_WARNING, "WARNING::scene_in_game_edit::initialize_scene_in_game_edit()::tilemap initialization failed");
     }
-    load_or_create_map_data(&state->map.at(i), &state->map_stringtify.at(i));
+    load_or_create_map_data(&state->map.at(itr_000), &state->map_stringtify.at(itr_000));
 
-    if (!state->map_stringtify.at(i).is_success) {
+    if (!state->map_stringtify.at(itr_000).is_success) {
       TraceLog(LOG_ERROR, "game_manager_initialize::game manager unable to load map");
       return false;
     }
-    state->worldmap_locations.at(i).spawning_areas.at(0) = {
-      state->map.at(i).position.x, state->map.at(i).position.y,
-      (f32) (state->map.at(i).map_dim * state->map.at(i).tile_size), (f32) (state->map.at(i).map_dim * state->map.at(i).tile_size)
+    state->worldmap_locations.at(itr_000).spawning_areas.at(0) = {
+      state->map.at(itr_000).position.x, state->map.at(itr_000).position.y,
+      (f32) (state->map.at(itr_000).map_dim * state->map.at(itr_000).tile_size), (f32) (state->map.at(itr_000).map_dim * state->map.at(itr_000).tile_size)
     };
   }
   return true;
@@ -126,31 +126,31 @@ void set_map_tile(i32 layer, tile src, tile dst) {
   CURR_MAP.tiles[layer][src.position.x][src.position.y].c[0] = dst.symbol.c[0];
   CURR_MAP.tiles[layer][src.position.x][src.position.y].c[1] = dst.symbol.c[1];
 }
-tilemap_prop get_map_prop_by_pos(Vector2 pos) {
-  for (size_t iter = 0; iter < CURR_MAP.static_props.size(); ++iter) {
-    Rectangle prop_dest = CURR_MAP.static_props.at(iter).dest;
+tilemap_prop_address get_map_prop_by_pos(Vector2 pos) {
+  for (size_t itr_000 = 0; itr_000 < CURR_MAP.static_props.size(); ++itr_000) {
+    Rectangle prop_dest = CURR_MAP.static_props.at(itr_000).dest;
     prop_dest.x -= prop_dest.width  * .5f;
     prop_dest.y -= prop_dest.height * .5f;
     if(CheckCollisionPointRec(pos, prop_dest)) { // Props are always centered
-      tilemap_prop prop = {};
-      prop.data.prop_static = __builtin_addressof(CURR_MAP.static_props.at(iter));
+      tilemap_prop_address prop = tilemap_prop_address();
+      prop.data.prop_static = __builtin_addressof(CURR_MAP.static_props.at(itr_000));
       prop.type = prop.data.prop_static->prop_type;
       return prop;
     }
   }
-  for (size_t iter = 0; iter < CURR_MAP.sprite_props.size(); ++iter) {
-    Rectangle prop_dest = CURR_MAP.sprite_props.at(iter).sprite.coord;
+  for (size_t itr_000 = 0; itr_000 < CURR_MAP.sprite_props.size(); ++itr_000) {
+    Rectangle prop_dest = CURR_MAP.sprite_props.at(itr_000).sprite.coord;
     prop_dest.x -= prop_dest.width  * .5f;
     prop_dest.y -= prop_dest.height * .5f;
     if(CheckCollisionPointRec(pos, prop_dest)) { // Props are always centered
-      tilemap_prop prop = {};
-      prop.data.prop_sprite = &CURR_MAP.sprite_props.at(iter);
+      tilemap_prop_address prop = tilemap_prop_address();
+      prop.data.prop_sprite = &CURR_MAP.sprite_props.at(itr_000);
       prop.type = prop.data.prop_sprite->prop_type;
       return prop;
     }
   }
 
-  return tilemap_prop {};
+  return tilemap_prop_address();
 }
 tilemap_prop_static* get_map_prop_static_by_id(u16 id) {
   for (size_t iter = 0; iter < CURR_MAP.static_props.size(); ++iter) {
@@ -203,26 +203,24 @@ void render_map_palette(f32 zoom) {
   state->palette_zoom = zoom;
 }
 
-bool add_prop_curr_map(tilemap_prop prop) {
-  if (prop.type != TILEMAP_PROP_TYPE_SPRITE) {
-    if (prop.data.prop_static == nullptr) {
-      TraceLog(LOG_WARNING, "world::add_prop_curr_map()::Recieved static prop was empty");
-      return false;
-    }
-
-    prop.data.prop_static->id = CURR_MAP.static_prop_count;
-    CURR_MAP.static_props.push_back(*prop.data.prop_static);
-    CURR_MAP.static_prop_count++;
+bool add_prop_curr_map(tilemap_prop_static prop_static) {
+  if (!prop_static.is_initialized) {
+    TraceLog(LOG_WARNING, "world::add_prop_curr_map()::Recieved static prop was empty");
+    return false;
   }
-  if (prop.type == TILEMAP_PROP_TYPE_SPRITE) {
-    if (prop.data.prop_sprite == nullptr) {
-      TraceLog(LOG_WARNING, "world::add_prop_curr_map()::Recieved sprite prop was empty");
-      return false;
-    }
-    prop.data.prop_sprite->id = CURR_MAP.sprite_prop_count;
-    CURR_MAP.sprite_props.push_back(*prop.data.prop_sprite);
-    CURR_MAP.sprite_prop_count++;
+  prop_static.id = CURR_MAP.static_props.size();
+  CURR_MAP.static_props.push_back(prop_static);
+  
+  return true;
+}
+bool add_prop_curr_map(tilemap_prop_sprite prop_sprite) {
+  if (!prop_sprite.is_initialized) {
+    TraceLog(LOG_WARNING, "world::add_prop_curr_map()::Recieved sprite prop was empty");
+    return false;
   }
+  prop_sprite.id = CURR_MAP.sprite_props.size();
+  CURR_MAP.sprite_props.push_back(prop_sprite);
+  
   return true;
 }
 bool remove_prop_cur_map_by_id(u16 id, tilemap_prop_types type) {
@@ -233,9 +231,7 @@ bool remove_prop_cur_map_by_id(u16 id, tilemap_prop_types type) {
     }
     for (auto iter = CURR_MAP.static_props.begin(); iter != CURR_MAP.static_props.end(); ++iter) {
       if (iter->id == id) {
-        CURR_MAP.static_prop_count--;
-        *iter = CURR_MAP.static_props.at(CURR_MAP.static_prop_count);
-        CURR_MAP.static_props.at(CURR_MAP.static_prop_count) = tilemap_prop_static{};
+        CURR_MAP.static_props.erase(iter);
         return true;
       }
     }
@@ -247,7 +243,6 @@ bool remove_prop_cur_map_by_id(u16 id, tilemap_prop_types type) {
     }
     for (auto iter = CURR_MAP.sprite_props.begin(); iter != CURR_MAP.sprite_props.end(); iter++) {
       if (iter->id == id) {
-        CURR_MAP.sprite_prop_count--;
         CURR_MAP.sprite_props.erase(iter);
         return true;
       }

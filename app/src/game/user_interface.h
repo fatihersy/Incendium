@@ -197,8 +197,8 @@ void gui_draw_atlas_texture_id(atlas_texture_id _id, Rectangle dest, Vector2 ori
 void gui_draw_atlas_texture_id_scale(atlas_texture_id _id, Vector2 position, f32 scale, Color tint, bool should_center); 
 void gui_draw_atlas_texture_id_pro_grid(atlas_texture_id _id, Rectangle src, Rectangle dest, bool relative); 
 void gui_draw_atlas_texture_id_grid(atlas_texture_id _id, Rectangle dest); 
-void gui_draw_texture_id_pro(texture_id _id, Rectangle src, Rectangle dest, bool should_center);
-void gui_draw_texture_id(texture_id _id, Rectangle dest); 
+void gui_draw_texture_id_pro(texture_id _id, Rectangle src, Rectangle dest, Color tint = WHITE, Vector2 origin = {0.f, 0.f});
+void gui_draw_texture_id(texture_id _id, Rectangle dest);
 void gui_draw_map_stage_pin(bool have_hovered, Vector2 screen_loc);
 void gui_draw_spritesheet_id(spritesheet_id _id, Color _tint, Vector2 pos, Vector2 scale, u16 frame); 
 void gui_draw_settings_screen(void);

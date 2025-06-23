@@ -1271,10 +1271,10 @@ void gui_draw_spritesheet_to_background(spritesheet_id _id, Color _tint) {
   icon_loc.y -= icon_loc.height * .5f;
   
   if(have_hovered) {
-    gui_draw_texture_id_pro(TEX_ID_ASSET_ATLAS, Rectangle{1632, 928, 32, 32}, icon_loc, false); // INFO: MAP PIN TEXTURES
+    gui_draw_texture_id_pro(TEX_ID_ASSET_ATLAS, Rectangle{1632, 928, 32, 32}, icon_loc); // INFO: MAP PIN TEXTURES
   }
   else {
-    gui_draw_texture_id_pro(TEX_ID_ASSET_ATLAS, Rectangle{1600, 928, 32, 32}, icon_loc, false);
+    gui_draw_texture_id_pro(TEX_ID_ASSET_ATLAS, Rectangle{1600, 928, 32, 32}, icon_loc);
   }
 }
 /**
@@ -1483,7 +1483,7 @@ void gui_draw_spritesheet_id(spritesheet_id _id, Color _tint, Vector2 pos, Vecto
   }
   draw_sprite_on_site_by_id(_id, _tint, pos, scale, frame);
 }
-void gui_draw_texture_id_pro(texture_id _id, Rectangle src, Rectangle dest, bool should_center) {
+void gui_draw_texture_id_pro(texture_id _id, Rectangle src, Rectangle dest, Color tint, Vector2 origin) {
   if (_id >= TEX_ID_MAX || _id <= TEX_ID_UNSPECIFIED) {
     TraceLog(LOG_WARNING, "user_interface::gui_draw_texture_id_pro()::ID was out of bound"); 
     return; 
@@ -1493,11 +1493,7 @@ void gui_draw_texture_id_pro(texture_id _id, Rectangle src, Rectangle dest, bool
     TraceLog(LOG_WARNING, "user_interface::gui_draw_texture_id_pro()::Tex was null");
     return; 
   }
-  if (should_center) {
-    dest.x -= dest.width / 2.f;
-    dest.y -= dest.height / 2.f;
-  }
-  DrawTexturePro(*tex, src, dest, Vector2 {}, 0, WHITE);
+  DrawTexturePro(*tex, src, dest, origin, 0, tint);
 }
 void gui_draw_texture_id(texture_id _id, Rectangle dest) {
   if (_id >= TEX_ID_MAX || _id <= TEX_ID_UNSPECIFIED) {
@@ -1537,7 +1533,7 @@ void gui_draw_atlas_texture_id_scale(atlas_texture_id _id, Vector2 position, f32
 
 Font* ui_get_font(font_type font) {
   if (!state) {
-    TraceLog(LOG_WARNING, "user_interface::user_interface_state_get_font()::user interface didn't initialized. Returning default font");
+    TraceLog(LOG_WARNING, "user_interface::ui_get_font()::State is not valid");
     return nullptr;
   }
   switch (font) {
@@ -1547,7 +1543,6 @@ Font* ui_get_font(font_type font) {
   case FONT_TYPE_ITALIC: return &UI_ITALIC_FONT;
   default: TraceLog(LOG_WARNING, "user_interface::ui_get_font()::Unknown font type");
   }
-
   return nullptr;
 }
 Vector2* ui_get_mouse_pos(void) {

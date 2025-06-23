@@ -1,6 +1,8 @@
 #ifndef GAME_TYPES_H
 #define GAME_TYPES_H
 
+#include "/core/fmemory.h"
+
 #include <string>
 #include <array>
 #include <raylib.h>
@@ -228,7 +230,7 @@ typedef struct spritesheet {
   bool play_looped;
   bool play_once;
 
-  spritesheet() {
+  spritesheet(void) {
     this->sheet_id = SHEET_ID_SPRITESHEET_UNSPECIFIED;
     this->tex_id = TEX_ID_UNSPECIFIED;
     this->tex_handle = nullptr;
@@ -281,6 +283,13 @@ typedef struct atlas_texture {
 
 typedef struct tile_symbol {
   u8 c[2];
+  tile_symbol(void) {
+    zero_memory(this->c, sizeof(u8) * 2);
+  }
+  tile_symbol(u16 u1, u16 u2) : tile_symbol() {
+    this->c[0] = static_cast<u8>(u1 + TILEMAP_TILE_START_SYMBOL);
+    this->c[1] = static_cast<u8>(u2 + TILEMAP_TILE_START_SYMBOL);
+  }
 }tile_symbol;
 
 typedef struct tilesheet {
@@ -319,7 +328,21 @@ typedef struct tilemap_prop_static {
   i16 zindex;
   f32 rotation;
   f32 scale;
+  Color tint;
+  Vector2 origin;
   bool is_initialized;
+  tilemap_prop_static(void) {
+    this->id = 0;
+    this->tex_id = TEX_ID_UNSPECIFIED;
+    this->prop_type = TILEMAP_PROP_TYPE_UNDEFINED;
+    this->source = Rectangle { 0.f, 0.f, 0.f, 0.f};
+    this->dest = Rectangle { 0.f, 0.f, 0.f, 0.f};
+    this->zindex = 0;
+    this->rotation = 0.f;
+    this->scale = 0.f;
+    this->origin = Vector2 { 0.f, 0.f};
+    this->is_initialized = false;
+  }
 } tilemap_prop_static;
 
 typedef struct tilemap_prop_sprite {
@@ -329,38 +352,57 @@ typedef struct tilemap_prop_sprite {
   i16 zindex;
   f32 scale;
   bool is_initialized;
+  tilemap_prop_sprite(void) {
+    this->id = 0;
+    this->sprite = spritesheet();
+    this->prop_type = TILEMAP_PROP_TYPE_UNDEFINED;
+    this->zindex = 0;
+    this->scale = 0.f;
+    this->is_initialized = false;
+  }
 } tilemap_prop_sprite;
 
-typedef struct tilemap_prop {
+typedef struct tilemap_prop_address {
   tilemap_prop_types type;
   union {
     tilemap_prop_static* prop_static;
     tilemap_prop_sprite* prop_sprite;
-  }data;
-  tilemap_prop(void) {
+  } data;
+  
+  tilemap_prop_address(void) {
     this->type = TILEMAP_PROP_TYPE_UNDEFINED;
-    this->data.prop_static = nullptr;
+    this->data.prop_sprite = nullptr;
   }
-  tilemap_prop(tilemap_prop_static* _prop) {
+  tilemap_prop_address(tilemap_prop_static* _prop) : tilemap_prop_address() {
     this->data.prop_static = _prop;
     this->type = _prop->prop_type;
   }
-  tilemap_prop(tilemap_prop_sprite* _prop) {
+  tilemap_prop_address(tilemap_prop_sprite* _prop) : tilemap_prop_address() {
     this->data.prop_sprite = _prop;
     this->type = _prop->prop_type;
   }
-}tilemap_prop;
+}tilemap_prop_address;
 
 typedef struct tile_position {
   u16 layer;
   u16 x;
   u16 y;
+  tile_position(void) {
+    this->x = 0;
+    this->y = 0;
+    this->layer = 0;
+  }
 } tile_position;
 
 typedef struct tile {
-  tile_position position = {};
-  tile_symbol symbol = { .c { '\0', '\0' } };
-  bool is_initialized = false;
+  tile_position position;
+  tile_symbol symbol;
+  bool is_initialized;
+  tile(void) {
+    this->symbol = tile_symbol();
+    this->position = tile_position();
+    this->is_initialized = false;
+  }
 } tile;
 
 typedef struct tilemap {
@@ -374,10 +416,22 @@ typedef struct tilemap {
   std::vector<tilemap_prop_static> static_props;
   std::vector<tilemap_prop_sprite> sprite_props;
   u16 tile_size;
-  u16 static_prop_count;
-  u16 sprite_prop_count;
-
+  
   bool is_initialized;
+
+  tilemap(void) {
+    zero_memory(this->tiles, sizeof(tile_symbol) * MAX_TILEMAP_LAYERS * MAX_TILEMAP_TILESLOT_X * MAX_TILEMAP_TILESLOT_Y);
+    
+    this->filename.fill("");
+    this->propfile.clear();
+    this->position = Vector2 {0.f, 0.f};
+    this->map_dim_total = 0;
+    this->map_dim = 0;
+    this->static_props.clear();
+    this->sprite_props.clear();
+    this->tile_size = 0;
+    this->is_initialized = false;
+  }
 } tilemap;
 
 typedef struct tilemap_stringtify_package {
@@ -433,8 +487,7 @@ typedef struct Character2D {
     this->initialized = false;
     this->buffer = {};
   }
-  Character2D(u16 spawn_type, u16 player_level, u16 rnd_scale, Vector2 position, f32 speed) : Character2D()
-  {
+  Character2D(u16 spawn_type, u16 player_level, u16 rnd_scale, Vector2 position, f32 speed) : Character2D() {
     type = ACTOR_TYPE_SPAWN;
     buffer.u16[0] = spawn_type;
     buffer.u16[1] = player_level;
@@ -443,8 +496,7 @@ typedef struct Character2D {
     this->speed = speed;
     is_damagable = true;
   }
-  Character2D(Rectangle collision, i32 damage) : Character2D()
-  {
+  Character2D(Rectangle collision, i32 damage) : Character2D() {
     this->collision = collision;
     this->damage = damage;
     this->initialized = true;

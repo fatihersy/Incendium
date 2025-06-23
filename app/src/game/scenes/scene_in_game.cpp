@@ -647,7 +647,7 @@ void draw_in_game_upgrade_panel(u16 which_panel, Rectangle panel_dest) {
   const u16 level_ind_font_size = 9; 
   const u16 upgr_font_size = 6; 
 
-  gui_draw_texture_id_pro(TEX_ID_ASSET_ATLAS, upg->icon_src, icon_rect, false);
+  gui_draw_texture_id_pro(TEX_ID_ASSET_ATLAS, upg->icon_src, icon_rect);
   gui_label(upg->display_name.c_str(), FONT_TYPE_MEDIUM, title_font_size, ability_name_pos, WHITE, true, true);
 
   if (upg->level == 1) {
@@ -693,7 +693,7 @@ void draw_passive_selection_panel(character_stat* stat, Rectangle panel_dest) {
 
   const u16 title_font_size = 10; 
   
-  gui_draw_texture_id_pro(TEX_ID_ASSET_ATLAS, stat->passive_icon_src, icon_rect, false);
+  gui_draw_texture_id_pro(TEX_ID_ASSET_ATLAS, stat->passive_icon_src, icon_rect);
   gui_label(lc_txt(stat->passive_display_name_symbol), FONT_TYPE_MEDIUM, title_font_size, passive_name_pos, WHITE, true, true);
   
   const u16 desc_font_size = 6;

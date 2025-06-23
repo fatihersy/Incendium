@@ -99,24 +99,24 @@ void render_interface_main_menu(void) {
   if (!state->scene_changing_process_complete) {
     if (state->type == MAIN_MENU_SCENE_DEFAULT) {
       gui_label(GAME_TITLE, FONT_TYPE_BOLD, 72, VECTOR2(BASE_RENDER_SCALE(.5f).x, BASE_RENDER_SCALE(.25f).y), WHITE, true, true);
-      if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_PLAY), BTN_ID_MAINMENU_BUTTON_PLAY, VECTOR2(0.f, -20.f), BASE_RENDER_RES_DIV2, true)) {
+      if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_PLAY), BTN_ID_MAINMENU_BUTTON_PLAY, VECTOR2(0.f, -24.f), BASE_RENDER_RES_DIV2, true)) {
         state->in_scene_changing_process = true;
         state->next_scene = SCENE_TYPE_IN_GAME;
         event_fire(EVENT_CODE_UI_START_FADEOUT_EFFECT, event_context((u16)MAIN_MENU_FADE_DURATION));
       }
-      if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_UPGRADE), BTN_ID_MAINMENU_BUTTON_UPGRADE, VECTOR2(0.f, -10.f), BASE_RENDER_RES_DIV2, true)) {
+      if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_UPGRADE), BTN_ID_MAINMENU_BUTTON_UPGRADE, VECTOR2(0.f, -12.f), BASE_RENDER_RES_DIV2, true)) {
         state->type = MAIN_MENU_SCENE_UPGRADE;
       }
       if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_SETTINGS), BTN_ID_MAINMENU_BUTTON_SETTINGS, VECTOR2(0.f, 0.f), BASE_RENDER_RES_DIV2, true)) {
         ui_refresh_setting_sliders_to_default();
         state->type = MAIN_MENU_SCENE_SETTINGS;
       }
-      if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_EDITOR), BTN_ID_MAINMENU_BUTTON_EDITOR, VECTOR2(0.f, 10.f), BASE_RENDER_RES_DIV2, true)) {
+      if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_EDITOR), BTN_ID_MAINMENU_BUTTON_EDITOR, VECTOR2(0.f, 12.f), BASE_RENDER_RES_DIV2, true)) {
         state->in_scene_changing_process = true;
         state->next_scene = SCENE_TYPE_EDITOR;
         event_fire(EVENT_CODE_UI_START_FADEOUT_EFFECT, event_context((u16)MAIN_MENU_FADE_DURATION));
       }
-      if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_EXIT), BTN_ID_MAINMENU_BUTTON_EXIT, VECTOR2(0.f, 20.f), BASE_RENDER_RES_DIV2, true)) {
+      if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_EXIT), BTN_ID_MAINMENU_BUTTON_EXIT, VECTOR2(0.f, 24.f), BASE_RENDER_RES_DIV2, true)) {
         event_fire(EVENT_CODE_APPLICATION_QUIT, event_context{});
       }
     } 
@@ -269,7 +269,7 @@ void draw_main_menu_upgrade_list_panel(void) {
         }
       }
 
-      gui_draw_texture_id_pro(TEX_ID_ASSET_ATLAS, stat->passive_icon_src, icon_pos, false);
+      gui_draw_texture_id_pro(TEX_ID_ASSET_ATLAS, stat->passive_icon_src, icon_pos);
 
       gui_label(lc_txt(stat->passive_display_name_symbol), FONT_TYPE_MEDIUM, 10, title_pos, WHITE, true, true);
       gui_draw_atlas_texture_id(ATLAS_TEX_ID_HEADER, header_tex_pos, header_tex_origin, 0.f);
@@ -290,7 +290,7 @@ void draw_main_menu_upgrade_details_panel(void) {
     state->upgrade_details_panel.dest.width * .35f,
     state->upgrade_details_panel.dest.width * .35f
   };
-  gui_draw_texture_id_pro(TEX_ID_ASSET_ATLAS, state->hovered_stat->passive_icon_src, icon_pos, false);
+  gui_draw_texture_id_pro(TEX_ID_ASSET_ATLAS, state->hovered_stat->passive_icon_src, icon_pos);
 
   Rectangle tier_symbol_src_rect = get_atlas_texture_source_rect(ATLAS_TEX_ID_PASSIVE_UPGRADE_TIER_STAR);
   f32 star_spacing = tier_symbol_src_rect.width * 1.25f;
