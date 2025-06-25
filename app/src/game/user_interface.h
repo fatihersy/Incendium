@@ -38,8 +38,8 @@ typedef struct panel {
       this->scroll        = 0;
       this->current_state = BTN_STATE_UP;
       this->signal_state  = BTN_STATE_UNDEFINED;
-      this->dest          = Rectangle {};
-      this->scroll_handle = Rectangle {};
+      this->dest          = ZERORECT;
+      this->scroll_handle = ZERORECT;
       this->draggable     = false;
       this->is_dragging_scroll = false;
       this->buffer = data128();
@@ -61,6 +61,22 @@ typedef struct button_type {
   Vector2 dest_frame_dim;
   f32 scale;
   bool should_center;
+  button_type(void) {
+    this->id = BTN_TYPE_UNDEFINED;
+    this->ss_type = SHEET_ID_SPRITESHEET_UNSPECIFIED;
+    this->source_frame_dim = ZEROVEC2;
+    this->dest_frame_dim = ZEROVEC2;
+    this->scale = 0.f;
+    this->should_center = false;
+  }
+  button_type(button_type_id id, spritesheet_id ss_type, Vector2 source_frame_dim, Vector2 dest_frame_dim, f32 scale, bool should_center) {
+    this->id = id;
+    this->ss_type = ss_type;
+    this->source_frame_dim = source_frame_dim;
+    this->dest_frame_dim = dest_frame_dim;
+    this->scale = scale;
+    this->should_center = should_center;
+  }
 } button_type;
   
 typedef struct button {
@@ -70,15 +86,30 @@ typedef struct button {
   Rectangle dest;
   bool on_screen;
   bool is_registered;
+  button(void) {
+    this->id = BTN_ID_UNDEFINED;
+    this->btn_type = button_type();
+    this->state = BTN_STATE_UNDEFINED;
+    this->dest = ZERORECT;
+    this->on_screen = false;
+    this->is_registered = false;
+  }
+  button(button_id id, button_type btn_type, button_state state, Rectangle dest) : button() {
+    this->id = id;
+    this->btn_type = btn_type;
+    this->state = state;
+    this->dest = dest;
+    this->is_registered = true;
+  }
 } button;
 
 typedef struct slider_option {
   std::string no_localized_text;
   u32 localization_symbol;
   data_pack content;
-  slider_option() {
-      this->no_localized_text = "NULL";
-      this-> localization_symbol = 0;
+  slider_option(void) {
+      this->no_localized_text = "::NULL";
+      this->localization_symbol = 0;
       this->content = data_pack();
   }
   slider_option(const char* _str, u32 symbol, data_pack content) : slider_option() {
@@ -92,7 +123,7 @@ typedef struct slider_option {
       this->content = content;
   }
   slider_option(u32 symbol, data_pack content) : slider_option() {
-      this->no_localized_text = "::ERROR";
+      this->no_localized_text = "::localized";
       this->localization_symbol = symbol;
       this->content = content;
   }
@@ -102,18 +133,51 @@ typedef struct slider_type {
   slider_type_id id;
   spritesheet_id ss_sdr_body;
   Vector2 source_frame_dim;
-  Vector2 dest_frame_dim = {};
+  Vector2 dest_frame_dim;
   f32 scale;
   u16 width_multiply;
   u16 char_limit;
-  button_id left_btn_id = BTN_ID_UNDEFINED;
-  button_id right_btn_id = BTN_ID_UNDEFINED;
+  button_id left_btn_id;
+  button_id right_btn_id;
   button_type_id left_btn_type_id;
   button_type_id right_btn_type_id;
   u16 left_btn_width;
   u16 right_btn_width;
   u16 origin_body_width;
   u16 body_width;
+  slider_type(void) {
+    this->id = SDR_TYPE_UNDEFINED;
+    this->ss_sdr_body = SHEET_ID_SPRITESHEET_UNSPECIFIED;
+    this->source_frame_dim = ZEROVEC2;
+    this->dest_frame_dim = ZEROVEC2;
+    this->scale = 0.f;
+    this->width_multiply = 0u;
+    this->char_limit = 0u;
+    this->left_btn_id = BTN_ID_UNDEFINED;
+    this->right_btn_id = BTN_ID_UNDEFINED;
+    this->left_btn_type_id = BTN_TYPE_UNDEFINED;
+    this->right_btn_type_id = BTN_TYPE_UNDEFINED;
+    this->left_btn_width = 0u;
+    this->right_btn_width = 0u;
+    this->origin_body_width = 0u;
+    this->body_width = 0u;
+  }
+  slider_type(
+    slider_type_id id, spritesheet_id ss_sdr_body, Vector2 source_frame_dim, f32 scale, u16 width_multiply, u16 char_limit, 
+    button_type_id left_btn_type_id, button_type_id right_btn_type_id, u16 left_btn_width, u16 right_btn_width, u16 origin_body_width, u16 body_width) : slider_type() {
+    this->id = id;
+    this->ss_sdr_body = ss_sdr_body;
+    this->source_frame_dim = source_frame_dim;
+    this->scale = scale;
+    this->width_multiply = width_multiply;
+    this->char_limit = char_limit;
+    this->left_btn_type_id = left_btn_type_id;
+    this->right_btn_type_id = right_btn_type_id;
+    this->left_btn_width =  left_btn_width;
+    this->right_btn_width =  right_btn_width;
+    this->origin_body_width =  origin_body_width;
+    this->body_width = body_width;
+  }
 } slider_type;
 
 typedef struct slider {
@@ -124,7 +188,7 @@ typedef struct slider {
   bool (*on_left_button_trigger)();
   bool (*on_right_button_trigger)();
 
-  std::array<slider_option, MAX_SLIDER_OPTION_SLOT> options = {};
+  std::array<slider_option, MAX_SLIDER_OPTION_SLOT> options;
   u16 current_value;
   u16 max_value;
   u16 min_value;
@@ -132,16 +196,45 @@ typedef struct slider {
   bool localize_text; // Flag for sliders displaying only numbers, 
   bool is_clickable;
   bool on_screen;
-  bool is_registered;  
+  bool is_registered;
+  slider(void) {
+    this->id = SDR_ID_UNDEFINED;
+    this->sdr_type = slider_type();
+    this->position = ZEROVEC2;
+    this->on_click = nullptr;
+    this->on_left_button_trigger = nullptr;
+    this->on_right_button_trigger = nullptr;
+    this->options.fill(slider_option());
+    this->current_value = 0u;
+    this->max_value = 0u;
+    this->min_value = 0u;
+    this->localize_text = false; 
+    this->is_clickable = false;
+    this->on_screen = false;
+    this->is_registered = false;
+  }
+  slider(slider_id _id, slider_type _type, u16 current_value, u16 max_value, u16 min_value, bool _localized_text, bool _is_clickable) : slider() {
+    this->id = _id;
+    this->sdr_type = _type;
+    this->current_value = current_value;
+    this->max_value = max_value;
+    this->min_value = min_value;
+    this->localize_text = _localized_text;
+    this->is_clickable = _is_clickable;
+    this->is_registered = true;
+  }
 } slider;
 
 typedef struct progress_bar_type {
   //texture_id body_repetitive;
   atlas_texture_id body_inside;
   atlas_texture_id body_outside;
-
-
   shader_id mask_shader_id;
+  progress_bar_type(void) {
+    this->body_inside = ATLAS_TEX_ID_UNSPECIFIED;
+    this->body_outside = ATLAS_TEX_ID_UNSPECIFIED;
+    this->mask_shader_id = SHADER_ID_UNSPECIFIED;
+  }
 } progress_bar_type;
 
 typedef struct progress_bar {
@@ -153,6 +246,14 @@ typedef struct progress_bar {
 
   f32 progress;
   bool is_initialized;
+  progress_bar(void) {
+    this->id = PRG_BAR_ID_UNDEFINED;
+    this->type = progress_bar_type();
+    this->width_multiply = 0.f;
+    this->scale = ZEROVEC2;
+    this->progress = 0.f;
+    this->is_initialized = false;
+  }
 } progress_bar;
 
 void user_interface_system_initialize(void);

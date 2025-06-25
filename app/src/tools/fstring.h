@@ -6,6 +6,9 @@
 
 typedef struct string_parse_result {
   std::vector<std::string> buffer;
+  string_parse_result(void) {
+    this->buffer.clear();
+  }
 } string_parse_result;
 
 i64 str_to_I64(const char* str);

@@ -148,9 +148,9 @@ const char *map_layer_path(const char *filename) {
 unsigned int load_texture(const char *filename, bool resize, Vector2 new_size, texture_id _id) {
   if (_id >= TEX_ID_MAX || _id <= TEX_ID_UNSPECIFIED) { 
     TraceLog(LOG_ERROR, "resource::load_texture()::texture type out of bound");
-    return INVALID_ID32;
+    return INVALID_IDU32;
   }
-  Texture2D tex = {};
+  Texture2D tex;
 
   #if USE_PAK_FORMAT
     file_data file = get_file_data(filename);
@@ -212,7 +212,7 @@ void load_spritesheet(texture_id _source_tex, spritesheet_id handle_id, Vector2 
     TraceLog(LOG_ERROR, "resource::load_spritesheet()::Out of bound ID recieved");
     return;
   }
-  spritesheet _sheet = {};
+  spritesheet _sheet = spritesheet();
 
   _sheet.sheet_id = handle_id;
   _sheet.tex_id = _source_tex;
@@ -258,7 +258,7 @@ void load_tilesheet(tilesheet_type sheet_id, atlas_texture_id _atlas_tex_id, u16
     u8 x_symbol = TILEMAP_TILE_START_SYMBOL + x;
     u8 y_symbol = TILEMAP_TILE_START_SYMBOL + y;
 
-    _tilesheet->tile_symbols[x][y] = tile_symbol { x_symbol, y_symbol };
+    _tilesheet->tile_symbols[x][y] = tile_symbol(x_symbol, y_symbol);
   }
 }
 void load_texture_from_atlas(atlas_texture_id _id, Rectangle texture_area) {
@@ -266,7 +266,7 @@ void load_texture_from_atlas(atlas_texture_id _id, Rectangle texture_area) {
     TraceLog(LOG_ERROR, "resource::load_texture()::texture type out of bound");
     return;
   }
-  atlas_texture tex = {};
+  atlas_texture tex = atlas_texture();
   tex.source = texture_area;
   tex.atlas_handle = __builtin_addressof(state->textures.at(ATLAS_TEXTURE_ID));
 

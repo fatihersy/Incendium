@@ -115,39 +115,45 @@ void render_tilemap(tilemap* _tilemap, Rectangle camera_view) {
       }
     }
   }
-  
-  for (size_t iter = 0; iter < _tilemap->static_props.size(); ++iter) {
-    if (!_tilemap->static_props.at(iter).is_initialized) continue;
 
-    const tilemap_prop_static* prop = &_tilemap->static_props.at(iter); if (!prop) {
-      TraceLog(LOG_ERROR, "tilemap::render_tilemap()::Prop:%d is not valid", iter);
-      continue;
+  for (size_t itr_000 = 0; itr_000 < _tilemap->render_queue.size(); ++itr_000) {
+    for (size_t itr_111 = 0; itr_111 < _tilemap->render_queue.at(itr_000).size(); ++itr_111) 
+    {
+      const tilemap_prop_address* _queue_prop_ptr = __builtin_addressof(_tilemap->render_queue.at(itr_000).at(itr_111));
+      if (_queue_prop_ptr->type <= TILEMAP_PROP_TYPE_UNDEFINED || _queue_prop_ptr->type >= TILEMAP_PROP_TYPE_MAX) {
+        continue;
+      }
+      if (_queue_prop_ptr->type == TILEMAP_PROP_TYPE_SPRITE) {
+        if (_queue_prop_ptr->data.prop_static == nullptr) continue;
+        tilemap_prop_sprite* map_prop_ptr = _queue_prop_ptr->data.prop_sprite;
+        if (!map_prop_ptr->is_initialized) continue;
+
+        if (!CheckCollisionRecs(camera_view, map_prop_ptr->sprite.coord)) { continue; }
+      
+        play_sprite_on_site(&map_prop_ptr->sprite, map_prop_ptr->sprite.tint, map_prop_ptr->sprite.coord);
+        continue;
+      }
+      if (_queue_prop_ptr->type != TILEMAP_PROP_TYPE_SPRITE) {
+        if (_queue_prop_ptr->data.prop_sprite == nullptr) continue;
+        
+        tilemap_prop_static* map_prop_ptr = _queue_prop_ptr->data.prop_static;
+        if (!map_prop_ptr->is_initialized) continue;
+        
+        Rectangle prop_rect = map_prop_ptr->dest; 
+        if (!CheckCollisionRecs(camera_view, prop_rect)) { continue; }
+      
+        Texture2D* tex = get_texture_by_enum(map_prop_ptr->tex_id); 
+        if (!tex) continue;
+
+        prop_rect.width = map_prop_ptr->dest.width * map_prop_ptr->scale;
+        prop_rect.height = map_prop_ptr->dest.height * map_prop_ptr->scale;
+      
+        Vector2 origin = VECTOR2(prop_rect.width * .5f, prop_rect.height * .5f);
+      
+        DrawTexturePro(*tex, map_prop_ptr->source, prop_rect, origin, map_prop_ptr->rotation, map_prop_ptr->tint);
+        continue;
+      }
     }
-    Rectangle prop_rect = prop->dest; 
-    if (!CheckCollisionRecs(camera_view, prop_rect)) { continue; }
-
-    Texture2D* tex = get_texture_by_enum(prop->tex_id); if (!tex) {
-      TraceLog(LOG_ERROR, "tilemap::render_tilemap()::Atlas texture:%d is not valid", prop->tex_id);
-      continue;
-    }
-    prop_rect.width = prop->dest.width * prop->scale;
-    prop_rect.height = prop->dest.height * prop->scale;
-  
-    Vector2 origin = VECTOR2(prop_rect.width / 2.f, prop_rect.height / 2.f);
-
-    DrawTexturePro(*tex, prop->source, prop_rect, origin, prop->rotation, prop->tint);
-  }
-  
-  for (size_t iter = 0; iter < _tilemap->sprite_props.size(); ++iter) {
-    if (!_tilemap->sprite_props.at(iter).is_initialized) continue;
-
-    tilemap_prop_sprite* prop = &_tilemap->sprite_props.at(iter); if (!prop) {
-      TraceLog(LOG_ERROR, "tilemap::render_tilemap()::Prop:%d is not valid", iter);
-      continue;
-    }
-    if (!CheckCollisionRecs(camera_view, prop->sprite.coord)) { continue; }
-
-    play_sprite_on_site(&prop->sprite, prop->sprite.tint, prop->sprite.coord);
   }
 }
 void render_tilesheet(tilesheet* sheet, f32 zoom) {
@@ -163,7 +169,7 @@ void render_tilesheet(tilesheet* sheet, f32 zoom) {
     f32 dest_y   = y * sheet->offset * sheet->dest_tile_size * zoom; 
     i16 x_pos    = sheet->offset     + sheet->position.x + dest_x; 
     i16 y_pos    = sheet->offset     + sheet->position.y + dest_y; 
-    tile_symbol _tile = tile_symbol(x, y);
+    tile_symbol _tile = tile_symbol(x + TILEMAP_TILE_START_SYMBOL, y + TILEMAP_TILE_START_SYMBOL);
 
     render_tile(&_tile, Rectangle { (f32) x_pos, (f32) y_pos, (f32) sheet->dest_tile_size * zoom, (f32) sheet->dest_tile_size * zoom}, sheet);
   }
@@ -173,15 +179,20 @@ void render_tilesheet(tilesheet* sheet, f32 zoom) {
  * @param tile Needed for x, y
  */
  void render_tile(tile_symbol* symbol, Rectangle dest, tilesheet* sheet) {
-  u16 x = (symbol->c[0] - TILEMAP_TILE_START_SYMBOL) * sheet->tile_size;
-  u16 y = (symbol->c[1] - TILEMAP_TILE_START_SYMBOL) * sheet->tile_size;
-  DrawTexturePro(*sheet->atlas_handle, Rectangle {(f32) x, (f32) y, (f32) sheet->tile_size, (f32) sheet->tile_size }, dest, Vector2{}, 0.f, WHITE);
+  u16 c0    = symbol->c[0];
+  u16 c1    = symbol->c[1];
+  u16 x     = c0 - TILEMAP_TILE_START_SYMBOL;
+  u16 y     = c1 - TILEMAP_TILE_START_SYMBOL;
+  u16 x_pos = x * sheet->tile_size;
+  u16 y_pos = y * sheet->tile_size;
+
+  DrawTexturePro(*sheet->atlas_handle, Rectangle {(f32) x_pos, (f32) y_pos, (f32) sheet->tile_size, (f32) sheet->tile_size }, dest, ZEROVEC2, 0.f, WHITE);
 }
 
 Vector2 get_tilesheet_dim(tilesheet* sheet) {
   if (!sheet) {
     TraceLog(LOG_ERROR, "tilemap::get_tilesheet_dim()::Sheet is invalid");
-    return Vector2{};
+    return ZEROVEC2;
   }
   return Vector2 {
     (sheet->tile_count_x * sheet->offset) * sheet->dest_tile_size,
@@ -191,20 +202,20 @@ Vector2 get_tilesheet_dim(tilesheet* sheet) {
 tile get_tile_from_sheet_by_mouse_pos(tilesheet* sheet, Vector2 mouse_pos, f32 zoom) {
   if (!sheet) {
     TraceLog(LOG_ERROR, "tilemap::get_tile_from_mouse_pos()::Provided sheet was null");
-    return tile { };
+    return tile();
   }
-  tile _tile = { };
+  tile _tile = tile();
 
   i16 x_pos    = (mouse_pos.x - sheet->offset - sheet->position.x) / zoom; 
   i16 y_pos    = (mouse_pos.y - sheet->offset - sheet->position.y) / zoom; 
   if (x_pos < 0 || y_pos < 0) {
-    return tile { };
+    return tile();
   }
   i16 dest_x   = x_pos       / (sheet->dest_tile_size * sheet->offset);  
   i16 dest_y   = y_pos       / (sheet->dest_tile_size * sheet->offset);  
 
   if (dest_x < 0 || dest_x > sheet->tile_count_x || dest_y < 0 || dest_y > sheet->tile_count_y) {
-    return tile { };
+    return tile();
   }
   _tile.position.x           = dest_x  * sheet->tile_size;
   _tile.position.y           = dest_y  * sheet->tile_size;
@@ -216,14 +227,14 @@ tile get_tile_from_sheet_by_mouse_pos(tilesheet* sheet, Vector2 mouse_pos, f32 z
 tile get_tile_from_map_by_mouse_pos(tilemap* map, Vector2 mouse_pos, u16 layer) {
   if (!map) {
     TraceLog(LOG_ERROR, "tilemap::get_tile_from_mouse_pos()::Map is not valid");
-    return tile { };
+    return tile();
   }
-  tile _tile = {};
+  tile _tile = tile();
   _tile.position.x = (mouse_pos.x - map->position.x) / map->tile_size;
   _tile.position.y = (mouse_pos.y - map->position.y) / map->tile_size;
 
   if (_tile.position.x >= map->map_dim || _tile.position.y >= map->map_dim) { // NOTE: Assumes tilemap x and y are unsigned
-    return tile { };
+    return tile();
   }
   _tile.symbol = map->tiles[layer][_tile.position.x][_tile.position.y];
   _tile.is_initialized = true;
@@ -293,6 +304,7 @@ void str_to_map(tilemap* map, tilemap_stringtify_package* out_package) {
   out_package->is_success = false;
   map->sprite_props.clear();
   map->static_props.clear();
+  for (auto itr_000 : map->render_queue) itr_000.clear();
   
   tilesheet* sheet = get_tilesheet_by_enum(TILESHEET_TYPE_MAP);
   if (!sheet) {
@@ -336,11 +348,7 @@ void str_to_map(tilemap* map, tilemap_stringtify_package* out_package) {
 
       prop.scale = prop.scale / 100.f;
       prop.sprite.rotation = prop.sprite.rotation / 10.f;
-
-      prop.sprite.coord.width  = prop.sprite.coord.width  * prop.scale;
-      prop.sprite.coord.height = prop.sprite.coord.height * prop.scale;
-      Vector2 origin = VECTOR2(prop.sprite.coord.width / 2.f, prop.sprite.coord.height / 2.f);
-      prop.sprite.origin = origin;
+      prop.sprite.origin = VECTOR2(prop.sprite.coord.width / 2.f, prop.sprite.coord.height / 2.f);;
 
       prop.is_initialized = true;
       map->sprite_props.push_back(prop);
@@ -373,7 +381,6 @@ void str_to_map(tilemap* map, tilemap_stringtify_package* out_package) {
       map->static_props.push_back(prop);
     }
   }
-
   out_package->is_success = true;
 }
 /**

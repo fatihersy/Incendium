@@ -201,7 +201,7 @@ void gm_reset_game(void) {
   copy_memory(state->game_info.player_state_dynamic, __builtin_addressof(state->player_state_static), sizeof(player_state));
   state->is_game_end = false;
   state->is_game_paused = true;
-  state->stage = worldmap_stage {};
+  state->stage = worldmap_stage();
 }
 void gm_save_game(void) {
   state->game_progression_data->p_player = state->player_state_static;
@@ -708,7 +708,7 @@ u16 _spawn_character(Character2D _character) {
 ability _get_ability(ability_type type) {
   if (type <= ABILITY_TYPE_UNDEFINED || type >= ABILITY_TYPE_MAX) {
     TraceLog(LOG_INFO, "game_manager::_get_ability()::Ability type is out of bound");
-    return ability {};
+    return ability();
   }
   return get_ability(type);
 }
@@ -750,8 +750,7 @@ bool _upgrade_ability(ability* abl) {
 ability _get_next_level(ability abl) {
   if (!abl.is_initialized || abl.type <= ABILITY_TYPE_UNDEFINED || abl.type >= ABILITY_TYPE_MAX) {
     TraceLog(LOG_WARNING, "game_manager::_get_next_level()::Recieved ability has not initialized yet");
-    return ability{};
-  
+    return ability();
   }
   return get_next_level(abl);
 }

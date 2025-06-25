@@ -28,12 +28,30 @@ typedef struct user_interface_system_state {
   spritesheet ss_to_draw_bg;
   
   Vector2 mouse_pos;
-  std::vector<localization_package> localization_info = {};
+  std::vector<localization_package> localization_info;
 
   u16 fade_animation_duration;
   f32 fade_animation_timer;
   bool fadein;
   bool fade_animation_playing;
+
+  user_interface_system_state(void) {
+    this->in_app_settings = nullptr;
+    this->display_language = nullptr;
+    this->buttons.fill(button());
+    this->button_types.fill(button_type());
+    this->sliders.fill(slider());
+    this->slider_types.fill(slider_type());
+    this->prg_bars.fill(progress_bar());
+    this->prg_bar_types.fill(progress_bar_type());
+    this->ss_to_draw_bg = spritesheet();
+    this->mouse_pos = ZEROVEC2;
+    this->localization_info.clear();
+    this->fade_animation_duration = 0u;
+    this->fade_animation_timer = 0.f;
+    this->fadein = false;
+    this->fade_animation_playing = false;
+  }
 } user_interface_system_state;
 
 static user_interface_system_state * state;
@@ -69,8 +87,8 @@ static user_interface_system_state * state;
 #define DRAW_TEXT(TEXT, POSITION, FONT, FONT_SIZE, COLOR, CENTER_HORIZONTAL, CENTER_VERTICAL, USE_GRID_ALIGN, GRID_COORD) {\
   Vector2 text_measure = MeasureTextEx(FONT, TEXT, FONT_SIZE, UI_FONT_SPACING);                                   \
   Vector2 text_position = POSITION;                                                                               \
-  if (USE_GRID_ALIGN) {                                                                                             \
-    text_position = position_element_by_grid(text_position, GRID_COORD, SCREEN_OFFSET);                                \
+  if (USE_GRID_ALIGN) {                                                                                           \
+    text_position = position_element_by_grid(text_position, GRID_COORD, SCREEN_OFFSET);                           \
   }                                                                                                               \
   if (CENTER_HORIZONTAL) {                                                                                        \
     text_position.x -= (text_measure.x / 2.f);                                                                    \
@@ -334,8 +352,6 @@ void user_interface_system_initialize(void) {
     state->sliders.at(SDR_ID_SETTINGS_SOUND_SLIDER).on_left_button_trigger = ui_sound_slider_on_left_button_trigger;
     state->sliders.at(SDR_ID_SETTINGS_SOUND_SLIDER).on_right_button_trigger = ui_sound_slider_on_right_button_trigger;
   }
-
-
 
   event_register(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, user_interface_on_event);
   event_register(EVENT_CODE_UI_START_FADEIN_EFFECT, user_interface_on_event);
@@ -687,7 +703,7 @@ void draw_slider_body(slider* sdr) {
       f32 each_body_scale = (float)each_body_width / sdr_type.origin_body_width;
       Vector2 draw_sprite_scale = Vector2 {each_body_scale, sdr_type.scale};
       Vector2 _pos_temp = Vector2 {sdr->position.x + SCREEN_OFFSET.x, sdr->position.y};
-      std::string text = {};
+      std::string text = std::string("");
       if (sdr->localize_text) {
         text = lc_txt(sdr->options.at(sdr->current_value).localization_symbol);
       } else {
@@ -879,7 +895,6 @@ void gui_label_wrap_grid(const char* text, font_type type, i32 font_size, Rectan
 
 }
 
-
 void gui_draw_settings_screen(void) { // TODO: Return to settings later
   Rectangle settings_bg_pnl_dest = Rectangle{ BASE_RENDER_SCALE(.025f).x, BASE_RENDER_SCALE(.075f).y, BASE_RENDER_SCALE(.950f).x, BASE_RENDER_SCALE(.850f).y};
   Rectangle header_loc = {0, 0, BASE_RENDER_RES.x, BASE_RENDER_SCALE(.1f).y};
@@ -902,17 +917,17 @@ void gui_draw_settings_screen(void) { // TODO: Return to settings later
     i32 window_mod = sdr_win_mode.options.at(sdr_win_mode.current_value).content.data.i32[0];
     
     if (window_mod == FLAG_BORDERLESS_WINDOWED_MODE && !IsWindowState(FLAG_BORDERLESS_WINDOWED_MODE)) {
-      event_fire(EVENT_CODE_TOGGLE_BORDERLESS, event_context{});
+      event_fire(EVENT_CODE_TOGGLE_BORDERLESS, event_context());
       set_resolution_slider_native_res();
     }
     else if (window_mod == FLAG_FULLSCREEN_MODE && !IsWindowFullscreen()) {
-      event_fire(EVENT_CODE_TOGGLE_FULLSCREEN, event_context{});
+      event_fire(EVENT_CODE_TOGGLE_FULLSCREEN, event_context());
       set_resolution_slider_native_res();
     }
     else if (window_mod == 0 && (IsWindowState(FLAG_BORDERLESS_WINDOWED_MODE) || IsWindowFullscreen())) {
       Vector2 res = pVECTOR2(SDR_CURR_OPT_VAL(SDR_ID_SETTINGS_RES_SLIDER).content.data.u16);
       set_resolution(res.x, res.y);
-      event_fire(EVENT_CODE_TOGGLE_WINDOWED, event_context{});
+      event_fire(EVENT_CODE_TOGGLE_WINDOWED, event_context());
     }
     
     u32 language_index = SDR_CURR_OPT_VAL(SDR_ID_SETTINGS_LANGUAGE).content.data.u32[0];
@@ -986,15 +1001,15 @@ void gui_draw_pause_screen(bool in_game_play_state) {
 
   if (in_game_play_state) {
     if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_PAUSE_BUTTON_TEXT_RESUME), BTN_ID_PAUSEMENU_BUTTON_RESUME, Vector2 {0.f, -15.f}, BASE_RENDER_RES_DIV2, true)) {
-      event_fire(EVENT_CODE_RESUME_GAME, event_context {});
+      event_fire(EVENT_CODE_RESUME_GAME, event_context());
     }
   }
   if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_SETTINGS), BTN_ID_PAUSEMENU_BUTTON_SETTINGS, Vector2 {0.f, -5.f}, BASE_RENDER_RES_DIV2, true)) {}
   if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_PAUSE_BUTTON_TEXT_EXIT_TO_MAINMENU), BTN_ID_PAUSEMENU_BUTTON_EXIT_TO_MAIN_MENU, Vector2 { 0.f, 5.f}, BASE_RENDER_RES_DIV2, true)) {
-    event_fire(EVENT_CODE_SCENE_MAIN_MENU, event_context {});
+    event_fire(EVENT_CODE_SCENE_MAIN_MENU, event_context());
   }
   if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_PAUSE_BUTTON_TEXT_EXIT_TO_DESKTOP), BTN_ID_PAUSEMENU_BUTTON_EXIT_TO_DESKTOP, Vector2 { 0.f, 15.f}, BASE_RENDER_RES_DIV2, true)) {
-    event_fire(EVENT_CODE_APPLICATION_QUIT, event_context {});
+    event_fire(EVENT_CODE_APPLICATION_QUIT, event_context());
   }
 }
 
@@ -1025,17 +1040,7 @@ void register_button_type(button_type_id _btn_type_id, spritesheet_id _ss_type, 
     TraceLog(LOG_WARNING, "user_interface::register_button_type()::Recieved id was out of bound");
     return;
   }
-  button_type btn_type = {
-    .id = _btn_type_id,
-    .ss_type = _ss_type,
-    .source_frame_dim = frame_dim,
-    .dest_frame_dim = Vector2 {
-      .x = frame_dim.x * _scale,
-      .y = frame_dim.y * _scale,
-    },
-    .scale = _scale,
-    .should_center = _should_center,
-  };
+  button_type btn_type = button_type(_btn_type_id, _ss_type, frame_dim, VECTOR2(frame_dim.x * _scale, frame_dim.y * _scale), _scale, _should_center);
   state->button_types.at(_btn_type_id) = btn_type;
 }
 void register_button(button_id _btn_id, button_type_id _btn_type_id) {
@@ -1046,18 +1051,7 @@ void register_button(button_id _btn_id, button_type_id _btn_type_id) {
     return;
   }
   button_type* _btn_type = __builtin_addressof(state->button_types.at(_btn_type_id));
-
-  button btn = {
-    .id = _btn_id,
-    .btn_type = state->button_types.at(_btn_type_id),
-    .state = BTN_STATE_UP,
-    .dest = Rectangle{
-      .x = 0.f, .y = 0.f,
-      .width = _btn_type->dest_frame_dim.x, .height = _btn_type->dest_frame_dim.y
-    },
-    .on_screen = false,
-    .is_registered = true,
-  };
+  button btn = button(_btn_id, state->button_types.at(_btn_type_id), BTN_STATE_UP, Rectangle{0.f, 0.f, _btn_type->dest_frame_dim.x, _btn_type->dest_frame_dim.y});
 
   state->buttons.at(_btn_id) = btn;
 }
@@ -1068,7 +1062,7 @@ void register_progress_bar(progress_bar_id _id, progress_bar_type_id _type_id, f
     TraceLog(LOG_WARNING, "user_interface::register_progress_bar()::Recieved id was out of bound");
     return;
   }
-  progress_bar prg_bar = {};
+  progress_bar prg_bar = progress_bar();
 
   prg_bar.type = state->prg_bar_types.at(_type_id);
   prg_bar.id = _id;
@@ -1087,7 +1081,7 @@ void register_progress_bar_type(progress_bar_type_id _type_id, atlas_texture_id 
     TraceLog(LOG_WARNING, "user_interface::register_progress_bar_type()::Recieved id was out of bound");
     return;
   }
-  progress_bar_type prg_type = {};
+  progress_bar_type prg_type = progress_bar_type();
 
   prg_type.body_inside     = _body_inside;
   prg_type.body_outside    = _body_outside;
@@ -1111,22 +1105,14 @@ void register_slider_type(
   button_type* left_btn_type = __builtin_addressof(state->button_types.at(_left_btn_type_id)); 
   button_type* right_btn_type = __builtin_addressof(state->button_types.at(_right_btn_type_id)); 
 
-  slider_type sdr_type = {
-    .id = _sdr_type_id,
-    .ss_sdr_body = _ss_sdr_body_type,
-    .source_frame_dim = Vector2 {
-      .x = ss_body.current_frame_rect.width, .y = ss_body.current_frame_rect.height
-    },
-    .scale = _scale,
-    .width_multiply = _width_multiply,
-    .char_limit = (u16)(_scale * _char_limit),
-    .left_btn_type_id = _left_btn_type_id,
-    .right_btn_type_id = _right_btn_type_id,
-    .left_btn_width =  (u16) (left_btn_type->source_frame_dim.x * left_btn_type->scale),
-    .right_btn_width =  (u16) (right_btn_type->source_frame_dim.x * right_btn_type->scale),
-    .origin_body_width =  (u16) ss_body.current_frame_rect.width,
-    .body_width =  (u16) (ss_body.current_frame_rect.width * _scale),
-  };
+  slider_type sdr_type = slider_type(_sdr_type_id,_ss_sdr_body_type,
+    VECTOR2(ss_body.current_frame_rect.width, ss_body.current_frame_rect.height),
+    _scale, _width_multiply, (u16)(_scale * _char_limit), 
+    _left_btn_type_id, _right_btn_type_id,
+    (u16) (left_btn_type->source_frame_dim.x * left_btn_type->scale), (u16) (right_btn_type->source_frame_dim.x * right_btn_type->scale),
+    (u16) ss_body.current_frame_rect.width, (u16) (ss_body.current_frame_rect.width * _scale)
+  );
+
   sdr_type.dest_frame_dim = Vector2 { (f32) sdr_type.body_width * sdr_type.width_multiply, ss_body.current_frame_rect.height * _scale };
 
   state->slider_types.at(_sdr_type_id) = sdr_type;
@@ -1149,21 +1135,14 @@ void register_slider(
 
   slider_type* _sdr_type = __builtin_addressof(state->slider_types.at(_sdr_type_id));
   
-  slider sdr = {
-    .id = _sdr_id,
-    .sdr_type = *_sdr_type,
-    .position = Vector2 {},
-    .on_click = nullptr,
-    .on_left_button_trigger = nullptr,
-    .on_right_button_trigger = nullptr,
-    .current_value = static_cast<u16>(_sdr_type_id == SDR_TYPE_PERCENT ? 7 : 1 ),
-    .max_value     = static_cast<u16>(_sdr_type_id == SDR_TYPE_PERCENT ? DEFAULT_PERCENT_SLIDER_CIRCLE_AMOUTH : 1),
-    .min_value = 1,
-    .localize_text = _localize_text,
-    .is_clickable = _is_clickable,
-    .on_screen = false,
-    .is_registered = true,
-  };
+  //slider_id _id, slider_type _type, u16 current_value, u16 max_value, u16 min_value, bool _localized_text, bool _is_clickable
+  slider sdr = slider(
+    _sdr_id, *_sdr_type, 
+    static_cast<u16>(_sdr_type_id == SDR_TYPE_PERCENT ? 7 : 1 ), static_cast<u16>(_sdr_type_id == SDR_TYPE_PERCENT ? DEFAULT_PERCENT_SLIDER_CIRCLE_AMOUTH : 1), 1,
+    _localize_text,
+    _is_clickable
+  );
+
   if(_left_btn_id != BTN_ID_UNDEFINED){
     sdr.sdr_type.left_btn_id = _left_btn_id;
 
@@ -1203,7 +1182,7 @@ void gui_draw_spritesheet_to_background(spritesheet_id _id, Color _tint) {
   atlas_texture* tex = ss_get_atlas_texture_by_enum(_id);
   if (!tex) { 
     TraceLog(LOG_WARNING, "user_interface::get_atlas_texture_source_rect()::Requested type was null");
-    return Rectangle {}; 
+    return ZERORECT; 
   }
   
   return tex->source;
@@ -1229,7 +1208,7 @@ void gui_draw_spritesheet_to_background(spritesheet_id _id, Color _tint) {
   DrawTexturePro(*tex->atlas_handle, 
   tex->source, 
   dest, 
-  Vector2 {}, 0, tint);
+  ZEROVEC2, 0, tint);
 }
 /**
  * @brief Centers over -> dest.x -= dest.width / 2.f; 
@@ -1259,7 +1238,7 @@ void gui_draw_spritesheet_to_background(spritesheet_id _id, Color _tint) {
     NPATCH_NINE_PATCH
   };
 
-  DrawTextureNPatch(*tex->atlas_handle, npatch, dest, Vector2 {}, 0, WHITE);
+  DrawTextureNPatch(*tex->atlas_handle, npatch, dest, ZEROVEC2, 0, WHITE);
 }
  Vector2 make_vector(f32 x, f32 y) {
   return Vector2 {x,y};
@@ -1427,7 +1406,7 @@ void gui_draw_atlas_texture_id_pro(atlas_texture_id _id, Rectangle src, Rectangl
     dest.x -= dest.width / 2.f;
     dest.y -= dest.height / 2.f;
   }
-  DrawTexturePro(*tex->atlas_handle, src, dest, Vector2 {}, 0, WHITE);
+  DrawTexturePro(*tex->atlas_handle, src, dest, ZEROVEC2, 0, WHITE);
 }
 void gui_draw_atlas_texture_id(atlas_texture_id _id, Rectangle dest, Vector2 origin, f32 rotation) {
   if (_id >= ATLAS_TEX_ID_MAX || _id <= ATLAS_TEX_ID_UNSPECIFIED) {
@@ -1474,7 +1453,7 @@ void gui_draw_atlas_texture_id_grid(atlas_texture_id _id, Rectangle dest) {
   Vector2 pos = position_element_by_grid(BASE_RENDER_SCALE(.5f), VECTOR2(dest.x, dest.y), SCREEN_OFFSET);
   dest.x = pos.x;
   dest.y = pos.y;
-  DrawTexturePro(*tex->atlas_handle, tex->source, dest, Vector2 {}, 0, WHITE);
+  DrawTexturePro(*tex->atlas_handle, tex->source, dest, ZEROVEC2, 0, WHITE);
 }
 void gui_draw_spritesheet_id(spritesheet_id _id, Color _tint, Vector2 pos, Vector2 scale, u16 frame) {
   if (_id >= SHEET_ID_SPRITESHEET_TYPE_MAX || _id <= SHEET_ID_SPRITESHEET_UNSPECIFIED) {
@@ -1508,7 +1487,7 @@ void gui_draw_texture_id(texture_id _id, Rectangle dest) {
   DrawTexturePro(*tex, 
   Rectangle{0.f, 0.f, (f32) tex->width, (f32) tex->height},
   dest, 
-  Vector2{}, 0.f, WHITE);
+  ZEROVEC2, 0.f, WHITE);
 }
 void gui_draw_atlas_texture_id_scale(atlas_texture_id _id, Vector2 position, f32 scale, Color tint, bool should_center) {
   if (_id >= ATLAS_TEX_ID_MAX || _id <= ATLAS_TEX_ID_UNSPECIFIED) {
@@ -1528,7 +1507,7 @@ void gui_draw_atlas_texture_id_scale(atlas_texture_id _id, Vector2 position, f32
   DrawTexturePro(*tex->atlas_handle, 
   tex->source, 
   Rectangle {position.x, position.y, tex->source.width * scale, tex->source.height * scale}, 
-  Vector2 {}, 0, tint);
+  ZEROVEC2, 0, tint);
 }
 
 Font* ui_get_font(font_type font) {
@@ -1680,7 +1659,7 @@ localization_package* load_localization(std::string language_name, u32 loc_index
     TraceLog(LOG_ERROR, "user_interface::load_localization()::State is not valid");
     return nullptr;
   }
-  localization_package loc_pack = {};
+  localization_package loc_pack = localization_package();
 
   i32 codepoint_count = 1;
   i32* codepoints = LoadCodepoints(_codepoints.c_str(), &codepoint_count);

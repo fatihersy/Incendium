@@ -6,7 +6,7 @@
 #include "core/fmemory.h"
 
 string_parse_result parse_string(std::string str, const char parser, u16 delimiter) {
-  string_parse_result result = {};
+  string_parse_result result = string_parse_result();
   std::string::size_type string_in_readed = 0;
 
   for (size_t iter = 0; iter < delimiter && iter < str.size(); ++iter) {
@@ -24,7 +24,7 @@ string_parse_result parse_string(std::string str, const char parser, u16 delimit
 }
 
 bool append_text(const char* src, char* dest, u16 char_limit) {
-  if(strlen(src) + strlen(dest) > char_limit || char_limit == INVALID_ID16) {
+  if(strlen(src) + strlen(dest) > char_limit || char_limit == INVALID_IDU16) {
     return false;
   }
   copy_memory(dest + strlen(dest), src, strlen(src)); 

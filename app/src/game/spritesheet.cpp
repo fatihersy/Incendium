@@ -113,7 +113,7 @@ void draw_sprite_on_site_by_id(spritesheet_id _id, Color _tint, Vector2 pos, Vec
     sheet.current_frame_rect.width * scale.x, 
     sheet.current_frame_rect.height * scale.y
   };
-  DrawTexturePro(*sheet.tex_handle,source,dest,Vector2 {}, 0, _tint);
+  DrawTexturePro(*sheet.tex_handle,source,dest, ZEROVEC2, 0, _tint);
   
   #if DEBUG_COLLISIONS
     DrawRectangleLines(
@@ -143,7 +143,7 @@ void draw_sprite_on_site(spritesheet *sheet, Color _tint, Vector2 pos, Vector2 s
     sheet->current_frame_rect.width * scale.x, 
     sheet->current_frame_rect.height * scale.y
   };
-  DrawTexturePro(*sheet->tex_handle,source,dest, Vector2{}, 0, _tint);
+  DrawTexturePro(*sheet->tex_handle,source,dest, ZEROVEC2, 0, _tint);
   
   #if DEBUG_COLLISIONS
     DrawRectangleLines(

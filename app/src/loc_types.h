@@ -102,6 +102,12 @@ typedef struct loc_data {
   std::string codepoints;
   std::vector<std::string> content;
   unsigned int index;
+  loc_data(void) {
+    this->language_name.clear();
+    this->codepoints.clear();
+    this->content.clear();
+    this->index = 0u;
+  }
 } loc_data;
 
 typedef struct loc_content {

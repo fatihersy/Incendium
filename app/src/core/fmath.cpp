@@ -41,5 +41,5 @@ float get_movement_rotation(Vector2 from, Vector2 to) {
   Vector2 direction = vec2_subtract(to, from);
   return atan2f(direction.y, direction.x) * RAD2DEG;
 }
-Vector2 vec2_zero(void) { return {}; }
+Vector2 vec2_zero(void) { return Vector2 { 0.f, 0.f }; }
 

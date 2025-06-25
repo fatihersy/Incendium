@@ -384,21 +384,21 @@ void move_next_alpha(const char* _str, u16* counter, bool stay_the_line) {
     if (is_alpha(&_str[*counter])) return;
     if (stay_the_line && is_eol(&_str[*counter])) break;
   }
-  *counter = INVALID_ID16;
+  *counter = INVALID_IDU16;
 }
 void move_next_letter(const char* _str, u16* counter, bool stay_the_line) {
   while(_str[(*counter)++] != '\0') {
     if (is_letter(&_str[*counter])) return;
     if (stay_the_line && is_eol(&_str[*counter])) break;
   }
-  *counter = INVALID_ID16;
+  *counter = INVALID_IDU16;
 }
 void move_next_number(const char* _str, u16* counter, bool stay_the_line) {
   while(_str[(*counter)++] != '\0') {
     if (is_number(&_str[*counter])) return;
     if (stay_the_line && is_eol(&_str[*counter])) break;
   }
-  *counter = INVALID_ID16;
+  *counter = INVALID_IDU16;
 }
 void move_next_string(const char* _str, u16* counter, bool stay_the_line) {
   while(_str[(*counter)++] != '\0') {
@@ -408,6 +408,6 @@ void move_next_string(const char* _str, u16* counter, bool stay_the_line) {
     }
     if (stay_the_line && is_eol(&_str[*counter])) break;
   }
-  *counter = INVALID_ID16;
+  *counter = INVALID_IDU16;
 }
 

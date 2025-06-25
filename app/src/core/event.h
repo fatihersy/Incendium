@@ -6,46 +6,43 @@
 
 typedef struct event_context {
   data128 data;
-  event_context() {}
-  event_context(data128 in_data) :data(in_data) {}
-    
-  event_context(i64 value1, i64 value2 = 0){
-    data = data128(value1, value2);
+  event_context(void) {
+    this->data = data128();
   }
-  event_context(u64 value1, u64 value2 = 0) {
-  	data = data128(value1, value2);
+  event_context(data128 in_data) : event_context() {
+    this->data = in_data;
   }
-  event_context(f64 value1, f64 value2 = 0){
-    data = data128(value1, value2);
+  event_context(i64 value1, i64 value2 = 0) : event_context() { data = data128(value1, value2); }
+  event_context(u64 value1, u64 value2 = 0) : event_context() { data = data128(value1, value2); }
+  event_context(f64 value1, f64 value2 = 0) : event_context() { data = data128(value1, value2); }
+  event_context(i32 value1, i32 value2 = 0, i32 value3 = 0, i32 value4 = 0) : event_context() { 
+    data = data128(value1, value2, value3, value4); 
   }
-  event_context(i32 value1, i32 value2 = 0, i32 value3 = 0, i32 value4 = 0){
+  event_context(u32 value1, u32 value2 = 0, u32 value3 = 0, u32 value4 = 0) : event_context() {
     data = data128(value1, value2, value3, value4);
   }
-  event_context(u32 value1, u32 value2 = 0, u32 value3 = 0, u32 value4 = 0){
+  event_context(f32 value1, f32 value2 = 0, f32 value3 = 0, f32 value4 = 0) : event_context() {
     data = data128(value1, value2, value3, value4);
   }
-  event_context(f32 value1, f32 value2 = 0, f32 value3 = 0, f32 value4 = 0){
-    data = data128(value1, value2, value3, value4);
-  }
-  event_context(u16 value1, u16 value2 = 0, u16 value3 = 0, u16 value4 = 0, u16 value5 = 0, u16 value6 = 0, u16 value7 = 0, u16 value8 = 0){
+  event_context(u16 value1, u16 value2 = 0, u16 value3 = 0, u16 value4 = 0, u16 value5 = 0, u16 value6 = 0, u16 value7 = 0, u16 value8 = 0) : event_context() {
     data = data128(value1, value2, value3, value4, value5, value6, value7, value8);
   }
-  event_context(i16 value1, i16 value2 = 0, i16 value3 = 0, i16 value4 = 0, i16 value5 = 0, i16 value6 = 0, i16 value7 = 0, i16 value8 = 0){
+  event_context(i16 value1, i16 value2 = 0, i16 value3 = 0, i16 value4 = 0, i16 value5 = 0, i16 value6 = 0, i16 value7 = 0, i16 value8 = 0) : event_context() {
     data = data128(value1, value2, value3, value4, value5, value6, value7, value8);
   }
-  event_context(u16* value, u16 len){
+  event_context(u16* value, u16 len) : event_context() {
     data = data128(value, len);
   }
-  event_context(i16* value, u16 len){
+  event_context(i16* value, u16 len) : event_context() {
     data = data128(value, len);
   }
-  event_context(u8* value, u16 len){
+  event_context(u8* value, u16 len) : event_context() {
     data = data128(value, len);
   }
-  event_context(i8* value, u16 len){
+  event_context(i8* value, u16 len) : event_context() {
     data = data128(value, len);
   }
-  event_context(char* value, u16 len){
+  event_context(char* value, u16 len) : event_context() {
     data = data128(value, len);
   }
 } event_context;

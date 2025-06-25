@@ -18,8 +18,8 @@
   .x = BASE_RENDER_RES.x  * (X / 100), \
   .y = BASE_RENDER_RES.y * (Y / 100)  \
 })
-#define ZEROVEC2 Vector2{0.f, 0.f}
-#define ZERORECT Rectangle{0.f, 0.f, 0.f, 0.f}
+#define ZEROVEC2 (Vector2{0.f, 0.f})
+#define ZERORECT (Rectangle{0.f, 0.f, 0.f, 0.f})
 
 #define ATLAS_TEXTURE_ID TEX_ID_ASSET_ATLAS
 
@@ -279,6 +279,10 @@ typedef struct sound_data {
 typedef struct atlas_texture {
   Texture2D* atlas_handle;
   Rectangle source;
+  atlas_texture(void) {
+    this->atlas_handle = nullptr;
+    this->source = ZERORECT;
+  } 
 } atlas_texture;
 
 typedef struct tile_symbol {
@@ -287,8 +291,8 @@ typedef struct tile_symbol {
     zero_memory(this->c, sizeof(u8) * 2);
   }
   tile_symbol(u16 u1, u16 u2) : tile_symbol() {
-    this->c[0] = static_cast<u8>(u1 + TILEMAP_TILE_START_SYMBOL);
-    this->c[1] = static_cast<u8>(u2 + TILEMAP_TILE_START_SYMBOL);
+    this->c[0] = u1;
+    this->c[1] = u2;
   }
 }tile_symbol;
 
@@ -313,10 +317,27 @@ typedef struct worldmap_stage {
   u16 map_id;
   std::string displayname;
   std::string filename;
-  std::array<Rectangle, MAX_SPAWN_COLLISIONS> spawning_areas = {};
+  std::array<Rectangle, MAX_SPAWN_COLLISIONS> spawning_areas;
   Vector2 screen_location;
   bool is_centered;
   bool is_active;
+  worldmap_stage(void) {
+    this->map_id = INVALID_IDU16;
+    this->displayname.clear();
+    this->filename.clear();
+    this->spawning_areas.fill(ZERORECT);
+    this->screen_location = ZEROVEC2;
+    this->is_centered = false;
+    this->is_active = false;
+  }
+  worldmap_stage(u16 map_id, std::string displayname, std::string filename, Vector2 screen_location, bool is_centered, bool is_active) {
+    this->map_id = map_id;
+    this->displayname = displayname;
+    this->filename = filename;
+    this->screen_location = NORMALIZE_VEC2(screen_location.x, screen_location.y, 3840.f, 2160.f);
+    this->is_centered = is_centered;
+    this->is_active = is_active;
+  }
 } worldmap_stage;
 
 typedef struct tilemap_prop_static {
@@ -332,15 +353,15 @@ typedef struct tilemap_prop_static {
   Vector2 origin;
   bool is_initialized;
   tilemap_prop_static(void) {
-    this->id = 0;
+    this->id = INVALID_IDU32;
     this->tex_id = TEX_ID_UNSPECIFIED;
     this->prop_type = TILEMAP_PROP_TYPE_UNDEFINED;
-    this->source = Rectangle { 0.f, 0.f, 0.f, 0.f};
-    this->dest = Rectangle { 0.f, 0.f, 0.f, 0.f};
+    this->source = ZERORECT;
+    this->dest = ZERORECT;
     this->zindex = 0;
     this->rotation = 0.f;
     this->scale = 0.f;
-    this->origin = Vector2 { 0.f, 0.f};
+    this->origin = ZEROVEC2;
     this->is_initialized = false;
   }
 } tilemap_prop_static;
@@ -353,7 +374,7 @@ typedef struct tilemap_prop_sprite {
   f32 scale;
   bool is_initialized;
   tilemap_prop_sprite(void) {
-    this->id = 0;
+    this->id = INVALID_IDU32;
     this->sprite = spritesheet();
     this->prop_type = TILEMAP_PROP_TYPE_UNDEFINED;
     this->zindex = 0;
@@ -368,7 +389,6 @@ typedef struct tilemap_prop_address {
     tilemap_prop_static* prop_static;
     tilemap_prop_sprite* prop_sprite;
   } data;
-  
   tilemap_prop_address(void) {
     this->type = TILEMAP_PROP_TYPE_UNDEFINED;
     this->data.prop_sprite = nullptr;
@@ -388,9 +408,9 @@ typedef struct tile_position {
   u16 x;
   u16 y;
   tile_position(void) {
-    this->x = 0;
-    this->y = 0;
-    this->layer = 0;
+    this->x = 0u;
+    this->y = 0u;
+    this->layer = 0u;
   }
 } tile_position;
 
@@ -411,35 +431,27 @@ typedef struct tilemap {
   Vector2 position;
   u16 map_dim_total;
   u16 map_dim;
-
+  u16 tile_size;
   tile_symbol tiles[MAX_TILEMAP_LAYERS][MAX_TILEMAP_TILESLOT_X][MAX_TILEMAP_TILESLOT_Y];
   std::vector<tilemap_prop_static> static_props;
   std::vector<tilemap_prop_sprite> sprite_props;
-  u16 tile_size;
-  
+  std::array<std::vector<tilemap_prop_address>, MAX_Z_INDEX_SLOT> render_queue;
   bool is_initialized;
-
-  tilemap(void) {
-    zero_memory(this->tiles, sizeof(tile_symbol) * MAX_TILEMAP_LAYERS * MAX_TILEMAP_TILESLOT_X * MAX_TILEMAP_TILESLOT_Y);
-    
-    this->filename.fill("");
-    this->propfile.clear();
-    this->position = Vector2 {0.f, 0.f};
-    this->map_dim_total = 0;
-    this->map_dim = 0;
-    this->static_props.clear();
-    this->sprite_props.clear();
-    this->tile_size = 0;
-    this->is_initialized = false;
-  }
 } tilemap;
 
 typedef struct tilemap_stringtify_package {
-  u8 str_tilemap[MAX_TILEMAP_LAYERS][MAX_TILEMAP_TILESLOT * TILESHEET_TILE_SYMBOL_STR_LEN] = {};
-  i32 size_tilemap_str[MAX_TILEMAP_LAYERS] = {};
-  std::string str_props = "";
-  i32 size_props_str = 0;
-  bool is_success = false;
+  u8 str_tilemap[MAX_TILEMAP_LAYERS][MAX_TILEMAP_TILESLOT * TILESHEET_TILE_SYMBOL_STR_LEN];
+  i32 size_tilemap_str[MAX_TILEMAP_LAYERS];
+  std::string str_props;
+  i32 size_props_str;
+  bool is_success;
+  tilemap_stringtify_package(void) {
+    zero_memory(this->str_tilemap, sizeof(u8) * MAX_TILEMAP_LAYERS * MAX_TILEMAP_TILESLOT * TILESHEET_TILE_SYMBOL_STR_LEN);
+    zero_memory(this->size_tilemap_str, sizeof(i32) * MAX_TILEMAP_LAYERS);
+    this->str_props.clear();
+    this->size_props_str = 0;
+    this->is_success = false;
+  }
 }tilemap_stringtify_package;
 
 typedef struct Character2D {
@@ -466,26 +478,26 @@ typedef struct Character2D {
   data128 buffer;
 
   Character2D(void) {
-    this->character_id = 0;
+    this->character_id = INVALID_IDU32;
     this->health = 0;
     this->damage = 0;
     this->speed = 0.f;
     this->type = ACTOR_TYPE_UNDEFINED;
-    this->collision = {};
+    this->collision = ZERORECT;
     this->w_direction = WORLD_DIRECTION_UNDEFINED;
-    this->move_right_animation = {};
-    this->move_left_animation = {};
-    this->take_damage_right_animation = {};
-    this->take_damage_left_animation = {};
+    this->move_right_animation = spritesheet();
+    this->move_left_animation = spritesheet();
+    this->take_damage_right_animation = spritesheet();
+    this->take_damage_left_animation = spritesheet();
     this->last_played_animation = nullptr;
-    this->position = {};
-    this->rotation = 0;
+    this->position = ZEROVEC2;
+    this->rotation = 0u;
     this->scale = 0.f;
     this->damage_break_time = 0.f;
     this->is_dead = false;
     this->is_damagable = false;
     this->initialized = false;
-    this->buffer = {};
+    this->buffer = data128();
   }
   Character2D(u16 spawn_type, u16 player_level, u16 rnd_scale, Vector2 position, f32 speed) : Character2D() {
     type = ACTOR_TYPE_SPAWN;
@@ -525,7 +537,7 @@ typedef struct projectile {
 
   projectile(void) {
     this->id = 0u;
-    this->animations = {};
+    this->animations.clear();
     this->active_sprite = -1;
     this->position = ZEROVEC2;
     this->collision = ZERORECT;
@@ -564,23 +576,23 @@ typedef struct ability {
 
   ability(void) {
     this->p_owner = nullptr;
-    this->display_name = "";
-    this->projectiles = {};
-    this->upgradables = {};
-    this->animation_ids = {};
+    this->display_name.clear();
+    this->projectiles.clear();
+    this->upgradables.fill(ABILITY_UPG_UNDEFINED);
+    this->animation_ids.clear();
     this->type = ABILITY_TYPE_UNDEFINED;
     this->ability_play_time = 0.f;
     this->proj_sprite_scale = 1.f;
     this->proj_collision_scale = 1.f;
-    this->proj_count = 0;
-    this->proj_speed = 0;
+    this->proj_count = 0u;
+    this->proj_speed = 0u;
     this->proj_duration = 0.f;
-    this->proj_dim = {};
-    this->icon_src = {};
-    this->position = {};
-    this->level = 0;
-    this->base_damage = 0;
-    this->rotation = 0;
+    this->proj_dim = ZEROVEC2;
+    this->icon_src = ZERORECT;
+    this->position = ZEROVEC2;
+    this->level = 0u;
+    this->base_damage = 0u;
+    this->rotation = 0u;
     this->is_active = false;
     this->is_initialized = false;
   };
@@ -608,6 +620,9 @@ typedef struct ability {
 
 typedef struct ability_play_system {
   std::array<ability, ABILITY_TYPE_MAX> abilities;
+  ability_play_system(void) {
+    this->abilities.fill(ability());
+  }
 } ability_play_system;
 
 typedef struct character_stat {
@@ -622,14 +637,14 @@ typedef struct character_stat {
 
   character_stat(void) {
     this->id = CHARACTER_STATS_UNDEFINED;
-    this->level = 0;
-    this->passive_display_name_symbol = 0;
-    this->passive_desc_symbol = 0;
-    this->passive_icon_src = {};
+    this->level = 0u;
+    this->passive_display_name_symbol = 0u;
+    this->passive_desc_symbol = 0u;
+    this->passive_icon_src = ZERORECT;
     this->upgrade_cost = 0;
     this->buffer = data128();
   }
-  character_stat(character_stats id, u32 display_name_symbol, u32 desc_symbol, Rectangle icon_src, i32 upgrade_cost, data128 buffer = {}) : character_stat()
+  character_stat(character_stats id, u32 display_name_symbol, u32 desc_symbol, Rectangle icon_src, i32 upgrade_cost, data128 buffer = data128()) : character_stat()
   {
     this->id = id;
     this->passive_display_name_symbol = display_name_symbol;
@@ -720,6 +735,15 @@ typedef struct localization_package {
   Font bold_font;
   Font medium_font;
   Font italic_font;
+  localization_package(void) {
+    this->language_name.clear();
+    this->language_index = INVALID_IDU32;
+    this->codepoints = nullptr;
+    this->light_font = {};
+    this->bold_font = {};
+    this->medium_font = {};
+    this->italic_font = {};
+  }
 } localization_package;
 
 typedef struct text_spec {
@@ -731,12 +755,12 @@ typedef struct text_spec {
   u32 language_index;
 
   text_spec(void) {
-    this->text = "This is default";
+    this->text = "NULL";
     this->text_pos = VECTOR2(960,540);
     this->font = nullptr;
     this->font_size = 32;
     this->color = Color{0,0,0,255};
-    this->language_index = 0;
+    this->language_index = 0u;
   }
   text_spec(std::string _display_text, Vector2 _text_pos, Font* _font, i32 _font_size, Color _color, u32 _language_index) : text_spec() {
     this->text = _display_text;

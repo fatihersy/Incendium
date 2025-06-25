@@ -74,11 +74,11 @@ void update_scene_main_menu(void) {
         case SCENE_TYPE_UNSPECIFIED:
         break;
       case SCENE_TYPE_IN_GAME: {
-        event_fire(EVENT_CODE_SCENE_IN_GAME, event_context{});
+        event_fire(EVENT_CODE_SCENE_IN_GAME, event_context());
         break;
       }
       case SCENE_TYPE_EDITOR: {
-        event_fire(EVENT_CODE_SCENE_EDITOR, event_context{});
+        event_fire(EVENT_CODE_SCENE_EDITOR, event_context());
         break;
       }
       default: {
@@ -117,7 +117,7 @@ void render_interface_main_menu(void) {
         event_fire(EVENT_CODE_UI_START_FADEOUT_EFFECT, event_context((u16)MAIN_MENU_FADE_DURATION));
       }
       if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_EXIT), BTN_ID_MAINMENU_BUTTON_EXIT, VECTOR2(0.f, 24.f), BASE_RENDER_RES_DIV2, true)) {
-        event_fire(EVENT_CODE_APPLICATION_QUIT, event_context{});
+        event_fire(EVENT_CODE_APPLICATION_QUIT, event_context());
       }
     } 
     else if (state->type == MAIN_MENU_SCENE_SETTINGS) {

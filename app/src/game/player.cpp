@@ -26,7 +26,6 @@ bool player_system_initialize(void) {
     TraceLog(LOG_ERROR, "player::player_system_initialize()::Failed to allocate player state");
     return false;
   }
-
   player->move_left_sprite.sheet_id = SHEET_ID_PLAYER_ANIMATION_MOVE_LEFT;
   player->move_right_sprite.sheet_id = SHEET_ID_PLAYER_ANIMATION_MOVE_RIGHT;
   player->idle_left_sprite.sheet_id = SHEET_ID_PLAYER_ANIMATION_IDLE_LEFT;
@@ -45,7 +44,6 @@ bool player_system_initialize(void) {
   set_sprite(&player->wreck_right_sprite,       true, false);
 
   {
-    player->stats[CHARACTER_STATS_UNDEFINED] = {};
     player->stats[CHARACTER_STATS_HEALTH] = character_stat(CHARACTER_STATS_HEALTH, 
       LOC_TEXT_PLAYER_STAT_LIFE_ESSENCE, LOC_TEXT_PLAYER_STAT_DESC_LIFE_ESSENCE, Rectangle{2016, 640, 32, 32}, (i32) level_curve[1]
     );
@@ -122,7 +120,7 @@ player_state* get_player_state(void) {
 }
 
 Vector2 get_player_position(bool centered) {
-  Vector2 pos = {};
+  Vector2 pos = ZEROVEC2;
   if(centered) {
     pos = Vector2 {
       .x = player->position.x + player->dimentions_div2.x,
@@ -162,7 +160,7 @@ void player_take_damage(u16 damage) {
   else {
     player->health_current = 0;
     player->is_dead = true;
-    event_fire(EVENT_CODE_END_GAME, event_context {});
+    event_fire(EVENT_CODE_END_GAME, event_context());
   }
   player->health_perc = (float) player->health_current / player->health_max;
 }
@@ -178,16 +176,16 @@ void player_heal_player(u16 amouth){
 }
 
 player_update_results update_player(void) {
-  if (!player) return player_update_results { .is_success = false };
+  if (!player) return player_update_results();
   if (player->is_dead) { 
-    return player_update_results { .is_success = false }; 
+    return player_update_results(); 
   }
   
   if(!player->is_damagable) {
     if(player->damage_break_current <= 0) { player->is_damagable = true; }
     else { player->damage_break_current -= GetFrameTime(); }
   }
-  Vector2 new_position = {};
+  Vector2 new_position = ZEROVEC2;
   if (IsKeyDown(KEY_W)) {
     new_position.y -= 2;
   }
@@ -201,10 +199,8 @@ player_update_results update_player(void) {
     new_position.x += 2;
   }
   update_sprite(player->last_played_animation);
-  return player_update_results { 
-    .move_request = new_position,
-    .is_success = true
-  };
+  
+  return player_update_results(new_position, true);
 }
 void player_move_player(Vector2 new_pos) {
   if (!player) {

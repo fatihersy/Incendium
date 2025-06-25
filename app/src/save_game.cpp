@@ -214,7 +214,7 @@ u32 save_game_get_entry(u32 offset) {
   u32 out_offset = 0;
 
   for (u32 i=offset; i<TOTAL_SAVE_FILE_SIZE; ++i) {
-    u8 header_symbol[HEADER_SYMBOL_LENGTH_NULL_TERMINATED] = {0};
+    u8 header_symbol[HEADER_SYMBOL_LENGTH_NULL_TERMINATED] = {};
     copy_memory(header_symbol, state->file_buffer + i, HEADER_SYMBOL_LENGTH);
 
     if (TextIsEqual((const char*)header_symbol, HEADER_SYMBOL_ENTRY)) {
@@ -229,7 +229,7 @@ u32 save_game_get_entry(u32 offset) {
   return out_offset + HEADER_SYMBOL_LENGTH;
 }
 encode_integer_result encode_integer(i32 val) {
-  encode_integer_result result = {0};
+  encode_integer_result result = {};
   const char* souls_text = TextFormat("%d", val);
   i32 val_str_len = TextLength(souls_text);
   for (i32 i=0; i<val_str_len; ++i) {
@@ -239,7 +239,7 @@ encode_integer_result encode_integer(i32 val) {
   return result;
 }
 encode_string_result encode_string(const char* str, u16 len) {
-  encode_string_result result = {0};
+  encode_string_result result = {};
 
   copy_memory(result.txt, str, len);
 
@@ -247,7 +247,7 @@ encode_string_result encode_string(const char* str, u16 len) {
 }
 i32 decode_integer(void) {
   u32 var_len = TextLength((const char*)state->variable_buffer);
-  char txt_val[VARIABLE_ENCODED_TEXT_LENGTH] = {0};
+  char txt_val[VARIABLE_ENCODED_TEXT_LENGTH] = {};
   for (u32 i=0; i<var_len; ++i) {
     txt_val[i] = state->variable_buffer[i] - SAVE_GAME_VAR_NUM_START_SYMBOL;
   }

@@ -489,7 +489,7 @@ void update_radience(ability* abl) {
     static_cast<i16>(COLLISION_TYPE_CIRCLE_RECTANGLE)
   ));
 
-  update_sprite(&prj.animations.at(prj.active_sprite));
+  update_sprite(__builtin_addressof(prj.animations.at(prj.active_sprite)));
 }
 void update_firetrail(ability* abl) {
   if (abl == nullptr) {
@@ -524,7 +524,7 @@ void update_firetrail(ability* abl) {
       static_cast<i16>(COLLISION_TYPE_RECTANGLE_RECTANGLE)
     ));
     
-    update_sprite(&prj->animations.at(prj->active_sprite));
+    update_sprite(__builtin_addressof(prj->animations.at(prj->active_sprite)));
   }
 }
 
@@ -684,7 +684,7 @@ void refresh_ability_fireball(ability* abl) {
         TraceLog(LOG_WARNING, "ability::refresh_ability_fireball()::Ability don't have any sprite");
         return;
       }
-      spritesheet spr = {};
+      spritesheet spr = spritesheet();
       spr.sheet_id = abl->animation_ids.at(iter);
       set_sprite(__builtin_addressof(spr), true, false);
       spr.origin = VECTOR2( spr.coord.width * .5f,  spr.coord.height * .5f );
@@ -724,7 +724,7 @@ void refresh_ability_bullet(ability* abl) {
         TraceLog(LOG_WARNING, "ability::refresh_ability_bullet()::Ability don't have any sprite");
         return;
       }
-      spritesheet spr = {};
+      spritesheet spr = spritesheet();
       spr.sheet_id = abl->animation_ids.at(iter);
       set_sprite(__builtin_addressof(spr), true, false);
       spr.origin = VECTOR2( spr.coord.width * .5f,  spr.coord.height * .5f );
@@ -766,7 +766,7 @@ void refresh_ability_comet(ability* abl) {
         TraceLog(LOG_WARNING, "ability::refresh_ability_comet()::Ability don't have any sprite");
         return;
       }
-      spritesheet spr = {};
+      spritesheet spr = spritesheet();
       spr.sheet_id = abl->animation_ids.at(iter);
       set_sprite(__builtin_addressof(spr), true, false);
       spr.origin = VECTOR2( spr.coord.width * .5f,  spr.coord.height * .5f );
@@ -816,7 +816,7 @@ void refresh_ability_codex(ability* abl) {
         TraceLog(LOG_WARNING, "ability::refresh_ability_codex()::Ability don't have any sprite");
         return;
       }
-      spritesheet spr = {};
+      spritesheet spr = spritesheet();
       spr.sheet_id = abl->animation_ids.at(itr_111);
       set_sprite(__builtin_addressof(spr), true, false);
       spr.origin = VECTOR2( spr.coord.width * .5f,  spr.coord.height * .5f );
@@ -856,7 +856,7 @@ void refresh_ability_radience(ability* abl) {
         TraceLog(LOG_WARNING, "ability::refresh_ability_radience()::Ability don't have any sprite");
         return;
       }
-      spritesheet spr = {};
+      spritesheet spr = spritesheet();
       spr.sheet_id = abl->animation_ids.at(iter);
       set_sprite(__builtin_addressof(spr), true, false);
       spr.origin = VECTOR2( spr.coord.width * .5f,  spr.coord.height * .5f );
@@ -918,7 +918,7 @@ void refresh_ability_firetrail(ability* abl) {
     prj->active_sprite = 0;
 
     for (size_t itr_111 = 0; itr_111 < abl->animation_ids.size(); ++itr_111) {
-      spritesheet spr = {};
+      spritesheet spr = spritesheet();
       spr.sheet_id = abl->animation_ids.at(itr_111);
       set_sprite(__builtin_addressof(spr), true, false);
       spr.origin = VECTOR2( spr.coord.width * .5f,  spr.coord.height * .5f );

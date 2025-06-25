@@ -74,7 +74,7 @@ void parse_pak(void) {
     return;
   }
   pak_reading_order reading_order = READING_ORDER_FILENAME;
-  file_data file = {};
+  file_data file = file_data();
   for (u32 i=0; i<state->pak_data_size; ++i) {
     switch (reading_order) {
     case READING_ORDER_FILENAME: {
@@ -107,7 +107,7 @@ void parse_pak(void) {
     if (reading_order == pak_reading_order::READING_ORDER_MAX) {
       file.is_initialized = true;
       state->file_datas[state->total_file_count] = file;
-      file = file_data {};
+      file = file_data();
       state->total_file_count++;
       reading_order = static_cast<pak_reading_order>((reading_order % (pak_reading_order::READING_ORDER_MAX)) + 1);
     }
@@ -123,7 +123,7 @@ u32 pak_parser_get_entry(u32 offset) {
 
   for (u32 i=offset; i<state->pak_data_size; ++i) {
 
-    u8 header_symbol[HEADER_SYMBOL_LENGTH_NULL_TERMINATED] = {};
+    u8 header_symbol[HEADER_SYMBOL_LENGTH_NULL_TERMINATED];
     copy_memory(header_symbol, state->pak_data + i, HEADER_SYMBOL_LENGTH);
 
     if (TextIsEqual((const char*)header_symbol, HEADER_SYMBOL_ENTRY)) {
@@ -141,7 +141,7 @@ u32 pak_parser_get_entry(u32 offset) {
 file_data get_file_data(const char* file_name) {
   if (!state) {
     TraceLog(LOG_ERROR, "pak_parser::get_file_data()::Pak parser system didn't initialized");
-    return file_data {};
+    return file_data();
   }
 
   for (u32 i=0; i<state->total_file_count; ++i) {
@@ -150,7 +150,7 @@ file_data get_file_data(const char* file_name) {
     }
   }
 
-  return file_data {};
+  return file_data();
 }
 
 /**
@@ -159,10 +159,10 @@ file_data get_file_data(const char* file_name) {
 file_data fetch_file_data(const char* file_name) {
   if (!state) {
     TraceLog(LOG_ERROR, "pak_parser::fetch_file_data()::Pak parser system didn't initialized");
-    return file_data{};
+    return file_data();
   }
   pak_reading_order reading_order = READING_ORDER_FILENAME;
-  file_data file = {};
+  file_data file = file_data();
   bool found = false;
   for (u32 i=0; i<state->pak_data_size; ++i) {
     switch (reading_order) {
@@ -198,7 +198,7 @@ file_data fetch_file_data(const char* file_name) {
     }
     default: {
       TraceLog(LOG_ERROR, "pak_parser::parse_pak()::Unsupported reading order stage");
-      return file_data{};
+      return file_data();
     }
     }
     reading_order = static_cast<pak_reading_order>((reading_order % (READING_ORDER_MAX)) + 1);

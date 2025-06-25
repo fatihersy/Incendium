@@ -44,7 +44,7 @@ bool scene_manager_initialize(void) {
   return true;
 }
 void scene_manager_reinit(void) {
-  event_fire(EVENT_CODE_SCENE_MAIN_MENU, event_context {});
+  event_fire(EVENT_CODE_SCENE_MAIN_MENU, event_context());
 }
 
 void update_scene_scene(void) {
@@ -55,7 +55,7 @@ void update_scene_scene(void) {
     case SCENE_TYPE_IN_GAME:   update_scene_in_game();       break;
     case SCENE_TYPE_EDITOR:    update_scene_editor();        break;
     default: {
-      event_fire(EVENT_CODE_SCENE_MAIN_MENU, event_context {});
+      event_fire(EVENT_CODE_SCENE_MAIN_MENU, event_context());
       return;
     }
   }
@@ -66,7 +66,7 @@ void render_scene_world(void) {
     case SCENE_TYPE_IN_GAME:   render_scene_in_game();       break;
     case SCENE_TYPE_EDITOR:    render_scene_editor();        break;
     default: {
-      event_fire(EVENT_CODE_SCENE_MAIN_MENU, event_context {});
+      event_fire(EVENT_CODE_SCENE_MAIN_MENU, event_context());
       return;
     }
   }
@@ -77,7 +77,7 @@ void render_scene_interface(void) {
     case SCENE_TYPE_MAIN_MENU: render_interface_main_menu(); break;
     case SCENE_TYPE_EDITOR:    render_interface_editor();    break;
     default: {
-      event_fire(EVENT_CODE_SCENE_MAIN_MENU, event_context {});
+      event_fire(EVENT_CODE_SCENE_MAIN_MENU, event_context());
       return;
     }
   }

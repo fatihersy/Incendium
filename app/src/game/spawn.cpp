@@ -73,7 +73,7 @@ i32 damage_spawn(u32 _id, i32 damage) {
       break;
     }
   }
-  if (!character) return INVALID_ID16;
+  if (!character) return INVALID_IDU16;
   if (!character->is_damagable) { return character->health; }
 
   if(character->health - damage > 0 && character->health - damage < MAX_SPAWN_HEALTH) {

@@ -109,10 +109,10 @@ bool loc_parser_parse_localization_data_from_file(const char* file_name) {
     return false;
   }
   const char* file_path = TextFormat("%s%s%s", LOC_FILE_PATH_PREFIX, file_name, LOC_FILE_EXTENSION);
-  loc_data data = {};
-  state->file_size = 0;
+  loc_data data = loc_data();
+  state->file_size = 0u;
   state->file_buffer.clear();
-  state->_buffer = {};
+  state->_buffer = loc_data();
   {
     int dataSize = 1;
     u8* _str_tile = LoadFileData(file_path, &dataSize);
@@ -148,9 +148,9 @@ bool loc_parser_parse_localization_data(void) {
   state->lang_data.clear();
   state->file_size = 0;
   state->file_buffer.clear();
-  state->_buffer = {};
+  state->_buffer = loc_data();
   for (size_t iter = 0; iter < file_names.count; iter++) {
-    loc_data data = {};
+    loc_data data = loc_data();
     {
       int dataSize = 1;
       u8* _str_tile = LoadFileData(file_names.paths[iter], &dataSize);
@@ -175,7 +175,7 @@ bool loc_parser_parse_localization_data(void) {
     state->file_buffer.assign(default_language, default_language + def_lang_len);
     state->file_size = def_lang_len;
 
-    loc_data data = {};
+    loc_data data = loc_data();
     data.language_name = loc_parser_read_language_name();
     data.codepoints = loc_parser_read_codepoints();
     data.content = loc_parser_read_map();
@@ -187,7 +187,7 @@ bool loc_parser_parse_localization_data(void) {
 }
 
 loc_content_text loc_parser_get_next_content_text(u32& offset) {
-  loc_content_text text = {};
+  loc_content_text text = std::string("");
 
   bool quote_found = false;
   for (; offset<state->file_size; ++offset) {
@@ -206,7 +206,7 @@ loc_content_text loc_parser_get_next_content_text(u32& offset) {
   return text;
 }
 std::string loc_parser_get_text(u32& offset, std::string text) {
-  std::string _text = {};
+  std::string _text = std::string("");
 
   bool quote_found = false;
   for (; offset<state->file_size; ++offset) {
@@ -229,7 +229,7 @@ std::string loc_parser_get_text(u32& offset, std::string text) {
   else return "";
 }
 std::string loc_parser_get_next_text(u32& offset) {
-  std::string text = {};
+  std::string text = std::string("");
 
   bool quote_found = false;
   for (; offset<state->file_size; ++offset) {
@@ -279,10 +279,10 @@ loc_file_scope loc_parser_get_scope_range(u32 offset) {
 }
 
 u32 loc_parser_go_to_variable(std::string variable_name) {
-  std::string variable = {};
+  std::string variable = std::string("");
   bool variable_found = false;
   bool in_variable_try = false;
-  u32 variable_search_offset = 0;
+  u32 variable_search_offset = 0u;
   do {
     variable.clear();
     in_variable_try = false;
@@ -317,7 +317,7 @@ u32 loc_parser_go_to_variable(std::string variable_name) {
 }
 
 loc_content_symbol loc_parser_read_symbol(u32& offset) {
-  loc_content_symbol symbol = {};
+  loc_content_symbol symbol = std::string("");
   char parser = '=';
 
   for (; offset<state->file_size; ++offset) {
@@ -364,8 +364,8 @@ loc_content_map loc_parser_read_map(void) {
 
   loc_reading_order reading_order = static_cast<loc_reading_order>(LOC_READING_ORDER_UNDEFINED+1);
 
-  loc_content_symbol symbol = {};
-  loc_content_text text = {};
+  loc_content_symbol symbol = std::string("");
+  loc_content_text text = std::string("");
   loc_content_map content_map = {};
 
   for (u32 offset=scope.scope_start_offset; offset < scope.scope_end_offset;) {
@@ -431,7 +431,7 @@ bool loc_parser_set_active_language_by_index(unsigned int index) {
 loc_data* loc_parser_get_active_language(void) {
   if (!state) {
     TraceLog(LOG_ERROR, "loc_parser::loc_parser_get_active_language()::State is not valid");
-    return {};
+    return nullptr;
   }
   
   return state->active_loc;

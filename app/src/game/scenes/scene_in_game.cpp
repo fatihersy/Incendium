@@ -26,6 +26,11 @@ typedef struct end_game_results{
   u16 collected_souls;
   f32 play_time;
   bool is_win;
+  end_game_results(void) {
+    this->collected_souls = 0u;
+    this->play_time = 0.f;
+    this->is_win = false;
+  }
 }end_game_results;
 
 typedef struct scene_in_game_state {
@@ -55,7 +60,7 @@ static scene_in_game_state * state;
 
 #define STATE_ASSERT(FUNCTION) if (!state) {                                              \
   TraceLog(LOG_ERROR, "scene_in_game::" FUNCTION "::In game state was not initialized");  \
-  event_fire(EVENT_CODE_SCENE_MAIN_MENU, event_context{});                                \
+  event_fire(EVENT_CODE_SCENE_MAIN_MENU, event_context());                                \
   return;                                                                                 \
 }
 
@@ -154,7 +159,7 @@ void end_scene_in_game(void) {
   //state->is_game_paused           = Handled by update, each frame fetches from game manager;
 
   state->stage = IN_GAME_STAGE_MAP_CHOICE;
-  state->end_game_result = end_game_results {};
+  state->end_game_result = end_game_results();
   state->hovered_stage = U16_MAX;
   state->hovered_spawn = U16_MAX;
   state->hovered_ability = ABILITY_TYPE_MAX;
@@ -188,7 +193,7 @@ void update_scene_in_game(void) {
       if (!state->has_game_started) { return; }
       if (*state->is_game_paused) { return; }
       else if (get_remaining_enemies() <= 0 || get_remaining_enemies() > MAX_SPAWN_COUNT) {
-        event_fire(EVENT_CODE_END_GAME, event_context {});
+        event_fire(EVENT_CODE_END_GAME, event_context());
         state->end_game_result.is_win = true;
       }
       if (get_is_game_end()) {
@@ -419,7 +424,7 @@ void render_interface_in_game(void) {
               WORLDMAP_LOC_PIN_SIZE, WORLDMAP_LOC_PIN_SIZE
             };
             pnl->dest = Rectangle {scrloc.x + WORLDMAP_LOC_PIN_SIZE, scrloc.y + WORLDMAP_LOC_PIN_SIZE_DIV2, BASE_RENDER_SCALE(.25f).x, BASE_RENDER_SCALE(.25f).y};
-            DrawCircleGradient(scrloc.x + WORLDMAP_LOC_PIN_SIZE_DIV2, scrloc.y + WORLDMAP_LOC_PIN_SIZE_DIV2, 100, Color{236,240,241,50}, Color{});
+            DrawCircleGradient(scrloc.x + WORLDMAP_LOC_PIN_SIZE_DIV2, scrloc.y + WORLDMAP_LOC_PIN_SIZE_DIV2, 100, Color{236,240,241,50}, Color{255, 255, 255, 0});
             gui_panel_scissored((*pnl), false, {
               gui_label(state->worldmap_locations.at(i).displayname.c_str(), FONT_TYPE_MEDIUM, 10, Vector2 {
                 pnl->dest.x + pnl->dest.width *.5f, pnl->dest.y + pnl->dest.height*.5f
@@ -599,7 +604,7 @@ void render_interface_in_game(void) {
         currency_souls_add(state->end_game_result.collected_souls);
         gm_save_game();
         end_scene_in_game();
-        event_fire(EVENT_CODE_SCENE_MAIN_MENU, event_context {});
+        event_fire(EVENT_CODE_SCENE_MAIN_MENU, event_context());
       }
       break; 
     }

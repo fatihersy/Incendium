@@ -67,8 +67,6 @@ typedef struct scene_editor_state {
 
   camera_metrics * in_camera_metrics;
   std::array<worldmap_stage, MAX_WORLDMAP_LOCATIONS> worldmap_locations;
-  u32 next_prop_static_id;
-  u32 next_prop_sprite_id;
   panel prop_selection_panel;
   panel tile_selection_panel;
   panel prop_edit_panel;
@@ -749,7 +747,7 @@ void update_scene_editor(void) {
 }
 void render_scene_editor(void) {
   if (state->selected_stage == WORLDMAP_MAINMENU_MAP) {
-    render_map_view_on(Vector2 {}, 1);
+    render_map_view_on(ZEROVEC2, 1);
   }
   else {
     render_map();
@@ -963,7 +961,7 @@ void add_prop(texture_id source_tex, tilemap_prop_types type, Rectangle source, 
   }
   tilemap_prop_static prop = tilemap_prop_static();
 
-  prop.id = state->next_prop_static_id++;
+  prop.id = INVALID_IDU32;
   prop.tex_id = source_tex;
   prop.prop_type = type;
   
@@ -1001,7 +999,7 @@ void add_prop(tilemap_prop_types type, spritesheet_id sprite_id, f32 scale, Colo
   }
   tilemap_prop_sprite prop = tilemap_prop_sprite();
 
-  prop.id = state->next_prop_sprite_id++;
+  prop.id = INVALID_IDU32;
   prop.prop_type = type;
   prop.scale = scale;
   prop.sprite.sheet_id = sprite_id;
@@ -1097,6 +1095,7 @@ void editor_update_mouse_bindings(void) {
     switch (state->selection_type) {
       case SLC_TYPE_UNSELECTED: {
         tilemap_prop_address _prop_address = get_map_prop_by_pos(state->mouse_pos_world);
+        if (_prop_address.type <= TILEMAP_PROP_TYPE_UNDEFINED || _prop_address.type >= TILEMAP_PROP_TYPE_MAX) break;
         if (_prop_address.type != TILEMAP_PROP_TYPE_SPRITE && _prop_address.data.prop_static != nullptr) {
           state->selected_prop_static_map_prop_address = _prop_address.data.prop_static;
           state->selection_type = SLC_TYPE_SLC_PROP_STATIC;
@@ -1283,11 +1282,11 @@ void end_scene_editor(void) {
     TraceLog(LOG_ERROR, "scene_editor::end_scene_editor()::State is not valid");
     return;
   }
-  state->target = VECTOR2(0.f, 0.f);
-  state->selection_type = editor_state_selection_type::SLC_TYPE_UNSELECTED;
-  state->mouse_focus = editor_state_mouse_focus::MOUSE_FOCUS_UNFOCUSED;
-  state->edit_layer = 0;
-  state->selected_stage = 0;
+  state->target = ZEROVEC2;
+  state->selection_type = SLC_TYPE_UNSELECTED;
+  state->mouse_focus = MOUSE_FOCUS_UNFOCUSED;
+  state->edit_layer = 0u;
+  state->selected_stage = 0u;
   state->tilemap_props_sprite_selected = nullptr;
   state->tilemap_props_static_selected = nullptr;
   state->b_show_tilesheet_tile_selection_screen = false;
@@ -1296,7 +1295,7 @@ void end_scene_editor(void) {
   state->b_show_prop_edit_screen = false;
   state->b_dragging_prop = false;
   state->b_show_pause_menu = false;
-  state->selected_tile = {};
+  state->selected_tile = tile();
   state->selected_prop_static_map_prop_address = nullptr;
   state->selected_prop_sprite_map_prop_address = nullptr;
   state->selected_prop_sprite_panel_selection_copy = tilemap_prop_sprite();
@@ -1351,16 +1350,18 @@ bool scene_editor_scale_slider_on_left_button_trigger() {
     TraceLog(LOG_ERROR, "scene_editor::scene_editor_scale_slider_on_left_button_trigger():: State is not valid");
     return false;
   }
-  if (state->selected_prop_static_map_prop_address != nullptr && state->selected_prop_sprite_map_prop_address != nullptr) {
-    TraceLog(LOG_WARNING, "scene_editor::scene_editor_scale_slider_on_left_button_trigger::Both static and sprite pointer have values");
-    return false;
-  }
   if (state->selected_prop_static_map_prop_address != nullptr) {
     state->selected_prop_static_map_prop_address->scale -= .15f;
     return true;
   }
   if (state->selected_prop_sprite_map_prop_address != nullptr) {
-    state->selected_prop_sprite_map_prop_address->scale -= .15f;
+    tilemap_prop_sprite * map_prop_ptr = state->selected_prop_sprite_map_prop_address;
+    map_prop_ptr->scale -= .15f;
+    
+    map_prop_ptr->sprite.coord.width = map_prop_ptr->sprite.current_frame_rect.width * map_prop_ptr->scale;
+    map_prop_ptr->sprite.coord.height = map_prop_ptr->sprite.current_frame_rect.height * map_prop_ptr->scale;
+    map_prop_ptr->sprite.origin.x = map_prop_ptr->sprite.coord.width  * .5f;
+    map_prop_ptr->sprite.origin.y = map_prop_ptr->sprite.coord.height * .5f;
     return true;
   }
 
@@ -1371,16 +1372,18 @@ bool scene_editor_scale_slider_on_right_button_trigger() {
     TraceLog(LOG_ERROR, "scene_editor::scene_editor_scale_slider_on_right_button_trigger():: State is not valid");
     return false;
   }
-  if (state->selected_prop_static_map_prop_address != nullptr && state->selected_prop_sprite_map_prop_address != nullptr) {
-    TraceLog(LOG_WARNING, "scene_editor::scene_editor_scale_slider_on_right_button_trigger::Both static and sprite pointer have values");
-    return false;
-  }
   if (state->selected_prop_static_map_prop_address != nullptr) {
     state->selected_prop_static_map_prop_address->scale += .15f;
     return true;
   }
   if (state->selected_prop_sprite_map_prop_address != nullptr) {
-    state->selected_prop_sprite_map_prop_address->scale += .15f;
+    tilemap_prop_sprite * map_prop_ptr = state->selected_prop_sprite_map_prop_address;
+    map_prop_ptr->scale += .15f;
+    
+    map_prop_ptr->sprite.coord.width = map_prop_ptr->sprite.current_frame_rect.width * map_prop_ptr->scale;
+    map_prop_ptr->sprite.coord.height = map_prop_ptr->sprite.current_frame_rect.height * map_prop_ptr->scale;
+    map_prop_ptr->sprite.origin.x = map_prop_ptr->sprite.coord.width  * .5f;
+    map_prop_ptr->sprite.origin.y = map_prop_ptr->sprite.coord.height * .5f;
     return true;
   }
 
@@ -1389,10 +1392,6 @@ bool scene_editor_scale_slider_on_right_button_trigger() {
 bool scene_editor_rotation_slider_on_left_button_trigger() {
   if (!state) {
     TraceLog(LOG_ERROR, "scene_editor::scene_editor_rotation_slider_on_left_button_trigger():: State is not valid");
-    return false;
-  }
-  if (state->selected_prop_static_map_prop_address != nullptr && state->selected_prop_sprite_map_prop_address != nullptr) {
-    TraceLog(LOG_WARNING, "scene_editor::scene_editor_rotation_slider_on_left_button_trigger::Both static and sprite pointer have values");
     return false;
   }
   if (state->selected_prop_static_map_prop_address != nullptr) {
@@ -1419,10 +1418,6 @@ bool scene_editor_rotation_slider_on_right_button_trigger() {
     TraceLog(LOG_ERROR, "scene_editor::scene_editor_rotation_slider_on_right_button_trigger():: State is not valid");
     return false;
   }
-  if (state->selected_prop_static_map_prop_address != nullptr && state->selected_prop_sprite_map_prop_address != nullptr) {
-    TraceLog(LOG_WARNING, "scene_editor::scene_editor_rotation_slider_on_right_button_trigger::Both static and sprite pointer have values");
-    return false;
-  }
   if (state->selected_prop_static_map_prop_address != nullptr) {
     state->selected_prop_static_map_prop_address->rotation += 10.f;
     if(state->selected_prop_static_map_prop_address->rotation > 360.f) {
@@ -1447,15 +1442,12 @@ bool scene_editor_zindex_slider_on_left_button_trigger() {
     TraceLog(LOG_ERROR, "scene_editor::scene_editor_zindex_slider_on_left_button_trigger():: State is not valid");
     return false;
   }
-  if (state->selected_prop_static_map_prop_address != nullptr && state->selected_prop_sprite_map_prop_address != nullptr) {
-    TraceLog(LOG_WARNING, "scene_editor::scene_editor_zindex_slider_on_left_button_trigger::Both static and sprite pointer have values");
-    return false;
-  }
   if (state->selected_prop_static_map_prop_address != nullptr) {
     state->selected_prop_static_map_prop_address->zindex -= 1;
     if(state->selected_prop_static_map_prop_address->zindex < 0) {
       state->selected_prop_static_map_prop_address->zindex = 0;
     }
+    refresh_render_queue(state->selected_stage);
     return true;
   }
   if (state->selected_prop_sprite_map_prop_address != nullptr) {
@@ -1463,6 +1455,7 @@ bool scene_editor_zindex_slider_on_left_button_trigger() {
     if(state->selected_prop_sprite_map_prop_address->zindex < 0) {
       state->selected_prop_sprite_map_prop_address->zindex = 0;
     }
+    refresh_render_queue(state->selected_stage);
     return true;
   }
 
@@ -1473,22 +1466,26 @@ bool scene_editor_zindex_slider_on_right_button_trigger() {
     TraceLog(LOG_ERROR, "scene_editor::scene_editor_zindex_slider_on_right_button_trigger():: State is not valid");
     return false;
   }
-  if (state->selected_prop_static_map_prop_address != nullptr && state->selected_prop_sprite_map_prop_address != nullptr) {
-    TraceLog(LOG_WARNING, "scene_editor::scene_editor_zindex_slider_on_right_button_trigger::Both static and sprite pointer have values");
-    return false;
-  }
   if (state->selected_prop_static_map_prop_address != nullptr) {
+    i16 old_zindex_backup = state->selected_prop_static_map_prop_address->zindex;
+
     state->selected_prop_static_map_prop_address->zindex += 1;
-    if(state->selected_prop_static_map_prop_address->zindex > MAX_Z_INDEX_SLOT) {
-      state->selected_prop_static_map_prop_address->zindex = MAX_Z_INDEX_SLOT;
+    if(state->selected_prop_static_map_prop_address->zindex >= MAX_Z_INDEX_SLOT) {
+      state->selected_prop_static_map_prop_address->zindex = MAX_Z_INDEX_SLOT-1;
     }
+    tilemap_prop_static& map_prop_ref = *state->selected_prop_static_map_prop_address;
+    change_prop_zindex(map_prop_ref.prop_type, map_prop_ref.id, old_zindex_backup, map_prop_ref.zindex);
     return true;
   }
   if (state->selected_prop_sprite_map_prop_address != nullptr) {
+    i16 old_zindex_backup = state->selected_prop_sprite_map_prop_address->zindex;
+
     state->selected_prop_sprite_map_prop_address->zindex += 1;
-    if(state->selected_prop_sprite_map_prop_address->zindex > MAX_Z_INDEX_SLOT) {
-      state->selected_prop_sprite_map_prop_address->zindex = MAX_Z_INDEX_SLOT;
+    if(state->selected_prop_sprite_map_prop_address->zindex >= MAX_Z_INDEX_SLOT) {
+      state->selected_prop_sprite_map_prop_address->zindex = MAX_Z_INDEX_SLOT-1;
     }
+    tilemap_prop_sprite& map_prop_ref = *state->selected_prop_sprite_map_prop_address;
+    change_prop_zindex(map_prop_ref.prop_type, map_prop_ref.id, old_zindex_backup, map_prop_ref.zindex);
     return true;
   }
 

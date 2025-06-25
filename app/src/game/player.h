@@ -6,8 +6,16 @@
 #include "game_types.h"
 
 typedef struct player_update_results {
-  Vector2 move_request = Vector2 {};
-  bool is_success = false;
+  Vector2 move_request;
+  bool is_success;
+  player_update_results(void) {
+    this->move_request = ZEROVEC2;
+    this->is_success = false;
+  }
+  player_update_results(Vector2 move_req, bool is_success) : player_update_results() {
+    this->move_request = move_req;
+    this->is_success = is_success;
+  }
 } player_update_results;
 
 bool player_system_initialize(void);

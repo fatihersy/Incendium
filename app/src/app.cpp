@@ -82,7 +82,7 @@ bool app_initialize(void) {
     ClearBackground(CLEAR_BACKGROUND_COLOR); //TODO: Loading screen
     DrawTexturePro(loading_tex, 
       {0, 0, loading_image.width, loading_image.height}, 
-      {0, 0, GetScreenWidth(), GetScreenHeight()}, Vector2{}, 0, WHITE);
+      {0, 0, GetScreenWidth(), GetScreenHeight()}, Vector2{0.f, 0.f}, 0, WHITE);
     EndDrawing();
 
     parse_pak();
@@ -93,7 +93,7 @@ bool app_initialize(void) {
     ClearBackground(CLEAR_BACKGROUND_COLOR); //TODO: Loading screen
     DrawTexturePro(loading_tex, 
       {0, 0, (f32)loading_tex.width, (f32)loading_tex.height}, 
-      {0, 0, (f32)GetScreenWidth(),  (f32)GetScreenHeight()}, Vector2{}, 0, WHITE);
+      {0, 0, (f32)GetScreenWidth(),  (f32)GetScreenHeight()}, Vector2{0.f, 0.f}, 0, WHITE);
     EndDrawing();
   #endif
 
@@ -154,7 +154,7 @@ bool app_update(void) {
     state->app_runing = false;
   }
   if (IsKeyDown(KEY_LEFT_ALT) && IsKeyPressed(KEY_ENTER)) {
-   event_fire(EVENT_CODE_TOGGLE_BORDERLESS, event_context {});
+   event_fire(EVENT_CODE_TOGGLE_BORDERLESS, event_context());
   }
   
   if(IsWindowFocused() && !IsWindowState(FLAG_WINDOW_TOPMOST) && state->settings->window_state != 0) {
@@ -184,7 +184,7 @@ bool app_render(void) {
     DrawFPS(BASE_RENDER_SCALE(.75f).x, SCREEN_OFFSET.y * 10);
   EndTextureMode();
   
-  state->screen_space_camera.target = Vector2 {};
+  state->screen_space_camera.target = Vector2 {0.f, 0.f};
   state->screen_space_camera.zoom = 1.f;
   BeginDrawing();
     ClearBackground(CLEAR_BACKGROUND_COLOR);
@@ -195,7 +195,7 @@ bool app_render(void) {
           -state->settings->normalized_ratio, -state->settings->normalized_ratio, 
           state->settings->window_size.at(0) + (state->settings->normalized_ratio*2), 
           state->settings->window_size.at(1) + (state->settings->normalized_ratio*2)
-        }, Vector2 {}, 0, WHITE
+        }, Vector2 {0.f ,0.f}, 0, WHITE
       );
     EndMode2D();
   EndDrawing();

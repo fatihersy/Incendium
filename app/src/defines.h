@@ -123,8 +123,8 @@ static_assert(sizeof(f64) == 8, "Expected float to be 8 bytes.");
  * @brief Any id set to this should be considered invalid,
  * and not actually pointing to a real object.
  */
-#define INVALID_ID32 U32_MAX
-#define INVALID_ID16 U16_MAX
+#define INVALID_IDU32 U32_MAX
+#define INVALID_IDU16 U16_MAX
 
 
 typedef enum data_type {
@@ -403,7 +403,7 @@ typedef struct data_pack {
   data_pack() {
     this->type_flag = DATA_TYPE_UNRESERVED;
     this->array_lenght = 0;
-    this->data = {};
+    this->data = data128();
   };
   data_pack(data_type type, data128 buffer, u16 len) : data_pack()
   {
@@ -632,6 +632,12 @@ typedef struct file_data {
   u32 offset;
   u8* data;
   bool is_initialized;
+  file_data(void) {
+    this->offset = 0u;
+    this->size = 0u;
+    this->data = nullptr;
+    this->is_initialized = false;
+  }
 }file_data;
 
 #ifdef STEAM_CEG
