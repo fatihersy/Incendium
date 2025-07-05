@@ -5,7 +5,7 @@
 
 #include <game/game_types.h>
 
-bool initialize_scene_in_game(camera_metrics* _camera_metrics);
+[[__nodiscard__]] bool initialize_scene_in_game(camera_metrics* _camera_metrics);
 
 void end_scene_in_game(void);
 

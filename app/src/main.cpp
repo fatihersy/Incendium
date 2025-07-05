@@ -111,7 +111,10 @@ int entry(void)
 	// do a DRM self check
 	Steamworks_SelfCheck();
 
-    if(!app_initialize()) return 1;
+    if(!app_initialize()) {
+			alert("main::entry()::App initialize return with 1. Please look at the logs for more details", "Oh no!");
+			return 1;
+		}
 
     while (window_should_close())
     {

@@ -30,6 +30,7 @@ bool resource_system_initialize(void) {
   // NOTE: resource files inside the pak file
   load_texture("atlas.png", false, VECTOR2(0.f, 0.f), TEX_ID_ASSET_ATLAS);
   load_texture("worldmap_wo_clouds.png",       false, VECTOR2(0.f, 0.f), TEX_ID_WORLDMAP_WO_CLOUDS);
+  load_texture("fudesumi.png", false, VECTOR2(0.f, 0.f), TEX_ID_FIDESUMI); // TODO: Remove later
 
   load_texture_from_atlas(ATLAS_TEX_ID_MAP_TILESET_TEXTURE,        Rectangle{   0,   0,  1568, 2016});
   load_texture_from_atlas(ATLAS_TEX_ID_PROGRESS_BAR_OUTSIDE_FULL,  Rectangle{1568, 112,    48,    4});
@@ -48,6 +49,7 @@ bool resource_system_initialize(void) {
   load_texture_from_atlas(ATLAS_TEX_ID_CURRENCY_SOUL_ICON_45000,   Rectangle{1952, 736,    32,   32});
   load_texture_from_atlas(ATLAS_TEX_ID_FOG,                        Rectangle{1152,3296,   400,   64});
   load_texture_from_atlas(ATLAS_TEX_ID_HEADER,                     Rectangle{1824,  64,   192,   32});
+  load_texture_from_atlas(ATLAS_TEX_ID_LITTLE_SHOWCASE,            Rectangle{1592,  16,    88,   16});
 
   load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_PLAYER_ANIMATION_IDLE_LEFT,         VECTOR2(1584, 288), 15,   22,  32, 1,  4);
   load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_PLAYER_ANIMATION_IDLE_RIGHT,        VECTOR2(1584, 224), 15,   22,  32, 1,  4);

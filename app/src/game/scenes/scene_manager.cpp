@@ -19,12 +19,11 @@ static scene_manager_system_state *scene_manager_state;
 bool scene_manager_on_event(u16 code, event_context context);
 void begin_scene(scene_id scene_id);
 void end_scene(scene_id scene_id);
-void scene_manager_reinit(void);
+bool scene_manager_reinit(void);
 
 bool scene_manager_initialize(void) {
   if (scene_manager_state) {
-    scene_manager_reinit();
-    return true;
+    return scene_manager_reinit();
   }
   scene_manager_state = (scene_manager_system_state *)allocate_memory_linear(sizeof(scene_manager_system_state), true);
   if (!scene_manager_state) {
@@ -39,12 +38,10 @@ bool scene_manager_initialize(void) {
   event_register(EVENT_CODE_SCENE_MANAGER_SET_CAM_POS, scene_manager_on_event);
   event_register(EVENT_CODE_SCENE_MANAGER_SET_ZOOM, scene_manager_on_event);
 
-  scene_manager_reinit();
-
-  return true;
+  return scene_manager_reinit();
 }
-void scene_manager_reinit(void) {
-  event_fire(EVENT_CODE_SCENE_MAIN_MENU, event_context());
+bool scene_manager_reinit(void) {
+  return event_fire(EVENT_CODE_SCENE_MAIN_MENU, event_context());
 }
 
 void update_scene_scene(void) {
@@ -113,23 +110,28 @@ bool scene_manager_on_event(u16 code, event_context context) {
   case EVENT_CODE_SCENE_IN_GAME: {
     end_scene(scene_manager_state->scene_data);
     scene_manager_state->scene_data = SCENE_TYPE_IN_GAME;
-    initialize_scene_in_game(get_in_game_camera());
+    if(!initialize_scene_in_game(get_in_game_camera())) {
+      TraceLog(LOG_ERROR, "scene_manager::EVENT_CODE_SCENE_IN_GAME::User interface failed to initialize!");
+      return false;
+    }
     return true;
     break;
   }
   case EVENT_CODE_SCENE_EDITOR: {
     end_scene(scene_manager_state->scene_data);
     scene_manager_state->scene_data = SCENE_TYPE_EDITOR;
-    initialize_scene_editor(get_in_game_camera());
+    if(!initialize_scene_editor(get_in_game_camera())) {
+      TraceLog(LOG_ERROR, "scene_manager::EVENT_CODE_SCENE_EDITOR::User interface failed to initialize!");
+      return false;
+    }
     return true;
     break;
   }
   case EVENT_CODE_SCENE_MAIN_MENU: {
     end_scene(scene_manager_state->scene_data);
     scene_manager_state->scene_data = SCENE_TYPE_MAIN_MENU;
-    initialize_scene_main_menu(get_in_game_camera());
-    return true;
-    break;
+
+    return initialize_scene_main_menu(get_in_game_camera());
   }
   case EVENT_CODE_SCENE_MANAGER_SET_TARGET: {
     scene_manager_state->target.x = context.data.f32[0];

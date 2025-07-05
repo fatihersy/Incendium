@@ -107,7 +107,7 @@ void player_system_reinit(void) {
 
   player->last_played_animation = &player->idle_left_sprite; // The position player starts. To avoid from the error when move firstly called
   
-  player->starter_ability = ABILITY_TYPE_COMET;
+  player->starter_ability = ABILITY_TYPE_FIRETRAIL;
   player->is_initialized = true;
 }
 

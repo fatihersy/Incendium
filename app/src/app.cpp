@@ -49,7 +49,7 @@ bool app_initialize(void) {
   set_settings_from_ini_file(CONFIG_FILE_LOCATION);
   state->settings = get_app_settings();
   
-  SetConfigFlags(FLAG_VSYNC_HINT | FLAG_WINDOW_HIGHDPI);
+  SetConfigFlags(FLAG_VSYNC_HINT | FLAG_WINDOW_HIGHDPI | FLAG_MSAA_4X_HINT);
   InitWindow(
     state->settings->window_size.at(0), 
     state->settings->window_size.at(1), 

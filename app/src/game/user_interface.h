@@ -256,7 +256,7 @@ typedef struct progress_bar {
   }
 } progress_bar;
 
-void user_interface_system_initialize(void);
+[[__nodiscard__]] bool user_interface_system_initialize(void);
 
 void update_user_interface(void);
 void render_user_interface(void);

@@ -563,7 +563,7 @@ typedef struct ability {
   f32 ability_cooldown_duration;
   f32 ability_play_time;
   f32 proj_sprite_scale;
-  f32 proj_collision_scale;
+  Vector2 proj_collision_scale;
   f32 proj_duration;
   u16 proj_count;
   u16 proj_speed;
@@ -574,6 +574,9 @@ typedef struct ability {
   bool is_active;
   bool is_initialized;
 
+  data128 mm_ex;
+  data256 vec_ex;
+
   ability(void) {
     this->p_owner = nullptr;
     this->display_name.clear();
@@ -583,7 +586,7 @@ typedef struct ability {
     this->type = ABILITY_TYPE_UNDEFINED;
     this->ability_play_time = 0.f;
     this->proj_sprite_scale = 1.f;
-    this->proj_collision_scale = 1.f;
+    this->proj_collision_scale = Vector2 { 1.f, 1.f };
     this->proj_count = 0u;
     this->proj_speed = 0u;
     this->proj_duration = 0.f;
@@ -599,7 +602,7 @@ typedef struct ability {
   ability(
     std::string name, ability_type type, 
     std::array<ability_upgradables, ABILITY_UPG_MAX> upgrs, 
-    f32 ability_cooldown, f32 proj_sprite_scale, f32 proj_collision_scale, u16 proj_count, u16 proj_speed, f32 proj_duration, u16 base_damage,
+    f32 ability_cooldown, f32 proj_sprite_scale, Vector2 proj_collision_scale, u16 proj_count, u16 proj_speed, f32 proj_duration, u16 base_damage,
     Vector2 proj_dim, Rectangle icon_src) : ability()
   {
     this->display_name = name;

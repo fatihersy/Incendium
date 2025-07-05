@@ -7,7 +7,7 @@
 #include "core/fmemory.h"
 #include "core/fmath.h"
 
-#include "game/ability.h"
+#include "game/abilities/ability_manager.h"
 #include "game/player.h"
 #include "game/spawn.h"
 
@@ -129,20 +129,21 @@ void update_game_manager(void) {
       */
       player_move_player(pur.move_request);
     }
-    update_abilities(__builtin_addressof(state->game_info.player_state_dynamic->ability_system));
-    update_spawns(get_player_position(true));
 
     if (*state->game_info.p_spawn_system_spawn_count < 50) {
       populate_map_with_spawns();
     }
+    update_spawns(get_player_position(true));
+
+    generate_in_game_info();
+
+    update_abilities(__builtin_addressof(state->game_info.player_state_dynamic->ability_system));
 
     for (size_t itr_000 = 0; itr_000 < ABILITY_TYPE_MAX; ++itr_000) {
       if (state->game_info.player_state_dynamic->ability_system.abilities.at(itr_000).is_active) {
         state->game_info.player_state_dynamic->ability_system.abilities.at(itr_000).ability_play_time += GetFrameTime();
       }
     }
-
-    generate_in_game_info();
   }
 }
 void update_game_manager_debug(void) {

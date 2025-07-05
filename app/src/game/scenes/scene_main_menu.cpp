@@ -9,6 +9,9 @@
 #include "game/game_manager.h"
 #include "game/user_interface.h"
 #include "game/world.h"
+#include "game/fshader.h"
+
+#include "game/resource.h"
 
 typedef enum main_menu_scene_type {
   MAIN_MENU_SCENE_DEFAULT,
@@ -42,22 +45,21 @@ static main_menu_scene_state * state;
 #define draw_upgrade_label(VEC2, TEXT, PRE_UPG_VAL, POS_UPG_VAL) \
   gui_label_format(FONT_TYPE_LIGHT, 10, VEC2.x, VEC2.y, WHITE, true, false, TEXT, PRE_UPG_VAL, POS_UPG_VAL);
 
-void begin_scene_main_menu(void);
+bool begin_scene_main_menu(void);
 void draw_main_menu_upgrade_panel(void);
 void draw_main_menu_upgrade_list_panel(void);
 void draw_main_menu_upgrade_details_panel(void);
 Rectangle smm_get_camera_view_rect(Camera2D camera);
 
-void initialize_scene_main_menu(camera_metrics *_camera_metrics) {
+bool initialize_scene_main_menu(camera_metrics *_camera_metrics) {
   if (state) {
-    begin_scene_main_menu();
-    return;
+    return begin_scene_main_menu();
   }
   state = (main_menu_scene_state *)allocate_memory_linear(sizeof(main_menu_scene_state), true);
   state->in_camera_metrics = _camera_metrics;
   
 
-  begin_scene_main_menu();
+  return begin_scene_main_menu();
 }
 
 void update_scene_main_menu(void) {
@@ -98,25 +100,27 @@ void render_scene_main_menu(void) {
 void render_interface_main_menu(void) {
   if (!state->scene_changing_process_complete) {
     if (state->type == MAIN_MENU_SCENE_DEFAULT) {
+
       gui_label(GAME_TITLE, FONT_TYPE_BOLD, 72, VECTOR2(BASE_RENDER_SCALE(.5f).x, BASE_RENDER_SCALE(.25f).y), WHITE, true, true);
-      if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_PLAY), BTN_ID_MAINMENU_BUTTON_PLAY, VECTOR2(0.f, -24.f), BASE_RENDER_RES_DIV2, true)) {
+
+      if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_PLAY), BTN_ID_MAINMENU_BUTTON_PLAY, VECTOR2(0.f, -21.f), BASE_RENDER_RES_DIV2, true)) {
         state->in_scene_changing_process = true;
         state->next_scene = SCENE_TYPE_IN_GAME;
         event_fire(EVENT_CODE_UI_START_FADEOUT_EFFECT, event_context((u16)MAIN_MENU_FADE_DURATION));
       }
-      if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_UPGRADE), BTN_ID_MAINMENU_BUTTON_UPGRADE, VECTOR2(0.f, -12.f), BASE_RENDER_RES_DIV2, true)) {
+      if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_UPGRADE), BTN_ID_MAINMENU_BUTTON_UPGRADE, VECTOR2(0.f, -10.5f), BASE_RENDER_RES_DIV2, true)) {
         state->type = MAIN_MENU_SCENE_UPGRADE;
       }
       if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_SETTINGS), BTN_ID_MAINMENU_BUTTON_SETTINGS, VECTOR2(0.f, 0.f), BASE_RENDER_RES_DIV2, true)) {
         ui_refresh_setting_sliders_to_default();
         state->type = MAIN_MENU_SCENE_SETTINGS;
       }
-      if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_EDITOR), BTN_ID_MAINMENU_BUTTON_EDITOR, VECTOR2(0.f, 12.f), BASE_RENDER_RES_DIV2, true)) {
+      if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_EDITOR), BTN_ID_MAINMENU_BUTTON_EDITOR, VECTOR2(0.f, 10.5f), BASE_RENDER_RES_DIV2, true)) {
         state->in_scene_changing_process = true;
         state->next_scene = SCENE_TYPE_EDITOR;
         event_fire(EVENT_CODE_UI_START_FADEOUT_EFFECT, event_context((u16)MAIN_MENU_FADE_DURATION));
       }
-      if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_EXIT), BTN_ID_MAINMENU_BUTTON_EXIT, VECTOR2(0.f, 24.f), BASE_RENDER_RES_DIV2, true)) {
+      if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_EXIT), BTN_ID_MAINMENU_BUTTON_EXIT, VECTOR2(0.f, 21.f), BASE_RENDER_RES_DIV2, true)) {
         event_fire(EVENT_CODE_APPLICATION_QUIT, event_context());
       }
     } 
@@ -132,16 +136,28 @@ void render_interface_main_menu(void) {
         state->type = MAIN_MENU_SCENE_DEFAULT;
       }
     }
+
+    Texture2D * tex = get_texture_by_enum(TEX_ID_FIDESUMI);
+    BeginShaderMode(get_shader_by_enum(SHADER_ID_FONT_OUTLINE)->handle);
+      i32 uni_tex_size_loc = GetShaderLocation(get_shader_by_enum(SHADER_ID_FONT_OUTLINE)->handle, "texture_size");
+      set_shader_uniform(SHADER_ID_FONT_OUTLINE, uni_tex_size_loc, data128(tex->width, tex->height));
+      gui_draw_texture_id(TEX_ID_FIDESUMI, Rectangle {BASE_RENDER_RES.x * .25f - 192, BASE_RENDER_RES.y * .65f - 256, 384, 512});
+    EndShaderMode();
+
+
     render_user_interface();
   }
 }
 
-void begin_scene_main_menu(void) {
-  user_interface_system_initialize();  
+[[__nodiscard__]] bool begin_scene_main_menu(void) {
+  if (!user_interface_system_initialize()) {
+    TraceLog(LOG_ERROR, "scene_main_menu::begin_scene_main_menu()::User interface failed to initialize!");
+    return false;
+  }
 
   if (!game_manager_initialize( state->in_camera_metrics)) { // Inits player & spawns
     TraceLog(LOG_ERROR, "scene_in_game::initialize_scene_in_game()::game_manager_initialize() failed");
-    return;
+    return false;
   }
   set_worldmap_location(WORLDMAP_MAINMENU_MAP); // NOTE: Worldmap index 0 is mainmenu background now
 
@@ -161,6 +177,8 @@ void begin_scene_main_menu(void) {
   };
   gm_save_game();
   //event_fire(EVENT_CODE_PLAY_MAIN_MENU_THEME, event_context{}); TODO: Uncomment later
+
+  return true;
 }
 void end_scene_main_menu(void) {
   event_fire(EVENT_CODE_RESET_MUSIC, event_context((i32)MUSIC_ID_MAIN_MENU_THEME));
@@ -226,9 +244,9 @@ void draw_main_menu_upgrade_list_panel(void) {
       }
       
       // TITLE
-      Rectangle header_tex_src_rect = get_atlas_texture_source_rect(ATLAS_TEX_ID_HEADER);
-      header_tex_src_rect.width  *= 1.75f;
-      header_tex_src_rect.height *= 1.75f;
+      Rectangle header_tex_src_rect = get_atlas_texture_source_rect(ATLAS_TEX_ID_LITTLE_SHOWCASE);
+      header_tex_src_rect.width  *= 2.75f;
+      header_tex_src_rect.height *= 3.f;
       Rectangle header_tex_pos = {
         showcase_position.x + showcase_new_dim * .5f, showcase_position.y + (showcase_new_dim * .05f), 
         header_tex_src_rect.width, header_tex_src_rect.height
@@ -239,7 +257,7 @@ void draw_main_menu_upgrade_list_panel(void) {
       }
       Vector2 header_tex_origin = Vector2 {header_tex_pos.width * .5f, header_tex_pos.height * .5f * (-0.15f)};
 
-      Vector2 title_pos = VECTOR2(showcase_position.x + showcase_new_dim * .5f, header_tex_pos.y + header_tex_pos.height * 0.5f);
+      Vector2 title_pos = VECTOR2(showcase_position.x + showcase_new_dim * .5f, header_tex_pos.y + header_tex_pos.height * 0.375f);
       // TITLE
       
       // STARS
@@ -270,9 +288,8 @@ void draw_main_menu_upgrade_list_panel(void) {
       }
 
       gui_draw_texture_id_pro(TEX_ID_ASSET_ATLAS, stat->passive_icon_src, icon_pos);
-
-      gui_label(lc_txt(stat->passive_display_name_symbol), FONT_TYPE_MEDIUM, 10, title_pos, WHITE, true, true);
-      gui_draw_atlas_texture_id(ATLAS_TEX_ID_HEADER, header_tex_pos, header_tex_origin, 0.f);
+      gui_draw_atlas_texture_id(ATLAS_TEX_ID_LITTLE_SHOWCASE, header_tex_pos, header_tex_origin, 0.f);
+      gui_label(lc_txt(stat->passive_display_name_symbol), FONT_TYPE_MEDIUM, hovered ? 12 : 11, title_pos, WHITE, true, true);
     }
   }
 }
@@ -316,7 +333,7 @@ void draw_main_menu_upgrade_details_panel(void) {
     state->upgrade_details_panel.dest.x +state->upgrade_details_panel.dest.width * .05f, title_pos.y + detail_panel_element_spacing * .75f,
     state->upgrade_details_panel.dest.width * .9f, state->upgrade_details_panel.dest.width * .35f
   };
-  gui_label_wrap(lc_txt(state->hovered_stat->passive_desc_symbol), FONT_TYPE_MEDIUM, 8, description_pos, WHITE, false);
+  gui_label_wrap(lc_txt(state->hovered_stat->passive_desc_symbol), FONT_TYPE_LIGHT, 10, description_pos, WHITE, false);
 
   character_stat pseudo_update = *state->hovered_stat;
   upgrade_stat_pseudo(&pseudo_update);

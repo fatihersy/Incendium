@@ -17,7 +17,7 @@ typedef struct fshader {
   fshader_location locations[MAX_SHADER_LOCATION_SLOT];
 } fshader;
 
-void initialize_shader_system(void);
+[[__nodiscard__]] bool initialize_shader_system(void);
 
 const char* shader_path(const char* _path);
 fshader* get_shader_by_enum(shader_id _id);

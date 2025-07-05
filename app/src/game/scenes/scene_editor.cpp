@@ -113,26 +113,29 @@ void add_prop(tilemap_prop_types type, spritesheet_id sprite_id, f32 scale = 1.f
 #define add_prop_building(...) add_prop(TEX_ID_ASSET_ATLAS, TILEMAP_PROP_TYPE_BUILDING __VA_OPT__(,) __VA_ARGS__)
 #define add_prop_sprite(SPRITE_ID, ...) add_prop(TILEMAP_PROP_TYPE_SPRITE, SPRITE_ID __VA_OPT__(,) __VA_ARGS__)
 
-void initialize_scene_editor(camera_metrics* _camera_metrics) {
+bool initialize_scene_editor(camera_metrics* _camera_metrics) {
   if (state) {
     update_tilemap_prop_type();
     begin_scene_editor();
-    return;
+    return true;
   }
   state = (scene_editor_state*)allocate_memory_linear(sizeof(scene_editor_state), true);
   if (!state) {
     TraceLog(LOG_ERROR, "scene_editor::initialize_scene_editor()::State allocation failed!");
-    return;
+    return false;
   }
 
   if (!_camera_metrics) {
     TraceLog(LOG_ERROR, "scene_editor::initialize_scene_editor()::Camera metrics recieved NULL");
-    return;
+    return false;
   }
   state->in_camera_metrics = _camera_metrics;
   world_system_initialize(_camera_metrics);
 
-  user_interface_system_initialize();
+  if(!user_interface_system_initialize()) {
+    TraceLog(LOG_ERROR, "scene_editor::initialize_scene_editor()::User interface failed to initialize!");
+    return false;
+  }
 
   copy_memory(state->worldmap_locations.data(), get_worldmap_locations(), MAX_WORLDMAP_LOCATIONS * sizeof(worldmap_stage));
   state->selected_sheet = get_tilesheet_by_enum(TILESHEET_TYPE_MAP);
@@ -658,7 +661,7 @@ void initialize_scene_editor(camera_metrics* _camera_metrics) {
     slider * scale_slider = get_slider_by_id(SDR_ID_EDITOR_PROP_SCALE_SLIDER);
     if (scale_slider == nullptr) {
       TraceLog(LOG_ERROR, "scene_editor::initialize_scene_editor()::Cannot found Scale slider");
-      return;
+      return false;
     }
     scale_slider->on_left_button_trigger  = scene_editor_scale_slider_on_left_button_trigger;
     scale_slider->on_right_button_trigger = scene_editor_scale_slider_on_right_button_trigger;
@@ -667,7 +670,7 @@ void initialize_scene_editor(camera_metrics* _camera_metrics) {
     slider * rotation_slider = get_slider_by_id(SDR_ID_EDITOR_PROP_ROTATION_SLIDER);
     if (rotation_slider == nullptr) {
       TraceLog(LOG_ERROR, "scene_editor::initialize_scene_editor()::Cannot found Rotation slider");
-      return;
+      return false;
     }
     rotation_slider->on_left_button_trigger  = scene_editor_rotation_slider_on_left_button_trigger;
     rotation_slider->on_right_button_trigger = scene_editor_rotation_slider_on_right_button_trigger;
@@ -676,7 +679,7 @@ void initialize_scene_editor(camera_metrics* _camera_metrics) {
     slider * zindex_slider = get_slider_by_id(SDR_ID_EDITOR_PROP_ZINDEX_SLIDER);
     if (zindex_slider == nullptr) {
       TraceLog(LOG_ERROR, "scene_editor::initialize_scene_editor()::Cannot found Z-index slider");
-      return;
+      return false;
     }
     zindex_slider->on_left_button_trigger  = scene_editor_zindex_slider_on_left_button_trigger;
     zindex_slider->on_right_button_trigger = scene_editor_zindex_slider_on_right_button_trigger;
@@ -685,7 +688,7 @@ void initialize_scene_editor(camera_metrics* _camera_metrics) {
     slider * layer_slider = get_slider_by_id(SDR_ID_EDITOR_MAP_LAYER_SLC_SLIDER);
     if (layer_slider == nullptr) {
       TraceLog(LOG_ERROR, "scene_editor::initialize_scene_editor()::Cannot found map layer slider");
-      return;
+      return false;
     }
     layer_slider->on_left_button_trigger  = scene_editor_map_layer_slc_slider_on_left_button_trigger;
     layer_slider->on_right_button_trigger = scene_editor_map_layer_slc_slider_on_right_button_trigger;
@@ -694,7 +697,7 @@ void initialize_scene_editor(camera_metrics* _camera_metrics) {
     slider * stage_slider = get_slider_by_id(SDR_ID_EDITOR_MAP_STAGE_SLC_SLIDER);
     if (stage_slider == nullptr) {
       TraceLog(LOG_ERROR, "scene_editor::initialize_scene_editor()::Cannot found map stage slider");
-      return;
+      return false;
     }
     stage_slider->on_left_button_trigger =  scene_editor_map_stage_slc_slider_on_left_button_trigger;
     stage_slider->on_right_button_trigger = scene_editor_map_stage_slc_slider_on_right_button_trigger;
@@ -703,7 +706,7 @@ void initialize_scene_editor(camera_metrics* _camera_metrics) {
     slider * prop_type_slider = get_slider_by_id(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER);
     if (prop_type_slider == nullptr) {
       TraceLog(LOG_ERROR, "scene_editor::initialize_scene_editor()::Cannot found map prop type slider");
-      return;
+      return false;
     }
     prop_type_slider->on_left_button_trigger =  scene_editor_map_prop_type_slc_slider_on_left_button_trigger;
     prop_type_slider->on_right_button_trigger = scene_editor_map_prop_type_slc_slider_on_right_button_trigger;
@@ -712,6 +715,8 @@ void initialize_scene_editor(camera_metrics* _camera_metrics) {
 
   update_tilemap_prop_type();
   begin_scene_editor();
+
+  return true;
 }
 
 // UPDATE / RENDER

@@ -5,7 +5,7 @@
 
 #include "game/game_types.h"
 
-void initialize_scene_main_menu(camera_metrics* _camera_metrics);
+[[__nodiscard__]] bool initialize_scene_main_menu(camera_metrics* _camera_metrics);
 void end_scene_main_menu(void);
 
 void update_scene_main_menu(void);
