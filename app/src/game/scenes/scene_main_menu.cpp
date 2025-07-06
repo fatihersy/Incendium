@@ -9,9 +9,6 @@
 #include "game/game_manager.h"
 #include "game/user_interface.h"
 #include "game/world.h"
-#include "game/fshader.h"
-
-#include "game/resource.h"
 
 typedef enum main_menu_scene_type {
   MAIN_MENU_SCENE_DEFAULT,
@@ -100,27 +97,27 @@ void render_scene_main_menu(void) {
 void render_interface_main_menu(void) {
   if (!state->scene_changing_process_complete) {
     if (state->type == MAIN_MENU_SCENE_DEFAULT) {
+        
+      gui_label_shader(GAME_TITLE, SHADER_ID_FONT_OUTLINE, FONT_TYPE_MEDIUM, 64, VECTOR2(BASE_RENDER_SCALE(.5f).x, BASE_RENDER_SCALE(.25f).y), WHITE, true, true);
 
-      gui_label(GAME_TITLE, FONT_TYPE_BOLD, 72, VECTOR2(BASE_RENDER_SCALE(.5f).x, BASE_RENDER_SCALE(.25f).y), WHITE, true, true);
-
-      if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_PLAY), BTN_ID_MAINMENU_BUTTON_PLAY, VECTOR2(0.f, -21.f), BASE_RENDER_RES_DIV2, true)) {
+      if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_PLAY), BTN_ID_MAINMENU_BUTTON_PLAY, VECTOR2(-5.f, -21.f), BASE_RENDER_RES_DIV2, true)) {
         state->in_scene_changing_process = true;
         state->next_scene = SCENE_TYPE_IN_GAME;
         event_fire(EVENT_CODE_UI_START_FADEOUT_EFFECT, event_context((u16)MAIN_MENU_FADE_DURATION));
       }
-      if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_UPGRADE), BTN_ID_MAINMENU_BUTTON_UPGRADE, VECTOR2(0.f, -10.5f), BASE_RENDER_RES_DIV2, true)) {
+      if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_UPGRADE), BTN_ID_MAINMENU_BUTTON_UPGRADE, VECTOR2(-5.f, -10.5f), BASE_RENDER_RES_DIV2, true)) {
         state->type = MAIN_MENU_SCENE_UPGRADE;
       }
-      if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_SETTINGS), BTN_ID_MAINMENU_BUTTON_SETTINGS, VECTOR2(0.f, 0.f), BASE_RENDER_RES_DIV2, true)) {
+      if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_SETTINGS), BTN_ID_MAINMENU_BUTTON_SETTINGS, VECTOR2(-5.f, 0.f), BASE_RENDER_RES_DIV2, true)) {
         ui_refresh_setting_sliders_to_default();
         state->type = MAIN_MENU_SCENE_SETTINGS;
       }
-      if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_EDITOR), BTN_ID_MAINMENU_BUTTON_EDITOR, VECTOR2(0.f, 10.5f), BASE_RENDER_RES_DIV2, true)) {
+      if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_EDITOR), BTN_ID_MAINMENU_BUTTON_EDITOR, VECTOR2(-5.f, 10.5f), BASE_RENDER_RES_DIV2, true)) {
         state->in_scene_changing_process = true;
         state->next_scene = SCENE_TYPE_EDITOR;
         event_fire(EVENT_CODE_UI_START_FADEOUT_EFFECT, event_context((u16)MAIN_MENU_FADE_DURATION));
       }
-      if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_EXIT), BTN_ID_MAINMENU_BUTTON_EXIT, VECTOR2(0.f, 21.f), BASE_RENDER_RES_DIV2, true)) {
+      if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_EXIT), BTN_ID_MAINMENU_BUTTON_EXIT, VECTOR2(-5.f, 21.f), BASE_RENDER_RES_DIV2, true)) {
         event_fire(EVENT_CODE_APPLICATION_QUIT, event_context());
       }
     } 
@@ -136,13 +133,6 @@ void render_interface_main_menu(void) {
         state->type = MAIN_MENU_SCENE_DEFAULT;
       }
     }
-
-    Texture2D * tex = get_texture_by_enum(TEX_ID_FIDESUMI);
-    BeginShaderMode(get_shader_by_enum(SHADER_ID_FONT_OUTLINE)->handle);
-      i32 uni_tex_size_loc = GetShaderLocation(get_shader_by_enum(SHADER_ID_FONT_OUTLINE)->handle, "texture_size");
-      set_shader_uniform(SHADER_ID_FONT_OUTLINE, uni_tex_size_loc, data128(tex->width, tex->height));
-      gui_draw_texture_id(TEX_ID_FIDESUMI, Rectangle {BASE_RENDER_RES.x * .25f - 192, BASE_RENDER_RES.y * .65f - 256, 384, 512});
-    EndShaderMode();
 
 
     render_user_interface();

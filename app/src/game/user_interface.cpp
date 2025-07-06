@@ -112,7 +112,7 @@ void register_progress_bar(progress_bar_id _id, progress_bar_type_id _type_id, f
 void register_progress_bar_type(progress_bar_type_id _type_id, atlas_texture_id _body_inside, atlas_texture_id _body_outside, shader_id _mask_shader_id);
 void register_slider_type(slider_type_id _sdr_type_id, spritesheet_id _ss_sdr_body_type, f32 _scale, u16 _width_multiply, button_type_id _left_btn_type_id, button_type_id _right_btn_type_id, u16 _char_limit);
 
-//constexpr void draw_text_expr(const char *text, Vector2 position, Font font, float fontsize, Color tint, bool center_horizontal, bool center_vertical, bool use_grid_align, Vector2 grid_coord);
+constexpr void draw_text_shader(const char *text, shader_id sdr_id, Vector2 position, Font font, float fontsize, Color tint, bool center_horizontal, bool center_vertical, bool use_grid_align, Vector2 grid_coord);
 void DrawTextBoxed(Font font, const char *text, Rectangle rec, float fontSize, float spacing, bool wordWrap, Color tint);
 const char* wrap_text(const char* text, Font font, i32 font_size, Rectangle bounds, bool center_x);
 void set_resolution_slider_native_res(void);
@@ -841,6 +841,28 @@ void gui_label(const char* text, font_type type, i32 font_size, Vector2 position
     break;
   }
 }
+void gui_label_shader(const char* text, shader_id sdr_id, font_type type, i32 font_size, Vector2 position, Color tint, bool _center_h, bool _center_v) {
+  switch (type) {
+    case FONT_TYPE_MEDIUM: {
+      draw_text_shader(text, sdr_id, position, UI_MEDIUM_FONT, font_size * UI_MEDIUM_FONT_SIZE, tint, _center_h, _center_v, false, VECTOR2(0.f, 0.f));
+      break;
+    }
+    case FONT_TYPE_BOLD: {
+      draw_text_shader(text, sdr_id, position, UI_BOLD_FONT, font_size * UI_BOLD_FONT_SIZE, tint, _center_h, _center_v, false, VECTOR2(0.f, 0.f));
+      break;
+    }
+    case FONT_TYPE_LIGHT: {
+      draw_text_shader(text, sdr_id, position, UI_LIGHT_FONT, font_size * UI_LIGHT_FONT_SIZE, tint, _center_h, _center_v, false, VECTOR2(0.f, 0.f));
+      break;
+    }
+    case FONT_TYPE_ITALIC: {
+      draw_text_shader(text, sdr_id, position, UI_ITALIC_FONT, font_size * UI_ITALIC_FONT_SIZE, tint, _center_h, _center_v, false, VECTOR2(0.f, 0.f));
+      break;
+    }
+    default: TraceLog(LOG_WARNING, "user_interface::gui_label_shader()::Unsupported font type");
+    break;
+  }
+}
 void gui_label_wrap(const char* text, font_type type, i32 font_size, Rectangle position, Color tint, bool _should_center) {
   if (_should_center) {
     position.x -= (position.width / 2.f);
@@ -868,8 +890,6 @@ void gui_label_wrap(const char* text, font_type type, i32 font_size, Rectangle p
   }
 }
 void gui_label_grid(const char* text, font_type type, i32 font_size, Vector2 position, Color tint, bool _center_h, bool _center_v, Vector2 grid_coord) {
-
-
   switch (type) {
     case FONT_TYPE_MEDIUM: {
       draw_text(text, position, UI_MEDIUM_FONT, font_size * UI_MEDIUM_FONT_SIZE, tint, _center_h, _center_v, true, grid_coord);
@@ -1294,9 +1314,7 @@ Vector2 position_element_by_grid(Vector2 grid_pos, Vector2 grid_coord, Vector2 g
   };
 }
 
-/*
-constexpr void draw_text_expr(const char *text, Vector2 position, Font font, float fontsize, Color tint, bool center_horizontal, bool center_vertical, bool use_grid_align, Vector2 grid_coord) {
- 
+constexpr void draw_text_shader(const char *text, shader_id sdr_id, Vector2 position, Font font, float fontsize, Color tint, bool center_horizontal, bool center_vertical, bool use_grid_align, Vector2 grid_coord) {
   Vector2 text_measure = MeasureTextEx(font, text, fontsize, UI_FONT_SPACING);
   Vector2 text_position = Vector2 { position.x, position.y };
   if (use_grid_align) {
@@ -1308,7 +1326,6 @@ constexpr void draw_text_expr(const char *text, Vector2 position, Font font, flo
   if (center_vertical) {
     text_position.y -= (text_measure.y * .5f);
   }
-
   int length = TextLength(text);
 
   float textOffsetX = 0.0f;
@@ -1327,17 +1344,26 @@ constexpr void draw_text_expr(const char *text, Vector2 position, Font font, flo
     if ((codepoint != ' ') && (codepoint != '\t')) {
       f32 letter_width  = (font.recs[index].width + 2.0f*font.glyphPadding) * scaleFactor;
       f32 letter_height = (font.recs[index].height + 2.0f*font.glyphPadding) * scaleFactor;
-      BeginShaderMode(get_shader_by_enum(SHADER_ID_FONT_OUTLINE)->handle);
-        i32 uni_tex_size_loc = GetShaderLocation(get_shader_by_enum(SHADER_ID_FONT_OUTLINE)->handle, "texture_size");
-        set_shader_uniform(SHADER_ID_FONT_OUTLINE, uni_tex_size_loc, data128(letter_width, letter_height));
-        DrawTextCodepoint(font, codepoint, Vector2{ text_position.x + textOffsetX, text_position.y }, fontsize, tint);
-      EndShaderMode();
+
+      switch (sdr_id) {
+        case SHADER_ID_FONT_OUTLINE: {
+          BeginShaderMode(get_shader_by_enum(SHADER_ID_FONT_OUTLINE)->handle);
+            i32 uni_tex_size_loc = GetShaderLocation(get_shader_by_enum(SHADER_ID_FONT_OUTLINE)->handle, "texture_size");
+            set_shader_uniform(SHADER_ID_FONT_OUTLINE, uni_tex_size_loc, data128(letter_width, letter_height));
+            DrawTextCodepoint(font, codepoint, Vector2{ text_position.x + textOffsetX, text_position.y }, fontsize, tint);
+          EndShaderMode();
+          break;
+        }
+        default: {
+          TraceLog(LOG_WARNING, "user_interface::draw_text_shader()::Unsupported shader id");
+          break;
+        }
+      }
     }
-    
     if ((textOffsetX != 0) || (codepoint != ' ')) textOffsetX += glyphWidth;
   }
 } 
-*/
+
 
 /**
  * @brief NOTE: Source https://github.com/raysan5/raylib/blob/master/examples/text/text_rectangle_bounds.c

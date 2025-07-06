@@ -1237,7 +1237,7 @@ void editor_update_keyboard_bindings(void) {
     state->b_show_prop_selection_screen = !state->b_show_prop_selection_screen;
     state->b_show_tilesheet_tile_selection_screen = false;
   }
-  if (IsKeyReleased(KEY_DELETE)) {
+  if (IsKeyReleased(KEY_BACKSPACE)) {
     if (state->mouse_focus == MOUSE_FOCUS_MAP && state->selection_type == SLC_TYPE_SLC_PROP_STATIC && !state->b_dragging_prop) {
       if(!_remove_prop_cur_map_by_id(state->selected_prop_static_map_prop_address)) {
         TraceLog(LOG_WARNING, "scene_editor::editor_update_keyboard_bindings()::Removing property failed.");

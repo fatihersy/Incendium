@@ -280,31 +280,6 @@ void gm_damage_player_if_collide(data128 coll_data, i32 damage, collision_type c
   TraceLog(LOG_WARNING, "game_manager::gm_damage_player_if_collide()::Function terminated unexpectedly");
 }
 
-[[__deprecated__("DEPRECATED!")]] void damage_any_collider_by_type() {
-/*     case ACTOR_TYPE_SPAWN: {
-    for (u32 i = 0; i < *state->game_info.p_spawn_system_spawn_count; ++i) {
-      if (!state->game_info.in_spawns[i].is_dead){
-        if (CheckCollisionRecs(state->game_info.in_spawns[i].collision, from_actor.collision)) {
-          damage_spawn(state->game_info.in_spawns[i].character_id, from_actor.damage);
-        }
-      }
-    }
-    return;
-    }
-    case ACTOR_TYPE_PLAYER: {
-    if (CheckCollisionRecs(from_actor.collision, state->game_info.player_state_dynamic->collision)) {
-      event_fire(EVENT_CODE_PLAYER_TAKE_DAMAGE, event_context((u8)from_actor.damage));
-      return;
-    }
-    return;
-    }
-    case ACTOR_TYPE_PROJECTILE_SPAWN: return; 
-    case ACTOR_TYPE_PROJECTILE_PLAYER: return;
-    default:{
-      TraceLog(LOG_WARNING, "game_manager::damage_any_collider_by_type()::Actor type is not supported");
-      return;
-    } */
-}
 void populate_map_with_spawns(void) {
   if (!state->game_info.in_spawns) {
     TraceLog(LOG_ERROR, "game_manager::populate_map_with_spawns()::Spawn accessor is not valid");

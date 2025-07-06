@@ -62,7 +62,7 @@ ability get_ability_firetrail(void) {
   std::array<ability_upgradables, ABILITY_UPG_MAX> fire_trail_upgr = {ABILITY_UPG_DAMAGE, ABILITY_UPG_HITBOX, ABILITY_UPG_UNDEFINED, ABILITY_UPG_UNDEFINED, ABILITY_UPG_UNDEFINED};
   return ability("Fire Trail", ABILITY_TYPE_FIRETRAIL,
     fire_trail_upgr,
-    0.f, 3.5f, Vector2 {.5f, .5f}, 0u, 0u, 3.f, 11u,
+    0.f, 3.5f, Vector2 {.25f, .25f}, 0u, 0u, 3.f, 11u,
     Vector2{128.f, 128.f}, Rectangle{2304.f, 736.f, 32.f, 32.f}
   );
 }
@@ -90,10 +90,10 @@ void update_ability_firetrail(ability* abl) {
   }
   player_state* p_player = reinterpret_cast<player_state*>(abl->p_owner);
 
-  Vector2 ability_projectile_dimentions = Vector2 {abl->proj_dim.x * abl->proj_collision_scale.x, abl->proj_dim.x * abl->proj_collision_scale.y};
+  Vector2 ability_projectile_dimentions = Vector2 {abl->proj_dim.x * abl->proj_collision_scale.x, abl->proj_dim.y * abl->proj_collision_scale.y};
   Vector2 ability_position = VECTOR2(
     p_player->position.x + p_player->dimentions_div2.x, 
-    p_player->position.y + p_player->dimentions.y - ability_projectile_dimentions.y
+    p_player->position.y + p_player->dimentions.y
   );
   abl->position = ability_position;
 
@@ -103,24 +103,23 @@ void update_ability_firetrail(ability* abl) {
       abl->projectiles.erase(abl->projectiles.begin() + itr_000);
       continue;
     }
-    
     event_fire(EVENT_CODE_DAMAGE_ANY_SPAWN_IF_COLLIDE, event_context(
       static_cast<i16>(prj->collision.x), static_cast<i16>(prj->collision.y), static_cast<i16>(prj->collision.width), static_cast<i16>(prj->collision.height), 
       static_cast<i16>(prj->damage + p_player->damage),
       static_cast<i16>(COLLISION_TYPE_RECTANGLE_RECTANGLE)
     ));
-    
     update_sprite(__builtin_addressof(prj->animations.at(prj->active_sprite)));
-    
     prj->duration -= GetFrameTime();
   }
 
-  Rectangle last_placed_projectile_dest = Rectangle { abl->vec_ex.f32[0], abl->vec_ex.f32[1], abl->vec_ex.f32[2], abl->vec_ex.f32[3] };
+  Rectangle last_placed_projectile_dest = Rectangle { 
+    abl->vec_ex.f32[0] + abl->vec_ex.f32[2] * .25f, abl->vec_ex.f32[1] + abl->vec_ex.f32[3] * .5f,
+    abl->vec_ex.f32[2] * .5f, abl->vec_ex.f32[3] * .5f
+  };
+
   Rectangle player_collision = Rectangle {
-    p_player->collision.x,
-    p_player->collision.y + p_player->dimentions_div2.y,
-    p_player->dimentions.x,
-    p_player->dimentions_div2.y
+    p_player->collision.x + (p_player->dimentions.x * .25f), p_player->collision.y + (p_player->dimentions.y * .8f),
+    p_player->dimentions.x * .5f, p_player->dimentions.y * .2f 
   };
 
   if (!CheckCollisionRecs(last_placed_projectile_dest, player_collision)) {
@@ -128,10 +127,8 @@ void update_ability_firetrail(ability* abl) {
     prj.position = ability_position;
 
     prj.collision = Rectangle {
-      prj.position.x - (ability_projectile_dimentions.x * .5f),
-      prj.position.y,
-      ability_projectile_dimentions.x,
-      ability_projectile_dimentions.y
+      prj.position.x - (ability_projectile_dimentions.x * .5f), prj.position.y - ability_projectile_dimentions.y,
+      ability_projectile_dimentions.x, ability_projectile_dimentions.y
     };
 
     abl->vec_ex.f32[0] = prj.collision.x;
@@ -150,7 +147,10 @@ void update_ability_firetrail(ability* abl) {
       spritesheet spr = spritesheet();
       spr.sheet_id = abl->animation_ids.at(itr_000);
       set_sprite(__builtin_addressof(spr), true, false);
-      spr.origin = VECTOR2( spr.coord.width * .5f,  spr.coord.height * .5f );
+      spr.coord.width = spr.current_frame_rect.width * abl->proj_sprite_scale;
+      spr.coord.height = spr.current_frame_rect.height * abl->proj_sprite_scale;
+      spr.origin = VECTOR2(spr.coord.width * .5f ,  spr.coord.height);
+
       prj.animations.push_back(spr);
     }
 
@@ -172,18 +172,13 @@ void render_ability_firetrail(ability* abl) {
     return;
   }
   //player_state* p_player = reinterpret_cast<player_state*>(abl->p_owner);
-  
   for (size_t itr_000 = 0; itr_000 < abl->projectiles.size(); ++itr_000) {
     projectile& prj = abl->projectiles.at(itr_000);
     if (!prj.is_active) { continue; }
-    Vector2 dim = Vector2 {
-      prj.animations.at(prj.active_sprite).current_frame_rect.width  * abl->proj_sprite_scale,
-      prj.animations.at(prj.active_sprite).current_frame_rect.height * abl->proj_sprite_scale
-    };
-    prj.animations.at(prj.active_sprite).origin.x = dim.x / 2.f;
-    prj.animations.at(prj.active_sprite).origin.y = dim.y / 2.f;
-    play_sprite_on_site(__builtin_addressof(prj.animations.at(prj.active_sprite)), WHITE, Rectangle { prj.position.x, prj.position.y, dim.x, dim.y });
-    DrawRectangleLines(prj.collision.x, prj.collision.y, prj.collision.width, prj.collision.height, Color {100, 100, 255, 105});
+    play_sprite_on_site(__builtin_addressof(prj.animations.at(prj.active_sprite)), WHITE, Rectangle { 
+      prj.position.x, prj.position.y, prj.animations.at(prj.active_sprite).coord.width, 
+      prj.animations.at(prj.active_sprite).coord.height
+    });
   }
 }
 

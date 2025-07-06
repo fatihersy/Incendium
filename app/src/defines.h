@@ -443,7 +443,6 @@ typedef enum texture_id {
   TEX_ID_WORLDMAP_WO_CLOUDS,
   TEX_ID_GAME_START_LOADING_SCREEN,
   TEX_ID_ASSET_ATLAS,
-  TEX_ID_FIDESUMI,
   TEX_ID_MAX,
 } texture_id;
 

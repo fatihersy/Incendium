@@ -30,7 +30,6 @@ bool resource_system_initialize(void) {
   // NOTE: resource files inside the pak file
   load_texture("atlas.png", false, VECTOR2(0.f, 0.f), TEX_ID_ASSET_ATLAS);
   load_texture("worldmap_wo_clouds.png",       false, VECTOR2(0.f, 0.f), TEX_ID_WORLDMAP_WO_CLOUDS);
-  load_texture("fudesumi.png", false, VECTOR2(0.f, 0.f), TEX_ID_FIDESUMI); // TODO: Remove later
 
   load_texture_from_atlas(ATLAS_TEX_ID_MAP_TILESET_TEXTURE,        Rectangle{   0,   0,  1568, 2016});
   load_texture_from_atlas(ATLAS_TEX_ID_PROGRESS_BAR_OUTSIDE_FULL,  Rectangle{1568, 112,    48,    4});

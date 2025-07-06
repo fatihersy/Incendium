@@ -341,7 +341,7 @@ typedef struct worldmap_stage {
 } worldmap_stage;
 
 typedef struct tilemap_prop_static {
-  u32 id;
+  i32 id;
 	texture_id tex_id;
   tilemap_prop_types prop_type;
   Rectangle source;
@@ -367,7 +367,7 @@ typedef struct tilemap_prop_static {
 } tilemap_prop_static;
 
 typedef struct tilemap_prop_sprite {
-  u32 id;
+  i32 id;
   tilemap_prop_types prop_type;
   spritesheet sprite;
   i16 zindex;
@@ -428,7 +428,9 @@ typedef struct tile {
 typedef struct tilemap {
   std::array<std::string, MAX_TILEMAP_LAYERS> filename;
   std::string propfile;
+  std::string collisionfile;
   Vector2 position;
+  i32 next_prop_id;
   u16 map_dim_total;
   u16 map_dim;
   u16 tile_size;
@@ -436,6 +438,7 @@ typedef struct tilemap {
   std::vector<tilemap_prop_static> static_props;
   std::vector<tilemap_prop_sprite> sprite_props;
   std::array<std::vector<tilemap_prop_address>, MAX_Z_INDEX_SLOT> render_queue;
+  std::vector<Rectangle> collisions;
   bool is_initialized;
 } tilemap;
 
@@ -443,7 +446,9 @@ typedef struct tilemap_stringtify_package {
   u8 str_tilemap[MAX_TILEMAP_LAYERS][MAX_TILEMAP_TILESLOT * TILESHEET_TILE_SYMBOL_STR_LEN];
   i32 size_tilemap_str[MAX_TILEMAP_LAYERS];
   std::string str_props;
+  std::string str_collisions;
   i32 size_props_str;
+  i32 size_collisions_str;
   bool is_success;
   tilemap_stringtify_package(void) {
     zero_memory(this->str_tilemap, sizeof(u8) * MAX_TILEMAP_LAYERS * MAX_TILEMAP_TILESLOT * TILESHEET_TILE_SYMBOL_STR_LEN);

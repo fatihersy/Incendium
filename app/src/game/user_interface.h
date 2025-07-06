@@ -289,6 +289,7 @@ void gui_progress_bar(progress_bar_id bar_id, Vector2 pos, bool _should_center);
 void gui_panel(panel pan, Rectangle dest, bool _should_center);
 bool gui_panel_active(panel* panel, Rectangle dest, bool _should_center);
 void gui_label(const char* text, font_type type, i32 font_size, Vector2 position, Color tint, bool _center_h, bool _center_v);
+void gui_label_shader(const char* text, shader_id sdr_id, font_type type, i32 font_size, Vector2 position, Color tint, bool _center_h, bool _center_v);
 void gui_label_wrap(const char* text, font_type type, i32 font_size, Rectangle position, Color tint, bool _should_center);
 void gui_label_grid(const char* text, font_type type, i32 font_size, Vector2 position, Color tint, bool _center_h, bool _center_v, Vector2 grid_coord);
 void gui_label_wrap_grid(const char* text, font_type type, i32 font_size, Rectangle position, Color tint, bool _should_center, Vector2 grid_pos);
