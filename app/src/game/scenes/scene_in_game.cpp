@@ -44,6 +44,7 @@ typedef struct scene_in_game_state {
   bool is_upgrade_choices_ready;
   
   camera_metrics* in_camera_metrics;
+  app_settings* in_app_settings;
   bool* is_game_paused;
   
   in_game_stages stage;
@@ -64,9 +65,21 @@ static scene_in_game_state * state;
   return;                                                                                 \
 }
 
-#define ABILITY_UPG_PANEL_ICON_SIZE BASE_RENDER_SCALE(.25f).x*.5f
+#define SIG_BASE_RENDER_SCALE(SCALE) VECTOR2(\
+  static_cast<f32>(state->in_app_settings->render_width * SCALE),\
+  static_cast<f32>(state->in_app_settings->render_height * SCALE))
+#define SIG_BASE_RENDER_DIV2 VECTOR2(static_cast<f32>(state->in_app_settings->render_width_div2), static_cast<f32>(state->in_app_settings->render_height_div2))
+#define SIG_BASE_RENDER_WIDTH state->in_app_settings->render_width
+#define SIG_BASE_RENDER_HEIGHT state->in_app_settings->render_height
+#define SIG_SCREEN_POS(X, Y) (Vector2{  \
+  SIG_BASE_RENDER_WIDTH  * (X / 100), \
+  SIG_BASE_RENDER_HEIGHT * (Y / 100)  \
+})
+
+#define ABILITY_UPG_PANEL_ICON_SIZE SIG_BASE_RENDER_WIDTH * .25f * .5f
 #define PASSIVE_SELECTION_PANEL_ICON_SIZE ABILITY_UPG_PANEL_ICON_SIZE
 #define CLOUDS_ANIMATION_DURATION TARGET_FPS * 1.5f // second
+
 
 bool scene_in_game_on_event(u16 code, event_context context);
 void begin_scene_in_game(void);
@@ -88,13 +101,22 @@ Rectangle sig_get_camera_view_rect(Camera2D camera);
 /**
  * @brief Requires world system, world init moved to app, as well as its loading time
  */
-bool initialize_scene_in_game(camera_metrics* _camera_metrics) {
+bool initialize_scene_in_game(camera_metrics* _camera_metrics, app_settings * _in_app_settings) {
   if (state) {
     begin_scene_in_game();
     return false;
   }
   state = (scene_in_game_state *)allocate_memory_linear(sizeof(scene_in_game_state), true);
+  if (state == nullptr) {
+    TraceLog(LOG_ERROR, "scene_in_game::initialize_scene_in_game()::State allocation failed!");
+    return false;
+  }
+  if (_camera_metrics == nullptr || _in_app_settings == nullptr) {
+    TraceLog(LOG_ERROR, "scene_in_game::initialize_scene_in_game()::Recieved pointer(s) is/are null");
+    return false;
+  }
   state->in_camera_metrics = _camera_metrics;
+  state->in_app_settings = _in_app_settings;
 
   if (!game_manager_initialize(_camera_metrics)) { // Inits player & spawns
     TraceLog(LOG_ERROR, "scene_in_game::initialize_scene_in_game()::game_manager_initialize() failed");
@@ -115,7 +137,7 @@ void begin_scene_in_game(void) {
     Vector4 {6, 6, 6, 6}, Color { 30, 39, 46, 245}, Color { 52, 64, 76, 245}
   );
   copy_memory(state->worldmap_locations.data(), get_worldmap_locations(), MAX_WORLDMAP_LOCATIONS * sizeof(worldmap_stage));
-  _set_player_position(BASE_RENDER_SCALE(.5f));
+  _set_player_position(SIG_BASE_RENDER_SCALE(.5f));
   set_is_game_paused(true);
   
   for (size_t itr_000 = 0; itr_000 < MAX_UPDATE_ABILITY_PANEL_COUNT; ++itr_000) {
@@ -143,7 +165,7 @@ void start_game(character_stats stat) {
   gm_start_game(*get_active_worldmap());
 
   upgrade_dynamic_player_stat(stat);
-  _set_player_position(BASE_RENDER_SCALE(.5f));
+  _set_player_position(SIG_BASE_RENDER_SCALE(.5f));
   state->stage = IN_GAME_STAGE_PLAY;
 }
 void end_scene_in_game(void) {
@@ -176,7 +198,7 @@ void update_scene_in_game(void) {
 
   switch (state->stage) {
     case IN_GAME_STAGE_MAP_CHOICE: {
-      event_fire(EVENT_CODE_SCENE_MANAGER_SET_CAM_POS, event_context(BASE_RENDER_SCALE(.5f).x, BASE_RENDER_SCALE(.5f).y));
+      event_fire(EVENT_CODE_SCENE_MANAGER_SET_CAM_POS, event_context(SIG_BASE_RENDER_WIDTH * .5f, SIG_BASE_RENDER_HEIGHT * .5f));
       state->in_camera_metrics->frustum = sig_get_camera_view_rect(state->in_camera_metrics->handle);
 
       if (state->show_pause_menu) {}
@@ -237,8 +259,8 @@ void in_game_update_mouse_bindings(void) {
       state->hovered_stage = U16_MAX;
       for (int i=0; i<MAX_WORLDMAP_LOCATIONS; ++i) {
         Rectangle scrloc = Rectangle{
-          state->worldmap_locations.at(i).screen_location.x * BASE_RENDER_RES.x - WORLDMAP_LOC_PIN_SIZE_DIV2, 
-          state->worldmap_locations.at(i).screen_location.y * BASE_RENDER_RES.y - WORLDMAP_LOC_PIN_SIZE_DIV2,
+          state->worldmap_locations.at(i).screen_location.x * SIG_BASE_RENDER_WIDTH - WORLDMAP_LOC_PIN_SIZE_DIV2, 
+          state->worldmap_locations.at(i).screen_location.y * SIG_BASE_RENDER_HEIGHT - WORLDMAP_LOC_PIN_SIZE_DIV2,
           WORLDMAP_LOC_PIN_SIZE, WORLDMAP_LOC_PIN_SIZE
         };
         if (CheckCollisionPointRec(*ui_get_mouse_pos(), scrloc)) {
@@ -363,12 +385,12 @@ void render_scene_in_game(void) {
   switch (state->stage) {
     case IN_GAME_STAGE_MAP_CHOICE: {
  
-      gui_draw_texture_id(TEX_ID_WORLDMAP_WO_CLOUDS, Rectangle {0, 0, BASE_RENDER_RES.x, BASE_RENDER_RES.y});
+      gui_draw_texture_id(TEX_ID_WORLDMAP_WO_CLOUDS, Rectangle {0, 0, static_cast<f32>(SIG_BASE_RENDER_WIDTH), static_cast<f32>(SIG_BASE_RENDER_HEIGHT)});
       for (int i=0; i<MAX_WORLDMAP_LOCATIONS; ++i) {
         if (state->worldmap_locations.at(i).is_active) {
           Vector2 scrloc = Vector2 {
-            state->worldmap_locations.at(i).screen_location.x * BASE_RENDER_RES.x, 
-            state->worldmap_locations.at(i).screen_location.y * BASE_RENDER_RES.y
+            state->worldmap_locations.at(i).screen_location.x * SIG_BASE_RENDER_WIDTH, 
+            state->worldmap_locations.at(i).screen_location.y * SIG_BASE_RENDER_HEIGHT
           };
           gui_draw_map_stage_pin(state->hovered_stage == i, scrloc);
         }
@@ -419,14 +441,14 @@ void render_interface_in_game(void) {
           if (state->hovered_stage == i) {
             panel* pnl = __builtin_addressof(state->worldmap_selection_panel);
             Rectangle scrloc = Rectangle{
-              state->worldmap_locations.at(i).screen_location.x * BASE_RENDER_RES.x - WORLDMAP_LOC_PIN_SIZE_DIV2, 
-              state->worldmap_locations.at(i).screen_location.y * BASE_RENDER_RES.y - WORLDMAP_LOC_PIN_SIZE_DIV2,
+              state->worldmap_locations.at(i).screen_location.x * SIG_BASE_RENDER_WIDTH - WORLDMAP_LOC_PIN_SIZE_DIV2, 
+              state->worldmap_locations.at(i).screen_location.y * SIG_BASE_RENDER_HEIGHT - WORLDMAP_LOC_PIN_SIZE_DIV2,
               WORLDMAP_LOC_PIN_SIZE, WORLDMAP_LOC_PIN_SIZE
             };
-            pnl->dest = Rectangle {scrloc.x + WORLDMAP_LOC_PIN_SIZE, scrloc.y + WORLDMAP_LOC_PIN_SIZE_DIV2, BASE_RENDER_SCALE(.25f).x, BASE_RENDER_SCALE(.25f).y};
+            pnl->dest = Rectangle {scrloc.x + WORLDMAP_LOC_PIN_SIZE, scrloc.y + WORLDMAP_LOC_PIN_SIZE_DIV2, SIG_BASE_RENDER_WIDTH * .25f, SIG_BASE_RENDER_HEIGHT * .25f};
             DrawCircleGradient(scrloc.x + WORLDMAP_LOC_PIN_SIZE_DIV2, scrloc.y + WORLDMAP_LOC_PIN_SIZE_DIV2, 100, Color{236,240,241,50}, Color{255, 255, 255, 0});
-            gui_panel_scissored((*pnl), false, {
-              gui_label(state->worldmap_locations.at(i).displayname.c_str(), FONT_TYPE_MEDIUM, 10, Vector2 {
+            GUI_PANEL_SCISSORED((*pnl), false, {
+              gui_label(state->worldmap_locations.at(i).displayname.c_str(), FONT_TYPE_ABRACADABRA, 10, Vector2 {
                 pnl->dest.x + pnl->dest.width *.5f, pnl->dest.y + pnl->dest.height*.5f
               }, WHITE, true, true);
             });
@@ -441,8 +463,8 @@ void render_interface_in_game(void) {
       }
       else {
         Rectangle dest = Rectangle {
-          BASE_RENDER_SCALE(.25f).x, BASE_RENDER_SCALE(.5f).y, 
-          BASE_RENDER_SCALE(.25f).x, BASE_RENDER_SCALE(.8f).y 
+          SIG_BASE_RENDER_WIDTH * .25f, SIG_BASE_RENDER_HEIGHT * .5f, 
+          SIG_BASE_RENDER_WIDTH * .25f, SIG_BASE_RENDER_HEIGHT *  .8f 
         };
         f32 dest_x_buffer = dest.x;
         for (size_t itr_000 = 0; itr_000 < MAX_UPDATE_PASSIVE_PANEL_COUNT; ++itr_000) {
@@ -476,13 +498,13 @@ void render_interface_in_game(void) {
         gui_draw_pause_screen(state->has_game_started);
       }
       else if (!state->has_game_started) {
-        gui_label("Press Space to Start!", FONT_TYPE_BOLD, 10, Vector2 {BASE_RENDER_SCALE(.5f).x, BASE_RENDER_SCALE(.5f).y}, WHITE, true, true);
+        gui_label("Press Space to Start!", FONT_TYPE_ABRACADABRA, 10, Vector2 {SIG_BASE_RENDER_WIDTH * .5f, SIG_BASE_RENDER_HEIGHT * .5f}, WHITE, true, true);
       }
       else if (get_b_player_have_upgrade_points()) {
         if (state->is_upgrade_choices_ready) {
           Rectangle dest = Rectangle {
-            BASE_RENDER_SCALE(.25f).x, BASE_RENDER_SCALE(.5f).y, 
-            BASE_RENDER_SCALE(.25f).x, BASE_RENDER_SCALE(.5f).y 
+            SIG_BASE_RENDER_WIDTH * .25f, SIG_BASE_RENDER_HEIGHT * .5f, 
+            SIG_BASE_RENDER_WIDTH * .25f, SIG_BASE_RENDER_HEIGHT * .5f 
           };
           f32 dest_x_buffer = dest.x;
           for (size_t itr_000 = 0; itr_000 < MAX_UPDATE_ABILITY_PANEL_COUNT; ++itr_000) {
@@ -499,13 +521,13 @@ void render_interface_in_game(void) {
         else { prepare_ability_upgrade_state(); }
       }
       else {
-        gui_progress_bar(PRG_BAR_ID_PLAYER_EXPERIANCE, Vector2{.x = BASE_RENDER_SCALE(.5f).x, .y = SCREEN_OFFSET.x}, true);
+        gui_progress_bar(PRG_BAR_ID_PLAYER_EXPERIANCE, Vector2{SIG_BASE_RENDER_WIDTH * .5f, SCREEN_OFFSET.y}, true);
         gui_progress_bar(PRG_BAR_ID_PLAYER_HEALTH, SCREEN_OFFSET, false);
 
-        gui_label_format_v(FONT_TYPE_MEDIUM, 18, SCREEN_POS(5.f, 50.f), WHITE, true, true, "%d", gm_get_ingame_info()->nearest_spawn->character_id);
+        gui_label_format_v(FONT_TYPE_ABRACADABRA, 18, SIG_SCREEN_POS(5.f, 50.f), WHITE, true, true, "%d", gm_get_ingame_info()->nearest_spawn->character_id);
 
         // TODO: Display currency
-        //gui_label_format(FONT_TYPE_MEDIUM, 10, BASE_RENDER_SCALE(.75f).x, SCREEN_OFFSET.y * 5.f, WHITE, false, false, "Souls: %d", get_currency_souls());
+        //gui_label_format(FONT_TYPE_ABRACADABRA, 10, BASE_RENDER_SCALE(.75f).x, SCREEN_OFFSET.y * 5.f, WHITE, false, false, "Souls: %d", get_currency_souls());
       }
       break;
     }
@@ -517,7 +539,7 @@ void render_interface_in_game(void) {
       else if (!state->has_game_started) { }
       else {
         gui_label_format(
-          FONT_TYPE_MEDIUM, 15, ui_get_mouse_pos()->x, ui_get_mouse_pos()->y, 
+          FONT_TYPE_ABRACADABRA, 15, ui_get_mouse_pos()->x, ui_get_mouse_pos()->y, 
           WHITE, false, false, "world_pos {%.1f, %.1f}", gm_get_mouse_pos_world()->x, gm_get_mouse_pos_world()->y
         );
 
@@ -526,39 +548,39 @@ void render_interface_in_game(void) {
           panel* pnl = __builtin_addressof(state->debug_info_panel);
           pnl->dest = Rectangle {
             ui_get_mouse_pos()->x, ui_get_mouse_pos()->y, 
-            BASE_RENDER_SCALE(.4f).x, BASE_RENDER_SCALE(.3f).y
+            SIG_BASE_RENDER_WIDTH * .4f, SIG_BASE_RENDER_HEIGHT * .3f
           };
           i32 font_size = 18;
-          i32 line_height = BASE_RENDER_SCALE(.05f).y;
+          i32 line_height = SIG_BASE_RENDER_HEIGHT * .05f;
           Vector2 debug_info_position_buffer = VECTOR2(pnl->dest.x, pnl->dest.y);
-          gui_panel_scissored((*pnl), false, {
+          GUI_PANEL_SCISSORED((*pnl), false, {
             gui_label_format(
-              FONT_TYPE_MEDIUM, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
+              FONT_TYPE_ABRACADABRA, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
               WHITE, false, false, "Id: %d", spawn->character_id
             );
             debug_info_position_buffer.y += line_height;
             gui_label_format(
-              FONT_TYPE_MEDIUM, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
+              FONT_TYPE_ABRACADABRA, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
               WHITE, false, false, "Collision: {%.1f, %.1f, %.1f, %.1f}", spawn->collision.x, spawn->collision.y, spawn->collision.width, spawn->collision.height
             );
             debug_info_position_buffer.y += line_height;
             gui_label_format(
-              FONT_TYPE_MEDIUM, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
+              FONT_TYPE_ABRACADABRA, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
               WHITE, false, false, "Position: {%.1f, %.1f}", spawn->position.x, spawn->position.y
             );
             debug_info_position_buffer.y += line_height;
             gui_label_format(
-              FONT_TYPE_MEDIUM, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
+              FONT_TYPE_ABRACADABRA, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
               WHITE, false, false, "Health: %d", spawn->health
             );
             debug_info_position_buffer.y += line_height;
             gui_label_format(
-              FONT_TYPE_MEDIUM, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
+              FONT_TYPE_ABRACADABRA, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
               WHITE, false, false, "Scale: %.1f", spawn->scale
             );
             debug_info_position_buffer.y += line_height;
             gui_label_format(
-              FONT_TYPE_MEDIUM, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
+              FONT_TYPE_ABRACADABRA, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
               WHITE, false, false, "Speed: %.1f", spawn->speed
             );
           });
@@ -569,38 +591,38 @@ void render_interface_in_game(void) {
           panel* pnl = __builtin_addressof(state->debug_info_panel);
           pnl->dest = Rectangle {
             ui_get_mouse_pos()->x, ui_get_mouse_pos()->y, 
-            BASE_RENDER_SCALE(.4f).x, BASE_RENDER_SCALE(.3f).y
+            SIG_BASE_RENDER_WIDTH * .4f, SIG_BASE_RENDER_HEIGHT * .3f
           };
           i32 font_size = 11;
-          i32 line_height = BASE_RENDER_SCALE(.05f).y;
+          i32 line_height = SIG_BASE_RENDER_HEIGHT * .05f;
           Vector2 debug_info_position_buffer = VECTOR2(pnl->dest.x, pnl->dest.y);
           projectile* prj = __builtin_addressof(abl->projectiles.at(state->hovered_projectile));
-          gui_panel_scissored((*pnl), false, {
+          GUI_PANEL_SCISSORED((*pnl), false, {
             gui_label_format(
-              FONT_TYPE_LIGHT, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
+              FONT_TYPE_ABRACADABRA, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
               WHITE, false, false, "Collision: {%.1f, %.1f, %.1f, %.1f}", prj->collision.x, prj->collision.y, prj->collision.width, prj->collision.height
             );
             debug_info_position_buffer.y += line_height;
             gui_label_format(
-              FONT_TYPE_LIGHT, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
+              FONT_TYPE_ABRACADABRA, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
               WHITE, false, false, "Rotation: %.1f", prj->animations.at(prj->active_sprite).rotation
             );
           });
         }
         
-        gui_label_format(FONT_TYPE_MEDIUM, 10, BASE_RENDER_SCALE(.75f).x, SCREEN_OFFSET.y, WHITE, false, false, "Remaining: %d", get_remaining_enemies());
-        gui_label_format(FONT_TYPE_MEDIUM, 10, BASE_RENDER_SCALE(.75f).x, SCREEN_OFFSET.y * 5.f, WHITE, false, false, "Souls: %d", get_currency_souls());
+        gui_label_format(FONT_TYPE_ABRACADABRA, 10, SIG_BASE_RENDER_WIDTH * .75f, SCREEN_OFFSET.y, WHITE, false, false, "Remaining: %d", get_remaining_enemies());
+        gui_label_format(FONT_TYPE_ABRACADABRA, 10, SIG_BASE_RENDER_WIDTH * .75f, SCREEN_OFFSET.y * 5.f, WHITE, false, false, "Souls: %d", get_currency_souls());
 
-        gui_label_format(FONT_TYPE_MEDIUM, 10, 0, BASE_RENDER_SCALE(.35f).y, WHITE, false, false, "Health: %d", _get_dynamic_player_state()->health_max);
-        gui_label_format(FONT_TYPE_MEDIUM, 10, 0, BASE_RENDER_SCALE(.40f).y, WHITE, false, false, "Current Health: %d", _get_dynamic_player_state()->health_current);
-        gui_label_format(FONT_TYPE_MEDIUM, 10, 0, BASE_RENDER_SCALE(.45f).y, WHITE, false, false, "Damage: %d", _get_dynamic_player_state()->damage);
+        gui_label_format(FONT_TYPE_ABRACADABRA, 10, 0, SIG_BASE_RENDER_HEIGHT * .35f, WHITE, false, false, "Health: %d", _get_dynamic_player_state()->health_max);
+        gui_label_format(FONT_TYPE_ABRACADABRA, 10, 0, SIG_BASE_RENDER_HEIGHT * .40f, WHITE, false, false, "Current Health: %d", _get_dynamic_player_state()->health_current);
+        gui_label_format(FONT_TYPE_ABRACADABRA, 10, 0, SIG_BASE_RENDER_HEIGHT * .45f, WHITE, false, false, "Damage: %d", _get_dynamic_player_state()->damage);
       }
 
       break;
     }
     case IN_GAME_STAGE_PLAY_RESULTS: { 
       draw_end_game_panel();
-      if(gui_menu_button("Accept", BTN_ID_IN_GAME_BUTTON_RETURN_MENU, Vector2 {0, 5}, BASE_RENDER_RES_DIV2, true)) {
+      if(gui_menu_button("Accept", BTN_ID_IN_GAME_BUTTON_RETURN_MENU, Vector2 {0, 5}, SIG_BASE_RENDER_DIV2, true)) {
         currency_souls_add(state->end_game_result.collected_souls);
         gm_save_game();
         end_scene_in_game();
@@ -619,10 +641,10 @@ void render_interface_in_game(void) {
 
 #define DRAW_ABL_UPG_STAT_PNL(UPG, TEXT, ...){ \
 if (UPG->level == 1) {\
-  gui_label_format(FONT_TYPE_LIGHT, upgr_font_size, (f32)start_upgradables_x_exis, (f32)upgradables_height_buffer, WHITE, false, false, TEXT, __VA_ARGS__);\
+  gui_label_format(FONT_TYPE_ABRACADABRA, upgr_font_size, (f32)start_upgradables_x_exis, (f32)upgradables_height_buffer, WHITE, false, false, TEXT, __VA_ARGS__);\
   upgradables_height_buffer += btw_space_gap;\
 } else {\
-  gui_label_format(FONT_TYPE_LIGHT, upgr_font_size, (f32)start_upgradables_x_exis, (f32)upgradables_height_buffer, WHITE, false, false, TEXT, __VA_ARGS__);\
+  gui_label_format(FONT_TYPE_ABRACADABRA, upgr_font_size, (f32)start_upgradables_x_exis, (f32)upgradables_height_buffer, WHITE, false, false, TEXT, __VA_ARGS__);\
   upgradables_height_buffer += btw_space_gap;\
 }}
 
@@ -653,12 +675,12 @@ void draw_in_game_upgrade_panel(u16 which_panel, Rectangle panel_dest) {
   const u16 upgr_font_size = 6; 
 
   gui_draw_texture_id_pro(TEX_ID_ASSET_ATLAS, upg->icon_src, icon_rect);
-  gui_label(upg->display_name.c_str(), FONT_TYPE_MEDIUM, title_font_size, ability_name_pos, WHITE, true, true);
+  gui_label(upg->display_name.c_str(), FONT_TYPE_ABRACADABRA, title_font_size, ability_name_pos, WHITE, true, true);
 
   if (upg->level == 1) {
-    gui_label("NEW!", FONT_TYPE_BOLD, level_ind_font_size, ability_level_ind, WHITE, true, true);
+    gui_label("NEW!", FONT_TYPE_ABRACADABRA, level_ind_font_size, ability_level_ind, WHITE, true, true);
   } else if(upg->level>1 && upg->level <= MAX_ABILITY_LEVEL) {
-    gui_label_format_v(FONT_TYPE_BOLD, level_ind_font_size, ability_level_ind, WHITE, true, true, "%d -> %d", abl->level, upg->level);
+    gui_label_format_v(FONT_TYPE_ABRACADABRA, level_ind_font_size, ability_level_ind, WHITE, true, true, "%d -> %d", abl->level, upg->level);
   } else {
     TraceLog(LOG_ERROR, "scene_in_game::draw_in_game_upgrade_panel()::Ability level is out of bound");
     return;
@@ -699,7 +721,7 @@ void draw_passive_selection_panel(character_stat* stat, Rectangle panel_dest) {
   const u16 title_font_size = 10; 
   
   gui_draw_texture_id_pro(TEX_ID_ASSET_ATLAS, stat->passive_icon_src, icon_rect);
-  gui_label(lc_txt(stat->passive_display_name_symbol), FONT_TYPE_MEDIUM, title_font_size, passive_name_pos, WHITE, true, true);
+  gui_label(lc_txt(stat->passive_display_name_symbol), FONT_TYPE_ABRACADABRA, title_font_size, passive_name_pos, WHITE, true, true);
   
   const u16 desc_font_size = 6;
   const f32 desc_box_height = panel_dest.y + (panel_dest.height * .5f) - passive_name_pos.y - elm_space_gap;
@@ -710,24 +732,31 @@ void draw_passive_selection_panel(character_stat* stat, Rectangle panel_dest) {
     .width  = panel_dest.width - padding.x,
     .height = desc_box_height - padding.y,
   };
-  gui_label_wrap(lc_txt(stat->passive_desc_symbol), FONT_TYPE_LIGHT, desc_font_size, desc_box, WHITE, false);
+  gui_label_wrap(lc_txt(stat->passive_desc_symbol), FONT_TYPE_ABRACADABRA, desc_font_size, desc_box, WHITE, false);
 
 }
 void draw_end_game_panel() {
   STATE_ASSERT("draw_end_game_panel")
-  gui_panel(state->default_panel, Rectangle{ BASE_RENDER_SCALE(.5f).x, BASE_RENDER_SCALE(.5f).y, BASE_RENDER_SCALE(.75f).x, BASE_RENDER_SCALE(.75f).y}, true);
+  gui_panel(state->default_panel, Rectangle{ 
+      SIG_BASE_RENDER_WIDTH * .5f, SIG_BASE_RENDER_HEIGHT * .5f, 
+      SIG_BASE_RENDER_WIDTH * .75f, SIG_BASE_RENDER_HEIGHT * .75f
+    }, 
+    true
+  );
 
   if (state->end_game_result.is_win) {
-    gui_label(lc_txt(LOC_TEXT_INGAME_STAGE_RESULT_CLEARED), FONT_TYPE_MEDIUM, 20, BASE_RENDER_SCALE(.5f), WHITE, true, true);
+    gui_label(lc_txt(LOC_TEXT_INGAME_STAGE_RESULT_CLEARED), FONT_TYPE_ABRACADABRA, 20, SIG_BASE_RENDER_DIV2, WHITE, true, true);
   }
   else {
-    gui_label(lc_txt(LOC_TEXT_INGAME_STAGE_RESULT_DEAD), FONT_TYPE_MEDIUM, 20, BASE_RENDER_SCALE(.5f), RED, true, true);
+    gui_label(lc_txt(LOC_TEXT_INGAME_STAGE_RESULT_DEAD), FONT_TYPE_ABRACADABRA, 20, SIG_BASE_RENDER_DIV2, RED, true, true);
   }
   u32 min  = (i32)state->end_game_result.play_time/60;
   u32 secs = (i32)state->end_game_result.play_time%60;
-  gui_label_format_v(FONT_TYPE_MEDIUM, 15, VECTOR2(BASE_RENDER_SCALE(.5f).x, BASE_RENDER_SCALE(.55f).y), WHITE, true, true, "%d:%d", min, secs);
+  gui_label_format_v(FONT_TYPE_ABRACADABRA, 15, VECTOR2(static_cast<f32>(state->in_app_settings->render_width_div2), SIG_BASE_RENDER_HEIGHT * .55f), 
+    WHITE, true, true, "%d:%d", min, secs
+  );
 
-  gui_label_format_v(FONT_TYPE_MEDIUM, 15, VECTOR2(BASE_RENDER_SCALE(.5f).x, BASE_RENDER_SCALE(.75f).y), WHITE, true, true, 
+  gui_label_format_v(FONT_TYPE_ABRACADABRA, 15, VECTOR2(static_cast<f32>(state->in_app_settings->render_width_div2), SIG_BASE_RENDER_HEIGHT * .75f), WHITE, true, true, 
     "%s%d", lc_txt(LOC_TEXT_INGAME_STAGE_RESULT_COLLECTED_SOULS), state->end_game_result.collected_souls
   );
 }
@@ -772,8 +801,8 @@ void end_ability_upgrade_state(u16 which_panel_chosen) {
 }
 Rectangle sig_get_camera_view_rect(Camera2D camera) {
 
-  f32 view_width = BASE_RENDER_RES.x / camera.zoom;
-  f32 view_height = BASE_RENDER_RES.y / camera.zoom;
+  f32 view_width = SIG_BASE_RENDER_WIDTH / camera.zoom;
+  f32 view_height = SIG_BASE_RENDER_HEIGHT / camera.zoom;
 
   f32 x = camera.target.x;
   f32 y = camera.target.y;
@@ -810,4 +839,9 @@ bool scene_in_game_on_event(u16 code, event_context context) {
 #undef CLOUDS_ANIMATION_DURATION
 #undef FADE_ANIMATION_DURATION
 #undef DRAW_ABL_UPG_STAT_PNL
-
+#undef SIG_BASE_RENDER_SCALE
+#undef SIG_BASE_RENDER_DIV2
+#undef SIG_BASE_RENDER_RES_VEC
+#undef SIG_BASE_RENDER_WIDTH
+#undef SIG_BASE_RENDER_HEIGHT
+#undef SIG_SCREEN_POS

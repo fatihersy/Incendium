@@ -44,7 +44,6 @@ void move_next_number(const char* _str, u16* counter, bool stay_the_line);
 void move_next_string(const char* _str, u16* counter, bool stay_the_line);
 
 bool parse_app_settings_ini(const char* filename, app_settings* out_settings) {
-
   i32 size = 0;
   char file_str[INI_FILE_MAX_FILE_SIZE] = "";
   char section_resolution[INI_FILE_MAX_SECTION_LENGTH] = "";
@@ -57,14 +56,14 @@ bool parse_app_settings_ini(const char* filename, app_settings* out_settings) {
     return false;
   }
   TextCopy(file_str, (char*)_str);
-  TextCopy(section_resolution,  get_section(file_str, "resolution"));
-  TextCopy(section_sound,       get_section(file_str, "sound"));
-  TextCopy(section_window,      get_section(file_str, "window"));
-  TextCopy(section_localization,get_section(file_str, "localization"));
-  out_settings->window_size.push_back(static_cast<f32>(get_variable_I32(section_resolution, "width")));
-  out_settings->window_size.push_back(static_cast<f32>(get_variable_I32(section_resolution, "height")));
-  out_settings->master_sound_volume = get_variable_U16(section_sound, "master");
-  out_settings->language = get_value_string(section_localization, "language");
+  TextCopy(section_resolution,          get_section(file_str, "resolution"));
+  TextCopy(section_sound,               get_section(file_str, "sound"));
+  TextCopy(section_window,              get_section(file_str, "window"));
+  TextCopy(section_localization,        get_section(file_str, "localization"));
+  out_settings->window_width  =         get_variable_I32(section_resolution, "width");
+  out_settings->window_height =         get_variable_I32(section_resolution, "height");
+  out_settings->master_sound_volume =   get_variable_U16(section_sound, "master");
+  out_settings->language =              get_value_string(section_localization, "language");
   const char* str_win_mode = get_value_string(section_window, "mode");
   if (TextIsEqual(str_win_mode, "borderless")) {
     out_settings->window_state = FLAG_BORDERLESS_WINDOWED_MODE;
@@ -410,4 +409,3 @@ void move_next_string(const char* _str, u16* counter, bool stay_the_line) {
   }
   *counter = INVALID_IDU16;
 }
-

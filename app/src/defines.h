@@ -42,8 +42,10 @@
 
 #define DEFAULT_SETTINGS_WINDOW_WIDTH "1280"
 #define DEFAULT_SETTINGS_WINDOW_HEIGHT "720"
+#define DEFAULT_SETTINGS_RATIO "16:9"
 #define DEFAULT_SETTINGS_WINDOW_MODE "windowed"
-#define DEFAULT_SETTINGS_MASTER_VOLUME "100"
+#define DEFAULT_SETTINGS_MASTER_VOLUME_C "50"
+#define DEFAULT_SETTINGS_MASTER_VOLUME 50
 #define DEFAULT_SETTINGS_LANGUAGE "English"
 
 #define RESOURCE_PATH ".\\resources\\"
@@ -62,14 +64,10 @@
 
 #define SCREEN_OFFSET CLITERAL(Vector2){5.f, 5.f}
 
-#define BASE_RENDER_RES          CLITERAL(Vector2){ 1920, 1080}
-#define BASE_RENDER_RES_DIV2     CLITERAL(Vector2){ 960, 540}
-#define BASE_RENDER_SCALE(FLOAT) CLITERAL(Vector2){ BASE_RENDER_RES.x * FLOAT , BASE_RENDER_RES.y * FLOAT }
-
 #define MAX_FILENAME_LENGTH 64
 #define MAX_FILENAME_EXT_LENGTH 5
 
-#define FCLAMP(value, min, max) (value <= min) ? min : (value >= max) ? max : value
+#define FCLAMP(value, min, max) ((value <= min) ? min : (value >= max) ? max : value)
 #define FMAX(v1, v2) (v1 >= v2) ? v1 : v2
 #define FMIN(v1, v2) (v1 <= v2) ? v1 : v2
 #define FABS(v1) (v1 < 0) ? v1*(-1) : v1
@@ -126,6 +124,23 @@ static_assert(sizeof(f64) == 8, "Expected float to be 8 bytes.");
 #define INVALID_IDU32 U32_MAX
 #define INVALID_IDU16 U16_MAX
 
+typedef enum aspect_ratio {
+  ASPECT_RATIO_UNDEFINED,
+  ASPECT_RATIO_3_2,
+  ASPECT_RATIO_4_3,
+  ASPECT_RATIO_5_3,
+  ASPECT_RATIO_5_4,
+  ASPECT_RATIO_8_5,
+  ASPECT_RATIO_16_9,
+  ASPECT_RATIO_16_10,
+  ASPECT_RATIO_21_9,
+  ASPECT_RATIO_32_9,
+  ASPECT_RATIO_37_27,
+  ASPECT_RATIO_43_18,
+  ASPECT_RATIO_64_27,
+  ASPECT_RATIO_CUSTOM,
+  ASPECT_RATIO_MAX,
+} aspect_ratio;
 
 typedef enum data_type {
   DATA_TYPE_UNRESERVED,
@@ -579,6 +594,8 @@ typedef enum button_id {
   BTN_ID_SETTINGS_SLIDER_LANGUAGE_RIGHT_BUTTON,
   BTN_ID_SETTINGS_APPLY_SETTINGS_BUTTON,
 
+  BTN_ID_EDITOR_ADD_MAP_COLLISION,
+
   BTN_ID_MAX
 } button_id;
 
@@ -619,12 +636,45 @@ typedef enum slider_id {
 } slider_id;
 
 typedef struct app_settings {
-  std::vector<f32> window_size;
   f32 normalized_ratio;
   std::vector<f32> scale_ratio;
-  u16 master_sound_volume;
+  aspect_ratio display_ratio;
+  i32 master_sound_volume;
   i32 window_state;
+  i32 window_width;
+  i32 window_height;
+  i32 render_width;
+  i32 render_height;
+  i32 render_width_div2;
+  i32 render_height_div2;
   std::string language;
+  app_settings(void) {
+    this->scale_ratio.clear();
+    this->language.clear();
+    this->normalized_ratio = 0;
+    this->master_sound_volume = 0;
+    this->window_state = 0;
+    this->window_width = 0;
+    this->window_height = 0;
+    this->render_width = 0;
+    this->render_height = 0;
+    this->render_width_div2 = 0;
+    this->render_height_div2 = 0;
+  }
+  app_settings(i32 window_state, i32 width, i32 height, i32 volume, std::string language) : app_settings() {
+    this->window_width       = width;
+    this->window_height      = height;
+    this->render_width       = width;
+    this->render_height      = height;
+    this->render_width_div2  = width * .5f;
+    this->render_height_div2 = height * .5f;
+    this->normalized_ratio    = static_cast<f32>(this->window_width)  / static_cast<f32>(this->render_width);
+    this->scale_ratio.push_back(static_cast<f32>(this->render_width)  / static_cast<f32>(this->window_width));
+    this->scale_ratio.push_back(static_cast<f32>(this->render_height) / static_cast<f32>(this->window_height));
+    this->master_sound_volume = volume;
+    this->language = language;
+    this->window_state = window_state;
+  }
 } app_settings;
 
 typedef struct file_data {

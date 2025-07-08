@@ -4,7 +4,7 @@
 
 #include "game_types.h"
 
-bool world_system_initialize(camera_metrics* _in_camera_metrics);
+bool world_system_initialize(camera_metrics* _in_camera_metrics, app_settings* _in_app_settings);
 
 void set_worldmap_location(i32 id);
 worldmap_stage* get_worldmap_locations(void);
@@ -23,6 +23,7 @@ tile _get_tile_from_map_by_mouse_pos(u16 from_layer, Vector2 _mouse_pos);
 
 bool add_prop_curr_map(tilemap_prop_static prop_static);
 bool add_prop_curr_map(tilemap_prop_sprite prop_sprite);
+bool add_map_coll_curr_map(Rectangle map_coll);
 bool remove_prop_cur_map_by_id(i32 id, tilemap_prop_types type);
 void update_map(void);
 void drag_tilesheet(Vector2 vec);

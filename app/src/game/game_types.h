@@ -14,10 +14,6 @@
 #define TO_VECTOR2(X) (Vector2{X, X})
 #define NORMALIZE_VEC2(X, Y, X_MAX, Y_MAX)  ( Vector2 {X / X_MAX, Y / Y_MAX})
 #define CENTER_RECT(RECT) (Rectangle{RECT.x - RECT.width / 2.f, RECT.y - RECT.height, RECT.width, RECT.height});
-#define SCREEN_POS(X, Y) (Vector2{  \
-  .x = BASE_RENDER_RES.x  * (X / 100), \
-  .y = BASE_RENDER_RES.y * (Y / 100)  \
-})
 #define ZEROVEC2 (Vector2{0.f, 0.f})
 #define ZERORECT (Rectangle{0.f, 0.f, 0.f, 0.f})
 
@@ -144,6 +140,7 @@ typedef enum font_type {
   FONT_TYPE_MEDIUM,
   FONT_TYPE_BOLD,
   FONT_TYPE_ITALIC,
+  FONT_TYPE_ABRACADABRA,
   FONT_TYPE_MAX
 } font_type;
 
@@ -743,6 +740,7 @@ typedef struct localization_package {
   Font bold_font;
   Font medium_font;
   Font italic_font;
+  Font abracadabra;
   localization_package(void) {
     this->language_name.clear();
     this->language_index = INVALID_IDU32;
@@ -751,6 +749,7 @@ typedef struct localization_package {
     this->bold_font = {};
     this->medium_font = {};
     this->italic_font = {};
+    this->abracadabra = {};
   }
 } localization_package;
 

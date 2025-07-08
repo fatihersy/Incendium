@@ -14,6 +14,10 @@
 #define PROP_DRAG_HANDLE_DIM_DIV2 PROP_DRAG_HANDLE_DIM/2.f
 #define PROP_PANEL_PROP_DRAW_STARTING_HEIGHT 100.f
 
+#define MAP_COLLISION_DRAG_HANDLE_DIM 16
+#define MAP_COLLISION_DRAG_HANDLE_DIM_DIV2 PROP_DRAG_HANDLE_DIM * .5f
+#define MAP_COLLISION_PANEL_COLLISION_DRAW_STARTING_HEIGHT 100.f
+
 typedef enum editor_state_selection_type {
   SLC_TYPE_UNSELECTED,
   SLC_TYPE_TILE,
@@ -21,36 +25,39 @@ typedef enum editor_state_selection_type {
   SLC_TYPE_SLC_PROP_STATIC,
   SLC_TYPE_DROP_PROP_SPRITE,
   SLC_TYPE_SLC_PROP_SPRITE,
+  SLC_TYPE_DROP_COLLISION_POSITION,
+  SLC_TYPE_DROP_COLLISION_DIMENTIONS
 } editor_state_selection_type;
 
 typedef enum editor_state_mouse_focus {
   MOUSE_FOCUS_UNFOCUSED, // While window unfocused or not on the screen
   MOUSE_FOCUS_MAP,
-  MOUSE_FOCUS_TILE_SELECTION,
-  MOUSE_FOCUS_PROP_SELECTION,
+  MOUSE_FOCUS_TILE_SELECTION_PANEL,
+  MOUSE_FOCUS_PROP_SELECTION_PANEL,
+  MOUSE_FOCUS_COLLISION_PLACEMENT_PANEL,
 } editor_state_mouse_focus;
 
 typedef struct scene_editor_state {
   bool b_show_tilesheet_tile_selection_screen;
-  bool b_prop_selection_screen_update_prop_sprites;
   bool b_show_prop_selection_screen;
   bool b_show_prop_edit_screen;
+  bool b_show_collision_placement_screen;
   bool b_dragging_prop;
   bool b_show_pause_menu;
+  bool b_prop_selection_screen_update_prop_sprites;
 
-  Vector2 target;
   std::vector<tilemap_prop_static> * tilemap_props_static_selected; // INFO: The prop list that shown on props panel
   std::vector<tilemap_prop_sprite> * tilemap_props_sprite_selected;
   tilemap_prop_static* selected_prop_static_map_prop_address;
   tilemap_prop_sprite* selected_prop_sprite_map_prop_address;
   tilemap_prop_static  selected_prop_static_panel_selection_copy;
   tilemap_prop_sprite  selected_prop_sprite_panel_selection_copy;
+  Rectangle _map_collision;
   tilesheet* selected_sheet;
   tile selected_tile;
   u16 edit_layer;
   u16 selected_stage;
   editor_state_selection_type selection_type;
-  editor_state_mouse_focus mouse_focus;
 
   std::vector<tilemap_prop_static> tilemap_props_trees;
   std::vector<tilemap_prop_static> tilemap_props_tombstones;
@@ -66,40 +73,45 @@ typedef struct scene_editor_state {
   std::vector<tilemap_prop_sprite> tilemap_props_sprite;
 
   camera_metrics * in_camera_metrics;
+  app_settings   * in_app_settings;
   std::array<worldmap_stage, MAX_WORLDMAP_LOCATIONS> worldmap_locations;
   panel prop_selection_panel;
   panel tile_selection_panel;
+  panel collision_placement_panel;
   panel prop_edit_panel;
   Vector2 mouse_pos_world;
   Vector2 mouse_pos_screen;
+  editor_state_mouse_focus mouse_focus;
+  Vector2 target;
 } scene_editor_state;
 
 static scene_editor_state * state;
 
-void begin_scene_editor(void);
-void editor_update_bindings(void);
-void editor_update_movement(void);
-void editor_update_mouse_bindings(void);
-void editor_update_keyboard_bindings(void);
-i32 map_prop_id_to_index(u16 id);
-Rectangle se_get_camera_view_rect(Camera2D camera);
-void update_tilemap_prop_type(void);
+constexpr void begin_scene_editor(void);
+constexpr void editor_update_bindings(void);
+constexpr void editor_update_movement(void);
+constexpr void editor_update_mouse_bindings(void);
+constexpr void editor_update_keyboard_bindings(void);
+constexpr i32 map_prop_id_to_index(u16 id);
+constexpr Rectangle se_get_camera_view_rect(Camera2D camera);
+constexpr void update_tilemap_prop_type(void);
+constexpr void scene_editor_selection_cleanup(void);
 
-bool scene_editor_scale_slider_on_left_button_trigger(void);
-bool scene_editor_scale_slider_on_right_button_trigger(void);
-bool scene_editor_rotation_slider_on_left_button_trigger(void);
-bool scene_editor_rotation_slider_on_right_button_trigger(void);
-bool scene_editor_zindex_slider_on_left_button_trigger(void);
-bool scene_editor_zindex_slider_on_right_button_trigger(void);
-bool scene_editor_map_layer_slc_slider_on_left_button_trigger(void);
-bool scene_editor_map_layer_slc_slider_on_right_button_trigger(void);
-bool scene_editor_map_stage_slc_slider_on_left_button_trigger(void);
-bool scene_editor_map_stage_slc_slider_on_right_button_trigger(void);
-bool scene_editor_map_prop_type_slc_slider_on_left_button_trigger(void);
-bool scene_editor_map_prop_type_slc_slider_on_right_button_trigger(void);
+constexpr bool scene_editor_scale_slider_on_left_button_trigger(void);
+constexpr bool scene_editor_scale_slider_on_right_button_trigger(void);
+constexpr bool scene_editor_rotation_slider_on_left_button_trigger(void);
+constexpr bool scene_editor_rotation_slider_on_right_button_trigger(void);
+constexpr bool scene_editor_zindex_slider_on_left_button_trigger(void);
+constexpr bool scene_editor_zindex_slider_on_right_button_trigger(void);
+constexpr bool scene_editor_map_layer_slc_slider_on_left_button_trigger(void);
+constexpr bool scene_editor_map_layer_slc_slider_on_right_button_trigger(void);
+constexpr bool scene_editor_map_stage_slc_slider_on_left_button_trigger(void);
+constexpr bool scene_editor_map_stage_slc_slider_on_right_button_trigger(void);
+constexpr bool scene_editor_map_prop_type_slc_slider_on_left_button_trigger(void);
+constexpr bool scene_editor_map_prop_type_slc_slider_on_right_button_trigger(void);
 
-void add_prop(texture_id source_tex, tilemap_prop_types type, Rectangle source, f32 scale = 1.f, Color tint = WHITE);
-void add_prop(tilemap_prop_types type, spritesheet_id sprite_id, f32 scale = 1.f, Color tint = WHITE);
+constexpr void add_prop(texture_id source_tex, tilemap_prop_types type, Rectangle source, f32 scale = 1.f, Color tint = WHITE);
+constexpr void add_prop(tilemap_prop_types type, spritesheet_id sprite_id, f32 scale = 1.f, Color tint = WHITE);
 #define add_prop_tree(...) add_prop(TEX_ID_ASSET_ATLAS, TILEMAP_PROP_TYPE_TREE __VA_OPT__(,) __VA_ARGS__)
 #define add_prop_tombstone(...) add_prop(TEX_ID_ASSET_ATLAS, TILEMAP_PROP_TYPE_TOMBSTONE, __VA_ARGS__)
 #define add_prop_stone(...) add_prop(TEX_ID_ASSET_ATLAS, TILEMAP_PROP_TYPE_STONE __VA_OPT__(,) __VA_ARGS__)
@@ -113,7 +125,10 @@ void add_prop(tilemap_prop_types type, spritesheet_id sprite_id, f32 scale = 1.f
 #define add_prop_building(...) add_prop(TEX_ID_ASSET_ATLAS, TILEMAP_PROP_TYPE_BUILDING __VA_OPT__(,) __VA_ARGS__)
 #define add_prop_sprite(SPRITE_ID, ...) add_prop(TILEMAP_PROP_TYPE_SPRITE, SPRITE_ID __VA_OPT__(,) __VA_ARGS__)
 
-bool initialize_scene_editor(camera_metrics* _camera_metrics) {
+#define SE_BASE_RENDER_WIDTH state->in_app_settings->render_width
+#define SE_BASE_RENDER_HEIGHT state->in_app_settings->render_height
+
+bool initialize_scene_editor(camera_metrics* _camera_metrics, app_settings * _in_app_settings) {
   if (state) {
     update_tilemap_prop_type();
     begin_scene_editor();
@@ -129,8 +144,13 @@ bool initialize_scene_editor(camera_metrics* _camera_metrics) {
     TraceLog(LOG_ERROR, "scene_editor::initialize_scene_editor()::Camera metrics recieved NULL");
     return false;
   }
+  if (_camera_metrics == nullptr || _in_app_settings == nullptr) {
+    TraceLog(LOG_ERROR, "scene_editor::initialize_scene_editor()::Recieved pointer(s) is/are null");
+    return false;
+  }
   state->in_camera_metrics = _camera_metrics;
-  world_system_initialize(_camera_metrics);
+  state->in_app_settings = _in_app_settings;
+  world_system_initialize(_camera_metrics, state->in_app_settings);
 
   if(!user_interface_system_initialize()) {
     TraceLog(LOG_ERROR, "scene_editor::initialize_scene_editor()::User interface failed to initialize!");
@@ -142,11 +162,20 @@ bool initialize_scene_editor(camera_metrics* _camera_metrics) {
 
   state->tile_selection_panel = panel();
   state->tile_selection_panel.signal_state = BTN_STATE_HOVER;
-  state->tile_selection_panel.dest = Rectangle {0, 0, BASE_RENDER_SCALE(.45f).x, BASE_RENDER_RES.y};
+  state->tile_selection_panel.dest = Rectangle {0, 0, SE_BASE_RENDER_WIDTH * .45f, static_cast<f32>(SE_BASE_RENDER_WIDTH)};
+
+  state->collision_placement_panel = panel();
+  state->collision_placement_panel.signal_state = BTN_STATE_HOVER;
+  state->collision_placement_panel.dest = Rectangle {0, 0, SE_BASE_RENDER_WIDTH * .25f, static_cast<f32>(SE_BASE_RENDER_HEIGHT)};
+  state->collision_placement_panel.scroll_handle = Rectangle{
+    .x = state->prop_selection_panel.dest.x + state->prop_selection_panel.dest.width - PROP_DRAG_HANDLE_DIM - 10, .y = 0,
+    .width = PROP_DRAG_HANDLE_DIM, .height = PROP_DRAG_HANDLE_DIM * 5,
+  };
+  state->collision_placement_panel.buffer.f32[1] = PROP_PANEL_PROP_DRAW_STARTING_HEIGHT;
   
   state->prop_selection_panel = panel();
   state->prop_selection_panel.signal_state = BTN_STATE_HOVER;
-  state->prop_selection_panel.dest = Rectangle {0, 0, BASE_RENDER_SCALE(.35f).x, BASE_RENDER_RES.y};
+  state->prop_selection_panel.dest = Rectangle {0, 0, SE_BASE_RENDER_WIDTH * .35f, static_cast<f32>(SE_BASE_RENDER_HEIGHT)};
   state->prop_selection_panel.scroll_handle = Rectangle{
     .x = state->prop_selection_panel.dest.x + state->prop_selection_panel.dest.width - PROP_DRAG_HANDLE_DIM - 10, .y = 0,
     .width = PROP_DRAG_HANDLE_DIM, .height = PROP_DRAG_HANDLE_DIM * 5,
@@ -155,9 +184,9 @@ bool initialize_scene_editor(camera_metrics* _camera_metrics) {
 
   state->prop_edit_panel = panel();
   state->prop_edit_panel.signal_state = BTN_STATE_HOVER;
-  Vector2 _prop_edit_panel_dim = Vector2 {BASE_RENDER_SCALE(.3f).x, BASE_RENDER_RES.y};
+  Vector2 _prop_edit_panel_dim = Vector2 {SE_BASE_RENDER_WIDTH * .3f, static_cast<f32>(SE_BASE_RENDER_HEIGHT)};
   state->prop_edit_panel.dest = Rectangle { 
-    BASE_RENDER_RES.x - _prop_edit_panel_dim.x, 0, 
+    SE_BASE_RENDER_WIDTH - _prop_edit_panel_dim.x, 0, 
     _prop_edit_panel_dim.x, _prop_edit_panel_dim.y
   };
 
@@ -730,6 +759,10 @@ void update_scene_editor(void) {
     return;
   }
   else state->mouse_focus = MOUSE_FOCUS_MAP;
+
+  editor_update_bindings();
+  update_map();
+
   state->mouse_pos_screen.x = GetMousePosition().x * get_app_settings()->scale_ratio.at(0);
   state->mouse_pos_screen.y = GetMousePosition().y * get_app_settings()->scale_ratio.at(1);
   state->mouse_pos_world = GetScreenToWorld2D(state->mouse_pos_screen, state->in_camera_metrics->handle);
@@ -745,9 +778,6 @@ void update_scene_editor(void) {
   if (state->selected_prop_sprite_panel_selection_copy.is_initialized && state->selection_type == SLC_TYPE_DROP_PROP_SPRITE) {
     ui_update_sprite(&state->selected_prop_sprite_panel_selection_copy.sprite);
   }
-
-  editor_update_bindings();
-  update_map();
   update_user_interface();
 }
 void render_scene_editor(void) {
@@ -757,6 +787,12 @@ void render_scene_editor(void) {
   else {
     render_map();
   }
+  std::vector<Rectangle> _map_collisions = get_active_map()->collisions;
+  for (size_t itr_000 = 0; itr_000 < _map_collisions.size(); ++itr_000) {
+    const Rectangle& _map_coll = _map_collisions.at(itr_000);
+
+    DrawRectangleLinesEx(_map_coll, 2.f, BLUE);    
+  }
   DrawPixel(0, 0, RED);
 }
 void render_interface_editor(void) {
@@ -764,28 +800,28 @@ void render_interface_editor(void) {
     TraceLog(LOG_ERROR, "scene_editor::render_interface_editor()::State is not valid");
     return;
   }
-  if(state->b_show_tilesheet_tile_selection_screen && !state->b_show_prop_selection_screen) 
+  if(state->b_show_tilesheet_tile_selection_screen && !state->b_show_prop_selection_screen && !state->b_show_collision_placement_screen) 
   {
     Rectangle& panel_dest = state->tile_selection_panel.dest; 
-    gui_panel_scissored(state->tile_selection_panel, false, {
+    GUI_PANEL_SCISSORED(state->tile_selection_panel, false, {
       render_map_palette(state->tile_selection_panel.zoom);
       Vector2 label_anchor  = VECTOR2(panel_dest.x + panel_dest.width * .5f, panel_dest.y + panel_dest.height * .05f);
       Vector2 slider_anchor = VECTOR2(panel_dest.x + panel_dest.width * .5f, panel_dest.y + panel_dest.height * .05f);
 
-      gui_label_grid("Layer", FONT_TYPE_MEDIUM, 10, label_anchor, WHITE, true, true, VECTOR2(-15.f, -4.f));
+      gui_label_grid("Layer", FONT_TYPE_ABRACADABRA, 10, label_anchor, WHITE, true, true, VECTOR2(-15.f, -4.f));
       gui_slider(SDR_ID_EDITOR_MAP_LAYER_SLC_SLIDER, slider_anchor, VECTOR2(15.f,-4.f));
 
-      gui_label_grid("Stage", FONT_TYPE_MEDIUM, 10, label_anchor, WHITE, true, true, VECTOR2(-15.f, 4.f));
+      gui_label_grid("Stage", FONT_TYPE_ABRACADABRA, 10, label_anchor, WHITE, true, true, VECTOR2(-15.f, 4.f));
       gui_slider(SDR_ID_EDITOR_MAP_STAGE_SLC_SLIDER, slider_anchor, VECTOR2(15.f,4.f));
     }); 
   }
-  else if(state->b_show_prop_selection_screen && !state->b_show_tilesheet_tile_selection_screen) 
+  else if(state->b_show_prop_selection_screen && !state->b_show_tilesheet_tile_selection_screen && !state->b_show_collision_placement_screen)
   {
     panel* pnl = &state->prop_selection_panel;
-    gui_panel_scissored((*pnl), false, {
+    GUI_PANEL_SCISSORED((*pnl), false, {
       Vector2 label_anchor = VECTOR2(pnl->dest.x + pnl->dest.width * .25f, pnl->dest.y + pnl->dest.height * .05f);
       Vector2 slider_anchor = VECTOR2(pnl->dest.x + pnl->dest.width * .675f, pnl->dest.y + pnl->dest.height * .05f);
-      gui_label_grid("Prop Type", FONT_TYPE_MEDIUM, 10, label_anchor, WHITE, true, true, VECTOR2(0.f, 0.f));
+      gui_label_grid("Prop Type", FONT_TYPE_ABRACADABRA, 10, label_anchor, WHITE, true, true, VECTOR2(0.f, 0.f));
       gui_slider(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER, slider_anchor, VECTOR2(0.f, 0.f));
 
       f32 prop_height_count = pnl->buffer.f32[1];
@@ -816,56 +852,37 @@ void render_interface_editor(void) {
       DrawRectangleRec(pnl->scroll_handle, WHITE);
     });
   }
-
-  if(state->selection_type == SLC_TYPE_SLC_PROP_STATIC) 
+  else if(state->b_show_collision_placement_screen && !state->b_show_prop_selection_screen && !state->b_show_tilesheet_tile_selection_screen) 
   {
-    panel* pnl = &state->prop_edit_panel;
-    tilemap_prop_static** p_prop = &state->selected_prop_static_map_prop_address;
-    if ((*p_prop) == nullptr) {
-      return;
-    }
-    gui_panel_scissored((*pnl), false, {
-      ui_set_slider_current_value(SDR_ID_EDITOR_PROP_SCALE_SLIDER, slider_option(TextFormat("%.2f", (*p_prop)->scale), data_pack()));
-      Vector2 sdr_center = VECTOR2( pnl->dest.x + pnl->dest.width * .75f, pnl->dest.y + pnl->dest.height * .5f);
-      Vector2 label_center = VECTOR2( pnl->dest.x + pnl->dest.width * .25f, pnl->dest.y + pnl->dest.height * .5f);
+    panel* pnl = &state->collision_placement_panel;
+    GUI_PANEL_SCISSORED((*pnl), false, {
+      Vector2 button_location_pivot = VECTOR2(pnl->dest.x + pnl->dest.width * .5f,pnl->dest.y + pnl->dest.height * .05f);
+      if(gui_menu_button("Add", BTN_ID_EDITOR_ADD_MAP_COLLISION, VECTOR2(0, 0), button_location_pivot, false)) {
+        if(state->selection_type == SLC_TYPE_DROP_COLLISION_POSITION) {
+          state->selection_type = SLC_TYPE_DROP_COLLISION_DIMENTIONS;
+        }
+        else state->selection_type = SLC_TYPE_DROP_COLLISION_POSITION;
 
-      gui_label_grid("Scale", FONT_TYPE_MEDIUM, 10, label_center, WHITE, true, true, VECTOR2(0.f, -10.f));
-      get_slider_by_id(SDR_ID_EDITOR_PROP_SCALE_SLIDER)->options.at(0).no_localized_text = TextFormat("%.2f", (*p_prop)->scale);
-      gui_slider(SDR_ID_EDITOR_PROP_SCALE_SLIDER, sdr_center, VECTOR2(0.f, -10.f));
+        state->_map_collision = ZERORECT;
+      }
 
-      gui_label_grid("Rotation", FONT_TYPE_MEDIUM, 10, label_center, WHITE, true, true, VECTOR2(0.f, 0.f));
-      get_slider_by_id(SDR_ID_EDITOR_PROP_ROTATION_SLIDER)->options.at(0).no_localized_text = TextFormat("%.1f", (*p_prop)->rotation);
-      gui_slider(SDR_ID_EDITOR_PROP_ROTATION_SLIDER, sdr_center, VECTOR2(0.f, 0.f));
+      f32 collision_height_count = pnl->buffer.f32[1];
+      for (size_t itr_000 = 0; itr_000 < get_active_map()->collisions.size(); ++itr_000) {
+        const Rectangle * _rect = __builtin_addressof(get_active_map()->collisions.at(itr_000));
+        Vector2 dest = VECTOR2(
+          pnl->dest.x + pnl->dest.width * .1f, 
+          (pnl->scroll * pnl->buffer.f32[0]) + collision_height_count
+        );
 
-      gui_label_grid("Z-Index", FONT_TYPE_MEDIUM, 10, label_center, WHITE, true, true, VECTOR2(0.f, 10.f));
-      get_slider_by_id(SDR_ID_EDITOR_PROP_ZINDEX_SLIDER)->options.at(0).no_localized_text = TextFormat("%d", (*p_prop)->zindex);
-      gui_slider(SDR_ID_EDITOR_PROP_ZINDEX_SLIDER, sdr_center, VECTOR2(0.f, 10.f));
-    });
-  }
-
-  if(state->selection_type == SLC_TYPE_SLC_PROP_SPRITE)
-  {
-    panel* pnl = &state->prop_edit_panel;
-    tilemap_prop_sprite** p_prop = &state->selected_prop_sprite_map_prop_address;
-    if ((*p_prop) == nullptr) {
-      return;
-    }
-    gui_panel_scissored((*pnl), false, {
-      ui_set_slider_current_value(SDR_ID_EDITOR_PROP_SCALE_SLIDER, slider_option(TextFormat("%.2f", (*p_prop)->scale), data_pack()));
-      Vector2 sdr_center = VECTOR2( pnl->dest.x + pnl->dest.width * .75f, pnl->dest.y + pnl->dest.height * .5f);
-      Vector2 label_center = VECTOR2( pnl->dest.x + pnl->dest.width * .25f, pnl->dest.y + pnl->dest.height * .5f);
-
-      gui_label_grid("Scale", FONT_TYPE_MEDIUM, 10, label_center, WHITE, true, true, VECTOR2(0.f, -10.f));
-      get_slider_by_id(SDR_ID_EDITOR_PROP_SCALE_SLIDER)->options.at(0).no_localized_text = TextFormat("%.2f", (*p_prop)->scale);
-      gui_slider(SDR_ID_EDITOR_PROP_SCALE_SLIDER, sdr_center, VECTOR2(0.f, -10.f));
-
-      gui_label_grid("Rotation", FONT_TYPE_MEDIUM, 10, label_center, WHITE, true, true, VECTOR2(0.f, 0.f));
-      get_slider_by_id(SDR_ID_EDITOR_PROP_ROTATION_SLIDER)->options.at(0).no_localized_text = TextFormat("%.1f", (*p_prop)->sprite.rotation);
-      gui_slider(SDR_ID_EDITOR_PROP_ROTATION_SLIDER, sdr_center, VECTOR2(0.f, 0.f));
-
-      gui_label_grid("Z-Index", FONT_TYPE_MEDIUM, 10, label_center, WHITE, true, true, VECTOR2(0.f, 10.f));
-      get_slider_by_id(SDR_ID_EDITOR_PROP_ZINDEX_SLIDER)->options.at(0).no_localized_text = TextFormat("%d", (*p_prop)->zindex);
-      gui_slider(SDR_ID_EDITOR_PROP_ZINDEX_SLIDER, sdr_center, VECTOR2(0.f, 10.f));
+        gui_label_format(FONT_TYPE_ABRACADABRA, 12, dest.x, dest.y, WHITE, false, true, "%.0f, %.0f, %.0f, %.0f", _rect->x, _rect->y, _rect->width, _rect->height);
+        collision_height_count += dest.y;
+      }
+      
+      pnl->buffer.f32[0] = collision_height_count;
+      pnl->scroll_handle.y = FMAX(pnl->scroll_handle.y, pnl->dest.y + SCREEN_OFFSET.x);
+      pnl->scroll_handle.y = FMIN(pnl->scroll_handle.y, pnl->dest.y + pnl->dest.height);
+      pnl->scroll = (pnl->scroll_handle.y - pnl->dest.y - SCREEN_OFFSET.x) / (pnl->dest.height - pnl->scroll_handle.height) * -1;
+      DrawRectangleRec(pnl->scroll_handle, WHITE);
     });
   }
 
@@ -909,6 +926,30 @@ void render_interface_editor(void) {
       if (state->selected_prop_static_map_prop_address == nullptr || state->in_camera_metrics == nullptr) {
         return;
       }
+      panel* pnl = &state->prop_edit_panel;
+      
+      tilemap_prop_static** p_prop = &state->selected_prop_static_map_prop_address;
+      if ((*p_prop) == nullptr) {
+        return;
+      }
+      GUI_PANEL_SCISSORED((*pnl), false, {
+        ui_set_slider_current_value(SDR_ID_EDITOR_PROP_SCALE_SLIDER, slider_option(TextFormat("%.2f", (*p_prop)->scale), data_pack()));
+        Vector2 sdr_center = VECTOR2( pnl->dest.x + pnl->dest.width * .75f, pnl->dest.y + pnl->dest.height * .5f);
+        Vector2 label_center = VECTOR2( pnl->dest.x + pnl->dest.width * .25f, pnl->dest.y + pnl->dest.height * .5f);
+      
+        gui_label_grid("Scale", FONT_TYPE_ABRACADABRA, 10, label_center, WHITE, true, true, VECTOR2(0.f, -10.f));
+        get_slider_by_id(SDR_ID_EDITOR_PROP_SCALE_SLIDER)->options.at(0).no_localized_text = TextFormat("%.2f", (*p_prop)->scale);
+        gui_slider(SDR_ID_EDITOR_PROP_SCALE_SLIDER, sdr_center, VECTOR2(0.f, -10.f));
+      
+        gui_label_grid("Rotation", FONT_TYPE_ABRACADABRA, 10, label_center, WHITE, true, true, VECTOR2(0.f, 0.f));
+        get_slider_by_id(SDR_ID_EDITOR_PROP_ROTATION_SLIDER)->options.at(0).no_localized_text = TextFormat("%.1f", (*p_prop)->rotation);
+        gui_slider(SDR_ID_EDITOR_PROP_ROTATION_SLIDER, sdr_center, VECTOR2(0.f, 0.f));
+      
+        gui_label_grid("Z-Index", FONT_TYPE_ABRACADABRA, 10, label_center, WHITE, true, true, VECTOR2(0.f, 10.f));
+        get_slider_by_id(SDR_ID_EDITOR_PROP_ZINDEX_SLIDER)->options.at(0).no_localized_text = TextFormat("%d", (*p_prop)->zindex);
+        gui_slider(SDR_ID_EDITOR_PROP_ZINDEX_SLIDER, sdr_center, VECTOR2(0.f, 10.f));
+      });
+
       tilemap_prop_static** slc_prop_static = &state->selected_prop_static_map_prop_address;
       Vector2 prop_pos = GetWorldToScreen2D(Vector2{ (*slc_prop_static)->dest.x, (*slc_prop_static)->dest.y}, state->in_camera_metrics->handle);
       f32 relative_width = (*slc_prop_static)->dest.width * (*slc_prop_static)->scale * state->in_camera_metrics->handle.zoom;
@@ -926,6 +967,30 @@ void render_interface_editor(void) {
       if (state->selected_prop_sprite_map_prop_address == nullptr || state->in_camera_metrics == nullptr) {
         return;
       }
+
+      panel* pnl = &state->prop_edit_panel;
+      tilemap_prop_sprite** p_prop = &state->selected_prop_sprite_map_prop_address;
+      if ((*p_prop) == nullptr) {
+        return;
+      }
+      GUI_PANEL_SCISSORED((*pnl), false, {
+        ui_set_slider_current_value(SDR_ID_EDITOR_PROP_SCALE_SLIDER, slider_option(TextFormat("%.2f", (*p_prop)->scale), data_pack()));
+        Vector2 sdr_center = VECTOR2( pnl->dest.x + pnl->dest.width * .75f, pnl->dest.y + pnl->dest.height * .5f);
+        Vector2 label_center = VECTOR2( pnl->dest.x + pnl->dest.width * .25f, pnl->dest.y + pnl->dest.height * .5f);
+
+        gui_label_grid("Scale", FONT_TYPE_ABRACADABRA, 10, label_center, WHITE, true, true, VECTOR2(0.f, -10.f));
+        get_slider_by_id(SDR_ID_EDITOR_PROP_SCALE_SLIDER)->options.at(0).no_localized_text = TextFormat("%.2f", (*p_prop)->scale);
+        gui_slider(SDR_ID_EDITOR_PROP_SCALE_SLIDER, sdr_center, VECTOR2(0.f, -10.f));
+
+        gui_label_grid("Rotation", FONT_TYPE_ABRACADABRA, 10, label_center, WHITE, true, true, VECTOR2(0.f, 0.f));
+        get_slider_by_id(SDR_ID_EDITOR_PROP_ROTATION_SLIDER)->options.at(0).no_localized_text = TextFormat("%.1f", (*p_prop)->sprite.rotation);
+        gui_slider(SDR_ID_EDITOR_PROP_ROTATION_SLIDER, sdr_center, VECTOR2(0.f, 0.f));
+
+        gui_label_grid("Z-Index", FONT_TYPE_ABRACADABRA, 10, label_center, WHITE, true, true, VECTOR2(0.f, 10.f));
+        get_slider_by_id(SDR_ID_EDITOR_PROP_ZINDEX_SLIDER)->options.at(0).no_localized_text = TextFormat("%d", (*p_prop)->zindex);
+        gui_slider(SDR_ID_EDITOR_PROP_ZINDEX_SLIDER, sdr_center, VECTOR2(0.f, 10.f));
+      });
+
       tilemap_prop_sprite** slc_prop_sprite = &state->selected_prop_sprite_map_prop_address;
       Vector2 prop_pos = GetWorldToScreen2D(Vector2{ (*slc_prop_sprite)->sprite.coord.x, (*slc_prop_sprite)->sprite.coord.y}, state->in_camera_metrics->handle);
       f32 relative_width = (*slc_prop_sprite)->sprite.coord.width * (*slc_prop_sprite)->scale * state->in_camera_metrics->handle.zoom;
@@ -939,6 +1004,29 @@ void render_interface_editor(void) {
       DrawRectangle(prop_pos.x, prop_pos.y, PROP_DRAG_HANDLE_DIM, PROP_DRAG_HANDLE_DIM, WHITE);
       break;
     }
+    case SLC_TYPE_DROP_COLLISION_POSITION: {
+      state->_map_collision = Rectangle {state->mouse_pos_world.x, state->mouse_pos_world.y, 0.f, 0.f};
+      gui_label_format(FONT_TYPE_ABRACADABRA, 12, SE_BASE_RENDER_WIDTH * .5f, SE_BASE_RENDER_HEIGHT * .9f, WHITE, true, true, "%.0f, %.0f, %.0f, %.0f",
+        state->_map_collision.x, state->_map_collision.y, state->_map_collision.width, state->_map_collision.height
+      );
+      break;
+    }
+    case SLC_TYPE_DROP_COLLISION_DIMENTIONS: {
+      if (state->_map_collision.width > 0 && state->_map_collision.height > 0) {
+        gui_label_format(FONT_TYPE_ABRACADABRA, 12, SE_BASE_RENDER_WIDTH * .5f, SE_BASE_RENDER_HEIGHT * .9f, WHITE, true, true, 
+          "%.1f, %.1f, %.1f, %.1f", state->_map_collision.x, state->_map_collision.y, state->_map_collision.width, state->_map_collision.height
+        );
+        Vector2 map_to_screen_coord = GetWorldToScreen2D(VECTOR2(state->_map_collision.x, state->_map_collision.y), state->in_camera_metrics->handle);
+        DrawRectangleLinesEx(Rectangle {
+          map_to_screen_coord.x, map_to_screen_coord.y, 
+          state->_map_collision.width * state->in_camera_metrics->handle.zoom, state->_map_collision.height * state->in_camera_metrics->handle.zoom}, 2.f, BLUE
+        );
+      }
+      else gui_label_format(FONT_TYPE_ABRACADABRA, 12, SE_BASE_RENDER_WIDTH * .5f, SE_BASE_RENDER_HEIGHT * .9f, RED, true, true, 
+        "%.1f, %.1f, %.1f, %.1f //Rectangle cannot have negative dimention", state->_map_collision.x, state->_map_collision.y, state->_map_collision.width, state->_map_collision.height
+      );
+      break;
+    }
     default: break;
   }
   
@@ -950,7 +1038,7 @@ void render_interface_editor(void) {
 }
 // UPDATE / RENDER
 
-void add_prop(texture_id source_tex, tilemap_prop_types type, Rectangle source, f32 scale, Color tint) {
+constexpr void add_prop(texture_id source_tex, tilemap_prop_types type, Rectangle source, f32 scale, Color tint) {
   if (source_tex >= TEX_ID_MAX || source_tex <= TEX_ID_UNSPECIFIED) {
     TraceLog(LOG_WARNING, "scene_editor::add_prop()::Provided texture id out of bound");
     return;
@@ -997,7 +1085,7 @@ void add_prop(texture_id source_tex, tilemap_prop_types type, Rectangle source, 
     }
   }
 }
-void add_prop(tilemap_prop_types type, spritesheet_id sprite_id, f32 scale, Color tint) {
+constexpr void add_prop(tilemap_prop_types type, spritesheet_id sprite_id, f32 scale, Color tint) {
   if (sprite_id >= SHEET_ID_SPRITESHEET_TYPE_MAX || sprite_id <= SHEET_ID_SPRITESHEET_UNSPECIFIED) {
     TraceLog(LOG_WARNING, "scene_editor::add_prop()::Provided sprite id out of bound");
     return;
@@ -1025,14 +1113,14 @@ void add_prop(tilemap_prop_types type, spritesheet_id sprite_id, f32 scale, Colo
 }
 
 // BINDINGS
-void editor_update_bindings(void) {
+constexpr void editor_update_bindings(void) {
   editor_update_mouse_bindings();
   editor_update_keyboard_bindings();
 }
-void editor_update_mouse_bindings(void) { 
+constexpr void editor_update_mouse_bindings(void) {
   if(state->b_show_tilesheet_tile_selection_screen && CheckCollisionPointRec(state->mouse_pos_screen, state->tile_selection_panel.dest))
   {
-    state->mouse_focus = MOUSE_FOCUS_TILE_SELECTION;
+    state->mouse_focus = MOUSE_FOCUS_TILE_SELECTION_PANEL;
     state->tile_selection_panel.zoom += ((float)GetMouseWheelMove()*0.05f);
 
     if (state->tile_selection_panel.zoom > 3.0f) state->tile_selection_panel.zoom = 3.0f;
@@ -1051,11 +1139,7 @@ void editor_update_mouse_bindings(void) {
   }
   else if(state->b_show_prop_selection_screen && CheckCollisionPointRec(state->mouse_pos_screen, state->prop_selection_panel.dest))
   {
-    if (state->mouse_focus == MOUSE_FOCUS_TILE_SELECTION) {
-      TraceLog(LOG_ERROR, "scene_editor::editor_update_mouse_bindings()::tile and prop screen activated at the same time.");
-      return;
-    } 
-    else state->mouse_focus = MOUSE_FOCUS_PROP_SELECTION;
+    state->mouse_focus = MOUSE_FOCUS_PROP_SELECTION_PANEL;
     panel* pnl = &state->prop_selection_panel;
 
     if (IsMouseButtonDown(MOUSE_LEFT_BUTTON) && state->selection_type == SLC_TYPE_UNSELECTED && CheckCollisionPointRec(state->mouse_pos_screen, pnl->scroll_handle)) {
@@ -1095,6 +1179,12 @@ void editor_update_mouse_bindings(void) {
       }
     }
   }
+  else if(state->b_show_collision_placement_screen && CheckCollisionPointRec(state->mouse_pos_screen, state->collision_placement_panel.dest))
+  {
+    state->mouse_focus = MOUSE_FOCUS_COLLISION_PLACEMENT_PANEL;
+
+
+  }
   else if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON) && state->mouse_focus == MOUSE_FOCUS_MAP) 
   {
     switch (state->selection_type) {
@@ -1129,6 +1219,16 @@ void editor_update_mouse_bindings(void) {
       }
       case SLC_TYPE_SLC_PROP_SPRITE: {
         state->b_dragging_prop = false;
+        break;
+      }
+      case SLC_TYPE_DROP_COLLISION_POSITION: {
+        state->selection_type = SLC_TYPE_DROP_COLLISION_DIMENTIONS;
+        break;
+      }
+      case SLC_TYPE_DROP_COLLISION_DIMENTIONS: {
+        if (state->_map_collision.width != -1) {
+          add_map_coll_curr_map(state->_map_collision);
+        }
         break;
       }
       default: break;
@@ -1201,23 +1301,38 @@ void editor_update_mouse_bindings(void) {
       state->prop_selection_panel.is_dragging_scroll = false;
     }
   }
-  if (IsMouseButtonReleased(MOUSE_RIGHT_BUTTON) && state->selection_type != SLC_TYPE_UNSELECTED) 
+  if (IsMouseButtonReleased(MOUSE_RIGHT_BUTTON)) 
   {
-    state->selected_tile = tile();
-    state->selected_prop_static_map_prop_address = nullptr;
-    state->selected_prop_sprite_map_prop_address = nullptr;
-    state->selected_prop_static_panel_selection_copy = tilemap_prop_static();
-    state->selected_prop_sprite_panel_selection_copy = tilemap_prop_sprite();
-    state->selection_type = SLC_TYPE_UNSELECTED;
+    scene_editor_selection_cleanup();
   }
   if (state->mouse_focus == MOUSE_FOCUS_MAP) {
     state->in_camera_metrics->handle.zoom += ((float)GetMouseWheelMove()*0.05f);
 
     if (state->in_camera_metrics->handle.zoom > 3.0f) state->in_camera_metrics->handle.zoom = 3.0f;
     else if (state->in_camera_metrics->handle.zoom < 0.1f) state->in_camera_metrics->handle.zoom = 0.1f;
+
+    switch (state->selection_type) {
+      case SLC_TYPE_DROP_COLLISION_POSITION: {
+        state->_map_collision = Rectangle {state->mouse_pos_world.x, state->mouse_pos_world.y, 0.f, 0.f};
+        break;
+      }
+      case SLC_TYPE_DROP_COLLISION_DIMENTIONS: {
+        f32 width = state->mouse_pos_world.x - state->_map_collision.x;
+        f32 height = state->mouse_pos_world.y - state->_map_collision.y;
+        if (width > 0 && height > 0) {
+          state->_map_collision.width  = width;
+          state->_map_collision.height = height;
+        } else {
+          state->_map_collision.width = -1;
+          state->_map_collision.height = -1;
+        }
+        break;
+      }
+      default: break;
+    }
   }
 }
-void editor_update_keyboard_bindings(void) {
+constexpr void editor_update_keyboard_bindings(void) {
   editor_update_movement();
 
   if (IsKeyReleased(KEY_ESCAPE)) {
@@ -1232,10 +1347,20 @@ void editor_update_keyboard_bindings(void) {
   if (IsKeyReleased(KEY_TAB)) {
     state->b_show_tilesheet_tile_selection_screen = !state->b_show_tilesheet_tile_selection_screen;
     state->b_show_prop_selection_screen = false;
+    state->b_show_collision_placement_screen = false;
+    scene_editor_selection_cleanup();
   }
   if (IsKeyPressed(KEY_I)) {
     state->b_show_prop_selection_screen = !state->b_show_prop_selection_screen;
     state->b_show_tilesheet_tile_selection_screen = false;
+    state->b_show_collision_placement_screen = false;
+    scene_editor_selection_cleanup();
+  }
+  if (IsKeyPressed(KEY_U)) {
+    state->b_show_collision_placement_screen = !state->b_show_collision_placement_screen;
+    state->b_show_tilesheet_tile_selection_screen = false;
+    state->b_show_prop_selection_screen = false;
+    scene_editor_selection_cleanup();
   }
   if (IsKeyReleased(KEY_BACKSPACE)) {
     if (state->mouse_focus == MOUSE_FOCUS_MAP && state->selection_type == SLC_TYPE_SLC_PROP_STATIC && !state->b_dragging_prop) {
@@ -1254,7 +1379,7 @@ void editor_update_keyboard_bindings(void) {
     }
   }
 }
-void editor_update_movement(void) {
+constexpr void editor_update_movement(void) {
   f32 speed = 10;
 
   if (IsKeyDown(KEY_W)) {
@@ -1276,7 +1401,7 @@ void editor_update_movement(void) {
 }
 // BINDINGS
 
-void begin_scene_editor(void) {
+constexpr void begin_scene_editor(void) {
   get_slider_by_id(SDR_ID_EDITOR_MAP_STAGE_SLC_SLIDER)->options.at(0).no_localized_text = TextFormat("%d", state->selected_stage);
   get_slider_by_id(SDR_ID_EDITOR_MAP_LAYER_SLC_SLIDER)->options.at(0).no_localized_text = TextFormat("%d", state->edit_layer);
 
@@ -1300,18 +1425,20 @@ void end_scene_editor(void) {
   state->b_show_prop_edit_screen = false;
   state->b_dragging_prop = false;
   state->b_show_pause_menu = false;
+  state->b_show_collision_placement_screen = false;
   state->selected_tile = tile();
   state->selected_prop_static_map_prop_address = nullptr;
   state->selected_prop_sprite_map_prop_address = nullptr;
   state->selected_prop_sprite_panel_selection_copy = tilemap_prop_sprite();
   state->selected_prop_static_panel_selection_copy = tilemap_prop_static();
   state->selected_sheet = nullptr;
+  state->_map_collision = ZERORECT;
 }
 
-Rectangle se_get_camera_view_rect(Camera2D camera) {
+constexpr Rectangle se_get_camera_view_rect(Camera2D camera) {
 
-  f32 view_width = BASE_RENDER_RES.x / camera.zoom;
-  f32 view_height = BASE_RENDER_RES.y / camera.zoom;
+  f32 view_width = SE_BASE_RENDER_WIDTH / camera.zoom;
+  f32 view_height = SE_BASE_RENDER_HEIGHT / camera.zoom;
 
   f32 x = camera.target.x;
   f32 y = camera.target.y;
@@ -1321,7 +1448,7 @@ Rectangle se_get_camera_view_rect(Camera2D camera) {
   
   return Rectangle{ x, y, view_width, view_height };
 }
-void update_tilemap_prop_type(void) {
+constexpr void update_tilemap_prop_type(void) {
   if (!state) {
     TraceLog(LOG_WARNING, "scene_editor::update_tilemap_prop_type()::State is not valid");
     return;
@@ -1350,7 +1477,7 @@ void update_tilemap_prop_type(void) {
   }
 }
 
-bool scene_editor_scale_slider_on_left_button_trigger() {
+constexpr bool scene_editor_scale_slider_on_left_button_trigger(void) {
   if (!state) {
     TraceLog(LOG_ERROR, "scene_editor::scene_editor_scale_slider_on_left_button_trigger():: State is not valid");
     return false;
@@ -1372,7 +1499,7 @@ bool scene_editor_scale_slider_on_left_button_trigger() {
 
   return false;
 }
-bool scene_editor_scale_slider_on_right_button_trigger() {
+constexpr bool scene_editor_scale_slider_on_right_button_trigger(void) {
   if (!state) {
     TraceLog(LOG_ERROR, "scene_editor::scene_editor_scale_slider_on_right_button_trigger():: State is not valid");
     return false;
@@ -1394,7 +1521,7 @@ bool scene_editor_scale_slider_on_right_button_trigger() {
 
   return false;
 }
-bool scene_editor_rotation_slider_on_left_button_trigger() {
+constexpr bool scene_editor_rotation_slider_on_left_button_trigger(void) {
   if (!state) {
     TraceLog(LOG_ERROR, "scene_editor::scene_editor_rotation_slider_on_left_button_trigger():: State is not valid");
     return false;
@@ -1418,7 +1545,7 @@ bool scene_editor_rotation_slider_on_left_button_trigger() {
 
   return false;
 }
-bool scene_editor_rotation_slider_on_right_button_trigger() {
+constexpr bool scene_editor_rotation_slider_on_right_button_trigger(void) {
   if (!state) {
     TraceLog(LOG_ERROR, "scene_editor::scene_editor_rotation_slider_on_right_button_trigger():: State is not valid");
     return false;
@@ -1442,7 +1569,7 @@ bool scene_editor_rotation_slider_on_right_button_trigger() {
 
   return false;
 }
-bool scene_editor_zindex_slider_on_left_button_trigger() {
+constexpr bool scene_editor_zindex_slider_on_left_button_trigger(void) {
   if (!state) {
     TraceLog(LOG_ERROR, "scene_editor::scene_editor_zindex_slider_on_left_button_trigger():: State is not valid");
     return false;
@@ -1466,7 +1593,7 @@ bool scene_editor_zindex_slider_on_left_button_trigger() {
 
   return false;
 }
-bool scene_editor_zindex_slider_on_right_button_trigger() {
+constexpr bool scene_editor_zindex_slider_on_right_button_trigger(void) {
   if (!state) {
     TraceLog(LOG_ERROR, "scene_editor::scene_editor_zindex_slider_on_right_button_trigger():: State is not valid");
     return false;
@@ -1497,7 +1624,7 @@ bool scene_editor_zindex_slider_on_right_button_trigger() {
   return false;
 }
 
-bool scene_editor_map_layer_slc_slider_on_left_button_trigger() {
+constexpr bool scene_editor_map_layer_slc_slider_on_left_button_trigger(void) {
   if (!state) {
     TraceLog(LOG_ERROR, "scene_editor::scene_editor_map_layer_slc_slider_on_left_button_trigger():: State is not valid");
     return false;
@@ -1510,7 +1637,7 @@ bool scene_editor_map_layer_slc_slider_on_left_button_trigger() {
   get_slider_by_id(SDR_ID_EDITOR_MAP_LAYER_SLC_SLIDER)->options.at(0).no_localized_text = TextFormat("%d", state->edit_layer);
   return true; 
 }
-bool scene_editor_map_layer_slc_slider_on_right_button_trigger() { 
+constexpr bool scene_editor_map_layer_slc_slider_on_right_button_trigger(void) { 
   if (!state) {
     TraceLog(LOG_ERROR, "scene_editor::scene_editor_map_layer_slc_slider_on_right_button_trigger():: State is not valid");
     return false;
@@ -1523,7 +1650,7 @@ bool scene_editor_map_layer_slc_slider_on_right_button_trigger() {
   get_slider_by_id(SDR_ID_EDITOR_MAP_LAYER_SLC_SLIDER)->options.at(0).no_localized_text = TextFormat("%d", state->edit_layer);
   return true; 
 }
-bool scene_editor_map_stage_slc_slider_on_left_button_trigger() {
+constexpr bool scene_editor_map_stage_slc_slider_on_left_button_trigger(void) {
   if (!state) {
     TraceLog(LOG_ERROR, "scene_editor::scene_editor_map_stage_slc_slider_on_left_button_trigger():: State is not valid");
     return false;
@@ -1537,7 +1664,7 @@ bool scene_editor_map_stage_slc_slider_on_left_button_trigger() {
   get_slider_by_id(SDR_ID_EDITOR_MAP_STAGE_SLC_SLIDER)->options.at(0).no_localized_text = TextFormat("%d", state->selected_stage);
   return true; 
 }
-bool scene_editor_map_stage_slc_slider_on_right_button_trigger() {
+constexpr bool scene_editor_map_stage_slc_slider_on_right_button_trigger(void) {
   if (!state) {
     TraceLog(LOG_ERROR, "scene_editor::scene_editor_map_stage_slc_slider_on_right_button_trigger():: State is not valid");
     return false;
@@ -1551,40 +1678,48 @@ bool scene_editor_map_stage_slc_slider_on_right_button_trigger() {
   get_slider_by_id(SDR_ID_EDITOR_MAP_STAGE_SLC_SLIDER)->options.at(0).no_localized_text = TextFormat("%d", state->selected_stage);
   return true; 
 }
-bool scene_editor_map_prop_type_slc_slider_on_left_button_trigger() {
+constexpr bool scene_editor_map_prop_type_slc_slider_on_left_button_trigger(void) {
   if (!state) {
     TraceLog(LOG_ERROR, "scene_editor::scene_editor_map_prop_type_slc_slider_on_left_button_trigger():: State is not valid");
     return false;
   }
-  u16& current_index = get_slider_by_id(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER)->current_value;
+  i32 & current_index = get_slider_by_id(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER)->current_value;
 
   current_index--;
-  if (current_index < get_slider_by_id(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER)->min_value) {
-    current_index = get_slider_by_id(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER)->min_value;
+  if (current_index < 0) {
+    current_index = 0;
   }
 
   update_tilemap_prop_type();
   return true; 
 }
-bool scene_editor_map_prop_type_slc_slider_on_right_button_trigger() {
+constexpr bool scene_editor_map_prop_type_slc_slider_on_right_button_trigger(void) {
   if (!state) {
     TraceLog(LOG_ERROR, "scene_editor::scene_editor_map_prop_type_slc_slider_on_right_button_trigger():: State is not valid");
     return false;
   }
-  u16& current_index = get_slider_by_id(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER)->current_value;
+  i32& current_index = get_slider_by_id(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER)->current_value;
 
   current_index++;
-  if (current_index >= get_slider_by_id(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER)->max_value) {
-    current_index = get_slider_by_id(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER)->max_value-1;
+  if (static_cast<size_t>(current_index) >= get_slider_by_id(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER)->options.size()) {
+    current_index = get_slider_by_id(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER)->options.size()-1;
   }
 
   update_tilemap_prop_type();
   return true;
 }
 
-#undef PROP_DRAG_HANDLE_DIM
-#undef PROP_DRAG_HANDLE_DIM_DIV2
-#undef PROP_PANEL_PROP_DRAW_STARTING_HEIGHT
+constexpr void scene_editor_selection_cleanup(void) {
+  state->selected_tile = tile();
+  state->selected_prop_static_map_prop_address = nullptr;
+  state->selected_prop_sprite_map_prop_address = nullptr;
+  state->selected_prop_static_panel_selection_copy = tilemap_prop_static();
+  state->selected_prop_sprite_panel_selection_copy = tilemap_prop_sprite();
+  state->selection_type = SLC_TYPE_UNSELECTED;
+  state->_map_collision = ZERORECT;
+  state->b_dragging_prop = false;
+}
+
 #undef add_prop_tree
 #undef add_prop_tombstone
 #undef add_prop_stone
@@ -1597,3 +1732,12 @@ bool scene_editor_map_prop_type_slc_slider_on_right_button_trigger() {
 #undef add_prop_candle
 #undef add_prop_building
 #undef add_prop_sprite
+#undef SE_BASE_RENDER_WIDTH 
+#undef SE_BASE_RENDER_HEIGHT
+#undef PROP_DRAG_HANDLE_DIM
+#undef PROP_DRAG_HANDLE_DIM_DIV2
+#undef PROP_PANEL_PROP_DRAW_STARTING_HEIGHT
+#undef MAP_COLLISION_DRAG_HANDLE_DIM
+#undef MAP_COLLISION_DRAG_HANDLE_DIM_DIV2
+#undef MAP_COLLISION_PANEL_COLLISION_DRAW_STARTING_HEIGHT
+

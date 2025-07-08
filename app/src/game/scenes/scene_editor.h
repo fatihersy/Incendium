@@ -4,7 +4,7 @@
 
 #include <game/game_types.h>
 
-[[__nodiscard__]] bool initialize_scene_editor(camera_metrics* _camera);
+[[__nodiscard__]] bool initialize_scene_editor(camera_metrics* _camera, app_settings * _in_app_settings);
 void end_scene_editor(void);
 
 void update_scene_editor(void);

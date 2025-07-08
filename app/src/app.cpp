@@ -21,7 +21,7 @@
 
 typedef struct app_system_state {
   app_settings* settings;
-  bool app_runing;
+  bool app_running;
   RenderTexture2D drawing_target;
   Camera2D screen_space_camera;
 } app_system_state;
@@ -29,6 +29,10 @@ typedef struct app_system_state {
 static app_system_state* state;
 
 bool application_on_event(u16 code, event_context context);
+
+constexpr void toggle_borderless(void);
+constexpr void toggle_fullscreen(void);
+constexpr void toggle_windowed(void);
 
 bool app_initialize(void) {
   // Subsystems
@@ -46,31 +50,13 @@ bool app_initialize(void) {
     TraceLog(LOG_ERROR, "app::app_initialize()::Settings state allocation has failed");
     return false; // TODO: Set default settings instead
   }
+  app_settings * initializer = get_initializer_settings();
+  SetConfigFlags(FLAG_VSYNC_HINT | FLAG_WINDOW_HIGHDPI | FLAG_WINDOW_UNDECORATED | FLAG_WINDOW_TRANSPARENT);
+  InitWindow(initializer->window_width ,initializer->window_height, GAME_TITLE);
+
   set_settings_from_ini_file(CONFIG_FILE_LOCATION);
   state->settings = get_app_settings();
-  
-  SetConfigFlags(FLAG_VSYNC_HINT | FLAG_WINDOW_HIGHDPI | FLAG_MSAA_4X_HINT);
-  InitWindow(
-    state->settings->window_size.at(0), 
-    state->settings->window_size.at(1), 
-    GAME_TITLE);
-  SetTargetFPS(TARGET_FPS); // TODO: SetTargetFPS() Doesn't work
-  SetExitKey(KEY_END);
-  if (state->settings->window_state == FLAG_BORDERLESS_WINDOWED_MODE) {
-    ToggleBorderlessWindowed();
-    Vector2 res = {(f32)GetMonitorWidth(GetCurrentMonitor()), (f32)GetMonitorHeight(GetCurrentMonitor())};
-    SetWindowSize(res.x, res.y);
-    set_resolution(res.x, res.y);
-    SetConfigFlags(FLAG_WINDOW_UNDECORATED | FLAG_WINDOW_TOPMOST);
-  }
-  else if (state->settings->window_state == FLAG_FULLSCREEN_MODE) {
-    ToggleFullscreen();
-    Vector2 res = {(f32)GetMonitorWidth(GetCurrentMonitor()), (f32)GetMonitorHeight(GetCurrentMonitor())};
-    SetWindowSize(res.x, res.y);
-    set_resolution(res.x, res.y);
-    SetConfigFlags(FLAG_WINDOW_UNDECORATED | FLAG_WINDOW_TOPMOST);
-  }
-  state->drawing_target = LoadRenderTexture(BASE_RENDER_RES.x, BASE_RENDER_RES.y);
+
   // Game
   #if USE_PAK_FORMAT 
     pak_parser_system_initialize(PAK_FILE_LOCATION);
@@ -111,16 +97,16 @@ bool app_initialize(void) {
     TraceLog(LOG_WARNING, "app::app_initialize()::Sound system init failed");
     return false;
   }
-  if(!create_camera(BASE_RENDER_SCALE(.5f))) {
+  if(!create_camera(state->settings->render_width_div2, state->settings->render_height_div2)) {
     TraceLog(LOG_WARNING, "app::app_initialize()::Creating camera failed");
     return false;
   }
 
-  if(!world_system_initialize(get_in_game_camera())) {
+  if(!world_system_initialize(get_in_game_camera(), state->settings)) {
     TraceLog(LOG_WARNING, "app::app_initialize()::World initialize failed");
     return false;
   }
-  if(!scene_manager_initialize()) {
+  if(!scene_manager_initialize(state->settings)) {
     TraceLog(LOG_WARNING, "app::app_initialize()::Scene manager initialize failed");
     return false;
   }
@@ -130,14 +116,27 @@ bool app_initialize(void) {
   event_register(EVENT_CODE_TOGGLE_FULLSCREEN, application_on_event);
   event_register(EVENT_CODE_TOGGLE_WINDOWED, application_on_event);
 
-  state->app_runing = true;
+  state->drawing_target = LoadRenderTexture(state->settings->render_width, state->settings->render_height);
+  SetWindowSize(state->settings->window_width, state->settings->window_height);
+  SetTargetFPS(TARGET_FPS); // TODO: SetTargetFPS() Doesn't work
+  SetExitKey(KEY_END);
+  if (state->settings->window_state == FLAG_BORDERLESS_WINDOWED_MODE) {
+    toggle_borderless();
+  }
+  else if (state->settings->window_state == FLAG_FULLSCREEN_MODE) {
+    toggle_fullscreen();
+  }
+  else {
+    toggle_windowed();
+  }
 
+  state->app_running = true;
   save_ini_file();
   return true;
 }
 
 bool window_should_close(void) {
-  return state->app_runing;
+  return state->app_running;
 }
 
 bool app_update(void) {
@@ -147,11 +146,12 @@ bool app_update(void) {
     TraceLog(LOG_FATAL, "app::app_update()::App state is not valid!");
     return false;
   }
+  
   update_app_settings_state();
 
   if ((IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_W)) || (IsKeyDown(KEY_LEFT_ALT) && IsKeyPressed(KEY_F4))) {
     // TODO: handle destruction ops
-    state->app_runing = false;
+    state->app_running = false;
   }
   if (IsKeyDown(KEY_LEFT_ALT) && IsKeyPressed(KEY_ENTER)) {
    event_fire(EVENT_CODE_TOGGLE_BORDERLESS, event_context());
@@ -181,7 +181,7 @@ bool app_render(void) {
 
     render_scene_interface();
     
-    DrawFPS(BASE_RENDER_SCALE(.75f).x, SCREEN_OFFSET.y * 10);
+    DrawFPS(state->settings->render_width * .75f, SCREEN_OFFSET.y * 10);
   EndTextureMode();
   
   state->screen_space_camera.target = Vector2 {0.f, 0.f};
@@ -189,62 +189,67 @@ bool app_render(void) {
   BeginDrawing();
     ClearBackground(CLEAR_BACKGROUND_COLOR);
     BeginMode2D(state->screen_space_camera);
-      DrawTexturePro(state->drawing_target.texture, 
-        {0, 0, (f32)state->drawing_target.texture.width, (f32)-state->drawing_target.texture.height},
-        {
-          -state->settings->normalized_ratio, -state->settings->normalized_ratio, 
-          state->settings->window_size.at(0) + (state->settings->normalized_ratio*2), 
-          state->settings->window_size.at(1) + (state->settings->normalized_ratio*2)
-        }, Vector2 {0.f ,0.f}, 0, WHITE
-      );
+      Rectangle source = Rectangle {0, 0, (f32)state->drawing_target.texture.width, (f32)-state->drawing_target.texture.height};
+      Rectangle dest = Rectangle {
+        -state->settings->normalized_ratio, -state->settings->normalized_ratio, 
+        state->settings->window_width  + (state->settings->normalized_ratio*2), 
+        state->settings->window_height + (state->settings->normalized_ratio*2)
+      };
+      DrawTexturePro(state->drawing_target.texture, source, dest, ZEROVEC2, 0, WHITE);
     EndMode2D();
   EndDrawing();
   return true;
+}
+
+constexpr void toggle_borderless(void) {
+  ToggleBorderlessWindowed();
+  set_resolution(GetRenderWidth(), GetRenderHeight());
+  state->settings->window_state = FLAG_BORDERLESS_WINDOWED_MODE;
+}
+constexpr void toggle_fullscreen(void) {
+  ToggleFullscreen();
+  set_resolution(GetRenderWidth(), GetRenderHeight());
+  state->settings->window_state = FLAG_FULLSCREEN_MODE;
+}
+constexpr void toggle_windowed(void) {   
+  if (state->settings->window_state == FLAG_BORDERLESS_WINDOWED_MODE) {
+    ToggleBorderlessWindowed();
+  }
+  else if (state->settings->window_state == FLAG_FULLSCREEN_MODE) {
+    ToggleFullscreen();
+  }
+  state->settings->window_state = 0;
+  SetWindowSize(state->settings->window_width, state->settings->window_height);
+  SetWindowPosition(
+    (GetMonitorWidth(GetCurrentMonitor())  / 2.f) - (GetScreenWidth()  / 2.f), 
+    (GetMonitorHeight(GetCurrentMonitor()) / 2.f) - (GetScreenHeight() / 2.f)
+  );
+  if (IsWindowState(FLAG_WINDOW_UNDECORATED)) {
+    ClearWindowState(FLAG_WINDOW_UNDECORATED);
+  }
+  if (IsWindowState(FLAG_WINDOW_TRANSPARENT)) {
+    ClearWindowState(FLAG_WINDOW_TRANSPARENT);
+  }
 }
 
 bool application_on_event(u16 code, event_context context) {
   switch (code)
   {
   case EVENT_CODE_APPLICATION_QUIT:{
-    state->app_runing = context.data.i32[0];
-    state->app_runing = false;
+    state->app_running = context.data.i32[0];
+    state->app_running = false;
     return true;
   }
-  case EVENT_CODE_TOGGLE_BORDERLESS: { 
-    i32 monitor = GetCurrentMonitor();
-    Vector2 res = {(f32)GetMonitorWidth(monitor), (f32)GetMonitorHeight(monitor)};
-    ToggleBorderlessWindowed();
-    SetWindowSize(res.x, res.y);
-    set_resolution(res.x, res.y);
-    state->settings->window_state = FLAG_BORDERLESS_WINDOWED_MODE;
+  case EVENT_CODE_TOGGLE_BORDERLESS: {
+    toggle_borderless();
     return true;
   }
   case EVENT_CODE_TOGGLE_FULLSCREEN: {
-    i32 monitor = GetCurrentMonitor();
-    Vector2 res = {(f32)GetMonitorWidth(monitor), (f32)GetMonitorHeight(monitor)};
-    ToggleFullscreen();
-    SetWindowSize(res.x, res.y);
-    set_resolution(res.x, res.y);
-    state->settings->window_state = FLAG_FULLSCREEN_MODE;
+    toggle_fullscreen();
     return true;
   }
-  case EVENT_CODE_TOGGLE_WINDOWED: {    
-    if (state->settings->window_state == FLAG_BORDERLESS_WINDOWED_MODE) {
-      ToggleBorderlessWindowed();
-      state->settings->window_state = 0;
-    }
-    else if (state->settings->window_state == FLAG_FULLSCREEN_MODE) {
-      ToggleFullscreen();
-      state->settings->window_state = 0;
-    }
-    SetWindowSize(get_app_settings()->window_size.at(0), get_app_settings()->window_size.at(1));
-    SetWindowPosition(
-      (GetMonitorWidth(GetCurrentMonitor())  / 2.f) - (GetScreenWidth()  / 2.f), 
-      (GetMonitorHeight(GetCurrentMonitor()) / 2.f) - (GetScreenHeight() / 2.f)
-    );
-    if (IsWindowState(FLAG_WINDOW_UNDECORATED)) {
-      ClearWindowState(FLAG_WINDOW_UNDECORATED);
-    }
+  case EVENT_CODE_TOGGLE_WINDOWED: {
+    toggle_windowed();
     return true;
   }
   default:

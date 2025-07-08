@@ -12,6 +12,7 @@ typedef struct world_system_state {
   f32 palette_zoom;
   worldmap_stage active_stage;
   camera_metrics* in_camera_metrics;
+  app_settings * in_app_settings;
 } world_system_state;
 
 static world_system_state * state; 
@@ -25,7 +26,7 @@ static world_system_state * state;
 Rectangle get_position_view_rect(Camera2D camera, Vector2 pos, f32 zoom);
 constexpr size_t get_renderqueue_prop_index_by_id(i16 zindex, u32 id);
 
-bool world_system_initialize(camera_metrics* _in_camera_metrics) {
+bool world_system_initialize(camera_metrics* _in_camera_metrics, app_settings* _in_app_settings) {
   if (state) {
     TraceLog(LOG_WARNING, "world::world_system_initialize()::Initialize called twice");
     return false;
@@ -35,6 +36,11 @@ bool world_system_initialize(camera_metrics* _in_camera_metrics) {
     TraceLog(LOG_ERROR, "world::world_system_initialize()::State allocation failed");
     return false;
   }
+  if (_in_camera_metrics == nullptr || _in_app_settings == nullptr) {
+    TraceLog(LOG_ERROR, "world::world_system_initialize()::Recieved pointer(s) is/are null");
+    return false;
+  }
+  state->in_app_settings = _in_app_settings;
   state->in_camera_metrics = _in_camera_metrics;
   create_tilesheet(TILESHEET_TYPE_MAP, 16*2, 1.1, &state->palette);
   if(!state->palette.is_initialized) {
@@ -243,6 +249,16 @@ bool add_prop_curr_map(tilemap_prop_sprite prop_sprite) {
   refresh_render_queue(state->active_stage.map_id);
   return true;
 }
+bool add_map_coll_curr_map(Rectangle map_coll) {
+  f32 map_dim = CURR_MAP.position.x + (CURR_MAP.map_dim * CURR_MAP.tile_size);
+  bool in_bounds = map_coll.x > CURR_MAP.position.x && map_coll.y > CURR_MAP.position.y && map_coll.x < CURR_MAP.position.x + map_dim && map_coll.y < CURR_MAP.position.y + map_dim;
+  if (!in_bounds) {
+    TraceLog(LOG_WARNING, "world::add_map_coll_curr_map()::Collision out of the bounds of map");
+    return false;
+  }
+  CURR_MAP.collisions.push_back(map_coll);
+  return true;
+}
 bool remove_prop_cur_map_by_id(i32 id, tilemap_prop_types type) {
   bool found = false;
 
@@ -275,8 +291,8 @@ bool remove_prop_cur_map_by_id(i32 id, tilemap_prop_types type) {
   }
 }
 Rectangle get_position_view_rect(Camera2D camera, Vector2 pos, f32 zoom) {
-  int screen_width = BASE_RENDER_RES.x;
-  int screen_height = BASE_RENDER_RES.y;
+  int screen_width = state->in_app_settings->render_width;
+  int screen_height = state->in_app_settings->render_height;
   
   float view_width = screen_width / zoom;
   float view_height = screen_height / zoom;

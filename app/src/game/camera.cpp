@@ -15,7 +15,7 @@ typedef struct main_camera_system_state {
 
 static main_camera_system_state *state;
 
-bool create_camera(Vector2 position) {
+bool create_camera(i32 width, i32 height) {
   if (state) {
     TraceLog(LOG_WARNING, "camera::create_camera()::Called twice");
     return false;
@@ -27,8 +27,7 @@ bool create_camera(Vector2 position) {
     return false;
   }
 
-  state->in_camera_metrics.handle.offset = BASE_RENDER_SCALE(.5f);
-  state->in_camera_metrics.handle.target = Vector2 {position.x, position.y};
+  state->in_camera_metrics.handle.target = Vector2 {static_cast<f32>(width), static_cast<f32>(height)};
   state->in_camera_metrics.handle.rotation = 0;
   state->in_camera_metrics.handle.zoom = 1.0f;
   state->camera_min_speed = 30;
@@ -40,8 +39,8 @@ bool create_camera(Vector2 position) {
 
 camera_metrics* get_in_game_camera(void) { return &state->in_camera_metrics; }
 
-bool update_camera(Vector2 position) {
-  state->in_camera_metrics.handle.offset = BASE_RENDER_SCALE(.5f);
+bool update_camera(Vector2 position, Vector2 offset) {
+  state->in_camera_metrics.handle.offset = offset;
 
   Vector2 diff = vec2_subtract(position, state->in_camera_metrics.handle.target);
   float length = vec2_lenght(diff);

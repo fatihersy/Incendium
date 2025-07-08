@@ -188,10 +188,8 @@ typedef struct slider {
   bool (*on_left_button_trigger)();
   bool (*on_right_button_trigger)();
 
-  std::array<slider_option, MAX_SLIDER_OPTION_SLOT> options;
-  u16 current_value;
-  u16 max_value;
-  u16 min_value;
+  std::vector<slider_option> options;
+  i32 current_value;
 
   bool localize_text; // Flag for sliders displaying only numbers, 
   bool is_clickable;
@@ -200,25 +198,21 @@ typedef struct slider {
   slider(void) {
     this->id = SDR_ID_UNDEFINED;
     this->sdr_type = slider_type();
+    this->options.clear();
     this->position = ZEROVEC2;
     this->on_click = nullptr;
     this->on_left_button_trigger = nullptr;
     this->on_right_button_trigger = nullptr;
-    this->options.fill(slider_option());
     this->current_value = 0u;
-    this->max_value = 0u;
-    this->min_value = 0u;
     this->localize_text = false; 
     this->is_clickable = false;
     this->on_screen = false;
     this->is_registered = false;
   }
-  slider(slider_id _id, slider_type _type, u16 current_value, u16 max_value, u16 min_value, bool _localized_text, bool _is_clickable) : slider() {
+  slider(slider_id _id, slider_type _type, u16 current_value, bool _localized_text, bool _is_clickable) : slider() {
     this->id = _id;
     this->sdr_type = _type;
     this->current_value = current_value;
-    this->max_value = max_value;
-    this->min_value = min_value;
     this->localize_text = _localized_text;
     this->is_clickable = _is_clickable;
     this->is_registered = true;
@@ -293,7 +287,6 @@ void gui_label_shader(const char* text, shader_id sdr_id, font_type type, i32 fo
 void gui_label_wrap(const char* text, font_type type, i32 font_size, Rectangle position, Color tint, bool _should_center);
 void gui_label_grid(const char* text, font_type type, i32 font_size, Vector2 position, Color tint, bool _center_h, bool _center_v, Vector2 grid_coord);
 void gui_label_wrap_grid(const char* text, font_type type, i32 font_size, Rectangle position, Color tint, bool _should_center, Vector2 grid_pos);
-
 void gui_draw_atlas_texture_id_pro(atlas_texture_id _id, Rectangle src, Rectangle dest, bool relative, bool should_center);
 void gui_draw_atlas_texture_id(atlas_texture_id _id, Rectangle dest, Vector2 origin, f32 rotation); 
 void gui_draw_atlas_texture_id_scale(atlas_texture_id _id, Vector2 position, f32 scale, Color tint, bool should_center); 
@@ -305,7 +298,7 @@ void gui_draw_map_stage_pin(bool have_hovered, Vector2 screen_loc);
 void gui_draw_spritesheet_id(spritesheet_id _id, Color _tint, Vector2 pos, Vector2 scale, u16 frame); 
 void gui_draw_settings_screen(void);
 void gui_draw_pause_screen(bool in_game_play_state);
-
+ 
 // Exposed
 void ui_play_sprite_on_site(spritesheet *sheet, Color _tint, Rectangle dest);
 void ui_set_sprite(spritesheet *sheet, bool _play_looped, bool _play_once);
@@ -316,7 +309,7 @@ void ui_update_sprite(spritesheet *sheet);
 #define gui_label_format_grid(FONT, FONT_SIZE, X,Y, GRID_SCALE, COLOR, CENTER_H, CENTER_V, TEXT, ...) gui_label_grid(TextFormat(TEXT, __VA_ARGS__), FONT, FONT_SIZE, Vector2{X,Y}, COLOR, CENTER_H, CENTER_V, GRID_SCALE)
 #define gui_label_format_v_grid(FONT, FONT_SIZE, POS, GRID_SCALE, COLOR, CENTER_H, CENTER_V, TEXT, ...) gui_label_grid(TextFormat(TEXT, __VA_ARGS__), FONT, FONT_SIZE, POS, COLOR, CENTER_H, CENTER_V, GRID_SCALE)
 
-#define gui_panel_scissored(PANEL, CENTER, CODE)                                      \
+#define GUI_PANEL_SCISSORED(PANEL, CENTER, CODE)                                      \
     gui_panel(PANEL, PANEL.dest, CENTER);                                             \
     BeginScissorMode(PANEL.dest.x, PANEL.dest.y, PANEL.dest.width, PANEL.dest.height);\
     CODE                                                                              \
