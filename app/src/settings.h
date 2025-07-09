@@ -12,6 +12,7 @@ bool set_settings_from_ini_file(const char* file_name);
 bool save_ini_file(void);
 
 void set_resolution(i32 width, i32 height);
+void set_window_size(i32 width, i32 height);
 bool set_master_sound(i32 volume);
 void set_language(const char* lang);
 

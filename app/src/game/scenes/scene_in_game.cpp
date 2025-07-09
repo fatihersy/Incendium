@@ -448,7 +448,7 @@ void render_interface_in_game(void) {
             pnl->dest = Rectangle {scrloc.x + WORLDMAP_LOC_PIN_SIZE, scrloc.y + WORLDMAP_LOC_PIN_SIZE_DIV2, SIG_BASE_RENDER_WIDTH * .25f, SIG_BASE_RENDER_HEIGHT * .25f};
             DrawCircleGradient(scrloc.x + WORLDMAP_LOC_PIN_SIZE_DIV2, scrloc.y + WORLDMAP_LOC_PIN_SIZE_DIV2, 100, Color{236,240,241,50}, Color{255, 255, 255, 0});
             GUI_PANEL_SCISSORED((*pnl), false, {
-              gui_label(state->worldmap_locations.at(i).displayname.c_str(), FONT_TYPE_ABRACADABRA, 10, Vector2 {
+              gui_label(state->worldmap_locations.at(i).displayname.c_str(), FONT_TYPE_ABRACADABRA, 1, Vector2 {
                 pnl->dest.x + pnl->dest.width *.5f, pnl->dest.y + pnl->dest.height*.5f
               }, WHITE, true, true);
             });
@@ -498,7 +498,7 @@ void render_interface_in_game(void) {
         gui_draw_pause_screen(state->has_game_started);
       }
       else if (!state->has_game_started) {
-        gui_label("Press Space to Start!", FONT_TYPE_ABRACADABRA, 10, Vector2 {SIG_BASE_RENDER_WIDTH * .5f, SIG_BASE_RENDER_HEIGHT * .5f}, WHITE, true, true);
+        gui_label("Press Space to Start!", FONT_TYPE_ABRACADABRA, 1, Vector2 {SIG_BASE_RENDER_WIDTH * .5f, SIG_BASE_RENDER_HEIGHT * .5f}, WHITE, true, true);
       }
       else if (get_b_player_have_upgrade_points()) {
         if (state->is_upgrade_choices_ready) {
@@ -524,7 +524,7 @@ void render_interface_in_game(void) {
         gui_progress_bar(PRG_BAR_ID_PLAYER_EXPERIANCE, Vector2{SIG_BASE_RENDER_WIDTH * .5f, SCREEN_OFFSET.y}, true);
         gui_progress_bar(PRG_BAR_ID_PLAYER_HEALTH, SCREEN_OFFSET, false);
 
-        gui_label_format_v(FONT_TYPE_ABRACADABRA, 18, SIG_SCREEN_POS(5.f, 50.f), WHITE, true, true, "%d", gm_get_ingame_info()->nearest_spawn->character_id);
+        gui_label_format_v(FONT_TYPE_ABRACADABRA, 1, SIG_SCREEN_POS(5.f, 50.f), WHITE, true, true, "%d", gm_get_ingame_info()->nearest_spawn->character_id);
 
         // TODO: Display currency
         //gui_label_format(FONT_TYPE_ABRACADABRA, 10, BASE_RENDER_SCALE(.75f).x, SCREEN_OFFSET.y * 5.f, WHITE, false, false, "Souls: %d", get_currency_souls());
@@ -539,7 +539,7 @@ void render_interface_in_game(void) {
       else if (!state->has_game_started) { }
       else {
         gui_label_format(
-          FONT_TYPE_ABRACADABRA, 15, ui_get_mouse_pos()->x, ui_get_mouse_pos()->y, 
+          FONT_TYPE_ABRACADABRA, 1, ui_get_mouse_pos()->x, ui_get_mouse_pos()->y, 
           WHITE, false, false, "world_pos {%.1f, %.1f}", gm_get_mouse_pos_world()->x, gm_get_mouse_pos_world()->y
         );
 
@@ -550,7 +550,7 @@ void render_interface_in_game(void) {
             ui_get_mouse_pos()->x, ui_get_mouse_pos()->y, 
             SIG_BASE_RENDER_WIDTH * .4f, SIG_BASE_RENDER_HEIGHT * .3f
           };
-          i32 font_size = 18;
+          i32 font_size = 1;
           i32 line_height = SIG_BASE_RENDER_HEIGHT * .05f;
           Vector2 debug_info_position_buffer = VECTOR2(pnl->dest.x, pnl->dest.y);
           GUI_PANEL_SCISSORED((*pnl), false, {
@@ -593,7 +593,7 @@ void render_interface_in_game(void) {
             ui_get_mouse_pos()->x, ui_get_mouse_pos()->y, 
             SIG_BASE_RENDER_WIDTH * .4f, SIG_BASE_RENDER_HEIGHT * .3f
           };
-          i32 font_size = 11;
+          i32 font_size = 1;
           i32 line_height = SIG_BASE_RENDER_HEIGHT * .05f;
           Vector2 debug_info_position_buffer = VECTOR2(pnl->dest.x, pnl->dest.y);
           projectile* prj = __builtin_addressof(abl->projectiles.at(state->hovered_projectile));
@@ -610,12 +610,12 @@ void render_interface_in_game(void) {
           });
         }
         
-        gui_label_format(FONT_TYPE_ABRACADABRA, 10, SIG_BASE_RENDER_WIDTH * .75f, SCREEN_OFFSET.y, WHITE, false, false, "Remaining: %d", get_remaining_enemies());
-        gui_label_format(FONT_TYPE_ABRACADABRA, 10, SIG_BASE_RENDER_WIDTH * .75f, SCREEN_OFFSET.y * 5.f, WHITE, false, false, "Souls: %d", get_currency_souls());
+        gui_label_format(FONT_TYPE_ABRACADABRA, 1, SIG_BASE_RENDER_WIDTH * .75f, SCREEN_OFFSET.y, WHITE, false, false, "Remaining: %d", get_remaining_enemies());
+        gui_label_format(FONT_TYPE_ABRACADABRA, 1, SIG_BASE_RENDER_WIDTH * .75f, SCREEN_OFFSET.y * 5.f, WHITE, false, false, "Souls: %d", get_currency_souls());
 
-        gui_label_format(FONT_TYPE_ABRACADABRA, 10, 0, SIG_BASE_RENDER_HEIGHT * .35f, WHITE, false, false, "Health: %d", _get_dynamic_player_state()->health_max);
-        gui_label_format(FONT_TYPE_ABRACADABRA, 10, 0, SIG_BASE_RENDER_HEIGHT * .40f, WHITE, false, false, "Current Health: %d", _get_dynamic_player_state()->health_current);
-        gui_label_format(FONT_TYPE_ABRACADABRA, 10, 0, SIG_BASE_RENDER_HEIGHT * .45f, WHITE, false, false, "Damage: %d", _get_dynamic_player_state()->damage);
+        gui_label_format(FONT_TYPE_ABRACADABRA, 1, 0, SIG_BASE_RENDER_HEIGHT * .35f, WHITE, false, false, "Health: %d", _get_dynamic_player_state()->health_max);
+        gui_label_format(FONT_TYPE_ABRACADABRA, 1, 0, SIG_BASE_RENDER_HEIGHT * .40f, WHITE, false, false, "Current Health: %d", _get_dynamic_player_state()->health_current);
+        gui_label_format(FONT_TYPE_ABRACADABRA, 1, 0, SIG_BASE_RENDER_HEIGHT * .45f, WHITE, false, false, "Damage: %d", _get_dynamic_player_state()->damage);
       }
 
       break;
@@ -670,9 +670,9 @@ void draw_in_game_upgrade_panel(u16 which_panel, Rectangle panel_dest) {
   const Vector2 ability_name_pos  = {panel_dest.x, start_panel_height + ABILITY_UPG_PANEL_ICON_SIZE*.5f + elm_space_gap};
   const Vector2 ability_level_ind = {panel_dest.x, ability_name_pos.y + btw_space_gap};
 
-  const u16 title_font_size = 10; 
-  const u16 level_ind_font_size = 9; 
-  const u16 upgr_font_size = 6; 
+  const u16 title_font_size = 1; 
+  const u16 level_ind_font_size = 1; 
+  const u16 upgr_font_size = 1; 
 
   gui_draw_texture_id_pro(TEX_ID_ASSET_ATLAS, upg->icon_src, icon_rect);
   gui_label(upg->display_name.c_str(), FONT_TYPE_ABRACADABRA, title_font_size, ability_name_pos, WHITE, true, true);
@@ -745,18 +745,18 @@ void draw_end_game_panel() {
   );
 
   if (state->end_game_result.is_win) {
-    gui_label(lc_txt(LOC_TEXT_INGAME_STAGE_RESULT_CLEARED), FONT_TYPE_ABRACADABRA, 20, SIG_BASE_RENDER_DIV2, WHITE, true, true);
+    gui_label(lc_txt(LOC_TEXT_INGAME_STAGE_RESULT_CLEARED), FONT_TYPE_ABRACADABRA, 1, SIG_BASE_RENDER_DIV2, WHITE, true, true);
   }
   else {
-    gui_label(lc_txt(LOC_TEXT_INGAME_STAGE_RESULT_DEAD), FONT_TYPE_ABRACADABRA, 20, SIG_BASE_RENDER_DIV2, RED, true, true);
+    gui_label(lc_txt(LOC_TEXT_INGAME_STAGE_RESULT_DEAD), FONT_TYPE_ABRACADABRA, 1, SIG_BASE_RENDER_DIV2, RED, true, true);
   }
   u32 min  = (i32)state->end_game_result.play_time/60;
   u32 secs = (i32)state->end_game_result.play_time%60;
-  gui_label_format_v(FONT_TYPE_ABRACADABRA, 15, VECTOR2(static_cast<f32>(state->in_app_settings->render_width_div2), SIG_BASE_RENDER_HEIGHT * .55f), 
+  gui_label_format_v(FONT_TYPE_ABRACADABRA, 1, VECTOR2(static_cast<f32>(state->in_app_settings->render_width_div2), SIG_BASE_RENDER_HEIGHT * .55f), 
     WHITE, true, true, "%d:%d", min, secs
   );
 
-  gui_label_format_v(FONT_TYPE_ABRACADABRA, 15, VECTOR2(static_cast<f32>(state->in_app_settings->render_width_div2), SIG_BASE_RENDER_HEIGHT * .75f), WHITE, true, true, 
+  gui_label_format_v(FONT_TYPE_ABRACADABRA, 1, VECTOR2(static_cast<f32>(state->in_app_settings->render_width_div2), SIG_BASE_RENDER_HEIGHT * .75f), WHITE, true, true, 
     "%s%d", lc_txt(LOC_TEXT_INGAME_STAGE_RESULT_COLLECTED_SOULS), state->end_game_result.collected_souls
   );
 }

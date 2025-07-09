@@ -77,14 +77,14 @@ static user_interface_system_state * state;
 #define UI_ABRACADABRA_FONT_SIZE state->display_language->abracadabra.baseSize
 
 #define MENU_BUTTON_FONT UI_ABRACADABRA_FONT
-#define MENU_BUTTON_FONT_SIZE_SCALE 2
+#define MENU_BUTTON_FONT_SIZE_SCALE 1
 #define MINI_BUTTON_FONT UI_ABRACADABRA_FONT
-#define MINI_BUTTON_FONT_SIZE_SCALE 2
+#define MINI_BUTTON_FONT_SIZE_SCALE 1
 #define LABEL_FONT UI_ABRACADABRA_FONT
-#define LABEL_FONT_SIZE_SCALE 2.f
+#define LABEL_FONT_SIZE_SCALE 1
 #define DEFAULT_MENU_BUTTON_SCALE 4
 #define SLIDER_FONT UI_ABRACADABRA_FONT
-#define DEFAULT_SLIDER_FONT_SIZE 2
+#define DEFAULT_SLIDER_FONT_SIZE 1
 #define DEFAULT_PERCENT_SLIDER_CIRCLE_AMOUTH 10
 
 #define SDR_AT(ID) state->sliders.at(ID)
@@ -107,35 +107,35 @@ static user_interface_system_state * state;
 
 bool user_interface_on_event(u16 code, event_context context);
  
- void update_buttons(void);
- void update_sliders(void);
+void update_buttons(void);
+void update_sliders(void);
  
- void draw_fade_effect();
- void draw_slider_body(slider* sdr);
- void draw_atlas_texture_stretch(atlas_texture_id body, Vector2 pos, Vector2 scale, Rectangle stretch_part, u16 stretch_part_mltp, bool should_center);
- void draw_atlas_texture_regular(atlas_texture_id _id, Rectangle dest, Color tint, bool should_center);
- void draw_atlas_texture_npatch(atlas_texture_id _id, Rectangle dest, Vector4 offsets, bool should_center);
- void gui_draw_settings_screen(void);
- bool gui_button(const char* text, button_id _id, Font font, i32 font_size_scale, Vector2 pos, bool play_on_click_sound);
- 
- void register_button(button_id _btn_id, button_type_id _btn_type_id);
- void register_button_type(button_type_id _btn_type_id, spritesheet_id _ss_type, Vector2 frame_dim, f32 _scale, bool _should_center);
- void register_progress_bar(progress_bar_id _id, progress_bar_type_id _type_id, f32 width_multiply, Vector2 scale);
- void register_progress_bar_type(progress_bar_type_id _type_id, atlas_texture_id _body_inside, atlas_texture_id _body_outside, shader_id _mask_shader_id);
- void register_slider_type(slider_type_id _sdr_type_id, spritesheet_id _ss_sdr_body_type, f32 _scale, u16 _width_multiply, button_type_id _left_btn_type_id, button_type_id _right_btn_type_id, u16 _char_limit);
- 
- void draw_text_shader(const char *text, shader_id sdr_id, Vector2 position, Font font, float fontsize, Color tint, bool center_horizontal, bool center_vertical, bool use_grid_align, Vector2 grid_coord);
- void DrawTextBoxed(Font font, const char *text, Rectangle rec, float fontSize, float spacing, bool wordWrap, Color tint);
- const char* wrap_text(const char* text, Font font, i32 font_size, Rectangle bounds, bool center_x);
- void set_resolution_slider_native_res(void);
- Font load_font(const char* file_name, i32 font_size, i32* _codepoints, i32 _codepoint_count);
- localization_package* load_localization(std::string language_name, u32 loc_index, std::string _codepoints, i32 font_size);
- localization_package* ui_get_localization_by_name(std::string language_name);
- localization_package* ui_get_localization_by_index(u32 _language_index);
- 
- Vector2 make_vector(f32 x, f32 y);
- bool ui_sound_slider_on_left_button_trigger(void);
- bool ui_sound_slider_on_right_button_trigger(void);
+void draw_fade_effect();
+void draw_slider_body(slider* sdr);
+void draw_atlas_texture_stretch(atlas_texture_id body, Vector2 pos, Vector2 scale, Rectangle stretch_part, u16 stretch_part_mltp, bool should_center);
+void draw_atlas_texture_regular(atlas_texture_id _id, Rectangle dest, Color tint, bool should_center);
+void draw_atlas_texture_npatch(atlas_texture_id _id, Rectangle dest, Vector4 offsets, bool should_center);
+void gui_draw_settings_screen(void);
+bool gui_button(const char* text, button_id _id, Font font, i32 font_size_scale, Vector2 pos, bool play_on_click_sound);
+
+void register_button(button_id _btn_id, button_type_id _btn_type_id);
+void register_button_type(button_type_id _btn_type_id, spritesheet_id _ss_type, Vector2 frame_dim, f32 _scale, bool _should_center);
+void register_progress_bar(progress_bar_id _id, progress_bar_type_id _type_id, f32 width_multiply, Vector2 scale);
+void register_progress_bar_type(progress_bar_type_id _type_id, atlas_texture_id _body_inside, atlas_texture_id _body_outside, shader_id _mask_shader_id);
+void register_slider_type(slider_type_id _sdr_type_id, spritesheet_id _ss_sdr_body_type, f32 _scale, u16 _width_multiply, button_type_id _left_btn_type_id, button_type_id _right_btn_type_id, u16 _char_limit);
+
+void draw_text_shader(const char *text, shader_id sdr_id, Vector2 position, Font font, float fontsize, Color tint, bool center_horizontal, bool center_vertical, bool use_grid_align, Vector2 grid_coord);
+void DrawTextBoxed(Font font, const char *text, Rectangle rec, float fontSize, float spacing, bool wordWrap, Color tint);
+const char* wrap_text(const char* text, Font font, i32 font_size, Rectangle bounds, bool center_x);
+void set_resolution_slider_native_res(void);
+Font load_font(const char* file_name, i32 font_size, i32* _codepoints, i32 _codepoint_count);
+localization_package* load_localization(std::string language_name, u32 loc_index, std::string _codepoints, i32 font_size);
+localization_package* ui_get_localization_by_name(std::string language_name);
+localization_package* ui_get_localization_by_index(u32 _language_index);
+
+Vector2 make_vector(f32 x, f32 y);
+bool ui_sound_slider_on_left_button_trigger(void);
+bool ui_sound_slider_on_right_button_trigger(void);
 
  constexpr void draw_text(const char* text, Vector2 pos, Font font, i32 fontsize, Color color, bool center_horizontal, bool center_vertical, bool use_grid_align, Vector2 grid_coord) {
   Vector2 text_measure = MeasureTextEx(font, text, font.baseSize * fontsize, UI_FONT_SPACING);
@@ -331,6 +331,25 @@ bool user_interface_system_initialize(void) {
   }
   // SETTINGS
 
+    // SLIDER OPTIONS
+  {
+    localized_languages langs = loc_parser_get_loc_langs();
+    for (size_t iter = 0; iter < langs.lang.size(); iter++) {
+      gui_slider_add_option(SDR_ID_SETTINGS_LANGUAGE, data_pack(DATA_TYPE_U32, data128(static_cast<u32>(iter), 1u), 1), LOC_TEXT_SETTINGS_BUTTON_ENGLISH+iter, "");
+      SDR_ASSERT_SET_CURR_VAL_TO_LAST_ADDED(state->display_language->language_index == iter, SDR_ID_SETTINGS_LANGUAGE)
+    }
+
+    gui_slider_add_option(SDR_ID_SETTINGS_WIN_MODE_SLIDER, data_pack(DATA_TYPE_I32, data128((i32)0), 1                            ),  LOC_TEXT_SETTINGS_SDR_WINDOW_MODE_WINDOWED,   "");
+    SDR_ASSERT_SET_CURR_VAL_TO_LAST_ADDED(state->in_app_settings->window_state == 0, SDR_ID_SETTINGS_WIN_MODE_SLIDER)
+    gui_slider_add_option(SDR_ID_SETTINGS_WIN_MODE_SLIDER, data_pack(DATA_TYPE_I32, data128((i32)FLAG_BORDERLESS_WINDOWED_MODE), 1),  LOC_TEXT_SETTINGS_SDR_WINDOW_MODE_BORDERLESS, "");
+    SDR_ASSERT_SET_CURR_VAL_TO_LAST_ADDED(state->in_app_settings->window_state == FLAG_BORDERLESS_WINDOWED_MODE, SDR_ID_SETTINGS_WIN_MODE_SLIDER)
+    gui_slider_add_option(SDR_ID_SETTINGS_WIN_MODE_SLIDER, data_pack(DATA_TYPE_I32, data128((i32)FLAG_FULLSCREEN_MODE), 1         ),  LOC_TEXT_SETTINGS_SDR_WINDOW_MODE_FULLSCREEN, "");
+    SDR_ASSERT_SET_CURR_VAL_TO_LAST_ADDED(state->in_app_settings->window_state == FLAG_FULLSCREEN_MODE, SDR_ID_SETTINGS_WIN_MODE_SLIDER)
+  }
+  // SLIDER OPTIONS
+
+  ui_refresh_setting_sliders_to_default();
+
   state->sliders.at(SDR_ID_SETTINGS_SOUND_SLIDER).on_left_button_trigger = ui_sound_slider_on_left_button_trigger;
   state->sliders.at(SDR_ID_SETTINGS_SOUND_SLIDER).on_right_button_trigger = ui_sound_slider_on_right_button_trigger;
 
@@ -448,7 +467,7 @@ bool user_interface_system_initialize(void) {
   }  
 }
 
- void render_user_interface(void) {
+void render_user_interface(void) {
   if (state->fade_animation_playing) {
     draw_fade_effect();
     return;
@@ -655,7 +674,7 @@ bool user_interface_system_initialize(void) {
     if (sdr->on_right_button_trigger != nullptr) {
       sdr->on_right_button_trigger();
     }
-    else if (static_cast<size_t>(sdr->current_value) < sdr->options.size() - 2u) {
+    else if (static_cast<size_t>(sdr->current_value) < sdr->options.size() - 1u) {
       sdr->current_value++;
     }
   }
@@ -684,7 +703,7 @@ bool user_interface_system_initialize(void) {
     }
     case SDR_TYPE_OPTION: {
       u16 total_body_width = sdr_type.body_width * sdr_type.width_multiply;
-      u16 each_body_width = (total_body_width - ((sdr->options.size()) * SCREEN_OFFSET.x)) / (sdr->options.size() - 1);
+      u16 each_body_width = (total_body_width - ((sdr->options.size()) * SCREEN_OFFSET.x)) / sdr->options.size();
       f32 each_body_scale = (float)each_body_width / sdr_type.origin_body_width;
       Vector2 draw_sprite_scale = Vector2 {each_body_scale, sdr_type.scale};
       Vector2 _pos_temp = Vector2 {sdr->position.x + SCREEN_OFFSET.x, sdr->position.y};
@@ -697,7 +716,7 @@ bool user_interface_system_initialize(void) {
 
       for (size_t itr_000 = 0; itr_000 < sdr->options.size(); ++itr_000) {
         Vector2 _pos = _pos_temp;
-        _pos.x += (each_body_width + SCREEN_OFFSET.x) * (itr_000-1); 
+        _pos.x += (each_body_width + SCREEN_OFFSET.x) * (itr_000); 
         draw_sprite_on_site_by_id(sdr_type.ss_sdr_body, WHITE, _pos, draw_sprite_scale, (itr_000 == static_cast<size_t>(sdr->current_value)) ? 1u : 0u);
       }
       Vector2 text_pos = Vector2 { sdr->position.x + total_body_width * .5f, sdr->position.y + sdr_type.dest_frame_dim.y * .5f };
@@ -929,22 +948,22 @@ bool user_interface_system_initialize(void) {
 
   gui_slider(SDR_ID_SETTINGS_LANGUAGE, UI_BASE_RENDER_DIV2, VECTOR2(0.f, 10.f));
 
-  if(gui_menu_button(lc_txt(LOC_TEXT_SETTINGS_BUTTON_APPLY), BTN_ID_SETTINGS_APPLY_SETTINGS_BUTTON, VECTOR2(50.f, 100.f), UI_BASE_RENDER_DIV2, true)) {
+  if(gui_menu_button(lc_txt(LOC_TEXT_SETTINGS_BUTTON_APPLY), BTN_ID_SETTINGS_APPLY_SETTINGS_BUTTON, VECTOR2(35.f, 66.5f), UI_BASE_RENDER_DIV2, true)) {
     slider sdr_win_mode = state->sliders.at(SDR_ID_SETTINGS_WIN_MODE_SLIDER);
     i32 window_mod = sdr_win_mode.options.at(sdr_win_mode.current_value).content.data.i32[0];
-    
+    Vector2 new_res = pVECTOR2(SDR_CURR_OPT_VAL(SDR_ID_SETTINGS_RES_SLIDER).content.data.i32);
+
     if (window_mod == FLAG_BORDERLESS_WINDOWED_MODE && !IsWindowState(FLAG_BORDERLESS_WINDOWED_MODE)) {
       event_fire(EVENT_CODE_TOGGLE_BORDERLESS, event_context());
-      set_resolution_slider_native_res();
     }
     else if (window_mod == FLAG_FULLSCREEN_MODE && !IsWindowFullscreen()) {
       event_fire(EVENT_CODE_TOGGLE_FULLSCREEN, event_context());
-      set_resolution_slider_native_res();
     }
     else if (window_mod == 0 && (IsWindowState(FLAG_BORDERLESS_WINDOWED_MODE) || IsWindowFullscreen())) {
-      Vector2 res = pVECTOR2(SDR_CURR_OPT_VAL(SDR_ID_SETTINGS_RES_SLIDER).content.data.u16);
-      set_resolution(res.x, res.y);
-      event_fire(EVENT_CODE_TOGGLE_WINDOWED, event_context());
+      event_fire(EVENT_CODE_TOGGLE_WINDOWED, event_context(static_cast<i32>(new_res.x), static_cast<i32>(new_res.y)));
+    }
+    else if (window_mod == 0 && (state->in_app_settings->window_width != new_res.x || state->in_app_settings->window_height != new_res.y)) {
+      event_fire(EVENT_CODE_TOGGLE_WINDOWED, event_context(static_cast<i32>(new_res.x), static_cast<i32>(new_res.y)));
     }
     
     u32 language_index = SDR_CURR_OPT_VAL(SDR_ID_SETTINGS_LANGUAGE).content.data.u32[0];
@@ -963,108 +982,77 @@ bool user_interface_system_initialize(void) {
     save_ini_file();
   }
 }
- void ui_refresh_setting_sliders_to_default(void) {
-  if (!state) {
-    TraceLog(LOG_ERROR, "user_interface::ui_refresh_setting_sliders_to_default()::State is not valid");
-    return;
-  }
-
-
-  // SLIDER OPTIONS
+ void ui_refresh_setting_sliders_to_default(void) {	
+	/////////////////////// RESOLUTION SLIDER
   {
-    std::vector<std::pair<i32, i32>> * supported_resolution_list = get_supported_render_resolutions();
-    for (size_t itr_000 = 0; itr_000 < supported_resolution_list->size(); ++itr_000) {
-      i32 _window_width  = supported_resolution_list->at(itr_000).first;
-      i32 _window_height = supported_resolution_list->at(itr_000).second;
-      gui_slider_add_option(SDR_ID_SETTINGS_RES_SLIDER, data_pack(DATA_TYPE_I32, data128(_window_width, _window_height), 2) , 0, TextFormat("%dx%d", _window_width, _window_height));
-      SDR_ASSERT_SET_CURR_VAL_TO_LAST_ADDED(state->in_app_settings->window_width == state->in_app_settings->window_height && _window_height == _window_height, SDR_ID_SETTINGS_RES_SLIDER)
+	  slider *const ressdr = get_slider_by_id(SDR_ID_SETTINGS_RES_SLIDER);
+	  if (ressdr) {
+	  	ressdr->options.clear();
+	  }
+	  else {
+	  	TraceLog(LOG_ERROR, "user_interface::ui_refresh_setting_sliders_to_default()::Resolution slider is invalid");
+	  	return;
+	  }
+
+    { // Getting resolutions based on aspect ratio
+	    std::vector<std::pair<i32, i32>> * supported_resolution_list = get_supported_render_resolutions();
+	    for (size_t itr_000 = 0; itr_000 < supported_resolution_list->size(); ++itr_000) {
+	    	i32 _suppres_window_width  = supported_resolution_list->at(itr_000).first;
+	    	i32 _suppres_window_height = supported_resolution_list->at(itr_000).second;
+	    	gui_slider_add_option(SDR_ID_SETTINGS_RES_SLIDER, data_pack(DATA_TYPE_I32, 
+          data128(_suppres_window_width, _suppres_window_height), 2) , 0, TextFormat("%dx%d", _suppres_window_width, _suppres_window_height)
+        );
+	    	SDR_ASSERT_SET_CURR_VAL_TO_LAST_ADDED(
+          state->in_app_settings->window_width  == _suppres_window_width && 
+          state->in_app_settings->window_height == _suppres_window_height, SDR_ID_SETTINGS_RES_SLIDER
+        )
+	    }
     }
 
-    localized_languages langs = loc_parser_get_loc_langs();
-    for (size_t iter = 0; iter < langs.lang.size(); iter++) {
-      gui_slider_add_option(SDR_ID_SETTINGS_LANGUAGE, data_pack(DATA_TYPE_U32, data128(static_cast<u32>(iter), 1u), 1), LOC_TEXT_SETTINGS_BUTTON_ENGLISH+iter, "");
-      SDR_ASSERT_SET_CURR_VAL_TO_LAST_ADDED(state->display_language->language_index == iter, SDR_ID_SETTINGS_LANGUAGE)
+	  { // Settings current resolution to corresponding slider index
+	    ressdr->current_value = -1;
+      const i32 _currres_window_width = state->in_app_settings->window_width;
+      const i32 _currres_window_height = state->in_app_settings->window_height;
+	    for (size_t itr_000 = 0; itr_000 < ressdr->options.size(); ++itr_000) {
+	    	slider_option& option = ressdr->options.at(itr_000);
+	    	if (option.content.data.i32[0] == _currres_window_width && option.content.data.i32[1] == _currres_window_height) {
+	    		ressdr->current_value = itr_000;
+	    		break;
+	    	}
+	    }
     }
 
-    gui_slider_add_option(SDR_ID_SETTINGS_WIN_MODE_SLIDER, data_pack(DATA_TYPE_I32, data128((i32)0), 1                            ),  LOC_TEXT_SETTINGS_SDR_WINDOW_MODE_WINDOWED,   "");
-    SDR_ASSERT_SET_CURR_VAL_TO_LAST_ADDED(state->in_app_settings->window_state == 0, SDR_ID_SETTINGS_WIN_MODE_SLIDER)
-    gui_slider_add_option(SDR_ID_SETTINGS_WIN_MODE_SLIDER, data_pack(DATA_TYPE_I32, data128((i32)FLAG_BORDERLESS_WINDOWED_MODE), 1),  LOC_TEXT_SETTINGS_SDR_WINDOW_MODE_BORDERLESS, "");
-    SDR_ASSERT_SET_CURR_VAL_TO_LAST_ADDED(state->in_app_settings->window_state == FLAG_BORDERLESS_WINDOWED_MODE, SDR_ID_SETTINGS_WIN_MODE_SLIDER)
-    gui_slider_add_option(SDR_ID_SETTINGS_WIN_MODE_SLIDER, data_pack(DATA_TYPE_I32, data128((i32)FLAG_FULLSCREEN_MODE), 1         ),  LOC_TEXT_SETTINGS_SDR_WINDOW_MODE_FULLSCREEN, "");
-    SDR_ASSERT_SET_CURR_VAL_TO_LAST_ADDED(state->in_app_settings->window_state == FLAG_FULLSCREEN_MODE, SDR_ID_SETTINGS_WIN_MODE_SLIDER)
-  }
-  // SLIDER OPTIONS
-
-  // SETTING SLIDER SETUP
-  { 
-    for (size_t itr_000 = 0; itr_000 < state->sliders.at(SDR_ID_SETTINGS_WIN_MODE_SLIDER).options.size(); ++itr_000) {
-      if (state->sliders.at(SDR_ID_SETTINGS_WIN_MODE_SLIDER).options.at(itr_000).content.data.i32[0] == state->in_app_settings->window_state && itr_000 != 0) {
-        state->sliders.at(SDR_ID_SETTINGS_WIN_MODE_SLIDER).current_value = itr_000;
-        break;
-      }
-    }
-  
-    const i32 window_width = state->in_app_settings->window_width;
-    const i32 window_height = state->in_app_settings->window_height;
-
-    for (size_t itr_000 = 0; itr_000 < state->sliders.at(SDR_ID_SETTINGS_RES_SLIDER).options.size(); ++itr_000) {
-      slider_option& option = state->sliders.at(SDR_ID_SETTINGS_RES_SLIDER).options.at(itr_000);
-      if (option.content.data.i32[0] == window_width && option.content.data.i32[1] == window_height) {
-        state->sliders.at(SDR_ID_SETTINGS_RES_SLIDER).current_value = itr_000;
-        break;
-      }
-    }
-  
-    if (SDR_CURR_OPT_VAL(SDR_ID_SETTINGS_RES_SLIDER).content.data.i32[0] != window_width || SDR_CURR_OPT_VAL(SDR_ID_SETTINGS_RES_SLIDER).content.data.i32[1] != window_height) {
-      TraceLog(LOG_ERROR, "user_interface::user_interface_system_initialize()::Unsupported resolution: {%d:%d}", window_width, window_height);
-      set_resolution(1920, 1080); // TODO: Set default resolution based on aspect ratio
-      for (size_t itr_000 = 0; itr_000 < state->sliders.at(SDR_ID_SETTINGS_RES_SLIDER).options.size(); ++itr_000) {
-        slider_option& option = state->sliders.at(SDR_ID_SETTINGS_RES_SLIDER).options.at(itr_000);
-        if (option.content.data.i32[0] == window_width && option.content.data.i32[1] == window_height) {
-          state->sliders.at(SDR_ID_SETTINGS_RES_SLIDER).current_value = itr_000;
-          break;
-        }
+	  { // If there is no equal slider option somehow
+	    if (ressdr->current_value < 0) {
+        ressdr->options.clear();
+        const i32 _noeqres_window_width = state->in_app_settings->window_width;
+        const i32 _noeqres_window_height = state->in_app_settings->window_height;
+	      TraceLog(LOG_ERROR, "user_interface::user_interface_system_initialize()::Setting window size to custom");
+	    	gui_slider_add_option(SDR_ID_SETTINGS_RES_SLIDER, data_pack(DATA_TYPE_I32, 
+          data128(_noeqres_window_width, _noeqres_window_height), 2) , 0, TextFormat("%dx%d", _noeqres_window_width, _noeqres_window_height)
+        );
+        SDR_ASSERT_SET_CURR_VAL_TO_LAST_ADDED(1, SDR_ID_SETTINGS_RES_SLIDER);
       }
     }
   }
+	/////////////////////// RESOLUTION SLIDER
 
-  SDR_AT(SDR_ID_SETTINGS_SOUND_SLIDER).current_value = static_cast<u16>(state->in_app_settings->master_sound_volume * .1f);
-  for (size_t itr_000 = 0; itr_000 < state->sliders.at(SDR_ID_SETTINGS_WIN_MODE_SLIDER).options.size(); ++itr_000) {
-    if (state->sliders.at(SDR_ID_SETTINGS_WIN_MODE_SLIDER).options.at(itr_000).content.data.i32[0] == state->in_app_settings->window_state && itr_000 != 0) {
-      state->sliders.at(SDR_ID_SETTINGS_WIN_MODE_SLIDER).current_value = itr_000;
-      break;
-    }
-  }
-  
-  const i32 window_width = state->in_app_settings->window_width;
-  const i32 window_height = state->in_app_settings->window_height;
-  for (size_t itr_000 = 0; itr_000 < state->sliders.at(SDR_ID_SETTINGS_RES_SLIDER).options.size(); ++itr_000) {
-    slider_option& option = state->sliders.at(SDR_ID_SETTINGS_RES_SLIDER).options.at(itr_000);
-    if (option.content.data.i32[0] == window_width && option.content.data.i32[1] == window_height) {
-      state->sliders.at(SDR_ID_SETTINGS_RES_SLIDER).current_value = itr_000;
-      break;
-    }
-  }
-  
-  if (SDR_CURR_OPT_VAL(SDR_ID_SETTINGS_RES_SLIDER).content.data.i32[0] != window_width || SDR_CURR_OPT_VAL(SDR_ID_SETTINGS_RES_SLIDER).content.data.i32[1] != window_height) {
-    TraceLog(LOG_ERROR, "user_interface::user_interface_system_initialize()::Unsupported resolution: {%d:%d}", window_width, window_height);
-    set_resolution(1920, 1080); // TODO: Set default resolution based on aspect ratio
-    for (size_t itr_000 = 0; itr_000 < state->sliders.at(SDR_ID_SETTINGS_RES_SLIDER).options.size(); ++itr_000) {
-      slider_option& option = state->sliders.at(SDR_ID_SETTINGS_RES_SLIDER).options.at(itr_000);
-      if (option.content.data.i32[0] == window_width && option.content.data.i32[1] == window_height) {
-        state->sliders.at(SDR_ID_SETTINGS_RES_SLIDER).current_value = itr_000;
-        break;
-      }
-    }
-  }
+	SDR_AT(SDR_ID_SETTINGS_SOUND_SLIDER).current_value = static_cast<u16>(state->in_app_settings->master_sound_volume * .1f);
 
-  u32 language_index = loc_parser_get_active_language()->index;
-  for (size_t itr_000 = 0; itr_000 < SDR_AT(SDR_ID_SETTINGS_LANGUAGE).options.size(); ++itr_000) {
-    data_pack opt = SDR_AT(SDR_ID_SETTINGS_LANGUAGE).options.at(itr_000).content;
-    if (opt.data.u32[0] == language_index && (opt.type_flag < DATA_TYPE_MAX && opt.type_flag > DATA_TYPE_UNRESERVED)) {
-      SDR_AT(SDR_ID_SETTINGS_LANGUAGE).current_value = itr_000;
-      break;
-    }
+	for (size_t itr_000 = 0; itr_000 < state->sliders.at(SDR_ID_SETTINGS_WIN_MODE_SLIDER).options.size(); ++itr_000) {
+		if (state->sliders.at(SDR_ID_SETTINGS_WIN_MODE_SLIDER).options.at(itr_000).content.data.i32[0] == state->in_app_settings->window_state && itr_000 != 0) {
+			state->sliders.at(SDR_ID_SETTINGS_WIN_MODE_SLIDER).current_value = itr_000;
+			break;
+		}
+	}
+
+	u32 language_index = loc_parser_get_active_language()->index;
+	for (size_t itr_000 = 0; itr_000 < SDR_AT(SDR_ID_SETTINGS_LANGUAGE).options.size(); ++itr_000) {
+		data_pack opt = SDR_AT(SDR_ID_SETTINGS_LANGUAGE).options.at(itr_000).content;
+		if (opt.data.u32[0] == language_index && (opt.type_flag < DATA_TYPE_MAX && opt.type_flag > DATA_TYPE_UNRESERVED)) {
+			SDR_AT(SDR_ID_SETTINGS_LANGUAGE).current_value = itr_000;
+			break;
+		}
   }
 }
  void gui_draw_pause_screen(bool in_game_play_state) {
@@ -1090,7 +1078,7 @@ bool user_interface_system_initialize(void) {
   }
 }
 
- bool gui_slider_add_option(slider_id _id, data_pack content, u32 _localization_symbol, std::string _no_localized_text) {
+bool gui_slider_add_option(slider_id _id, data_pack content, u32 _localization_symbol, std::string _no_localized_text) {
   if (_id >= SDR_ID_MAX || _id <= SDR_ID_UNDEFINED || !state) {
     TraceLog(LOG_WARNING, "user_interface::gui_slider_add_option()::Slider ids was out of bound");
     return false;
@@ -1168,14 +1156,14 @@ bool user_interface_system_initialize(void) {
  void register_slider_type(
   slider_type_id _sdr_type_id, spritesheet_id _ss_sdr_body_type, f32 _scale, u16 _width_multiply,
   button_type_id _left_btn_type_id, button_type_id _right_btn_type_id, u16 _char_limit) {
-    if (_ss_sdr_body_type >= SHEET_ID_SPRITESHEET_TYPE_MAX || _ss_sdr_body_type <= SHEET_ID_SPRITESHEET_UNSPECIFIED || 
-        _sdr_type_id      >= SDR_TYPE_MAX         || _sdr_type_id      <= SDR_TYPE_UNDEFINED      ||
-        _left_btn_type_id >= BTN_TYPE_MAX         || _left_btn_type_id <= BTN_TYPE_UNDEFINED      ||
-        _right_btn_type_id>= BTN_TYPE_MAX         || _right_btn_type_id<= BTN_TYPE_UNDEFINED      ||
-        !state) {
-      TraceLog(LOG_WARNING, "WARNING::user_interface::register_slider_type()::One of recieved ids was out of bound");
-      return;
-    }
+  if (_ss_sdr_body_type >= SHEET_ID_SPRITESHEET_TYPE_MAX || _ss_sdr_body_type <= SHEET_ID_SPRITESHEET_UNSPECIFIED || 
+      _sdr_type_id      >= SDR_TYPE_MAX         || _sdr_type_id      <= SDR_TYPE_UNDEFINED      ||
+      _left_btn_type_id >= BTN_TYPE_MAX         || _left_btn_type_id <= BTN_TYPE_UNDEFINED      ||
+      _right_btn_type_id>= BTN_TYPE_MAX         || _right_btn_type_id<= BTN_TYPE_UNDEFINED      ||
+      !state) {
+    TraceLog(LOG_WARNING, "WARNING::user_interface::register_slider_type()::One of recieved ids was out of bound");
+    return;
+  }
 
   spritesheet ss_body = *ss_get_spritesheet_by_enum(_ss_sdr_body_type);
   button_type* left_btn_type = __builtin_addressof(state->button_types.at(_left_btn_type_id)); 
@@ -1212,11 +1200,10 @@ bool user_interface_system_initialize(void) {
   slider_type* _sdr_type = __builtin_addressof(state->slider_types.at(_sdr_type_id));
   
   //slider_id _id, slider_type _type, u16 current_value, u16 max_value, u16 min_value, bool _localized_text, bool _is_clickable
-  slider sdr = slider(_sdr_id, *_sdr_type, 1, _localize_text, _is_clickable);
+  slider sdr = slider(_sdr_id, *_sdr_type, 0, _localize_text, _is_clickable);
 
   if(_left_btn_id != BTN_ID_UNDEFINED){
     sdr.sdr_type.left_btn_id = _left_btn_id;
-
     register_button(
       sdr.sdr_type.left_btn_id, sdr.sdr_type.left_btn_type_id
     );
@@ -1227,7 +1214,9 @@ bool user_interface_system_initialize(void) {
       sdr.sdr_type.right_btn_id, sdr.sdr_type.right_btn_type_id
     );
   }
-
+  if (_sdr_type_id == SDR_TYPE_NUMBER) { // To display its value
+    sdr.options.push_back(slider_option());
+  }
   state->sliders.at(_sdr_id) = sdr;
 }
 void gui_draw_atlas_texture_to_background(atlas_texture_id _id) {
@@ -1686,8 +1675,9 @@ void gui_draw_atlas_texture_to_background(atlas_texture_id _id) {
     TraceLog(LOG_WARNING, "user_interface::ui_set_slider_current_value()::ID was out of bound"); 
     return false;
   }
-
-  SDR_CURR_OPT_VAL(id) = value;
+  slider & sdr = state->sliders.at(id);
+  i32 last_elem = sdr.current_value;
+  sdr.options.at(last_elem) = value;
   return true;
 }
  bool ui_sound_slider_on_left_button_trigger(void) {
@@ -1749,7 +1739,7 @@ void gui_draw_atlas_texture_to_background(atlas_texture_id _id) {
 
   for (size_t itr_000 = 0; itr_000 < state->sliders.at(SDR_ID_SETTINGS_RES_SLIDER).options.size(); ++itr_000) {
     const slider_option * option = __builtin_addressof(state->sliders.at(SDR_ID_SETTINGS_RES_SLIDER).options.at(itr_000));
-    if ( option->content.data.u16[0] == res.x && option->content.data.u16[1] == res.y) { 
+    if ( option->content.data.i32[0] == res.x && option->content.data.i32[1] == res.y) {
       state->sliders.at(SDR_ID_SETTINGS_RES_SLIDER).current_value = itr_000;
       break;
     }

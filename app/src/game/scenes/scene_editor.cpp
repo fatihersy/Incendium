@@ -808,10 +808,10 @@ void render_interface_editor(void) {
       Vector2 label_anchor  = VECTOR2(panel_dest.x + panel_dest.width * .5f, panel_dest.y + panel_dest.height * .05f);
       Vector2 slider_anchor = VECTOR2(panel_dest.x + panel_dest.width * .5f, panel_dest.y + panel_dest.height * .05f);
 
-      gui_label_grid("Layer", FONT_TYPE_ABRACADABRA, 10, label_anchor, WHITE, true, true, VECTOR2(-15.f, -4.f));
+      gui_label_grid("Layer", FONT_TYPE_ABRACADABRA, 1, label_anchor, WHITE, true, true, VECTOR2(-15.f, -4.f));
       gui_slider(SDR_ID_EDITOR_MAP_LAYER_SLC_SLIDER, slider_anchor, VECTOR2(15.f,-4.f));
 
-      gui_label_grid("Stage", FONT_TYPE_ABRACADABRA, 10, label_anchor, WHITE, true, true, VECTOR2(-15.f, 4.f));
+      gui_label_grid("Stage", FONT_TYPE_ABRACADABRA, 1, label_anchor, WHITE, true, true, VECTOR2(-15.f, 4.f));
       gui_slider(SDR_ID_EDITOR_MAP_STAGE_SLC_SLIDER, slider_anchor, VECTOR2(15.f,4.f));
     }); 
   }
@@ -821,7 +821,7 @@ void render_interface_editor(void) {
     GUI_PANEL_SCISSORED((*pnl), false, {
       Vector2 label_anchor = VECTOR2(pnl->dest.x + pnl->dest.width * .25f, pnl->dest.y + pnl->dest.height * .05f);
       Vector2 slider_anchor = VECTOR2(pnl->dest.x + pnl->dest.width * .675f, pnl->dest.y + pnl->dest.height * .05f);
-      gui_label_grid("Prop Type", FONT_TYPE_ABRACADABRA, 10, label_anchor, WHITE, true, true, VECTOR2(0.f, 0.f));
+      gui_label_grid("Prop Type", FONT_TYPE_ABRACADABRA, 1, label_anchor, WHITE, true, true, VECTOR2(0.f, 0.f));
       gui_slider(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER, slider_anchor, VECTOR2(0.f, 0.f));
 
       f32 prop_height_count = pnl->buffer.f32[1];
@@ -874,7 +874,7 @@ void render_interface_editor(void) {
           (pnl->scroll * pnl->buffer.f32[0]) + collision_height_count
         );
 
-        gui_label_format(FONT_TYPE_ABRACADABRA, 12, dest.x, dest.y, WHITE, false, true, "%.0f, %.0f, %.0f, %.0f", _rect->x, _rect->y, _rect->width, _rect->height);
+        gui_label_format(FONT_TYPE_ABRACADABRA, 1, dest.x, dest.y, WHITE, false, true, "%.0f, %.0f, %.0f, %.0f", _rect->x, _rect->y, _rect->width, _rect->height);
         collision_height_count += dest.y;
       }
       
@@ -937,15 +937,15 @@ void render_interface_editor(void) {
         Vector2 sdr_center = VECTOR2( pnl->dest.x + pnl->dest.width * .75f, pnl->dest.y + pnl->dest.height * .5f);
         Vector2 label_center = VECTOR2( pnl->dest.x + pnl->dest.width * .25f, pnl->dest.y + pnl->dest.height * .5f);
       
-        gui_label_grid("Scale", FONT_TYPE_ABRACADABRA, 10, label_center, WHITE, true, true, VECTOR2(0.f, -10.f));
+        gui_label_grid("Scale", FONT_TYPE_ABRACADABRA, 1, label_center, WHITE, true, true, VECTOR2(0.f, -10.f));
         get_slider_by_id(SDR_ID_EDITOR_PROP_SCALE_SLIDER)->options.at(0).no_localized_text = TextFormat("%.2f", (*p_prop)->scale);
         gui_slider(SDR_ID_EDITOR_PROP_SCALE_SLIDER, sdr_center, VECTOR2(0.f, -10.f));
       
-        gui_label_grid("Rotation", FONT_TYPE_ABRACADABRA, 10, label_center, WHITE, true, true, VECTOR2(0.f, 0.f));
+        gui_label_grid("Rotation", FONT_TYPE_ABRACADABRA, 1, label_center, WHITE, true, true, VECTOR2(0.f, 0.f));
         get_slider_by_id(SDR_ID_EDITOR_PROP_ROTATION_SLIDER)->options.at(0).no_localized_text = TextFormat("%.1f", (*p_prop)->rotation);
         gui_slider(SDR_ID_EDITOR_PROP_ROTATION_SLIDER, sdr_center, VECTOR2(0.f, 0.f));
       
-        gui_label_grid("Z-Index", FONT_TYPE_ABRACADABRA, 10, label_center, WHITE, true, true, VECTOR2(0.f, 10.f));
+        gui_label_grid("Z-Index", FONT_TYPE_ABRACADABRA, 1, label_center, WHITE, true, true, VECTOR2(0.f, 10.f));
         get_slider_by_id(SDR_ID_EDITOR_PROP_ZINDEX_SLIDER)->options.at(0).no_localized_text = TextFormat("%d", (*p_prop)->zindex);
         gui_slider(SDR_ID_EDITOR_PROP_ZINDEX_SLIDER, sdr_center, VECTOR2(0.f, 10.f));
       });
@@ -978,15 +978,15 @@ void render_interface_editor(void) {
         Vector2 sdr_center = VECTOR2( pnl->dest.x + pnl->dest.width * .75f, pnl->dest.y + pnl->dest.height * .5f);
         Vector2 label_center = VECTOR2( pnl->dest.x + pnl->dest.width * .25f, pnl->dest.y + pnl->dest.height * .5f);
 
-        gui_label_grid("Scale", FONT_TYPE_ABRACADABRA, 10, label_center, WHITE, true, true, VECTOR2(0.f, -10.f));
+        gui_label_grid("Scale", FONT_TYPE_ABRACADABRA, 1, label_center, WHITE, true, true, VECTOR2(0.f, -10.f));
         get_slider_by_id(SDR_ID_EDITOR_PROP_SCALE_SLIDER)->options.at(0).no_localized_text = TextFormat("%.2f", (*p_prop)->scale);
         gui_slider(SDR_ID_EDITOR_PROP_SCALE_SLIDER, sdr_center, VECTOR2(0.f, -10.f));
 
-        gui_label_grid("Rotation", FONT_TYPE_ABRACADABRA, 10, label_center, WHITE, true, true, VECTOR2(0.f, 0.f));
+        gui_label_grid("Rotation", FONT_TYPE_ABRACADABRA, 1, label_center, WHITE, true, true, VECTOR2(0.f, 0.f));
         get_slider_by_id(SDR_ID_EDITOR_PROP_ROTATION_SLIDER)->options.at(0).no_localized_text = TextFormat("%.1f", (*p_prop)->sprite.rotation);
         gui_slider(SDR_ID_EDITOR_PROP_ROTATION_SLIDER, sdr_center, VECTOR2(0.f, 0.f));
 
-        gui_label_grid("Z-Index", FONT_TYPE_ABRACADABRA, 10, label_center, WHITE, true, true, VECTOR2(0.f, 10.f));
+        gui_label_grid("Z-Index", FONT_TYPE_ABRACADABRA, 1, label_center, WHITE, true, true, VECTOR2(0.f, 10.f));
         get_slider_by_id(SDR_ID_EDITOR_PROP_ZINDEX_SLIDER)->options.at(0).no_localized_text = TextFormat("%d", (*p_prop)->zindex);
         gui_slider(SDR_ID_EDITOR_PROP_ZINDEX_SLIDER, sdr_center, VECTOR2(0.f, 10.f));
       });
@@ -1006,14 +1006,14 @@ void render_interface_editor(void) {
     }
     case SLC_TYPE_DROP_COLLISION_POSITION: {
       state->_map_collision = Rectangle {state->mouse_pos_world.x, state->mouse_pos_world.y, 0.f, 0.f};
-      gui_label_format(FONT_TYPE_ABRACADABRA, 12, SE_BASE_RENDER_WIDTH * .5f, SE_BASE_RENDER_HEIGHT * .9f, WHITE, true, true, "%.0f, %.0f, %.0f, %.0f",
+      gui_label_format(FONT_TYPE_ABRACADABRA, 1, SE_BASE_RENDER_WIDTH * .5f, SE_BASE_RENDER_HEIGHT * .9f, WHITE, true, true, "%.0f, %.0f, %.0f, %.0f",
         state->_map_collision.x, state->_map_collision.y, state->_map_collision.width, state->_map_collision.height
       );
       break;
     }
     case SLC_TYPE_DROP_COLLISION_DIMENTIONS: {
       if (state->_map_collision.width > 0 && state->_map_collision.height > 0) {
-        gui_label_format(FONT_TYPE_ABRACADABRA, 12, SE_BASE_RENDER_WIDTH * .5f, SE_BASE_RENDER_HEIGHT * .9f, WHITE, true, true, 
+        gui_label_format(FONT_TYPE_ABRACADABRA, 1, SE_BASE_RENDER_WIDTH * .5f, SE_BASE_RENDER_HEIGHT * .9f, WHITE, true, true, 
           "%.1f, %.1f, %.1f, %.1f", state->_map_collision.x, state->_map_collision.y, state->_map_collision.width, state->_map_collision.height
         );
         Vector2 map_to_screen_coord = GetWorldToScreen2D(VECTOR2(state->_map_collision.x, state->_map_collision.y), state->in_camera_metrics->handle);
@@ -1022,7 +1022,7 @@ void render_interface_editor(void) {
           state->_map_collision.width * state->in_camera_metrics->handle.zoom, state->_map_collision.height * state->in_camera_metrics->handle.zoom}, 2.f, BLUE
         );
       }
-      else gui_label_format(FONT_TYPE_ABRACADABRA, 12, SE_BASE_RENDER_WIDTH * .5f, SE_BASE_RENDER_HEIGHT * .9f, RED, true, true, 
+      else gui_label_format(FONT_TYPE_ABRACADABRA, 1, SE_BASE_RENDER_WIDTH * .5f, SE_BASE_RENDER_HEIGHT * .9f, RED, true, true, 
         "%.1f, %.1f, %.1f, %.1f //Rectangle cannot have negative dimention", state->_map_collision.x, state->_map_collision.y, state->_map_collision.width, state->_map_collision.height
       );
       break;
@@ -1402,8 +1402,10 @@ constexpr void editor_update_movement(void) {
 // BINDINGS
 
 constexpr void begin_scene_editor(void) {
-  get_slider_by_id(SDR_ID_EDITOR_MAP_STAGE_SLC_SLIDER)->options.at(0).no_localized_text = TextFormat("%d", state->selected_stage);
-  get_slider_by_id(SDR_ID_EDITOR_MAP_LAYER_SLC_SLIDER)->options.at(0).no_localized_text = TextFormat("%d", state->edit_layer);
+  slider * sdr_stage = get_slider_by_id(SDR_ID_EDITOR_MAP_STAGE_SLC_SLIDER);
+  slider * sdr_layer = get_slider_by_id(SDR_ID_EDITOR_MAP_LAYER_SLC_SLIDER);
+  sdr_stage->options.at(0).no_localized_text = TextFormat("%d", state->selected_stage);
+  sdr_layer->options.at(0).no_localized_text = TextFormat("%d", state->edit_layer);
 
   event_fire(EVENT_CODE_SCENE_MANAGER_SET_CAM_POS, event_context(data128(state->target.x, state->target.y)));
 }

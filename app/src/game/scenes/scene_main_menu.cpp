@@ -40,7 +40,7 @@ static main_menu_scene_state * state;
 #define MAIN_MENU_FADE_DURATION 1 * TARGET_FPS
 #define MAIN_MENU_UPGRADE_PANEL_COL 3
 #define MAIN_MENU_UPGRADE_PANEL_ROW 3
-#define DRAW_UPGRADE_LABEL(VEC2, TEXT, PRE_UPG_VAL, POS_UPG_VAL) gui_label_format(FONT_TYPE_ABRACADABRA, 10, VEC2.x, VEC2.y, WHITE, true, false, TEXT, PRE_UPG_VAL, POS_UPG_VAL);
+#define DRAW_UPGRADE_LABEL(VEC2, TEXT, PRE_UPG_VAL, POS_UPG_VAL) gui_label_format(FONT_TYPE_ABRACADABRA, 1, VEC2.x, VEC2.y, WHITE, true, false, TEXT, PRE_UPG_VAL, POS_UPG_VAL);
 
 #define SMM_BASE_RENDER_SCALE(SCALE) VECTOR2(\
   static_cast<f32>(state->in_app_settings->render_width * SCALE),\
@@ -80,7 +80,7 @@ void update_scene_main_menu(void) {
   update_map();
   state->in_camera_metrics->frustum = smm_get_camera_view_rect(state->in_camera_metrics->handle);
 
-  event_fire(EVENT_CODE_SCENE_MANAGER_SET_CAM_POS, event_context(30.f, 30.f));
+  event_fire(EVENT_CODE_SCENE_MANAGER_SET_CAM_POS, event_context(0.f, 0.f));
   if (state->in_scene_changing_process && is_ui_fade_anim_about_to_complete()) {
     state->scene_changing_process_complete = true;
   }
@@ -114,7 +114,7 @@ void render_interface_main_menu(void) {
   if (!state->scene_changing_process_complete) {
     if (state->type == MAIN_MENU_SCENE_DEFAULT) {
         
-      gui_label_shader(GAME_TITLE, SHADER_ID_FONT_OUTLINE, FONT_TYPE_ABRACADABRA, 10, VECTOR2(SMM_BASE_RENDER_WIDTH * .5f, SMM_BASE_RENDER_HEIGHT * .25f), WHITE, true, true);
+      gui_label_shader(GAME_TITLE, SHADER_ID_FONT_OUTLINE, FONT_TYPE_ABRACADABRA, 5, VECTOR2(SMM_BASE_RENDER_WIDTH * .5f, SMM_BASE_RENDER_HEIGHT * .25f), WHITE, true, true);
 
       if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_PLAY), BTN_ID_MAINMENU_BUTTON_PLAY, VECTOR2(-5.f, -21.f), SMM_BASE_RENDER_DIV2, true)) {
         state->in_scene_changing_process = true;
@@ -139,13 +139,13 @@ void render_interface_main_menu(void) {
     } 
     else if (state->type == MAIN_MENU_SCENE_SETTINGS) {
       gui_draw_settings_screen();
-      if (gui_menu_button(lc_txt(LOC_TEXT_SETTINGS_BUTTON_CANCEL), BTN_ID_MAINMENU_SETTINGS_CANCEL, VECTOR2(-50.f, 100.f), SMM_BASE_RENDER_DIV2, true)) {
+      if (gui_menu_button(lc_txt(LOC_TEXT_SETTINGS_BUTTON_CANCEL), BTN_ID_MAINMENU_SETTINGS_CANCEL, VECTOR2(-35.f, 66.5f), SMM_BASE_RENDER_DIV2, true)) {
         state->type = MAIN_MENU_SCENE_DEFAULT;
       }
     }
     else if (state->type == MAIN_MENU_SCENE_UPGRADE) {
       draw_main_menu_upgrade_panel();
-      if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_UPDATE_BUTTON_BACK), BTN_ID_MAINMENU_UPGRADE_BACK, VECTOR2(0.f, 100.f), SMM_BASE_RENDER_DIV2, true)) {
+      if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_UPDATE_BUTTON_BACK), BTN_ID_MAINMENU_UPGRADE_BACK, VECTOR2(0.f, 66.5f), SMM_BASE_RENDER_DIV2, true)) {
         state->type = MAIN_MENU_SCENE_DEFAULT;
       }
     }
@@ -167,7 +167,7 @@ void render_interface_main_menu(void) {
   }
   set_worldmap_location(WORLDMAP_MAINMENU_MAP); // NOTE: Worldmap index 0 is mainmenu background now
 
-  state->in_camera_metrics->handle.zoom = .975f;
+  state->in_camera_metrics->handle.zoom = 1.f;
 
   state->type = MAIN_MENU_SCENE_DEFAULT;
   state->next_scene = SCENE_TYPE_UNSPECIFIED;
@@ -211,7 +211,7 @@ void draw_main_menu_upgrade_panel(void) {
   gui_draw_atlas_texture_id(icon_tex_id, cost_icon_pos, icon_tex_origin, 0.f);
 
   Vector2 cost_label_pos = VECTOR2(SMM_BASE_RENDER_WIDTH *.5f + cost_icon_dim * .3f, SMM_BASE_RENDER_HEIGHT * .05f);
-  gui_label_format_v(FONT_TYPE_ABRACADABRA, 25, cost_label_pos, WHITE, true, true, "%d", get_currency_souls());
+  gui_label_format_v(FONT_TYPE_ABRACADABRA, 1, cost_label_pos, WHITE, true, true, "%d", get_currency_souls());
 
   draw_main_menu_upgrade_list_panel();
   draw_main_menu_upgrade_details_panel();
@@ -297,7 +297,7 @@ void draw_main_menu_upgrade_list_panel(void) {
 
       gui_draw_texture_id_pro(TEX_ID_ASSET_ATLAS, stat->passive_icon_src, icon_pos);
       gui_draw_atlas_texture_id(ATLAS_TEX_ID_LITTLE_SHOWCASE, header_tex_pos, header_tex_origin, 0.f);
-      gui_label(lc_txt(stat->passive_display_name_symbol), FONT_TYPE_ABRACADABRA, hovered ? 12 : 11, title_pos, WHITE, true, true);
+      gui_label(lc_txt(stat->passive_display_name_symbol), FONT_TYPE_ABRACADABRA, 1, title_pos, WHITE, true, true);
     }
   }
 }
@@ -335,13 +335,13 @@ void draw_main_menu_upgrade_details_panel(void) {
     state->upgrade_details_panel.dest.x + state->upgrade_details_panel.dest.width * .5f,
     tier_symbols_vertical_position + tier_symbol_src_rect.height + detail_panel_element_spacing * .5f
   );
-  gui_label(lc_txt(state->hovered_stat->passive_display_name_symbol), FONT_TYPE_ABRACADABRA, 12, title_pos, WHITE, true, true);
+  gui_label(lc_txt(state->hovered_stat->passive_display_name_symbol), FONT_TYPE_ABRACADABRA, 1, title_pos, WHITE, true, true);
 
   Rectangle description_pos = {
     state->upgrade_details_panel.dest.x +state->upgrade_details_panel.dest.width * .05f, title_pos.y + detail_panel_element_spacing * .75f,
     state->upgrade_details_panel.dest.width * .9f, state->upgrade_details_panel.dest.width * .35f
   };
-  gui_label_wrap(lc_txt(state->hovered_stat->passive_desc_symbol), FONT_TYPE_ABRACADABRA, 10, description_pos, WHITE, false);
+  gui_label_wrap(lc_txt(state->hovered_stat->passive_desc_symbol), FONT_TYPE_ABRACADABRA, 1, description_pos, WHITE, false);
 
   character_stat pseudo_update = *state->hovered_stat;
   upgrade_stat_pseudo(&pseudo_update);
@@ -407,7 +407,7 @@ void draw_main_menu_upgrade_details_panel(void) {
     state->upgrade_details_panel.dest.x + state->upgrade_details_panel.dest.width * .575f,
     state->upgrade_details_panel.dest.y + state->upgrade_details_panel.dest.height * .85f
   );
-  gui_label_format_v(FONT_TYPE_ABRACADABRA, 25, cost_label_pos, cost_label_color, true, true, "%d", state->hovered_stat->upgrade_cost);
+  gui_label_format_v(FONT_TYPE_ABRACADABRA, 1, cost_label_pos, cost_label_color, true, true, "%d", state->hovered_stat->upgrade_cost);
 
   Vector2 button_location = Vector2 {
     state->upgrade_details_panel.dest.x + state->upgrade_details_panel.dest.width * .5f, 

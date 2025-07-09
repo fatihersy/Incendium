@@ -32,7 +32,7 @@ bool application_on_event(u16 code, event_context context);
 
 constexpr void toggle_borderless(void);
 constexpr void toggle_fullscreen(void);
-constexpr void toggle_windowed(void);
+constexpr void toggle_windowed(i32 width, i32 height);
 
 bool app_initialize(void) {
   // Subsystems
@@ -51,7 +51,7 @@ bool app_initialize(void) {
     return false; // TODO: Set default settings instead
   }
   app_settings * initializer = get_initializer_settings();
-  SetConfigFlags(FLAG_VSYNC_HINT | FLAG_WINDOW_HIGHDPI | FLAG_WINDOW_UNDECORATED | FLAG_WINDOW_TRANSPARENT);
+  SetConfigFlags(FLAG_VSYNC_HINT | FLAG_WINDOW_HIGHDPI | FLAG_WINDOW_UNDECORATED);
   InitWindow(initializer->window_width ,initializer->window_height, GAME_TITLE);
 
   set_settings_from_ini_file(CONFIG_FILE_LOCATION);
@@ -117,7 +117,7 @@ bool app_initialize(void) {
   event_register(EVENT_CODE_TOGGLE_WINDOWED, application_on_event);
 
   state->drawing_target = LoadRenderTexture(state->settings->render_width, state->settings->render_height);
-  SetWindowSize(state->settings->window_width, state->settings->window_height);
+
   SetTargetFPS(TARGET_FPS); // TODO: SetTargetFPS() Doesn't work
   SetExitKey(KEY_END);
   if (state->settings->window_state == FLAG_BORDERLESS_WINDOWED_MODE) {
@@ -127,7 +127,7 @@ bool app_initialize(void) {
     toggle_fullscreen();
   }
   else {
-    toggle_windowed();
+    toggle_windowed(state->settings->window_width, state->settings->window_height);
   }
 
   state->app_running = true;
@@ -190,10 +190,7 @@ bool app_render(void) {
     ClearBackground(CLEAR_BACKGROUND_COLOR);
     BeginMode2D(state->screen_space_camera);
       Rectangle source = Rectangle {0, 0, (f32)state->drawing_target.texture.width, (f32)-state->drawing_target.texture.height};
-      Rectangle dest = Rectangle {
-        -state->settings->normalized_ratio, -state->settings->normalized_ratio, 
-        state->settings->window_width  + (state->settings->normalized_ratio*2), 
-        state->settings->window_height + (state->settings->normalized_ratio*2)
+      Rectangle dest = Rectangle {0, 0, static_cast<f32>(state->settings->window_width), static_cast<f32>(-state->settings->window_height)
       };
       DrawTexturePro(state->drawing_target.texture, source, dest, ZEROVEC2, 0, WHITE);
     EndMode2D();
@@ -202,16 +199,26 @@ bool app_render(void) {
 }
 
 constexpr void toggle_borderless(void) {
+  set_resolution(GetMonitorWidth(GetCurrentMonitor()), GetMonitorHeight(GetCurrentMonitor()));
+  set_window_size(GetMonitorWidth(GetCurrentMonitor()), GetMonitorHeight(GetCurrentMonitor()));
+
+  UnloadRenderTexture(state->drawing_target);
+  state->drawing_target = LoadRenderTexture(state->settings->render_width, state->settings->render_height);
+
   ToggleBorderlessWindowed();
-  set_resolution(GetRenderWidth(), GetRenderHeight());
   state->settings->window_state = FLAG_BORDERLESS_WINDOWED_MODE;
 }
 constexpr void toggle_fullscreen(void) {
+  set_resolution(GetMonitorWidth(GetCurrentMonitor()), GetMonitorHeight(GetCurrentMonitor()));
+  set_window_size(GetMonitorWidth(GetCurrentMonitor()), GetMonitorHeight(GetCurrentMonitor()));
+
+  UnloadRenderTexture(state->drawing_target);
+  state->drawing_target = LoadRenderTexture(state->settings->render_width, state->settings->render_height);
+
   ToggleFullscreen();
-  set_resolution(GetRenderWidth(), GetRenderHeight());
   state->settings->window_state = FLAG_FULLSCREEN_MODE;
 }
-constexpr void toggle_windowed(void) {   
+constexpr void toggle_windowed(i32 width, i32 height) {
   if (state->settings->window_state == FLAG_BORDERLESS_WINDOWED_MODE) {
     ToggleBorderlessWindowed();
   }
@@ -219,6 +226,12 @@ constexpr void toggle_windowed(void) {
     ToggleFullscreen();
   }
   state->settings->window_state = 0;
+  set_resolution(width, height);  
+  set_window_size(width, height);
+  
+  UnloadRenderTexture(state->drawing_target);
+  state->drawing_target = LoadRenderTexture(state->settings->render_width, state->settings->render_height);
+
   SetWindowSize(state->settings->window_width, state->settings->window_height);
   SetWindowPosition(
     (GetMonitorWidth(GetCurrentMonitor())  / 2.f) - (GetScreenWidth()  / 2.f), 
@@ -249,7 +262,7 @@ bool application_on_event(u16 code, event_context context) {
     return true;
   }
   case EVENT_CODE_TOGGLE_WINDOWED: {
-    toggle_windowed();
+    toggle_windowed(context.data.i32[0], context.data.i32[1]);
     return true;
   }
   default:

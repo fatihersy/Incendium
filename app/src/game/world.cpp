@@ -78,7 +78,7 @@ bool world_system_initialize(camera_metrics* _in_camera_metrics, app_settings* _
     }
     state->map.at(itr_000).propfile = TextFormat("%s_prop.txt", state->worldmap_locations.at(itr_000).filename.c_str());
     state->map.at(itr_000).collisionfile = TextFormat("%s_collision.txt", state->worldmap_locations.at(itr_000).filename.c_str());
-    create_tilemap(TILESHEET_TYPE_MAP, ZEROVEC2, 100, 60, &state->map.at(itr_000));
+    create_tilemap(TILESHEET_TYPE_MAP, ZEROVEC2, 100, state->in_app_settings->window_height * 0.05 , &state->map.at(itr_000));
     if(!state->map.at(itr_000).is_initialized) {
       TraceLog(LOG_WARNING, "WARNING::scene_in_game_edit::initialize_scene_in_game_edit()::tilemap initialization failed");
     }

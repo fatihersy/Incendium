@@ -22,6 +22,7 @@ typedef struct app_settings_system_state {
   std::vector<std::pair<i32, i32>> ratio_37_27_resolutions;
   std::vector<std::pair<i32, i32>> ratio_43_18_resolutions;
   std::vector<std::pair<i32, i32>> ratio_64_27_resolutions;
+  std::vector<std::pair<i32, i32>> ratio_custom_resolutions;
 } app_settings_system_state;
 
 static app_settings_system_state * state;
@@ -172,7 +173,6 @@ bool update_app_settings_state(void) {
   return true;
 }
 
-
 void set_resolution(i32 width, i32 height) {
   if (!state) {
     TraceLog(LOG_WARNING, "settings::set_resolution()::settings state didn't initialized yet");
@@ -182,11 +182,19 @@ void set_resolution(i32 width, i32 height) {
   state->settings.render_height = height;
   state->settings.render_width_div2   = state->settings.render_width  * .5f;
   state->settings.render_height_div2  = state->settings.render_height * .5f;
+}
+void set_window_size(i32 width, i32 height) {
+  if (!state) {
+    TraceLog(LOG_WARNING, "settings::set_resolution()::settings state didn't initialized yet");
+    return;
+  }
+  state->settings.window_width  = width;
+  state->settings.window_height = height;
   state->settings.normalized_ratio    = static_cast<f32>(state->settings.window_width)  / static_cast<f32>(state->settings.render_width);
   state->settings.scale_ratio.push_back(static_cast<f32>(state->settings.render_width)  / static_cast<f32>(state->settings.window_width));
   state->settings.scale_ratio.push_back(static_cast<f32>(state->settings.render_height) / static_cast<f32>(state->settings.window_height));
-  state->offset = 5;
 }
+
 void set_language(const char* lang) {
   if (!state) {
     TraceLog(LOG_ERROR, "settings::set_language()::State is not valid");
@@ -338,6 +346,9 @@ aspect_ratio get_aspect_ratio(i32 width, i32 height) {
     case 21: return ASPECT_RATIO_21_9;      
     case 32: return ASPECT_RATIO_32_9;      
   }
+  else if(height_ratio == 384) switch (width_ratio) {
+    case 683: return ASPECT_RATIO_16_9;      
+  }
   else if(height_ratio ==  10) switch (width_ratio) {
     case 16: return ASPECT_RATIO_16_10;
   }
@@ -391,25 +402,33 @@ std::pair<i32, i32> get_optimum_render_resolution(aspect_ratio ratio) {
 }
 std::vector<std::pair<i32, i32>> * get_supported_render_resolutions(void) {
 
-  switch (state->settings.display_ratio) {
-    case ASPECT_RATIO_3_2:   return __builtin_addressof(state->ratio_3_2_resolutions);
-    case ASPECT_RATIO_4_3:   return __builtin_addressof(state->ratio_4_3_resolutions);
-    case ASPECT_RATIO_5_3:   return __builtin_addressof(state->ratio_5_3_resolutions);
-    case ASPECT_RATIO_5_4:   return __builtin_addressof(state->ratio_5_4_resolutions);
-    case ASPECT_RATIO_8_5:   return __builtin_addressof(state->ratio_8_5_resolutions);
-    case ASPECT_RATIO_16_9:  return __builtin_addressof(state->ratio_16_9_resolutions);
-    case ASPECT_RATIO_16_10: return __builtin_addressof(state->ratio_16_10_resolutions);
-    case ASPECT_RATIO_21_9:  return __builtin_addressof(state->ratio_21_9_resolutions);
-    case ASPECT_RATIO_32_9:  return __builtin_addressof(state->ratio_32_9_resolutions);
-    case ASPECT_RATIO_37_27: return __builtin_addressof(state->ratio_37_27_resolutions);
-    case ASPECT_RATIO_43_18: return __builtin_addressof(state->ratio_43_18_resolutions);
-    case ASPECT_RATIO_64_27: return __builtin_addressof(state->ratio_64_27_resolutions);
-    default: {
-      TraceLog(LOG_WARNING, "settings::get_supported_render_resolutions()::Unsupported ratio");
-      break;
+  if (state->settings.display_ratio != ASPECT_RATIO_CUSTOM) {
+    switch (state->settings.display_ratio) {
+      case ASPECT_RATIO_3_2:   return __builtin_addressof(state->ratio_3_2_resolutions);
+      case ASPECT_RATIO_4_3:   return __builtin_addressof(state->ratio_4_3_resolutions);
+      case ASPECT_RATIO_5_3:   return __builtin_addressof(state->ratio_5_3_resolutions);
+      case ASPECT_RATIO_5_4:   return __builtin_addressof(state->ratio_5_4_resolutions);
+      case ASPECT_RATIO_8_5:   return __builtin_addressof(state->ratio_8_5_resolutions);
+      case ASPECT_RATIO_16_9:  return __builtin_addressof(state->ratio_16_9_resolutions);
+      case ASPECT_RATIO_16_10: return __builtin_addressof(state->ratio_16_10_resolutions);
+      case ASPECT_RATIO_21_9:  return __builtin_addressof(state->ratio_21_9_resolutions);
+      case ASPECT_RATIO_32_9:  return __builtin_addressof(state->ratio_32_9_resolutions);
+      case ASPECT_RATIO_37_27: return __builtin_addressof(state->ratio_37_27_resolutions);
+      case ASPECT_RATIO_43_18: return __builtin_addressof(state->ratio_43_18_resolutions);
+      case ASPECT_RATIO_64_27: return __builtin_addressof(state->ratio_64_27_resolutions);
+      default: {
+        TraceLog(LOG_WARNING, "settings::get_supported_render_resolutions()::Unsupported ratio");
+        return nullptr;
+      }
     }
   }
+  else {
+    state->ratio_custom_resolutions.clear();
+    state->ratio_custom_resolutions.push_back(std::pair<i32, i32>(state->settings.window_width, state->settings.window_height));
+    return __builtin_addressof(state->ratio_custom_resolutions);
+  }
 
+  TraceLog(LOG_WARNING, "settings::get_supported_render_resolutions()::Function ended unexpectedly");
   return nullptr;
 }
 
