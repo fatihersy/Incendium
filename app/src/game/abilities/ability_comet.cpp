@@ -11,13 +11,13 @@
 typedef struct ability_comet_state {
   std::array<ability, ABILITY_TYPE_MAX> abilities;
 
-  camera_metrics* in_camera_metrics;
-  app_settings* in_settings;
-  ingame_info* in_ingame_info; 
+  const camera_metrics* in_camera_metrics;
+  const app_settings* in_settings;
+  const ingame_info* in_ingame_info; 
 } ability_comet_state;
 static ability_comet_state * state;
 
-bool ability_comet_initialize(camera_metrics* _camera_metrics, app_settings* _settings, ingame_info* _ingame_info) {
+bool ability_comet_initialize(const camera_metrics* _camera_metrics,const app_settings* _settings,const ingame_info* _ingame_info) {
   if (state) {
     TraceLog(LOG_WARNING, "ability::ability_system_initialize()::Init callet multiple times");
     return false;

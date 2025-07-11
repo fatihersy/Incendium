@@ -105,7 +105,7 @@ static user_interface_system_state * state;
 #define UI_BASE_RENDER_WIDTH state->in_app_settings->render_width
 #define UI_BASE_RENDER_HEIGHT state->in_app_settings->render_height
 
-bool user_interface_on_event(u16 code, event_context context);
+bool user_interface_on_event(i32 code, event_context context);
  
 void update_buttons(void);
 void update_sliders(void);
@@ -127,13 +127,11 @@ void register_slider_type(slider_type_id _sdr_type_id, spritesheet_id _ss_sdr_bo
 void draw_text_shader(const char *text, shader_id sdr_id, Vector2 position, Font font, float fontsize, Color tint, bool center_horizontal, bool center_vertical, bool use_grid_align, Vector2 grid_coord);
 void DrawTextBoxed(Font font, const char *text, Rectangle rec, float fontSize, float spacing, bool wordWrap, Color tint);
 const char* wrap_text(const char* text, Font font, i32 font_size, Rectangle bounds, bool center_x);
-void set_resolution_slider_native_res(void);
 Font load_font(const char* file_name, i32 font_size, i32* _codepoints, i32 _codepoint_count);
 localization_package* load_localization(std::string language_name, u32 loc_index, std::string _codepoints, i32 font_size);
 localization_package* ui_get_localization_by_name(std::string language_name);
 localization_package* ui_get_localization_by_index(u32 _language_index);
 
-Vector2 make_vector(f32 x, f32 y);
 bool ui_sound_slider_on_left_button_trigger(void);
 bool ui_sound_slider_on_right_button_trigger(void);
 
@@ -558,8 +556,8 @@ void render_user_interface(void) {
     TraceLog(LOG_ERROR, "user_interface::gui_player_experiance_process()::Player experiance process bar didn't initialized");
     return;
   }
-  atlas_texture* inside_tex = ss_get_atlas_texture_by_enum(prg_bar.type.body_inside);
-  Texture2D* atlas = ss_get_texture_by_enum(ATLAS_TEXTURE_ID);
+  const atlas_texture* inside_tex = ss_get_atlas_texture_by_enum(prg_bar.type.body_inside);
+  const Texture2D* atlas = ss_get_texture_by_enum(ATLAS_TEXTURE_ID);
   if (!inside_tex) {
     TraceLog(LOG_ERROR, "user_interface::gui_player_experiance_process()::progress bar atlas is null");
     return;
@@ -596,7 +594,7 @@ void render_user_interface(void) {
     TraceLog(LOG_ERROR, "user_interface::draw_repetitive_body_tex()::Recieved texture out of bound");
     return;
   }
-  atlas_texture* body_tex = ss_get_atlas_texture_by_enum(body);
+  const atlas_texture* body_tex = ss_get_atlas_texture_by_enum(body);
   if (!body_tex) {
     TraceLog(LOG_ERROR, "user_interface::draw_repetitive_body_tex()::Recieved texture returned NULL");
     return;
@@ -685,7 +683,7 @@ void render_user_interface(void) {
 
   switch (sdr->sdr_type.id) {
     case SDR_TYPE_PERCENT: {
-      spritesheet * circle_sprite = ss_get_spritesheet_by_enum(SHEET_ID_SLIDER_PERCENT);
+      const spritesheet * circle_sprite = ss_get_spritesheet_by_enum(SHEET_ID_SLIDER_PERCENT);
       u16 total_body_width = sdr_type.body_width * sdr_type.width_multiply;
       u16 each_body_width = (total_body_width - ((DEFAULT_PERCENT_SLIDER_CIRCLE_AMOUTH) * SCREEN_OFFSET.x)) / DEFAULT_PERCENT_SLIDER_CIRCLE_AMOUTH;
       f32 each_body_scale = (float)each_body_width / sdr_type.origin_body_width;
@@ -1239,7 +1237,7 @@ void gui_draw_atlas_texture_to_background(atlas_texture_id _id) {
  * @return Rectangle { .x = 0, .y = 0, .width = tex->width, .height = tex->height}; 
  */
   Rectangle get_atlas_texture_source_rect(atlas_texture_id _id) {
-  atlas_texture* tex = ss_get_atlas_texture_by_enum(_id);
+  const atlas_texture* tex = ss_get_atlas_texture_by_enum(_id);
   if (!tex) { 
     TraceLog(LOG_WARNING, "user_interface::get_atlas_texture_source_rect()::Requested type was null");
     return ZERORECT; 
@@ -1256,7 +1254,7 @@ void gui_draw_atlas_texture_to_background(atlas_texture_id _id) {
     "user_interface::draw_texture_regular()::ID was out of bound"); 
     return; 
   }
-  atlas_texture* tex = ss_get_atlas_texture_by_enum(_id);
+  const atlas_texture* tex = ss_get_atlas_texture_by_enum(_id);
   if (!tex) { TraceLog(
   LOG_WARNING, "user_interface::draw_texture_regular()::Tex was null");
     return; 
@@ -1278,7 +1276,7 @@ void gui_draw_atlas_texture_to_background(atlas_texture_id _id) {
     TraceLog(LOG_WARNING, "user_interface::draw_atlas_texture_npatch()::ID was out of bound"); 
     return; 
   }
-  atlas_texture* tex = ss_get_atlas_texture_by_enum(_id);
+  const atlas_texture* tex = ss_get_atlas_texture_by_enum(_id);
   if (!tex) { 
     TraceLog(LOG_WARNING, "user_interface::draw_atlas_texture_npatch()::Tex was null"); 
     return; 
@@ -1299,9 +1297,6 @@ void gui_draw_atlas_texture_to_background(atlas_texture_id _id) {
   };
 
   DrawTextureNPatch(*tex->atlas_handle, npatch, dest, ZEROVEC2, 0, WHITE);
-}
- Vector2 make_vector(f32 x, f32 y) {
-  return Vector2 {x,y};
 }
  void gui_draw_map_stage_pin(bool have_hovered, Vector2 screen_loc) {
   const Vector2 icon_size = NORMALIZE_VEC2(32.f, 32.f, 1280, 720);
@@ -1502,7 +1497,7 @@ void gui_draw_atlas_texture_to_background(atlas_texture_id _id) {
     TraceLog(LOG_WARNING, "user_interface::gui_draw_atlas_texture_id_pro()::ID was out of bound"); 
     return; 
   }
-  atlas_texture* tex = ss_get_atlas_texture_by_enum(_id);
+  const atlas_texture* tex = ss_get_atlas_texture_by_enum(_id);
   if (!tex) { 
     TraceLog(LOG_WARNING, "user_interface::gui_draw_atlas_texture_id_pro()::Tex was null");
     return; 
@@ -1522,7 +1517,7 @@ void gui_draw_atlas_texture_to_background(atlas_texture_id _id) {
     TraceLog(LOG_WARNING, "user_interface::gui_draw_atlas_texture_id()::ID was out of bound"); 
     return; 
   }
-  atlas_texture* tex = ss_get_atlas_texture_by_enum(_id);
+  const atlas_texture* tex = ss_get_atlas_texture_by_enum(_id);
   if (!tex) { 
     TraceLog(LOG_WARNING, "user_interface::gui_draw_atlas_texture_id()::Tex was null");
     return; 
@@ -1535,7 +1530,7 @@ void gui_draw_atlas_texture_to_background(atlas_texture_id _id) {
     TraceLog(LOG_WARNING, "user_interface::gui_draw_atlas_texture_id_pro_grid()::ID was out of bound"); 
     return; 
   }
-  atlas_texture* tex = ss_get_atlas_texture_by_enum(_id);
+  const atlas_texture* tex = ss_get_atlas_texture_by_enum(_id);
   if (!tex) { 
     TraceLog(LOG_WARNING, "user_interface::gui_draw_atlas_texture_id_pro_grid()::Tex was null");
     return; 
@@ -1554,7 +1549,7 @@ void gui_draw_atlas_texture_to_background(atlas_texture_id _id) {
     TraceLog(LOG_WARNING, "user_interface::gui_draw_atlas_texture_id_grid()::ID was out of bound"); 
     return; 
   }
-  atlas_texture* tex = ss_get_atlas_texture_by_enum(_id);
+  const atlas_texture* tex = ss_get_atlas_texture_by_enum(_id);
   if (!tex) { 
     TraceLog(LOG_WARNING, "user_interface::gui_draw_atlas_texture_id_grid()::Tex was null");
     return; 
@@ -1576,7 +1571,7 @@ void gui_draw_atlas_texture_to_background(atlas_texture_id _id) {
     TraceLog(LOG_WARNING, "user_interface::gui_draw_texture_id_pro()::ID was out of bound"); 
     return; 
   }
-  Texture2D* tex = ss_get_texture_by_enum(_id);
+  const Texture2D* tex = ss_get_texture_by_enum(_id);
   if (!tex) { 
     TraceLog(LOG_WARNING, "user_interface::gui_draw_texture_id_pro()::Tex was null");
     return; 
@@ -1588,7 +1583,7 @@ void gui_draw_atlas_texture_to_background(atlas_texture_id _id) {
     TraceLog(LOG_WARNING, "user_interface::gui_draw_texture_id()::ID was out of bound"); 
     return; 
   }
-  Texture2D* tex = ss_get_texture_by_enum(_id);
+  const Texture2D* tex = ss_get_texture_by_enum(_id);
   if (!tex) { 
     TraceLog(LOG_WARNING, "user_interface::gui_draw_texture_id()::Tex was null");
     return; 
@@ -1603,7 +1598,7 @@ void gui_draw_atlas_texture_to_background(atlas_texture_id _id) {
     TraceLog(LOG_WARNING, "user_interface::gui_draw_atlas_texture_id_scale()::ID was out of bound"); 
     return; 
   }
-  atlas_texture* tex = ss_get_atlas_texture_by_enum(_id);
+  const atlas_texture* tex = ss_get_atlas_texture_by_enum(_id);
   if (!tex) { 
     TraceLog(LOG_WARNING, "user_interface::gui_draw_atlas_texture_id_scale()::Tex was null");
     return; 
@@ -1728,23 +1723,6 @@ void gui_draw_atlas_texture_to_background(atlas_texture_id _id) {
  bool is_ui_fade_anim_about_to_complete(void) {
   return state->fade_animation_timer == state->fade_animation_duration-1;
 }
- void set_resolution_slider_native_res(void) {
-  if (!state) {
-    TraceLog(LOG_ERROR, "user_interface::set_resolution_slider_native_res()::State is null");
-    return;
-  }
-  
-  i32 monitor = GetCurrentMonitor();
-  Vector2 res = Vector2 { (f32) GetMonitorWidth(monitor), (f32) GetMonitorHeight(monitor)};
-
-  for (size_t itr_000 = 0; itr_000 < state->sliders.at(SDR_ID_SETTINGS_RES_SLIDER).options.size(); ++itr_000) {
-    const slider_option * option = __builtin_addressof(state->sliders.at(SDR_ID_SETTINGS_RES_SLIDER).options.at(itr_000));
-    if ( option->content.data.i32[0] == res.x && option->content.data.i32[1] == res.y) {
-      state->sliders.at(SDR_ID_SETTINGS_RES_SLIDER).current_value = itr_000;
-      break;
-    }
-  }
-}
  Font load_font(const char* file_name, i32 font_size, i32* _codepoints, i32 _codepoint_count) {
   if (!state) {
     TraceLog(LOG_ERROR, "user_interface::load_font()::State is not valid");
@@ -1837,7 +1815,7 @@ void ui_set_sprite(spritesheet *sheet, bool _play_looped, bool _play_once) {
 
  void user_interface_system_destroy(void) {}
 
-bool user_interface_on_event(u16 code, event_context context) {
+bool user_interface_on_event(i32 code, event_context context) {
   switch (code) {
     case EVENT_CODE_UI_UPDATE_PROGRESS_BAR: {
       state->prg_bars.at((i32)context.data.f32[0]).progress = context.data.f32[1];

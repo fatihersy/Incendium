@@ -11,18 +11,17 @@
 
 typedef struct scene_manager_system_state {
   scene_id scene_data;
-  Vector2 target;
-  app_settings * in_app_settings;
+  const app_settings * in_app_settings;
 } scene_manager_system_state;
 
 static scene_manager_system_state * state;
 
-bool scene_manager_on_event(u16 code, event_context context);
+bool scene_manager_on_event(i32 code, event_context context);
 void begin_scene(scene_id scene_id);
 void end_scene(scene_id scene_id);
 bool scene_manager_reinit(void);
 
-bool scene_manager_initialize(app_settings * _in_app_settings) {
+bool scene_manager_initialize(const app_settings * _in_app_settings) {
   if (state != nullptr) {
     return scene_manager_reinit();
   }
@@ -35,23 +34,22 @@ bool scene_manager_initialize(app_settings * _in_app_settings) {
   event_register(EVENT_CODE_SCENE_IN_GAME, scene_manager_on_event);
   event_register(EVENT_CODE_SCENE_EDITOR, scene_manager_on_event);
   event_register(EVENT_CODE_SCENE_MAIN_MENU, scene_manager_on_event);
-  event_register(EVENT_CODE_SCENE_MANAGER_SET_TARGET, scene_manager_on_event);
-  event_register(EVENT_CODE_SCENE_MANAGER_SET_CAM_POS, scene_manager_on_event);
-  event_register(EVENT_CODE_SCENE_MANAGER_SET_ZOOM, scene_manager_on_event);
 
   state->in_app_settings = _in_app_settings;
 
   return scene_manager_reinit();
 }
 bool scene_manager_reinit(void) {
+  if (!state || state == nullptr ) {
+    TraceLog(LOG_ERROR, "scene_manager::scene_manager_reinit()::State is not valid");
+    return false;
+  }
+
   return event_fire(EVENT_CODE_SCENE_MAIN_MENU, event_context());
 }
 
 void update_scene_scene(void) {
-  update_camera(state->target, VECTOR2(
-    static_cast<f32>(state->in_app_settings->render_width_div2), 
-    static_cast<f32>(state->in_app_settings->render_height_div2))
-);
+  update_camera();
 
   switch (state->scene_data) {
     case SCENE_TYPE_MAIN_MENU: update_scene_main_menu();     break;
@@ -86,15 +84,6 @@ void render_scene_interface(void) {
   }
 }
 
-void set_current_scene_type(scene_id type) {
-  state->scene_data = type;
-}
-scene_id get_current_scene_type(void) {
-  return state->scene_data;
-}
-Vector2 get_spectator_position(void) {
-  return state->target;
-}
 void end_scene(scene_id scene_id) {
   switch (scene_id) {
   case SCENE_TYPE_UNSPECIFIED: { return; }
@@ -111,7 +100,7 @@ void end_scene(scene_id scene_id) {
   TraceLog(LOG_ERROR, "scene_manager::end_scene()::Function ended unexpectedly");
 }
 
-bool scene_manager_on_event(u16 code, event_context context) {
+bool scene_manager_on_event(i32 code,[[maybe_unused]] event_context context) {
   switch (code) {
   case EVENT_CODE_SCENE_IN_GAME: {
     end_scene(state->scene_data);
@@ -138,25 +127,6 @@ bool scene_manager_on_event(u16 code, event_context context) {
     state->scene_data = SCENE_TYPE_MAIN_MENU;
 
     return initialize_scene_main_menu(get_in_game_camera(), state->in_app_settings);
-  }
-  case EVENT_CODE_SCENE_MANAGER_SET_TARGET: {
-    state->target.x = context.data.f32[0];
-    state->target.y = context.data.f32[1];
-    return true;
-    break;
-  }
-  case EVENT_CODE_SCENE_MANAGER_SET_CAM_POS: {
-    state->target.x = context.data.f32[0];
-    state->target.y = context.data.f32[1];
-    get_in_game_camera()->handle.target.x = context.data.f32[0];
-    get_in_game_camera()->handle.target.y = context.data.f32[1];
-    return true;
-    break;
-  }
-  case EVENT_CODE_SCENE_MANAGER_SET_ZOOM: {
-    get_in_game_camera()->handle.zoom = context.data.f32[0];
-    return true;
-    break;
   }
   default:
     break;

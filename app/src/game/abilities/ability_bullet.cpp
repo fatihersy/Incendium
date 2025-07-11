@@ -7,13 +7,13 @@
 #include "game/spritesheet.h"
 
 typedef struct ability_bullet_state {
-  camera_metrics* in_camera_metrics;
-  app_settings* in_settings;
-  ingame_info* in_ingame_info; 
+  const camera_metrics* in_camera_metrics;
+  const app_settings* in_settings;
+  const ingame_info* in_ingame_info; 
 } ability_bullet_state;
 static ability_bullet_state * state;
 
-bool ability_bullet_initialize(camera_metrics* _camera_metrics, app_settings* _settings, ingame_info* _ingame_info) {
+bool ability_bullet_initialize(const camera_metrics* _camera_metrics, const app_settings* _settings, const ingame_info* _ingame_info) {
   if (state) {
     TraceLog(LOG_WARNING, "ability::ability_bullet_initialize()::Initialize called multiple times");
     return false;

@@ -16,7 +16,7 @@ typedef enum spawn_movement_animations {
 typedef struct spawn_system_state {
   Character2D spawns[MAX_SPAWN_COUNT]; // NOTE: See also clean-up function
   u32 current_spawn_count;
-  camera_metrics* in_camera_metrics;
+  const camera_metrics* in_camera_metrics;
   u32 next_spawn_id;
 } spawn_system_state;
 
@@ -46,7 +46,7 @@ void spawn_play_anim(Character2D* spawn, spawn_movement_animations sheet);
 void remove_spawn(u16 index);
 void register_spawn_animation(Character2D* spawn, spawn_movement_animations movement);
 
-bool spawn_system_initialize(camera_metrics* _camera_metrics) {
+bool spawn_system_initialize(const camera_metrics* _camera_metrics) {
   if (state) {
     clean_up_spawn_state();
     return true;

@@ -5,7 +5,7 @@
 
 #include "game_types.h"
 
-bool spawn_system_initialize(camera_metrics* _camera_metrics);
+bool spawn_system_initialize(const camera_metrics* _camera_metrics);
 bool spawn_character(Character2D _character);
 Character2D *get_spawns(void);
 u32 *get_spawn_count(void);

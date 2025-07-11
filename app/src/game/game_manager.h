@@ -5,7 +5,7 @@
 
 #include <game/game_types.h>
 
-bool game_manager_initialize(camera_metrics* _camera_metrics);
+bool game_manager_initialize(const camera_metrics* _camera_metrics);
 
 void update_game_manager(void);
 void update_game_manager_debug(void);

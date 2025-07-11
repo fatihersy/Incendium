@@ -12,7 +12,7 @@ extern const u32 level_curve[MAX_PLAYER_LEVEL+1];
 
 static player_state* player;
 
-bool player_system_on_event(u16 code, event_context context);
+bool player_system_on_event(i32 code, event_context context);
 void player_system_reinit(void);
 void play_anim(spritesheet_id player_anim_sheet);
 
@@ -340,7 +340,7 @@ void play_anim(spritesheet_id player_anim_sheet) {
   }
 }
 
-bool player_system_on_event(u16 code, event_context context) {
+bool player_system_on_event(i32 code, event_context context) {
     switch (code) {
         case EVENT_CODE_PLAYER_ADD_EXP: {
           player_add_exp_to_player(context.data.u32[0]);

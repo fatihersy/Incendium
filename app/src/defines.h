@@ -740,7 +740,6 @@ typedef enum slider_id {
 } slider_id;
 
 typedef struct app_settings {
-  f32 normalized_ratio;
   std::vector<f32> scale_ratio;
   aspect_ratio display_ratio;
   i32 master_sound_volume;
@@ -755,7 +754,6 @@ typedef struct app_settings {
   app_settings(void) {
     this->scale_ratio.clear();
     this->language.clear();
-    this->normalized_ratio = 0;
     this->master_sound_volume = 0;
     this->window_state = 0;
     this->window_width = 0;
@@ -772,7 +770,6 @@ typedef struct app_settings {
     this->render_height      = height;
     this->render_width_div2  = width * .5f;
     this->render_height_div2 = height * .5f;
-    this->normalized_ratio    = static_cast<f32>(this->window_width)  / static_cast<f32>(this->render_width);
     this->scale_ratio.push_back(static_cast<f32>(this->render_width)  / static_cast<f32>(this->window_width));
     this->scale_ratio.push_back(static_cast<f32>(this->render_height) / static_cast<f32>(this->window_height));
     this->master_sound_volume = volume;

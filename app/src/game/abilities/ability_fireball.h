@@ -4,7 +4,7 @@
 
 #include "game/game_types.h"
 
-[[__nodiscard__]] bool ability_fireball_initialize(camera_metrics* _camera_metrics, app_settings* settings, ingame_info* _ingame_info);
+[[__nodiscard__]] bool ability_fireball_initialize(const camera_metrics* _camera_metrics,const app_settings* settings,const ingame_info* _ingame_info);
 
 ability get_ability_fireball(void);
 ability get_ability_fireball_next_level(ability abl);

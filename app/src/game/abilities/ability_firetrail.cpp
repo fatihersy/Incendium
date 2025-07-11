@@ -9,13 +9,13 @@
 typedef struct ability_firetrail_state {
   std::array<ability, ABILITY_TYPE_MAX> abilities;
 
-  camera_metrics* in_camera_metrics;
-  app_settings* in_settings;
-  ingame_info* in_ingame_info; 
+  const camera_metrics* in_camera_metrics;
+  const app_settings* in_settings;
+  const ingame_info* in_ingame_info; 
 } ability_firetrail_state;
 static ability_firetrail_state * state;
 
-bool ability_firetrail_initialize(camera_metrics* _camera_metrics, app_settings* _settings, ingame_info* _ingame_info) {
+bool ability_firetrail_initialize(const camera_metrics* _camera_metrics,const app_settings* _settings,const ingame_info* _ingame_info) {
   if (state) {
     TraceLog(LOG_WARNING, "ability::ability_system_initialize()::Init called multiple times");
     return false;

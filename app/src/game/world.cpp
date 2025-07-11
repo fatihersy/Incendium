@@ -11,13 +11,14 @@ typedef struct world_system_state {
 
   f32 palette_zoom;
   worldmap_stage active_stage;
-  camera_metrics* in_camera_metrics;
-  app_settings * in_app_settings;
+  const camera_metrics* in_camera_metrics;
+  const app_settings * in_app_settings;
 } world_system_state;
 
 static world_system_state * state; 
 
 #define CURR_MAP state->map.at(state->active_stage.map_id)
+#define MAINMENU_STAGE_INDEX 0
 
 // 3840x2160 is the dimentions of map selection screen background picture
 #define CREATE_WORLDMAP_STAGE_CENTERED(ID, DISPLAY_NAME, FILENAME, SELECTION_SCREEN_LOCATION, WILL_BE_ON_SELECTION_SCREEN)\
@@ -26,7 +27,7 @@ static world_system_state * state;
 Rectangle get_position_view_rect(Camera2D camera, Vector2 pos, f32 zoom);
 constexpr size_t get_renderqueue_prop_index_by_id(i16 zindex, u32 id);
 
-bool world_system_initialize(camera_metrics* _in_camera_metrics, app_settings* _in_app_settings) {
+bool world_system_initialize(const camera_metrics* _in_camera_metrics,const app_settings* _in_app_settings) {
   if (state) {
     TraceLog(LOG_WARNING, "world::world_system_initialize()::Initialize called twice");
     return false;
@@ -44,7 +45,8 @@ bool world_system_initialize(camera_metrics* _in_camera_metrics, app_settings* _
   state->in_camera_metrics = _in_camera_metrics;
   create_tilesheet(TILESHEET_TYPE_MAP, 16*2, 1.1, &state->palette);
   if(!state->palette.is_initialized) {
-    TraceLog(LOG_WARNING, "scene_in_game_edit::initialize_scene_in_game_edit()::palette initialization failed");
+    TraceLog(LOG_WARNING, "world::world_system_initialize()::palette initialization failed");
+    return false;
   }
   state->palette.position = {_in_camera_metrics->screen_offset.x, _in_camera_metrics->screen_offset.y + 100}; // INFO: Tilesheet start position
 
@@ -72,29 +74,38 @@ bool world_system_initialize(camera_metrics* _in_camera_metrics, app_settings* _
     CREATE_WORLDMAP_STAGE_CENTERED(20, "Stage 21", "stage21", VECTOR2(1977,  385), true);
     CREATE_WORLDMAP_STAGE_CENTERED(21, "Stage 22", "stage22", VECTOR2(1661,  410), true);
   }
-  for (int itr_000 = 0; itr_000 < MAX_WORLDMAP_LOCATIONS; ++itr_000) {
-    for (int itr_111 = 0; itr_111 < MAX_TILEMAP_LAYERS; ++itr_111) {
+  for (i32 itr_000 = 0; itr_000 < MAX_WORLDMAP_LOCATIONS; ++itr_000) 
+  {
+    for (i32 itr_111 = 0; itr_111 < MAX_TILEMAP_LAYERS; ++itr_111) {
       state->map.at(itr_000).filename.at(itr_111) = TextFormat("%s_layer%d.txt", state->worldmap_locations.at(itr_000).filename.c_str(), itr_111);
     }
     state->map.at(itr_000).propfile = TextFormat("%s_prop.txt", state->worldmap_locations.at(itr_000).filename.c_str());
     state->map.at(itr_000).collisionfile = TextFormat("%s_collision.txt", state->worldmap_locations.at(itr_000).filename.c_str());
-    create_tilemap(TILESHEET_TYPE_MAP, ZEROVEC2, 100, state->in_app_settings->window_height * 0.05 , &state->map.at(itr_000));
-    if(!state->map.at(itr_000).is_initialized) {
-      TraceLog(LOG_WARNING, "WARNING::scene_in_game_edit::initialize_scene_in_game_edit()::tilemap initialization failed");
-    }
-    if(!load_or_create_map_data(&state->map.at(itr_000), &state->map_stringtify.at(itr_000))) {
-      TraceLog(LOG_WARNING, "world::world_system_initialize()::Stage:%d creating failed", itr_000);
-    }
-    refresh_render_queue(itr_000);
 
-    if (!state->map_stringtify.at(itr_000).is_success) {
-      TraceLog(LOG_ERROR, "game_manager_initialize::game manager unable to load map");
-      return false;
+    if (!create_tilemap(TILESHEET_TYPE_MAP, ZEROVEC2, 100, 60, __builtin_addressof(state->map.at(itr_000)))) {
+      TraceLog(LOG_WARNING, "world::world_system_initialize()::tilemap initialization failed");
+      continue;
     }
+    if(!state->map.at(itr_000).is_initialized) {
+      TraceLog(LOG_WARNING, "world::world_system_initialize()::tilemap initialization failed");
+      continue;
+    }
+
+    if(!load_or_create_map_data(&state->map.at(itr_000), &state->map_stringtify.at(itr_000))) {
+      TraceLog(LOG_WARNING, "world::world_system_initialize()::Stage:%d creation failed", itr_000);
+      continue;
+    }
+    if (!state->map_stringtify.at(itr_000).is_success) {
+      TraceLog(LOG_WARNING, "world::world_system_initialize::Stage:%d read failed", itr_000);
+      continue;
+    }
+
     state->worldmap_locations.at(itr_000).spawning_areas.at(0) = {
       state->map.at(itr_000).position.x, state->map.at(itr_000).position.y,
       (f32) (state->map.at(itr_000).map_dim * state->map.at(itr_000).tile_size), (f32) (state->map.at(itr_000).map_dim * state->map.at(itr_000).tile_size)
     };
+
+    refresh_render_queue(itr_000);
   }
   return true;
 }
@@ -102,13 +113,13 @@ bool world_system_initialize(camera_metrics* _in_camera_metrics, app_settings* _
 /**
  * @brief The size is MAX_WORLDMAP_LOCATIONS
  */
-worldmap_stage* get_worldmap_locations(void) {
+const worldmap_stage* get_worldmap_locations(void) {
   return state->worldmap_locations.data();
 }
-worldmap_stage* get_active_worldmap(void) {
+const worldmap_stage* get_active_worldmap(void) {
   return &state->active_stage;
 }
-tilemap* get_active_map(void) {
+const tilemap* get_active_map(void) {
   return &CURR_MAP;
 }
 void set_worldmap_location(i32 id) {
@@ -216,7 +227,12 @@ void drag_tilesheet(Vector2 vec) {
   state->palette.position.y += vec.y;
 }
 void render_map() {
-  render_tilemap(&CURR_MAP, state->in_camera_metrics->frustum);
+  if (state->active_stage.map_id == MAINMENU_STAGE_INDEX) {
+    render_mainmenu(&CURR_MAP, state->in_camera_metrics->frustum, state->in_app_settings);
+  }
+  else {
+    render_tilemap(&CURR_MAP, state->in_camera_metrics->frustum);
+  }
 }
 void render_map_view_on(Vector2 pos, f32 zoom) {
   render_tilemap(&CURR_MAP, get_position_view_rect(state->in_camera_metrics->handle, pos, zoom));
@@ -370,7 +386,7 @@ tile _get_tile_from_map_by_mouse_pos(u16 from_layer, Vector2 _mouse_pos) {
   }
   return get_tile_from_map_by_mouse_pos(&CURR_MAP, GetScreenToWorld2D(_mouse_pos, state->in_camera_metrics->handle), from_layer);
 }
-void _render_tile_on_pos(tile* _tile, Vector2 pos, tilesheet* sheet) {
+void _render_tile_on_pos(const tile* _tile, Vector2 pos,const tilesheet* sheet) {
   if (!_tile || !_tile->is_initialized || !sheet) {
     TraceLog(LOG_WARNING, "world::_render_tile()::One of pointers is not valid");
     return;

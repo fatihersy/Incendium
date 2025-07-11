@@ -54,7 +54,6 @@ bool settings_initialize(void) {
   state->initializer.render_height = 448;
   state->initializer.render_width_div2  = state->initializer.render_width  * .5f;
   state->initializer.render_height_div2 = state->initializer.render_height * .5f;
-  state->initializer.normalized_ratio    = static_cast<f32>(state->settings.window_width)  / static_cast<f32>(state->settings.render_width);
   state->initializer.scale_ratio.push_back(static_cast<f32>(state->settings.render_width)  / static_cast<f32>(state->settings.window_width));
   state->initializer.scale_ratio.push_back(static_cast<f32>(state->settings.render_height) / static_cast<f32>(state->settings.window_height));
   state->initializer.language = DEFAULT_SETTINGS_LANGUAGE; // Recieve from args
@@ -155,7 +154,6 @@ bool set_settings_from_ini_file(const char * file_name) {
   state->settings.render_width_div2  = state->settings.window_width  * .5f;
   state->settings.render_height_div2 = state->settings.window_height * .5f;
   
-  state->settings.normalized_ratio    = static_cast<f32>(state->settings.window_width)  / static_cast<f32>(state->settings.render_width);
   state->settings.scale_ratio.push_back(static_cast<f32>(state->settings.render_width)  / static_cast<f32>(state->settings.window_width));
   state->settings.scale_ratio.push_back(static_cast<f32>(state->settings.render_height) / static_cast<f32>(state->settings.window_height));
   state->settings.display_ratio = get_aspect_ratio(state->settings.window_width, state->settings.window_height);
@@ -190,7 +188,6 @@ void set_window_size(i32 width, i32 height) {
   }
   state->settings.window_width  = width;
   state->settings.window_height = height;
-  state->settings.normalized_ratio    = static_cast<f32>(state->settings.window_width)  / static_cast<f32>(state->settings.render_width);
   state->settings.scale_ratio.push_back(static_cast<f32>(state->settings.render_width)  / static_cast<f32>(state->settings.window_width));
   state->settings.scale_ratio.push_back(static_cast<f32>(state->settings.render_height) / static_cast<f32>(state->settings.window_height));
 }
@@ -242,7 +239,6 @@ app_settings get_default_ini_file(void) {
   _defaults.render_width_div2  = _defaults.render_width  * .5f;
   _defaults.render_height_div2 = _defaults.render_height * .5f;
 
-  _defaults.normalized_ratio    = static_cast<f32>(state->settings.window_width)  / static_cast<f32>(state->settings.render_width);
   _defaults.scale_ratio.push_back(static_cast<f32>(state->settings.render_width)  / static_cast<f32>(state->settings.window_width));
   _defaults.scale_ratio.push_back(static_cast<f32>(state->settings.render_height) / static_cast<f32>(state->settings.window_height));
   _defaults.display_ratio = get_monitor_aspect_ratio();

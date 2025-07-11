@@ -47,21 +47,20 @@ typedef struct event_context {
   }
 } event_context;
 
-typedef bool (*PFN_on_event)(u16 code, event_context data);
+typedef bool (*PFN_on_event)(i32 code, event_context data);
 
-void event_system_initialize(void) ;
-void event_system_shutdown(void);
+bool event_system_initialize(void) ;
+consteval void event_system_shutdown(void);
 
-bool event_register(u16 code, PFN_on_event on_event);
+bool event_register(i32 code, PFN_on_event on_event);
 
-bool event_unregister(u16 code, PFN_on_event on_event);
+bool event_unregister(i32 code, PFN_on_event on_event);
 
-bool event_fire(u16 code, event_context context);
+bool event_fire(i32 code, event_context context);
 
 typedef enum system_event_code {
-    
   // app
-  EVENT_CODE_APPLICATION_QUIT = 0x01,
+  EVENT_CODE_APPLICATION_QUIT,
   EVENT_CODE_TOGGLE_BORDERLESS,
   EVENT_CODE_TOGGLE_FULLSCREEN,
   EVENT_CODE_TOGGLE_WINDOWED,
@@ -80,9 +79,6 @@ typedef enum system_event_code {
   EVENT_CODE_SCENE_IN_GAME,
   EVENT_CODE_SCENE_EDITOR,
   EVENT_CODE_SCENE_MAIN_MENU,
-  EVENT_CODE_SCENE_MANAGER_SET_TARGET,
-  EVENT_CODE_SCENE_MANAGER_SET_CAM_POS,
-  EVENT_CODE_SCENE_MANAGER_SET_ZOOM,
 
   // scene_in_game
   EVENT_CODE_ADD_CURRENCY_SOULS,
@@ -104,11 +100,19 @@ typedef enum system_event_code {
   EVENT_CODE_RESET_SOUND,
   EVENT_CODE_RESET_MUSIC,
 
+  // camera
+  EVENT_CODE_CAMERA_SET_FRUSTUM,
+  EVENT_CODE_CAMERA_SET_OFFSET,
+  EVENT_CODE_CAMERA_SET_TARGET,
+  EVENT_CODE_CAMERA_SET_CAMERA_POSITION,
+  EVENT_CODE_CAMERA_SET_ZOOM,
+  EVENT_CODE_CAMERA_ADD_ZOOM,
+
   // player
   EVENT_CODE_PLAYER_ADD_EXP,
   EVENT_CODE_PLAYER_SET_POSITION,
   EVENT_CODE_PLAYER_TAKE_DAMAGE,
-  MAX_EVENT_CODE = 0xFF
+  MAX_EVENT_CODE
 } system_event_code;
 
 #endif

@@ -4,7 +4,7 @@
 
 #include "defines.h"
 
-[[__nodiscard__]] bool scene_manager_initialize(app_settings * _in_app_settings);
+[[__nodiscard__]] bool scene_manager_initialize(const app_settings * _in_app_settings);
 
 void update_scene_scene(void);
 void render_scene_world(void);

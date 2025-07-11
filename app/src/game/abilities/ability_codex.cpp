@@ -17,13 +17,13 @@
 typedef struct ability_codex_state {
   std::array<ability, ABILITY_TYPE_MAX> abilities;
 
-  camera_metrics* in_camera_metrics;
-  app_settings* in_settings;
-  ingame_info* in_ingame_info; 
+  const camera_metrics* in_camera_metrics;
+  const app_settings* in_settings;
+  const ingame_info* in_ingame_info; 
 } ability_codex_state;
 static ability_codex_state * state;
 
-bool ability_codex_initialize(camera_metrics* _camera_metrics, app_settings* _settings, ingame_info* _ingame_info) {
+bool ability_codex_initialize(const camera_metrics* _camera_metrics,const app_settings* _settings,const ingame_info* _ingame_info) {
   if (state) {
     TraceLog(LOG_WARNING, "ability::ability_system_initialize()::Init called multiple times");
     return false;
@@ -162,7 +162,7 @@ void render_ability_codex(ability* abl) {
     prj.animations.at(prj.active_sprite).origin.y = dim.y / 2.f;
     play_sprite_on_site(__builtin_addressof(prj.animations.at(prj.active_sprite)), WHITE, Rectangle { prj.position.x, prj.position.y, dim.x, dim.y });
   }
-  Texture2D * icon_tex = ss_get_texture_by_enum(TEX_ID_ASSET_ATLAS);
+  const Texture2D * icon_tex = ss_get_texture_by_enum(TEX_ID_ASSET_ATLAS);
   Rectangle codex_book_dest = CODEX_BOOK_POSITION_BY_ABILITY(abl->position);
 
   DrawTexturePro(*icon_tex, abl->icon_src, codex_book_dest, VECTOR2(0, 0), 0.f, WHITE);

@@ -1,10 +1,10 @@
 #include "spritesheet.h"
 #include "game/resource.h"
 
-void update_sprite(spritesheet *sheet);
-void render_sprite(spritesheet *sheet, Color _tint, Rectangle dest);
-
-void update_sprite(spritesheet *sheet) {
+void update_sprite(spritesheet *const sheet);
+constexpr void render_sprite(const spritesheet * sheet,const Color _tint,const Rectangle dest);
+ 
+void update_sprite(spritesheet *const sheet) {
   if (!sheet) {
     TraceLog(LOG_ERROR, "spritesheet::update_sprite()::Sheet is null");
     return;
@@ -42,7 +42,7 @@ void update_sprite(spritesheet *sheet) {
   sheet->current_frame_rect.x = sheet->current_col * sheet->current_frame_rect.width;
   sheet->current_frame_rect.y = sheet->current_row * sheet->current_frame_rect.height;
 }
-void render_sprite(spritesheet *sheet, Color _tint, Rectangle dest) {
+constexpr void render_sprite(const spritesheet * sheet,const Color _tint,const Rectangle dest) {
   if (!sheet || !sheet->tex_handle) {
     TraceLog(LOG_ERROR, "spritesheet::render_sprite()::Sheet is not valid");
     return;
@@ -63,7 +63,7 @@ void render_sprite(spritesheet *sheet, Color _tint, Rectangle dest) {
       WHITE);
   #endif
 }
-void set_sprite(spritesheet *sheet, bool _play_looped, bool _play_once) {
+void set_sprite(spritesheet *const sheet, bool _play_looped, bool _play_once) {
   if (!sheet || sheet->sheet_id >= SHEET_ID_SPRITESHEET_TYPE_MAX || sheet->sheet_id <= SHEET_ID_SPRITESHEET_UNSPECIFIED) {
     TraceLog(LOG_ERROR, "spritesheet::register_sprite()::Sheet is not valid");
     return;
@@ -74,7 +74,7 @@ void set_sprite(spritesheet *sheet, bool _play_looped, bool _play_once) {
   sheet->play_once = _play_once;
   sheet->is_started = false;
 }
-void play_sprite_on_site(spritesheet *sheet, Color _tint, Rectangle dest) {
+void play_sprite_on_site(spritesheet *const sheet, Color _tint, Rectangle dest) {
   if (!sheet || sheet->sheet_id >= SHEET_ID_SPRITESHEET_TYPE_MAX || sheet->sheet_id <= SHEET_ID_SPRITESHEET_UNSPECIFIED) {
     TraceLog(LOG_ERROR, "spritesheet::play_sprite_on_site()::Sheet is not valid");
     return;
@@ -123,7 +123,7 @@ void draw_sprite_on_site_by_id(spritesheet_id _id, Color _tint, Vector2 pos, Vec
   #endif
 }
 
-void draw_sprite_on_site(spritesheet *sheet, Color _tint, Vector2 pos, Vector2 scale, u16 frame) {
+void draw_sprite_on_site(spritesheet *const sheet, Color _tint, Vector2 pos, Vector2 scale, u16 frame) {
   if (!sheet || sheet->sheet_id > SHEET_ID_SPRITESHEET_TYPE_MAX || sheet->sheet_id <= SHEET_ID_SPRITESHEET_UNSPECIFIED) {
     TraceLog(LOG_ERROR, "spritesheet::draw_sprite_on_site()::invalid sprite type");
     return;
@@ -152,7 +152,7 @@ void draw_sprite_on_site(spritesheet *sheet, Color _tint, Vector2 pos, Vector2 s
       WHITE);
   #endif
 }
-void stop_sprite(spritesheet *sheet, bool reset) {
+void stop_sprite(spritesheet *const sheet, bool reset) {
   if (!sheet)  {
     TraceLog(LOG_ERROR, "resource::stop_sprite()::Sheet is invalid");
     return;
@@ -167,7 +167,7 @@ void stop_sprite(spritesheet *sheet, bool reset) {
 
   sheet->is_started = false;
 }
-void reset_sprite(spritesheet *sheet, bool _retrospective) {
+void reset_sprite(spritesheet *const sheet, bool _retrospective) {
   if (!sheet)  {
     TraceLog(LOG_ERROR, "resource::reset_sprite()::sheet is invalid");
     return;
@@ -184,13 +184,13 @@ void reset_sprite(spritesheet *sheet, bool _retrospective) {
     sheet->is_started = false;
   }
 }
-Texture2D* ss_get_texture_by_enum(texture_id _id) {
+const Texture2D* ss_get_texture_by_enum(texture_id _id) {
   return get_texture_by_enum(_id);
 }
-atlas_texture* ss_get_atlas_texture_by_enum(atlas_texture_id _id) {
+const atlas_texture* ss_get_atlas_texture_by_enum(atlas_texture_id _id) {
     return get_atlas_texture_by_enum(_id);
 }
-spritesheet* ss_get_spritesheet_by_enum(spritesheet_id _id) {
+const spritesheet* ss_get_spritesheet_by_enum(spritesheet_id _id) {
     return get_spritesheet_by_enum(_id);
 }
 const char *ss_rs_path(const char *_path) {

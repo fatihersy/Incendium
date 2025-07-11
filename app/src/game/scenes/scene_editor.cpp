@@ -53,7 +53,7 @@ typedef struct scene_editor_state {
   tilemap_prop_static  selected_prop_static_panel_selection_copy;
   tilemap_prop_sprite  selected_prop_sprite_panel_selection_copy;
   Rectangle _map_collision;
-  tilesheet* selected_sheet;
+  tilesheet_type default_sheet;
   tile selected_tile;
   u16 edit_layer;
   u16 selected_stage;
@@ -72,8 +72,8 @@ typedef struct scene_editor_state {
   std::vector<tilemap_prop_static> tilemap_props_buildings;
   std::vector<tilemap_prop_sprite> tilemap_props_sprite;
 
-  camera_metrics * in_camera_metrics;
-  app_settings   * in_app_settings;
+  const camera_metrics * in_camera_metrics;
+  const app_settings   * in_app_settings;
   std::array<worldmap_stage, MAX_WORLDMAP_LOCATIONS> worldmap_locations;
   panel prop_selection_panel;
   panel tile_selection_panel;
@@ -128,7 +128,7 @@ constexpr void add_prop(tilemap_prop_types type, spritesheet_id sprite_id, f32 s
 #define SE_BASE_RENDER_WIDTH state->in_app_settings->render_width
 #define SE_BASE_RENDER_HEIGHT state->in_app_settings->render_height
 
-bool initialize_scene_editor(camera_metrics* _camera_metrics, app_settings * _in_app_settings) {
+bool initialize_scene_editor(const camera_metrics* _camera_metrics,const app_settings * _in_app_settings) {
   if (state) {
     update_tilemap_prop_type();
     begin_scene_editor();
@@ -158,7 +158,7 @@ bool initialize_scene_editor(camera_metrics* _camera_metrics, app_settings * _in
   }
 
   copy_memory(state->worldmap_locations.data(), get_worldmap_locations(), MAX_WORLDMAP_LOCATIONS * sizeof(worldmap_stage));
-  state->selected_sheet = get_tilesheet_by_enum(TILESHEET_TYPE_MAP);
+  state->default_sheet = TILESHEET_TYPE_MAP;
 
   state->tile_selection_panel = panel();
   state->tile_selection_panel.signal_state = BTN_STATE_HOVER;
@@ -766,7 +766,13 @@ void update_scene_editor(void) {
   state->mouse_pos_screen.x = GetMousePosition().x * get_app_settings()->scale_ratio.at(0);
   state->mouse_pos_screen.y = GetMousePosition().y * get_app_settings()->scale_ratio.at(1);
   state->mouse_pos_world = GetScreenToWorld2D(state->mouse_pos_screen, state->in_camera_metrics->handle);
-  state->in_camera_metrics->frustum = se_get_camera_view_rect(state->in_camera_metrics->handle);
+  Rectangle _frustum = se_get_camera_view_rect(state->in_camera_metrics->handle);
+  event_fire(EVENT_CODE_CAMERA_SET_FRUSTUM, event_context(
+    static_cast<i32>(_frustum.x),
+    static_cast<i32>(_frustum.y),
+    static_cast<i32>(_frustum.width),
+    static_cast<i32>(_frustum.height)
+  ));
 
   if (state->b_prop_selection_screen_update_prop_sprites) {
     for (size_t iter = 0; iter < state->tilemap_props_sprite.size(); iter++) {
@@ -782,7 +788,8 @@ void update_scene_editor(void) {
 }
 void render_scene_editor(void) {
   if (state->selected_stage == WORLDMAP_MAINMENU_MAP) {
-    render_map_view_on(ZEROVEC2, 1);
+    //render_map_view_on(ZEROVEC2, 1);
+    render_map();
   }
   else {
     render_map();
@@ -888,17 +895,20 @@ void render_interface_editor(void) {
 
   switch (state->selection_type) {
     case SLC_TYPE_TILE: {
-      if (state->selected_sheet == nullptr) {
+      if (state->default_sheet <= TILESHEET_TYPE_UNSPECIFIED || state->default_sheet >= TILESHEET_TYPE_MAX) {
         return;
       }
-      _render_tile_on_pos(&state->selected_tile, state->mouse_pos_screen, state->selected_sheet);
+      const tilesheet* default_sheet = get_tilesheet_by_enum(state->default_sheet);
+      if (default_sheet && default_sheet != nullptr) {
+        _render_tile_on_pos(__builtin_addressof(state->selected_tile), state->mouse_pos_screen, default_sheet);
+      }
       break;
     }
     case SLC_TYPE_DROP_PROP_STATIC: {
       if (!state->selected_prop_static_panel_selection_copy.is_initialized) {
         return;
       }
-      tilemap_prop_static* p_prop = &state->selected_prop_static_panel_selection_copy;
+      const tilemap_prop_static* p_prop = &state->selected_prop_static_panel_selection_copy;
       if (!p_prop->is_initialized) {
         return;
       }
@@ -1306,10 +1316,14 @@ constexpr void editor_update_mouse_bindings(void) {
     scene_editor_selection_cleanup();
   }
   if (state->mouse_focus == MOUSE_FOCUS_MAP) {
-    state->in_camera_metrics->handle.zoom += ((float)GetMouseWheelMove()*0.05f);
+    event_fire(EVENT_CODE_CAMERA_ADD_ZOOM, event_context(((float)GetMouseWheelMove()*0.05f)));
 
-    if (state->in_camera_metrics->handle.zoom > 3.0f) state->in_camera_metrics->handle.zoom = 3.0f;
-    else if (state->in_camera_metrics->handle.zoom < 0.1f) state->in_camera_metrics->handle.zoom = 0.1f;
+    if (state->in_camera_metrics->handle.zoom > 3.0f) {
+      event_fire(EVENT_CODE_CAMERA_SET_ZOOM, event_context(3.f));
+    }
+    else if (state->in_camera_metrics->handle.zoom < 0.1f) {
+      event_fire(EVENT_CODE_CAMERA_SET_ZOOM, event_context(0.1f));
+    }
 
     switch (state->selection_type) {
       case SLC_TYPE_DROP_COLLISION_POSITION: {
@@ -1384,19 +1398,19 @@ constexpr void editor_update_movement(void) {
 
   if (IsKeyDown(KEY_W)) {
     state->target.y -= speed;
-    event_fire(EVENT_CODE_SCENE_MANAGER_SET_TARGET, event_context(data128(state->target.x, state->target.y)));
+    event_fire(EVENT_CODE_CAMERA_SET_TARGET, event_context(data128(state->target.x, state->target.y)));
   }
   if (IsKeyDown(KEY_A)) {
     state->target.x -= speed;
-    event_fire(EVENT_CODE_SCENE_MANAGER_SET_TARGET, event_context(data128(state->target.x, state->target.y)));
+    event_fire(EVENT_CODE_CAMERA_SET_TARGET, event_context(data128(state->target.x, state->target.y)));
   }
   if (IsKeyDown(KEY_S)) {
     state->target.y += speed;
-    event_fire(EVENT_CODE_SCENE_MANAGER_SET_TARGET, event_context(data128(state->target.x, state->target.y)));
+    event_fire(EVENT_CODE_CAMERA_SET_TARGET, event_context(data128(state->target.x, state->target.y)));
   }
   if (IsKeyDown(KEY_D)) {
     state->target.x += speed;
-    event_fire(EVENT_CODE_SCENE_MANAGER_SET_TARGET, event_context(data128(state->target.x, state->target.y)));
+    event_fire(EVENT_CODE_CAMERA_SET_TARGET, event_context(data128(state->target.x, state->target.y)));
   }
 }
 // BINDINGS
@@ -1407,7 +1421,7 @@ constexpr void begin_scene_editor(void) {
   sdr_stage->options.at(0).no_localized_text = TextFormat("%d", state->selected_stage);
   sdr_layer->options.at(0).no_localized_text = TextFormat("%d", state->edit_layer);
 
-  event_fire(EVENT_CODE_SCENE_MANAGER_SET_CAM_POS, event_context(data128(state->target.x, state->target.y)));
+  event_fire(EVENT_CODE_CAMERA_SET_CAMERA_POSITION, event_context(data128(state->target.x, state->target.y)));
 }
 void end_scene_editor(void) {
   if (!state) {
@@ -1433,7 +1447,7 @@ void end_scene_editor(void) {
   state->selected_prop_sprite_map_prop_address = nullptr;
   state->selected_prop_sprite_panel_selection_copy = tilemap_prop_sprite();
   state->selected_prop_static_panel_selection_copy = tilemap_prop_static();
-  state->selected_sheet = nullptr;
+  state->default_sheet = TILESHEET_TYPE_UNSPECIFIED;
   state->_map_collision = ZERORECT;
 }
 

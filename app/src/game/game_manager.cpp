@@ -13,7 +13,7 @@
 
 typedef struct game_manager_system_state {
   save_data* game_progression_data;
-  camera_metrics* in_camera_metrics;
+  const camera_metrics* in_camera_metrics;
 
   worldmap_stage stage;
   player_state player_state_static;
@@ -34,13 +34,13 @@ extern const u32 level_curve[MAX_PLAYER_LEVEL+1];
 #define SPAWN_TRYING_LIMIT 15
 #define WAVE_COUNT_TO_SPAWN_BOSS 2
 
-bool game_manager_on_event(u16 code, event_context context);
+bool game_manager_on_event(i32 code, event_context context);
 void game_manager_reinit(void);
 void game_manager_set_stats(character_stat* stat, u32 level);
 void populate_map_with_spawns(void);
 void generate_in_game_info(void);
 
-bool game_manager_initialize(camera_metrics* _camera_metrics) {
+bool game_manager_initialize(const camera_metrics* _camera_metrics) {
   if (state) {
     game_manager_reinit();
     return true;
@@ -744,7 +744,7 @@ player_state* _get_dynamic_player_state(void) {
 // Exposed functions
 
 
-bool game_manager_on_event(u16 code, event_context context) {
+bool game_manager_on_event(i32 code, event_context context) {
   switch (code) {
     case EVENT_CODE_END_GAME: {
       state->is_game_end = true;

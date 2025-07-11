@@ -1,92 +1,79 @@
 #include "core/event.h"
 
 #include "core/fmemory.h"
-#include <vector>
-
-typedef struct registered_event {
-    PFN_on_event callback;
-} registered_event;
 
 typedef struct event_code_entry {
-    std::vector<registered_event> events;
+    PFN_on_event callback;
+    event_code_entry(void) {
+        this->callback = nullptr;
+    }
 } event_code_entry;
 
-
-#define MAX_MESSAGE_CODES 16384
-
-
 typedef struct event_system_state {
-    event_code_entry registered[MAX_MESSAGE_CODES];
+    std::array<event_code_entry, MAX_EVENT_CODE> registered;
 } event_system_state;
 
-static event_system_state* state_ptr;
+static event_system_state * state;
 
-bool event_system_initialized = false;
-
-void event_system_initialize(void) {
-    if (event_system_initialized) return;
-    
-    state_ptr = (event_system_state*)allocate_memory_linear(sizeof(event_system_state), true);
-    event_system_initialized = true;
-}
-
-void event_system_shutdown(void) {
-    if (state_ptr) {
-        for (u16 i = 0; i < MAX_MESSAGE_CODES; ++i) {
-            // Vector's destructor will handle cleanup automatically
-            state_ptr->registered[i].events.clear();
-        }
-    }
-    state_ptr = 0;
-}
-
-bool event_register(u16 code, PFN_on_event on_event) {
-    if (!state_ptr) {
+bool event_system_initialize(void) {
+    if (state) {
         return false;
     }
-    
-    registered_event event;
-    event.callback = on_event;
-    state_ptr->registered[code].events.push_back(event);
+    state = (event_system_state*)allocate_memory_linear(sizeof(event_system_state), true);
+    if (!state || state == nullptr) {
+        return false;
+    }
+
     return true;
 }
 
-bool event_unregister(u16 code, PFN_on_event on_event) {
-    if (!state_ptr) {
-        return false;
+consteval void event_system_shutdown(void) {
+    if (!state || state == nullptr) {
+        return;
     }
+    state->registered.fill(event_code_entry());
     
-    std::vector<registered_event>& events = state_ptr->registered[code].events;
-    if (events.empty()) {
-        // TODO: warn
-        return false;
-    }
-    
-    for (size_t i = 0; i < events.size(); ++i) {
-        if (events[i].callback == on_event) {
-            events.erase(events.begin() + i);
-            return true;
-        }
-    }
+    free(state);
+    state = nullptr;
+}
 
+bool event_register(i32 code, PFN_on_event on_event) {
+    if (!state) {
+        return false;
+    }
+    
+    event_code_entry event;
+    event.callback = on_event;
+    state->registered.at(code) = event;
+    return true;
+}
+
+[[__deprecated__("We are not support multiple events in a code currently")]] bool event_unregister([[maybe_unused]] i32 code,[[maybe_unused]] PFN_on_event on_event) {
+    if (!state) {
+        return false;
+    }
+    //std::vector<registered_event>& events = state->registered[code].events;
+    //if (events.empty()) {
+    //    return false;
+    //}
+    //
+    //for (size_t itr_000 = 0; itr_000 < events.size(); ++itr_000) {
+    //    if (events[itr_000].callback == on_event) {
+    //        events.erase(events.begin() + itr_000);
+    //        return true;
+    //    }
+    //}
     return false;
 }
 
-bool event_fire(u16 code, event_context context) {
-    if (!state_ptr) {
+bool event_fire(i32 code, event_context context) {
+    if (!state) {
+        return false;
+    }
+    PFN_on_event callback = state->registered.at(code).callback;
+    if (!callback || callback == nullptr) {
         return false;
     }
 
-    const std::vector<registered_event>& events = state_ptr->registered[code].events;
-    if (events.empty()) {
-        return false;
-    }
-
-    for (size_t i = 0; i < events.size(); ++i) {
-        if (events[i].callback(code, context)) {
-            return true;
-        }
-    }
-
-    return false;
+    return callback(code, context);
 }

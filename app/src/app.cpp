@@ -28,7 +28,7 @@ typedef struct app_system_state {
 
 static app_system_state* state;
 
-bool application_on_event(u16 code, event_context context);
+bool application_on_event(i32 code, event_context context);
 
 constexpr void toggle_borderless(void);
 constexpr void toggle_fullscreen(void);
@@ -245,7 +245,7 @@ constexpr void toggle_windowed(i32 width, i32 height) {
   }
 }
 
-bool application_on_event(u16 code, event_context context) {
+bool application_on_event(i32 code, event_context context) {
   switch (code)
   {
   case EVENT_CODE_APPLICATION_QUIT:{

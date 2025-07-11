@@ -12,15 +12,15 @@
 typedef struct ability_system_state {
   std::array<ability, ABILITY_TYPE_MAX> abilities;
 
-  camera_metrics* in_camera_metrics;
-  app_settings* in_settings;
-  ingame_info* in_ingame_info; 
+  const camera_metrics* in_camera_metrics;
+  const app_settings* in_settings;
+  const ingame_info* in_ingame_info; 
 } ability_system_state;
 static ability_system_state * state;
 
 void register_ability(ability abl) { state->abilities.at(abl.type) = abl; }
 
-bool ability_system_initialize(camera_metrics* _camera_metrics, app_settings* _settings, ingame_info* _ingame_info) {
+bool ability_system_initialize(const camera_metrics* _camera_metrics,const app_settings* _settings,const ingame_info* _ingame_info) {
   if (state) {
     return false;
   }

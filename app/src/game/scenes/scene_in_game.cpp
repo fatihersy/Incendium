@@ -43,8 +43,8 @@ typedef struct scene_in_game_state {
   std::array<ability, MAX_UPDATE_ABILITY_PANEL_COUNT> ability_upgrade_choices;
   bool is_upgrade_choices_ready;
   
-  camera_metrics* in_camera_metrics;
-  app_settings* in_app_settings;
+  const camera_metrics* in_camera_metrics;
+  const app_settings* in_app_settings;
   bool* is_game_paused;
   
   in_game_stages stage;
@@ -80,8 +80,7 @@ static scene_in_game_state * state;
 #define PASSIVE_SELECTION_PANEL_ICON_SIZE ABILITY_UPG_PANEL_ICON_SIZE
 #define CLOUDS_ANIMATION_DURATION TARGET_FPS * 1.5f // second
 
-
-bool scene_in_game_on_event(u16 code, event_context context);
+bool scene_in_game_on_event(i32 code, event_context context);
 void begin_scene_in_game(void);
 void in_game_update_bindings(void);
 void in_game_update_mouse_bindings(void);
@@ -101,7 +100,7 @@ Rectangle sig_get_camera_view_rect(Camera2D camera);
 /**
  * @brief Requires world system, world init moved to app, as well as its loading time
  */
-bool initialize_scene_in_game(camera_metrics* _camera_metrics, app_settings * _in_app_settings) {
+bool initialize_scene_in_game(const camera_metrics* _camera_metrics,const app_settings * _in_app_settings) {
   if (state) {
     begin_scene_in_game();
     return false;
@@ -198,8 +197,14 @@ void update_scene_in_game(void) {
 
   switch (state->stage) {
     case IN_GAME_STAGE_MAP_CHOICE: {
-      event_fire(EVENT_CODE_SCENE_MANAGER_SET_CAM_POS, event_context(SIG_BASE_RENDER_WIDTH * .5f, SIG_BASE_RENDER_HEIGHT * .5f));
-      state->in_camera_metrics->frustum = sig_get_camera_view_rect(state->in_camera_metrics->handle);
+      event_fire(EVENT_CODE_CAMERA_SET_CAMERA_POSITION, event_context(SIG_BASE_RENDER_WIDTH * .5f, SIG_BASE_RENDER_HEIGHT * .5f));
+      Rectangle _frustum = sig_get_camera_view_rect(state->in_camera_metrics->handle);
+      event_fire(EVENT_CODE_CAMERA_SET_FRUSTUM, event_context(
+        static_cast<i32>(_frustum.x),
+        static_cast<i32>(_frustum.y),
+        static_cast<i32>(_frustum.width),
+        static_cast<i32>(_frustum.height)
+      ));
 
       if (state->show_pause_menu) {}
       else if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON) && state->hovered_stage <= MAX_WORLDMAP_LOCATIONS) {
@@ -230,8 +235,14 @@ void update_scene_in_game(void) {
       update_game_manager();
       state->end_game_result.play_time += GetFrameTime();
     
-      event_fire(EVENT_CODE_SCENE_MANAGER_SET_TARGET, event_context(_get_player_position(true).x, _get_player_position(true).y));
-      state->in_camera_metrics->frustum = sig_get_camera_view_rect(state->in_camera_metrics->handle);
+      event_fire(EVENT_CODE_CAMERA_SET_CAMERA_POSITION, event_context(_get_player_position(true).x, _get_player_position(true).y));
+      Rectangle _frustum = sig_get_camera_view_rect(state->in_camera_metrics->handle);
+      event_fire(EVENT_CODE_CAMERA_SET_FRUSTUM, event_context(
+        static_cast<i32>(_frustum.x),
+        static_cast<i32>(_frustum.y),
+        static_cast<i32>(_frustum.width),
+        static_cast<i32>(_frustum.height)
+      ));
       break;
     }
     case IN_GAME_STAGE_PLAY_DEBUG: {
@@ -242,8 +253,14 @@ void update_scene_in_game(void) {
       update_map();
       update_game_manager_debug();
 
-      event_fire(EVENT_CODE_SCENE_MANAGER_SET_TARGET, event_context(_get_player_position(true).x,_get_player_position(true).y));
-      state->in_camera_metrics->frustum = sig_get_camera_view_rect(state->in_camera_metrics->handle);
+      event_fire(EVENT_CODE_CAMERA_SET_TARGET, event_context(_get_player_position(true).x,_get_player_position(true).y));
+      Rectangle _frustum = sig_get_camera_view_rect(state->in_camera_metrics->handle);
+      event_fire(EVENT_CODE_CAMERA_SET_FRUSTUM, event_context(
+        static_cast<i32>(_frustum.x),
+        static_cast<i32>(_frustum.y),
+        static_cast<i32>(_frustum.width),
+        static_cast<i32>(_frustum.height)
+      ));
       break;
     }
     case IN_GAME_STAGE_PLAY_RESULTS: { break; }
@@ -813,7 +830,7 @@ Rectangle sig_get_camera_view_rect(Camera2D camera) {
   return Rectangle{ x, y, view_width, view_height };
 }
 
-bool scene_in_game_on_event(u16 code, event_context context) {
+bool scene_in_game_on_event(i32 code, event_context context) {
   switch (code) {
     case EVENT_CODE_ADD_CURRENCY_SOULS: {
       state->end_game_result.collected_souls += context.data.u32[0];

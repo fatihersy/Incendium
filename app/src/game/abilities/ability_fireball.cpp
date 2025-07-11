@@ -10,13 +10,13 @@
 typedef struct ability_fireball_state {
   std::array<ability, ABILITY_TYPE_MAX> abilities;
 
-  camera_metrics* in_camera_metrics;
-  app_settings* in_settings;
-  ingame_info* in_ingame_info; 
+  const camera_metrics* in_camera_metrics;
+  const app_settings* in_settings;
+  const ingame_info* in_ingame_info; 
 } ability_fireball_state;
 static ability_fireball_state * state;
 
-bool ability_fireball_initialize(camera_metrics* _camera_metrics, app_settings* _settings, ingame_info* _ingame_info) {
+bool ability_fireball_initialize(const camera_metrics* _camera_metrics,const app_settings* _settings,const ingame_info* _ingame_info) {
   if (state) {
     return false;
   }

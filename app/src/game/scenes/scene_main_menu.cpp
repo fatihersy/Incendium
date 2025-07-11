@@ -22,8 +22,8 @@ typedef struct main_menu_scene_state {
   panel upgrade_details_panel;
 
   character_stat * hovered_stat;
-  camera_metrics * in_camera_metrics;
-  app_settings   * in_app_settings;
+  const camera_metrics * in_camera_metrics;
+  const app_settings   * in_app_settings;
   
   Vector2 mouse_pos;
   u32 deny_notify_timer;
@@ -56,7 +56,7 @@ void draw_main_menu_upgrade_list_panel(void);
 void draw_main_menu_upgrade_details_panel(void);
 Rectangle smm_get_camera_view_rect(Camera2D camera);
 
-bool initialize_scene_main_menu(camera_metrics *_camera_metrics, app_settings * _in_app_settings) {
+bool initialize_scene_main_menu(const camera_metrics *_camera_metrics,const app_settings * _in_app_settings) {
   if (state) {
     return begin_scene_main_menu();
   }
@@ -78,9 +78,18 @@ bool initialize_scene_main_menu(camera_metrics *_camera_metrics, app_settings * 
 void update_scene_main_menu(void) {
   update_user_interface();
   update_map();
-  state->in_camera_metrics->frustum = smm_get_camera_view_rect(state->in_camera_metrics->handle);
+  
+  event_fire(EVENT_CODE_CAMERA_SET_CAMERA_POSITION, event_context(0.f, 0.f));
 
-  event_fire(EVENT_CODE_SCENE_MANAGER_SET_CAM_POS, event_context(0.f, 0.f));
+  Rectangle _frustum = smm_get_camera_view_rect(state->in_camera_metrics->handle);
+  event_fire(EVENT_CODE_CAMERA_SET_FRUSTUM, event_context(
+    static_cast<f32>(_frustum.x),
+    static_cast<f32>(_frustum.y),
+    static_cast<f32>(_frustum.width),
+    static_cast<f32>(_frustum.height)
+  ));
+
+
   if (state->in_scene_changing_process && is_ui_fade_anim_about_to_complete()) {
     state->scene_changing_process_complete = true;
   }
@@ -116,24 +125,24 @@ void render_interface_main_menu(void) {
         
       gui_label_shader(GAME_TITLE, SHADER_ID_FONT_OUTLINE, FONT_TYPE_ABRACADABRA, 5, VECTOR2(SMM_BASE_RENDER_WIDTH * .5f, SMM_BASE_RENDER_HEIGHT * .25f), WHITE, true, true);
 
-      if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_PLAY), BTN_ID_MAINMENU_BUTTON_PLAY, VECTOR2(-5.f, -21.f), SMM_BASE_RENDER_DIV2, true)) {
+      if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_PLAY), BTN_ID_MAINMENU_BUTTON_PLAY, VECTOR2(0.f, -21.f), SMM_BASE_RENDER_DIV2, true)) {
         state->in_scene_changing_process = true;
         state->next_scene = SCENE_TYPE_IN_GAME;
         event_fire(EVENT_CODE_UI_START_FADEOUT_EFFECT, event_context((u16)MAIN_MENU_FADE_DURATION));
       }
-      if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_UPGRADE), BTN_ID_MAINMENU_BUTTON_UPGRADE, VECTOR2(-5.f, -10.5f), SMM_BASE_RENDER_DIV2, true)) {
+      if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_UPGRADE), BTN_ID_MAINMENU_BUTTON_UPGRADE, VECTOR2(0.f, -10.5f), SMM_BASE_RENDER_DIV2, true)) {
         state->type = MAIN_MENU_SCENE_UPGRADE;
       }
-      if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_SETTINGS), BTN_ID_MAINMENU_BUTTON_SETTINGS, VECTOR2(-5.f, 0.f), SMM_BASE_RENDER_DIV2, true)) {
+      if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_SETTINGS), BTN_ID_MAINMENU_BUTTON_SETTINGS, VECTOR2(0.f, 0.f), SMM_BASE_RENDER_DIV2, true)) {
         ui_refresh_setting_sliders_to_default();
         state->type = MAIN_MENU_SCENE_SETTINGS;
       }
-      if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_EDITOR), BTN_ID_MAINMENU_BUTTON_EDITOR, VECTOR2(-5.f, 10.5f), SMM_BASE_RENDER_DIV2, true)) {
+      if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_EDITOR), BTN_ID_MAINMENU_BUTTON_EDITOR, VECTOR2(0.f, 10.5f), SMM_BASE_RENDER_DIV2, true)) {
         state->in_scene_changing_process = true;
         state->next_scene = SCENE_TYPE_EDITOR;
         event_fire(EVENT_CODE_UI_START_FADEOUT_EFFECT, event_context((u16)MAIN_MENU_FADE_DURATION));
       }
-      if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_EXIT), BTN_ID_MAINMENU_BUTTON_EXIT, VECTOR2(-5.f, 21.f), SMM_BASE_RENDER_DIV2, true)) {
+      if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_EXIT), BTN_ID_MAINMENU_BUTTON_EXIT, VECTOR2(0.f, 21.f), SMM_BASE_RENDER_DIV2, true)) {
         event_fire(EVENT_CODE_APPLICATION_QUIT, event_context());
       }
     } 
@@ -167,7 +176,11 @@ void render_interface_main_menu(void) {
   }
   set_worldmap_location(WORLDMAP_MAINMENU_MAP); // NOTE: Worldmap index 0 is mainmenu background now
 
-  state->in_camera_metrics->handle.zoom = 1.f;
+  event_fire(EVENT_CODE_CAMERA_SET_ZOOM, event_context(1.f));
+  event_fire(EVENT_CODE_CAMERA_SET_OFFSET, event_context(
+    state->in_app_settings->render_width * .5f,
+    state->in_app_settings->render_height * .5f
+  ));
 
   state->type = MAIN_MENU_SCENE_DEFAULT;
   state->next_scene = SCENE_TYPE_UNSPECIFIED;

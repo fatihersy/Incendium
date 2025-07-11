@@ -23,7 +23,7 @@ static sound_system_state * state;
 void load_sound(const char* file_name, sound_id id);
 void load_music(const char* file_name, music_id id);
 
-bool sound_system_on_event(u16 code, event_context context);
+bool sound_system_on_event(i32 code, event_context context);
 
 #define MAX_SOUND_SLOT 20
 
@@ -170,7 +170,7 @@ void reset_sound(sound_id id) {
   state->sounds[id].played = false;
 }
 
-bool sound_system_on_event(u16 code, event_context context) {
+bool sound_system_on_event(i32 code, event_context context) {
   switch (code)
   {
   case EVENT_CODE_PLAY_SOUND:{
