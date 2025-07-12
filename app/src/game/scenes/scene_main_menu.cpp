@@ -78,8 +78,6 @@ bool initialize_scene_main_menu(const camera_metrics *_camera_metrics,const app_
 void update_scene_main_menu(void) {
   update_user_interface();
   update_map();
-  
-  event_fire(EVENT_CODE_CAMERA_SET_CAMERA_POSITION, event_context(0.f, 0.f));
 
   Rectangle _frustum = smm_get_camera_view_rect(state->in_camera_metrics->handle);
   event_fire(EVENT_CODE_CAMERA_SET_FRUSTUM, event_context(
@@ -88,7 +86,12 @@ void update_scene_main_menu(void) {
     static_cast<f32>(_frustum.width),
     static_cast<f32>(_frustum.height)
   ));
-
+  event_fire(EVENT_CODE_CAMERA_SET_ZOOM, event_context(1.f));
+  event_fire(EVENT_CODE_CAMERA_SET_CAMERA_POSITION, event_context(0.f, 0.f));
+  event_fire(EVENT_CODE_CAMERA_SET_OFFSET, event_context(
+    state->in_app_settings->render_width * .5f,
+    state->in_app_settings->render_height * .5f
+  ));
 
   if (state->in_scene_changing_process && is_ui_fade_anim_about_to_complete()) {
     state->scene_changing_process_complete = true;
@@ -175,12 +178,6 @@ void render_interface_main_menu(void) {
     return false;
   }
   set_worldmap_location(WORLDMAP_MAINMENU_MAP); // NOTE: Worldmap index 0 is mainmenu background now
-
-  event_fire(EVENT_CODE_CAMERA_SET_ZOOM, event_context(1.f));
-  event_fire(EVENT_CODE_CAMERA_SET_OFFSET, event_context(
-    state->in_app_settings->render_width * .5f,
-    state->in_app_settings->render_height * .5f
-  ));
 
   state->type = MAIN_MENU_SCENE_DEFAULT;
   state->next_scene = SCENE_TYPE_UNSPECIFIED;

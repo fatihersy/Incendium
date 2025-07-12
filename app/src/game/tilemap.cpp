@@ -17,6 +17,8 @@
 #define COLL_BUFFER_PARSE_TOP_LIMIT 999
 #define COLL_MEMBER_PARSE_TOP_LIMIT 99
 
+#define TOTAL_NUMBER_OF_TILES_TO_THE_HEIGHT 18
+
 void map_to_str(tilemap* const map, tilemap_stringtify_package* const out_package);
 void str_to_map(tilemap* const map, tilemap_stringtify_package* const out_package);
 
@@ -183,8 +185,8 @@ void render_mainmenu(const tilemap* _tilemap, Rectangle camera_view, const app_s
     return;
   }
   const tilesheet* sheet = get_tilesheet_by_enum(TILESHEET_TYPE_MAP);
-  const f32 map_scale = 60.f / 1080.f; // We are created the map at that scale. In 1920x1080 resolution and 60 as grid size
-  const f32 dynamic_tile_size = in_settings->render_height * map_scale;
+  const f32 dynamic_tile_size = static_cast<f32>(in_settings->render_height) / TOTAL_NUMBER_OF_TILES_TO_THE_HEIGHT; // Based off of certain amouth tiles along render height
+  const f32 dynamic_prop_coord_scale = dynamic_tile_size / _tilemap->tile_size;
 
   Vector2 map_position = Vector2 {
     ((_tilemap->map_dim * dynamic_tile_size) * -0.5f),
@@ -228,15 +230,15 @@ void render_mainmenu(const tilemap* _tilemap, Rectangle camera_view, const app_s
         if (_queue_prop_ptr->data.prop_static == nullptr) continue;
         tilemap_prop_sprite* const map_prop_ptr = _queue_prop_ptr->data.prop_sprite;
         if (!map_prop_ptr->is_initialized) continue;
-
-        if (!CheckCollisionRecs(camera_view, map_prop_ptr->sprite.coord)) { continue; }
-
+        
         Rectangle coord = Rectangle {
-          map_prop_ptr->sprite.coord.x      * map_scale,
-          map_prop_ptr->sprite.coord.y      * map_scale,
-          map_prop_ptr->sprite.coord.width  * map_scale,
-          map_prop_ptr->sprite.coord.height * map_scale,
+          map_prop_ptr->sprite.coord.x      * dynamic_prop_coord_scale,
+          map_prop_ptr->sprite.coord.y      * dynamic_prop_coord_scale,
+          map_prop_ptr->sprite.coord.width  * dynamic_prop_coord_scale,
+          map_prop_ptr->sprite.coord.height * dynamic_prop_coord_scale,
         };
+        if (!CheckCollisionRecs(camera_view, coord)) { continue; }
+
         play_sprite_on_site(__builtin_addressof(map_prop_ptr->sprite), map_prop_ptr->sprite.tint, coord);
         continue;
       }
@@ -246,7 +248,12 @@ void render_mainmenu(const tilemap* _tilemap, Rectangle camera_view, const app_s
         const tilemap_prop_static * map_prop_ptr = _queue_prop_ptr->data.prop_static;
         if (!map_prop_ptr->is_initialized) continue;
         
-        Rectangle prop_rect = map_prop_ptr->dest; 
+        Rectangle prop_rect = Rectangle {
+          map_prop_ptr->dest.x      * dynamic_prop_coord_scale,
+          map_prop_ptr->dest.y      * dynamic_prop_coord_scale,
+          map_prop_ptr->dest.width  * dynamic_prop_coord_scale,
+          map_prop_ptr->dest.height * dynamic_prop_coord_scale,
+        };
         if (!CheckCollisionRecs(camera_view, prop_rect)) { continue; }
       
         const Texture2D* tex = get_texture_by_enum(map_prop_ptr->tex_id); 
@@ -577,12 +584,13 @@ bool load_or_create_map_data(tilemap* const map, tilemap_stringtify_package* con
       if (FileExists(map_layer_path(map->filename.at(i).c_str()))) {
         int dataSize = 1;
         u8* _str_tile = LoadFileData(map_layer_path(map->filename.at(i).c_str()), &dataSize);
-        if (dataSize <= 0) {
-          TraceLog(LOG_ERROR, "tilemap::load_or_create_map_data()::Reading data returned null");
+        if (dataSize > 1 && dataSize < TOTAL_ALLOCATED_MEMORY) {
+          out_package->size_tilemap_str[i] = dataSize;
+          copy_memory(out_package->str_tilemap[i], _str_tile, dataSize);
         }
-        out_package->size_tilemap_str[i] = dataSize;
-        copy_memory(out_package->str_tilemap[i], _str_tile, dataSize);
-        UnloadFileData(_str_tile);
+        if (_str_tile) {
+          UnloadFileData(_str_tile);
+        }
       }
       else {
         if (!out_package->is_success) {
@@ -598,11 +606,13 @@ bool load_or_create_map_data(tilemap* const map, tilemap_stringtify_package* con
     if (FileExists(map_layer_path(map->propfile.c_str()))) {
       int dataSize = 1;
       u8* _str_prop = LoadFileData(map_layer_path(map->propfile.c_str()), &dataSize);
-      if (dataSize <= 0) {
-        TraceLog(LOG_ERROR, "tilemap::load_or_create_map_data()::Reading data returned null");
+      if (dataSize > 1 && dataSize < TOTAL_ALLOCATED_MEMORY) {
+        out_package->size_props_str = dataSize;
+        out_package->str_props.assign(reinterpret_cast<char*>(_str_prop), dataSize);
       }
-      out_package->str_props.assign(reinterpret_cast<char*>(_str_prop), dataSize);
-      UnloadFileData(_str_prop);
+      if (_str_prop) {
+        UnloadFileData(_str_prop);
+      }
     }
     else {
       if (!out_package->is_success) {
@@ -617,11 +627,13 @@ bool load_or_create_map_data(tilemap* const map, tilemap_stringtify_package* con
     if (FileExists(map_layer_path(map->collisionfile.c_str()))) {
       int dataSize = 1;
       u8* _str_collision = LoadFileData(map_layer_path(map->collisionfile.c_str()), &dataSize);
-      if (dataSize <= 0) {
-        TraceLog(LOG_ERROR, "tilemap::load_or_create_map_data()::Reading data returned null");
+      if (dataSize > 1 && dataSize < TOTAL_ALLOCATED_MEMORY) {
+        out_package->size_collisions_str = dataSize;
+        out_package->str_collisions.assign(reinterpret_cast<char*>(_str_collision), dataSize);
       }
-      out_package->str_collisions.assign(reinterpret_cast<char*>(_str_collision), dataSize);
-      UnloadFileData(_str_collision);
+      if (_str_collision) {
+        UnloadFileData(_str_collision);
+      }
     }
     else {
       if (!out_package->is_success) {
