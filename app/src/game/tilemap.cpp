@@ -186,7 +186,6 @@ void render_mainmenu(const tilemap* _tilemap, Rectangle camera_view, const app_s
   }
   const tilesheet* sheet = get_tilesheet_by_enum(TILESHEET_TYPE_MAP);
   const f32 dynamic_tile_size = static_cast<f32>(in_settings->render_height) / TOTAL_NUMBER_OF_TILES_TO_THE_HEIGHT; // Based off of certain amouth tiles along render height
-  const f32 dynamic_prop_coord_scale = dynamic_tile_size / _tilemap->tile_size;
 
   Vector2 map_position = Vector2 {
     ((_tilemap->map_dim * dynamic_tile_size) * -0.5f),
@@ -231,15 +230,17 @@ void render_mainmenu(const tilemap* _tilemap, Rectangle camera_view, const app_s
         tilemap_prop_sprite* const map_prop_ptr = _queue_prop_ptr->data.prop_sprite;
         if (!map_prop_ptr->is_initialized) continue;
         
-        Rectangle coord = Rectangle {
-          map_prop_ptr->sprite.coord.x      * dynamic_prop_coord_scale,
-          map_prop_ptr->sprite.coord.y      * dynamic_prop_coord_scale,
-          map_prop_ptr->sprite.coord.width  * dynamic_prop_coord_scale,
-          map_prop_ptr->sprite.coord.height * dynamic_prop_coord_scale,
+        Rectangle coord = Rectangle { // Position can be usable as a dimention since it's a square and centered
+          (map_prop_ptr->sprite.coord.x      / (-_tilemap->position.x)) * -map_position.x,
+          (map_prop_ptr->sprite.coord.y      / (-_tilemap->position.y)) * -map_position.y,
+          ((map_prop_ptr->sprite.coord.width  * map_prop_ptr->scale) / (-_tilemap->position.x)) * -map_position.x,
+          ((map_prop_ptr->sprite.coord.height * map_prop_ptr->scale) / (-_tilemap->position.y)) * -map_position.y,
         };
+        Vector2 origin = Vector2 {coord.width  * .5f, coord.height * .5f};
+
         if (!CheckCollisionRecs(camera_view, coord)) { continue; }
 
-        play_sprite_on_site(__builtin_addressof(map_prop_ptr->sprite), map_prop_ptr->sprite.tint, coord);
+        play_sprite_on_site_pro(__builtin_addressof(map_prop_ptr->sprite), coord, origin, map_prop_ptr->sprite.rotation, map_prop_ptr->sprite.tint);
         continue;
       }
       if (_queue_prop_ptr->type != TILEMAP_PROP_TYPE_SPRITE) {
@@ -247,22 +248,19 @@ void render_mainmenu(const tilemap* _tilemap, Rectangle camera_view, const app_s
         
         const tilemap_prop_static * map_prop_ptr = _queue_prop_ptr->data.prop_static;
         if (!map_prop_ptr->is_initialized) continue;
-        
-        Rectangle prop_rect = Rectangle {
-          map_prop_ptr->dest.x      * dynamic_prop_coord_scale,
-          map_prop_ptr->dest.y      * dynamic_prop_coord_scale,
-          map_prop_ptr->dest.width  * dynamic_prop_coord_scale,
-          map_prop_ptr->dest.height * dynamic_prop_coord_scale,
-        };
-        if (!CheckCollisionRecs(camera_view, prop_rect)) { continue; }
-      
+
         const Texture2D* tex = get_texture_by_enum(map_prop_ptr->tex_id); 
         if (!tex) continue;
+        
+        Rectangle prop_rect = Rectangle { // Position can be usable as a dimention since it's a square and centered
+          (map_prop_ptr->dest.x      / (-_tilemap->position.x)) * -map_position.x,
+          (map_prop_ptr->dest.y      / (-_tilemap->position.y)) * -map_position.y,
+          ((map_prop_ptr->dest.width  * map_prop_ptr->scale) / (-_tilemap->position.x)) * -map_position.x,
+          ((map_prop_ptr->dest.height * map_prop_ptr->scale) / (-_tilemap->position.y)) * -map_position.y,
+        };
+        Vector2 origin = Vector2 {prop_rect.width * .5f, prop_rect.height * .5f};
 
-        prop_rect.width = map_prop_ptr->dest.width * map_prop_ptr->scale;
-        prop_rect.height = map_prop_ptr->dest.height * map_prop_ptr->scale;
-      
-        const Vector2 origin = VECTOR2(prop_rect.width * .5f, prop_rect.height * .5f);
+        if (!CheckCollisionRecs(camera_view, prop_rect)) { continue; }
       
         DrawTexturePro(*tex, map_prop_ptr->source, prop_rect, origin, map_prop_ptr->rotation, map_prop_ptr->tint);
         continue;

@@ -3,6 +3,7 @@
 
 void update_sprite(spritesheet *const sheet);
 constexpr void render_sprite(const spritesheet * sheet,const Color _tint,const Rectangle dest);
+constexpr void render_sprite_pro(const spritesheet * sheet, const Rectangle dest, const Vector2 origin, const f32 rotation, const Color _tint);
  
 void update_sprite(spritesheet *const sheet) {
   if (!sheet) {
@@ -63,6 +64,24 @@ constexpr void render_sprite(const spritesheet * sheet,const Color _tint,const R
       WHITE);
   #endif
 }
+constexpr void render_sprite_pro(const spritesheet * sheet, const Rectangle dest, const Vector2 origin, const f32 rotation, const Color _tint) {
+  if (!sheet || !sheet->tex_handle) {
+    TraceLog(LOG_ERROR, "spritesheet::render_sprite()::Sheet is not valid");
+    return;
+  }
+  Rectangle source = Rectangle {
+    sheet->current_frame_rect.x + sheet->offset.x,
+    sheet->current_frame_rect.y + sheet->offset.y,
+    sheet->current_frame_rect.width,
+    sheet->current_frame_rect.height,
+  };
+
+  DrawTexturePro(*sheet->tex_handle, source, dest, origin, rotation, _tint);
+
+  #if DEBUG_COLLISIONS 
+    DrawRectangleLines(sheet->coord.x, sheet->coord.y, sheet->coord.width,sheet->coord.height, WHITE);
+  #endif
+}
 void set_sprite(spritesheet *const sheet, bool _play_looped, bool _play_once) {
   if (!sheet || sheet->sheet_id >= SHEET_ID_SPRITESHEET_TYPE_MAX || sheet->sheet_id <= SHEET_ID_SPRITESHEET_UNSPECIFIED) {
     TraceLog(LOG_ERROR, "spritesheet::register_sprite()::Sheet is not valid");
@@ -74,7 +93,7 @@ void set_sprite(spritesheet *const sheet, bool _play_looped, bool _play_once) {
   sheet->play_once = _play_once;
   sheet->is_started = false;
 }
-void play_sprite_on_site(spritesheet *const sheet, Color _tint, Rectangle dest) {
+void play_sprite_on_site(spritesheet *const sheet, Color _tint, const Rectangle dest) {
   if (!sheet || sheet->sheet_id >= SHEET_ID_SPRITESHEET_TYPE_MAX || sheet->sheet_id <= SHEET_ID_SPRITESHEET_UNSPECIFIED) {
     TraceLog(LOG_ERROR, "spritesheet::play_sprite_on_site()::Sheet is not valid");
     return;
@@ -88,6 +107,20 @@ void play_sprite_on_site(spritesheet *const sheet, Color _tint, Rectangle dest) 
 
   render_sprite(sheet, _tint, dest);
 }
+void play_sprite_on_site_pro(spritesheet *const sheet, const Rectangle dest, const Vector2 origin, const f32 rotation, const Color _tint) {
+  if (!sheet || sheet->sheet_id >= SHEET_ID_SPRITESHEET_TYPE_MAX || sheet->sheet_id <= SHEET_ID_SPRITESHEET_UNSPECIFIED) {
+    TraceLog(LOG_ERROR, "spritesheet::play_sprite_on_site()::Sheet is not valid");
+    return;
+  }
+  if (sheet->play_once && sheet->is_played && !sheet->is_started) { return; }
+
+  sheet->playmod = ON_SITE;
+  sheet->is_started = true;
+  sheet->is_played = true;
+
+  render_sprite_pro(sheet, dest, origin, rotation, _tint);
+}
+
 void draw_sprite_on_site_by_id(spritesheet_id _id, Color _tint, Vector2 pos, Vector2 scale, u16 frame) {
   if (_id > SHEET_ID_SPRITESHEET_TYPE_MAX || _id <= SHEET_ID_SPRITESHEET_UNSPECIFIED) {
     TraceLog(LOG_ERROR, "spritesheet::draw_sprite_on_site()::invalid sprite type");
