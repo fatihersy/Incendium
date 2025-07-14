@@ -204,7 +204,8 @@ player_update_results update_player(void) {
 }
 void player_move_player(Vector2 new_pos) {
   if (!player) {
-    TraceLog(LOG_ERROR, "player::move_player()::Player state is null");
+    TraceLog(LOG_ERROR, "player::player_move_player()::Player state is null");
+    return;
   }
   if (new_pos.x < 0) {
     player->w_direction = WORLD_DIRECTION_LEFT;
@@ -216,6 +217,7 @@ void player_move_player(Vector2 new_pos) {
     player->is_moving = false;
     return;
   }
+  
   player->is_moving = true;
   player->position.x += new_pos.x;
   player->position.y += new_pos.y;

@@ -21,7 +21,7 @@ typedef struct main_menu_scene_state {
   panel upgrade_list_panel;
   panel upgrade_details_panel;
 
-  character_stat * hovered_stat;
+  const character_stat * hovered_stat;
   const camera_metrics * in_camera_metrics;
   const app_settings   * in_app_settings;
   
@@ -173,7 +173,7 @@ void render_interface_main_menu(void) {
     return false;
   }
 
-  if (!game_manager_initialize( state->in_camera_metrics)) { // Inits player & spawns
+  if (!game_manager_initialize( state->in_camera_metrics, state->in_app_settings, get_active_map_ptr())) { // Inits player & spawns
     TraceLog(LOG_ERROR, "scene_in_game::initialize_scene_in_game()::game_manager_initialize() failed");
     return false;
   }
@@ -242,7 +242,7 @@ void draw_main_menu_upgrade_list_panel(void) {
 
   for (i32 iter = 0; iter < MAIN_MENU_UPGRADE_PANEL_ROW; ++iter) {
     for (i32 j = 0; j < MAIN_MENU_UPGRADE_PANEL_COL; ++j) {
-      character_stat *stat = get_static_player_state_stat(static_cast<character_stats>((MAIN_MENU_UPGRADE_PANEL_COL * iter) + j + 1));
+      const character_stat *stat = get_static_player_state_stat(static_cast<character_stats>((MAIN_MENU_UPGRADE_PANEL_COL * iter) + j + 1));
       if (!stat || stat->id >= CHARACTER_STATS_MAX ||
         stat->id <= CHARACTER_STATS_UNDEFINED) {
         continue;

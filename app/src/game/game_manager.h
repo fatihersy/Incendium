@@ -5,28 +5,28 @@
 
 #include <game/game_types.h>
 
-bool game_manager_initialize(const camera_metrics* _camera_metrics);
+[[__nodiscard__]] bool game_manager_initialize(const camera_metrics* _camera_metrics, const app_settings * in_app_settings,tilemap ** const in_active_map_ptr);
 
 void update_game_manager(void);
 void update_game_manager_debug(void);
 
 u16 get_remaining_enemies(void);
-Character2D* get_spawn_info(u16 spawn_id);
 u32 get_currency_souls(void);
 void set_currency_souls(i32 value);
 bool get_b_player_have_upgrade_points(void);
-ability* get_dynamic_player_state_ability(ability_type type);
-character_stat* get_dynamic_player_state_stat(character_stats stat);
-character_stat* get_static_player_state_stat(character_stats stat);
 void set_dynamic_player_have_ability_upgrade_points(bool _b);
-bool* get_is_game_paused(void);
 void set_is_game_paused(bool _is_game_paused);
 void toggle_is_game_paused(void);
 bool get_is_game_end(void);
 void set_is_game_end(bool _is_game_end);
 void toggle_is_game_end(void);
-Vector2* gm_get_mouse_pos_world(void);
-ingame_info* gm_get_ingame_info(void);
+ability* get_dynamic_player_state_ability(ability_type type);
+const bool * get_is_game_paused(void);
+const character_stat* get_dynamic_player_state_stat(character_stats stat);
+const character_stat* get_static_player_state_stat(character_stats stat);
+const Character2D* get_spawn_info(u16 spawn_id);
+const Vector2* gm_get_mouse_pos_world(void);
+const ingame_info* gm_get_ingame_info(void);
 
 void gm_start_game(worldmap_stage stage);
 void gm_reset_game(void);
@@ -40,13 +40,13 @@ void refresh_player_stats(bool refresh_dynamic_state, bool refresh_static_state)
 void upgrade_stat_pseudo(character_stat* stat);
 void currency_souls_add(i32 value);
 
-bool          _add_ability(ability_type _type);
-Vector2       _get_player_position(bool centered);
-bool          _upgrade_ability(ability* abl);
-u16           _spawn_character(Character2D _character);
-void          _set_player_position(Vector2 position);
-ability       _get_next_level(ability abl);
-ability       _get_ability(ability_type type);
+bool                _add_ability(ability_type _type);
+Vector2             _get_player_position(bool centered);
+bool                _upgrade_ability(ability* abl);
+u16                 _spawn_character(Character2D _character);
+void                _set_player_position(Vector2 position);
+ability             _get_next_level(ability abl);
+ability             _get_ability(ability_type type);
 player_state* _get_dynamic_player_state(void);
 
 void render_game(void);

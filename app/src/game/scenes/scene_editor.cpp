@@ -794,7 +794,7 @@ void render_scene_editor(void) {
   else {
     render_map();
   }
-  std::vector<Rectangle> _map_collisions = get_active_map()->collisions;
+  const std::vector<Rectangle>& _map_collisions = get_active_map()->collisions;
   for (size_t itr_000 = 0; itr_000 < _map_collisions.size(); ++itr_000) {
     const Rectangle& _map_coll = _map_collisions.at(itr_000);
 

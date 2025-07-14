@@ -308,6 +308,22 @@ typedef struct tilesheet {
   Vector2 position;
   f32 offset;
   bool is_initialized;
+
+  tilesheet(void) {
+    zero_memory(this->tile_symbols, sizeof(tile_symbols) * MAX_TILESHEET_UNIQUE_TILESLOTS_X * MAX_TILESHEET_UNIQUE_TILESLOTS_Y);
+    
+    this->sheet_id = TILESHEET_TYPE_UNSPECIFIED;
+    this->atlas_source = atlas_texture();
+    this->atlas_handle = nullptr;
+    this->tile_count_x = 0;
+    this->tile_count_y = 0;
+    this->tile_count = 0;
+    this->tile_size = 0;
+    this->dest_tile_size = 0;
+    this->position = ZEROVEC2;
+    this->offset = 0.f;
+    this->is_initialized = false;
+  }
 } tilesheet;
 
 typedef struct worldmap_stage {

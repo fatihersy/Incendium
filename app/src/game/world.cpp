@@ -1,4 +1,5 @@
 #include "world.h"
+
 #include <core/fmemory.h>
 
 #include "tilemap.h"
@@ -10,21 +11,21 @@ typedef struct world_system_state {
   tilesheet palette;
 
   f32 palette_zoom;
-  worldmap_stage active_stage;
-  const camera_metrics* in_camera_metrics;
+  worldmap_stage active_map_stage;
+  const camera_metrics * in_camera_metrics;
   const app_settings * in_app_settings;
+  tilemap * active_map;
 } world_system_state;
 
-static world_system_state * state; 
+static world_system_state * state;
 
-#define CURR_MAP state->map.at(state->active_stage.map_id)
 #define MAINMENU_STAGE_INDEX 0
 
 // 3840x2160 is the dimentions of map selection screen background picture
 #define CREATE_WORLDMAP_STAGE_CENTERED(ID, DISPLAY_NAME, FILENAME, SELECTION_SCREEN_LOCATION, WILL_BE_ON_SELECTION_SCREEN)\
   state->worldmap_locations.at(ID) = worldmap_stage(ID, DISPLAY_NAME, FILENAME, SELECTION_SCREEN_LOCATION, true, WILL_BE_ON_SELECTION_SCREEN);
 
-Rectangle get_position_view_rect(Camera2D camera, Vector2 pos, f32 zoom);
+constexpr Rectangle get_position_view_rect(Camera2D camera, Vector2 pos, f32 zoom);
 constexpr size_t get_renderqueue_prop_index_by_id(i16 zindex, u32 id);
 
 bool world_system_initialize(const camera_metrics* _in_camera_metrics,const app_settings* _in_app_settings) {
@@ -43,12 +44,12 @@ bool world_system_initialize(const camera_metrics* _in_camera_metrics,const app_
   }
   state->in_app_settings = _in_app_settings;
   state->in_camera_metrics = _in_camera_metrics;
-  create_tilesheet(TILESHEET_TYPE_MAP, 16*2, 1.1, &state->palette);
+  create_tilesheet(TILESHEET_TYPE_MAP, 16u*2u, 1.1f, __builtin_addressof(state->palette));
   if(!state->palette.is_initialized) {
     TraceLog(LOG_WARNING, "world::world_system_initialize()::palette initialization failed");
     return false;
   }
-  state->palette.position = {_in_camera_metrics->screen_offset.x, _in_camera_metrics->screen_offset.y + 100}; // INFO: Tilesheet start position
+  state->palette.position = Vector2 { _in_camera_metrics->screen_offset.x, _in_camera_metrics->screen_offset.y + 100.f};
 
   { // WORLD LOCATIONS
     CREATE_WORLDMAP_STAGE_CENTERED( 0, "Stage 1",  "stage1",  VECTOR2(   0,    0), false); // main menu background
@@ -74,7 +75,7 @@ bool world_system_initialize(const camera_metrics* _in_camera_metrics,const app_
     CREATE_WORLDMAP_STAGE_CENTERED(20, "Stage 21", "stage21", VECTOR2(1977,  385), true);
     CREATE_WORLDMAP_STAGE_CENTERED(21, "Stage 22", "stage22", VECTOR2(1661,  410), true);
   }
-  for (i32 itr_000 = 0; itr_000 < MAX_WORLDMAP_LOCATIONS; ++itr_000) 
+  for (i32 itr_000 = 0; itr_000 < MAX_WORLDMAP_LOCATIONS; ++itr_000)
   {
     for (i32 itr_111 = 0; itr_111 < MAX_TILEMAP_LAYERS; ++itr_111) {
       state->map.at(itr_000).filename.at(itr_111) = TextFormat("%s_layer%d.txt", state->worldmap_locations.at(itr_000).filename.c_str(), itr_111);
@@ -102,7 +103,8 @@ bool world_system_initialize(const camera_metrics* _in_camera_metrics,const app_
 
     state->worldmap_locations.at(itr_000).spawning_areas.at(0) = {
       state->map.at(itr_000).position.x, state->map.at(itr_000).position.y,
-      (f32) (state->map.at(itr_000).map_dim * state->map.at(itr_000).tile_size), (f32) (state->map.at(itr_000).map_dim * state->map.at(itr_000).tile_size)
+      static_cast<f32>((state->map.at(itr_000).map_dim * state->map.at(itr_000).tile_size)), 
+      static_cast<f32>((state->map.at(itr_000).map_dim * state->map.at(itr_000).tile_size))
     };
 
     refresh_render_queue(itr_000);
@@ -117,17 +119,21 @@ const worldmap_stage* get_worldmap_locations(void) {
   return state->worldmap_locations.data();
 }
 const worldmap_stage* get_active_worldmap(void) {
-  return &state->active_stage;
+  return __builtin_addressof(state->active_map_stage);
 }
 const tilemap* get_active_map(void) {
-  return &CURR_MAP;
+  return state->active_map;
+}
+tilemap** get_active_map_ptr(void) {
+  return __builtin_addressof(state->active_map);
 }
 void set_worldmap_location(i32 id) {
   if (id >= MAX_WORLDMAP_LOCATIONS) {
     TraceLog(LOG_WARNING, "world::set_worldmap_location()::Recieved id was out of bound");
     return;
   }
-  state->active_stage = state->worldmap_locations.at(id);
+  state->active_map_stage = state->worldmap_locations.at(id);
+  state->active_map = __builtin_addressof(state->map.at(state->active_map_stage.map_id));
 }
 void set_map_tile(i32 layer, tile src, tile dst) {
   if (layer < 0 || layer >= MAX_TILEMAP_LAYERS) {
@@ -138,28 +144,26 @@ void set_map_tile(i32 layer, tile src, tile dst) {
     TraceLog(LOG_WARNING, "world::set_map_tile()::Recieved tile was out of bound");
     return;
   }
-  CURR_MAP.tiles[layer][src.position.x][src.position.y].c[0] = dst.symbol.c[0];
-  CURR_MAP.tiles[layer][src.position.x][src.position.y].c[1] = dst.symbol.c[1];
+  state->active_map->tiles[layer][src.position.x][src.position.y].c[0] = dst.symbol.c[0];
+  state->active_map->tiles[layer][src.position.x][src.position.y].c[1] = dst.symbol.c[1];
 }
 tilemap_prop_address get_map_prop_by_pos(Vector2 pos) {
-  for (size_t itr_000 = 0; itr_000 < CURR_MAP.static_props.size(); ++itr_000) {
-    Rectangle prop_dest = CURR_MAP.static_props.at(itr_000).dest;
+  for (size_t itr_000 = 0; itr_000 < state->active_map->static_props.size(); ++itr_000) {
+    Rectangle prop_dest = state->active_map->static_props.at(itr_000).dest;
     prop_dest.x -= prop_dest.width  * .5f;
     prop_dest.y -= prop_dest.height * .5f;
     if(CheckCollisionPointRec(pos, prop_dest)) { // Props are always centered
-      tilemap_prop_address prop = tilemap_prop_address();
-      prop.data.prop_static = __builtin_addressof(CURR_MAP.static_props.at(itr_000));
+      tilemap_prop_address prop = tilemap_prop_address(__builtin_addressof(state->active_map->static_props.at(itr_000)));
       prop.type = prop.data.prop_static->prop_type;
       return prop;
     }
   }
-  for (size_t itr_000 = 0; itr_000 < CURR_MAP.sprite_props.size(); ++itr_000) {
-    Rectangle prop_dest = CURR_MAP.sprite_props.at(itr_000).sprite.coord;
+  for (size_t itr_000 = 0; itr_000 < state->active_map->sprite_props.size(); ++itr_000) {
+    Rectangle prop_dest = state->active_map->sprite_props.at(itr_000).sprite.coord;
     prop_dest.x -= prop_dest.width  * .5f;
     prop_dest.y -= prop_dest.height * .5f;
     if(CheckCollisionPointRec(pos, prop_dest)) { // Props are always centered
-      tilemap_prop_address prop = tilemap_prop_address();
-      prop.data.prop_sprite = &CURR_MAP.sprite_props.at(itr_000);
+      tilemap_prop_address prop = tilemap_prop_address(__builtin_addressof(state->active_map->sprite_props.at(itr_000)));
       prop.type = prop.data.prop_sprite->prop_type;
       return prop;
     }
@@ -172,7 +176,7 @@ constexpr size_t get_renderqueue_prop_index_by_id(i16 zindex, i32 id) {
     TraceLog(LOG_ERROR, "world::get_renderqueue_prop_by_id()::State is not valid");
     return INVALID_IDU32;
   }
-  const std::vector<tilemap_prop_address>& _queue = CURR_MAP.render_queue.at(zindex);
+  const std::vector<tilemap_prop_address>& _queue = state->active_map->render_queue.at(zindex);
   for (size_t itr_000 = 0; itr_000 < _queue.size(); ++itr_000) {
     const tilemap_prop_address * _queue_elm = __builtin_addressof(_queue.at(itr_000));
     if (_queue_elm->type <= TILEMAP_PROP_TYPE_UNDEFINED || _queue_elm->type >= TILEMAP_PROP_TYPE_MAX) {
@@ -186,18 +190,18 @@ constexpr size_t get_renderqueue_prop_index_by_id(i16 zindex, i32 id) {
   return INVALID_IDU32;
 }
 tilemap_prop_static* get_map_prop_static_by_id(i32 id) {
-  for (size_t iter = 0; iter < CURR_MAP.static_props.size(); ++iter) {
-    if (CURR_MAP.static_props.at(iter).id == id) {
-      return &CURR_MAP.static_props.at(iter);
+  for (size_t iter = 0; iter < state->active_map->static_props.size(); ++iter) {
+    if (state->active_map->static_props.at(iter).id == id) {
+      return __builtin_addressof(state->active_map->static_props.at(iter));
     }
   }
   TraceLog(LOG_WARNING, "world::get_map_prop_by_id()::No match found");
   return nullptr;  
 }
 tilemap_prop_sprite* get_map_prop_sprite_by_id(i32 id) {
-  for (size_t iter = 0; iter < CURR_MAP.sprite_props.size(); ++iter) {
-    if (CURR_MAP.sprite_props.at(iter).id == id) {
-      return &CURR_MAP.sprite_props.at(iter);
+  for (size_t iter = 0; iter < state->active_map->sprite_props.size(); ++iter) {
+    if (state->active_map->sprite_props.at(iter).id == id) {
+      return __builtin_addressof(state->active_map->sprite_props.at(iter));
     }
   }
   TraceLog(LOG_WARNING, "world::get_map_prop_by_id()::No match found");
@@ -206,20 +210,20 @@ tilemap_prop_sprite* get_map_prop_sprite_by_id(i32 id) {
 
 
 void save_current_map(void) {
-  if(!save_map_data(&CURR_MAP, &state->map_stringtify.at(state->active_stage.map_id))) {
+  if(!save_map_data(state->active_map, &state->map_stringtify.at(state->active_map_stage.map_id))) {
     TraceLog(LOG_WARNING, "world::save_current_map()::save_map_data returned false");
   }
 }
 void load_current_map(void) {
-  if(!load_map_data(&CURR_MAP, &state->map_stringtify.at(state->active_stage.map_id))) {
+  if(!load_map_data(state->active_map, &state->map_stringtify.at(state->active_map_stage.map_id))) {
     TraceLog(LOG_WARNING, "world::load_current_map()::load_map_data returned false");
   }
 
-  refresh_render_queue(state->active_stage.map_id);
+  refresh_render_queue(state->active_map_stage.map_id);
 }
 
 void update_map(void) {
-  update_tilemap(&state->map.at(state->active_stage.map_id));
+  update_tilemap(&state->map.at(state->active_map_stage.map_id));
 }
 
 void drag_tilesheet(Vector2 vec) {
@@ -227,15 +231,15 @@ void drag_tilesheet(Vector2 vec) {
   state->palette.position.y += vec.y;
 }
 void render_map() {
-  if (state->active_stage.map_id == MAINMENU_STAGE_INDEX) {
-    render_mainmenu(&CURR_MAP, state->in_camera_metrics->frustum, state->in_app_settings);
+  if (state->active_map_stage.map_id == MAINMENU_STAGE_INDEX) {
+    render_mainmenu(state->active_map, state->in_camera_metrics->frustum, state->in_app_settings);
   }
   else {
-    render_tilemap(&CURR_MAP, state->in_camera_metrics->frustum);
+    render_tilemap(state->active_map, state->in_camera_metrics->frustum);
   }
 }
 void render_map_view_on(Vector2 pos, f32 zoom) {
-  render_tilemap(&CURR_MAP, get_position_view_rect(state->in_camera_metrics->handle, pos, zoom));
+  render_tilemap(state->active_map, get_position_view_rect(state->in_camera_metrics->handle, pos, zoom));
 }
 
 void render_map_palette(f32 zoom) {
@@ -248,10 +252,10 @@ bool add_prop_curr_map(tilemap_prop_static prop_static) {
     TraceLog(LOG_WARNING, "world::add_prop_curr_map()::Recieved static prop was empty");
     return false;
   }
-  prop_static.id = CURR_MAP.next_prop_id++;
-  CURR_MAP.static_props.push_back(prop_static);
+  prop_static.id = state->active_map->next_prop_id++;
+  state->active_map->static_props.push_back(prop_static);
   
-  refresh_render_queue(state->active_stage.map_id);
+  refresh_render_queue(state->active_map_stage.map_id);
   return true;
 }
 bool add_prop_curr_map(tilemap_prop_sprite prop_sprite) {
@@ -259,38 +263,42 @@ bool add_prop_curr_map(tilemap_prop_sprite prop_sprite) {
     TraceLog(LOG_WARNING, "world::add_prop_curr_map()::Recieved sprite prop was empty");
     return false;
   }
-  prop_sprite.id = CURR_MAP.next_prop_id++;
-  CURR_MAP.sprite_props.push_back(prop_sprite);
+  prop_sprite.id = state->active_map->next_prop_id++;
+  state->active_map->sprite_props.push_back(prop_sprite);
 
-  refresh_render_queue(state->active_stage.map_id);
+  refresh_render_queue(state->active_map_stage.map_id);
   return true;
 }
 bool add_map_coll_curr_map(Rectangle map_coll) {
-  f32 map_dim = CURR_MAP.position.x + (CURR_MAP.map_dim * CURR_MAP.tile_size);
-  bool in_bounds = map_coll.x > CURR_MAP.position.x && map_coll.y > CURR_MAP.position.y && map_coll.x < CURR_MAP.position.x + map_dim && map_coll.y < CURR_MAP.position.y + map_dim;
+  f32 map_dim = state->active_map->position.x + (state->active_map->map_dim * state->active_map->tile_size);
+  bool in_bounds = 
+    map_coll.x > state->active_map->position.x && 
+    map_coll.y > state->active_map->position.y && 
+    map_coll.x < state->active_map->position.x + map_dim && 
+    map_coll.y < state->active_map->position.y + map_dim;
   if (!in_bounds) {
-    TraceLog(LOG_WARNING, "world::add_map_coll_curr_map()::Collision out of the bounds of map");
+    TraceLog(LOG_WARNING, "world::add_map_coll_state->active_map->)::Collision out of the bounds of map");
     return false;
   }
-  CURR_MAP.collisions.push_back(map_coll);
+  state->active_map->collisions.push_back(map_coll);
   return true;
 }
 bool remove_prop_cur_map_by_id(i32 id, tilemap_prop_types type) {
   bool found = false;
 
   if (type != TILEMAP_PROP_TYPE_SPRITE) {
-    for (size_t itr_000 = 0; itr_000 < CURR_MAP.static_props.size(); ++itr_000) {
-      if (CURR_MAP.static_props.at(itr_000).id == id) {
-        CURR_MAP.static_props.erase(CURR_MAP.static_props.begin() + itr_000);
+    for (size_t itr_000 = 0; itr_000 < state->active_map->static_props.size(); ++itr_000) {
+      if (state->active_map->static_props.at(itr_000).id == id) {
+        state->active_map->static_props.erase(state->active_map->static_props.begin() + itr_000);
         found = true;
         break;
       }
     }
   }
   if (type == TILEMAP_PROP_TYPE_SPRITE) {
-    for (size_t itr_000 = 0; itr_000 < CURR_MAP.sprite_props.size(); ++itr_000) {
-      if (CURR_MAP.sprite_props.at(itr_000).id == id) {
-        CURR_MAP.sprite_props.erase(CURR_MAP.sprite_props.begin() + itr_000);
+    for (size_t itr_000 = 0; itr_000 < state->active_map->sprite_props.size(); ++itr_000) {
+      if (state->active_map->sprite_props.at(itr_000).id == id) {
+        state->active_map->sprite_props.erase(state->active_map->sprite_props.begin() + itr_000);
         found = true;
         break;
       }
@@ -298,7 +306,7 @@ bool remove_prop_cur_map_by_id(i32 id, tilemap_prop_types type) {
   }
 
   if (found) {
-    refresh_render_queue(state->active_stage.map_id);
+    refresh_render_queue(state->active_map_stage.map_id);
     return true;
   }
   else {
@@ -306,7 +314,7 @@ bool remove_prop_cur_map_by_id(i32 id, tilemap_prop_types type) {
     return false;
   }
 }
-Rectangle get_position_view_rect(Camera2D camera, Vector2 pos, f32 zoom) {
+constexpr Rectangle get_position_view_rect(Camera2D camera, Vector2 pos, f32 zoom) {
   int screen_width = state->in_app_settings->render_width;
   int screen_height = state->in_app_settings->render_height;
   
@@ -333,20 +341,20 @@ bool change_prop_zindex(tilemap_prop_types type, i32 id, i16 old_zindex, i16 new
   
   if (type == TILEMAP_PROP_TYPE_SPRITE) {
     size_t _prop_addr_queue_index = get_renderqueue_prop_index_by_id(old_zindex, id);
-    std::vector<tilemap_prop_address>& queue_ref = CURR_MAP.render_queue.at(old_zindex);
+    std::vector<tilemap_prop_address>& queue_ref = state->active_map->render_queue.at(old_zindex);
     tilemap_prop_address map_prop_backup = queue_ref.at(_prop_addr_queue_index); 
     queue_ref.erase(queue_ref.begin() + _prop_addr_queue_index);
 
-    CURR_MAP.render_queue.at(new_zindex).push_back(tilemap_prop_address(map_prop_backup));
+    state->active_map->render_queue.at(new_zindex).push_back(tilemap_prop_address(map_prop_backup));
     return true;
   }
   else if (type != TILEMAP_PROP_TYPE_SPRITE) {
     size_t _prop_addr_queue_index = get_renderqueue_prop_index_by_id(old_zindex, id);
-    std::vector<tilemap_prop_address>& queue_ref = CURR_MAP.render_queue.at(old_zindex);
+    std::vector<tilemap_prop_address>& queue_ref = state->active_map->render_queue.at(old_zindex);
     tilemap_prop_address map_prop_backup = queue_ref.at(_prop_addr_queue_index); 
     queue_ref.erase(queue_ref.begin() + _prop_addr_queue_index);
 
-    CURR_MAP.render_queue.at(new_zindex).push_back(tilemap_prop_address(map_prop_backup));
+    state->active_map->render_queue.at(new_zindex).push_back(tilemap_prop_address(map_prop_backup));
     return true;
   }
 
@@ -384,13 +392,13 @@ tile _get_tile_from_map_by_mouse_pos(u16 from_layer, Vector2 _mouse_pos) {
     TraceLog(LOG_WARNING, "world::_get_tile_from_map_by_mouse_pos()::Recieved layer was out of bound");
     return tile();
   }
-  return get_tile_from_map_by_mouse_pos(&CURR_MAP, GetScreenToWorld2D(_mouse_pos, state->in_camera_metrics->handle), from_layer);
+  return get_tile_from_map_by_mouse_pos(state->active_map, GetScreenToWorld2D(_mouse_pos, state->in_camera_metrics->handle), from_layer);
 }
 void _render_tile_on_pos(const tile* _tile, Vector2 pos,const tilesheet* sheet) {
   if (!_tile || !_tile->is_initialized || !sheet) {
     TraceLog(LOG_WARNING, "world::_render_tile()::One of pointers is not valid");
     return;
   }
-  render_tile(&_tile->symbol, Rectangle {pos.x, pos.y, (f32) CURR_MAP.tile_size, (f32) CURR_MAP.tile_size }, sheet);
+  render_tile(&_tile->symbol, Rectangle {pos.x, pos.y, (f32) state->active_map->tile_size, (f32) state->active_map->tile_size }, sheet);
 }
 // EXPOSED

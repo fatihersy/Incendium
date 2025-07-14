@@ -14,6 +14,8 @@
 typedef struct game_manager_system_state {
   save_data* game_progression_data;
   const camera_metrics* in_camera_metrics;
+  const app_settings* in_app_settings;
+  tilemap ** in_active_map;
 
   worldmap_stage stage;
   player_state player_state_static;
@@ -35,15 +37,14 @@ extern const u32 level_curve[MAX_PLAYER_LEVEL+1];
 #define WAVE_COUNT_TO_SPAWN_BOSS 2
 
 bool game_manager_on_event(i32 code, event_context context);
-void game_manager_reinit(void);
+bool game_manager_reinit(const camera_metrics * in_camera_metrics, const app_settings * in_app_settings,tilemap ** const in_active_map_ptr);
 void game_manager_set_stats(character_stat* stat, u32 level);
 void populate_map_with_spawns(void);
 void generate_in_game_info(void);
 
-bool game_manager_initialize(const camera_metrics* _camera_metrics) {
+bool game_manager_initialize(const camera_metrics * in_camera_metrics, const app_settings * in_app_settings, tilemap ** const in_active_map_ptr) {
   if (state) {
-    game_manager_reinit();
-    return true;
+    return game_manager_reinit(in_camera_metrics, in_app_settings, in_active_map_ptr);
   }
   state = (game_manager_system_state *)allocate_memory_linear(sizeof(game_manager_system_state), true);
   if (!state) {
@@ -56,11 +57,11 @@ bool game_manager_initialize(const camera_metrics* _camera_metrics) {
     TraceLog(LOG_ERROR, "game_manager::game_manager_initialize()::Save system init returned false");
     return false;
   }
-  if (!ability_system_initialize(_camera_metrics, get_app_settings(), __builtin_addressof(state->game_info))) {
+  if (!ability_system_initialize(in_camera_metrics, get_app_settings(), __builtin_addressof(state->game_info))) {
     TraceLog(LOG_ERROR, "game_manager::game_manager_initialize()::Ability system init returned false");
     return false;
   }
-  if (!spawn_system_initialize(_camera_metrics)) {
+  if (!spawn_system_initialize(in_camera_metrics)) {
     TraceLog(LOG_ERROR, "game_manager::game_manager_initialize()::Spawn system init returned false");
     return false;
   }
@@ -69,7 +70,6 @@ bool game_manager_initialize(const camera_metrics* _camera_metrics) {
     return false;
   }
   state->player_state_static = *get_player_state();
-  state->in_camera_metrics = _camera_metrics;
   
   state->game_info.player_state_dynamic          = get_player_state();
   state->game_info.in_spawns                     = get_spawns();
@@ -83,28 +83,38 @@ bool game_manager_initialize(const camera_metrics* _camera_metrics) {
   event_register(EVENT_CODE_DAMAGE_PLAYER_IF_COLLIDE, game_manager_on_event);
   event_register(EVENT_CODE_DAMAGE_ANY_SPAWN_IF_COLLIDE, game_manager_on_event);
 
-  game_manager_reinit();
-  return true;
+  return game_manager_reinit(in_camera_metrics, in_app_settings, in_active_map_ptr);
 }
-void game_manager_reinit(void) {
+bool game_manager_reinit(const camera_metrics * in_camera_metrics, const app_settings * in_app_settings, tilemap ** const in_active_map_ptr) {
   if (!player_system_initialize()) {
-    TraceLog(LOG_ERROR, "game_manager::game_manager_reinit()::Returned false");
-    return;
+    TraceLog(LOG_ERROR, "game_manager::game_manager_reinit()::Player system initialization failed");
+    return false;
   }
-  parse_or_create_save_data_from_file(SAVE_SLOT_CURRENT_SESSION);
+  if (!parse_or_create_save_data_from_file(SAVE_SLOT_CURRENT_SESSION)) {
+    TraceLog(LOG_ERROR, "game_manager::game_manager_reinit()::Save system failed to creating/parsing serialization data");
+    return false;
+  }
   gm_load_game();
 
   state->remaining_waves_to_spawn_boss = WAVE_COUNT_TO_SPAWN_BOSS;
   state->game_manager_initialized = true;
   state->is_game_paused = true;
+
+  state->in_camera_metrics = in_camera_metrics;
+  state->in_app_settings = in_app_settings;
+  state->in_active_map = in_active_map_ptr;
+
+  return true;
 }
 
 void update_game_manager(void) {
   if (!state) {
     return;
   }
-  state->mouse_pos_world = GetScreenToWorld2D( 
-    Vector2{ GetMousePosition().x * get_app_settings()->scale_ratio.at(0), GetMousePosition().y * get_app_settings()->scale_ratio.at(1) }, 
+  state->mouse_pos_world = GetScreenToWorld2D(Vector2 {
+    GetMousePosition().x * get_app_settings()->scale_ratio.at(0),
+    GetMousePosition().y * get_app_settings()->scale_ratio.at(1)
+  },
     state->in_camera_metrics->handle
   );
 
@@ -115,19 +125,28 @@ void update_game_manager(void) {
   if (!state->game_info.player_state_dynamic->is_dead) {
     const player_update_results pur = update_player();
     if (pur.is_success) { // TODO: Player-Map collision detection system
-      /*
-      const Rectangle pl_col = state->p_player_public->collision;
-      const Rectangle x0 = (Rectangle) {pl_col.x, pl_col.y + pur.move_request.y, pl_col.width, pl_col.height};
-      const Rectangle y0 = (Rectangle) {pl_col.x + pur.move_request.x, pl_col.y, pl_col.width, pl_col.height};
+      const Rectangle& pl_col = state->game_info.player_state_dynamic->collision;
+      const Rectangle new_x = Rectangle { pl_col.x + pur.move_request.x, pl_col.y,                      pl_col.width, pl_col.height };
+      const Rectangle new_y = Rectangle { pl_col.x,                      pl_col.y + pur.move_request.y, pl_col.width, pl_col.height };
 
-      if(!CheckCollisionRecs(state->in_spawns[0].collision, x0)) {
-        move_player(VECTOR2(0, pur.move_request.y));
+      bool is_collided_x = false;
+      bool is_collided_y = false;
+      for (size_t itr_000 = 0; itr_000 < (*state->in_active_map)->collisions.size() ; ++itr_000) {
+        const Rectangle& map_coll = (*state->in_active_map)->collisions.at(itr_000);
+
+        if(CheckCollisionRecs(map_coll, new_x)) {
+          is_collided_x = true;
+        }
+        if(CheckCollisionRecs(map_coll, new_y)) {
+          is_collided_y = true;
+        }
       }
-      if(!CheckCollisionRecs(state->in_spawns[0].collision, y0)) {
-        move_player(VECTOR2(pur.move_request.x, 0));
-      } 
-      */
-      player_move_player(pur.move_request);
+      if ( !is_collided_x ) {
+        player_move_player(VECTOR2(pur.move_request.x, 0.f));
+      }
+      if ( !is_collided_y ) {
+        player_move_player(VECTOR2(0.f, pur.move_request.y));
+      }
     }
 
     if (*state->game_info.p_spawn_system_spawn_count < 50) {
@@ -170,11 +189,18 @@ void render_game(void) {
     render_abilities(__builtin_addressof(state->game_info.player_state_dynamic->ability_system));
     render_player();
     render_spawns();
+
+    for (size_t itr_000 = 0; itr_000 < (*state->in_active_map)->collisions.size() ; ++itr_000) {
+      DrawRectangleLinesEx(
+        (*state->in_active_map)->collisions.at(itr_000), 2.f, BLUE
+      );
+    }
   }
   else {
     render_player();
     render_spawns();
   }
+
 }
 
 // OPS
@@ -592,7 +618,7 @@ void generate_in_game_info(void) {
 // OPS
 
 // GET / SET
-Character2D* get_spawn_info(u16 spawn_id) {
+const Character2D* get_spawn_info(u16 spawn_id) {
   if (!state) {
     TraceLog(LOG_ERROR, "game_manager::get_spawn_info()::State is not valid");
     return nullptr;
@@ -627,21 +653,21 @@ ability* get_dynamic_player_state_ability(ability_type type) {
   }
   return __builtin_addressof(state->game_info.player_state_dynamic->ability_system.abilities.at(type));
 }
-character_stat* get_dynamic_player_state_stat(character_stats stat) {
+const character_stat* get_dynamic_player_state_stat(character_stats stat) {
   if (stat >= CHARACTER_STATS_MAX || stat <= CHARACTER_STATS_UNDEFINED) {
     return nullptr;
   }
   
   return __builtin_addressof(state->game_info.player_state_dynamic->stats[stat]);
 }
-character_stat* get_static_player_state_stat(character_stats stat) {
+const character_stat* get_static_player_state_stat(character_stats stat) {
   if (stat >= CHARACTER_STATS_MAX || stat <= CHARACTER_STATS_UNDEFINED) {
     return nullptr;
   }
   
   return __builtin_addressof(state->player_state_static.stats[stat]);
 }
-bool* get_is_game_paused(void) {
+const bool* get_is_game_paused(void) {
   return __builtin_addressof(state->is_game_paused);
 }
 void set_is_game_paused(bool _is_game_paused) {
@@ -665,10 +691,10 @@ u16 get_remaining_enemies(void) {
 void set_currency_souls(i32 value) {
   state->game_progression_data->currency_souls_player_have = value;
 }
-Vector2* gm_get_mouse_pos_world(void) {
+const Vector2* gm_get_mouse_pos_world(void) {
   return &state->mouse_pos_world;
 }
-ingame_info* gm_get_ingame_info(void){
+const ingame_info* gm_get_ingame_info(void){
   if (!state) {
     TraceLog(LOG_ERROR, "game_manager::gm_get_ingame_info()::State is not valid");
     return nullptr;
@@ -713,11 +739,6 @@ bool _upgrade_ability(ability* abl) {
     TraceLog(LOG_WARNING, "game_manager::_upgrade_ability::Recieved ability has not initialized yet");
     return false;
   }
-  ability_play_system* system = __builtin_addressof(state->game_info.player_state_dynamic->ability_system);
-  if (!system) {
-    TraceLog(LOG_WARNING, "game_manager::_add_ability()::Recieved system was NULL");
-    return false;
-  }
   upgrade_ability(abl);
   refresh_ability(abl);
 
@@ -757,7 +778,6 @@ bool game_manager_on_event(i32 code, event_context context) {
         static_cast<i16>(context.data.i16[2]),
         static_cast<i16>(context.data.i16[3])
       );
-      
       gm_damage_player_if_collide(coll_data, static_cast<i32>(context.data.i16[4]), static_cast<collision_type>(context.data.i16[5]));
       return true;
     }
@@ -768,7 +788,6 @@ bool game_manager_on_event(i32 code, event_context context) {
         static_cast<i16>(context.data.i16[2]),
         static_cast<i16>(context.data.i16[3])
       );
-      
       gm_damage_spawn_if_collide(coll_data, static_cast<i32>(context.data.i16[4]), static_cast<collision_type>(context.data.i16[5]));
       return true;
     }

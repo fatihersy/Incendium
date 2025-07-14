@@ -45,7 +45,7 @@ typedef struct scene_in_game_state {
   
   const camera_metrics* in_camera_metrics;
   const app_settings* in_app_settings;
-  bool* is_game_paused;
+  const bool* is_game_paused;
   
   in_game_stages stage;
   end_game_results end_game_result;
@@ -87,7 +87,7 @@ void in_game_update_mouse_bindings(void);
 void in_game_update_keyboard_bindings(void);
 void initialize_worldmap_locations(void);
 void draw_in_game_upgrade_panel(u16 which_panel, Rectangle panel_dest);
-void draw_passive_selection_panel(character_stat* stat, Rectangle panel_dest);
+void draw_passive_selection_panel(const character_stat* stat,const Rectangle panel_dest);
 void draw_end_game_panel(void);
 void prepare_ability_upgrade_state(void);
 void end_ability_upgrade_state(u16 which_panel_chosen);
@@ -100,7 +100,7 @@ Rectangle sig_get_camera_view_rect(Camera2D camera);
 /**
  * @brief Requires world system, world init moved to app, as well as its loading time
  */
-bool initialize_scene_in_game(const camera_metrics* _camera_metrics,const app_settings * _in_app_settings) {
+bool initialize_scene_in_game(const camera_metrics* _camera_metrics, const app_settings * _in_app_settings) {
   if (state) {
     begin_scene_in_game();
     return false;
@@ -117,7 +117,7 @@ bool initialize_scene_in_game(const camera_metrics* _camera_metrics,const app_se
   state->in_camera_metrics = _camera_metrics;
   state->in_app_settings = _in_app_settings;
 
-  if (!game_manager_initialize(_camera_metrics)) { // Inits player & spawns
+  if (!game_manager_initialize(_camera_metrics, _in_app_settings, get_active_map_ptr())) { // Inits player & spawns
     TraceLog(LOG_ERROR, "scene_in_game::initialize_scene_in_game()::game_manager_initialize() failed");
     return false;
   }
@@ -136,7 +136,7 @@ void begin_scene_in_game(void) {
     Vector4 {6, 6, 6, 6}, Color { 30, 39, 46, 245}, Color { 52, 64, 76, 245}
   );
   copy_memory(state->worldmap_locations.data(), get_worldmap_locations(), MAX_WORLDMAP_LOCATIONS * sizeof(worldmap_stage));
-  _set_player_position(SIG_BASE_RENDER_SCALE(.5f));
+  _set_player_position(Vector2 {0.f, 0.f});
   set_is_game_paused(true);
   
   for (size_t itr_000 = 0; itr_000 < MAX_UPDATE_ABILITY_PANEL_COUNT; ++itr_000) {
@@ -164,7 +164,7 @@ void start_game(character_stats stat) {
   gm_start_game(*get_active_worldmap());
 
   upgrade_dynamic_player_stat(stat);
-  _set_player_position(SIG_BASE_RENDER_SCALE(.5f));
+  _set_player_position(Vector2 {0.f, 0.f});
   state->stage = IN_GAME_STAGE_PLAY;
 }
 void end_scene_in_game(void) {
@@ -214,9 +214,30 @@ void update_scene_in_game(void) {
       break;
     }
     case IN_GAME_STAGE_PASSIVE_CHOICE: {
+      event_fire(EVENT_CODE_CAMERA_SET_CAMERA_POSITION, event_context(_get_player_position(true).x, _get_player_position(true).y));
+      Rectangle _frustum = sig_get_camera_view_rect(state->in_camera_metrics->handle);
+      event_fire(EVENT_CODE_CAMERA_SET_FRUSTUM, event_context(
+        static_cast<i32>(_frustum.x),
+        static_cast<i32>(_frustum.y),
+        static_cast<i32>(_frustum.width),
+        static_cast<i32>(_frustum.height)
+      ));
       break;
     }
     case IN_GAME_STAGE_PLAY: {
+      event_fire(EVENT_CODE_CAMERA_SET_TARGET, event_context(_get_player_position(true).x, _get_player_position(true).y));
+      Rectangle _frustum = sig_get_camera_view_rect(state->in_camera_metrics->handle);
+      event_fire(EVENT_CODE_CAMERA_SET_FRUSTUM, event_context(
+        static_cast<i32>(_frustum.x),
+        static_cast<i32>(_frustum.y),
+        static_cast<i32>(_frustum.width),
+        static_cast<i32>(_frustum.height)
+      ));
+
+      if (IsKeyDown(KEY_LEFT_SHIFT) && IsKeyReleased(KEY_D)) {
+        state->stage = IN_GAME_STAGE_PLAY_DEBUG;
+      }
+
       if (!state->has_game_started) { return; }
       if (*state->is_game_paused) { return; }
       else if (get_remaining_enemies() <= 0 || get_remaining_enemies() > MAX_SPAWN_COUNT) {
@@ -226,23 +247,10 @@ void update_scene_in_game(void) {
       if (get_is_game_end()) {
         state->stage = IN_GAME_STAGE_PLAY_RESULTS;
       }
-      // LABEL: DEBUG
-      if (IsKeyDown(KEY_LEFT_SHIFT) && IsKeyReleased(KEY_D)) {
-        state->stage = IN_GAME_STAGE_PLAY_DEBUG;
-      }
 
       update_map();
       update_game_manager();
       state->end_game_result.play_time += GetFrameTime();
-    
-      event_fire(EVENT_CODE_CAMERA_SET_CAMERA_POSITION, event_context(_get_player_position(true).x, _get_player_position(true).y));
-      Rectangle _frustum = sig_get_camera_view_rect(state->in_camera_metrics->handle);
-      event_fire(EVENT_CODE_CAMERA_SET_FRUSTUM, event_context(
-        static_cast<i32>(_frustum.x),
-        static_cast<i32>(_frustum.y),
-        static_cast<i32>(_frustum.width),
-        static_cast<i32>(_frustum.height)
-      ));
       break;
     }
     case IN_GAME_STAGE_PLAY_DEBUG: {
@@ -270,6 +278,265 @@ void update_scene_in_game(void) {
     }
   }
 }
+void render_scene_in_game(void) {
+  STATE_ASSERT("render_scene_in_game")
+
+  switch (state->stage) {
+    case IN_GAME_STAGE_MAP_CHOICE: {
+ 
+      gui_draw_texture_id(TEX_ID_WORLDMAP_WO_CLOUDS, Rectangle {0, 0, static_cast<f32>(SIG_BASE_RENDER_WIDTH), static_cast<f32>(SIG_BASE_RENDER_HEIGHT)});
+      for (int i=0; i<MAX_WORLDMAP_LOCATIONS; ++i) {
+        if (state->worldmap_locations.at(i).is_active) {
+          Vector2 scrloc = Vector2 {
+            state->worldmap_locations.at(i).screen_location.x * SIG_BASE_RENDER_WIDTH, 
+            state->worldmap_locations.at(i).screen_location.y * SIG_BASE_RENDER_HEIGHT
+          };
+          gui_draw_map_stage_pin(state->hovered_stage == i, scrloc);
+        }
+      }
+      break;
+    }
+    case IN_GAME_STAGE_PASSIVE_CHOICE: {
+      render_map();
+      break;
+    }
+    case IN_GAME_STAGE_PLAY: {
+      render_map();
+      if (!state->has_game_started) { return; }
+      if (*state->is_game_paused) { return; }
+      render_game();
+
+      const ingame_info* iginf = gm_get_ingame_info();
+      const Character2D* chr = iginf->nearest_spawn;
+      
+      if (chr) DrawRectangleLines(chr->collision.x, chr->collision.y, chr->collision.width, chr->collision.height, RED); // TODO: Nearest spawn indicator. Remove later
+      break;
+    }
+    case IN_GAME_STAGE_PLAY_DEBUG: {
+      render_map();
+      render_game();
+      break;
+    }
+    case IN_GAME_STAGE_PLAY_RESULTS: {
+      render_map();
+      break; 
+    }
+    default: {
+      TraceLog(LOG_WARNING, "scene_in_game::render_scene_in_game()::Unsupported stage");
+      break;
+    }
+  }
+}
+void render_interface_in_game(void) {
+  STATE_ASSERT("render_interface_in_game")
+  
+  switch (state->stage) {
+    case IN_GAME_STAGE_MAP_CHOICE: {
+      if (state->show_pause_menu) {
+        gui_draw_pause_screen(false);
+      }
+      else {
+        for (int i=0; i<MAX_WORLDMAP_LOCATIONS; ++i) {
+          if (state->hovered_stage == i) {
+            panel* pnl = __builtin_addressof(state->worldmap_selection_panel);
+            Rectangle scrloc = Rectangle{
+              state->worldmap_locations.at(i).screen_location.x * SIG_BASE_RENDER_WIDTH - WORLDMAP_LOC_PIN_SIZE_DIV2, 
+              state->worldmap_locations.at(i).screen_location.y * SIG_BASE_RENDER_HEIGHT - WORLDMAP_LOC_PIN_SIZE_DIV2,
+              WORLDMAP_LOC_PIN_SIZE, WORLDMAP_LOC_PIN_SIZE
+            };
+            pnl->dest = Rectangle {scrloc.x + WORLDMAP_LOC_PIN_SIZE, scrloc.y + WORLDMAP_LOC_PIN_SIZE_DIV2, SIG_BASE_RENDER_WIDTH * .25f, SIG_BASE_RENDER_HEIGHT * .25f};
+            DrawCircleGradient(scrloc.x + WORLDMAP_LOC_PIN_SIZE_DIV2, scrloc.y + WORLDMAP_LOC_PIN_SIZE_DIV2, 100, Color{236,240,241,50}, Color{255, 255, 255, 0});
+            GUI_PANEL_SCISSORED((*pnl), false, {
+              gui_label(state->worldmap_locations.at(i).displayname.c_str(), FONT_TYPE_ABRACADABRA, 1, Vector2 {
+                pnl->dest.x + pnl->dest.width *.5f, pnl->dest.y + pnl->dest.height*.5f
+              }, WHITE, true, true);
+            });
+          }
+        }
+      }
+      break;
+    }
+    case IN_GAME_STAGE_PASSIVE_CHOICE: {
+      if (state->show_pause_menu) {
+        gui_draw_pause_screen(false);
+      }
+      else {
+        Rectangle dest = Rectangle {
+          SIG_BASE_RENDER_WIDTH * .25f, SIG_BASE_RENDER_HEIGHT * .5f, 
+          SIG_BASE_RENDER_WIDTH * .25f, SIG_BASE_RENDER_HEIGHT *  .8f 
+        };
+        f32 dest_x_buffer = dest.x;
+        for (size_t itr_000 = 0; itr_000 < MAX_UPDATE_PASSIVE_PANEL_COUNT; ++itr_000) {
+          panel* pnl = __builtin_addressof(state->passive_selection_panels.at(itr_000));
+          if (pnl->frame_tex_id <= ATLAS_TEX_ID_UNSPECIFIED || pnl->frame_tex_id >= ATLAS_TEX_ID_MAX || 
+            pnl->bg_tex_id    <= ATLAS_TEX_ID_UNSPECIFIED || pnl->bg_tex_id    >= ATLAS_TEX_ID_MAX ) 
+          {
+            *pnl = state->default_panel;
+          }
+          if(pnl->buffer.u16[0] <= 0 || pnl->buffer.u16[0] >= CHARACTER_STATS_MAX) {
+            pnl->buffer.u16[0] = get_random(1,CHARACTER_STATS_MAX-1);
+          }
+          dest.x = dest_x_buffer + ((dest.width + SCREEN_OFFSET.x) * itr_000);
+          const character_stat* stat = get_dynamic_player_state_stat(static_cast<character_stats>(pnl->buffer.u16[0]));
+          if(gui_panel_active(pnl, dest, true)) {
+            set_is_game_paused(false);
+            start_game(stat->id);
+            for (size_t itr_111 = 0; itr_111 < MAX_UPDATE_ABILITY_PANEL_COUNT; ++itr_111) {
+              state->passive_selection_panels.at(itr_111).buffer.u16[0] = 0;
+            }
+            break;
+          }
+          draw_passive_selection_panel(stat, dest);
+        }
+      }
+      break;
+    }
+    case IN_GAME_STAGE_PLAY: {  
+
+      if (state->show_pause_menu) {
+        gui_draw_pause_screen(state->has_game_started);
+      }
+      else if (!state->has_game_started) {
+        gui_label("Press Space to Start!", FONT_TYPE_ABRACADABRA, 1, Vector2 {SIG_BASE_RENDER_WIDTH * .5f, SIG_BASE_RENDER_HEIGHT * .5f}, WHITE, true, true);
+      }
+      else if (get_b_player_have_upgrade_points()) {
+        if (state->is_upgrade_choices_ready) {
+          Rectangle dest = Rectangle {
+            SIG_BASE_RENDER_WIDTH * .25f, SIG_BASE_RENDER_HEIGHT * .5f, 
+            SIG_BASE_RENDER_WIDTH * .25f, SIG_BASE_RENDER_HEIGHT * .5f 
+          };
+          f32 dest_x_buffer = dest.x;
+          for (size_t itr_000 = 0; itr_000 < MAX_UPDATE_ABILITY_PANEL_COUNT; ++itr_000) {
+            panel* pnl = __builtin_addressof(state->ability_upg_panels.at(itr_000));
+            dest.x = dest_x_buffer + ((dest.width + SCREEN_OFFSET.x) * itr_000);
+
+            if(gui_panel_active(pnl, dest, true)) {
+              end_ability_upgrade_state(itr_000);
+              break;
+            }
+            draw_in_game_upgrade_panel(itr_000, dest);
+          }
+        }
+        else { prepare_ability_upgrade_state(); }
+      }
+      else {
+        gui_progress_bar(PRG_BAR_ID_PLAYER_EXPERIANCE, Vector2{SIG_BASE_RENDER_WIDTH * .5f, SCREEN_OFFSET.y}, true);
+        gui_progress_bar(PRG_BAR_ID_PLAYER_HEALTH, SCREEN_OFFSET, false);
+
+        gui_label_format_v(FONT_TYPE_ABRACADABRA, 1, SIG_SCREEN_POS(5.f, 50.f), WHITE, true, true, "%d", gm_get_ingame_info()->nearest_spawn->character_id);
+
+        // TODO: Display currency
+        //gui_label_format(FONT_TYPE_ABRACADABRA, 10, BASE_RENDER_SCALE(.75f).x, SCREEN_OFFSET.y * 5.f, WHITE, false, false, "Souls: %d", get_currency_souls());
+      }
+      break;
+    }
+    case IN_GAME_STAGE_PLAY_DEBUG: {  
+
+      if (state->show_pause_menu) {
+        gui_draw_pause_screen(state->has_game_started);
+      }
+      else if (!state->has_game_started) { }
+      else {
+        gui_label_format(
+          FONT_TYPE_ABRACADABRA, 1, ui_get_mouse_pos()->x, ui_get_mouse_pos()->y, 
+          WHITE, false, false, "world_pos {%.1f, %.1f}", gm_get_mouse_pos_world()->x, gm_get_mouse_pos_world()->y
+        );
+
+        if(state->hovered_spawn < get_remaining_enemies()){
+          const Character2D* spawn = get_spawn_info(state->hovered_spawn);
+          panel* const pnl = __builtin_addressof(state->debug_info_panel);
+          pnl->dest = Rectangle {
+            ui_get_mouse_pos()->x, ui_get_mouse_pos()->y, 
+            SIG_BASE_RENDER_WIDTH * .4f, SIG_BASE_RENDER_HEIGHT * .3f
+          };
+          i32 font_size = 1;
+          i32 line_height = SIG_BASE_RENDER_HEIGHT * .05f;
+          Vector2 debug_info_position_buffer = VECTOR2(pnl->dest.x, pnl->dest.y);
+          GUI_PANEL_SCISSORED((*pnl), false, {
+            gui_label_format(
+              FONT_TYPE_ABRACADABRA, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
+              WHITE, false, false, "Id: %d", spawn->character_id
+            );
+            debug_info_position_buffer.y += line_height;
+            gui_label_format(
+              FONT_TYPE_ABRACADABRA, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
+              WHITE, false, false, "Collision: {%.1f, %.1f, %.1f, %.1f}", spawn->collision.x, spawn->collision.y, spawn->collision.width, spawn->collision.height
+            );
+            debug_info_position_buffer.y += line_height;
+            gui_label_format(
+              FONT_TYPE_ABRACADABRA, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
+              WHITE, false, false, "Position: {%.1f, %.1f}", spawn->position.x, spawn->position.y
+            );
+            debug_info_position_buffer.y += line_height;
+            gui_label_format(
+              FONT_TYPE_ABRACADABRA, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
+              WHITE, false, false, "Health: %d", spawn->health
+            );
+            debug_info_position_buffer.y += line_height;
+            gui_label_format(
+              FONT_TYPE_ABRACADABRA, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
+              WHITE, false, false, "Scale: %.1f", spawn->scale
+            );
+            debug_info_position_buffer.y += line_height;
+            gui_label_format(
+              FONT_TYPE_ABRACADABRA, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
+              WHITE, false, false, "Speed: %.1f", spawn->speed
+            );
+          });
+        }
+
+        const ability* abl = get_dynamic_player_state_ability(state->hovered_ability);
+        if(state->hovered_ability > 0 && state->hovered_ability < ABILITY_TYPE_MAX && state->hovered_projectile >= 0 && state->hovered_projectile < abl->projectiles.size()){
+          panel* pnl = __builtin_addressof(state->debug_info_panel);
+          pnl->dest = Rectangle {
+            ui_get_mouse_pos()->x, ui_get_mouse_pos()->y, 
+            SIG_BASE_RENDER_WIDTH * .4f, SIG_BASE_RENDER_HEIGHT * .3f
+          };
+          i32 font_size = 1;
+          i32 line_height = SIG_BASE_RENDER_HEIGHT * .05f;
+          Vector2 debug_info_position_buffer = VECTOR2(pnl->dest.x, pnl->dest.y);
+          const projectile* prj = __builtin_addressof(abl->projectiles.at(state->hovered_projectile));
+          GUI_PANEL_SCISSORED((*pnl), false, {
+            gui_label_format(
+              FONT_TYPE_ABRACADABRA, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
+              WHITE, false, false, "Collision: {%.1f, %.1f, %.1f, %.1f}", prj->collision.x, prj->collision.y, prj->collision.width, prj->collision.height
+            );
+            debug_info_position_buffer.y += line_height;
+            gui_label_format(
+              FONT_TYPE_ABRACADABRA, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
+              WHITE, false, false, "Rotation: %.1f", prj->animations.at(prj->active_sprite).rotation
+            );
+          });
+        }
+        
+        gui_label_format(FONT_TYPE_ABRACADABRA, 1, SIG_BASE_RENDER_WIDTH * .75f, SCREEN_OFFSET.y, WHITE, false, false, "Remaining: %d", get_remaining_enemies());
+        gui_label_format(FONT_TYPE_ABRACADABRA, 1, SIG_BASE_RENDER_WIDTH * .75f, SCREEN_OFFSET.y * 5.f, WHITE, false, false, "Souls: %d", get_currency_souls());
+
+        gui_label_format(FONT_TYPE_ABRACADABRA, 1, 0, SIG_BASE_RENDER_HEIGHT * .35f, WHITE, false, false, "Health: %d", _get_dynamic_player_state()->health_max);
+        gui_label_format(FONT_TYPE_ABRACADABRA, 1, 0, SIG_BASE_RENDER_HEIGHT * .40f, WHITE, false, false, "Current Health: %d", _get_dynamic_player_state()->health_current);
+        gui_label_format(FONT_TYPE_ABRACADABRA, 1, 0, SIG_BASE_RENDER_HEIGHT * .45f, WHITE, false, false, "Damage: %d", _get_dynamic_player_state()->damage);
+      }
+
+      break;
+    }
+    case IN_GAME_STAGE_PLAY_RESULTS: { 
+      draw_end_game_panel();
+      if(gui_menu_button("Accept", BTN_ID_IN_GAME_BUTTON_RETURN_MENU, Vector2 {0, 5}, SIG_BASE_RENDER_DIV2, true)) {
+        currency_souls_add(state->end_game_result.collected_souls);
+        gm_save_game();
+        end_scene_in_game();
+        event_fire(EVENT_CODE_SCENE_MAIN_MENU, event_context());
+      }
+      break; 
+    }
+    default: {
+      TraceLog(LOG_WARNING, "scene_in_game::render_interface_in_game()::Unsupported stage");
+      break;
+    }
+  }
+
+  render_user_interface();
+}
 void in_game_update_mouse_bindings(void) { 
   switch (state->stage) {
     case IN_GAME_STAGE_MAP_CHOICE: {
@@ -293,24 +560,24 @@ void in_game_update_mouse_bindings(void) {
       break;
     }
     case IN_GAME_STAGE_PLAY_DEBUG: {
-      Vector2* mouse_pos_world = gm_get_mouse_pos_world();
+      const Vector2* mouse_pos_world = gm_get_mouse_pos_world();
       state->hovered_spawn = U16_MAX;
       for (int i=0; i<get_remaining_enemies(); ++i) {
-        Character2D* spawn = get_spawn_info(i);
+        const Character2D* spawn = get_spawn_info(i);
         if (spawn) {
           if (CheckCollisionPointRec(*mouse_pos_world, spawn->collision)) {
             state->hovered_spawn = i;
           }
         }
       }
-      player_state* player = _get_dynamic_player_state();
+      const player_state* player = _get_dynamic_player_state();
       state->hovered_ability = ABILITY_TYPE_UNDEFINED;
       state->hovered_projectile = U16_MAX;
       for (size_t iter = 0; iter < player->ability_system.abilities.size(); ++iter) {
-        ability* abl = __builtin_addressof(player->ability_system.abilities.at(iter));
+        const ability* abl = __builtin_addressof(player->ability_system.abilities.at(iter));
         if(!abl || !abl->is_active || !abl->is_initialized) { continue; }
         for (size_t j=0; j < abl->projectiles.size(); j++) {
-          projectile* prj = __builtin_addressof(abl->projectiles.at(j));
+          const projectile* prj = __builtin_addressof(abl->projectiles.at(j));
           if (!prj || !prj->is_active) { continue; }
           if (CheckCollisionPointRec(*mouse_pos_world, prj->collision)) {
             state->hovered_ability = abl->type;
@@ -396,266 +663,6 @@ void in_game_update_bindings(void) {
   in_game_update_keyboard_bindings();
 }
 
-void render_scene_in_game(void) {
-  STATE_ASSERT("render_scene_in_game")
-
-  switch (state->stage) {
-    case IN_GAME_STAGE_MAP_CHOICE: {
- 
-      gui_draw_texture_id(TEX_ID_WORLDMAP_WO_CLOUDS, Rectangle {0, 0, static_cast<f32>(SIG_BASE_RENDER_WIDTH), static_cast<f32>(SIG_BASE_RENDER_HEIGHT)});
-      for (int i=0; i<MAX_WORLDMAP_LOCATIONS; ++i) {
-        if (state->worldmap_locations.at(i).is_active) {
-          Vector2 scrloc = Vector2 {
-            state->worldmap_locations.at(i).screen_location.x * SIG_BASE_RENDER_WIDTH, 
-            state->worldmap_locations.at(i).screen_location.y * SIG_BASE_RENDER_HEIGHT
-          };
-          gui_draw_map_stage_pin(state->hovered_stage == i, scrloc);
-        }
-      }
-      break;
-    }
-    case IN_GAME_STAGE_PASSIVE_CHOICE: {
-      render_map();
-      break;
-    }
-    case IN_GAME_STAGE_PLAY: {
-      render_map();
-      if (!state->has_game_started) { return; }
-      if (*state->is_game_paused) { return; }
-      render_game();
-
-      ingame_info* iginf = gm_get_ingame_info();
-      Character2D* chr = iginf->nearest_spawn;
-      
-      if (chr) DrawRectangleLines(chr->collision.x, chr->collision.y, chr->collision.width, chr->collision.height, RED); // TODO: Nearest spawn indicator. Remove later
-      break;
-    }
-    case IN_GAME_STAGE_PLAY_DEBUG: {
-      render_map();
-      render_game();
-      break;
-    }
-    case IN_GAME_STAGE_PLAY_RESULTS: {
-      render_map();
-      break; 
-    }
-    default: {
-      TraceLog(LOG_WARNING, "scene_in_game::render_scene_in_game()::Unsupported stage");
-      break;
-    }
-  }
-}
-void render_interface_in_game(void) {
-  STATE_ASSERT("render_interface_in_game")
-  
-  switch (state->stage) {
-    case IN_GAME_STAGE_MAP_CHOICE: {
-      if (state->show_pause_menu) {
-        gui_draw_pause_screen(false);
-      }
-      else {
-        for (int i=0; i<MAX_WORLDMAP_LOCATIONS; ++i) {
-          if (state->hovered_stage == i) {
-            panel* pnl = __builtin_addressof(state->worldmap_selection_panel);
-            Rectangle scrloc = Rectangle{
-              state->worldmap_locations.at(i).screen_location.x * SIG_BASE_RENDER_WIDTH - WORLDMAP_LOC_PIN_SIZE_DIV2, 
-              state->worldmap_locations.at(i).screen_location.y * SIG_BASE_RENDER_HEIGHT - WORLDMAP_LOC_PIN_SIZE_DIV2,
-              WORLDMAP_LOC_PIN_SIZE, WORLDMAP_LOC_PIN_SIZE
-            };
-            pnl->dest = Rectangle {scrloc.x + WORLDMAP_LOC_PIN_SIZE, scrloc.y + WORLDMAP_LOC_PIN_SIZE_DIV2, SIG_BASE_RENDER_WIDTH * .25f, SIG_BASE_RENDER_HEIGHT * .25f};
-            DrawCircleGradient(scrloc.x + WORLDMAP_LOC_PIN_SIZE_DIV2, scrloc.y + WORLDMAP_LOC_PIN_SIZE_DIV2, 100, Color{236,240,241,50}, Color{255, 255, 255, 0});
-            GUI_PANEL_SCISSORED((*pnl), false, {
-              gui_label(state->worldmap_locations.at(i).displayname.c_str(), FONT_TYPE_ABRACADABRA, 1, Vector2 {
-                pnl->dest.x + pnl->dest.width *.5f, pnl->dest.y + pnl->dest.height*.5f
-              }, WHITE, true, true);
-            });
-          }
-        }
-      }
-      break;
-    }
-    case IN_GAME_STAGE_PASSIVE_CHOICE: {
-      if (state->show_pause_menu) {
-        gui_draw_pause_screen(false);
-      }
-      else {
-        Rectangle dest = Rectangle {
-          SIG_BASE_RENDER_WIDTH * .25f, SIG_BASE_RENDER_HEIGHT * .5f, 
-          SIG_BASE_RENDER_WIDTH * .25f, SIG_BASE_RENDER_HEIGHT *  .8f 
-        };
-        f32 dest_x_buffer = dest.x;
-        for (size_t itr_000 = 0; itr_000 < MAX_UPDATE_PASSIVE_PANEL_COUNT; ++itr_000) {
-          panel* pnl = __builtin_addressof(state->passive_selection_panels.at(itr_000));
-          if (pnl->frame_tex_id <= ATLAS_TEX_ID_UNSPECIFIED || pnl->frame_tex_id >= ATLAS_TEX_ID_MAX || 
-            pnl->bg_tex_id    <= ATLAS_TEX_ID_UNSPECIFIED || pnl->bg_tex_id    >= ATLAS_TEX_ID_MAX ) 
-          {
-            *pnl = state->default_panel;
-          }
-          if(pnl->buffer.u16[0] <= 0 || pnl->buffer.u16[0] >= CHARACTER_STATS_MAX) {
-            pnl->buffer.u16[0] = get_random(1,CHARACTER_STATS_MAX-1);
-          }
-          dest.x = dest_x_buffer + ((dest.width + SCREEN_OFFSET.x) * itr_000);
-          character_stat* stat = get_dynamic_player_state_stat(static_cast<character_stats>(pnl->buffer.u16[0]));
-          if(gui_panel_active(pnl, dest, true)) {
-            set_is_game_paused(false);
-            start_game(stat->id);
-            for (size_t itr_111 = 0; itr_111 < MAX_UPDATE_ABILITY_PANEL_COUNT; ++itr_111) {
-              state->passive_selection_panels.at(itr_111).buffer.u16[0] = 0;
-            }
-            break;
-          }
-          draw_passive_selection_panel(stat, dest);
-        }
-      }
-      break;
-    }
-    case IN_GAME_STAGE_PLAY: {  
-
-      if (state->show_pause_menu) {
-        gui_draw_pause_screen(state->has_game_started);
-      }
-      else if (!state->has_game_started) {
-        gui_label("Press Space to Start!", FONT_TYPE_ABRACADABRA, 1, Vector2 {SIG_BASE_RENDER_WIDTH * .5f, SIG_BASE_RENDER_HEIGHT * .5f}, WHITE, true, true);
-      }
-      else if (get_b_player_have_upgrade_points()) {
-        if (state->is_upgrade_choices_ready) {
-          Rectangle dest = Rectangle {
-            SIG_BASE_RENDER_WIDTH * .25f, SIG_BASE_RENDER_HEIGHT * .5f, 
-            SIG_BASE_RENDER_WIDTH * .25f, SIG_BASE_RENDER_HEIGHT * .5f 
-          };
-          f32 dest_x_buffer = dest.x;
-          for (size_t itr_000 = 0; itr_000 < MAX_UPDATE_ABILITY_PANEL_COUNT; ++itr_000) {
-            panel* pnl = __builtin_addressof(state->ability_upg_panels.at(itr_000));
-            dest.x = dest_x_buffer + ((dest.width + SCREEN_OFFSET.x) * itr_000);
-
-            if(gui_panel_active(pnl, dest, true)) {
-              end_ability_upgrade_state(itr_000);
-              break;
-            }
-            draw_in_game_upgrade_panel(itr_000, dest);
-          }
-        }
-        else { prepare_ability_upgrade_state(); }
-      }
-      else {
-        gui_progress_bar(PRG_BAR_ID_PLAYER_EXPERIANCE, Vector2{SIG_BASE_RENDER_WIDTH * .5f, SCREEN_OFFSET.y}, true);
-        gui_progress_bar(PRG_BAR_ID_PLAYER_HEALTH, SCREEN_OFFSET, false);
-
-        gui_label_format_v(FONT_TYPE_ABRACADABRA, 1, SIG_SCREEN_POS(5.f, 50.f), WHITE, true, true, "%d", gm_get_ingame_info()->nearest_spawn->character_id);
-
-        // TODO: Display currency
-        //gui_label_format(FONT_TYPE_ABRACADABRA, 10, BASE_RENDER_SCALE(.75f).x, SCREEN_OFFSET.y * 5.f, WHITE, false, false, "Souls: %d", get_currency_souls());
-      }
-      break;
-    }
-    case IN_GAME_STAGE_PLAY_DEBUG: {  
-
-      if (state->show_pause_menu) {
-        gui_draw_pause_screen(state->has_game_started);
-      }
-      else if (!state->has_game_started) { }
-      else {
-        gui_label_format(
-          FONT_TYPE_ABRACADABRA, 1, ui_get_mouse_pos()->x, ui_get_mouse_pos()->y, 
-          WHITE, false, false, "world_pos {%.1f, %.1f}", gm_get_mouse_pos_world()->x, gm_get_mouse_pos_world()->y
-        );
-
-        if(state->hovered_spawn < get_remaining_enemies()){
-          Character2D* spawn = get_spawn_info(state->hovered_spawn);
-          panel* pnl = __builtin_addressof(state->debug_info_panel);
-          pnl->dest = Rectangle {
-            ui_get_mouse_pos()->x, ui_get_mouse_pos()->y, 
-            SIG_BASE_RENDER_WIDTH * .4f, SIG_BASE_RENDER_HEIGHT * .3f
-          };
-          i32 font_size = 1;
-          i32 line_height = SIG_BASE_RENDER_HEIGHT * .05f;
-          Vector2 debug_info_position_buffer = VECTOR2(pnl->dest.x, pnl->dest.y);
-          GUI_PANEL_SCISSORED((*pnl), false, {
-            gui_label_format(
-              FONT_TYPE_ABRACADABRA, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
-              WHITE, false, false, "Id: %d", spawn->character_id
-            );
-            debug_info_position_buffer.y += line_height;
-            gui_label_format(
-              FONT_TYPE_ABRACADABRA, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
-              WHITE, false, false, "Collision: {%.1f, %.1f, %.1f, %.1f}", spawn->collision.x, spawn->collision.y, spawn->collision.width, spawn->collision.height
-            );
-            debug_info_position_buffer.y += line_height;
-            gui_label_format(
-              FONT_TYPE_ABRACADABRA, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
-              WHITE, false, false, "Position: {%.1f, %.1f}", spawn->position.x, spawn->position.y
-            );
-            debug_info_position_buffer.y += line_height;
-            gui_label_format(
-              FONT_TYPE_ABRACADABRA, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
-              WHITE, false, false, "Health: %d", spawn->health
-            );
-            debug_info_position_buffer.y += line_height;
-            gui_label_format(
-              FONT_TYPE_ABRACADABRA, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
-              WHITE, false, false, "Scale: %.1f", spawn->scale
-            );
-            debug_info_position_buffer.y += line_height;
-            gui_label_format(
-              FONT_TYPE_ABRACADABRA, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
-              WHITE, false, false, "Speed: %.1f", spawn->speed
-            );
-          });
-        }
-
-        ability* abl = get_dynamic_player_state_ability(state->hovered_ability);
-        if(state->hovered_ability > 0 && state->hovered_ability < ABILITY_TYPE_MAX && state->hovered_projectile >= 0 && state->hovered_projectile < abl->projectiles.size()){
-          panel* pnl = __builtin_addressof(state->debug_info_panel);
-          pnl->dest = Rectangle {
-            ui_get_mouse_pos()->x, ui_get_mouse_pos()->y, 
-            SIG_BASE_RENDER_WIDTH * .4f, SIG_BASE_RENDER_HEIGHT * .3f
-          };
-          i32 font_size = 1;
-          i32 line_height = SIG_BASE_RENDER_HEIGHT * .05f;
-          Vector2 debug_info_position_buffer = VECTOR2(pnl->dest.x, pnl->dest.y);
-          projectile* prj = __builtin_addressof(abl->projectiles.at(state->hovered_projectile));
-          GUI_PANEL_SCISSORED((*pnl), false, {
-            gui_label_format(
-              FONT_TYPE_ABRACADABRA, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
-              WHITE, false, false, "Collision: {%.1f, %.1f, %.1f, %.1f}", prj->collision.x, prj->collision.y, prj->collision.width, prj->collision.height
-            );
-            debug_info_position_buffer.y += line_height;
-            gui_label_format(
-              FONT_TYPE_ABRACADABRA, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
-              WHITE, false, false, "Rotation: %.1f", prj->animations.at(prj->active_sprite).rotation
-            );
-          });
-        }
-        
-        gui_label_format(FONT_TYPE_ABRACADABRA, 1, SIG_BASE_RENDER_WIDTH * .75f, SCREEN_OFFSET.y, WHITE, false, false, "Remaining: %d", get_remaining_enemies());
-        gui_label_format(FONT_TYPE_ABRACADABRA, 1, SIG_BASE_RENDER_WIDTH * .75f, SCREEN_OFFSET.y * 5.f, WHITE, false, false, "Souls: %d", get_currency_souls());
-
-        gui_label_format(FONT_TYPE_ABRACADABRA, 1, 0, SIG_BASE_RENDER_HEIGHT * .35f, WHITE, false, false, "Health: %d", _get_dynamic_player_state()->health_max);
-        gui_label_format(FONT_TYPE_ABRACADABRA, 1, 0, SIG_BASE_RENDER_HEIGHT * .40f, WHITE, false, false, "Current Health: %d", _get_dynamic_player_state()->health_current);
-        gui_label_format(FONT_TYPE_ABRACADABRA, 1, 0, SIG_BASE_RENDER_HEIGHT * .45f, WHITE, false, false, "Damage: %d", _get_dynamic_player_state()->damage);
-      }
-
-      break;
-    }
-    case IN_GAME_STAGE_PLAY_RESULTS: { 
-      draw_end_game_panel();
-      if(gui_menu_button("Accept", BTN_ID_IN_GAME_BUTTON_RETURN_MENU, Vector2 {0, 5}, SIG_BASE_RENDER_DIV2, true)) {
-        currency_souls_add(state->end_game_result.collected_souls);
-        gm_save_game();
-        end_scene_in_game();
-        event_fire(EVENT_CODE_SCENE_MAIN_MENU, event_context());
-      }
-      break; 
-    }
-    default: {
-      TraceLog(LOG_WARNING, "scene_in_game::render_interface_in_game()::Unsupported stage");
-      break;
-    }
-  }
-
-  render_user_interface();
-}
-
 #define DRAW_ABL_UPG_STAT_PNL(UPG, TEXT, ...){ \
 if (UPG->level == 1) {\
   gui_label_format(FONT_TYPE_ABRACADABRA, upgr_font_size, (f32)start_upgradables_x_exis, (f32)upgradables_height_buffer, WHITE, false, false, TEXT, __VA_ARGS__);\
@@ -721,7 +728,7 @@ void draw_in_game_upgrade_panel(u16 which_panel, Rectangle panel_dest) {
     }
   }
 }
-void draw_passive_selection_panel(character_stat* stat, Rectangle panel_dest) {
+void draw_passive_selection_panel(const character_stat* stat, const Rectangle panel_dest) {
   if (stat && (stat->id <= CHARACTER_STATS_UNDEFINED || stat->id >= CHARACTER_STATS_MAX)) {
     TraceLog(LOG_WARNING, "scene_in_game::draw_passive_selection_panel()::Character stat id is out of bound"); 
     return;
@@ -735,12 +742,12 @@ void draw_passive_selection_panel(character_stat* stat, Rectangle panel_dest) {
   };
   const Vector2 passive_name_pos  = {panel_dest.x, start_panel_height + PASSIVE_SELECTION_PANEL_ICON_SIZE*.5f + elm_space_gap};
 
-  const u16 title_font_size = 10; 
+  const u16 title_font_size = 1; 
   
   gui_draw_texture_id_pro(TEX_ID_ASSET_ATLAS, stat->passive_icon_src, icon_rect);
   gui_label(lc_txt(stat->passive_display_name_symbol), FONT_TYPE_ABRACADABRA, title_font_size, passive_name_pos, WHITE, true, true);
   
-  const u16 desc_font_size = 6;
+  const u16 desc_font_size = 1;
   const f32 desc_box_height = panel_dest.y + (panel_dest.height * .5f) - passive_name_pos.y - elm_space_gap;
   const Vector2 padding = { SCREEN_OFFSET.x, elm_space_gap };
   const Rectangle desc_box = {
@@ -785,7 +792,7 @@ void prepare_ability_upgrade_state(void) {
     if(pnl->buffer.u16[0] <= 0 || pnl->buffer.u16[0] >= ABILITY_TYPE_MAX) {
       pnl->buffer.u16[0] = get_random(ABILITY_TYPE_UNDEFINED+1,ABILITY_TYPE_MAX-1);
     }
-    ability* player_ability = get_dynamic_player_state_ability(static_cast<ability_type>(pnl->buffer.u16[0])); // INFO: do we need upgrade the ability player already have
+    const ability* player_ability = get_dynamic_player_state_ability(static_cast<ability_type>(pnl->buffer.u16[0])); // INFO: do we need upgrade the ability player already have
     if (player_ability->type <= ABILITY_TYPE_UNDEFINED || player_ability->type >= ABILITY_TYPE_MAX) {
       *pnl_slot = _get_ability(static_cast<ability_type>(pnl->buffer.u16[0]));
     }
@@ -800,7 +807,7 @@ void prepare_ability_upgrade_state(void) {
   state->is_upgrade_choices_ready = true;
 }
 void end_ability_upgrade_state(u16 which_panel_chosen) {
-  const ability* new_ability = __builtin_addressof(state->ability_upgrade_choices.at(which_panel_chosen));
+  ability* new_ability = __builtin_addressof(state->ability_upgrade_choices.at(which_panel_chosen));
   if (new_ability->level >= MAX_ABILITY_LEVEL || new_ability->level <= 1) {
     _add_ability(new_ability->type);
   }

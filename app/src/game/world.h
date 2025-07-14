@@ -9,8 +9,9 @@ bool world_system_initialize(const camera_metrics* _in_camera_metrics, const app
 void set_worldmap_location(i32 id);
 const worldmap_stage* get_worldmap_locations(void);
 const worldmap_stage* get_active_worldmap(void);
-void set_map_tile(i32 layer, tile src, tile dst);
 const tilemap* get_active_map(void);
+tilemap ** get_active_map_ptr(void);
+void set_map_tile(i32 layer, tile src, tile dst);
 tilemap_prop_address get_map_prop_by_pos(Vector2 pos);
 tilemap_prop_static* get_map_prop_static_by_id(i32 id);
 tilemap_prop_sprite* get_map_prop_sprite_by_id(i32 id);

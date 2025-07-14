@@ -34,24 +34,6 @@ typedef struct user_interface_system_state {
   f32 fade_animation_timer;
   bool fadein;
   bool fade_animation_playing;
-
-  user_interface_system_state(void) {
-    this->in_app_settings = nullptr;
-    this->display_language = nullptr;
-    this->buttons.fill(button());
-    this->button_types.fill(button_type());
-    this->sliders.fill(slider());
-    this->slider_types.fill(slider_type());
-    this->prg_bars.fill(progress_bar());
-    this->prg_bar_types.fill(progress_bar_type());
-    this->ss_to_draw_bg = spritesheet();
-    this->mouse_pos = ZEROVEC2;
-    this->localization_info.clear();
-    this->fade_animation_duration = 0u;
-    this->fade_animation_timer = 0.f;
-    this->fadein = false;
-    this->fade_animation_playing = false;
-  }
 } user_interface_system_state;
 
 static user_interface_system_state * state;
