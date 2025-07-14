@@ -87,6 +87,7 @@ bool create_tilemap(const tilesheet_type _type,const Vector2 _position,const i32
   return true;
 }
 void create_tilesheet(tilesheet_type _type, u16 _dest_tile_size, f32 _offset, tilesheet* out_tilesheet) {
+
   if (_type >= TILESHEET_TYPE_MAX || _type <= 0) {
     TraceLog(LOG_ERROR, "ERROR::tilemap::create_tilesheet()::Sheet type out of bound");
     return;
@@ -95,7 +96,7 @@ void create_tilesheet(tilesheet_type _type, u16 _dest_tile_size, f32 _offset, ti
   out_tilesheet->dest_tile_size = _dest_tile_size;
   out_tilesheet->offset = _offset;
 
-  out_tilesheet->is_initialized = true;
+  out_tilesheet->is_initialized = true; 
 }
 
 void update_tilemap(tilemap* const _tilemap) {
@@ -106,6 +107,9 @@ void update_tilemap(tilemap* const _tilemap) {
   }
 }
 
+/**
+ * @brief This function doesn't render Y-Based properties. Render them exclusively.
+ */
 void render_tilemap(const tilemap* _tilemap, Rectangle camera_view) {
   if (!_tilemap) {
     TraceLog(LOG_ERROR, "tilemap::render_tilemap()::Provided map was null");
@@ -138,10 +142,10 @@ void render_tilemap(const tilemap* _tilemap, Rectangle camera_view) {
     }
   }
 
-  for (size_t itr_000 = 0; itr_000 < _tilemap->render_queue.size(); ++itr_000) {
-    for (size_t itr_111 = 0; itr_111 < _tilemap->render_queue.at(itr_000).size(); ++itr_111) 
+  for (size_t itr_000 = 0; itr_000 < _tilemap->render_z_index_queue.size(); ++itr_000) {
+    for (size_t itr_111 = 0; itr_111 < _tilemap->render_z_index_queue.at(itr_000).size(); ++itr_111) 
     {
-      const tilemap_prop_address* _queue_prop_ptr = __builtin_addressof(_tilemap->render_queue.at(itr_000).at(itr_111));
+      const tilemap_prop_address* _queue_prop_ptr = __builtin_addressof(_tilemap->render_z_index_queue.at(itr_000).at(itr_111));
       if (_queue_prop_ptr->type <= TILEMAP_PROP_TYPE_UNDEFINED || _queue_prop_ptr->type >= TILEMAP_PROP_TYPE_MAX) {
         continue;
       }
@@ -178,6 +182,64 @@ void render_tilemap(const tilemap* _tilemap, Rectangle camera_view) {
       }
     }
   }
+}
+void render_props_y_based(const tilemap* _tilemap, Rectangle camera_view, i32 start_y, i32 end_y) {
+  if (!_tilemap) {
+    TraceLog(LOG_ERROR, "tilemap::render_tilemap()::Provided map was null");
+    return;
+  }
+  for (size_t itr_000 = 0; itr_000 < _tilemap->render_y_based_queue.size(); ++itr_000) {
+    const tilemap_prop_address* _queue_prop_ptr = __builtin_addressof(_tilemap->render_y_based_queue.at(itr_000));
+    if (_queue_prop_ptr->type <= TILEMAP_PROP_TYPE_UNDEFINED || _queue_prop_ptr->type >= TILEMAP_PROP_TYPE_MAX) {
+      continue;
+    }
+
+    if (_queue_prop_ptr->type == TILEMAP_PROP_TYPE_SPRITE) 
+    {
+      if (_queue_prop_ptr->data.prop_static == nullptr) continue;
+      tilemap_prop_sprite *const map_prop_ptr = _queue_prop_ptr->data.prop_sprite;
+      if (!map_prop_ptr->is_initialized) continue;
+      if (!CheckCollisionRecs(camera_view, map_prop_ptr->sprite.coord)) { continue; }
+
+      if (map_prop_ptr->sprite.coord.y < start_y) {
+        continue;
+      }
+      else if (map_prop_ptr->sprite.coord.y > end_y) {
+        break;
+      }
+
+      play_sprite_on_site(&map_prop_ptr->sprite, map_prop_ptr->sprite.tint, map_prop_ptr->sprite.coord);
+      continue;
+    }
+    else
+    {
+      if (_queue_prop_ptr->data.prop_sprite == nullptr) continue;
+      
+      const tilemap_prop_static * map_prop_ptr = _queue_prop_ptr->data.prop_static;
+      if (!map_prop_ptr->is_initialized) continue;
+      
+      Rectangle prop_rect = map_prop_ptr->dest; 
+
+      if (!CheckCollisionRecs(camera_view, prop_rect)) { continue; }
+    
+      const Texture2D* tex = get_texture_by_enum(map_prop_ptr->tex_id); 
+      if (!tex) continue;
+      prop_rect.width = map_prop_ptr->dest.width * map_prop_ptr->scale;
+      prop_rect.height = map_prop_ptr->dest.height * map_prop_ptr->scale;
+    
+      const Vector2 origin = VECTOR2(prop_rect.width * .5f, prop_rect.height * .5f);
+    
+      if (map_prop_ptr->dest.y < start_y) {
+        continue;
+      }
+      else if (map_prop_ptr->dest.y > end_y) {
+        break;
+      }
+      DrawTexturePro(*tex, map_prop_ptr->source, prop_rect, origin, map_prop_ptr->rotation, map_prop_ptr->tint);
+      continue;
+    }
+  }
+
 }
 void render_mainmenu(const tilemap* _tilemap, Rectangle camera_view, const app_settings * in_settings) {
   if (!_tilemap) {
@@ -217,10 +279,10 @@ void render_mainmenu(const tilemap* _tilemap, Rectangle camera_view, const app_s
     }
   }
 
-  for (size_t itr_000 = 0; itr_000 < _tilemap->render_queue.size(); ++itr_000) {
-    for (size_t itr_111 = 0; itr_111 < _tilemap->render_queue.at(itr_000).size(); ++itr_111) 
+  for (size_t itr_000 = 0; itr_000 < _tilemap->render_z_index_queue.size(); ++itr_000) {
+    for (size_t itr_111 = 0; itr_111 < _tilemap->render_z_index_queue.at(itr_000).size(); ++itr_111) 
     {
-      const tilemap_prop_address * _queue_prop_ptr = __builtin_addressof(_tilemap->render_queue.at(itr_000).at(itr_111));
+      const tilemap_prop_address * _queue_prop_ptr = __builtin_addressof(_tilemap->render_z_index_queue.at(itr_000).at(itr_111));
       if (_queue_prop_ptr->type <= TILEMAP_PROP_TYPE_UNDEFINED || _queue_prop_ptr->type >= TILEMAP_PROP_TYPE_MAX) {
         continue;
       }
@@ -432,7 +494,7 @@ void str_to_map(tilemap* const map, tilemap_stringtify_package* const out_packag
   out_package->is_success = false;
   map->sprite_props.clear();
   map->static_props.clear();
-  for (auto itr_000 : map->render_queue) itr_000.clear();
+  for (auto itr_000 : map->render_z_index_queue) itr_000.clear();
   
   const tilesheet* sheet = get_tilesheet_by_enum(TILESHEET_TYPE_MAP);
   if (!sheet) {

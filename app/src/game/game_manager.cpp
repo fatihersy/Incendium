@@ -21,6 +21,7 @@ typedef struct game_manager_system_state {
   player_state player_state_static;
   ingame_info game_info;
   Vector2 mouse_pos_world;
+  Vector2 mouse_pos_screen;
   u16 remaining_waves_to_spawn_boss;
 
   bool is_game_end;
@@ -75,6 +76,7 @@ bool game_manager_initialize(const camera_metrics * in_camera_metrics, const app
   state->game_info.in_spawns                     = get_spawns();
   state->game_info.p_spawn_system_spawn_count    = get_spawn_count();
   state->game_info.mouse_pos_world               = __builtin_addressof(state->mouse_pos_world);
+  state->game_info.mouse_pos_screen              = __builtin_addressof(state->mouse_pos_screen);
   state->game_info.remaining_waves_to_spawn_boss = __builtin_addressof(state->remaining_waves_to_spawn_boss);
   state->game_info.is_game_end                   = __builtin_addressof(state->is_game_end);
   state->game_info.is_game_paused                = __builtin_addressof(state->is_game_paused);
@@ -117,12 +119,20 @@ void update_game_manager(void) {
   },
     state->in_camera_metrics->handle
   );
+  state->mouse_pos_screen = Vector2 {
+    GetMousePosition().x * get_app_settings()->scale_ratio.at(0),
+    GetMousePosition().y * get_app_settings()->scale_ratio.at(1)
+  };
 
   if(state->is_game_paused || state->is_game_end) {
     return;
   }
 
   if (!state->game_info.player_state_dynamic->is_dead) {
+    state->game_info.player_state_dynamic->position_centered = Vector2 {
+      state->game_info.player_state_dynamic->position.x + state->game_info.player_state_dynamic->dimentions_div2.x,
+      state->game_info.player_state_dynamic->position.y + state->game_info.player_state_dynamic->dimentions_div2.y
+    };
     const player_update_results pur = update_player();
     if (pur.is_success) { // TODO: Player-Map collision detection system
       const Rectangle& pl_col = state->game_info.player_state_dynamic->collision;
@@ -152,7 +162,7 @@ void update_game_manager(void) {
     if (*state->game_info.p_spawn_system_spawn_count < 50) {
       populate_map_with_spawns();
     }
-    update_spawns(get_player_position(true));
+    update_spawns(state->game_info.player_state_dynamic->position_centered);
 
     generate_in_game_info();
 
@@ -600,11 +610,11 @@ void generate_in_game_info(void) {
     return;
   }
   Vector2 player_position = state->game_info.player_state_dynamic->position;
-  Character2D * spw_nearest = nullptr;
+  const Character2D * spw_nearest = nullptr;
 
   f32 dist_cache = F32_MAX;
   for (size_t iter=0; iter < *state->game_info.p_spawn_system_spawn_count; ++iter) {
-    Character2D* spw = &state->game_info.in_spawns[iter];
+    const Character2D* spw = &state->game_info.in_spawns[iter];
     if (!spw) continue;
     
     f32 dist = vec2_distance(player_position, spw->position);
@@ -755,9 +765,6 @@ void _set_player_position(Vector2 position) {
   state->game_info.player_state_dynamic->position = position;
   state->game_info.player_state_dynamic->collision.x = position.x;
   state->game_info.player_state_dynamic->collision.y = position.y;
-}
-Vector2 _get_player_position(bool centered) {
-  return get_player_position(centered);
 }
 player_state* _get_dynamic_player_state(void) {
   return state->game_info.player_state_dynamic;

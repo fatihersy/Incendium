@@ -450,7 +450,8 @@ typedef struct tilemap {
   tile_symbol tiles[MAX_TILEMAP_LAYERS][MAX_TILEMAP_TILESLOT_X][MAX_TILEMAP_TILESLOT_Y];
   std::vector<tilemap_prop_static> static_props;
   std::vector<tilemap_prop_sprite> sprite_props;
-  std::array<std::vector<tilemap_prop_address>, MAX_Z_INDEX_SLOT> render_queue;
+  std::array<std::vector<tilemap_prop_address>, MAX_Z_INDEX_SLOT> render_z_index_queue;
+  std::vector<tilemap_prop_address> render_y_based_queue;
   std::vector<Rectangle> collisions;
   bool is_initialized;
 } tilemap;
@@ -699,6 +700,7 @@ typedef struct player_state {
   
   world_direction w_direction;
   Vector2 position;
+  Vector2 position_centered;
   u32 level;
   u32 health_max;
   u32 health_current;
@@ -723,16 +725,17 @@ typedef struct player_state {
 } player_state;
 
 typedef struct ingame_info {
-  Character2D* in_spawns;
-  u32* p_spawn_system_spawn_count;
-  Character2D* nearest_spawn;
-
+  const Character2D* in_spawns;
+  const u32* p_spawn_system_spawn_count;
+  const Character2D* nearest_spawn;
+ 
   player_state* player_state_dynamic;
-  
-  Vector2* mouse_pos_world;
-  u16* remaining_waves_to_spawn_boss;
-  bool* is_game_end;
-  bool* is_game_paused;
+   
+  const Vector2* mouse_pos_world;
+  const Vector2* mouse_pos_screen;
+  const u16* remaining_waves_to_spawn_boss;
+  const bool* is_game_end;
+  const bool* is_game_paused;
 
   ingame_info(void) {
     this->in_spawns = nullptr;

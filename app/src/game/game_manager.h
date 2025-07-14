@@ -41,7 +41,6 @@ void upgrade_stat_pseudo(character_stat* stat);
 void currency_souls_add(i32 value);
 
 bool                _add_ability(ability_type _type);
-Vector2             _get_player_position(bool centered);
 bool                _upgrade_ability(ability* abl);
 u16                 _spawn_character(Character2D _character);
 void                _set_player_position(Vector2 position);

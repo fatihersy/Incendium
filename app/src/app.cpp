@@ -14,7 +14,6 @@
 #include "core/fmemory.h"
 //#include "core/logger.h"
 
-#include "game/camera.h"
 #include "game/resource.h"
 #include "game/scenes/scene_manager.h"
 #include "game/world.h"
@@ -97,12 +96,8 @@ bool app_initialize(void) {
     TraceLog(LOG_WARNING, "app::app_initialize()::Sound system init failed");
     return false;
   }
-  if(!create_camera(state->settings->render_width_div2, state->settings->render_height_div2)) {
-    TraceLog(LOG_WARNING, "app::app_initialize()::Creating camera failed");
-    return false;
-  }
 
-  if(!world_system_initialize(get_in_game_camera(), state->settings)) {
+  if(!world_system_initialize(state->settings)) {
     TraceLog(LOG_WARNING, "app::app_initialize()::World initialize failed");
     return false;
   }
@@ -175,10 +170,7 @@ bool app_render(void) {
   BeginTextureMode(state->drawing_target);
     ClearBackground(CLEAR_BACKGROUND_COLOR);
 
-    BeginMode2D(get_in_game_camera()->handle);
-      render_scene_world();
-    EndMode2D();
-
+    render_scene_world();
     render_scene_interface();
     
     DrawFPS(state->settings->render_width * .75f, SCREEN_OFFSET.y * 10);

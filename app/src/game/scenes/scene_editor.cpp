@@ -6,9 +6,10 @@
 #include "core/event.h"
 #include "core/fmemory.h"
 
-#include "game/world.h"
-#include "game/resource.h"
 #include "game/user_interface.h"
+#include "game/world.h"
+#include "game/camera.h"
+#include "game/resource.h"
 
 #define PROP_DRAG_HANDLE_DIM 16
 #define PROP_DRAG_HANDLE_DIM_DIV2 PROP_DRAG_HANDLE_DIM/2.f
@@ -128,7 +129,7 @@ constexpr void add_prop(tilemap_prop_types type, spritesheet_id sprite_id, f32 s
 #define SE_BASE_RENDER_WIDTH state->in_app_settings->render_width
 #define SE_BASE_RENDER_HEIGHT state->in_app_settings->render_height
 
-bool initialize_scene_editor(const camera_metrics* _camera_metrics,const app_settings * _in_app_settings) {
+bool initialize_scene_editor(const app_settings * _in_app_settings) {
   if (state) {
     update_tilemap_prop_type();
     begin_scene_editor();
@@ -139,18 +140,25 @@ bool initialize_scene_editor(const camera_metrics* _camera_metrics,const app_set
     TraceLog(LOG_ERROR, "scene_editor::initialize_scene_editor()::State allocation failed!");
     return false;
   }
-
-  if (!_camera_metrics) {
-    TraceLog(LOG_ERROR, "scene_editor::initialize_scene_editor()::Camera metrics recieved NULL");
+  if (!_in_app_settings || _in_app_settings == nullptr) {
+    TraceLog(LOG_ERROR, "scene_editor::initialize_scene_editor()::App settings pointer is invalid");
     return false;
   }
-  if (_camera_metrics == nullptr || _in_app_settings == nullptr) {
-    TraceLog(LOG_ERROR, "scene_editor::initialize_scene_editor()::Recieved pointer(s) is/are null");
-    return false;
-  }
-  state->in_camera_metrics = _camera_metrics;
   state->in_app_settings = _in_app_settings;
-  world_system_initialize(_camera_metrics, state->in_app_settings);
+
+  if(!create_camera(
+    state->in_app_settings->render_width_div2, state->in_app_settings->render_height_div2,
+    state->in_app_settings->render_width, state->in_app_settings->render_height
+  )) {
+    TraceLog(LOG_ERROR, "scene_editor::initialize_scene_editor()::Creating camera failed");
+    return false;
+  }
+  state->in_camera_metrics = get_in_game_camera();
+  if (!state->in_camera_metrics || state->in_camera_metrics == nullptr) {
+    TraceLog(LOG_ERROR, "scene_editor::initialize_scene_editor()::Camera pointer is invalid");
+    return false;
+  }
+  world_system_begin(state->in_camera_metrics);
 
   if(!user_interface_system_initialize()) {
     TraceLog(LOG_ERROR, "scene_editor::initialize_scene_editor()::User interface failed to initialize!");
@@ -760,19 +768,13 @@ void update_scene_editor(void) {
   }
   else state->mouse_focus = MOUSE_FOCUS_MAP;
 
-  editor_update_bindings();
   update_map();
+  update_camera();
+  editor_update_bindings();
 
   state->mouse_pos_screen.x = GetMousePosition().x * get_app_settings()->scale_ratio.at(0);
   state->mouse_pos_screen.y = GetMousePosition().y * get_app_settings()->scale_ratio.at(1);
   state->mouse_pos_world = GetScreenToWorld2D(state->mouse_pos_screen, state->in_camera_metrics->handle);
-  Rectangle _frustum = se_get_camera_view_rect(state->in_camera_metrics->handle);
-  event_fire(EVENT_CODE_CAMERA_SET_FRUSTUM, event_context(
-    static_cast<i32>(_frustum.x),
-    static_cast<i32>(_frustum.y),
-    static_cast<i32>(_frustum.width),
-    static_cast<i32>(_frustum.height)
-  ));
 
   if (state->b_prop_selection_screen_update_prop_sprites) {
     for (size_t iter = 0; iter < state->tilemap_props_sprite.size(); iter++) {
@@ -787,6 +789,8 @@ void update_scene_editor(void) {
   update_user_interface();
 }
 void render_scene_editor(void) {
+  BeginMode2D(get_in_game_camera()->handle);
+  
   if (state->selected_stage == WORLDMAP_MAINMENU_MAP) {
     //render_map_view_on(ZEROVEC2, 1);
     render_map();
@@ -801,6 +805,8 @@ void render_scene_editor(void) {
     DrawRectangleLinesEx(_map_coll, 2.f, BLUE);    
   }
   DrawPixel(0, 0, RED);
+  
+  EndMode2D();
 }
 void render_interface_editor(void) {
   if (!state) {

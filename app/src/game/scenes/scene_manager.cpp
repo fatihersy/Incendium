@@ -4,7 +4,6 @@
 #include "core/event.h"
 #include "core/fmemory.h"
 
-#include "game/camera.h"
 #include "game/scenes/scene_in_game.h"
 #include "game/scenes/scene_main_menu.h"
 #include "game/scenes/scene_editor.h"
@@ -49,8 +48,6 @@ bool scene_manager_reinit(void) {
 }
 
 void update_scene_scene(void) {
-  update_camera();
-
   switch (state->scene_data) {
     case SCENE_TYPE_MAIN_MENU: update_scene_main_menu();     break;
     case SCENE_TYPE_IN_GAME:   update_scene_in_game();       break;
@@ -105,7 +102,7 @@ bool scene_manager_on_event(i32 code,[[maybe_unused]] event_context context) {
   case EVENT_CODE_SCENE_IN_GAME: {
     end_scene(state->scene_data);
     state->scene_data = SCENE_TYPE_IN_GAME;
-    if(!initialize_scene_in_game(get_in_game_camera(), state->in_app_settings)) {
+    if(!initialize_scene_in_game(state->in_app_settings)) {
       TraceLog(LOG_ERROR, "scene_manager::EVENT_CODE_SCENE_IN_GAME::User interface failed to initialize!");
       return false;
     }
@@ -115,7 +112,7 @@ bool scene_manager_on_event(i32 code,[[maybe_unused]] event_context context) {
   case EVENT_CODE_SCENE_EDITOR: {
     end_scene(state->scene_data);
     state->scene_data = SCENE_TYPE_EDITOR;
-    if(!initialize_scene_editor(get_in_game_camera(), state->in_app_settings)) {
+    if(!initialize_scene_editor(state->in_app_settings)) {
       TraceLog(LOG_ERROR, "scene_manager::EVENT_CODE_SCENE_EDITOR::User interface failed to initialize!");
       return false;
     }
@@ -126,7 +123,7 @@ bool scene_manager_on_event(i32 code,[[maybe_unused]] event_context context) {
     end_scene(state->scene_data);
     state->scene_data = SCENE_TYPE_MAIN_MENU;
 
-    return initialize_scene_main_menu(get_in_game_camera(), state->in_app_settings);
+    return initialize_scene_main_menu(state->in_app_settings);
   }
   default:
     break;

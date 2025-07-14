@@ -26,7 +26,6 @@ void player_take_damage(u16 damage);
 void player_heal_player(u16 amouth);
 
 player_state* get_player_state(void);
-Vector2 get_player_position(bool centered);
 
 player_update_results update_player(void);
 bool render_player(void);

@@ -119,21 +119,6 @@ player_state* get_player_state(void) {
   return player;
 }
 
-Vector2 get_player_position(bool centered) {
-  Vector2 pos = ZEROVEC2;
-  if(centered) {
-    pos = Vector2 {
-      .x = player->position.x + player->dimentions_div2.x,
-      .y = player->position.y + player->dimentions_div2.y
-    };
-  }
-  else { 
-    pos = player->position;
-  }
-  //TraceLog(LOG_INFO, "(Vector2){%f, %f}", pos.x, pos.y);
-  return pos;
-}
-
 void player_add_exp_to_player(u32 exp) {
   u32 curr = player->exp_current;
   u32 to_next = player->exp_to_next_level;

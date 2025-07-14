@@ -8,9 +8,10 @@
 #include <core/fmemory.h>
 #include <core/ftime.h>
 
-#include "game/world.h"
 #include "game/game_manager.h"
 #include "game/user_interface.h"
+#include "game/world.h"
+#include "game/camera.h"
 
 typedef enum in_game_stages {
   IN_GAME_STAGE_UNDEFINED,
@@ -45,7 +46,7 @@ typedef struct scene_in_game_state {
   
   const camera_metrics* in_camera_metrics;
   const app_settings* in_app_settings;
-  const bool* is_game_paused;
+  const ingame_info* in_ingame_info;
   
   in_game_stages stage;
   end_game_results end_game_result;
@@ -100,7 +101,7 @@ Rectangle sig_get_camera_view_rect(Camera2D camera);
 /**
  * @brief Requires world system, world init moved to app, as well as its loading time
  */
-bool initialize_scene_in_game(const camera_metrics* _camera_metrics, const app_settings * _in_app_settings) {
+bool initialize_scene_in_game(const app_settings * _in_app_settings) {
   if (state) {
     begin_scene_in_game();
     return false;
@@ -110,18 +111,35 @@ bool initialize_scene_in_game(const camera_metrics* _camera_metrics, const app_s
     TraceLog(LOG_ERROR, "scene_in_game::initialize_scene_in_game()::State allocation failed!");
     return false;
   }
-  if (_camera_metrics == nullptr || _in_app_settings == nullptr) {
-    TraceLog(LOG_ERROR, "scene_in_game::initialize_scene_in_game()::Recieved pointer(s) is/are null");
+
+  state->in_app_settings = _in_app_settings;
+  if (!_in_app_settings || _in_app_settings == nullptr) {
+    TraceLog(LOG_ERROR, "scene_in_game::initialize_scene_in_game()::App setting pointer is invalid");
     return false;
   }
-  state->in_camera_metrics = _camera_metrics;
-  state->in_app_settings = _in_app_settings;
 
-  if (!game_manager_initialize(_camera_metrics, _in_app_settings, get_active_map_ptr())) { // Inits player & spawns
+  if(!create_camera(
+    state->in_app_settings->render_width_div2, state->in_app_settings->render_height_div2, 
+    state->in_app_settings->render_width, state->in_app_settings->render_height
+  )) {
+    TraceLog(LOG_ERROR, "scene_in_game::initialize_scene_in_game()::Creating camera failed");
+    return false;
+  }
+  state->in_camera_metrics = get_in_game_camera();
+  if (!state->in_camera_metrics || state->in_camera_metrics == nullptr) {
+    TraceLog(LOG_ERROR, "scene_in_game::initialize_scene_in_game()::Camera pointer is invalid");
+    return false;
+  }
+
+  if (!game_manager_initialize(state->in_camera_metrics, _in_app_settings, get_active_map_ptr())) { // Inits player & spawns
     TraceLog(LOG_ERROR, "scene_in_game::initialize_scene_in_game()::game_manager_initialize() failed");
     return false;
   }
-  state->is_game_paused = get_is_game_paused();
+  state->in_ingame_info = gm_get_ingame_info();
+  if (!state->in_ingame_info || state->in_ingame_info == nullptr) {
+    TraceLog(LOG_ERROR, "scene_in_game::initialize_scene_in_game()::Game info pointer is invalid");
+    return false;
+  }
 
   event_register(EVENT_CODE_ADD_CURRENCY_SOULS, scene_in_game_on_event);
   event_register(EVENT_CODE_RESUME_GAME, scene_in_game_on_event);
@@ -164,7 +182,7 @@ void start_game(character_stats stat) {
   gm_start_game(*get_active_worldmap());
 
   upgrade_dynamic_player_stat(stat);
-  _set_player_position(Vector2 {0.f, 0.f});
+  _set_player_position(ZEROVEC2);
   state->stage = IN_GAME_STAGE_PLAY;
 }
 void end_scene_in_game(void) {
@@ -192,19 +210,13 @@ void end_scene_in_game(void) {
 void update_scene_in_game(void) {
   STATE_ASSERT("update_scene_in_game")
 
+  update_camera();
   in_game_update_bindings();
   update_user_interface();
 
   switch (state->stage) {
     case IN_GAME_STAGE_MAP_CHOICE: {
       event_fire(EVENT_CODE_CAMERA_SET_CAMERA_POSITION, event_context(SIG_BASE_RENDER_WIDTH * .5f, SIG_BASE_RENDER_HEIGHT * .5f));
-      Rectangle _frustum = sig_get_camera_view_rect(state->in_camera_metrics->handle);
-      event_fire(EVENT_CODE_CAMERA_SET_FRUSTUM, event_context(
-        static_cast<i32>(_frustum.x),
-        static_cast<i32>(_frustum.y),
-        static_cast<i32>(_frustum.width),
-        static_cast<i32>(_frustum.height)
-      ));
 
       if (state->show_pause_menu) {}
       else if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON) && state->hovered_stage <= MAX_WORLDMAP_LOCATIONS) {
@@ -214,32 +226,24 @@ void update_scene_in_game(void) {
       break;
     }
     case IN_GAME_STAGE_PASSIVE_CHOICE: {
-      event_fire(EVENT_CODE_CAMERA_SET_CAMERA_POSITION, event_context(_get_player_position(true).x, _get_player_position(true).y));
-      Rectangle _frustum = sig_get_camera_view_rect(state->in_camera_metrics->handle);
-      event_fire(EVENT_CODE_CAMERA_SET_FRUSTUM, event_context(
-        static_cast<i32>(_frustum.x),
-        static_cast<i32>(_frustum.y),
-        static_cast<i32>(_frustum.width),
-        static_cast<i32>(_frustum.height)
+      event_fire(EVENT_CODE_CAMERA_SET_CAMERA_POSITION, event_context(
+        state->in_ingame_info->player_state_dynamic->position_centered.x,
+        state->in_ingame_info->player_state_dynamic->position_centered.y
       ));
       break;
     }
     case IN_GAME_STAGE_PLAY: {
-      event_fire(EVENT_CODE_CAMERA_SET_TARGET, event_context(_get_player_position(true).x, _get_player_position(true).y));
-      Rectangle _frustum = sig_get_camera_view_rect(state->in_camera_metrics->handle);
-      event_fire(EVENT_CODE_CAMERA_SET_FRUSTUM, event_context(
-        static_cast<i32>(_frustum.x),
-        static_cast<i32>(_frustum.y),
-        static_cast<i32>(_frustum.width),
-        static_cast<i32>(_frustum.height)
-      ));
+      event_fire(EVENT_CODE_CAMERA_SET_TARGET, event_context(
+        state->in_ingame_info->player_state_dynamic->position_centered.x,
+        state->in_ingame_info->player_state_dynamic->position_centered.y
+    ));
 
       if (IsKeyDown(KEY_LEFT_SHIFT) && IsKeyReleased(KEY_D)) {
         state->stage = IN_GAME_STAGE_PLAY_DEBUG;
       }
 
       if (!state->has_game_started) { return; }
-      if (*state->is_game_paused) { return; }
+      if (*state->in_ingame_info->is_game_paused) { return; }
       else if (get_remaining_enemies() <= 0 || get_remaining_enemies() > MAX_SPAWN_COUNT) {
         event_fire(EVENT_CODE_END_GAME, event_context());
         state->end_game_result.is_win = true;
@@ -254,20 +258,15 @@ void update_scene_in_game(void) {
       break;
     }
     case IN_GAME_STAGE_PLAY_DEBUG: {
-      // LABEL: DEBUG
       if (IsKeyDown(KEY_LEFT_SHIFT) && IsKeyReleased(KEY_D)) {
         state->stage = IN_GAME_STAGE_PLAY;
       }
       update_map();
       update_game_manager_debug();
 
-      event_fire(EVENT_CODE_CAMERA_SET_TARGET, event_context(_get_player_position(true).x,_get_player_position(true).y));
-      Rectangle _frustum = sig_get_camera_view_rect(state->in_camera_metrics->handle);
-      event_fire(EVENT_CODE_CAMERA_SET_FRUSTUM, event_context(
-        static_cast<i32>(_frustum.x),
-        static_cast<i32>(_frustum.y),
-        static_cast<i32>(_frustum.width),
-        static_cast<i32>(_frustum.height)
+      event_fire(EVENT_CODE_CAMERA_SET_TARGET, event_context(
+        state->in_ingame_info->player_state_dynamic->position_centered.x,
+        state->in_ingame_info->player_state_dynamic->position_centered.y
       ));
       break;
     }
@@ -280,10 +279,10 @@ void update_scene_in_game(void) {
 }
 void render_scene_in_game(void) {
   STATE_ASSERT("render_scene_in_game")
+  BeginMode2D(get_in_game_camera()->handle);
 
   switch (state->stage) {
     case IN_GAME_STAGE_MAP_CHOICE: {
- 
       gui_draw_texture_id(TEX_ID_WORLDMAP_WO_CLOUDS, Rectangle {0, 0, static_cast<f32>(SIG_BASE_RENDER_WIDTH), static_cast<f32>(SIG_BASE_RENDER_HEIGHT)});
       for (int i=0; i<MAX_WORLDMAP_LOCATIONS; ++i) {
         if (state->worldmap_locations.at(i).is_active) {
@@ -302,14 +301,17 @@ void render_scene_in_game(void) {
     }
     case IN_GAME_STAGE_PLAY: {
       render_map();
-      if (!state->has_game_started) { return; }
-      if (*state->is_game_paused) { return; }
-      render_game();
+      if (!(*state->in_ingame_info->is_game_paused) || state->has_game_started) {
+        const ingame_info* iginf = gm_get_ingame_info();
+        const Character2D* chr = iginf->nearest_spawn;
 
-      const ingame_info* iginf = gm_get_ingame_info();
-      const Character2D* chr = iginf->nearest_spawn;
+        //_render_props_y_based(0, iginf->player_state_dynamic->position.y + iginf->player_state_dynamic->dimentions.y);
+
+        render_game();
+        
+        if (chr) DrawRectangleLines(chr->collision.x, chr->collision.y, chr->collision.width, chr->collision.height, RED); // TODO: Nearest spawn indicator. Remove later
+      }
       
-      if (chr) DrawRectangleLines(chr->collision.x, chr->collision.y, chr->collision.width, chr->collision.height, RED); // TODO: Nearest spawn indicator. Remove later
       break;
     }
     case IN_GAME_STAGE_PLAY_DEBUG: {
@@ -326,6 +328,8 @@ void render_scene_in_game(void) {
       break;
     }
   }
+  
+  EndMode2D();
 }
 void render_interface_in_game(void) {
   STATE_ASSERT("render_interface_in_game")
@@ -363,7 +367,7 @@ void render_interface_in_game(void) {
       else {
         Rectangle dest = Rectangle {
           SIG_BASE_RENDER_WIDTH * .25f, SIG_BASE_RENDER_HEIGHT * .5f, 
-          SIG_BASE_RENDER_WIDTH * .25f, SIG_BASE_RENDER_HEIGHT *  .8f 
+          SIG_BASE_RENDER_WIDTH * .25f, SIG_BASE_RENDER_HEIGHT * .8f 
         };
         f32 dest_x_buffer = dest.x;
         for (size_t itr_000 = 0; itr_000 < MAX_UPDATE_PASSIVE_PANEL_COUNT; ++itr_000) {
@@ -397,7 +401,7 @@ void render_interface_in_game(void) {
         gui_draw_pause_screen(state->has_game_started);
       }
       else if (!state->has_game_started) {
-        gui_label("Press Space to Start!", FONT_TYPE_ABRACADABRA, 1, Vector2 {SIG_BASE_RENDER_WIDTH * .5f, SIG_BASE_RENDER_HEIGHT * .5f}, WHITE, true, true);
+        gui_label("Press Space to Start!", FONT_TYPE_ABRACADABRA, 1, Vector2 {0.f, SIG_BASE_RENDER_HEIGHT * .5f}, WHITE, true, true);
       }
       else if (get_b_player_have_upgrade_points()) {
         if (state->is_upgrade_choices_ready) {
@@ -425,8 +429,13 @@ void render_interface_in_game(void) {
 
         gui_label_format_v(FONT_TYPE_ABRACADABRA, 1, SIG_SCREEN_POS(5.f, 50.f), WHITE, true, true, "%d", gm_get_ingame_info()->nearest_spawn->character_id);
 
-        // TODO: Display currency
-        //gui_label_format(FONT_TYPE_ABRACADABRA, 10, BASE_RENDER_SCALE(.75f).x, SCREEN_OFFSET.y * 5.f, WHITE, false, false, "Souls: %d", get_currency_souls());
+        //// TODO: Display map coord
+        //gui_label_format_v(FONT_TYPE_ABRACADABRA, 1, 
+        //  VECTOR2(state->in_ingame_info->mouse_pos_screen->x, state->in_ingame_info->mouse_pos_screen->y) , 
+        //  WHITE, false, false, 
+        //  "{%.1f, %.1f}", state->in_ingame_info->mouse_pos_world->x, state->in_ingame_info->mouse_pos_world->y
+        //);
+
       }
       break;
     }
@@ -628,7 +637,7 @@ void in_game_update_keyboard_bindings(void) {
         }
         return; 
       }
-      if (!(*state->is_game_paused)) {
+      if (!(*state->in_ingame_info->is_game_paused)) {
         if (IsKeyReleased(KEY_ESCAPE)) {
           state->show_pause_menu = true;
           set_is_game_paused(true);

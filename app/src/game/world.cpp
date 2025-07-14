@@ -28,7 +28,7 @@ static world_system_state * state;
 constexpr Rectangle get_position_view_rect(Camera2D camera, Vector2 pos, f32 zoom);
 constexpr size_t get_renderqueue_prop_index_by_id(i16 zindex, u32 id);
 
-bool world_system_initialize(const camera_metrics* _in_camera_metrics,const app_settings* _in_app_settings) {
+bool world_system_initialize(const app_settings* _in_app_settings) {
   if (state) {
     TraceLog(LOG_WARNING, "world::world_system_initialize()::Initialize called twice");
     return false;
@@ -38,18 +38,17 @@ bool world_system_initialize(const camera_metrics* _in_camera_metrics,const app_
     TraceLog(LOG_ERROR, "world::world_system_initialize()::State allocation failed");
     return false;
   }
-  if (_in_camera_metrics == nullptr || _in_app_settings == nullptr) {
+  if (_in_app_settings == nullptr) {
     TraceLog(LOG_ERROR, "world::world_system_initialize()::Recieved pointer(s) is/are null");
     return false;
   }
   state->in_app_settings = _in_app_settings;
-  state->in_camera_metrics = _in_camera_metrics;
   create_tilesheet(TILESHEET_TYPE_MAP, 16u*2u, 1.1f, __builtin_addressof(state->palette));
   if(!state->palette.is_initialized) {
     TraceLog(LOG_WARNING, "world::world_system_initialize()::palette initialization failed");
     return false;
   }
-  state->palette.position = Vector2 { _in_camera_metrics->screen_offset.x, _in_camera_metrics->screen_offset.y + 100.f};
+  state->palette.position = Vector2 {0.f, 100.f};
 
   { // WORLD LOCATIONS
     CREATE_WORLDMAP_STAGE_CENTERED( 0, "Stage 1",  "stage1",  VECTOR2(   0,    0), false); // main menu background
@@ -109,6 +108,18 @@ bool world_system_initialize(const camera_metrics* _in_camera_metrics,const app_
 
     refresh_render_queue(itr_000);
   }
+  return true;
+}
+bool world_system_begin(const camera_metrics* _in_camera_metrics) {
+  if (!state) {
+    TraceLog(LOG_ERROR, "world::world_system_initialize()::State allocation failed");
+    return false;
+  }
+  if (!_in_camera_metrics || _in_camera_metrics == nullptr) {
+    TraceLog(LOG_ERROR, "world::world_system_initialize()::Recieved pointer(s) is/are null");
+    return false;
+  }
+  state->in_camera_metrics = _in_camera_metrics;
   return true;
 }
 
@@ -176,7 +187,7 @@ constexpr size_t get_renderqueue_prop_index_by_id(i16 zindex, i32 id) {
     TraceLog(LOG_ERROR, "world::get_renderqueue_prop_by_id()::State is not valid");
     return INVALID_IDU32;
   }
-  const std::vector<tilemap_prop_address>& _queue = state->active_map->render_queue.at(zindex);
+  const std::vector<tilemap_prop_address>& _queue = state->active_map->render_z_index_queue.at(zindex);
   for (size_t itr_000 = 0; itr_000 < _queue.size(); ++itr_000) {
     const tilemap_prop_address * _queue_elm = __builtin_addressof(_queue.at(itr_000));
     if (_queue_elm->type <= TILEMAP_PROP_TYPE_UNDEFINED || _queue_elm->type >= TILEMAP_PROP_TYPE_MAX) {
@@ -238,6 +249,12 @@ void render_map() {
     render_tilemap(state->active_map, state->in_camera_metrics->frustum);
   }
 }
+
+void _render_props_y_based(i32 start_y, i32 end_y) {
+  render_props_y_based(state->active_map, state->in_camera_metrics->frustum, start_y, end_y);
+}
+
+
 void render_map_view_on(Vector2 pos, f32 zoom) {
   render_tilemap(state->active_map, get_position_view_rect(state->in_camera_metrics->handle, pos, zoom));
 }
@@ -341,20 +358,20 @@ bool change_prop_zindex(tilemap_prop_types type, i32 id, i16 old_zindex, i16 new
   
   if (type == TILEMAP_PROP_TYPE_SPRITE) {
     size_t _prop_addr_queue_index = get_renderqueue_prop_index_by_id(old_zindex, id);
-    std::vector<tilemap_prop_address>& queue_ref = state->active_map->render_queue.at(old_zindex);
+    std::vector<tilemap_prop_address>& queue_ref = state->active_map->render_z_index_queue.at(old_zindex);
     tilemap_prop_address map_prop_backup = queue_ref.at(_prop_addr_queue_index); 
     queue_ref.erase(queue_ref.begin() + _prop_addr_queue_index);
 
-    state->active_map->render_queue.at(new_zindex).push_back(tilemap_prop_address(map_prop_backup));
+    state->active_map->render_z_index_queue.at(new_zindex).push_back(tilemap_prop_address(map_prop_backup));
     return true;
   }
   else if (type != TILEMAP_PROP_TYPE_SPRITE) {
     size_t _prop_addr_queue_index = get_renderqueue_prop_index_by_id(old_zindex, id);
-    std::vector<tilemap_prop_address>& queue_ref = state->active_map->render_queue.at(old_zindex);
+    std::vector<tilemap_prop_address>& queue_ref = state->active_map->render_z_index_queue.at(old_zindex);
     tilemap_prop_address map_prop_backup = queue_ref.at(_prop_addr_queue_index); 
     queue_ref.erase(queue_ref.begin() + _prop_addr_queue_index);
 
-    state->active_map->render_queue.at(new_zindex).push_back(tilemap_prop_address(map_prop_backup));
+    state->active_map->render_z_index_queue.at(new_zindex).push_back(tilemap_prop_address(map_prop_backup));
     return true;
   }
 
@@ -366,20 +383,20 @@ void refresh_render_queue(i32 id) {
     return;
   }
   tilemap& tilemap_ref = state->map.at(id); 
-  for (auto& _queue : tilemap_ref.render_queue) {
+  for (auto& _queue : tilemap_ref.render_z_index_queue) {
     _queue.clear();
   }
 
   for (size_t static_itr_111 = 0; static_itr_111 < tilemap_ref.static_props.size(); ++static_itr_111) {
     tilemap_prop_static * map_static_ptr = __builtin_addressof(tilemap_ref.static_props.at(static_itr_111));
 
-    tilemap_ref.render_queue.at(map_static_ptr->zindex).push_back(tilemap_prop_address(map_static_ptr));
+    tilemap_ref.render_z_index_queue.at(map_static_ptr->zindex).push_back(tilemap_prop_address(map_static_ptr));
   }
 
   for (size_t sprite_itr_111 = 0; sprite_itr_111 < tilemap_ref.sprite_props.size(); ++sprite_itr_111) {
     tilemap_prop_sprite * map_sprite_ptr = __builtin_addressof(tilemap_ref.sprite_props.at(sprite_itr_111));
 
-    tilemap_ref.render_queue.at(map_sprite_ptr->zindex).push_back(tilemap_prop_address(map_sprite_ptr));
+    tilemap_ref.render_z_index_queue.at(map_sprite_ptr->zindex).push_back(tilemap_prop_address(map_sprite_ptr));
   }
 }
 

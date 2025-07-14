@@ -9,6 +9,7 @@
 #include "game/game_manager.h"
 #include "game/user_interface.h"
 #include "game/world.h"
+#include "game/camera.h"
 
 typedef enum main_menu_scene_type {
   MAIN_MENU_SCENE_DEFAULT,
@@ -56,7 +57,7 @@ void draw_main_menu_upgrade_list_panel(void);
 void draw_main_menu_upgrade_details_panel(void);
 Rectangle smm_get_camera_view_rect(Camera2D camera);
 
-bool initialize_scene_main_menu(const camera_metrics *_camera_metrics,const app_settings * _in_app_settings) {
+bool initialize_scene_main_menu(const app_settings * _in_app_settings) {
   if (state) {
     return begin_scene_main_menu();
   }
@@ -65,27 +66,35 @@ bool initialize_scene_main_menu(const camera_metrics *_camera_metrics,const app_
     TraceLog(LOG_ERROR, "scene_main_menu::initialize_scene_main_menu()::State allocation failed");
     return false;
   }
-  if (_camera_metrics == nullptr || _in_app_settings == nullptr) {
-    TraceLog(LOG_ERROR, "scene_main_menu::initialize_scene_main_menu()::Recieved pointer(s) is/are not valid");
+  if (!_in_app_settings || _in_app_settings == nullptr) {
+    TraceLog(LOG_ERROR, "scene_main_menu::initialize_scene_main_menu()::App setting pointer is invalid");
     return false;
   }
   state->in_app_settings = _in_app_settings;
-  state->in_camera_metrics = _camera_metrics;
+
+  if(!create_camera(
+    state->in_app_settings->render_width_div2, state->in_app_settings->render_height_div2,
+    state->in_app_settings->render_width, state->in_app_settings->render_height
+  )) {
+    TraceLog(LOG_ERROR, "scene_main_menu::initialize_scene_main_menu()::Creating camera failed");
+    return false;
+  }
+  state->in_camera_metrics = get_in_game_camera();
+  if (!state->in_camera_metrics || state->in_camera_metrics == nullptr) {
+    TraceLog(LOG_ERROR, "scene_main_menu::initialize_scene_main_menu()::Camera pointer is invalid");
+    return false;
+  }
+  world_system_begin(state->in_camera_metrics);
   
   return begin_scene_main_menu();
 }
 
 void update_scene_main_menu(void) {
+  update_camera();
+  
   update_user_interface();
   update_map();
 
-  Rectangle _frustum = smm_get_camera_view_rect(state->in_camera_metrics->handle);
-  event_fire(EVENT_CODE_CAMERA_SET_FRUSTUM, event_context(
-    static_cast<f32>(_frustum.x),
-    static_cast<f32>(_frustum.y),
-    static_cast<f32>(_frustum.width),
-    static_cast<f32>(_frustum.height)
-  ));
   event_fire(EVENT_CODE_CAMERA_SET_ZOOM, event_context(1.f));
   event_fire(EVENT_CODE_CAMERA_SET_CAMERA_POSITION, event_context(0.f, 0.f));
   event_fire(EVENT_CODE_CAMERA_SET_OFFSET, event_context(
@@ -117,9 +126,13 @@ void update_scene_main_menu(void) {
 }
 
 void render_scene_main_menu(void) {
+  BeginMode2D(get_in_game_camera()->handle);
+  
   if (!state->scene_changing_process_complete) {
     render_map();
   }
+  
+  EndMode2D();
 }
 
 void render_interface_main_menu(void) {
