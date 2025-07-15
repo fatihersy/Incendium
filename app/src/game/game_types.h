@@ -747,8 +747,13 @@ typedef struct ingame_info {
 
 typedef struct camera_metrics {
   Camera2D handle;
-  Vector2 screen_offset;
   Rectangle frustum;
+  Vector2 screen_offset;
+  camera_metrics(void) {
+    this->handle = Camera2D {ZEROVEC2, ZEROVEC2, 0.f, 0.f}; 
+    this->frustum = ZERORECT;
+    this->screen_offset = ZEROVEC2;
+  }
 } camera_metrics;
 
 typedef struct localization_package {

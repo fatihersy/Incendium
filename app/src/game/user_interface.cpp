@@ -34,9 +34,28 @@ typedef struct user_interface_system_state {
   f32 fade_animation_timer;
   bool fadein;
   bool fade_animation_playing;
+
+  user_interface_system_state(void) {
+    this->buttons.fill(button());
+    this->button_types.fill(button_type());
+    this->sliders.fill(slider());
+    this->slider_types.fill(slider_type());
+    this->prg_bars.fill(progress_bar());
+    this->prg_bar_types.fill(progress_bar_type());
+    
+    this->in_app_settings = nullptr;
+    this->display_language = nullptr;
+    this->ss_to_draw_bg = spritesheet();
+    this->mouse_pos = ZEROVEC2;
+    this->localization_info.clear();
+    this->fade_animation_duration = 0u;
+    this->fade_animation_timer = 0.f;
+    this->fadein = false;
+    this->fade_animation_playing = false;
+  }
 } user_interface_system_state;
 
-static user_interface_system_state * state;
+static user_interface_system_state * state = nullptr;
 
 #define BUTTON_TEXT_UP_COLOR WHITE_ROCK
 #define BUTTON_TEXT_HOVER_COLOR WHITE
@@ -167,6 +186,8 @@ bool user_interface_system_initialize(void) {
     TraceLog(LOG_ERROR, "user_interface::user_interface_system_initialize()::State allocation failed");
     return false;
   }
+  *state = user_interface_system_state();
+  
   state->in_app_settings = get_app_settings();
 
   localized_languages langs = loc_parser_get_loc_langs();

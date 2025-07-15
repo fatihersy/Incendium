@@ -24,7 +24,11 @@ void memory_system_initialize(void) {
 
 void* allocate_memory_linear(u64 size, bool will_zero_memory) {
     if (memory_system->linear_memory_allocated + size > memory_system->linear_memory_total_size) {
-        alert("Error","Allocate memory failed!");
+        alert("Allocate memory failed!", "Error");
+        exit(EXIT_FAILURE);
+    }
+    if (size % sizeof(size_t) != 0) {
+        alert("Attemped to allocate nonaligned size", "Error");
         exit(EXIT_FAILURE);
     }
 

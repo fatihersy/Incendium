@@ -6,9 +6,9 @@ OBJ_DIR := obj
 TITLE := Incendium
 ASSEMBLY := app
 EXTENSION := .exe
-COMPILER_FLAGS := -g -MD -std=c++23 -Werror=vla -Wall -Wextra -Wpedantic -Wno-unused-function
+COMPILER_FLAGS := -g -MD -std=c++23 -Werror=vla -Wall -Wextra -Wpedantic -Wno-unused-function -fsanitize=undefined -fsanitize=address
 INCLUDE_FLAGS := -Ivendor/include -Iapp/src
-LINKER_FLAGS := -g -L$(OBJ_DIR)/ -L$(VENDOR_DIR)/lib/ -L$(BUILD_DIR) -L$(VENDOR_DIR)/lib/steam/win64/ -lsdkencryptedappticket64 -lsteam_api64 -lraylib -lucrtbase -lGdi32 -lWinMM -lUser32 -lShell32  #-Wl,-rpath,.
+LINKER_FLAGS := -g -fsanitize=undefined -fsanitize=address -L$(OBJ_DIR)/ -L$(VENDOR_DIR)/lib/ -L$(BUILD_DIR) -L$(VENDOR_DIR)/lib/steam/win64/ -lsdkencryptedappticket64 -lsteam_api64 -lraylib -lucrtbase -lGdi32 -lWinMM -lUser32 -lShell32  #-Wl,-rpath,.
 DEFINES := -D_DEBUG
 
 # Make does not offer a recursive wildcard function, so here's one:
