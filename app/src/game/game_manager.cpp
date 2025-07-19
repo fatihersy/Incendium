@@ -113,16 +113,16 @@ void update_game_manager(void) {
   if (!state) {
     return;
   }
-  state->mouse_pos_world = GetScreenToWorld2D(Vector2 {
-    GetMousePosition().x * get_app_settings()->scale_ratio.at(0),
-    GetMousePosition().y * get_app_settings()->scale_ratio.at(1)
-  },
-    state->in_camera_metrics->handle
-  );
   state->mouse_pos_screen = Vector2 {
     GetMousePosition().x * get_app_settings()->scale_ratio.at(0),
     GetMousePosition().y * get_app_settings()->scale_ratio.at(1)
   };
+  state->mouse_pos_world = GetScreenToWorld2D(Vector2 {
+    state->mouse_pos_screen.x,
+    state->mouse_pos_screen.y
+  },
+    state->in_camera_metrics->handle
+  );
 
   if(state->is_game_paused || state->is_game_end) {
     return;

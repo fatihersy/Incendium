@@ -193,7 +193,7 @@ bool app_render(void) {
 constexpr void toggle_borderless(void) {
   set_resolution(GetMonitorWidth(GetCurrentMonitor()), GetMonitorHeight(GetCurrentMonitor()));
   set_window_size(GetMonitorWidth(GetCurrentMonitor()), GetMonitorHeight(GetCurrentMonitor()));
-
+  event_fire(EVENT_CODE_CAMERA_SET_DRAWING_EXTENT, event_context(state->settings->render_width, state->settings->render_height));
   UnloadRenderTexture(state->drawing_target);
   state->drawing_target = LoadRenderTexture(state->settings->render_width, state->settings->render_height);
 
@@ -203,6 +203,7 @@ constexpr void toggle_borderless(void) {
 constexpr void toggle_fullscreen(void) {
   set_resolution(GetMonitorWidth(GetCurrentMonitor()), GetMonitorHeight(GetCurrentMonitor()));
   set_window_size(GetMonitorWidth(GetCurrentMonitor()), GetMonitorHeight(GetCurrentMonitor()));
+  event_fire(EVENT_CODE_CAMERA_SET_DRAWING_EXTENT, event_context(state->settings->render_width, state->settings->render_height));
 
   UnloadRenderTexture(state->drawing_target);
   state->drawing_target = LoadRenderTexture(state->settings->render_width, state->settings->render_height);
@@ -220,6 +221,7 @@ constexpr void toggle_windowed(i32 width, i32 height) {
   state->settings->window_state = 0;
   set_resolution(width, height);  
   set_window_size(width, height);
+  event_fire(EVENT_CODE_CAMERA_SET_DRAWING_EXTENT, event_context(state->settings->render_width, state->settings->render_height));
   
   UnloadRenderTexture(state->drawing_target);
   state->drawing_target = LoadRenderTexture(state->settings->render_width, state->settings->render_height);

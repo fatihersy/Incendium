@@ -725,9 +725,9 @@ void render_user_interface(void) {
       break;
     }
     case SDR_TYPE_NUMBER: {
-      u16 total_body_width = sdr_type.body_width * sdr_type.width_multiply;
-      u16 each_body_width = (total_body_width - ((sdr->options.size()) * SCREEN_OFFSET.x)) / (sdr->options.size()-1);
-      f32 each_body_scale = (float)each_body_width / sdr_type.origin_body_width;
+      i32 total_body_width = static_cast<i32>(sdr_type.body_width) * static_cast<i32>(sdr_type.width_multiply);
+      f32 each_body_width = (static_cast<f32>(total_body_width) - static_cast<f32>(sdr->options.size()) * SCREEN_OFFSET.x) / static_cast<f32>(sdr->options.size() - 1.f);
+      f32 each_body_scale = static_cast<f32>(each_body_width) / static_cast<f32>(sdr_type.origin_body_width);
       Vector2 draw_sprite_scale = Vector2 {each_body_scale, sdr_type.scale};
       Vector2 _pos_temp = Vector2 {sdr->position.x + SCREEN_OFFSET.x, sdr->position.y};
       std::string text = sdr->options.at(0).no_localized_text;

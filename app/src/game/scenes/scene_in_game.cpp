@@ -96,8 +96,6 @@ void end_ability_upgrade_state(u16 which_panel_chosen);
 void start_game(character_stats stat);
 void reset_game();
 
-Rectangle sig_get_camera_view_rect(Camera2D camera);
-
 /**
  * @brief Requires world system, world init moved to app, as well as its loading time
  */
@@ -302,13 +300,25 @@ void render_scene_in_game(void) {
     case IN_GAME_STAGE_PLAY: {
       render_map();
       if (!(*state->in_ingame_info->is_game_paused) || state->has_game_started) {
-        const ingame_info* iginf = gm_get_ingame_info();
-        const Character2D* chr = iginf->nearest_spawn;
+        const ingame_info* const iginf = gm_get_ingame_info();
 
-        //_render_props_y_based(0, iginf->player_state_dynamic->position.y + iginf->player_state_dynamic->dimentions.y);
-
-        render_game();
+        i32 bottom_of_the_screen = state->in_camera_metrics->frustum.y + state->in_camera_metrics->frustum.height;
+        i32 top_of_the_screen = state->in_camera_metrics->frustum.y;
+        i32 player_texture_begin = iginf->player_state_dynamic->position.y + iginf->player_state_dynamic->dimentions.y;
         
+        _render_props_y_based(top_of_the_screen, player_texture_begin);
+        render_game();
+        _render_props_y_based(player_texture_begin, bottom_of_the_screen);
+        
+        DrawRectangleLines(
+          static_cast<i32>(iginf->player_state_dynamic->position.x), 
+          static_cast<i32>(iginf->player_state_dynamic->position.y), 
+          static_cast<i32>(iginf->player_state_dynamic->dimentions.x), 
+          static_cast<i32>(iginf->player_state_dynamic->dimentions.y), 
+          RED
+        );
+
+        const Character2D* chr = iginf->nearest_spawn;
         if (chr) DrawRectangleLines(chr->collision.x, chr->collision.y, chr->collision.width, chr->collision.height, RED); // TODO: Nearest spawn indicator. Remove later
       }
       
@@ -426,16 +436,6 @@ void render_interface_in_game(void) {
       else {
         gui_progress_bar(PRG_BAR_ID_PLAYER_EXPERIANCE, Vector2{SIG_BASE_RENDER_WIDTH * .5f, SCREEN_OFFSET.y}, true);
         gui_progress_bar(PRG_BAR_ID_PLAYER_HEALTH, SCREEN_OFFSET, false);
-
-        gui_label_format_v(FONT_TYPE_ABRACADABRA, 1, SIG_SCREEN_POS(5.f, 50.f), WHITE, true, true, "%d", gm_get_ingame_info()->nearest_spawn->character_id);
-
-        //// TODO: Display map coord
-        //gui_label_format_v(FONT_TYPE_ABRACADABRA, 1, 
-        //  VECTOR2(state->in_ingame_info->mouse_pos_screen->x, state->in_ingame_info->mouse_pos_screen->y) , 
-        //  WHITE, false, false, 
-        //  "{%.1f, %.1f}", state->in_ingame_info->mouse_pos_world->x, state->in_ingame_info->mouse_pos_world->y
-        //);
-
       }
       break;
     }
@@ -831,19 +831,6 @@ void end_ability_upgrade_state(u16 which_panel_chosen) {
   for (size_t itr_000 = 0; itr_000 < MAX_UPDATE_ABILITY_PANEL_COUNT; ++itr_000) {
     state->ability_upg_panels.at(itr_000).buffer.u16[0] = 0;
   }
-}
-Rectangle sig_get_camera_view_rect(Camera2D camera) {
-
-  f32 view_width = SIG_BASE_RENDER_WIDTH / camera.zoom;
-  f32 view_height = SIG_BASE_RENDER_HEIGHT / camera.zoom;
-
-  f32 x = camera.target.x;
-  f32 y = camera.target.y;
-  
-  x -= camera.offset.x/camera.zoom;
-  y -= camera.offset.y/camera.zoom;
-  
-  return Rectangle{ x, y, view_width, view_height };
 }
 
 bool scene_in_game_on_event(i32 code, event_context context) {

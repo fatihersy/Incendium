@@ -107,7 +107,7 @@ void player_system_reinit(void) {
 
   player->last_played_animation = &player->idle_left_sprite; // The position player starts. To avoid from the error when move firstly called
   
-  player->starter_ability = ABILITY_TYPE_FIRETRAIL;
+  player->starter_ability = ABILITY_TYPE_FIREBALL;
   player->is_initialized = true;
 }
 
@@ -263,12 +263,13 @@ bool render_player(void) {
   }
   
   #if DEBUG_COLLISIONS
-      DrawRectangleLines(
-          player->collision.x,
-          player->collision.y,
-          player->collision.width,
-          player->collision.height,
-          WHITE);
+    DrawRectangleLines(
+      static_cast<i32>(player->collision.x),
+      static_cast<i32>(player->collision.y),
+      static_cast<i32>(player->collision.width),
+      static_cast<i32>(player->collision.height),
+      WHITE
+    );
   #endif
   return true;
 }

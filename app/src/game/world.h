@@ -4,8 +4,8 @@
 
 #include "game_types.h"
 
-bool world_system_initialize(const app_settings* _in_app_settings);
-bool world_system_begin(const camera_metrics* _in_camera_metrics);
+[[__nodiscard__]] bool world_system_initialize(const app_settings* _in_app_settings);
+[[__nodiscard__]] bool world_system_begin(const camera_metrics* _in_camera_metrics);
 
 void set_worldmap_location(i32 id);
 const worldmap_stage* get_worldmap_locations(void);
@@ -32,9 +32,7 @@ void update_map(void);
 void drag_tilesheet(Vector2 vec);
 void _render_tile_on_pos(const tile* _tile, Vector2 pos,const tilesheet* sheet);
 void render_map(void);
-void render_map_view_on(Vector2 pos, f32 zoom);
 void render_map_palette(f32 zoom);
-bool change_prop_zindex(tilemap_prop_types type, i32 id, i16 old_zindex, i16 new_zindex);
 void refresh_render_queue(i32 id);
 
 #define _remove_prop_cur_map_by_id(PROP) remove_prop_cur_map_by_id(PROP->id, PROP->prop_type)

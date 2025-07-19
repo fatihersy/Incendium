@@ -1,4 +1,5 @@
 #include "world.h"
+#include <algorithm>
 
 #include <core/fmemory.h>
 
@@ -27,6 +28,7 @@ static world_system_state * state;
 
 constexpr Rectangle get_position_view_rect(Camera2D camera, Vector2 pos, f32 zoom);
 constexpr size_t get_renderqueue_prop_index_by_id(i16 zindex, u32 id);
+void sort_render_y_based_queue(i32 id);
 
 bool world_system_initialize(const app_settings* _in_app_settings) {
   if (state) {
@@ -254,11 +256,6 @@ void _render_props_y_based(i32 start_y, i32 end_y) {
   render_props_y_based(state->active_map, state->in_camera_metrics->frustum, start_y, end_y);
 }
 
-
-void render_map_view_on(Vector2 pos, f32 zoom) {
-  render_tilemap(state->active_map, get_position_view_rect(state->in_camera_metrics->handle, pos, zoom));
-}
-
 void render_map_palette(f32 zoom) {
   render_tilesheet(&state->palette, zoom);
   state->palette_zoom = zoom;
@@ -346,58 +343,110 @@ constexpr Rectangle get_position_view_rect(Camera2D camera, Vector2 pos, f32 zoo
   
   return Rectangle{ x, y, view_width, view_height };
 }
-bool change_prop_zindex(tilemap_prop_types type, i32 id, i16 old_zindex, i16 new_zindex) {
-  if (!state) {
-    TraceLog(LOG_ERROR, "world::change_prop_zindex()::State is not valid");
-    return false;
-  }
-  if (type <= TILEMAP_PROP_TYPE_UNDEFINED || type >= TILEMAP_PROP_TYPE_MAX) {
-    TraceLog(LOG_ERROR, "world::change_prop_zindex()::Type out of bound: %d", type);
-    return false;
-  }
-  
-  if (type == TILEMAP_PROP_TYPE_SPRITE) {
-    size_t _prop_addr_queue_index = get_renderqueue_prop_index_by_id(old_zindex, id);
-    std::vector<tilemap_prop_address>& queue_ref = state->active_map->render_z_index_queue.at(old_zindex);
-    tilemap_prop_address map_prop_backup = queue_ref.at(_prop_addr_queue_index); 
-    queue_ref.erase(queue_ref.begin() + _prop_addr_queue_index);
-
-    state->active_map->render_z_index_queue.at(new_zindex).push_back(tilemap_prop_address(map_prop_backup));
-    return true;
-  }
-  else if (type != TILEMAP_PROP_TYPE_SPRITE) {
-    size_t _prop_addr_queue_index = get_renderqueue_prop_index_by_id(old_zindex, id);
-    std::vector<tilemap_prop_address>& queue_ref = state->active_map->render_z_index_queue.at(old_zindex);
-    tilemap_prop_address map_prop_backup = queue_ref.at(_prop_addr_queue_index); 
-    queue_ref.erase(queue_ref.begin() + _prop_addr_queue_index);
-
-    state->active_map->render_z_index_queue.at(new_zindex).push_back(tilemap_prop_address(map_prop_backup));
-    return true;
-  }
-
-  return false;
-}
 void refresh_render_queue(i32 id) {
   if (state == nullptr) {
     TraceLog(LOG_ERROR, "world::refresh_render_queue()::State is not valid");
     return;
   }
-  tilemap& tilemap_ref = state->map.at(id); 
+  tilemap& tilemap_ref = state->map.at(id);
+  std::vector<tilemap_prop_static>& static_prop_queue = tilemap_ref.static_props;
+  std::vector<tilemap_prop_sprite>& sprite_prop_queue = tilemap_ref.sprite_props;
   for (auto& _queue : tilemap_ref.render_z_index_queue) {
     _queue.clear();
   }
+  tilemap_ref.render_y_based_queue.clear();
 
-  for (size_t static_itr_111 = 0; static_itr_111 < tilemap_ref.static_props.size(); ++static_itr_111) {
-    tilemap_prop_static * map_static_ptr = __builtin_addressof(tilemap_ref.static_props.at(static_itr_111));
+  for (size_t static_itr_111 = 0; static_itr_111 < static_prop_queue.size(); ++static_itr_111) {
+    tilemap_prop_static * map_static_ptr = __builtin_addressof(static_prop_queue.at(static_itr_111));
 
-    tilemap_ref.render_z_index_queue.at(map_static_ptr->zindex).push_back(tilemap_prop_address(map_static_ptr));
+    if (map_static_ptr->prop_type <= TILEMAP_PROP_TYPE_UNDEFINED || map_static_ptr->prop_type >= TILEMAP_PROP_TYPE_MAX || map_static_ptr->prop_type == TILEMAP_PROP_TYPE_SPRITE) {
+      static_prop_queue.erase(static_prop_queue.begin() + static_itr_111);
+      continue;
+    }
+
+    if (map_static_ptr->zindex == -1) {
+      tilemap_ref.render_y_based_queue.push_back(tilemap_prop_address(map_static_ptr));
+    }
+    else if(map_static_ptr->zindex > -1 && map_static_ptr->zindex < MAX_Z_INDEX_SLOT) {
+      tilemap_ref.render_z_index_queue.at(map_static_ptr->zindex).push_back(tilemap_prop_address(map_static_ptr));
+    }
+    else {
+      TraceLog(LOG_WARNING, "world::refresh_render_queue()::Prop's Z-index is out of bound, set it to 0");
+      map_static_ptr->zindex = 0;
+      tilemap_ref.render_z_index_queue.at(0).push_back(tilemap_prop_address(map_static_ptr));
+    }
   }
 
-  for (size_t sprite_itr_111 = 0; sprite_itr_111 < tilemap_ref.sprite_props.size(); ++sprite_itr_111) {
-    tilemap_prop_sprite * map_sprite_ptr = __builtin_addressof(tilemap_ref.sprite_props.at(sprite_itr_111));
+  for (size_t sprite_itr_111 = 0; sprite_itr_111 < sprite_prop_queue.size(); ++sprite_itr_111) {
+    tilemap_prop_sprite * map_sprite_ptr = __builtin_addressof(sprite_prop_queue.at(sprite_itr_111));
 
-    tilemap_ref.render_z_index_queue.at(map_sprite_ptr->zindex).push_back(tilemap_prop_address(map_sprite_ptr));
+    if (map_sprite_ptr->prop_type != TILEMAP_PROP_TYPE_SPRITE) {
+      sprite_prop_queue.erase(sprite_prop_queue.begin() + sprite_itr_111);
+      continue;
+    }
+
+    if (map_sprite_ptr->zindex == -1) {
+      tilemap_ref.render_y_based_queue.push_back(tilemap_prop_address(map_sprite_ptr));
+    }
+    else if(map_sprite_ptr->zindex > -1 && map_sprite_ptr->zindex < MAX_Z_INDEX_SLOT) { 
+      tilemap_ref.render_z_index_queue.at(map_sprite_ptr->zindex).push_back(tilemap_prop_address(map_sprite_ptr));
+    }
+    else {
+      TraceLog(LOG_WARNING, "world::refresh_render_queue()::Prop's Z-index is out of bound, set it to 0");
+      map_sprite_ptr->zindex = 0;
+      tilemap_ref.render_z_index_queue.at(0).push_back(tilemap_prop_address(map_sprite_ptr));
+    }
   }
+
+  sort_render_y_based_queue(id);
+}
+void sort_render_y_based_queue(i32 id) {
+  if (state == nullptr) {
+    TraceLog(LOG_ERROR, "world::refresh_render_queue()::State is not valid");
+    return;
+  }
+  std::vector<tilemap_prop_address>& queue = state->map.at(id).render_y_based_queue; 
+
+  std::sort(queue.begin(), queue.end(), [](const tilemap_prop_address& a, const tilemap_prop_address& b) {
+    if (a.type == TILEMAP_PROP_TYPE_SPRITE) {
+      tilemap_prop_sprite * _prp_sprite_a = a.data.prop_sprite;
+      i32 y_value_sprite_a = _prp_sprite_a->sprite.coord.y + _prp_sprite_a->sprite.coord.height;
+
+      if (b.type == TILEMAP_PROP_TYPE_SPRITE) {
+        tilemap_prop_sprite * _prp_sprite_b = b.data.prop_sprite;
+        i32 y_value_sprite_b = _prp_sprite_b->sprite.coord.y + _prp_sprite_b->sprite.coord.height;
+
+        return y_value_sprite_a < y_value_sprite_b;
+      }
+      else if (b.type != TILEMAP_PROP_TYPE_SPRITE) {
+        tilemap_prop_static * _prp_static_b = b.data.prop_static;
+        i32 y_value_static_b = _prp_static_b->dest.y + _prp_static_b->dest.height;
+      
+        return y_value_sprite_a < y_value_static_b;
+      }
+      else return false;
+    }
+    else if (a.type != TILEMAP_PROP_TYPE_SPRITE) {
+      tilemap_prop_static * _prp_static_a = a.data.prop_static;
+      i32 y_value_sprite_a = _prp_static_a->dest.y + (_prp_static_a->dest.height * _prp_static_a->scale);
+
+      if (b.type == TILEMAP_PROP_TYPE_SPRITE) {
+        tilemap_prop_sprite * _prp_sprite_b = b.data.prop_sprite;
+        i32 y_value_sprite_b = _prp_sprite_b->sprite.coord.y + _prp_sprite_b->sprite.coord.height;
+      
+        return y_value_sprite_a < y_value_sprite_b;
+      }
+      else if (b.type != TILEMAP_PROP_TYPE_SPRITE) {
+        tilemap_prop_static * _prp_static_b = b.data.prop_static;
+        i32 y_value_static_b = _prp_static_b->dest.y + _prp_static_b->dest.height;
+      
+        return y_value_sprite_a < y_value_static_b;
+      }
+      else return false;
+    }
+    else return false;
+  });
+
 }
 
 // EXPOSED

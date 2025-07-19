@@ -19,6 +19,9 @@
 #define MAP_COLLISION_DRAG_HANDLE_DIM_DIV2 PROP_DRAG_HANDLE_DIM * .5f
 #define MAP_COLLISION_PANEL_COLLISION_DRAW_STARTING_HEIGHT 100.f
 
+#define MAP_Y_BOTTOM state->
+#define MAP_Y_TOP
+
 typedef enum editor_state_selection_type {
   SLC_TYPE_UNSELECTED,
   SLC_TYPE_TILE,
@@ -47,6 +50,7 @@ typedef struct scene_editor_state {
   bool b_show_pause_menu;
   bool b_prop_selection_screen_update_prop_sprites;
 
+  tilemap ** active_map_ptr;
   std::vector<tilemap_prop_static> * tilemap_props_static_selected; // INFO: The prop list that shown on props panel
   std::vector<tilemap_prop_sprite> * tilemap_props_sprite_selected;
   tilemap_prop_static* selected_prop_static_map_prop_address;
@@ -60,18 +64,18 @@ typedef struct scene_editor_state {
   u16 selected_stage;
   editor_state_selection_type selection_type;
 
-  std::vector<tilemap_prop_static> tilemap_props_trees;
-  std::vector<tilemap_prop_static> tilemap_props_tombstones;
-  std::vector<tilemap_prop_static> tilemap_props_stones;
-  std::vector<tilemap_prop_static> tilemap_props_spikes;
-  std::vector<tilemap_prop_static> tilemap_props_skulls;
-  std::vector<tilemap_prop_static> tilemap_props_pillars;
-  std::vector<tilemap_prop_static> tilemap_props_lamps;
-  std::vector<tilemap_prop_static> tilemap_props_fence;
-  std::vector<tilemap_prop_static> tilemap_props_details;
-  std::vector<tilemap_prop_static> tilemap_props_candles;
-  std::vector<tilemap_prop_static> tilemap_props_buildings;
-  std::vector<tilemap_prop_sprite> tilemap_props_sprite;
+  std::vector<tilemap_prop_static> * tilemap_props_trees;
+  std::vector<tilemap_prop_static> * tilemap_props_tombstones;
+  std::vector<tilemap_prop_static> * tilemap_props_stones;
+  std::vector<tilemap_prop_static> * tilemap_props_spikes;
+  std::vector<tilemap_prop_static> * tilemap_props_skulls;
+  std::vector<tilemap_prop_static> * tilemap_props_pillars;
+  std::vector<tilemap_prop_static> * tilemap_props_lamps;
+  std::vector<tilemap_prop_static> * tilemap_props_fence;
+  std::vector<tilemap_prop_static> * tilemap_props_details;
+  std::vector<tilemap_prop_static> * tilemap_props_candles;
+  std::vector<tilemap_prop_static> * tilemap_props_buildings;
+  std::vector<tilemap_prop_sprite> * tilemap_props_sprite;
 
   const camera_metrics * in_camera_metrics;
   const app_settings   * in_app_settings;
@@ -94,7 +98,6 @@ constexpr void editor_update_movement(void);
 constexpr void editor_update_mouse_bindings(void);
 constexpr void editor_update_keyboard_bindings(void);
 constexpr i32 map_prop_id_to_index(u16 id);
-constexpr Rectangle se_get_camera_view_rect(Camera2D camera);
 constexpr void update_tilemap_prop_type(void);
 constexpr void scene_editor_selection_cleanup(void);
 
@@ -110,21 +113,6 @@ constexpr bool scene_editor_map_stage_slc_slider_on_left_button_trigger(void);
 constexpr bool scene_editor_map_stage_slc_slider_on_right_button_trigger(void);
 constexpr bool scene_editor_map_prop_type_slc_slider_on_left_button_trigger(void);
 constexpr bool scene_editor_map_prop_type_slc_slider_on_right_button_trigger(void);
-
-constexpr void add_prop(texture_id source_tex, tilemap_prop_types type, Rectangle source, f32 scale = 1.f, Color tint = WHITE);
-constexpr void add_prop(tilemap_prop_types type, spritesheet_id sprite_id, f32 scale = 1.f, Color tint = WHITE);
-#define add_prop_tree(...) add_prop(TEX_ID_ASSET_ATLAS, TILEMAP_PROP_TYPE_TREE __VA_OPT__(,) __VA_ARGS__)
-#define add_prop_tombstone(...) add_prop(TEX_ID_ASSET_ATLAS, TILEMAP_PROP_TYPE_TOMBSTONE, __VA_ARGS__)
-#define add_prop_stone(...) add_prop(TEX_ID_ASSET_ATLAS, TILEMAP_PROP_TYPE_STONE __VA_OPT__(,) __VA_ARGS__)
-#define add_prop_spike(...) add_prop(TEX_ID_ASSET_ATLAS, TILEMAP_PROP_TYPE_SPIKE __VA_OPT__(,) __VA_ARGS__)
-#define add_prop_skull(...) add_prop(TEX_ID_ASSET_ATLAS, TILEMAP_PROP_TYPE_SKULL __VA_OPT__(,) __VA_ARGS__)
-#define add_prop_pillar(...) add_prop(TEX_ID_ASSET_ATLAS, TILEMAP_PROP_TYPE_PILLAR __VA_OPT__(,) __VA_ARGS__)
-#define add_prop_lamp(...) add_prop(TEX_ID_ASSET_ATLAS, TILEMAP_PROP_TYPE_LAMP __VA_OPT__(,) __VA_ARGS__)
-#define add_prop_fence(...) add_prop(TEX_ID_ASSET_ATLAS, TILEMAP_PROP_TYPE_FENCE __VA_OPT__(,) __VA_ARGS__)
-#define add_prop_detail(...) add_prop(TEX_ID_ASSET_ATLAS, TILEMAP_PROP_TYPE_DETAIL __VA_OPT__(,) __VA_ARGS__)
-#define add_prop_candle(...) add_prop(TEX_ID_ASSET_ATLAS, TILEMAP_PROP_TYPE_CANDLE __VA_OPT__(,) __VA_ARGS__)
-#define add_prop_building(...) add_prop(TEX_ID_ASSET_ATLAS, TILEMAP_PROP_TYPE_BUILDING __VA_OPT__(,) __VA_ARGS__)
-#define add_prop_sprite(SPRITE_ID, ...) add_prop(TILEMAP_PROP_TYPE_SPRITE, SPRITE_ID __VA_OPT__(,) __VA_ARGS__)
 
 #define SE_BASE_RENDER_WIDTH state->in_app_settings->render_width
 #define SE_BASE_RENDER_HEIGHT state->in_app_settings->render_height
@@ -158,7 +146,11 @@ bool initialize_scene_editor(const app_settings * _in_app_settings) {
     TraceLog(LOG_ERROR, "scene_editor::initialize_scene_editor()::Camera pointer is invalid");
     return false;
   }
-  world_system_begin(state->in_camera_metrics);
+  if (!world_system_begin(state->in_camera_metrics)) {
+    TraceLog(LOG_ERROR, "scene_editor::initialize_scene_editor()::World system begin failed");
+    return false;
+  }
+  state->active_map_ptr = get_active_map_ptr();
 
   if(!user_interface_system_initialize()) {
     TraceLog(LOG_ERROR, "scene_editor::initialize_scene_editor()::User interface failed to initialize!");
@@ -167,7 +159,6 @@ bool initialize_scene_editor(const app_settings * _in_app_settings) {
 
   copy_memory(state->worldmap_locations.data(), get_worldmap_locations(), MAX_WORLDMAP_LOCATIONS * sizeof(worldmap_stage));
   state->default_sheet = TILESHEET_TYPE_MAP;
-
   state->tile_selection_panel = panel();
   state->tile_selection_panel.signal_state = BTN_STATE_HOVER;
   state->tile_selection_panel.dest = Rectangle {0, 0, SE_BASE_RENDER_WIDTH * .45f, static_cast<f32>(SE_BASE_RENDER_WIDTH)};
@@ -198,461 +189,18 @@ bool initialize_scene_editor(const app_settings * _in_app_settings) {
     _prop_edit_panel_dim.x, _prop_edit_panel_dim.y
   };
 
-  // Prop init
-  {
-    // Trees
-    {
-      add_prop_tree(Rectangle{  11, 2056, 166, 152});
-      add_prop_tree(Rectangle{ 193, 2117, 122,  91});
-      add_prop_tree(Rectangle{ 321, 2059, 127, 149});
-      add_prop_tree(Rectangle{ 457, 2123,  53,  85});
-      add_prop_tree(Rectangle{ 523, 2056, 166, 152});
-      add_prop_tree(Rectangle{ 705, 2117, 122,  91});
-      add_prop_tree(Rectangle{ 833, 2059, 127, 149});
-      add_prop_tree(Rectangle{ 969, 2123,  53,  85});
-      add_prop_tree(Rectangle{ 197, 2208,  84,  62});
-      add_prop_tree(Rectangle{ 292, 2224,  57,  38});
-      add_prop_tree(Rectangle{ 354, 2225,  60,  39});
-      add_prop_tree(Rectangle{ 709, 2208,  84,  62});
-      add_prop_tree(Rectangle{ 709, 2208,  84,  62});
-      add_prop_tree(Rectangle{ 320,  256,  64,  32});
-      add_prop_tree(Rectangle{ 804, 2224,  57,  38});
-      add_prop_tree(Rectangle{ 866, 2225,  60,  39});
-      add_prop_tree(Rectangle{ 288, 2272,  32,  32});
-      add_prop_tree(Rectangle{ 320, 2272,  64,  32});
-      add_prop_tree(Rectangle{ 384, 2272,  32,  32});
-      add_prop_tree(Rectangle{ 416, 2272,  32,  32});
-      add_prop_tree(Rectangle{ 800, 2272,  32,  32});
-      add_prop_tree(Rectangle{ 832, 2272,  64,  32});
-      add_prop_tree(Rectangle{ 896, 2272,  32,  32});
-    }
-    // Trees
-
-    // Tombstones
-    {
-      add_prop_tombstone(Rectangle{  0, 2400, 32, 32});
-      add_prop_tombstone(Rectangle{ 32, 2400, 32, 32});
-      add_prop_tombstone(Rectangle{ 64, 2400, 32, 32});
-      add_prop_tombstone(Rectangle{ 96, 2400, 32, 32});
-      add_prop_tombstone(Rectangle{128, 2400, 32, 32});
-      add_prop_tombstone(Rectangle{160, 2400, 32, 32});
-      add_prop_tombstone(Rectangle{192, 2400, 32, 32});
-      add_prop_tombstone(Rectangle{224, 2400, 32, 32});
-      add_prop_tombstone(Rectangle{256, 2400, 32, 32});
-      add_prop_tombstone(Rectangle{288, 2400, 32, 32});
-      add_prop_tombstone(Rectangle{320, 2400, 32, 32});
-      add_prop_tombstone(Rectangle{352, 2400, 32, 32});
-      add_prop_tombstone(Rectangle{384, 2400, 32, 32});
-      add_prop_tombstone(Rectangle{416, 2400, 32, 32});
-      add_prop_tombstone(Rectangle{448, 2400, 32, 32});
-      add_prop_tombstone(Rectangle{  0, 2432, 32, 64});
-      add_prop_tombstone(Rectangle{ 32, 2432, 32, 64});
-      add_prop_tombstone(Rectangle{ 64, 2432, 32, 32});
-      add_prop_tombstone(Rectangle{ 96, 2432, 32, 32});
-      add_prop_tombstone(Rectangle{128, 2432, 32, 32});
-      add_prop_tombstone(Rectangle{160, 2432, 32, 32});
-      add_prop_tombstone(Rectangle{192, 2432, 32, 32});
-      add_prop_tombstone(Rectangle{224, 2432, 32, 32});
-      add_prop_tombstone(Rectangle{256, 2432, 32, 32});
-      add_prop_tombstone(Rectangle{288, 2432, 32, 32});
-      add_prop_tombstone(Rectangle{320, 2432, 32, 32});
-      add_prop_tombstone(Rectangle{352, 2432, 32, 32});
-      add_prop_tombstone(Rectangle{384, 2432, 32, 32});
-      add_prop_tombstone(Rectangle{416, 2432, 32, 32});
-      add_prop_tombstone(Rectangle{ 64, 2464, 32, 32});
-      add_prop_tombstone(Rectangle{ 96, 2464, 32, 32});
-      add_prop_tombstone(Rectangle{128, 2464, 32, 32});
-      add_prop_tombstone(Rectangle{160, 2464, 32, 32});
-      add_prop_tombstone(Rectangle{192, 2464, 32, 32});
-      add_prop_tombstone(Rectangle{224, 2464, 32, 32});
-      add_prop_tombstone(Rectangle{256, 2464, 32, 32});
-      add_prop_tombstone(Rectangle{288, 2464, 32, 32});
-      add_prop_tombstone(Rectangle{320, 2464, 32, 32});
-      add_prop_tombstone(Rectangle{352, 2464, 32, 32});
-      add_prop_tombstone(Rectangle{384, 2464, 32, 32});
-      add_prop_tombstone(Rectangle{416, 2464, 32, 32});
-    }
-    // Tombstones
-
-    // Stones
-    {
-      add_prop_stone(Rectangle{1024, 2272,  64,  32});
-      add_prop_stone(Rectangle{1088, 2272,  32,  32});
-      add_prop_stone(Rectangle{1120, 2272,  64,  32});
-      add_prop_stone(Rectangle{1184, 2272,  32,  32});
-      add_prop_stone(Rectangle{1216, 2272,  32,  32});
-      add_prop_stone(Rectangle{1024, 2304,  32,  32});
-      add_prop_stone(Rectangle{1088, 2304,  32,  32});
-      add_prop_stone(Rectangle{1120, 2304,  32,  32});
-      add_prop_stone(Rectangle{1152, 2304,  32,  32});
-      add_prop_stone(Rectangle{1184, 2304,  32,  32});
-      add_prop_stone(Rectangle{1216, 2304,  32,  32});
-      add_prop_stone(Rectangle{1056, 2336,  64,  48});
-      add_prop_stone(Rectangle{1152, 2336,  32,  32});
-      add_prop_stone(Rectangle{1184, 2336,  32,  32});
-      add_prop_stone(Rectangle{1216, 2368,  32,  32});
-      add_prop_stone(Rectangle{1024, 2400,  64,  32});
-      add_prop_stone(Rectangle{1120, 2400,  64,  32});
-      add_prop_stone(Rectangle{1024, 2432,  32,  32});
-      add_prop_stone(Rectangle{1088, 2432,  32,  32});
-      add_prop_stone(Rectangle{1120, 2432,  32,  32});
-      add_prop_stone(Rectangle{1152, 2432,  32,  32});
-      add_prop_stone(Rectangle{1184, 2432,  32,  32});
-      add_prop_stone(Rectangle{1056, 2464,  64,  64});
-      add_prop_stone(Rectangle{1120, 2464,  32,  32});
-      add_prop_stone(Rectangle{1184, 2464,  32,  32});
-      add_prop_stone(Rectangle{1216, 2496,   32, 32});
-      add_prop_stone(Rectangle{1024, 2528,  64,  32});
-      add_prop_stone(Rectangle{1088, 2528,  32,  32});
-      add_prop_stone(Rectangle{1120, 2528,  64,  32});
-      add_prop_stone(Rectangle{1184, 2528,  32,  32});
-      add_prop_stone(Rectangle{1024, 2560,  32,  32});
-      add_prop_stone(Rectangle{1088, 2560,  32,  32});
-      add_prop_stone(Rectangle{1120, 2560,  32,  32});
-      add_prop_stone(Rectangle{1184, 2560,  32,  32});
-      add_prop_stone(Rectangle{1024, 2592,  32,  32});
-      add_prop_stone(Rectangle{1056, 2592,  32,  32});
-      add_prop_stone(Rectangle{1120, 2592,  32,  32});
-      add_prop_stone(Rectangle{1184, 2592,  32,  32});
-      add_prop_stone(Rectangle{1216, 2624,  32,  32});
-      add_prop_stone(Rectangle{1024, 2656,  64,  32});
-      add_prop_stone(Rectangle{1088, 2656,  32,  32});
-      add_prop_stone(Rectangle{1120, 2656,  64,  32});
-      add_prop_stone(Rectangle{1024, 2688,  32,  32});
-      add_prop_stone(Rectangle{1120, 2688,  32,  32});
-      add_prop_stone(Rectangle{1152, 2688,  32,  32});
-      add_prop_stone(Rectangle{1184, 2688,  32,  32});
-      add_prop_stone(Rectangle{1216, 2688,  32,  32});
-      add_prop_stone(Rectangle{1024, 2720,  32,  32});
-      add_prop_stone(Rectangle{1056, 2720,  64,  48});
-      add_prop_stone(Rectangle{1216, 2752,  32,  32});
-    }
-    // Stones
-
-    // Spikes
-    {
-      add_prop_spike(Rectangle{ 928, 3232, 32, 64});
-      add_prop_spike(Rectangle{ 960, 3232, 32, 64});
-      add_prop_spike(Rectangle{ 992, 3232, 32, 64});
-      add_prop_spike(Rectangle{1024, 3232, 32, 64});
-      add_prop_spike(Rectangle{1056, 3232, 32, 64});
-      add_prop_spike(Rectangle{1088, 3232, 32, 64});
-      add_prop_spike(Rectangle{1120, 3232, 32, 64});
-      add_prop_spike(Rectangle{ 928, 3296, 32, 64});
-      add_prop_spike(Rectangle{ 960, 3296, 32, 64});
-      add_prop_spike(Rectangle{ 992, 3296, 32, 64});
-      add_prop_spike(Rectangle{1024, 3296, 32, 64});
-      add_prop_spike(Rectangle{1056, 3296, 32, 64});
-      add_prop_spike(Rectangle{1088, 3296, 32, 64});
-      add_prop_spike(Rectangle{1120, 3296, 32, 64});
-      add_prop_spike(Rectangle{ 928, 3360, 32, 32});
-      add_prop_spike(Rectangle{ 960, 3360, 32, 32});
-      add_prop_spike(Rectangle{ 992, 3360, 32, 32});
-      add_prop_spike(Rectangle{1024, 3360, 32, 32});
-      add_prop_spike(Rectangle{1056, 3360, 32, 32});
-    } 
-    // Spikes
-
-    // Skulls
-    {
-      add_prop_skull(Rectangle{  0, 3104, 32, 32});
-      add_prop_skull(Rectangle{ 32, 3104, 32, 32});
-      add_prop_skull(Rectangle{ 64, 3104, 32, 32});
-      add_prop_skull(Rectangle{ 96, 3104, 32, 32});
-      add_prop_skull(Rectangle{128, 3104, 32, 32});
-      add_prop_skull(Rectangle{160, 3104, 32, 32});
-      add_prop_skull(Rectangle{192, 3104, 32, 32});
-      add_prop_skull(Rectangle{224, 3104, 32, 32});
-      add_prop_skull(Rectangle{256, 3104, 32, 32});
-      add_prop_skull(Rectangle{288, 3104, 32, 32});
-      add_prop_skull(Rectangle{  0, 3136, 32, 32});
-      add_prop_skull(Rectangle{ 32, 3136, 32, 32});
-      add_prop_skull(Rectangle{ 64, 3136, 32, 32});
-      add_prop_skull(Rectangle{ 96, 3136, 32, 32});
-      add_prop_skull(Rectangle{128, 3136, 32, 32});
-      add_prop_skull(Rectangle{160, 3136, 32, 32});
-      add_prop_skull(Rectangle{192, 3136, 32, 32});
-      add_prop_skull(Rectangle{224, 3136, 32, 32});
-      add_prop_skull(Rectangle{256, 3136, 32, 32});
-      add_prop_skull(Rectangle{288, 3136, 32, 32});
-      add_prop_skull(Rectangle{  0, 3168, 32, 32});
-      add_prop_skull(Rectangle{ 32, 3168, 32, 32});
-      add_prop_skull(Rectangle{ 64, 3168, 32, 32});
-      add_prop_skull(Rectangle{ 96, 3168, 32, 32});
-      add_prop_skull(Rectangle{128, 3168, 32, 32});
-      add_prop_skull(Rectangle{160, 3168, 32, 32});
-      add_prop_skull(Rectangle{192, 3168, 32, 32});
-      add_prop_skull(Rectangle{224, 3168, 32, 32});
-      add_prop_skull(Rectangle{256, 3168, 32, 32});
-      add_prop_skull(Rectangle{288, 3168, 32, 32});
-      add_prop_skull(Rectangle{  0, 3200, 32, 32});
-      add_prop_skull(Rectangle{ 32, 3200, 32, 32});
-      add_prop_skull(Rectangle{ 64, 3200, 32, 32});
-      add_prop_skull(Rectangle{ 96, 3200, 32, 32});
-      add_prop_skull(Rectangle{128, 3200, 32, 32});
-      add_prop_skull(Rectangle{160, 3200, 32, 32});
-      add_prop_skull(Rectangle{192, 3200, 32, 32});
-      add_prop_skull(Rectangle{224, 3200, 32, 32});
-      add_prop_skull(Rectangle{256, 3200, 32, 32});
-      add_prop_skull(Rectangle{288, 3200, 32, 32});
-      add_prop_skull(Rectangle{  0, 3232, 32, 32});
-      add_prop_skull(Rectangle{ 32, 3232, 32, 32});
-      add_prop_skull(Rectangle{ 64, 3232, 32, 32});
-      add_prop_skull(Rectangle{ 96, 3232, 32, 32});
-      add_prop_skull(Rectangle{128, 3232, 32, 32});
-      add_prop_skull(Rectangle{160, 3232, 32, 32});
-      add_prop_skull(Rectangle{192, 3232, 32, 32});
-      add_prop_skull(Rectangle{224, 3232, 32, 32});
-      add_prop_skull(Rectangle{256, 3232, 32, 32});
-      add_prop_skull(Rectangle{288, 3232, 32, 32});
-      add_prop_skull(Rectangle{  0, 3264, 32, 32});
-      add_prop_skull(Rectangle{ 32, 3264, 32, 32});
-      add_prop_skull(Rectangle{ 64, 3264, 32, 32});
-      add_prop_skull(Rectangle{ 96, 3264, 32, 32});
-      add_prop_skull(Rectangle{128, 3264, 32, 32});
-      add_prop_skull(Rectangle{160, 3264, 32, 32});
-      add_prop_skull(Rectangle{192, 3264, 32, 32});
-      add_prop_skull(Rectangle{224, 3264, 32, 32});
-      add_prop_skull(Rectangle{256, 3264, 32, 32});
-      add_prop_skull(Rectangle{288, 3264, 32, 32});
-      add_prop_skull(Rectangle{  0, 3296, 32, 32});
-      add_prop_skull(Rectangle{ 32, 3296, 32, 32});
-      add_prop_skull(Rectangle{ 64, 3296, 32, 32});
-      add_prop_skull(Rectangle{ 96, 3296, 32, 32});
-      add_prop_skull(Rectangle{128, 3296, 32, 32});
-      add_prop_skull(Rectangle{160, 3296, 32, 32});
-      add_prop_skull(Rectangle{192, 3296, 32, 32});
-      add_prop_skull(Rectangle{224, 3296, 32, 32});
-      add_prop_skull(Rectangle{256, 3296, 32, 32});
-      add_prop_skull(Rectangle{288, 3296, 32, 32});
-      add_prop_skull(Rectangle{  0, 3328, 32, 32});
-      add_prop_skull(Rectangle{ 32, 3328, 32, 32});
-      add_prop_skull(Rectangle{ 64, 3328, 32, 32});
-      add_prop_skull(Rectangle{ 96, 3328, 32, 32});
-      add_prop_skull(Rectangle{128, 3328, 32, 32});
-      add_prop_skull(Rectangle{160, 3328, 32, 32});
-      add_prop_skull(Rectangle{192, 3328, 32, 32});
-      add_prop_skull(Rectangle{224, 3328, 32, 32});
-      add_prop_skull(Rectangle{256, 3328, 32, 32});
-      add_prop_skull(Rectangle{288, 3328, 32, 32});
-      add_prop_skull(Rectangle{  0, 3360, 32, 32});
-      add_prop_skull(Rectangle{ 32, 3360, 32, 32});
-      add_prop_skull(Rectangle{ 64, 3360, 32, 32});
-      add_prop_skull(Rectangle{ 96, 3360, 32, 32});
-      add_prop_skull(Rectangle{128, 3360, 32, 32});
-      add_prop_skull(Rectangle{160, 3360, 32, 32});
-      add_prop_skull(Rectangle{192, 3360, 32, 32});
-      add_prop_skull(Rectangle{224, 3360, 32, 32});
-      add_prop_skull(Rectangle{256, 3360, 32, 32});
-      add_prop_skull(Rectangle{288, 3360, 32, 32});
-      add_prop_skull(Rectangle{  0, 3392, 32, 32});
-      add_prop_skull(Rectangle{ 32, 3392, 32, 32});
-      add_prop_skull(Rectangle{ 64, 3392, 32, 32});
-      add_prop_skull(Rectangle{ 96, 3392, 32, 32});
-      add_prop_skull(Rectangle{128, 3392, 32, 32});
-      add_prop_skull(Rectangle{160, 3392, 32, 32});
-      add_prop_skull(Rectangle{192, 3392, 32, 32});
-      add_prop_skull(Rectangle{224, 3392, 32, 32});
-      add_prop_skull(Rectangle{256, 3392, 32, 32});
-      add_prop_skull(Rectangle{288, 3392, 32, 32});
-    }
-    // Skulls
-
-    // Pillar
-    {
-      add_prop_pillar(Rectangle{   928, 3232, 32, 64});
-      add_prop_pillar(Rectangle{   960, 3232, 32, 64});
-      add_prop_pillar(Rectangle{   992, 3232, 32, 64});
-      add_prop_pillar(Rectangle{  1024, 3232, 32, 64});
-      add_prop_pillar(Rectangle{  1056, 3232, 32, 64});
-      add_prop_pillar(Rectangle{  1088, 3232, 32, 64});
-      add_prop_pillar(Rectangle{  1120, 3232, 32, 64});
-      add_prop_pillar(Rectangle{   928, 3296, 32, 64});
-      add_prop_pillar(Rectangle{   960, 3296, 32, 64});
-      add_prop_pillar(Rectangle{   992, 3296, 32, 64});
-      add_prop_pillar(Rectangle{  1024, 3296, 32, 64});
-      add_prop_pillar(Rectangle{  1056, 3296, 32, 64});
-      add_prop_pillar(Rectangle{  1088, 3296, 32, 64});
-      add_prop_pillar(Rectangle{  1120, 3296, 32, 64});
-      add_prop_pillar(Rectangle{   928, 3360, 32, 32});
-      add_prop_pillar(Rectangle{   960, 3360, 32, 32});
-      add_prop_pillar(Rectangle{   992, 3360, 32, 32});
-      add_prop_pillar(Rectangle{  1024, 3360, 32, 32});
-      add_prop_pillar(Rectangle{  1056, 3360, 32, 32});
-      add_prop_pillar(Rectangle{   928, 3392, 32, 32});
-      add_prop_pillar(Rectangle{   960, 3392, 32, 32});
-      add_prop_pillar(Rectangle{   992, 3392, 32, 32});
-      add_prop_pillar(Rectangle{  1024, 3392, 32, 32});
-      add_prop_pillar(Rectangle{  1056, 3392, 32, 32});
-    } 
-    // Pillar 
-
-    // Lamps
-    {
-      add_prop_lamp(Rectangle{  576, 3072, 64, 96});
-      add_prop_lamp(Rectangle{  640, 3072, 64, 96});
-      add_prop_lamp(Rectangle{  704, 3072, 64, 96});
-      add_prop_lamp(Rectangle{  768, 3072, 64, 96});
-      add_prop_lamp(Rectangle{  832, 3072, 64, 96});
-      add_prop_lamp(Rectangle{  576, 3168, 64, 96});
-      add_prop_lamp(Rectangle{  640, 3168, 64, 96});
-      add_prop_lamp(Rectangle{  704, 3168, 64, 96});
-      add_prop_lamp(Rectangle{  768, 3168, 64, 96});
-      add_prop_lamp(Rectangle{  832, 3168, 64, 96});
-      add_prop_lamp(Rectangle{  576, 3264, 64, 96});
-      add_prop_lamp(Rectangle{  640, 3264, 64, 96});
-      add_prop_lamp(Rectangle{  704, 3264, 64, 96});
-      add_prop_lamp(Rectangle{  768, 3264, 64, 96});
-      add_prop_lamp(Rectangle{  832, 3264, 64, 96});
-      add_prop_lamp(Rectangle{  576, 3360, 64, 96});
-      add_prop_lamp(Rectangle{  640, 3360, 64, 96});
-      add_prop_lamp(Rectangle{  704, 3360, 64, 96});
-      add_prop_lamp(Rectangle{  768, 3360, 64, 96});
-      add_prop_lamp(Rectangle{  832, 3360, 64, 96});
-    }
-    // Lamps
-
-    // Fence
-    {
-      add_prop_fence(Rectangle{ 32, 2528, 32, 32});
-      add_prop_fence(Rectangle{ 64, 2528, 32, 64});
-      add_prop_fence(Rectangle{ 96, 2528, 32, 32});
-      add_prop_fence(Rectangle{ 32, 2560, 32, 64});
-      add_prop_fence(Rectangle{ 96, 2560, 32, 64});
-      add_prop_fence(Rectangle{  0, 2560, 32, 64});
-      add_prop_fence(Rectangle{128, 2560, 32, 64});
-      add_prop_fence(Rectangle{  0, 2624, 32, 32});
-      add_prop_fence(Rectangle{128, 2624, 32, 32});
-      add_prop_fence(Rectangle{  0, 2656, 32, 64});
-      add_prop_fence(Rectangle{ 32, 2656, 32, 64});
-      add_prop_fence(Rectangle{ 32, 2720, 32, 32});
-      add_prop_fence(Rectangle{ 64, 2688, 32, 64});
-      add_prop_fence(Rectangle{ 96, 2656, 32, 64});
-      add_prop_fence(Rectangle{ 96, 2720, 32, 32});
-      add_prop_fence(Rectangle{128, 2656, 32, 64});
-      add_prop_fence(Rectangle{128, 2624, 32, 32});
-      add_prop_fence(Rectangle{128, 2528, 32, 32});
-      add_prop_fence(Rectangle{160, 2528, 32, 32});
-      add_prop_fence(Rectangle{128, 2496, 32, 32});
-      add_prop_fence(Rectangle{160, 2496, 32, 32});
-      add_prop_fence(Rectangle{192, 2528, 32, 32});
-      add_prop_fence(Rectangle{224, 2528, 32, 32});
-      add_prop_fence(Rectangle{256, 2528, 32, 32});
-      add_prop_fence(Rectangle{256, 2560, 32, 32});
-      add_prop_fence(Rectangle{288, 2560, 32, 32});
-      add_prop_fence(Rectangle{288, 2592, 32, 32});
-      add_prop_fence(Rectangle{288, 2624, 32, 32});
-      add_prop_fence(Rectangle{256, 2624, 32, 32});
-      add_prop_fence(Rectangle{256, 2656, 32, 32});
-      add_prop_fence(Rectangle{224, 2656, 32, 32});
-      add_prop_fence(Rectangle{192, 2656, 32, 32});
-      add_prop_fence(Rectangle{192, 2624, 32, 32});
-      add_prop_fence(Rectangle{160, 2624, 32, 32});
-      add_prop_fence(Rectangle{160, 2592, 32, 32});
-      add_prop_fence(Rectangle{160, 2560, 32, 32});
-      add_prop_fence(Rectangle{192, 2560, 32, 32});
-      add_prop_fence(Rectangle{352, 2528, 32, 32});
-      add_prop_fence(Rectangle{384, 2528, 32, 32});
-      add_prop_fence(Rectangle{416, 2528, 32, 32});
-      add_prop_fence(Rectangle{416, 2560, 32, 32});
-      add_prop_fence(Rectangle{448, 2560, 32, 32});
-      add_prop_fence(Rectangle{448, 2592, 32, 32});
-      add_prop_fence(Rectangle{448, 2624, 32, 32});
-      add_prop_fence(Rectangle{416, 2624, 32, 32});
-      add_prop_fence(Rectangle{416, 2656, 32, 32});
-      add_prop_fence(Rectangle{384, 2656, 32, 32});
-      add_prop_fence(Rectangle{352, 2656, 32, 32});
-      add_prop_fence(Rectangle{352, 2624, 32, 32});
-      add_prop_fence(Rectangle{320, 2624, 32, 32});
-      add_prop_fence(Rectangle{320, 2592, 32, 32});
-      add_prop_fence(Rectangle{320, 2560, 32, 32});
-      add_prop_fence(Rectangle{152, 2560, 32, 64});
-      add_prop_fence(Rectangle{160, 2688, 128,96});
-      add_prop_fence(Rectangle{288, 2688, 128,96});
-      add_prop_fence(Rectangle{ 48, 3024, 64, 64});
-      add_prop_fence(Rectangle{192, 3024, 96, 64});
-      add_prop_fence(Rectangle{368, 3024, 64, 64});
-      add_prop_fence(Rectangle{528, 3008, 64, 64});
-      add_prop_fence(Rectangle{672, 3008, 64, 64});
-    }
-    // Fence 
-
-    // Detail
-    {
-      add_prop_detail(Rectangle{ 480, 2592, 32, 32});
-      add_prop_detail(Rectangle{ 512, 2592, 32, 32});
-      add_prop_detail(Rectangle{ 544, 2592, 32, 32});
-      add_prop_detail(Rectangle{ 576, 2592, 32, 32});
-      add_prop_detail(Rectangle{ 608, 2592, 32, 32});
-      add_prop_detail(Rectangle{ 480, 2624, 32, 32});
-      add_prop_detail(Rectangle{ 512, 2624, 32, 32});
-      add_prop_detail(Rectangle{ 544, 2624, 32, 64});
-      add_prop_detail(Rectangle{ 576, 2640, 32, 48});
-      add_prop_detail(Rectangle{ 480, 2656, 32, 32});
-      add_prop_detail(Rectangle{ 624, 2640, 64, 48});
-      add_prop_detail(Rectangle{ 544, 2688, 32, 64});
-      add_prop_detail(Rectangle{ 576, 2688, 32, 64});
-      add_prop_detail(Rectangle{ 624, 2704, 48, 48});
-      add_prop_detail(Rectangle{1152, 3296,400, 64}, 1.f, (Color {255, 255, 255, 128}));
-    }
-    // Detail 
-
-    // Candle
-    {
-      add_prop_candle(Rectangle{ 320, 3104, 32, 32});
-      add_prop_candle(Rectangle{ 352, 3104, 32, 32});
-      add_prop_candle(Rectangle{ 384, 3104, 32, 32});
-      add_prop_candle(Rectangle{ 416, 3104, 32, 32});
-      add_prop_candle(Rectangle{ 448, 3104, 32, 32});
-      add_prop_candle(Rectangle{ 320, 3136, 32, 32});
-      add_prop_candle(Rectangle{ 352, 3136, 32, 32});
-      add_prop_candle(Rectangle{ 384, 3136, 32, 32});
-      add_prop_candle(Rectangle{ 416, 3136, 32, 32});
-      add_prop_candle(Rectangle{ 320, 3168, 32, 32});
-      add_prop_candle(Rectangle{ 352, 3168, 32, 32});
-      add_prop_candle(Rectangle{ 384, 3168, 32, 32});
-      add_prop_candle(Rectangle{ 416, 3168, 32, 32});
-      add_prop_candle(Rectangle{ 320, 3200, 32, 32});
-      add_prop_candle(Rectangle{ 352, 3200, 32, 32});
-      add_prop_candle(Rectangle{ 384, 3200, 32, 32});
-      add_prop_candle(Rectangle{ 416, 3200, 32, 32});
-      add_prop_candle(Rectangle{ 448, 3200, 32, 32});
-      add_prop_candle(Rectangle{ 320, 3232, 32, 32});
-      add_prop_candle(Rectangle{ 352, 3232, 32, 32});
-      add_prop_candle(Rectangle{ 384, 3232, 32, 32});
-      add_prop_candle(Rectangle{ 416, 3232, 32, 32});
-      add_prop_candle(Rectangle{ 320, 3264, 32, 32});
-      add_prop_candle(Rectangle{ 352, 3264, 32, 32});
-      add_prop_candle(Rectangle{ 384, 3264, 32, 32});
-      add_prop_candle(Rectangle{ 416, 3264, 32, 32});
-      add_prop_candle(Rectangle{ 448, 3264, 32, 32});
-    }
-    // Candle 
-
-    // Buildings
-    {
-      add_prop_building(Rectangle{   0, 2800, 160, 208});
-      add_prop_building(Rectangle{ 160, 2800, 160, 208});
-      add_prop_building(Rectangle{ 320, 2800, 160, 208});
-      add_prop_building(Rectangle{ 480, 2784, 160, 224});
-      add_prop_building(Rectangle{ 640, 2800, 128, 208});
-      add_prop_building(Rectangle{ 768, 2800, 160, 208});
-      add_prop_building(Rectangle{ 928, 2784, 160, 224});
-      add_prop_building(Rectangle{1088, 2848, 128, 160});
-      add_prop_building(Rectangle{ 928, 3024, 160, 208});
-      add_prop_building(Rectangle{1088, 3024, 160, 208});
-    }
-    // Buildings
-
-    // Sprites
-    {
-      add_prop_sprite(SHEET_ID_ENVIRONMENTAL_PARTICLES);
-      add_prop_sprite(SHEET_ID_LIGHT_INSECTS);
-      add_prop_sprite(SHEET_ID_CANDLE_FX);
-      add_prop_sprite(SHEET_ID_GENERIC_LIGHT);
-    }
-    // Sprites
-  }
+  state->tilemap_props_trees = get_tilemap_prop_static(TILEMAP_PROP_TYPE_TREE);
+  state->tilemap_props_tombstones = get_tilemap_prop_static(TILEMAP_PROP_TYPE_TOMBSTONE);
+  state->tilemap_props_stones = get_tilemap_prop_static(TILEMAP_PROP_TYPE_STONE);
+  state->tilemap_props_spikes = get_tilemap_prop_static(TILEMAP_PROP_TYPE_SPIKE);
+  state->tilemap_props_skulls = get_tilemap_prop_static(TILEMAP_PROP_TYPE_SKULL);
+  state->tilemap_props_pillars = get_tilemap_prop_static(TILEMAP_PROP_TYPE_PILLAR);
+  state->tilemap_props_lamps = get_tilemap_prop_static(TILEMAP_PROP_TYPE_LAMP);
+  state->tilemap_props_fence = get_tilemap_prop_static(TILEMAP_PROP_TYPE_FENCE);
+  state->tilemap_props_details = get_tilemap_prop_static(TILEMAP_PROP_TYPE_DETAIL);
+  state->tilemap_props_candles = get_tilemap_prop_static(TILEMAP_PROP_TYPE_CANDLE);
+  state->tilemap_props_buildings = get_tilemap_prop_static(TILEMAP_PROP_TYPE_BUILDING);
+  state->tilemap_props_sprite = get_tilemap_prop_sprite();
 
   // Registering sliders
   {
@@ -768,17 +316,17 @@ void update_scene_editor(void) {
   }
   else state->mouse_focus = MOUSE_FOCUS_MAP;
 
+  editor_update_bindings();
   update_map();
   update_camera();
-  editor_update_bindings();
 
   state->mouse_pos_screen.x = GetMousePosition().x * get_app_settings()->scale_ratio.at(0);
   state->mouse_pos_screen.y = GetMousePosition().y * get_app_settings()->scale_ratio.at(1);
   state->mouse_pos_world = GetScreenToWorld2D(state->mouse_pos_screen, state->in_camera_metrics->handle);
 
   if (state->b_prop_selection_screen_update_prop_sprites) {
-    for (size_t iter = 0; iter < state->tilemap_props_sprite.size(); iter++) {
-      spritesheet * sprite = __builtin_addressof(state->tilemap_props_sprite.at(iter).sprite);
+    for (size_t iter = 0; iter < state->tilemap_props_sprite->size(); iter++) {
+      spritesheet * sprite = __builtin_addressof(state->tilemap_props_sprite->at(iter).sprite);
       ui_update_sprite(sprite);
     }
     state->b_prop_selection_screen_update_prop_sprites = false;
@@ -792,11 +340,15 @@ void render_scene_editor(void) {
   BeginMode2D(get_in_game_camera()->handle);
   
   if (state->selected_stage == WORLDMAP_MAINMENU_MAP) {
-    //render_map_view_on(ZEROVEC2, 1);
+
     render_map();
   }
   else {
+    i32 map_top = (*state->active_map_ptr)->position.y;
+    i32 map_bottom = (*state->active_map_ptr)->position.y + ((*state->active_map_ptr)->map_dim * (*state->active_map_ptr)->tile_size);
+    
     render_map();
+    _render_props_y_based(map_top, map_bottom); // INFO: Top to bottom order
   }
   const std::vector<Rectangle>& _map_collisions = get_active_map()->collisions;
   for (size_t itr_000 = 0; itr_000 < _map_collisions.size(); ++itr_000) {
@@ -962,7 +514,12 @@ void render_interface_editor(void) {
         gui_slider(SDR_ID_EDITOR_PROP_ROTATION_SLIDER, sdr_center, VECTOR2(0.f, 0.f));
       
         gui_label_grid("Z-Index", FONT_TYPE_ABRACADABRA, 1, label_center, WHITE, true, true, VECTOR2(0.f, 10.f));
-        get_slider_by_id(SDR_ID_EDITOR_PROP_ZINDEX_SLIDER)->options.at(0).no_localized_text = TextFormat("%d", (*p_prop)->zindex);
+        if ((*p_prop)->zindex == -1) {
+          get_slider_by_id(SDR_ID_EDITOR_PROP_ZINDEX_SLIDER)->options.at(0).no_localized_text = TextFormat("Y-Based");
+        }
+        else {
+          get_slider_by_id(SDR_ID_EDITOR_PROP_ZINDEX_SLIDER)->options.at(0).no_localized_text = TextFormat("%d", (*p_prop)->zindex);
+        }
         gui_slider(SDR_ID_EDITOR_PROP_ZINDEX_SLIDER, sdr_center, VECTOR2(0.f, 10.f));
       });
 
@@ -1003,7 +560,12 @@ void render_interface_editor(void) {
         gui_slider(SDR_ID_EDITOR_PROP_ROTATION_SLIDER, sdr_center, VECTOR2(0.f, 0.f));
 
         gui_label_grid("Z-Index", FONT_TYPE_ABRACADABRA, 1, label_center, WHITE, true, true, VECTOR2(0.f, 10.f));
-        get_slider_by_id(SDR_ID_EDITOR_PROP_ZINDEX_SLIDER)->options.at(0).no_localized_text = TextFormat("%d", (*p_prop)->zindex);
+        if ((*p_prop)->zindex == -1) {
+          get_slider_by_id(SDR_ID_EDITOR_PROP_ZINDEX_SLIDER)->options.at(0).no_localized_text = TextFormat("Y-Based");
+        }
+        else {
+          get_slider_by_id(SDR_ID_EDITOR_PROP_ZINDEX_SLIDER)->options.at(0).no_localized_text = TextFormat("%d", (*p_prop)->zindex);
+        }
         gui_slider(SDR_ID_EDITOR_PROP_ZINDEX_SLIDER, sdr_center, VECTOR2(0.f, 10.f));
       });
 
@@ -1053,80 +615,6 @@ void render_interface_editor(void) {
   render_user_interface();
 }
 // UPDATE / RENDER
-
-constexpr void add_prop(texture_id source_tex, tilemap_prop_types type, Rectangle source, f32 scale, Color tint) {
-  if (source_tex >= TEX_ID_MAX || source_tex <= TEX_ID_UNSPECIFIED) {
-    TraceLog(LOG_WARNING, "scene_editor::add_prop()::Provided texture id out of bound");
-    return;
-  }
-  const Texture2D* tex = get_texture_by_enum(source_tex);
-  if (!tex) {
-    TraceLog(LOG_WARNING, "scene_editor::add_prop()::Invalid texture");
-    return;
-  }
-  if (tex->width < source.x + source.width || tex->height < source.y + source.height) {
-    TraceLog(LOG_WARNING, "scene_editor::add_prop()::Provided prop dimentions out of bound");
-    return;
-  }
-  tilemap_prop_static prop = tilemap_prop_static();
-
-  prop.id = INVALID_IDU32;
-  prop.tex_id = source_tex;
-  prop.prop_type = type;
-  
-  prop.source = source;
-  prop.dest = Rectangle {0, 0, source.width * scale, source.height * scale};
-  prop.scale = scale;
-  prop.tint = tint;
-  prop.rotation = 0.f;
-  prop.zindex = 0;
-
-  prop.is_initialized = true;
-
-  switch (type) {
-    case TILEMAP_PROP_TYPE_TREE:      { state->tilemap_props_trees.push_back(prop); break; }
-    case TILEMAP_PROP_TYPE_TOMBSTONE: { state->tilemap_props_tombstones.push_back(prop); break; }
-    case TILEMAP_PROP_TYPE_STONE:     { state->tilemap_props_stones.push_back(prop); break; }
-    case TILEMAP_PROP_TYPE_SPIKE:     { state->tilemap_props_spikes.push_back(prop); break; }
-    case TILEMAP_PROP_TYPE_SKULL:     { state->tilemap_props_skulls.push_back(prop); break; }
-    case TILEMAP_PROP_TYPE_PILLAR:    { state->tilemap_props_pillars.push_back(prop); break; }
-    case TILEMAP_PROP_TYPE_LAMP:      { state->tilemap_props_lamps.push_back(prop); break; }
-    case TILEMAP_PROP_TYPE_FENCE:     { state->tilemap_props_fence.push_back(prop); break; }
-    case TILEMAP_PROP_TYPE_DETAIL:    { state->tilemap_props_details.push_back(prop); break; }
-    case TILEMAP_PROP_TYPE_CANDLE:    { state->tilemap_props_candles.push_back(prop); break; }
-    case TILEMAP_PROP_TYPE_BUILDING:  { state->tilemap_props_buildings.push_back(prop); break; }
-    default: { 
-      TraceLog(LOG_WARNING, "scene_editor::add_prop()::Unsupported tilemap type");
-      return;
-    }
-  }
-}
-constexpr void add_prop(tilemap_prop_types type, spritesheet_id sprite_id, f32 scale, Color tint) {
-  if (sprite_id >= SHEET_ID_SPRITESHEET_TYPE_MAX || sprite_id <= SHEET_ID_SPRITESHEET_UNSPECIFIED) {
-    TraceLog(LOG_WARNING, "scene_editor::add_prop()::Provided sprite id out of bound");
-    return;
-  }
-  tilemap_prop_sprite prop = tilemap_prop_sprite();
-
-  prop.id = INVALID_IDU32;
-  prop.prop_type = type;
-  prop.scale = scale;
-  prop.sprite.sheet_id = sprite_id;
-  prop.sprite.tint = tint;
-  
-  ui_set_sprite(&prop.sprite, true, false);
-  prop.sprite.rotation = 0.f;
-
-  prop.is_initialized = true;
-
-  switch (type) {
-    case TILEMAP_PROP_TYPE_SPRITE:      { state->tilemap_props_sprite.push_back(prop); break; }
-    default: { 
-      TraceLog(LOG_WARNING, "scene_editor::add_prop()::Unsupported tilemap sprite type");
-      return;
-    }
-  }
-}
 
 // BINDINGS
 constexpr void editor_update_bindings(void) {
@@ -1457,19 +945,6 @@ void end_scene_editor(void) {
   state->_map_collision = ZERORECT;
 }
 
-constexpr Rectangle se_get_camera_view_rect(Camera2D camera) {
-
-  f32 view_width = SE_BASE_RENDER_WIDTH / camera.zoom;
-  f32 view_height = SE_BASE_RENDER_HEIGHT / camera.zoom;
-
-  f32 x = camera.target.x;
-  f32 y = camera.target.y;
-  
-  x -= camera.offset.x/camera.zoom;
-  y -= camera.offset.y/camera.zoom;
-  
-  return Rectangle{ x, y, view_width, view_height };
-}
 constexpr void update_tilemap_prop_type(void) {
   if (!state) {
     TraceLog(LOG_WARNING, "scene_editor::update_tilemap_prop_type()::State is not valid");
@@ -1478,22 +953,22 @@ constexpr void update_tilemap_prop_type(void) {
   i32 prop_type_value = get_slider_current_value(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER)->data.i32[0];
   tilemap_prop_types selected_prop_type = static_cast<tilemap_prop_types>(prop_type_value);
   switch (selected_prop_type) {
-    case TILEMAP_PROP_TYPE_TREE:      { state->tilemap_props_static_selected = &state->tilemap_props_trees;      break; }
-    case TILEMAP_PROP_TYPE_TOMBSTONE: { state->tilemap_props_static_selected = &state->tilemap_props_tombstones; break; }
-    case TILEMAP_PROP_TYPE_STONE:     { state->tilemap_props_static_selected = &state->tilemap_props_stones;     break; }
-    case TILEMAP_PROP_TYPE_SPIKE:     { state->tilemap_props_static_selected = &state->tilemap_props_spikes;     break; }
-    case TILEMAP_PROP_TYPE_SKULL:     { state->tilemap_props_static_selected = &state->tilemap_props_skulls;     break; }
-    case TILEMAP_PROP_TYPE_PILLAR:    { state->tilemap_props_static_selected = &state->tilemap_props_pillars;    break; }
-    case TILEMAP_PROP_TYPE_LAMP:      { state->tilemap_props_static_selected = &state->tilemap_props_lamps;      break; }
-    case TILEMAP_PROP_TYPE_FENCE:     { state->tilemap_props_static_selected = &state->tilemap_props_fence;      break; }
-    case TILEMAP_PROP_TYPE_DETAIL:    { state->tilemap_props_static_selected = &state->tilemap_props_details;    break; }
-    case TILEMAP_PROP_TYPE_CANDLE:    { state->tilemap_props_static_selected = &state->tilemap_props_candles;    break; }
-    case TILEMAP_PROP_TYPE_BUILDING:  { state->tilemap_props_static_selected = &state->tilemap_props_buildings;  break; }
-    case TILEMAP_PROP_TYPE_SPRITE:    { state->tilemap_props_sprite_selected = &state->tilemap_props_sprite;     break; }
+    case TILEMAP_PROP_TYPE_TREE:      { state->tilemap_props_static_selected = state->tilemap_props_trees;      break; }
+    case TILEMAP_PROP_TYPE_TOMBSTONE: { state->tilemap_props_static_selected = state->tilemap_props_tombstones; break; }
+    case TILEMAP_PROP_TYPE_STONE:     { state->tilemap_props_static_selected = state->tilemap_props_stones;     break; }
+    case TILEMAP_PROP_TYPE_SPIKE:     { state->tilemap_props_static_selected = state->tilemap_props_spikes;     break; }
+    case TILEMAP_PROP_TYPE_SKULL:     { state->tilemap_props_static_selected = state->tilemap_props_skulls;     break; }
+    case TILEMAP_PROP_TYPE_PILLAR:    { state->tilemap_props_static_selected = state->tilemap_props_pillars;    break; }
+    case TILEMAP_PROP_TYPE_LAMP:      { state->tilemap_props_static_selected = state->tilemap_props_lamps;      break; }
+    case TILEMAP_PROP_TYPE_FENCE:     { state->tilemap_props_static_selected = state->tilemap_props_fence;      break; }
+    case TILEMAP_PROP_TYPE_DETAIL:    { state->tilemap_props_static_selected = state->tilemap_props_details;    break; }
+    case TILEMAP_PROP_TYPE_CANDLE:    { state->tilemap_props_static_selected = state->tilemap_props_candles;    break; }
+    case TILEMAP_PROP_TYPE_BUILDING:  { state->tilemap_props_static_selected = state->tilemap_props_buildings;  break; }
+    case TILEMAP_PROP_TYPE_SPRITE:    { state->tilemap_props_sprite_selected = state->tilemap_props_sprite;     break; }
     default: { 
       TraceLog(LOG_WARNING, "scene_editor::initialize_scene_editor()::Unsupported tilemap prop type");
       ui_set_slider_current_index(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER, 1);
-      state->tilemap_props_static_selected = &state->tilemap_props_trees;
+      state->tilemap_props_static_selected = state->tilemap_props_trees;
       break; 
     }
   }
@@ -1598,16 +1073,16 @@ constexpr bool scene_editor_zindex_slider_on_left_button_trigger(void) {
   }
   if (state->selected_prop_static_map_prop_address != nullptr) {
     state->selected_prop_static_map_prop_address->zindex -= 1;
-    if(state->selected_prop_static_map_prop_address->zindex < 0) {
-      state->selected_prop_static_map_prop_address->zindex = 0;
+    if(state->selected_prop_static_map_prop_address->zindex < -1) {
+      state->selected_prop_static_map_prop_address->zindex = -1;
     }
     refresh_render_queue(state->selected_stage);
     return true;
   }
   if (state->selected_prop_sprite_map_prop_address != nullptr) {
     state->selected_prop_sprite_map_prop_address->zindex -= 1;
-    if(state->selected_prop_sprite_map_prop_address->zindex < 0) {
-      state->selected_prop_sprite_map_prop_address->zindex = 0;
+    if(state->selected_prop_sprite_map_prop_address->zindex < -1) {
+      state->selected_prop_sprite_map_prop_address->zindex = -1;
     }
     refresh_render_queue(state->selected_stage);
     return true;
@@ -1621,25 +1096,19 @@ constexpr bool scene_editor_zindex_slider_on_right_button_trigger(void) {
     return false;
   }
   if (state->selected_prop_static_map_prop_address != nullptr) {
-    i16 old_zindex_backup = state->selected_prop_static_map_prop_address->zindex;
-
     state->selected_prop_static_map_prop_address->zindex += 1;
     if(state->selected_prop_static_map_prop_address->zindex >= MAX_Z_INDEX_SLOT) {
       state->selected_prop_static_map_prop_address->zindex = MAX_Z_INDEX_SLOT-1;
     }
-    tilemap_prop_static& map_prop_ref = *state->selected_prop_static_map_prop_address;
-    change_prop_zindex(map_prop_ref.prop_type, map_prop_ref.id, old_zindex_backup, map_prop_ref.zindex);
+    refresh_render_queue(state->selected_stage);
     return true;
   }
   if (state->selected_prop_sprite_map_prop_address != nullptr) {
-    i16 old_zindex_backup = state->selected_prop_sprite_map_prop_address->zindex;
-
     state->selected_prop_sprite_map_prop_address->zindex += 1;
     if(state->selected_prop_sprite_map_prop_address->zindex >= MAX_Z_INDEX_SLOT) {
       state->selected_prop_sprite_map_prop_address->zindex = MAX_Z_INDEX_SLOT-1;
     }
-    tilemap_prop_sprite& map_prop_ref = *state->selected_prop_sprite_map_prop_address;
-    change_prop_zindex(map_prop_ref.prop_type, map_prop_ref.id, old_zindex_backup, map_prop_ref.zindex);
+    refresh_render_queue(state->selected_stage);
     return true;
   }
 

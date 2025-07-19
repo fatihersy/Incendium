@@ -32,9 +32,23 @@ typedef struct main_menu_scene_state {
   scene_id next_scene;
   bool in_scene_changing_process;
   bool scene_changing_process_complete;
+
+  main_menu_scene_state(void) {
+    this->upgrade_list_panel = panel();
+    this->upgrade_details_panel = panel();
+    this->hovered_stat = nullptr;
+    this->in_camera_metrics = nullptr;
+    this->in_app_settings = nullptr;
+    this->mouse_pos = ZEROVEC2;
+    this->deny_notify_timer = 0u;
+    this->type = MAIN_MENU_SCENE_DEFAULT;
+    this->next_scene = SCENE_TYPE_UNSPECIFIED;
+    this->in_scene_changing_process = false;
+    this->scene_changing_process_complete = false;
+  }
 } main_menu_scene_state;
 
-static main_menu_scene_state * state;
+static main_menu_scene_state * state = nullptr;
 
 #define DENY_NOTIFY_TIME .8f * TARGET_FPS
 
@@ -55,7 +69,6 @@ bool begin_scene_main_menu(void);
 void draw_main_menu_upgrade_panel(void);
 void draw_main_menu_upgrade_list_panel(void);
 void draw_main_menu_upgrade_details_panel(void);
-Rectangle smm_get_camera_view_rect(Camera2D camera);
 
 bool initialize_scene_main_menu(const app_settings * _in_app_settings) {
   if (state) {
@@ -66,6 +79,8 @@ bool initialize_scene_main_menu(const app_settings * _in_app_settings) {
     TraceLog(LOG_ERROR, "scene_main_menu::initialize_scene_main_menu()::State allocation failed");
     return false;
   }
+  *state = main_menu_scene_state();
+   
   if (!_in_app_settings || _in_app_settings == nullptr) {
     TraceLog(LOG_ERROR, "scene_main_menu::initialize_scene_main_menu()::App setting pointer is invalid");
     return false;
@@ -84,23 +99,21 @@ bool initialize_scene_main_menu(const app_settings * _in_app_settings) {
     TraceLog(LOG_ERROR, "scene_main_menu::initialize_scene_main_menu()::Camera pointer is invalid");
     return false;
   }
-  world_system_begin(state->in_camera_metrics);
+  if(!world_system_begin(state->in_camera_metrics)) {
+    TraceLog(LOG_ERROR, "scene_main_menu::initialize_scene_main_menu()::World system begin failed");
+    return false;
+  }
   
   return begin_scene_main_menu();
 }
 
 void update_scene_main_menu(void) {
-  update_camera();
-  
-  update_user_interface();
-  update_map();
-
   event_fire(EVENT_CODE_CAMERA_SET_ZOOM, event_context(1.f));
   event_fire(EVENT_CODE_CAMERA_SET_CAMERA_POSITION, event_context(0.f, 0.f));
-  event_fire(EVENT_CODE_CAMERA_SET_OFFSET, event_context(
-    state->in_app_settings->render_width * .5f,
-    state->in_app_settings->render_height * .5f
-  ));
+  event_fire(EVENT_CODE_CAMERA_SET_OFFSET, event_context(state->in_app_settings->render_width * .5f,state->in_app_settings->render_height * .5f));
+  update_camera();
+  update_user_interface();
+  update_map();
 
   if (state->in_scene_changing_process && is_ui_fade_anim_about_to_complete()) {
     state->scene_changing_process_complete = true;
@@ -447,18 +460,4 @@ void draw_main_menu_upgrade_details_panel(void) {
       state->deny_notify_timer = DENY_NOTIFY_TIME;
     }
   }
-}
-
-Rectangle smm_get_camera_view_rect(Camera2D camera) {
-
-  f32 view_width = SMM_BASE_RENDER_WIDTH / camera.zoom;
-  f32 view_height = SMM_BASE_RENDER_WIDTH / camera.zoom;
-
-  f32 x = camera.target.x;
-  f32 y = camera.target.y;
-  
-  x -= camera.offset.x/camera.zoom;
-  y -= camera.offset.y/camera.zoom;
-  
-  return Rectangle{ x, y, view_width, view_height };
 }

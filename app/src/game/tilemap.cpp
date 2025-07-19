@@ -167,17 +167,34 @@ void render_tilemap(const tilemap* _tilemap, Rectangle camera_view) {
         if (!map_prop_ptr->is_initialized) continue;
         
         Rectangle prop_rect = map_prop_ptr->dest; 
+        prop_rect.width = map_prop_ptr->dest.width * map_prop_ptr->scale;
+        prop_rect.height = map_prop_ptr->dest.height * map_prop_ptr->scale;
+
         if (!CheckCollisionRecs(camera_view, prop_rect)) { continue; }
       
         const Texture2D* tex = get_texture_by_enum(map_prop_ptr->tex_id); 
         if (!tex) continue;
-
-        prop_rect.width = map_prop_ptr->dest.width * map_prop_ptr->scale;
-        prop_rect.height = map_prop_ptr->dest.height * map_prop_ptr->scale;
       
         const Vector2 origin = VECTOR2(prop_rect.width * .5f, prop_rect.height * .5f);
       
         DrawTexturePro(*tex, map_prop_ptr->source, prop_rect, origin, map_prop_ptr->rotation, map_prop_ptr->tint);
+        
+        #if DEBUG_COLLISIONS
+          Rectangle coll_dest = Rectangle {
+            prop_rect.x - origin.x,
+            prop_rect.y - origin.y,
+            prop_rect.width,
+            prop_rect.height
+          };
+          DrawRectangleLines(
+            static_cast<i32>(coll_dest.x), 
+            static_cast<i32>(coll_dest.y), 
+            static_cast<i32>(coll_dest.width), 
+            static_cast<i32>(coll_dest.height), 
+            WHITE
+          );
+        #endif
+
         continue;
       }
     }
@@ -219,23 +236,39 @@ void render_props_y_based(const tilemap* _tilemap, Rectangle camera_view, i32 st
       if (!map_prop_ptr->is_initialized) continue;
       
       Rectangle prop_rect = map_prop_ptr->dest; 
+      prop_rect.width = map_prop_ptr->dest.width * map_prop_ptr->scale;
+      prop_rect.height = map_prop_ptr->dest.height * map_prop_ptr->scale;
 
       if (!CheckCollisionRecs(camera_view, prop_rect)) { continue; }
     
       const Texture2D* tex = get_texture_by_enum(map_prop_ptr->tex_id); 
       if (!tex) continue;
-      prop_rect.width = map_prop_ptr->dest.width * map_prop_ptr->scale;
-      prop_rect.height = map_prop_ptr->dest.height * map_prop_ptr->scale;
     
       const Vector2 origin = VECTOR2(prop_rect.width * .5f, prop_rect.height * .5f);
     
-      if (map_prop_ptr->dest.y < start_y) {
+      if (map_prop_ptr->dest.y + (prop_rect.height * .5f) < start_y) {
         continue;
       }
-      else if (map_prop_ptr->dest.y > end_y) {
+      else if (map_prop_ptr->dest.y + (prop_rect.height * .5f) > end_y) {
         break;
       }
       DrawTexturePro(*tex, map_prop_ptr->source, prop_rect, origin, map_prop_ptr->rotation, map_prop_ptr->tint);
+      
+      #if DEBUG_COLLISIONS
+        Rectangle coll_dest = Rectangle {
+          prop_rect.x - origin.x,
+          prop_rect.y - origin.y,
+          prop_rect.width,
+          prop_rect.height
+        };
+        DrawRectangleLines(
+          static_cast<i32>(coll_dest.x), 
+          static_cast<i32>(coll_dest.y), 
+          static_cast<i32>(coll_dest.width), 
+          static_cast<i32>(coll_dest.height), 
+          WHITE
+        );
+      #endif
       continue;
     }
   }

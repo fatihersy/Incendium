@@ -10,7 +10,7 @@ typedef struct camera_system_state {
 
   Vector2 offset;
   Vector2 position;
-  Vector2 render_resolution;
+  Vector2 drawing_extent;
 
   float camera_min_speed;
   float camera_min_effect_lenght;
@@ -20,7 +20,7 @@ typedef struct camera_system_state {
     this->cam_met = camera_metrics();
     this->offset = ZEROVEC2;
     this->position = ZEROVEC2;
-    this->render_resolution = ZEROVEC2;
+    this->drawing_extent = ZEROVEC2;
     this->camera_min_speed = 0.f;
     this->camera_min_effect_lenght = 0.f;
     this->camera_fraction_speed = 0.f;
@@ -49,6 +49,7 @@ bool create_camera(i32 target_x, i32 target_y, i32 render_width, i32 render_heig
   event_register(EVENT_CODE_CAMERA_ADD_ZOOM, camera_on_event);
   event_register(EVENT_CODE_CAMERA_SET_TARGET, camera_on_event);
   event_register(EVENT_CODE_CAMERA_SET_CAMERA_POSITION, camera_on_event);
+  event_register(EVENT_CODE_CAMERA_SET_DRAWING_EXTENT, camera_on_event);
 
   return recreate_camera(target_x, target_y, render_width, render_height);
 }
@@ -63,8 +64,8 @@ bool recreate_camera(i32 width, i32 height, i32 render_width, i32 render_height)
   state->camera_min_speed = 30;
   state->camera_min_effect_lenght = 10;
   state->camera_fraction_speed = 5.f;
-  state->render_resolution.x = render_width;
-  state->render_resolution.y = render_height;
+  state->drawing_extent.x = render_width;
+  state->drawing_extent.y = render_height;
   state->offset.x = render_width * .5f;
   state->offset.y = render_height * .5f;
 
@@ -88,8 +89,8 @@ bool update_camera(void) {
     state->cam_met.handle.target = vec2_add(state->cam_met.handle.target, vec2_scale(diff, speed * GetFrameTime() / length));
   }
 
-  f32 view_width = state->render_resolution.x / state->cam_met.handle.zoom;
-  f32 view_height = state->render_resolution.y / state->cam_met.handle.zoom;
+  f32 view_width = state->drawing_extent.x / state->cam_met.handle.zoom;
+  f32 view_height = state->drawing_extent.y / state->cam_met.handle.zoom;
 
   f32 x = state->cam_met.handle.target.x;
   f32 y = state->cam_met.handle.target.y;
@@ -135,10 +136,15 @@ bool camera_on_event(i32 code, event_context context) {
       return true;
     }
     case EVENT_CODE_CAMERA_SET_CAMERA_POSITION: {
-      state->cam_met.handle.target = Vector2 {
-        context.data.f32[0],
-        context.data.f32[1]
-      };
+      state->cam_met.handle.target.x = context.data.f32[0];
+      state->cam_met.handle.target.y = context.data.f32[1];
+      state->position.x = context.data.f32[0];
+      state->position.y = context.data.f32[1];
+      return true;
+    }
+    case EVENT_CODE_CAMERA_SET_DRAWING_EXTENT: {
+      state->drawing_extent.x = context.data.i32[0];
+      state->drawing_extent.y = context.data.i32[1];
       return true;
     }
     default: {

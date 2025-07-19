@@ -58,10 +58,19 @@ constexpr void render_sprite(const spritesheet * sheet,const Color _tint,const R
   DrawTexturePro(*sheet->tex_handle, source, dest, sheet->origin, sheet->rotation, _tint);
 
   #if DEBUG_COLLISIONS
+    Rectangle coll_dest = Rectangle {
+      dest.x - sheet->origin.x,
+      dest.y - sheet->origin.y,
+      dest.width,
+      dest.height
+    };
     DrawRectangleLines(
-      sheet->coord.x, sheet->coord.y, 
-      sheet->coord.width,sheet->coord.height, 
-      WHITE);
+      static_cast<i32>(coll_dest.x), 
+      static_cast<i32>(coll_dest.y), 
+      static_cast<i32>(coll_dest.width), 
+      static_cast<i32>(coll_dest.height), 
+      WHITE
+    );
   #endif
 }
 constexpr void render_sprite_pro(const spritesheet * sheet, const Rectangle dest, const Vector2 origin, const f32 rotation, const Color _tint) {
@@ -78,8 +87,20 @@ constexpr void render_sprite_pro(const spritesheet * sheet, const Rectangle dest
 
   DrawTexturePro(*sheet->tex_handle, source, dest, origin, rotation, _tint);
 
-  #if DEBUG_COLLISIONS 
-    DrawRectangleLines(sheet->coord.x, sheet->coord.y, sheet->coord.width,sheet->coord.height, WHITE);
+  #if DEBUG_COLLISIONS
+    Rectangle coll_dest = Rectangle {
+      dest.x - origin.x,
+      dest.y - origin.y,
+      dest.width,
+      dest.height
+    };
+    DrawRectangleLines(
+      static_cast<i32>(coll_dest.x), 
+      static_cast<i32>(coll_dest.y), 
+      static_cast<i32>(coll_dest.width), 
+      static_cast<i32>(coll_dest.height), 
+      WHITE
+    );
   #endif
 }
 void set_sprite(spritesheet *const sheet, bool _play_looped, bool _play_once) {
@@ -150,9 +171,12 @@ void draw_sprite_on_site_by_id(spritesheet_id _id, Color _tint, Vector2 pos, Vec
   
   #if DEBUG_COLLISIONS
     DrawRectangleLines(
-      pos.x, pos.y, 
-      sheet.current_frame_rect.width * scale.x,sheet.current_frame_rect.height * scale.y, 
-      WHITE);
+      static_cast<i32>(dest.x), 
+      static_cast<i32>(dest.y), 
+      static_cast<i32>(dest.width), 
+      static_cast<i32>(dest.height), 
+      WHITE
+    );
   #endif
 }
 
@@ -180,9 +204,12 @@ void draw_sprite_on_site(spritesheet *const sheet, Color _tint, Vector2 pos, Vec
   
   #if DEBUG_COLLISIONS
     DrawRectangleLines(
-      pos.x, pos.y, 
-      sheet->current_frame_rect.width * scale.x,sheet->current_frame_rect.height * scale.y, 
-      WHITE);
+      static_cast<i32>(dest.x), 
+      static_cast<i32>(dest.y), 
+      static_cast<i32>(dest.width), 
+      static_cast<i32>(dest.height), 
+      WHITE
+    );
   #endif
 }
 void stop_sprite(spritesheet *const sheet, bool reset) {
@@ -229,4 +256,3 @@ const spritesheet* ss_get_spritesheet_by_enum(spritesheet_id _id) {
 const char *ss_rs_path(const char *_path) {
     return rs_path(_path);
 }
-
