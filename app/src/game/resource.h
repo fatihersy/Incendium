@@ -14,8 +14,9 @@ const Image* get_image_by_enum(image_type type);
 const spritesheet* get_spritesheet_by_enum(spritesheet_id type);
 const tilesheet* get_tilesheet_by_enum(tilesheet_type type);
 
-std::vector<tilemap_prop_static> * get_tilemap_prop_static(tilemap_prop_types type);
-std::vector<tilemap_prop_sprite> * get_tilemap_prop_sprite(void);
+std::vector<tilemap_prop_static> * resource_get_tilemap_props_static(tilemap_prop_types type);
+std::vector<tilemap_prop_sprite> * resource_get_tilemap_props_sprite(void);
+tilemap_prop_address resource_get_map_prop_by_prop_id(i32 id, tilemap_prop_types type);
 
 constexpr void add_prop(texture_id source_tex, tilemap_prop_types type, Rectangle source, f32 scale = 1.f, Color tint = WHITE);
 constexpr void add_prop(tilemap_prop_types type, spritesheet_id sprite_id, f32 scale = 1.f, Color tint = WHITE);

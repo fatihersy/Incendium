@@ -55,7 +55,7 @@
 #define TOTAL_ALLOCATED_MEMORY 512 * 1024 * 1024
 #define TARGET_FPS 60
 
-#define DEBUG_COLLISIONS 1
+#define DEBUG_COLLISIONS 0
 #define USE_PAK_FORMAT 0
 
 #define PAK_FILE_LOCATION "./resource.pak"

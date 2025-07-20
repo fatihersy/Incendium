@@ -23,9 +23,11 @@ typedef struct resource_system_state {
   std::vector<tilemap_prop_static> tilemap_props_candles;
   std::vector<tilemap_prop_static> tilemap_props_buildings;
   std::vector<tilemap_prop_sprite> tilemap_props_sprite;
+
+  i32 next_prop_id;
 } resource_system_state;
 
-static resource_system_state *state;
+static resource_system_state * state = nullptr;
 
 unsigned int load_texture(const char* filename, bool resize, Vector2 new_size, texture_id _id);
 void load_texture_from_atlas(atlas_texture_id _id, Rectangle texture_area);
@@ -402,26 +404,26 @@ bool resource_system_initialize(void) {
 
     // Lamps
     {
-      add_prop_lamp(Rectangle{  576, 3072, 64, 96});
-      add_prop_lamp(Rectangle{  640, 3072, 64, 96});
-      add_prop_lamp(Rectangle{  704, 3072, 64, 96});
-      add_prop_lamp(Rectangle{  768, 3072, 64, 96});
-      add_prop_lamp(Rectangle{  832, 3072, 64, 96});
-      add_prop_lamp(Rectangle{  576, 3168, 64, 96});
-      add_prop_lamp(Rectangle{  640, 3168, 64, 96});
-      add_prop_lamp(Rectangle{  704, 3168, 64, 96});
-      add_prop_lamp(Rectangle{  768, 3168, 64, 96});
-      add_prop_lamp(Rectangle{  832, 3168, 64, 96});
-      add_prop_lamp(Rectangle{  576, 3264, 64, 96});
-      add_prop_lamp(Rectangle{  640, 3264, 64, 96});
-      add_prop_lamp(Rectangle{  704, 3264, 64, 96});
-      add_prop_lamp(Rectangle{  768, 3264, 64, 96});
-      add_prop_lamp(Rectangle{  832, 3264, 64, 96});
-      add_prop_lamp(Rectangle{  576, 3360, 64, 96});
-      add_prop_lamp(Rectangle{  640, 3360, 64, 96});
-      add_prop_lamp(Rectangle{  704, 3360, 64, 96});
-      add_prop_lamp(Rectangle{  768, 3360, 64, 96});
-      add_prop_lamp(Rectangle{  832, 3360, 64, 96});
+      add_prop_lamp(Rectangle{  576, 3072, 64, 80});
+      add_prop_lamp(Rectangle{  640, 3072, 64, 80});
+      add_prop_lamp(Rectangle{  704, 3072, 64, 80});
+      add_prop_lamp(Rectangle{  768, 3072, 64, 80});
+      add_prop_lamp(Rectangle{  832, 3072, 64, 80});
+      add_prop_lamp(Rectangle{  576, 3168, 64, 80});
+      add_prop_lamp(Rectangle{  640, 3168, 64, 80});
+      add_prop_lamp(Rectangle{  704, 3168, 64, 80});
+      add_prop_lamp(Rectangle{  768, 3168, 64, 80});
+      add_prop_lamp(Rectangle{  832, 3168, 64, 80});
+      add_prop_lamp(Rectangle{  576, 3264, 64, 80});
+      add_prop_lamp(Rectangle{  640, 3264, 64, 80});
+      add_prop_lamp(Rectangle{  704, 3264, 64, 80});
+      add_prop_lamp(Rectangle{  768, 3264, 64, 80});
+      add_prop_lamp(Rectangle{  832, 3264, 64, 80});
+      add_prop_lamp(Rectangle{  576, 3360, 64, 80});
+      add_prop_lamp(Rectangle{  640, 3360, 64, 80});
+      add_prop_lamp(Rectangle{  704, 3360, 64, 80});
+      add_prop_lamp(Rectangle{  768, 3360, 64, 80});
+      add_prop_lamp(Rectangle{  832, 3360, 64, 80});
     }
     // Lamps
 
@@ -746,7 +748,7 @@ void load_texture_from_atlas(atlas_texture_id _id, Rectangle texture_area) {
   state->atlas_textures.at(_id) = tex;
   return;
 }
-std::vector<tilemap_prop_static> * get_tilemap_prop_static(tilemap_prop_types type) {
+std::vector<tilemap_prop_static> * resource_get_tilemap_props_static(tilemap_prop_types type) {
   if (!state || state == nullptr) { 
     TraceLog(LOG_ERROR, "resource::get_tilemap_prop_static()::State is not valid");
     return nullptr;
@@ -773,7 +775,7 @@ std::vector<tilemap_prop_static> * get_tilemap_prop_static(tilemap_prop_types ty
   TraceLog(LOG_ERROR, "resource::get_tilemap_prop_static()::Function ended unexpectedly");
   return nullptr;
 }
-std::vector<tilemap_prop_sprite> * get_tilemap_prop_sprite(void) {
+std::vector<tilemap_prop_sprite> * resource_get_tilemap_props_sprite(void) {
   if (!state || state == nullptr) { 
     TraceLog(LOG_ERROR, "resource::get_tilemap_prop_static()::State is not valid");
     return nullptr;
@@ -797,7 +799,7 @@ constexpr void add_prop(texture_id source_tex, tilemap_prop_types type, Rectangl
   }
   tilemap_prop_static prop = tilemap_prop_static();
 
-  prop.id = INVALID_IDU32;
+  prop.prop_id = state->next_prop_id++;
   prop.tex_id = source_tex;
   prop.prop_type = type;
   
@@ -805,23 +807,21 @@ constexpr void add_prop(texture_id source_tex, tilemap_prop_types type, Rectangl
   prop.dest = Rectangle {0, 0, source.width * scale, source.height * scale};
   prop.scale = scale;
   prop.tint = tint;
-  prop.rotation = 0.f;
-  prop.zindex = 0;
 
   prop.is_initialized = true;
 
   switch (type) {
-    case TILEMAP_PROP_TYPE_TREE:      { state->tilemap_props_trees.push_back(prop); return; }
+    case TILEMAP_PROP_TYPE_TREE:      { state->tilemap_props_trees     .push_back(prop); return; }
     case TILEMAP_PROP_TYPE_TOMBSTONE: { state->tilemap_props_tombstones.push_back(prop); return; }
-    case TILEMAP_PROP_TYPE_STONE:     { state->tilemap_props_stones.push_back(prop); return; }
-    case TILEMAP_PROP_TYPE_SPIKE:     { state->tilemap_props_spikes.push_back(prop); return; }
-    case TILEMAP_PROP_TYPE_SKULL:     { state->tilemap_props_skulls.push_back(prop); return; }
-    case TILEMAP_PROP_TYPE_PILLAR:    { state->tilemap_props_pillars.push_back(prop); return; }
-    case TILEMAP_PROP_TYPE_LAMP:      { state->tilemap_props_lamps.push_back(prop); return; }
-    case TILEMAP_PROP_TYPE_FENCE:     { state->tilemap_props_fence.push_back(prop); return; }
-    case TILEMAP_PROP_TYPE_DETAIL:    { state->tilemap_props_details.push_back(prop); return; }
-    case TILEMAP_PROP_TYPE_CANDLE:    { state->tilemap_props_candles.push_back(prop); return; }
-    case TILEMAP_PROP_TYPE_BUILDING:  { state->tilemap_props_buildings.push_back(prop); return; }
+    case TILEMAP_PROP_TYPE_STONE:     { state->tilemap_props_stones    .push_back(prop); return; }
+    case TILEMAP_PROP_TYPE_SPIKE:     { state->tilemap_props_spikes    .push_back(prop); return; }
+    case TILEMAP_PROP_TYPE_SKULL:     { state->tilemap_props_skulls    .push_back(prop); return; }
+    case TILEMAP_PROP_TYPE_PILLAR:    { state->tilemap_props_pillars   .push_back(prop); return; }
+    case TILEMAP_PROP_TYPE_LAMP:      { state->tilemap_props_lamps     .push_back(prop); return; }
+    case TILEMAP_PROP_TYPE_FENCE:     { state->tilemap_props_fence     .push_back(prop); return; }
+    case TILEMAP_PROP_TYPE_DETAIL:    { state->tilemap_props_details   .push_back(prop); return; }
+    case TILEMAP_PROP_TYPE_CANDLE:    { state->tilemap_props_candles   .push_back(prop); return; }
+    case TILEMAP_PROP_TYPE_BUILDING:  { state->tilemap_props_buildings .push_back(prop); return; }
     default: { 
       TraceLog(LOG_WARNING, "resource::add_prop()::Unsupported tilemap type");
       return;
@@ -838,14 +838,13 @@ constexpr void add_prop(tilemap_prop_types type, spritesheet_id sprite_id, f32 s
   }
   tilemap_prop_sprite prop = tilemap_prop_sprite();
 
-  prop.id = INVALID_IDU32;
+  prop.prop_id = state->next_prop_id++;
   prop.prop_type = type;
   prop.scale = scale;
   prop.sprite.sheet_id = sprite_id;
   prop.sprite.tint = tint;
   
   set_sprite(&prop.sprite, true, false);
-  prop.sprite.rotation = 0.f;
 
   prop.is_initialized = true;
 
@@ -859,5 +858,128 @@ constexpr void add_prop(tilemap_prop_types type, spritesheet_id sprite_id, f32 s
 
   TraceLog(LOG_WARNING, "resource::add_prop()::Function ended unexpectedly");
   return;
+}
+tilemap_prop_address resource_get_map_prop_by_prop_id(i32 id, tilemap_prop_types type) {
+  if (!state || state == nullptr) {
+    TraceLog(LOG_ERROR, "resource::get_map_prop_by_prop_id()::State is not valid");
+    return tilemap_prop_address();
+  }
+
+  switch (type) {
+    case TILEMAP_PROP_TYPE_TREE: {
+      for (size_t itr_000 = 0; itr_000 < state->tilemap_props_trees.size(); ++itr_000) {
+        tilemap_prop_static& _prop = state->tilemap_props_trees.at(itr_000);
+        if (_prop.prop_id == id) {
+          return tilemap_prop_address(__builtin_addressof(state->tilemap_props_trees.at(itr_000)));
+        }
+      }
+      return tilemap_prop_address();
+    }
+    case TILEMAP_PROP_TYPE_TOMBSTONE: {
+      for (size_t itr_000 = 0; itr_000 < state->tilemap_props_tombstones.size(); ++itr_000) {
+        tilemap_prop_static& _prop = state->tilemap_props_tombstones.at(itr_000);
+        if (_prop.prop_id == id) {
+          return tilemap_prop_address(__builtin_addressof(state->tilemap_props_tombstones.at(itr_000)));
+        }
+      }
+      return tilemap_prop_address();
+    }
+    case TILEMAP_PROP_TYPE_STONE: {
+      for (size_t itr_000 = 0; itr_000 < state->tilemap_props_stones.size(); ++itr_000) {
+        tilemap_prop_static& _prop = state->tilemap_props_stones.at(itr_000);
+        if (_prop.prop_id == id) {
+          return tilemap_prop_address(__builtin_addressof(state->tilemap_props_stones.at(itr_000)));
+        }
+      }
+      return tilemap_prop_address();
+    }
+    case TILEMAP_PROP_TYPE_SPIKE: {
+      for (size_t itr_000 = 0; itr_000 < state->tilemap_props_spikes.size(); ++itr_000) {
+        tilemap_prop_static& _prop = state->tilemap_props_spikes.at(itr_000);
+        if (_prop.prop_id == id) {
+          return tilemap_prop_address(__builtin_addressof(state->tilemap_props_spikes.at(itr_000)));
+        }
+      }
+      return tilemap_prop_address();
+    }
+    case TILEMAP_PROP_TYPE_SKULL: {
+      for (size_t itr_000 = 0; itr_000 < state->tilemap_props_skulls.size(); ++itr_000) {
+        tilemap_prop_static& _prop = state->tilemap_props_skulls.at(itr_000);
+        if (_prop.prop_id == id) {
+          return tilemap_prop_address(__builtin_addressof(state->tilemap_props_skulls.at(itr_000)));
+        }
+      }
+    }
+    case TILEMAP_PROP_TYPE_PILLAR: {
+      for (size_t itr_000 = 0; itr_000 < state->tilemap_props_pillars.size(); ++itr_000) {
+        tilemap_prop_static& _prop = state->tilemap_props_pillars.at(itr_000);
+        if (_prop.prop_id == id) {
+          return tilemap_prop_address(__builtin_addressof(state->tilemap_props_pillars.at(itr_000)));
+        }
+      }
+      return tilemap_prop_address();
+    }
+    case TILEMAP_PROP_TYPE_LAMP: {
+      for (size_t itr_000 = 0; itr_000 < state->tilemap_props_lamps.size(); ++itr_000) {
+        tilemap_prop_static& _prop = state->tilemap_props_lamps.at(itr_000);
+        if (_prop.prop_id == id) {
+          return tilemap_prop_address(__builtin_addressof(state->tilemap_props_lamps.at(itr_000)));
+        }
+      }
+      return tilemap_prop_address();
+    }
+    case TILEMAP_PROP_TYPE_FENCE: {
+      for (size_t itr_000 = 0; itr_000 < state->tilemap_props_fence.size(); ++itr_000) {
+        tilemap_prop_static& _prop = state->tilemap_props_fence.at(itr_000);
+        if (_prop.prop_id == id) {
+          return tilemap_prop_address(__builtin_addressof(state->tilemap_props_fence.at(itr_000)));
+        }
+      }
+      return tilemap_prop_address();
+    }
+    case TILEMAP_PROP_TYPE_DETAIL: {
+      for (size_t itr_000 = 0; itr_000 < state->tilemap_props_details.size(); ++itr_000) {
+        tilemap_prop_static& _prop = state->tilemap_props_details.at(itr_000);
+        if (_prop.prop_id == id) {
+          return tilemap_prop_address(__builtin_addressof(state->tilemap_props_details.at(itr_000)));
+        }
+      }
+      return tilemap_prop_address();
+    }
+    case TILEMAP_PROP_TYPE_CANDLE: {
+      for (size_t itr_000 = 0; itr_000 < state->tilemap_props_candles.size(); ++itr_000) {
+        tilemap_prop_static& _prop = state->tilemap_props_candles.at(itr_000);
+        if (_prop.prop_id == id) {
+          return tilemap_prop_address(__builtin_addressof(state->tilemap_props_candles.at(itr_000)));
+        }
+      }
+      return tilemap_prop_address();
+    }
+    case TILEMAP_PROP_TYPE_BUILDING: {
+      for (size_t itr_000 = 0; itr_000 < state->tilemap_props_buildings.size(); ++itr_000) {
+        tilemap_prop_static& _prop = state->tilemap_props_buildings.at(itr_000);
+        if (_prop.prop_id == id) {
+          return tilemap_prop_address(__builtin_addressof(state->tilemap_props_buildings.at(itr_000)));
+        }
+      }
+      return tilemap_prop_address();
+    }
+    case TILEMAP_PROP_TYPE_SPRITE: {
+      for (size_t itr_000 = 0; itr_000 < state->tilemap_props_sprite.size(); ++itr_000) {
+        tilemap_prop_sprite& _prop = state->tilemap_props_sprite.at(itr_000);
+        if (_prop.prop_id == id) {
+          return tilemap_prop_address(__builtin_addressof(state->tilemap_props_sprite.at(itr_000)));
+        }
+      }
+      return tilemap_prop_address();
+    }
+    default: { 
+      TraceLog(LOG_WARNING, "resource::get_map_prop_by_prop_id()::Unsupported tilemap type");
+      return tilemap_prop_address();
+    }
+  }
+
+  TraceLog(LOG_ERROR, "resource::get_map_prop_by_prop_id()::Function ended unexpectedly");
+  return tilemap_prop_address();
 }
 

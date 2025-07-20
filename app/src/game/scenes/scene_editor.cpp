@@ -189,18 +189,18 @@ bool initialize_scene_editor(const app_settings * _in_app_settings) {
     _prop_edit_panel_dim.x, _prop_edit_panel_dim.y
   };
 
-  state->tilemap_props_trees = get_tilemap_prop_static(TILEMAP_PROP_TYPE_TREE);
-  state->tilemap_props_tombstones = get_tilemap_prop_static(TILEMAP_PROP_TYPE_TOMBSTONE);
-  state->tilemap_props_stones = get_tilemap_prop_static(TILEMAP_PROP_TYPE_STONE);
-  state->tilemap_props_spikes = get_tilemap_prop_static(TILEMAP_PROP_TYPE_SPIKE);
-  state->tilemap_props_skulls = get_tilemap_prop_static(TILEMAP_PROP_TYPE_SKULL);
-  state->tilemap_props_pillars = get_tilemap_prop_static(TILEMAP_PROP_TYPE_PILLAR);
-  state->tilemap_props_lamps = get_tilemap_prop_static(TILEMAP_PROP_TYPE_LAMP);
-  state->tilemap_props_fence = get_tilemap_prop_static(TILEMAP_PROP_TYPE_FENCE);
-  state->tilemap_props_details = get_tilemap_prop_static(TILEMAP_PROP_TYPE_DETAIL);
-  state->tilemap_props_candles = get_tilemap_prop_static(TILEMAP_PROP_TYPE_CANDLE);
-  state->tilemap_props_buildings = get_tilemap_prop_static(TILEMAP_PROP_TYPE_BUILDING);
-  state->tilemap_props_sprite = get_tilemap_prop_sprite();
+  state->tilemap_props_trees = resource_get_tilemap_props_static(TILEMAP_PROP_TYPE_TREE);
+  state->tilemap_props_tombstones = resource_get_tilemap_props_static(TILEMAP_PROP_TYPE_TOMBSTONE);
+  state->tilemap_props_stones = resource_get_tilemap_props_static(TILEMAP_PROP_TYPE_STONE);
+  state->tilemap_props_spikes = resource_get_tilemap_props_static(TILEMAP_PROP_TYPE_SPIKE);
+  state->tilemap_props_skulls = resource_get_tilemap_props_static(TILEMAP_PROP_TYPE_SKULL);
+  state->tilemap_props_pillars = resource_get_tilemap_props_static(TILEMAP_PROP_TYPE_PILLAR);
+  state->tilemap_props_lamps = resource_get_tilemap_props_static(TILEMAP_PROP_TYPE_LAMP);
+  state->tilemap_props_fence = resource_get_tilemap_props_static(TILEMAP_PROP_TYPE_FENCE);
+  state->tilemap_props_details = resource_get_tilemap_props_static(TILEMAP_PROP_TYPE_DETAIL);
+  state->tilemap_props_candles = resource_get_tilemap_props_static(TILEMAP_PROP_TYPE_CANDLE);
+  state->tilemap_props_buildings = resource_get_tilemap_props_static(TILEMAP_PROP_TYPE_BUILDING);
+  state->tilemap_props_sprite = resource_get_tilemap_props_sprite();
 
   // Registering sliders
   {
@@ -742,9 +742,9 @@ constexpr void editor_update_mouse_bindings(void) {
   {
     switch (state->selection_type) {
       case SLC_TYPE_SLC_PROP_STATIC: {
-        tilemap_prop_static* prop = get_map_prop_static_by_id(state->selected_prop_static_map_prop_address->id);
+        tilemap_prop_static* prop = get_map_prop_static_by_id(state->selected_prop_static_map_prop_address->map_id);
         if (prop == nullptr) {
-          TraceLog(LOG_ERROR, "scene_editor::editor_update_mouse_bindings()::Prop static:%d cannot found", state->selected_prop_sprite_map_prop_address->id);
+          TraceLog(LOG_ERROR, "scene_editor::editor_update_mouse_bindings()::Prop static:%d cannot found", state->selected_prop_sprite_map_prop_address->map_id);
           break;
         }
         Rectangle drag_handle = Rectangle {
@@ -762,9 +762,9 @@ constexpr void editor_update_mouse_bindings(void) {
         break;
       }
       case SLC_TYPE_SLC_PROP_SPRITE: {
-        tilemap_prop_sprite* prop = get_map_prop_sprite_by_id(state->selected_prop_sprite_map_prop_address->id);
+        tilemap_prop_sprite* prop = get_map_prop_sprite_by_id(state->selected_prop_sprite_map_prop_address->map_id);
         if (prop == nullptr) {
-          TraceLog(LOG_ERROR, "scene_editor::editor_update_mouse_bindings()::Prop sprite:%d cannot found", state->selected_prop_sprite_map_prop_address->id);
+          TraceLog(LOG_ERROR, "scene_editor::editor_update_mouse_bindings()::Prop sprite:%d cannot found", state->selected_prop_sprite_map_prop_address->map_id);
           break;
         }
         Rectangle drag_handle = Rectangle {

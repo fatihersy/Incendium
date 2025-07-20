@@ -27,7 +27,7 @@ static world_system_state * state;
   state->worldmap_locations.at(ID) = worldmap_stage(ID, DISPLAY_NAME, FILENAME, SELECTION_SCREEN_LOCATION, true, WILL_BE_ON_SELECTION_SCREEN);
 
 constexpr Rectangle get_position_view_rect(Camera2D camera, Vector2 pos, f32 zoom);
-constexpr size_t get_renderqueue_prop_index_by_id(i16 zindex, u32 id);
+constexpr size_t get_renderqueue_prop_index_by_id(i16 zindex, u32 map_id);
 void sort_render_y_based_queue(i32 id);
 
 bool world_system_initialize(const app_settings* _in_app_settings) {
@@ -184,7 +184,7 @@ tilemap_prop_address get_map_prop_by_pos(Vector2 pos) {
 
   return tilemap_prop_address();
 }
-constexpr size_t get_renderqueue_prop_index_by_id(i16 zindex, i32 id) {
+constexpr size_t get_renderqueue_prop_index_by_id(i16 zindex, i32 map_id) {
   if (state == nullptr) {
     TraceLog(LOG_ERROR, "world::get_renderqueue_prop_by_id()::State is not valid");
     return INVALID_IDU32;
@@ -196,24 +196,24 @@ constexpr size_t get_renderqueue_prop_index_by_id(i16 zindex, i32 id) {
       continue;
     }
     
-    if (_queue_elm->type == TILEMAP_PROP_TYPE_SPRITE && _queue_elm->data.prop_sprite != nullptr && _queue_elm->data.prop_sprite->id == id) return itr_000; 
-    if (_queue_elm->type != TILEMAP_PROP_TYPE_SPRITE && _queue_elm->data.prop_static != nullptr && _queue_elm->data.prop_static->id == id) return itr_000;
+    if (_queue_elm->type == TILEMAP_PROP_TYPE_SPRITE && _queue_elm->data.prop_sprite != nullptr && _queue_elm->data.prop_sprite->map_id == map_id) return itr_000; 
+    if (_queue_elm->type != TILEMAP_PROP_TYPE_SPRITE && _queue_elm->data.prop_static != nullptr && _queue_elm->data.prop_static->map_id == map_id) return itr_000;
   }
 
   return INVALID_IDU32;
 }
-tilemap_prop_static* get_map_prop_static_by_id(i32 id) {
+tilemap_prop_static* get_map_prop_static_by_id(i32 map_id) {
   for (size_t iter = 0; iter < state->active_map->static_props.size(); ++iter) {
-    if (state->active_map->static_props.at(iter).id == id) {
+    if (state->active_map->static_props.at(iter).map_id == map_id) {
       return __builtin_addressof(state->active_map->static_props.at(iter));
     }
   }
   TraceLog(LOG_WARNING, "world::get_map_prop_by_id()::No match found");
   return nullptr;  
 }
-tilemap_prop_sprite* get_map_prop_sprite_by_id(i32 id) {
+tilemap_prop_sprite* get_map_prop_sprite_by_id(i32 map_id) {
   for (size_t iter = 0; iter < state->active_map->sprite_props.size(); ++iter) {
-    if (state->active_map->sprite_props.at(iter).id == id) {
+    if (state->active_map->sprite_props.at(iter).map_id == map_id) {
       return __builtin_addressof(state->active_map->sprite_props.at(iter));
     }
   }
@@ -266,7 +266,7 @@ bool add_prop_curr_map(tilemap_prop_static prop_static) {
     TraceLog(LOG_WARNING, "world::add_prop_curr_map()::Recieved static prop was empty");
     return false;
   }
-  prop_static.id = state->active_map->next_prop_id++;
+  prop_static.map_id = state->active_map->next_map_id++;
   state->active_map->static_props.push_back(prop_static);
   
   refresh_render_queue(state->active_map_stage.map_id);
@@ -277,7 +277,7 @@ bool add_prop_curr_map(tilemap_prop_sprite prop_sprite) {
     TraceLog(LOG_WARNING, "world::add_prop_curr_map()::Recieved sprite prop was empty");
     return false;
   }
-  prop_sprite.id = state->active_map->next_prop_id++;
+  prop_sprite.map_id = state->active_map->next_map_id++;
   state->active_map->sprite_props.push_back(prop_sprite);
 
   refresh_render_queue(state->active_map_stage.map_id);
@@ -297,12 +297,12 @@ bool add_map_coll_curr_map(Rectangle map_coll) {
   state->active_map->collisions.push_back(map_coll);
   return true;
 }
-bool remove_prop_cur_map_by_id(i32 id, tilemap_prop_types type) {
+bool remove_prop_cur_map_by_id(i32 map_id, tilemap_prop_types type) {
   bool found = false;
 
   if (type != TILEMAP_PROP_TYPE_SPRITE) {
     for (size_t itr_000 = 0; itr_000 < state->active_map->static_props.size(); ++itr_000) {
-      if (state->active_map->static_props.at(itr_000).id == id) {
+      if (state->active_map->static_props.at(itr_000).map_id == map_id) {
         state->active_map->static_props.erase(state->active_map->static_props.begin() + itr_000);
         found = true;
         break;
@@ -311,7 +311,7 @@ bool remove_prop_cur_map_by_id(i32 id, tilemap_prop_types type) {
   }
   if (type == TILEMAP_PROP_TYPE_SPRITE) {
     for (size_t itr_000 = 0; itr_000 < state->active_map->sprite_props.size(); ++itr_000) {
-      if (state->active_map->sprite_props.at(itr_000).id == id) {
+      if (state->active_map->sprite_props.at(itr_000).map_id == map_id) {
         state->active_map->sprite_props.erase(state->active_map->sprite_props.begin() + itr_000);
         found = true;
         break;

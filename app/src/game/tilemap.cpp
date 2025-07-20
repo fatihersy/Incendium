@@ -167,8 +167,6 @@ void render_tilemap(const tilemap* _tilemap, Rectangle camera_view) {
         if (!map_prop_ptr->is_initialized) continue;
         
         Rectangle prop_rect = map_prop_ptr->dest; 
-        prop_rect.width = map_prop_ptr->dest.width * map_prop_ptr->scale;
-        prop_rect.height = map_prop_ptr->dest.height * map_prop_ptr->scale;
 
         if (!CheckCollisionRecs(camera_view, prop_rect)) { continue; }
       
@@ -236,8 +234,6 @@ void render_props_y_based(const tilemap* _tilemap, Rectangle camera_view, i32 st
       if (!map_prop_ptr->is_initialized) continue;
       
       Rectangle prop_rect = map_prop_ptr->dest; 
-      prop_rect.width = map_prop_ptr->dest.width * map_prop_ptr->scale;
-      prop_rect.height = map_prop_ptr->dest.height * map_prop_ptr->scale;
 
       if (!CheckCollisionRecs(camera_view, prop_rect)) { continue; }
     
@@ -350,8 +346,8 @@ void render_mainmenu(const tilemap* _tilemap, Rectangle camera_view, const app_s
         Rectangle prop_rect = Rectangle { // Position can be usable as a dimention since it's a square and centered
           (map_prop_ptr->dest.x      / (-_tilemap->position.x)) * -map_position.x,
           (map_prop_ptr->dest.y      / (-_tilemap->position.y)) * -map_position.y,
-          ((map_prop_ptr->dest.width  * map_prop_ptr->scale) / (-_tilemap->position.x)) * -map_position.x,
-          ((map_prop_ptr->dest.height * map_prop_ptr->scale) / (-_tilemap->position.y)) * -map_position.y,
+          ((map_prop_ptr->dest.width) / (-_tilemap->position.x)) * -map_position.x,
+          ((map_prop_ptr->dest.height) / (-_tilemap->position.y)) * -map_position.y,
         };
         Vector2 origin = Vector2 {prop_rect.width * .5f, prop_rect.height * .5f};
 
@@ -467,6 +463,7 @@ void map_to_str(tilemap* const map, tilemap_stringtify_package* const out_packag
     return;
   }
 
+  // TILE SERIALIZE
   for (size_t itr_000 = 0u; itr_000 < MAX_TILEMAP_LAYERS; ++itr_000) {
     out_package->size_tilemap_str[itr_000] = sizeof(tile_symbol) * MAX_TILEMAP_TILESLOT_X * MAX_TILEMAP_TILESLOT_Y;
 
@@ -474,7 +471,10 @@ void map_to_str(tilemap* const map, tilemap_stringtify_package* const out_packag
       copy_memory(out_package->str_tilemap[itr_000] + (sizeof(tile_symbol) * itr_111 * MAX_TILEMAP_TILESLOT_Y), map->tiles[itr_000][itr_111], sizeof(tile_symbol) * MAX_TILEMAP_TILESLOT_Y);
     }
   }
+  // TILE SERIALIZE
 
+
+  // STATIC PROP SERIALIZE
   for (size_t itr_000 = 0u; itr_000 < map->static_props.size(); ++itr_000) {
     tilemap_prop_static& _prop = map->static_props.at(itr_000);
     if (!_prop.is_initialized) continue;
@@ -483,13 +483,31 @@ void map_to_str(tilemap* const map, tilemap_stringtify_package* const out_packag
     const i32 _prop_scale = prop->scale * 100.f;
     const i32 _prop_rotation = prop->rotation * 10.f;
     const char* symbol = TextFormat("%.4d,%.4d,%.4d,%.4d,%.4d,%.4d,%.4d,%.4d,%.4d,%.4d,%.4d,%.4d,%.4d,%.4d,%.4d,%.4d,%.4d,%.4d," PROP_PARSE_PROP_BUFFER_PARSE_SYMBOL_STR,
-      0u,                  static_cast<i32>(prop->tex_id),  static_cast<i32>(prop->prop_type),   static_cast<i32>(_prop_rotation), static_cast<i32>(_prop_scale), static_cast<i32>(prop->zindex),
-      static_cast<i32>(prop->source.x), static_cast<i32>(prop->source.y),static_cast<i32>(prop->source.width),static_cast<i32>(prop->source.height), 
-      static_cast<i32>(prop->dest.x),   static_cast<i32>(prop->dest.y),  static_cast<i32>(prop->dest.width),  static_cast<i32>(prop->dest.height),
-      static_cast<i32>(prop->tint.r),   static_cast<i32>(prop->tint.g),  static_cast<i32>(prop->tint.b),      static_cast<i32>(prop->tint.a)
+      static_cast<i32>(prop->prop_id),
+      static_cast<i32>(prop->tex_id),
+      static_cast<i32>(prop->prop_type),
+      static_cast<i32>(_prop_rotation),
+      static_cast<i32>(_prop_scale),
+      static_cast<i32>(prop->zindex),
+      static_cast<i32>(prop->dest.x),
+      static_cast<i32>(prop->dest.y),
+      static_cast<i32>(prop->tint.r),
+      static_cast<i32>(prop->tint.g),
+      static_cast<i32>(prop->tint.b),
+      static_cast<i32>(prop->tint.a),
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
     );
     out_package->str_props.append(symbol);
   }
+  // STATIC PROP SERIALIZE
+
+
+  // SPRITE PROP SERIALIZE
   for (size_t itr_000 = 0; itr_000 < map->sprite_props.size(); ++itr_000) {
     if (!map->sprite_props.at(itr_000).is_initialized) continue;
     
@@ -497,14 +515,31 @@ void map_to_str(tilemap* const map, tilemap_stringtify_package* const out_packag
     const i32 _prop_scale = prop->scale * 100.f;
     const i32 _prop_rotation = prop->sprite.rotation * 10.f;
     const char* symbol = TextFormat("%.4d,%.4d,%.4d,%.4d,%.4d,%.4d,%.4d,%.4d,%.4d,%.4d,%.4d,%.4d,%.4d,%.4d,%.4d,%.4d,%.4d,%.4d," PROP_PARSE_PROP_BUFFER_PARSE_SYMBOL_STR,
-      0u, static_cast<i32>(prop->sprite.sheet_id - SHEET_ENUM_MAP_SPRITE_START), static_cast<i32>(prop->prop_type), static_cast<i32>(_prop_rotation), static_cast<i32>(_prop_scale), static_cast<i32>(prop->zindex),
-      0u, 0u, 0u, 0u, 
-      static_cast<i32>(prop->sprite.coord.x),   static_cast<i32>(prop->sprite.coord.y),  static_cast<i32>(prop->sprite.coord.width),  static_cast<i32>(prop->sprite.coord.height),
-      static_cast<i32>(prop->sprite.tint.r),   static_cast<i32>(prop->sprite.tint.g),  static_cast<i32>(prop->sprite.tint.b),      static_cast<i32>(prop->sprite.tint.a)
+      static_cast<i32>(prop->prop_id),
+      static_cast<i32>(prop->sprite.sheet_id - SHEET_ENUM_MAP_SPRITE_START),
+      static_cast<i32>(prop->prop_type),
+      static_cast<i32>(_prop_rotation),
+      static_cast<i32>(_prop_scale),
+      static_cast<i32>(prop->zindex),
+      static_cast<i32>(prop->sprite.coord.x),
+      static_cast<i32>(prop->sprite.coord.y),
+      static_cast<i32>(prop->sprite.tint.r),
+      static_cast<i32>(prop->sprite.tint.g),
+      static_cast<i32>(prop->sprite.tint.b),
+      static_cast<i32>(prop->sprite.tint.a),
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
     );
     out_package->str_props.append(symbol);
   }
+  // SPRITE PROP SERIALIZE
 
+
+  // MAP COLLISIONS SERIALIZE
   for (size_t itr_000 = 0; itr_000 < map->collisions.size(); ++itr_000) {
     const Rectangle* coll = __builtin_addressof(map->collisions.at(itr_000));
     const char* symbol = TextFormat("%.4d,%.4d,%.4d,%.4d," PROP_PARSE_PROP_BUFFER_PARSE_SYMBOL_STR, 
@@ -514,6 +549,8 @@ void map_to_str(tilemap* const map, tilemap_stringtify_package* const out_packag
       static_cast<i32>(coll->height));
     out_package->str_collisions.append(symbol);
   }
+  // MAP COLLISIONS SERIALIZE
+
 
 
   out_package->size_props_str = sizeof(out_package->str_props);
@@ -544,6 +581,7 @@ void str_to_map(tilemap* const map, tilemap_stringtify_package* const out_packag
   }
 
   string_parse_result str_prop_parse_buffer = parse_string(out_package->str_props.c_str(), PROP_PARSE_PROP_BUFFER_PARSE_SYMBOL_C, PROP_BUFFER_PARSE_TOP_LIMIT);
+
   for (size_t itr_000 = 0; itr_000 < str_prop_parse_buffer.buffer.size(); ++itr_000) {
     string_parse_result str_par_prop_member = parse_string(str_prop_parse_buffer.buffer.at(itr_000), PROP_PARSE_PROP_MEMBER_PARSE_SYMBOL, PROP_MEMBER_PARSE_TOP_LIMIT);
     if (str_par_prop_member.buffer.size() < 17u) {
@@ -553,24 +591,28 @@ void str_to_map(tilemap* const map, tilemap_stringtify_package* const out_packag
     tilemap_prop_types type = static_cast<tilemap_prop_types>(TextToInteger(str_par_prop_member.buffer.at(2).c_str()));
     if (type == TILEMAP_PROP_TYPE_SPRITE ) {
       tilemap_prop_sprite prop = tilemap_prop_sprite();
-      prop.id = map->next_prop_id++;
+      prop.map_id = map->next_map_id++;
+      prop.prop_id = TextToInteger(str_par_prop_member.buffer.at(0).c_str());
       prop.sprite.sheet_id = static_cast<spritesheet_id>(TextToInteger(str_par_prop_member.buffer.at(1).c_str()) + SHEET_ENUM_MAP_SPRITE_START);
       set_sprite(&prop.sprite, true, false);
+
       prop.prop_type = type;
-      prop.sprite.rotation  = TextToFloat(str_par_prop_member.buffer.at(3).c_str());
-      prop.scale            = TextToFloat(str_par_prop_member.buffer.at(4).c_str());
-      prop.zindex           = TextToInteger(str_par_prop_member.buffer.at(5).c_str());
+      prop.sprite.rotation = TextToFloat(str_par_prop_member.buffer.at(3).c_str());
+      prop.sprite.rotation = prop.sprite.rotation / 10.f;
+      
+      prop.scale = TextToFloat(str_par_prop_member.buffer.at(4).c_str());
+      prop.scale = prop.scale / 100.f;
+      
+      prop.zindex = TextToInteger(str_par_prop_member.buffer.at(5).c_str());
       prop.sprite.coord = Rectangle {
-        TextToFloat(str_par_prop_member.buffer.at(10).c_str()), TextToFloat(str_par_prop_member.buffer.at(11).c_str()),
-        TextToFloat(str_par_prop_member.buffer.at(12).c_str()), TextToFloat(str_par_prop_member.buffer.at(13).c_str()),
+        TextToFloat(str_par_prop_member.buffer.at(6).c_str()), TextToFloat(str_par_prop_member.buffer.at(7).c_str()),
+        prop.sprite.current_frame_rect.width * prop.scale, prop.sprite.current_frame_rect.height * prop.scale,
       };
       prop.sprite.tint = Color {
-        (u8)TextToInteger(str_par_prop_member.buffer.at(14).c_str()), (u8)TextToInteger(str_par_prop_member.buffer.at(15).c_str()),
-        (u8)TextToInteger(str_par_prop_member.buffer.at(16).c_str()), (u8)TextToInteger(str_par_prop_member.buffer.at(17).c_str()),
+        (u8)TextToInteger(str_par_prop_member.buffer.at(8).c_str()), (u8)TextToInteger(str_par_prop_member.buffer.at(9).c_str()),
+        (u8)TextToInteger(str_par_prop_member.buffer.at(10).c_str()), (u8)TextToInteger(str_par_prop_member.buffer.at(11).c_str()),
       };
-
-      prop.scale = prop.scale / 100.f;
-      prop.sprite.rotation = prop.sprite.rotation / 10.f;
+      
       prop.sprite.origin = VECTOR2(prop.sprite.coord.width / 2.f, prop.sprite.coord.height / 2.f);
 
       prop.is_initialized = true;
@@ -578,27 +620,27 @@ void str_to_map(tilemap* const map, tilemap_stringtify_package* const out_packag
     }
     else {
       tilemap_prop_static prop = tilemap_prop_static();
-      prop.id        = map->next_prop_id++;
-      prop.tex_id    = static_cast<texture_id>(TextToInteger(str_par_prop_member.buffer.at(1).c_str()));
+      prop.map_id = map->next_map_id++;
+      prop.prop_id = TextToInteger(str_par_prop_member.buffer.at(0).c_str());
       prop.prop_type = type;
+      const tilemap_prop_address template_prop = resource_get_map_prop_by_prop_id(prop.prop_id, prop.prop_type); 
+
+      prop.tex_id    = static_cast<texture_id>(TextToInteger(str_par_prop_member.buffer.at(1).c_str()));
       prop.rotation  = TextToFloat(str_par_prop_member.buffer.at(3).c_str());
+      prop.rotation = prop.rotation / 10.f;
       prop.scale     = TextToFloat(str_par_prop_member.buffer.at(4).c_str());
+      prop.scale = prop.scale / 100.f;
       prop.zindex    = TextToInteger(str_par_prop_member.buffer.at(5).c_str());
-      prop.source = {
+      prop.source = template_prop.data.prop_static->source;
+      
+      prop.dest = Rectangle {
         TextToFloat(str_par_prop_member.buffer.at(6).c_str()), TextToFloat(str_par_prop_member.buffer.at(7).c_str()),
-        TextToFloat(str_par_prop_member.buffer.at(8).c_str()), TextToFloat(str_par_prop_member.buffer.at(9).c_str()),
-      };
-      prop.dest =   {
-        TextToFloat(str_par_prop_member.buffer.at(10).c_str()), TextToFloat(str_par_prop_member.buffer.at(11).c_str()),
-        TextToFloat(str_par_prop_member.buffer.at(12).c_str()), TextToFloat(str_par_prop_member.buffer.at(13).c_str()),
+        prop.source.width * prop.scale, prop.source.height * prop.scale,
       };
       prop.tint = Color {
-        (u8)TextToInteger(str_par_prop_member.buffer.at(14).c_str()), (u8)TextToInteger(str_par_prop_member.buffer.at(15).c_str()),
-        (u8)TextToInteger(str_par_prop_member.buffer.at(16).c_str()), (u8)TextToInteger(str_par_prop_member.buffer.at(17).c_str()),
+        (u8)TextToInteger(str_par_prop_member.buffer.at(8).c_str()), (u8)TextToInteger(str_par_prop_member.buffer.at(9).c_str()),
+        (u8)TextToInteger(str_par_prop_member.buffer.at(10).c_str()), (u8)TextToInteger(str_par_prop_member.buffer.at(11).c_str()),
       };
-
-      prop.scale = prop.scale / 100.f;
-      prop.rotation = prop.rotation / 10.f;
 
       prop.is_initialized = true;
       map->static_props.push_back(prop);

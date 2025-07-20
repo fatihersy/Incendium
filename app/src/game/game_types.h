@@ -354,7 +354,8 @@ typedef struct worldmap_stage {
 } worldmap_stage;
 
 typedef struct tilemap_prop_static {
-  i32 id;
+  i32 prop_id;
+  i32 map_id;
 	texture_id tex_id;
   tilemap_prop_types prop_type;
   Rectangle source;
@@ -366,7 +367,8 @@ typedef struct tilemap_prop_static {
   Vector2 origin;
   bool is_initialized;
   tilemap_prop_static(void) {
-    this->id = INVALID_IDU32;
+    this->map_id = I32_MAX;
+    this->prop_id = I32_MAX;
     this->tex_id = TEX_ID_UNSPECIFIED;
     this->prop_type = TILEMAP_PROP_TYPE_UNDEFINED;
     this->source = ZERORECT;
@@ -380,16 +382,18 @@ typedef struct tilemap_prop_static {
 } tilemap_prop_static;
 
 typedef struct tilemap_prop_sprite {
-  i32 id;
+  i32 prop_id;
+  i32 map_id;
   tilemap_prop_types prop_type;
   spritesheet sprite;
   i16 zindex;
   f32 scale;
   bool is_initialized;
   tilemap_prop_sprite(void) {
-    this->id = INVALID_IDU32;
-    this->sprite = spritesheet();
+    this->prop_id = I32_MAX;
+    this->map_id = I32_MAX;
     this->prop_type = TILEMAP_PROP_TYPE_UNDEFINED;
+    this->sprite = spritesheet();
     this->zindex = 0;
     this->scale = 0.f;
     this->is_initialized = false;
@@ -443,7 +447,7 @@ typedef struct tilemap {
   std::string propfile;
   std::string collisionfile;
   Vector2 position;
-  i32 next_prop_id;
+  i32 next_map_id;
   u16 map_dim_total;
   u16 map_dim;
   u16 tile_size;

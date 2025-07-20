@@ -48,7 +48,7 @@ bool event_register(i32 code, PFN_on_event on_event) {
     return true;
 }
 
-[[__deprecated__("We are not support multiple events in a code currently")]] bool event_unregister([[maybe_unused]] i32 code,[[maybe_unused]] PFN_on_event on_event) {
+[[__deprecated__]] bool event_unregister([[maybe_unused]] i32 code,[[maybe_unused]] PFN_on_event on_event) {
     if (!state) {
         return false;
     }
