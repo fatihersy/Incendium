@@ -26,7 +26,7 @@ typedef struct main_menu_scene_state {
   const camera_metrics * in_camera_metrics;
   const app_settings   * in_app_settings;
   
-  Vector2 mouse_pos;
+  const Vector2* mouse_pos_screen;
   u32 deny_notify_timer;
   main_menu_scene_type type;
   scene_id next_scene;
@@ -39,7 +39,7 @@ typedef struct main_menu_scene_state {
     this->hovered_stat = nullptr;
     this->in_camera_metrics = nullptr;
     this->in_app_settings = nullptr;
-    this->mouse_pos = ZEROVEC2;
+    this->mouse_pos_screen = nullptr;
     this->deny_notify_timer = 0u;
     this->type = MAIN_MENU_SCENE_DEFAULT;
     this->next_scene = SCENE_TYPE_UNSPECIFIED;
@@ -114,6 +114,8 @@ void update_scene_main_menu(void) {
   update_camera();
   update_user_interface();
   update_map();
+
+  state->mouse_pos_screen = ui_get_mouse_pos_screen();
 
   if (state->in_scene_changing_process && is_ui_fade_anim_about_to_complete()) {
     state->scene_changing_process_complete = true;
@@ -277,7 +279,7 @@ void draw_main_menu_upgrade_list_panel(void) {
 
       Vector2 showcase_position = VECTOR2(showcase_start_pos.x + j * showcase_spacing, showcase_start_pos.y + iter * showcase_spacing);
       f32 showcase_new_dim = showcase_base_dim;
-      if (CheckCollisionPointRec( *ui_get_mouse_pos(), Rectangle {showcase_position.x, showcase_position.y, showcase_base_dim, showcase_base_dim})) {
+      if (CheckCollisionPointRec( *state->mouse_pos_screen, Rectangle {showcase_position.x, showcase_position.y, showcase_base_dim, showcase_base_dim})) {
         hovered = true;
         showcase_new_dim *= showcase_hover_scale;
         showcase_position.x -= (showcase_new_dim - showcase_base_dim) / 2.f;

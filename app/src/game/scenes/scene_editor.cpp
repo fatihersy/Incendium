@@ -122,13 +122,15 @@ constexpr bool scene_editor_map_stage_slc_slider_on_right_button_trigger(void);
 constexpr bool scene_editor_map_prop_type_slc_slider_on_left_button_trigger(void);
 constexpr bool scene_editor_map_prop_type_slc_slider_on_right_button_trigger(void);
 
+constexpr bool scene_editor_is_map_prop_y_based_checkbox_on_change_trigger(void);
+
 #define SE_BASE_RENDER_WIDTH state->in_app_settings->render_width
 #define SE_BASE_RENDER_HEIGHT state->in_app_settings->render_height
 
 bool initialize_scene_editor(const app_settings * _in_app_settings) {
   if (state) {
-    update_tilemap_prop_type();
     begin_scene_editor();
+    update_tilemap_prop_type();
     return true;
   }
   state = (scene_editor_state*)allocate_memory_linear(sizeof(scene_editor_state), true);
@@ -309,9 +311,18 @@ bool initialize_scene_editor(const app_settings * _in_app_settings) {
     prop_type_slider->on_right_button_trigger = scene_editor_map_prop_type_slc_slider_on_right_button_trigger;
     prop_type_slider->on_click =                nullptr;
   }
+  // Checkboxes
+  {
+    checkbox * is_prop_y_based_checkbox = get_checkbox_by_id(CHECKBOX_ID_IS_PROP_YBASED);
+    if (!is_prop_y_based_checkbox || is_prop_y_based_checkbox == nullptr) {
+      TraceLog(LOG_ERROR, "scene_editor::initialize_scene_editor()::y-based checkbox is not valid");
+      return false;
+    }
+    is_prop_y_based_checkbox->pfn_on_change = scene_editor_is_map_prop_y_based_checkbox_on_change_trigger;
+  }
 
-  update_tilemap_prop_type();
   begin_scene_editor();
+  update_tilemap_prop_type();
   return true;
 }
 constexpr void begin_scene_editor(void) {
@@ -488,12 +499,9 @@ void render_interface_editor(void) {
     {
       Vector2 button_location_pivot = VECTOR2(pnl->dest.x + pnl->dest.width * .5f,pnl->dest.y + pnl->dest.height * .05f);
       if(gui_menu_button("Add", BTN_ID_EDITOR_ADD_MAP_COLLISION, VECTOR2(0, 0), button_location_pivot, false)) {
-        if(state->selection_type == SLC_TYPE_DROP_COLLISION_POSITION) {
-          state->selection_type = SLC_TYPE_DROP_COLLISION_DIMENTIONS;
-        }
-        else state->selection_type = SLC_TYPE_DROP_COLLISION_POSITION;
+        scene_editor_selection_cleanup();
 
-        state->map_collision_buffer_to_place = map_collision();
+        state->selection_type = SLC_TYPE_DROP_COLLISION_POSITION;
       }
     }
     BeginScissorMode(pnl_dest.x, pnl_dest.y, pnl_dest.width, pnl_dest.height);
@@ -595,13 +603,12 @@ void render_interface_editor(void) {
         gui_slider(SDR_ID_EDITOR_PROP_ROTATION_SLIDER, sdr_center, VECTOR2(0.f, 0.f));
       
         gui_label_grid("Z-Index", FONT_TYPE_ABRACADABRA, 1, label_center, WHITE, true, true, VECTOR2(0.f, 10.f));
-        if ((*p_prop)->zindex == -1) {
-          get_slider_by_id(SDR_ID_EDITOR_PROP_ZINDEX_SLIDER)->options.at(0).no_localized_text = TextFormat("Y-Based");
-        }
-        else {
-          get_slider_by_id(SDR_ID_EDITOR_PROP_ZINDEX_SLIDER)->options.at(0).no_localized_text = TextFormat("%d", (*p_prop)->zindex);
-        }
+        get_slider_by_id(SDR_ID_EDITOR_PROP_ZINDEX_SLIDER)->options.at(0).no_localized_text = TextFormat("%d", (*p_prop)->zindex);
         gui_slider(SDR_ID_EDITOR_PROP_ZINDEX_SLIDER, sdr_center, VECTOR2(0.f, 10.f));
+
+        gui_label_grid("Y-Based", FONT_TYPE_ABRACADABRA, 1, label_center, WHITE, true, true, VECTOR2(0.f, 20.f));
+        get_checkbox_by_id(CHECKBOX_ID_IS_PROP_YBASED)->state = (*p_prop)->use_y_based_zindex ? CHECKBOX_STATE_CHECKED : CHECKBOX_STATE_UNCHECKED;
+        gui_checkbox_grid(CHECKBOX_ID_IS_PROP_YBASED, VECTOR2(0.f, 20.f), sdr_center);
       }
       EndScissorMode();
 
@@ -644,13 +651,11 @@ void render_interface_editor(void) {
         gui_slider(SDR_ID_EDITOR_PROP_ROTATION_SLIDER, sdr_center, VECTOR2(0.f, 0.f));
 
         gui_label_grid("Z-Index", FONT_TYPE_ABRACADABRA, 1, label_center, WHITE, true, true, VECTOR2(0.f, 10.f));
-        if ((*p_prop)->zindex == -1) {
-          get_slider_by_id(SDR_ID_EDITOR_PROP_ZINDEX_SLIDER)->options.at(0).no_localized_text = TextFormat("Y-Based");
-        }
-        else {
-          get_slider_by_id(SDR_ID_EDITOR_PROP_ZINDEX_SLIDER)->options.at(0).no_localized_text = TextFormat("%d", (*p_prop)->zindex);
-        }
+        get_slider_by_id(SDR_ID_EDITOR_PROP_ZINDEX_SLIDER)->options.at(0).no_localized_text = TextFormat("%d", (*p_prop)->zindex);
         gui_slider(SDR_ID_EDITOR_PROP_ZINDEX_SLIDER, sdr_center, VECTOR2(0.f, 10.f));
+
+        gui_label_grid("Y-Based", FONT_TYPE_ABRACADABRA, 1, label_center, WHITE, true, true, VECTOR2(0.f, 20.f));
+        gui_checkbox_grid(CHECKBOX_ID_IS_PROP_YBASED, sdr_center, VECTOR2(0.f, 20.f));
       }
       EndScissorMode();
 
@@ -819,15 +824,21 @@ constexpr void editor_update_mouse_bindings(void) {
   {
     switch (state->selection_type) {
       case SLC_TYPE_UNSELECTED: {
-        tilemap_prop_address _prop_address = get_map_prop_by_pos(state->mouse_pos_world);
-        if (_prop_address.type <= TILEMAP_PROP_TYPE_UNDEFINED || _prop_address.type >= TILEMAP_PROP_TYPE_MAX) break;
-        if (_prop_address.type != TILEMAP_PROP_TYPE_SPRITE && _prop_address.data.prop_static != nullptr) {
-          state->selected_prop_static_map_prop_address = _prop_address.data.prop_static;
-          state->selection_type = SLC_TYPE_SLC_PROP_STATIC;
-        }
-        if (_prop_address.type == TILEMAP_PROP_TYPE_SPRITE && _prop_address.data.prop_sprite != nullptr) {
-          state->selected_prop_sprite_map_prop_address = _prop_address.data.prop_sprite;
-          state->selection_type = SLC_TYPE_SLC_PROP_SPRITE;
+        map_collision * _map_coll = get_map_collision_by_pos(state->mouse_pos_world);
+        if (_map_coll != nullptr) {
+          state->sel_map_coll_addr_from_map = _map_coll;
+          state->selection_type = SLC_TYPE_SLC_MAP_COLLISION;
+        };
+        tilemap_prop_address _prop_address = get_map_prop_by_pos(state->mouse_pos_world);        
+        if (_prop_address.type > TILEMAP_PROP_TYPE_UNDEFINED && _prop_address.type < TILEMAP_PROP_TYPE_MAX){
+          if (_prop_address.type != TILEMAP_PROP_TYPE_SPRITE && _prop_address.data.prop_static != nullptr) {
+            state->selected_prop_static_map_prop_address = _prop_address.data.prop_static;
+            state->selection_type = SLC_TYPE_SLC_PROP_STATIC;
+          }
+          else if (_prop_address.type == TILEMAP_PROP_TYPE_SPRITE && _prop_address.data.prop_sprite != nullptr) {
+            state->selected_prop_sprite_map_prop_address = _prop_address.data.prop_sprite;
+            state->selection_type = SLC_TYPE_SLC_PROP_SPRITE;
+          }
         }
         break;
       }
@@ -845,10 +856,20 @@ constexpr void editor_update_mouse_bindings(void) {
       }
       case SLC_TYPE_SLC_PROP_STATIC: {
         state->b_dragging_map_element = false;
+        if (state->selected_prop_static_map_prop_address && state->selected_prop_static_map_prop_address != nullptr) {
+          if (state->selected_prop_static_map_prop_address->use_y_based_zindex) {
+            _sort_render_y_based_queue();
+          }
+        }
         break;
       }
       case SLC_TYPE_SLC_PROP_SPRITE: {
         state->b_dragging_map_element = false;
+        if (state->selected_prop_sprite_map_prop_address && state->selected_prop_sprite_map_prop_address != nullptr) {
+          if (state->selected_prop_sprite_map_prop_address->use_y_based_zindex) {
+            _sort_render_y_based_queue();
+          }
+        }
         break;
       }
       case SLC_TYPE_DROP_COLLISION_POSITION: {
@@ -863,6 +884,7 @@ constexpr void editor_update_mouse_bindings(void) {
       }
       case SLC_TYPE_SLC_MAP_COLLISION: {
         state->b_dragging_map_element = false;
+        _sort_render_y_based_queue();
       }
       default: break;
     }
@@ -1200,16 +1222,16 @@ constexpr bool scene_editor_zindex_slider_on_left_button_trigger(void) {
   }
   if (state->selected_prop_static_map_prop_address != nullptr) {
     state->selected_prop_static_map_prop_address->zindex -= 1;
-    if(state->selected_prop_static_map_prop_address->zindex < -1) {
-      state->selected_prop_static_map_prop_address->zindex = -1;
+    if(state->selected_prop_static_map_prop_address->zindex < 0) {
+      state->selected_prop_static_map_prop_address->zindex = 0;
     }
     refresh_render_queue(state->selected_stage);
     return true;
   }
   if (state->selected_prop_sprite_map_prop_address != nullptr) {
     state->selected_prop_sprite_map_prop_address->zindex -= 1;
-    if(state->selected_prop_sprite_map_prop_address->zindex < -1) {
-      state->selected_prop_sprite_map_prop_address->zindex = -1;
+    if(state->selected_prop_sprite_map_prop_address->zindex < 0) {
+      state->selected_prop_sprite_map_prop_address->zindex = 0;
     }
     refresh_render_queue(state->selected_stage);
     return true;
@@ -1325,6 +1347,27 @@ constexpr bool scene_editor_map_prop_type_slc_slider_on_right_button_trigger(voi
 
   update_tilemap_prop_type();
   return true;
+}
+
+constexpr bool scene_editor_is_map_prop_y_based_checkbox_on_change_trigger(void) {
+  if (!state) {
+    TraceLog(LOG_ERROR, "scene_editor::scene_editor_is_map_prop_y_based_checkbox_on_change_trigger()::State is not valid");
+    return false;
+  }
+  bool is_checked = get_checkbox_by_id(CHECKBOX_ID_IS_PROP_YBASED)->state == CHECKBOX_STATE_CHECKED;
+
+  if (state->selected_prop_sprite_map_prop_address != nullptr) {
+    state->selected_prop_sprite_map_prop_address->use_y_based_zindex = is_checked;
+    refresh_render_queue(state->selected_stage);
+    return true;
+  }
+  if (state->selected_prop_static_map_prop_address != nullptr) {
+    state->selected_prop_static_map_prop_address->use_y_based_zindex = is_checked;
+    refresh_render_queue(state->selected_stage);
+    return true;
+  }
+  
+  return false;
 }
 
 constexpr void scene_editor_selection_cleanup(void) {

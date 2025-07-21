@@ -30,6 +30,7 @@
 #define MAX_SLIDER_OPTION_SLOT 16
 
 #define MAX_Z_INDEX_SLOT 10
+#define MAX_Y_INDEX_SLOT 10
 
 #define MAX_UPDATE_ABILITY_PANEL_COUNT 3
 #define MAX_UPDATE_PASSIVE_PANEL_COUNT 3
@@ -366,6 +367,7 @@ typedef struct tilemap_prop_static {
   Color tint;
   Vector2 origin;
   bool is_initialized;
+  bool use_y_based_zindex;
   tilemap_prop_static(void) {
     this->map_id = I32_MAX;
     this->prop_id = I32_MAX;
@@ -378,6 +380,7 @@ typedef struct tilemap_prop_static {
     this->scale = 0.f;
     this->origin = ZEROVEC2;
     this->is_initialized = false;
+    this->use_y_based_zindex = false;
   }
 } tilemap_prop_static;
 
@@ -389,6 +392,7 @@ typedef struct tilemap_prop_sprite {
   i16 zindex;
   f32 scale;
   bool is_initialized;
+  bool use_y_based_zindex;
   tilemap_prop_sprite(void) {
     this->prop_id = I32_MAX;
     this->map_id = I32_MAX;
@@ -397,6 +401,7 @@ typedef struct tilemap_prop_sprite {
     this->zindex = 0;
     this->scale = 0.f;
     this->is_initialized = false;
+    this->use_y_based_zindex = false;
   }
 } tilemap_prop_sprite;
 
@@ -469,7 +474,7 @@ typedef struct tilemap {
   std::vector<tilemap_prop_static> static_props;
   std::vector<tilemap_prop_sprite> sprite_props;
   std::array<std::vector<tilemap_prop_address>, MAX_Z_INDEX_SLOT> render_z_index_queue;
-  std::vector<tilemap_prop_address> render_y_based_queue;
+  std::array<std::vector<tilemap_prop_address>, MAX_Y_INDEX_SLOT> render_y_based_queue;
   std::vector<map_collision> collisions;
   bool is_initialized;
 } tilemap;

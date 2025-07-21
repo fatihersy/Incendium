@@ -198,43 +198,106 @@ void render_tilemap(const tilemap* _tilemap, Rectangle camera_view) {
     }
   }
 }
-void render_props_y_based(const tilemap* _tilemap, Rectangle camera_view, i32 start_y, i32 end_y) {
+void render_props_y_based_all(const tilemap* _tilemap, Rectangle camera_view, i32 start_y, i32 end_y) {
   if (!_tilemap) {
     TraceLog(LOG_ERROR, "tilemap::render_tilemap()::Provided map was null");
     return;
   }
   for (size_t itr_000 = 0; itr_000 < _tilemap->render_y_based_queue.size(); ++itr_000) {
-    const tilemap_prop_address* _queue_prop_ptr = __builtin_addressof(_tilemap->render_y_based_queue.at(itr_000));
+    for (size_t itr_111 = 0; itr_111 < _tilemap->render_y_based_queue.at(itr_000).size(); ++itr_111) {
+      const tilemap_prop_address* _queue_prop_ptr = __builtin_addressof(_tilemap->render_y_based_queue.at(itr_000).at(itr_111));
+      if (_queue_prop_ptr->type <= TILEMAP_PROP_TYPE_UNDEFINED || _queue_prop_ptr->type >= TILEMAP_PROP_TYPE_MAX) {
+        continue;
+      }
+      if (_queue_prop_ptr->type == TILEMAP_PROP_TYPE_SPRITE) 
+      {
+        if (_queue_prop_ptr->data.prop_static == nullptr) continue;
+        tilemap_prop_sprite *const map_prop_ptr = _queue_prop_ptr->data.prop_sprite;
+        if (!map_prop_ptr->is_initialized) continue;
+        if (!CheckCollisionRecs(camera_view, map_prop_ptr->sprite.coord)) { continue; }
+
+        if (map_prop_ptr->sprite.coord.y < start_y) {
+          continue;
+        }
+        else if (map_prop_ptr->sprite.coord.y > end_y) {
+          break;
+        }
+
+        play_sprite_on_site(&map_prop_ptr->sprite, map_prop_ptr->sprite.tint, map_prop_ptr->sprite.coord);
+        continue;
+      }
+      else
+      {
+        if (_queue_prop_ptr->data.prop_sprite == nullptr) continue;
+
+        const tilemap_prop_static * map_prop_ptr = _queue_prop_ptr->data.prop_static;
+        if (!map_prop_ptr->is_initialized) continue;
+
+        Rectangle prop_rect = map_prop_ptr->dest; 
+
+        if (!CheckCollisionRecs(camera_view, prop_rect)) { continue; }
+      
+        const Texture2D* tex = get_texture_by_enum(map_prop_ptr->tex_id); 
+        if (!tex) continue;
+      
+        const Vector2 origin = VECTOR2(prop_rect.width * .5f, prop_rect.height * .5f);
+      
+        if (map_prop_ptr->dest.y + (prop_rect.height * .5f) < start_y) {
+          continue;
+        }
+        else if (map_prop_ptr->dest.y + (prop_rect.height * .5f) > end_y) {
+          break;
+        }
+        DrawTexturePro(*tex, map_prop_ptr->source, prop_rect, origin, map_prop_ptr->rotation, map_prop_ptr->tint);
+
+        #if DEBUG_COLLISIONS
+          Rectangle coll_dest = Rectangle {
+            prop_rect.x - origin.x,
+            prop_rect.y - origin.y,
+            prop_rect.width,
+            prop_rect.height
+          };
+          DrawRectangleLines(
+            static_cast<i32>(coll_dest.x), 
+            static_cast<i32>(coll_dest.y), 
+            static_cast<i32>(coll_dest.width), 
+            static_cast<i32>(coll_dest.height), 
+            WHITE
+          );
+        #endif
+        continue;
+      }
+    }
+  }
+
+}
+void render_props_y_based_by_index(const tilemap* _tilemap, size_t index, Rectangle camera_view, i32 start_y, i32 end_y) {
+  for (size_t itr_111 = 0; itr_111 < _tilemap->render_y_based_queue.at(index).size(); ++itr_111) {
+    const tilemap_prop_address* _queue_prop_ptr = __builtin_addressof(_tilemap->render_y_based_queue.at(index).at(itr_111));
     if (_queue_prop_ptr->type <= TILEMAP_PROP_TYPE_UNDEFINED || _queue_prop_ptr->type >= TILEMAP_PROP_TYPE_MAX) {
       continue;
     }
-
     if (_queue_prop_ptr->type == TILEMAP_PROP_TYPE_SPRITE) 
     {
       if (_queue_prop_ptr->data.prop_static == nullptr) continue;
       tilemap_prop_sprite *const map_prop_ptr = _queue_prop_ptr->data.prop_sprite;
       if (!map_prop_ptr->is_initialized) continue;
       if (!CheckCollisionRecs(camera_view, map_prop_ptr->sprite.coord)) { continue; }
-
       if (map_prop_ptr->sprite.coord.y < start_y) {
         continue;
       }
       else if (map_prop_ptr->sprite.coord.y > end_y) {
         break;
       }
-
       play_sprite_on_site(&map_prop_ptr->sprite, map_prop_ptr->sprite.tint, map_prop_ptr->sprite.coord);
       continue;
     }
     else
     {
       if (_queue_prop_ptr->data.prop_sprite == nullptr) continue;
-      
       const tilemap_prop_static * map_prop_ptr = _queue_prop_ptr->data.prop_static;
       if (!map_prop_ptr->is_initialized) continue;
-      
       Rectangle prop_rect = map_prop_ptr->dest; 
-
       if (!CheckCollisionRecs(camera_view, prop_rect)) { continue; }
     
       const Texture2D* tex = get_texture_by_enum(map_prop_ptr->tex_id); 
@@ -249,7 +312,6 @@ void render_props_y_based(const tilemap* _tilemap, Rectangle camera_view, i32 st
         break;
       }
       DrawTexturePro(*tex, map_prop_ptr->source, prop_rect, origin, map_prop_ptr->rotation, map_prop_ptr->tint);
-      
       #if DEBUG_COLLISIONS
         Rectangle coll_dest = Rectangle {
           prop_rect.x - origin.x,
@@ -268,7 +330,6 @@ void render_props_y_based(const tilemap* _tilemap, Rectangle camera_view, i32 st
       continue;
     }
   }
-
 }
 void render_mainmenu(const tilemap* _tilemap, Rectangle camera_view, const app_settings * in_settings) {
   if (!_tilemap) {

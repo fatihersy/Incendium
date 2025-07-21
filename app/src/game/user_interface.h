@@ -12,6 +12,13 @@ typedef enum button_state {
   BTN_STATE_RELEASED,
 } button_state;
 
+typedef enum checkbox_state {
+  CHECKBOX_STATE_UNDEFINED,
+  CHECKBOX_STATE_CHECKED,
+  CHECKBOX_STATE_UNCHECKED,
+  CHECKBOX_STATE_MAX,
+} checkbox_state;
+
 typedef struct panel {
   atlas_texture_id frame_tex_id;
   atlas_texture_id bg_tex_id;
@@ -102,6 +109,58 @@ typedef struct button {
     this->is_registered = true;
   }
 } button;
+  
+typedef struct checkbox_type {
+  checkbox_type_id id;
+  spritesheet_id ss_type;
+  Vector2 source_frame_dim;
+  Vector2 dest_frame_dim;
+  f32 scale;
+  bool should_center;
+  checkbox_type(void) {
+    this->id = CHECKBOX_TYPE_UNDEFINED;
+    this->ss_type = SHEET_ID_SPRITESHEET_UNSPECIFIED;
+    this->source_frame_dim = ZEROVEC2;
+    this->dest_frame_dim = ZEROVEC2;
+    this->scale = 0.f;
+    this->should_center = false;
+  }
+  checkbox_type(checkbox_type_id id, spritesheet_id ss_type, Vector2 source_frame_dim, Vector2 dest_frame_dim, f32 scale, bool should_center) {
+    this->id = id;
+    this->ss_type = ss_type;
+    this->source_frame_dim = source_frame_dim;
+    this->dest_frame_dim = dest_frame_dim;
+    this->scale = scale;
+    this->should_center = should_center;
+  }
+} checkbox_type;
+
+typedef struct checkbox {
+  checkbox_id id;
+  checkbox_type cb_type;
+  checkbox_state state;
+  
+  bool (*pfn_on_change)(void);
+
+  Rectangle dest;
+  bool on_screen;
+  bool is_registered;
+  
+  checkbox(void) {
+    this->id = CHECKBOX_ID_UNDEFINED;
+    this->cb_type = checkbox_type();
+    this->state = CHECKBOX_STATE_UNCHECKED;
+    this->dest = ZERORECT;
+    this->on_screen = false;
+    this->is_registered = false;
+  }
+  checkbox(checkbox_id id, checkbox_type btn_type, Rectangle dest) : checkbox() {
+    this->id = id;
+    this->cb_type = btn_type;
+    this->dest = dest;
+    this->is_registered = true;
+  }
+} checkbox;
 
 typedef struct slider_option {
   std::string no_localized_text;
@@ -184,9 +243,9 @@ typedef struct slider {
   slider_id id;
   slider_type sdr_type;
   Vector2 position;
-  bool (*on_click)();
-  bool (*on_left_button_trigger)();
-  bool (*on_right_button_trigger)();
+  bool (*on_click)(void);
+  bool (*on_left_button_trigger)(void);
+  bool (*on_right_button_trigger)(void);
 
   std::vector<slider_option> options;
   i32 current_value;
@@ -255,14 +314,15 @@ typedef struct progress_bar {
 void update_user_interface(void);
 void render_user_interface(void);
 
-Vector2 position_element_by_grid(Vector2 grid_pos, Vector2 grid_coord, Vector2 grid_dim);
+Vector2 position_element_by_grid(Vector2 grid_location, Vector2 grid, Vector2 grid_dim);
 
 void register_slider(slider_id _sdr_id, slider_type_id _sdr_type_id, button_id _left_btn_id, button_id _right_btn_id, bool _is_clickable, bool _localize_text);
 
 data_pack* get_slider_current_value(slider_id id);
-Vector2* ui_get_mouse_pos(void);
-Font* ui_get_font(font_type font);
+const Vector2* ui_get_mouse_pos_screen(void);
+const Font* ui_get_font(font_type font);
 slider* get_slider_by_id(slider_id sdr_id);
+checkbox* get_checkbox_by_id(checkbox_id cb_id);
 bool is_ui_fade_anim_complete(void);
 bool is_ui_fade_anim_about_to_complete(void);
 void ui_refresh_setting_sliders_to_default(void);
@@ -276,6 +336,7 @@ Rectangle get_atlas_texture_source_rect(atlas_texture_id _id);
 bool gui_menu_button(const char* text, button_id _id, Vector2 grid, Vector2 grid_location, bool play_on_click_sound);
 bool gui_mini_button(const char* text, button_id _id, Vector2 grid, bool play_on_click_sound);
 bool gui_slider_button(button_id _id, Vector2 pos);
+void gui_checkbox_grid(checkbox_id _id, Vector2 grid, Vector2 grid_location);
 void gui_slider(slider_id _id, Vector2 pos, Vector2 grid);
 void gui_draw_texture_to_background(texture_id _id);
 void gui_draw_spritesheet_to_background(spritesheet_id _id, Color _tint);

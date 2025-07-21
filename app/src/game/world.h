@@ -14,6 +14,7 @@ const tilemap* get_active_map(void);
 tilemap ** get_active_map_ptr(void);
 void set_map_tile(i32 layer, tile src, tile dst);
 tilemap_prop_address get_map_prop_by_pos(Vector2 pos);
+map_collision* get_map_collision_by_pos(Vector2 pos);
 tilemap_prop_static* get_map_prop_static_by_id(i32 map_id);
 tilemap_prop_sprite* get_map_prop_sprite_by_id(i32 map_id);
 const map_collision* get_map_collision_by_id(i32 coll_id);
@@ -24,6 +25,7 @@ void load_current_map(void);
 tile _get_tile_from_sheet_by_mouse_pos(Vector2 _mouse_pos);
 tile _get_tile_from_map_by_mouse_pos(u16 from_layer, Vector2 _mouse_pos);
 void _render_props_y_based(i32 start_y, i32 end_y);
+void _sort_render_y_based_queue(void);
 
 bool add_prop_curr_map(tilemap_prop_static prop_static);
 bool add_prop_curr_map(tilemap_prop_sprite prop_sprite);

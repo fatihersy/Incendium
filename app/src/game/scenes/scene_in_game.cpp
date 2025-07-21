@@ -214,6 +214,7 @@ void update_scene_in_game(void) {
 
   switch (state->stage) {
     case IN_GAME_STAGE_MAP_CHOICE: {
+      update_game_manager();
       event_fire(EVENT_CODE_CAMERA_SET_CAMERA_POSITION, event_context(SIG_BASE_RENDER_WIDTH * .5f, SIG_BASE_RENDER_HEIGHT * .5f));
 
       if (state->show_pause_menu) {}
@@ -224,6 +225,7 @@ void update_scene_in_game(void) {
       break;
     }
     case IN_GAME_STAGE_PASSIVE_CHOICE: {
+      update_game_manager();
       event_fire(EVENT_CODE_CAMERA_SET_CAMERA_POSITION, event_context(
         state->in_ingame_info->player_state_dynamic->position_centered.x,
         state->in_ingame_info->player_state_dynamic->position_centered.y
@@ -439,8 +441,10 @@ void render_interface_in_game(void) {
       }
       else if (!state->has_game_started) { }
       else {
+        const Vector2& mouse_pos_screen = (*state->in_ingame_info->mouse_pos_screen);
+
         gui_label_format(
-          FONT_TYPE_ABRACADABRA, 1, ui_get_mouse_pos()->x, ui_get_mouse_pos()->y, 
+          FONT_TYPE_ABRACADABRA, 1, mouse_pos_screen.x, mouse_pos_screen.y, 
           WHITE, false, false, "world_pos {%.1f, %.1f}", gm_get_mouse_pos_world()->x, gm_get_mouse_pos_world()->y
         );
 
@@ -448,7 +452,7 @@ void render_interface_in_game(void) {
           const Character2D* spawn = get_spawn_info(state->hovered_spawn);
           panel* const pnl = __builtin_addressof(state->debug_info_panel);
           pnl->dest = Rectangle {
-            ui_get_mouse_pos()->x, ui_get_mouse_pos()->y, 
+            mouse_pos_screen.x, mouse_pos_screen.y, 
             SIG_BASE_RENDER_WIDTH * .4f, SIG_BASE_RENDER_HEIGHT * .3f
           };
           i32 font_size = 1;
@@ -495,7 +499,7 @@ void render_interface_in_game(void) {
         if(state->hovered_ability > 0 && state->hovered_ability < ABILITY_TYPE_MAX && state->hovered_projectile >= 0 && state->hovered_projectile < abl->projectiles.size()){
           panel* pnl = __builtin_addressof(state->debug_info_panel);
           pnl->dest = Rectangle {
-            ui_get_mouse_pos()->x, ui_get_mouse_pos()->y, 
+            mouse_pos_screen.x, mouse_pos_screen.y, 
             SIG_BASE_RENDER_WIDTH * .4f, SIG_BASE_RENDER_HEIGHT * .3f
           };
           i32 font_size = 1;
@@ -557,7 +561,7 @@ void in_game_update_mouse_bindings(void) {
           state->worldmap_locations.at(i).screen_location.y * SIG_BASE_RENDER_HEIGHT - WORLDMAP_LOC_PIN_SIZE_DIV2,
           WORLDMAP_LOC_PIN_SIZE, WORLDMAP_LOC_PIN_SIZE
         };
-        if (CheckCollisionPointRec(*ui_get_mouse_pos(), scrloc)) {
+        if (CheckCollisionPointRec( *state->in_ingame_info->mouse_pos_screen, scrloc)) {
           state->hovered_stage = i;
         }
       }

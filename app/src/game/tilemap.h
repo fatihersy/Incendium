@@ -9,7 +9,8 @@ void create_tilesheet(tilesheet_type _type, u16 _dest_tile_size, f32 _offset, ti
 
 void update_tilemap(tilemap* const _tilemap);
 void render_tilemap(const tilemap* _tilemap, Rectangle camera_view);
-void render_props_y_based(const tilemap* _tilemap, Rectangle camera_view, i32 start_y, i32 end_y);
+void render_props_y_based_all(const tilemap* _tilemap, Rectangle camera_view, i32 start_y, i32 end_y);
+void render_props_y_based_by_index(const tilemap* _tilemap, size_t index, Rectangle camera_view, i32 start_y, i32 end_y);
 void render_tilesheet(const tilesheet* sheet, f32 zoom);
 void render_tile(const tile_symbol* symbol,const Rectangle dest,const tilesheet* sheet);
 void render_mainmenu(const tilemap* _tilemap, Rectangle camera_view, const app_settings * in_settings);

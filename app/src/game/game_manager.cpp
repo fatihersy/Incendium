@@ -128,7 +128,7 @@ void update_game_manager(void) {
     return;
   }
 
-  if (!state->game_info.player_state_dynamic->is_dead) {
+  if (state->game_info.player_state_dynamic && state->game_info.player_state_dynamic != nullptr && !state->game_info.player_state_dynamic->is_dead) {
     state->game_info.player_state_dynamic->position_centered = Vector2 {
       state->game_info.player_state_dynamic->position.x + state->game_info.player_state_dynamic->dimentions_div2.x,
       state->game_info.player_state_dynamic->position.y + state->game_info.player_state_dynamic->dimentions_div2.y
