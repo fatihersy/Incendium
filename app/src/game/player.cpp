@@ -211,6 +211,13 @@ void player_move_player(Vector2 new_pos) {
   player->collision.y = player->position.y;
   player->collision.width = player->dimentions.x;
   player->collision.height = player->dimentions.y;
+
+  player->map_level_collision = Rectangle {
+    player->collision.x + (player->collision.width * .25f),
+    player->collision.y + (player->collision.height * .8f),
+    player->collision.width * .5f,
+    player->collision.height * .2f
+  };
 }
 
 bool render_player(void) {

@@ -82,7 +82,12 @@
         },
         {
             "text": "INFO:",
-            "color": "#f1c40f",
+            "color": "#ffd32a",
+            "backgroundColor": "rgba(0,0,0,0)"
+        },
+        {
+            "text": "WARN:",
+            "color": "#ffa801",
             "backgroundColor": "rgba(0,0,0,0)"
         }
     ],

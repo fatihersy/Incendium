@@ -541,12 +541,12 @@ void map_to_str(tilemap* const map, tilemap_stringtify_package* const out_packag
 
   // MAP COLLISIONS SERIALIZE
   for (size_t itr_000 = 0; itr_000 < map->collisions.size(); ++itr_000) {
-    const Rectangle* coll = __builtin_addressof(map->collisions.at(itr_000));
+    const Rectangle& coll = map->collisions.at(itr_000).dest;
     const char* symbol = TextFormat("%.4d,%.4d,%.4d,%.4d," PROP_PARSE_PROP_BUFFER_PARSE_SYMBOL_STR, 
-      static_cast<i32>(coll->x), 
-      static_cast<i32>(coll->y), 
-      static_cast<i32>(coll->width), 
-      static_cast<i32>(coll->height));
+      static_cast<i32>(coll.x), 
+      static_cast<i32>(coll.y), 
+      static_cast<i32>(coll.width), 
+      static_cast<i32>(coll.height));
     out_package->str_collisions.append(symbol);
   }
   // MAP COLLISIONS SERIALIZE
@@ -655,10 +655,10 @@ void str_to_map(tilemap* const map, tilemap_stringtify_package* const out_packag
       TraceLog(LOG_ERROR, "tilemap::str_to_map() Failed to parse collision data, expected 4 values, got %zu", str_coll_par_member.buffer.size());
       continue;
     }
-    Rectangle collision = Rectangle {
+    map_collision collision = map_collision(map->next_collision_id++, Rectangle {
       TextToFloat(str_coll_par_member.buffer.at(0).c_str()), TextToFloat(str_coll_par_member.buffer.at(1).c_str()),
-      TextToFloat(str_coll_par_member.buffer.at(2).c_str()), TextToFloat(str_coll_par_member.buffer.at(3).c_str()),
-    };
+      TextToFloat(str_coll_par_member.buffer.at(2).c_str()), TextToFloat(str_coll_par_member.buffer.at(3).c_str())
+    });
     
     map->collisions.push_back(collision);
   }

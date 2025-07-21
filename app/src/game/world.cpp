@@ -18,7 +18,7 @@ typedef struct world_system_state {
   tilemap * active_map;
 } world_system_state;
 
-static world_system_state * state;
+static world_system_state * state = nullptr;
 
 #define MAINMENU_STAGE_INDEX 0
 
@@ -220,6 +220,19 @@ tilemap_prop_sprite* get_map_prop_sprite_by_id(i32 map_id) {
   TraceLog(LOG_WARNING, "world::get_map_prop_by_id()::No match found");
   return nullptr;  
 }
+const map_collision* get_map_collision_by_id(i32 coll_id) {
+  if (!state || state != nullptr) {
+    TraceLog(LOG_ERROR, "world::get_map_collision_by_id()::State is not valid");
+    return nullptr;
+  }
+  for (size_t itr_000 = 0; itr_000 < state->active_map->collisions.size(); ++itr_000) {
+    if (state->active_map->collisions.at(itr_000).coll_id == coll_id) {
+      return __builtin_addressof(state->active_map->collisions.at(itr_000));
+    }
+  }
+
+  return nullptr;
+}
 
 
 void save_current_map(void) {
@@ -283,18 +296,18 @@ bool add_prop_curr_map(tilemap_prop_sprite prop_sprite) {
   refresh_render_queue(state->active_map_stage.map_id);
   return true;
 }
-bool add_map_coll_curr_map(Rectangle map_coll) {
-  f32 map_dim = state->active_map->position.x + (state->active_map->map_dim * state->active_map->tile_size);
-  bool in_bounds = 
-    map_coll.x > state->active_map->position.x && 
-    map_coll.y > state->active_map->position.y && 
-    map_coll.x < state->active_map->position.x + map_dim && 
-    map_coll.y < state->active_map->position.y + map_dim;
+bool add_map_coll_curr_map(Rectangle in_collision) {
+  f32 map_extent = state->active_map->position.x + (state->active_map->map_dim * state->active_map->tile_size);
+  bool in_bounds =
+    in_collision.x > state->active_map->position.x ||
+    in_collision.y > state->active_map->position.y ||
+    in_collision.x + in_collision.width  < map_extent ||
+    in_collision.y + in_collision.height < map_extent;
   if (!in_bounds) {
-    TraceLog(LOG_WARNING, "world::add_map_coll_state->active_map->)::Collision out of the bounds of map");
+    TraceLog(LOG_WARNING, "world::add_map_coll_curr_map()::Collision out of the bounds of map");
     return false;
   }
-  state->active_map->collisions.push_back(map_coll);
+  state->active_map->collisions.push_back(map_collision(state->active_map->next_collision_id++, in_collision));
   return true;
 }
 bool remove_prop_cur_map_by_id(i32 map_id, tilemap_prop_types type) {
@@ -327,6 +340,19 @@ bool remove_prop_cur_map_by_id(i32 map_id, tilemap_prop_types type) {
     TraceLog(LOG_WARNING, "world::remove_prop_cur_map_by_id()::No match found");
     return false;
   }
+}
+bool remove_map_collision_by_id(i32 coll_id) {
+  if (!state || state == nullptr) {
+    TraceLog(LOG_ERROR, "world::get_map_collision_by_id()::State is not valid");
+    return false;
+  }
+  for (size_t itr_000 = 0; itr_000 < state->active_map->collisions.size(); ++itr_000) {
+    if (state->active_map->collisions.at(itr_000).coll_id == coll_id) {
+      state->active_map->collisions.erase(state->active_map->collisions.begin() + itr_000);
+      return true;
+    }
+  }
+  return false;
 }
 constexpr Rectangle get_position_view_rect(Camera2D camera, Vector2 pos, f32 zoom) {
   int screen_width = state->in_app_settings->render_width;

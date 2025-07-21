@@ -135,14 +135,14 @@ void update_game_manager(void) {
     };
     const player_update_results pur = update_player();
     if (pur.is_success) { // TODO: Player-Map collision detection system
-      const Rectangle& pl_col = state->game_info.player_state_dynamic->collision;
-      const Rectangle new_x = Rectangle { pl_col.x + pur.move_request.x, pl_col.y,                      pl_col.width, pl_col.height };
-      const Rectangle new_y = Rectangle { pl_col.x,                      pl_col.y + pur.move_request.y, pl_col.width, pl_col.height };
+      const Rectangle& pl_map_coll = state->game_info.player_state_dynamic->map_level_collision;
+      const Rectangle new_x = Rectangle { pl_map_coll.x + pur.move_request.x, pl_map_coll.y,                      pl_map_coll.width, pl_map_coll.height };
+      const Rectangle new_y = Rectangle { pl_map_coll.x,                      pl_map_coll.y + pur.move_request.y, pl_map_coll.width, pl_map_coll.height };
 
       bool is_collided_x = false;
       bool is_collided_y = false;
       for (size_t itr_000 = 0; itr_000 < (*state->in_active_map)->collisions.size() ; ++itr_000) {
-        const Rectangle& map_coll = (*state->in_active_map)->collisions.at(itr_000);
+        const Rectangle& map_coll = (*state->in_active_map)->collisions.at(itr_000).dest;
 
         if(CheckCollisionRecs(map_coll, new_x)) {
           is_collided_x = true;
@@ -162,7 +162,7 @@ void update_game_manager(void) {
     if (*state->game_info.p_spawn_system_spawn_count < 50) {
       populate_map_with_spawns();
     }
-    update_spawns(state->game_info.player_state_dynamic->position_centered);
+    //update_spawns(state->game_info.player_state_dynamic->position_centered);
 
     generate_in_game_info();
 
@@ -201,9 +201,7 @@ void render_game(void) {
     render_spawns();
 
     for (size_t itr_000 = 0; itr_000 < (*state->in_active_map)->collisions.size() ; ++itr_000) {
-      DrawRectangleLinesEx(
-        (*state->in_active_map)->collisions.at(itr_000), 2.f, BLUE
-      );
+      DrawRectangleLinesEx((*state->in_active_map)->collisions.at(itr_000).dest, 2.f, BLUE);
     }
   }
   else {

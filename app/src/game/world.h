@@ -16,6 +16,7 @@ void set_map_tile(i32 layer, tile src, tile dst);
 tilemap_prop_address get_map_prop_by_pos(Vector2 pos);
 tilemap_prop_static* get_map_prop_static_by_id(i32 map_id);
 tilemap_prop_sprite* get_map_prop_sprite_by_id(i32 map_id);
+const map_collision* get_map_collision_by_id(i32 coll_id);
 
 void save_current_map(void);
 void load_current_map(void);
@@ -28,6 +29,7 @@ bool add_prop_curr_map(tilemap_prop_static prop_static);
 bool add_prop_curr_map(tilemap_prop_sprite prop_sprite);
 bool add_map_coll_curr_map(Rectangle map_coll);
 bool remove_prop_cur_map_by_id(i32 map_id, tilemap_prop_types type);
+bool remove_map_collision_by_id(i32 coll_id);
 void update_map(void);
 void drag_tilesheet(Vector2 vec);
 void _render_tile_on_pos(const tile* _tile, Vector2 pos,const tilesheet* sheet);

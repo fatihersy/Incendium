@@ -309,17 +309,6 @@ void render_scene_in_game(void) {
         _render_props_y_based(top_of_the_screen, player_texture_begin);
         render_game();
         _render_props_y_based(player_texture_begin, bottom_of_the_screen);
-        
-        DrawRectangleLines(
-          static_cast<i32>(iginf->player_state_dynamic->position.x), 
-          static_cast<i32>(iginf->player_state_dynamic->position.y), 
-          static_cast<i32>(iginf->player_state_dynamic->dimentions.x), 
-          static_cast<i32>(iginf->player_state_dynamic->dimentions.y), 
-          RED
-        );
-
-        const Character2D* chr = iginf->nearest_spawn;
-        if (chr) DrawRectangleLines(chr->collision.x, chr->collision.y, chr->collision.width, chr->collision.height, RED); // TODO: Nearest spawn indicator. Remove later
       }
       
       break;
@@ -360,11 +349,15 @@ void render_interface_in_game(void) {
             };
             pnl->dest = Rectangle {scrloc.x + WORLDMAP_LOC_PIN_SIZE, scrloc.y + WORLDMAP_LOC_PIN_SIZE_DIV2, SIG_BASE_RENDER_WIDTH * .25f, SIG_BASE_RENDER_HEIGHT * .25f};
             DrawCircleGradient(scrloc.x + WORLDMAP_LOC_PIN_SIZE_DIV2, scrloc.y + WORLDMAP_LOC_PIN_SIZE_DIV2, 100, Color{236,240,241,50}, Color{255, 255, 255, 0});
-            GUI_PANEL_SCISSORED((*pnl), false, {
+
+            gui_panel((*pnl), pnl->dest, false);
+            BeginScissorMode(pnl->dest.x, pnl->dest.y, pnl->dest.width, pnl->dest.height);
+            {
               gui_label(state->worldmap_locations.at(i).displayname.c_str(), FONT_TYPE_ABRACADABRA, 1, Vector2 {
                 pnl->dest.x + pnl->dest.width *.5f, pnl->dest.y + pnl->dest.height*.5f
               }, WHITE, true, true);
-            });
+            }
+            EndScissorMode();
           }
         }
       }
@@ -461,7 +454,10 @@ void render_interface_in_game(void) {
           i32 font_size = 1;
           i32 line_height = SIG_BASE_RENDER_HEIGHT * .05f;
           Vector2 debug_info_position_buffer = VECTOR2(pnl->dest.x, pnl->dest.y);
-          GUI_PANEL_SCISSORED((*pnl), false, {
+
+          gui_panel((*pnl), pnl->dest, false);
+          BeginScissorMode(pnl->dest.x, pnl->dest.y, pnl->dest.width, pnl->dest.height);
+          {
             gui_label_format(
               FONT_TYPE_ABRACADABRA, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
               WHITE, false, false, "Id: %d", spawn->character_id
@@ -491,7 +487,8 @@ void render_interface_in_game(void) {
               FONT_TYPE_ABRACADABRA, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
               WHITE, false, false, "Speed: %.1f", spawn->speed
             );
-          });
+          }
+          EndScissorMode();
         }
 
         const ability* abl = get_dynamic_player_state_ability(state->hovered_ability);
@@ -505,7 +502,10 @@ void render_interface_in_game(void) {
           i32 line_height = SIG_BASE_RENDER_HEIGHT * .05f;
           Vector2 debug_info_position_buffer = VECTOR2(pnl->dest.x, pnl->dest.y);
           const projectile* prj = __builtin_addressof(abl->projectiles.at(state->hovered_projectile));
-          GUI_PANEL_SCISSORED((*pnl), false, {
+
+          gui_panel((*pnl), pnl->dest, false);
+          BeginScissorMode(pnl->dest.x, pnl->dest.y, pnl->dest.width, pnl->dest.height);
+          {
             gui_label_format(
               FONT_TYPE_ABRACADABRA, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
               WHITE, false, false, "Collision: {%.1f, %.1f, %.1f, %.1f}", prj->collision.x, prj->collision.y, prj->collision.width, prj->collision.height
@@ -515,7 +515,8 @@ void render_interface_in_game(void) {
               FONT_TYPE_ABRACADABRA, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
               WHITE, false, false, "Rotation: %.1f", prj->animations.at(prj->active_sprite).rotation
             );
-          });
+          }
+          EndScissorMode();
         }
         
         gui_label_format(FONT_TYPE_ABRACADABRA, 1, SIG_BASE_RENDER_WIDTH * .75f, SCREEN_OFFSET.y, WHITE, false, false, "Remaining: %d", get_remaining_enemies());

@@ -442,12 +442,26 @@ typedef struct tile {
   }
 } tile;
 
+typedef struct map_collision {
+  i32 coll_id;
+  Rectangle dest;
+  map_collision(void) {
+    this->coll_id = I32_MAX;
+    this->dest = ZERORECT;
+  }
+  map_collision(i32 collision_id, Rectangle dest) : map_collision() {
+    this->coll_id = collision_id;
+    this->dest = dest;
+  }
+} map_collision;
+
 typedef struct tilemap {
   std::array<std::string, MAX_TILEMAP_LAYERS> filename;
   std::string propfile;
   std::string collisionfile;
   Vector2 position;
   i32 next_map_id;
+  i32 next_collision_id;
   u16 map_dim_total;
   u16 map_dim;
   u16 tile_size;
@@ -456,7 +470,7 @@ typedef struct tilemap {
   std::vector<tilemap_prop_sprite> sprite_props;
   std::array<std::vector<tilemap_prop_address>, MAX_Z_INDEX_SLOT> render_z_index_queue;
   std::vector<tilemap_prop_address> render_y_based_queue;
-  std::vector<Rectangle> collisions;
+  std::vector<map_collision> collisions;
   bool is_initialized;
 } tilemap;
 
@@ -689,6 +703,7 @@ typedef struct player_state {
   ability_type starter_ability;
   
   Rectangle collision;
+  Rectangle map_level_collision;
   Vector2 dimentions;
   Vector2 dimentions_div2;
   spritesheet move_left_sprite;
