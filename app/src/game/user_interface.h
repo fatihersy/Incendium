@@ -309,6 +309,34 @@ typedef struct progress_bar {
   }
 } progress_bar;
 
+typedef enum ui_fade_type {
+  FADE_TYPE_UNDEFINED,
+  FADE_TYPE_FADEIN,
+  FADE_TYPE_FADEOUT,
+  FADE_TYPE_MAX,
+} ui_fade_type;
+
+typedef struct ui_fade_control_system {
+  i32 fade_animation_duration;
+  i32 fade_animation_timer; // By frame
+  ui_fade_type fade_type;
+  bool fade_animation_playing;
+  bool is_fade_animation_played;
+
+  data64 data;
+  void (*on_change_complete)(data64 data);
+
+  ui_fade_control_system(void) {
+    this->fade_animation_duration = 0;
+    this->fade_animation_timer = 0;
+    this->fade_type = FADE_TYPE_UNDEFINED;
+    this->fade_animation_playing = false;
+    this->is_fade_animation_played = false;
+    this->data = data64();
+    this->on_change_complete = nullptr;
+  }
+} ui_fade_control_system;
+
 [[__nodiscard__]] bool user_interface_system_initialize(void);
 
 void update_user_interface(void);
@@ -324,8 +352,9 @@ const Font* ui_get_font(font_type font);
 slider* get_slider_by_id(slider_id sdr_id);
 checkbox* get_checkbox_by_id(checkbox_id cb_id);
 bool is_ui_fade_anim_complete(void);
-bool is_ui_fade_anim_about_to_complete(void);
+void is_ui_fade_anim_reset(void);
 void ui_refresh_setting_sliders_to_default(void);
+void process_fade_effect(ui_fade_control_system* fade);
 
 bool ui_set_slider_current_index(slider_id id, u16 index);
 bool ui_set_slider_current_value(slider_id id, slider_option value);

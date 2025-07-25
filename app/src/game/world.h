@@ -23,7 +23,7 @@ void save_current_map(void);
 void load_current_map(void);
 
 tile _get_tile_from_sheet_by_mouse_pos(Vector2 _mouse_pos);
-tile _get_tile_from_map_by_mouse_pos(u16 from_layer, Vector2 _mouse_pos);
+tile _get_tile_from_map_by_mouse_pos(i32 from_layer, Vector2 _mouse_pos);
 void _render_props_y_based(i32 start_y, i32 end_y);
 void _sort_render_y_based_queue(void);
 

@@ -33,7 +33,7 @@ typedef enum save_game_entry_order {
 }save_game_entry_order;
 
 typedef struct save_game_system_state {
-  save_data save_slots[SAVE_SLOT_MAX];
+  std::vector<save_data> save_slots;
   u8 file_buffer[TOTAL_SAVE_FILE_SIZE];
   u8 variable_buffer[TOTAL_SAVE_FILE_SIZE];
   i32 file_datasize;
@@ -58,14 +58,14 @@ bool save_system_initialize(void) {
     return false;
   }
 
-  for (i32 i=0; i<SAVE_SLOT_MAX; ++i) {
-    if (i == SAVE_SLOT_CURRENT_SESSION) {
+  for (i32 itr_000 = 0; itr_000 < SAVE_SLOT_MAX; ++itr_000) {
+    if (itr_000 == SAVE_SLOT_CURRENT_SESSION) {
       const char* file_name = TextFormat("%s%s","save_slot_current", SAVE_GAME_EXTENSION);
-      copy_memory(state->save_slots[i].file_name, file_name, TextLength(file_name));
+      state->save_slots.push_back(save_data(file_name));
     }
     else {
-      const char* file_name = TextFormat("save_slot%d%s", i+1, SAVE_GAME_EXTENSION);
-      copy_memory(state->save_slots[i].file_name, file_name, TextLength(file_name));
+      const char* file_name = TextFormat("save_slot%d%s", itr_000+1, SAVE_GAME_EXTENSION);
+      state->save_slots.push_back(save_data(file_name));
     }
   }
 
@@ -77,11 +77,11 @@ bool parse_or_create_save_data_from_file(save_slots slot) {
     TraceLog(LOG_WARNING, "save_game::parse_or_create_save_data_from_file()::Save game state is not valid");
     return false;
   }
-  if (!FileExists((const char*)state->save_slots[slot].file_name)) {
+  if (!FileExists(state->save_slots.at(slot).file_name.c_str())) {
     return save_save_data(slot);
   }
-  i32 out_datasize;
-  u8* data = LoadFileData((const char*)state->save_slots[slot].file_name, &out_datasize);
+  i32 out_datasize = 1;
+  u8* data = LoadFileData(state->save_slots.at(slot).file_name.c_str(), &out_datasize);
   copy_memory(state->file_buffer, data, out_datasize);
   UnloadFileData(data);
   state->file_datasize = out_datasize;
@@ -95,7 +95,7 @@ bool save_save_data(save_slots slot) {
     TraceLog(LOG_WARNING, "save_game::save_save_data()::Save game state is not valid");
     return false;
   }
-  save_data* slot_data = &state->save_slots[slot];
+  save_data* slot_data = &state->save_slots.at(slot);
   encode_integer_result result_souls = encode_integer(slot_data->currency_souls_player_have);
   const char* slot_data_text = TextFormat("%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s",
     result_souls.txt,
@@ -118,12 +118,12 @@ bool save_save_data(save_slots slot) {
     HEADER_SYMBOL_ENTRY
   );
 
-  return SaveFileText((const char*)state->save_slots[slot].file_name, (char*)slot_data_text);
+  return SaveFileText(state->save_slots.at(slot).file_name.c_str(), (char*)slot_data_text);
 }
 
 void parse_data(save_slots slot) {
   save_game_entry_order entry_order = static_cast<save_game_entry_order>(save_game_entry_order::SAVE_DATA_ORDER_START+1);
-  save_data* save_slot = &state->save_slots[slot];
+  save_data* save_slot = &state->save_slots.at(slot);
   for (i32 i=0; i<state->file_datasize; ++i) {
     switch (entry_order) {
     case SAVE_DATA_ORDER_CURRENCY_SOULS_PLAYER_HAVE: {
@@ -207,7 +207,7 @@ save_data* get_save_data(save_slots slot) {
     TraceLog(LOG_ERROR, "save_game::get_save_data()::State is not valid");
     return 0;
   }
-  return &state->save_slots[slot];
+  return &state->save_slots.at(slot);
 }
 u32 save_game_get_entry(u32 offset) {
   u32 data_counter = 0;

@@ -10,7 +10,7 @@
 extern const u32 level_curve[MAX_PLAYER_LEVEL+1];
 #define PLAYER_SCALE 3.f
 
-static player_state* player;
+static player_state* player = nullptr;
 
 bool player_system_on_event(i32 code, event_context context);
 void player_system_reinit(void);
@@ -80,9 +80,9 @@ bool player_system_initialize(void) {
 }
 void player_system_reinit(void) {
   
-  player->position.x = 0;
-  player->position.y = 0;
-  player->dimentions = Vector2{22, 32};
+  player->position.x = 0.f;
+  player->position.y = 0.f;
+  player->dimentions = Vector2{22.f, 32.f};
   player->dimentions.x *= PLAYER_SCALE;
   player->dimentions.y *= PLAYER_SCALE;
   player->dimentions_div2 = Vector2{ player->dimentions.x * .5f, player->dimentions.y * .5f };
@@ -96,14 +96,14 @@ void player_system_reinit(void) {
   player->is_moving = false;
   player->w_direction = WORLD_DIRECTION_LEFT;
   player->is_damagable = true;
-  player->damage_break_time = .2; //ms
+  player->damage_break_time = .2f; //ms
   player->damage_break_current = player->damage_break_time;
   player->level = 1;
   player->exp_to_next_level = level_curve[player->level];
   player->exp_current = 0;
   player->health_max = 0; // INFO: Will be Modified by player stats
   player->health_current = player->health_max;
-  player->health_perc = (float) player->health_current / player->health_max;
+  player->health_perc = static_cast<f32>(player->health_current) / static_cast<f32>(player->health_max);
 
   player->last_played_animation = &player->idle_left_sprite; // The position player starts. To avoid from the error when move firstly called
   
@@ -119,23 +119,22 @@ player_state* get_player_state(void) {
   return player;
 }
 
-void player_add_exp_to_player(u32 exp) {
-  u32 curr = player->exp_current;
-  u32 to_next = player->exp_to_next_level;
+void player_add_exp_to_player(i32 exp) {
+  i32 curr = player->exp_current;
+  i32 to_next = player->exp_to_next_level;
   if ( curr + exp >= to_next) 
   {
     player->exp_current = (curr + exp) - to_next;
     player->level++;
     player->exp_to_next_level = level_curve[player->level];
     player->is_player_have_ability_upgrade_points = true;
-    //play_sprite_on_player(player->);
   }
   else {
     player->exp_current += exp;
   }
-  player->exp_perc = (float) player->exp_current / player->exp_to_next_level;
+  player->exp_perc = static_cast<f32>(player->exp_current) / static_cast<f32>(player->exp_to_next_level);
 }
-void player_take_damage(u16 damage) {
+void player_take_damage(i32 damage) {
   if(!player->is_damagable || player->is_dead) return;
   if((player->health_current - damage) > 0 && (player->health_current - damage) <= player->health_max) {
     player->health_current -= damage;
@@ -147,9 +146,9 @@ void player_take_damage(u16 damage) {
     player->is_dead = true;
     event_fire(EVENT_CODE_END_GAME, event_context());
   }
-  player->health_perc = (float) player->health_current / player->health_max;
+  player->health_perc = static_cast<f32>(player->health_current) / static_cast<f32>(player->health_max);
 }
-void player_heal_player(u16 amouth){
+void player_heal_player(i32 amouth){
   if(player->is_dead) return;
   if(player->health_current + amouth <= player->health_max) {
     player->health_current += amouth;
@@ -157,7 +156,7 @@ void player_heal_player(u16 amouth){
   else {
     player->health_current = player->health_max;
   }
-  player->health_perc = (f32) player->health_current / player->health_max;
+  player->health_perc = static_cast<f32>(player->health_current) / static_cast<f32>(player->health_max);
 }
 
 player_update_results update_player(void) {
@@ -172,16 +171,16 @@ player_update_results update_player(void) {
   }
   Vector2 new_position = ZEROVEC2;
   if (IsKeyDown(KEY_W)) {
-    new_position.y -= 2;
+    new_position.y -= 2.f;
   }
   if (IsKeyDown(KEY_A)) {
-    new_position.x -= 2;
+    new_position.x -= 2.f;
   }
   if (IsKeyDown(KEY_S)) {
-    new_position.y += 2;
+    new_position.y += 2.f;
   }
   if (IsKeyDown(KEY_D)) {
-    new_position.x += 2;
+    new_position.x += 2.f;
   }
   update_sprite(player->last_played_animation);
   
@@ -192,13 +191,13 @@ void player_move_player(Vector2 new_pos) {
     TraceLog(LOG_ERROR, "player::player_move_player()::Player state is null");
     return;
   }
-  if (new_pos.x < 0) {
+  if (new_pos.x < 0.f) {
     player->w_direction = WORLD_DIRECTION_LEFT;
   }
-  else if (new_pos.x > 0) {
+  else if (new_pos.x > 0.f) {
     player->w_direction = WORLD_DIRECTION_RIGHT;
   }
-  else if(new_pos.x == 0 && new_pos.y == 0) {
+  else if(new_pos.x == 0.f && new_pos.y == 0.f) {
     player->is_moving = false;
     return;
   }
@@ -338,7 +337,7 @@ void play_anim(spritesheet_id player_anim_sheet) {
 bool player_system_on_event(i32 code, event_context context) {
     switch (code) {
         case EVENT_CODE_PLAYER_ADD_EXP: {
-          player_add_exp_to_player(context.data.u32[0]);
+          player_add_exp_to_player(context.data.i32[0]);
           event_fire(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, event_context((f32)PRG_BAR_ID_PLAYER_EXPERIANCE, (f32)player->exp_perc));
           return true;
         }

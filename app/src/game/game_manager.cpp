@@ -18,12 +18,13 @@ typedef struct game_manager_system_state {
   tilemap ** in_active_map;
 
   worldmap_stage stage;
+  ingame_phases ingame_phase;
   player_state player_state_static;
   ingame_info game_info;
   Vector2 mouse_pos_world;
   Vector2 mouse_pos_screen;
-  u16 remaining_waves_to_spawn_boss;
 
+  bool show_pause_menu;
   bool is_game_end;
   bool is_game_paused;
   bool game_manager_initialized;
@@ -35,12 +36,15 @@ static game_manager_system_state * state;
 extern const u32 level_curve[MAX_PLAYER_LEVEL+1];
 
 #define SPAWN_TRYING_LIMIT 15
-#define WAVE_COUNT_TO_SPAWN_BOSS 2
+#define GET_BOSS_LEVEL(STAGE_LEVEL, VAL) (STAGE_LEVEL + (STAGE_LEVEL * state->stage.boss_scale))
+#define GET_BOSS_SCALE(VAL) (100 + (100 * VAL))
+#define GET_BOSS_SPEED(VAL) (1.1f * VAL)
 
 bool game_manager_on_event(i32 code, event_context context);
 bool game_manager_reinit(const camera_metrics * in_camera_metrics, const app_settings * in_app_settings,tilemap ** const in_active_map_ptr);
 void game_manager_set_stats(character_stat* stat, u32 level);
-void populate_map_with_spawns(void);
+void populate_map_with_spawns(i32 min_count);
+bool spawn_boss(void);
 void generate_in_game_info(void);
 
 bool game_manager_initialize(const camera_metrics * in_camera_metrics, const app_settings * in_app_settings, tilemap ** const in_active_map_ptr) {
@@ -74,16 +78,20 @@ bool game_manager_initialize(const camera_metrics * in_camera_metrics, const app
   
   state->game_info.player_state_dynamic          = get_player_state();
   state->game_info.in_spawns                     = get_spawns();
-  state->game_info.p_spawn_system_spawn_count    = get_spawn_count();
   state->game_info.mouse_pos_world               = __builtin_addressof(state->mouse_pos_world);
   state->game_info.mouse_pos_screen              = __builtin_addressof(state->mouse_pos_screen);
-  state->game_info.remaining_waves_to_spawn_boss = __builtin_addressof(state->remaining_waves_to_spawn_boss);
   state->game_info.is_game_end                   = __builtin_addressof(state->is_game_end);
   state->game_info.is_game_paused                = __builtin_addressof(state->is_game_paused);
+  state->game_info.ingame_phase                  = __builtin_addressof(state->ingame_phase);
+  state->game_info.show_pause_menu               = __builtin_addressof(state->show_pause_menu);
 
   event_register(EVENT_CODE_END_GAME, game_manager_on_event);
   event_register(EVENT_CODE_DAMAGE_PLAYER_IF_COLLIDE, game_manager_on_event);
   event_register(EVENT_CODE_DAMAGE_ANY_SPAWN_IF_COLLIDE, game_manager_on_event);
+  event_register(EVENT_CODE_ADD_CURRENCY_SOULS, game_manager_on_event);
+  event_register(EVENT_CODE_RESUME_GAME, game_manager_on_event);
+  event_register(EVENT_CODE_PAUSE_GAME, game_manager_on_event);
+  event_register(EVENT_CODE_TOGGLE_GAME_PAUSE, game_manager_on_event);
 
   return game_manager_reinit(in_camera_metrics, in_app_settings, in_active_map_ptr);
 }
@@ -97,8 +105,6 @@ bool game_manager_reinit(const camera_metrics * in_camera_metrics, const app_set
     return false;
   }
   gm_load_game();
-
-  state->remaining_waves_to_spawn_boss = WAVE_COUNT_TO_SPAWN_BOSS;
   state->game_manager_initialized = true;
   state->is_game_paused = true;
 
@@ -151,18 +157,27 @@ void update_game_manager(void) {
           is_collided_y = true;
         }
       }
-      if ( !is_collided_x ) {
+      if ( !is_collided_x && pur.move_request.x) {
         player_move_player(VECTOR2(pur.move_request.x, 0.f));
+        //player_move_player(VECTOR2(0.f, 2.f));
       }
-      if ( !is_collided_y ) {
+      if ( !is_collided_y && pur.move_request.y) {
         player_move_player(VECTOR2(0.f, pur.move_request.y));
+      }
+      if (pur.move_request.x == 0 && pur.move_request.y == 0) {
+        player_move_player(VECTOR2(0.f, 0.f));
+      }
+    }
+    if (state->game_info.in_spawns->size() == 0) {
+      if (spawn_boss() && state->ingame_phase != INGAME_PHASE_DEFEAT_BOSS) {
+        state->ingame_phase = INGAME_PHASE_DEFEAT_BOSS;
+      }
+      else {
+        gm_end_game(true);
       }
     }
 
-    if (*state->game_info.p_spawn_system_spawn_count < 50) {
-      populate_map_with_spawns();
-    }
-    //update_spawns(state->game_info.player_state_dynamic->position_centered);
+    update_spawns(state->game_info.player_state_dynamic->position_centered);
 
     generate_in_game_info();
 
@@ -173,6 +188,7 @@ void update_game_manager(void) {
         state->game_info.player_state_dynamic->ability_system.abilities.at(itr_000).ability_play_time += GetFrameTime();
       }
     }
+    state->game_info.play_time += GetFrameTime();
   }
 }
 void update_game_manager_debug(void) {
@@ -215,30 +231,43 @@ void render_game(void) {
 /**
  * @brief Start game before, then upgrade the stat
  */
-void gm_start_game(worldmap_stage stage) {
+bool gm_start_game(worldmap_stage stage) {
   if (!state) {
     TraceLog(LOG_ERROR, "game_manager::gm_start_game()::State returned null");
-    return;
+    return false;
   }
   state->stage = stage;
+  if (_add_ability(state->game_info.player_state_dynamic->starter_ability)) {
+    refresh_player_stats(true, false);
+  }
+  else return false;
   
-  _add_ability(state->game_info.player_state_dynamic->starter_ability);
-  refresh_player_stats(true, false);
-  
-  populate_map_with_spawns();
+  populate_map_with_spawns(stage.total_spawn_count);
+  if (state->game_info.in_spawns->size() <= 0) {
+    return false;
+  }
+  TraceLog(LOG_INFO, "Spawn Count: %llu", state->game_info.in_spawns->size());
 
   event_fire(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, event_context((f32)PRG_BAR_ID_PLAYER_EXPERIANCE, (f32)state->game_info.player_state_dynamic->exp_perc));
   event_fire(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, event_context((f32)PRG_BAR_ID_PLAYER_HEALTH, (f32)state->game_info.player_state_dynamic->health_perc));
+
+  state->ingame_phase = INGAME_PHASE_CLEAR_ZOMBIES;
+  state->is_game_end = false;
+  state->is_game_paused = false;
+
+  return true;
 }
-void gm_reset_game(void) {
+void gm_end_game(bool is_win) {
   clean_up_spawn_state();
 
   copy_memory(state->game_info.player_state_dynamic, __builtin_addressof(state->player_state_static), sizeof(player_state));
-  state->is_game_end = false;
-  state->is_game_paused = true;
+  state->game_info.is_win = is_win;
+  state->is_game_end = true;
+  state->is_game_paused = false;
   state->stage = worldmap_stage();
 }
 void gm_save_game(void) {
+  state->game_progression_data->currency_souls_player_have += state->game_info.collected_souls;
   state->game_progression_data->p_player = state->player_state_static;
   save_save_data(SAVE_SLOT_CURRENT_SESSION);
 }
@@ -257,10 +286,10 @@ void gm_damage_spawn_if_collide(data128 coll_data, i32 damage, collision_type co
     case COLLISION_TYPE_RECTANGLE_RECTANGLE: {
       Rectangle rect = Rectangle { (f32)coll_data.i16[0],  (f32)coll_data.i16[1], (f32)coll_data.i16[2], (f32)coll_data.i16[3] };
 
-      for (u32 iter = 0; iter < * state->game_info.p_spawn_system_spawn_count; ++iter) {
-        if (!state->game_info.in_spawns[iter].is_dead){
-          if (CheckCollisionRecs(state->game_info.in_spawns[iter].collision, rect)) {
-            damage_spawn(state->game_info.in_spawns[iter].character_id, damage);
+      for (u32 itr_000 = 0; itr_000 < state->game_info.in_spawns->size(); ++itr_000) {
+        if (!state->game_info.in_spawns->at(itr_000).is_dead){
+          if (CheckCollisionRecs(state->game_info.in_spawns->at(itr_000).collision, rect)) {
+            damage_spawn(state->game_info.in_spawns->at(itr_000).character_id, damage);
           }
         }
       }
@@ -270,10 +299,10 @@ void gm_damage_spawn_if_collide(data128 coll_data, i32 damage, collision_type co
       Vector2 circle_center = Vector2 { (f32)coll_data.i16[0],  (f32)coll_data.i16[1] };
       f32 circle_radius = (f32) coll_data.i16[2];
 
-      for (u32 iter = 0; iter < * state->game_info.p_spawn_system_spawn_count; ++iter) {
-        if (!state->game_info.in_spawns[iter].is_dead){
-          if (CheckCollisionCircleRec(circle_center, circle_radius, state->game_info.in_spawns[iter].collision)) {
-            damage_spawn(state->game_info.in_spawns[iter].character_id, damage);
+      for (u32 itr_000 = 0; itr_000 < state->game_info.in_spawns->size(); ++itr_000) {
+        if (!state->game_info.in_spawns->at(itr_000).is_dead){
+          if (CheckCollisionCircleRec(circle_center, circle_radius, state->game_info.in_spawns->at(itr_000).collision)) {
+            damage_spawn(state->game_info.in_spawns->at(itr_000).character_id, damage);
           }
         }
       }
@@ -314,43 +343,45 @@ void gm_damage_player_if_collide(data128 coll_data, i32 damage, collision_type c
   TraceLog(LOG_WARNING, "game_manager::gm_damage_player_if_collide()::Function terminated unexpectedly");
 }
 
-void populate_map_with_spawns(void) {
-  if (!state->game_info.in_spawns) {
-    TraceLog(LOG_ERROR, "game_manager::populate_map_with_spawns()::Spawn accessor is not valid");
+void populate_map_with_spawns(i32 min_count) {
+  if (!state || state == nullptr) {
+    TraceLog(LOG_ERROR, "game_manager::populate_map_with_spawns()::State is not valid");
     return;
   }
-
-  if ((state->remaining_waves_to_spawn_boss <= 0 || state->remaining_waves_to_spawn_boss > WAVE_COUNT_TO_SPAWN_BOSS) && *state->game_info.p_spawn_system_spawn_count < MAX_SPAWN_COUNT) {
-    for (u16 i = 0; i < SPAWN_TRYING_LIMIT; i++) {
-      Vector2 position = {
-        (f32) get_random((i32)state->stage.spawning_areas.at(0).x, (i32)state->stage.spawning_areas.at(0).x + state->stage.spawning_areas.at(0).width),
-        (f32) get_random((i32)state->stage.spawning_areas.at(0).y, (i32)state->stage.spawning_areas.at(0).y + state->stage.spawning_areas.at(0).height)
-      };
-      if(spawn_character(Character2D(SPAWN_TYPE_RED, (u16) state->game_info.player_state_dynamic->level + 5, 150, position, 1.f))) {
-        state->remaining_waves_to_spawn_boss = WAVE_COUNT_TO_SPAWN_BOSS;
-        TraceLog(LOG_INFO, "Boss spawned!");
-        break;
-      }
-    }
+  if (!state->game_info.in_spawns || state->game_info.in_spawns == nullptr) {
+    TraceLog(LOG_ERROR, "game_manager::populate_map_with_spawns()::Spawns pointer is not valid");
+    return;
   }
-  else if(state->remaining_waves_to_spawn_boss > 0) {
-    state->remaining_waves_to_spawn_boss--;
-    TraceLog(LOG_INFO, "To boss spawn:%d", state->remaining_waves_to_spawn_boss);
-  }
-
-  u32 spawn_trying_limit = SPAWN_TRYING_LIMIT;
-  for (u16 i = 0; i < MAX_SPAWN_COUNT && (spawn_trying_limit <= SPAWN_TRYING_LIMIT && spawn_trying_limit != 0); ) 
+  i32 spawn_trying_limit = SPAWN_TRYING_LIMIT;
+  for (i32 itr_000 = 0; itr_000 < min_count && (spawn_trying_limit <= SPAWN_TRYING_LIMIT && spawn_trying_limit != 0); ) 
   {
-    Vector2 position = {
-      (f32) get_random((i32)state->stage.spawning_areas.at(0).x, (i32)state->stage.spawning_areas.at(0).x + state->stage.spawning_areas.at(0).width),
-      (f32) get_random((i32)state->stage.spawning_areas.at(0).y, (i32)state->stage.spawning_areas.at(0).y + state->stage.spawning_areas.at(0).height)
+    Vector2 position = Vector2 {
+      static_cast<f32>(get_random((i32)state->stage.spawning_areas.at(0).x, (i32)state->stage.spawning_areas.at(0).x + state->stage.spawning_areas.at(0).width)),
+      static_cast<f32>(get_random((i32)state->stage.spawning_areas.at(0).y, (i32)state->stage.spawning_areas.at(0).y + state->stage.spawning_areas.at(0).height))
     };
     spawn_character(Character2D(
-      (u16) get_random(SPAWN_TYPE_UNDEFINED+1, SPAWN_TYPE_MAX-2), 
-      (u16) state->game_info.player_state_dynamic->level, 
-      (u16) get_random(0, 100), position, 1.f)
-    ) ? ++i : --spawn_trying_limit;
+      static_cast<i32>(get_random(SPAWN_TYPE_UNDEFINED+1, SPAWN_TYPE_MAX-2)),
+      static_cast<i32>(state->game_info.player_state_dynamic->level),
+      static_cast<i32>(get_random(0, 100)),
+      position,
+      1.f)
+    )
+      ? ++itr_000 : --spawn_trying_limit;
   }
+}
+
+bool spawn_boss(void) {
+  const worldmap_stage& stage = state->stage;
+
+  Character2D _boss = Character2D(
+    SPAWN_TYPE_BOSS,
+    GET_BOSS_LEVEL(stage.stage_level, state->stage.boss_scale),
+    GET_BOSS_SCALE(state->stage.boss_scale), 
+    state->stage.boss_spawn_location, 
+    GET_BOSS_SPEED(state->stage.boss_scale)
+  );
+
+  return spawn_character(_boss);
 }
 void upgrade_dynamic_player_stat(character_stats stat_id, u16 level) {
   if (!state || !state->game_info.player_state_dynamic->is_initialized) {
@@ -597,7 +628,7 @@ void upgrade_stat_pseudo(character_stat* stat) {
   game_manager_set_stats(stat, stat->level);
 }
 void currency_souls_add(i32 value) {
-  state->game_progression_data->currency_souls_player_have += value;
+  state->game_info.collected_souls += value;
 }
 void generate_in_game_info(void) {
   if (!state || state == nullptr) {
@@ -611,8 +642,8 @@ void generate_in_game_info(void) {
   const Character2D * spw_nearest = nullptr;
 
   f32 dist_cache = F32_MAX;
-  for (size_t iter=0; iter < *state->game_info.p_spawn_system_spawn_count; ++iter) {
-    const Character2D* spw = &state->game_info.in_spawns[iter];
+  for (size_t itr_000 = 0; itr_000 < state->game_info.in_spawns->size(); ++itr_000) {
+    const Character2D* spw = __builtin_addressof(state->game_info.in_spawns->at(itr_000));
     if (!spw) continue;
     
     f32 dist = vec2_distance(player_position, spw->position);
@@ -626,22 +657,7 @@ void generate_in_game_info(void) {
 // OPS
 
 // GET / SET
-const Character2D* get_spawn_info(u16 spawn_id) {
-  if (!state) {
-    TraceLog(LOG_ERROR, "game_manager::get_spawn_info()::State is not valid");
-    return nullptr;
-  }
-  if (spawn_id > *state->game_info.p_spawn_system_spawn_count) {
-    TraceLog(LOG_ERROR, "game_manager::get_spawn_info()::spawn id is out of bound");
-    return nullptr;
-  }
-  if (!state->game_info.in_spawns[spawn_id].initialized) {
-    return nullptr;
-  }
-
-  return __builtin_addressof(state->game_info.in_spawns[spawn_id]);
-}
-u32 get_currency_souls(void) {
+i32 get_currency_souls(void) {
   return state->game_progression_data->currency_souls_player_have;
 }
 bool get_b_player_have_upgrade_points(void) {
@@ -650,24 +666,6 @@ bool get_b_player_have_upgrade_points(void) {
 void set_dynamic_player_have_ability_upgrade_points(bool _b) {
   state->game_info.player_state_dynamic->is_player_have_ability_upgrade_points = _b;
 }
-ability* get_dynamic_player_state_ability(ability_type type) {
-  if (!state) {
-    TraceLog(LOG_ERROR, "game_manager::get_dynamic_player_state_ability()::State is not valid");
-    return nullptr;
-  }
-  if (type >= ABILITY_TYPE_MAX || type <= ABILITY_TYPE_UNDEFINED) {
-    TraceLog(LOG_ERROR, "game_manager::get_dynamic_player_state_ability()::Ability type is out of bound");
-    return nullptr;
-  }
-  return __builtin_addressof(state->game_info.player_state_dynamic->ability_system.abilities.at(type));
-}
-const character_stat* get_dynamic_player_state_stat(character_stats stat) {
-  if (stat >= CHARACTER_STATS_MAX || stat <= CHARACTER_STATS_UNDEFINED) {
-    return nullptr;
-  }
-  
-  return __builtin_addressof(state->game_info.player_state_dynamic->stats[stat]);
-}
 const character_stat* get_static_player_state_stat(character_stats stat) {
   if (stat >= CHARACTER_STATS_MAX || stat <= CHARACTER_STATS_UNDEFINED) {
     return nullptr;
@@ -675,32 +673,11 @@ const character_stat* get_static_player_state_stat(character_stats stat) {
   
   return __builtin_addressof(state->player_state_static.stats[stat]);
 }
-const bool* get_is_game_paused(void) {
-  return __builtin_addressof(state->is_game_paused);
-}
-void set_is_game_paused(bool _is_game_paused) {
-  state->is_game_paused = _is_game_paused;
-}
 void toggle_is_game_paused(void) {
   state->is_game_paused = !state->is_game_paused;
 }
-bool get_is_game_end(void) {
-  return state->is_game_end;
-}
-void set_is_game_end(bool _is_game_end) { 
-  state->is_game_end = _is_game_end; 
-}
-void toggle_is_game_end(void) {
-  state->is_game_end = !state->is_game_end;
-}
-u16 get_remaining_enemies(void) {
-  return *state->game_info.p_spawn_system_spawn_count;
-}
 void set_currency_souls(i32 value) {
   state->game_progression_data->currency_souls_player_have = value;
-}
-const Vector2* gm_get_mouse_pos_world(void) {
-  return &state->mouse_pos_world;
 }
 const ingame_info* gm_get_ingame_info(void){
   if (!state) {
@@ -764,9 +741,6 @@ void _set_player_position(Vector2 position) {
   state->game_info.player_state_dynamic->collision.x = position.x;
   state->game_info.player_state_dynamic->collision.y = position.y;
 }
-player_state* _get_dynamic_player_state(void) {
-  return state->game_info.player_state_dynamic;
-}
 // Exposed functions
 
 
@@ -794,6 +768,25 @@ bool game_manager_on_event(i32 code, event_context context) {
         static_cast<i16>(context.data.i16[3])
       );
       gm_damage_spawn_if_collide(coll_data, static_cast<i32>(context.data.i16[4]), static_cast<collision_type>(context.data.i16[5]));
+      return true;
+    }
+    case EVENT_CODE_ADD_CURRENCY_SOULS: {
+      state->game_info.collected_souls += context.data.i32[0];
+      return true;
+    }
+    case EVENT_CODE_RESUME_GAME: {
+      state->is_game_paused = false;
+      state->show_pause_menu = false;
+      return true;
+    }
+    case EVENT_CODE_PAUSE_GAME: {
+      state->is_game_paused = true;
+      state->show_pause_menu = true;
+      return true;
+    }
+    case EVENT_CODE_TOGGLE_GAME_PAUSE: {
+      state->is_game_paused = !state->is_game_paused;
+      state->show_pause_menu = !state->show_pause_menu;
       return true;
     }
     default: {

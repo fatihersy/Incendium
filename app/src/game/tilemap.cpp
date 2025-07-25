@@ -271,7 +271,7 @@ void render_props_y_based_all(const tilemap* _tilemap, Rectangle camera_view, i3
   }
 
 }
-void render_props_y_based_by_index(const tilemap* _tilemap, size_t index, Rectangle camera_view, i32 start_y, i32 end_y) {
+void render_props_y_based_by_zindex(const tilemap* _tilemap, size_t index, Rectangle camera_view, i32 start_y, i32 end_y) {
   for (size_t itr_111 = 0; itr_111 < _tilemap->render_y_based_queue.at(index).size(); ++itr_111) {
     const tilemap_prop_address* _queue_prop_ptr = __builtin_addressof(_tilemap->render_y_based_queue.at(index).at(itr_111));
     if (_queue_prop_ptr->type <= TILEMAP_PROP_TYPE_UNDEFINED || _queue_prop_ptr->type >= TILEMAP_PROP_TYPE_MAX) {
@@ -556,7 +556,7 @@ void map_to_str(tilemap* const map, tilemap_stringtify_package* const out_packag
       static_cast<i32>(prop->tint.g),
       static_cast<i32>(prop->tint.b),
       static_cast<i32>(prop->tint.a),
-      0,
+      static_cast<i32>(prop->use_y_based_zindex),
       0,
       0,
       0,
@@ -588,7 +588,7 @@ void map_to_str(tilemap* const map, tilemap_stringtify_package* const out_packag
       static_cast<i32>(prop->sprite.tint.g),
       static_cast<i32>(prop->sprite.tint.b),
       static_cast<i32>(prop->sprite.tint.a),
-      0,
+      static_cast<i32>(prop->use_y_based_zindex),
       0,
       0,
       0,
@@ -673,6 +673,7 @@ void str_to_map(tilemap* const map, tilemap_stringtify_package* const out_packag
         (u8)TextToInteger(str_par_prop_member.buffer.at(8).c_str()), (u8)TextToInteger(str_par_prop_member.buffer.at(9).c_str()),
         (u8)TextToInteger(str_par_prop_member.buffer.at(10).c_str()), (u8)TextToInteger(str_par_prop_member.buffer.at(11).c_str()),
       };
+      prop.use_y_based_zindex = static_cast<bool>(TextToInteger(str_par_prop_member.buffer.at(12).c_str()));
       
       prop.sprite.origin = VECTOR2(prop.sprite.coord.width / 2.f, prop.sprite.coord.height / 2.f);
 
@@ -702,6 +703,7 @@ void str_to_map(tilemap* const map, tilemap_stringtify_package* const out_packag
         (u8)TextToInteger(str_par_prop_member.buffer.at(8).c_str()), (u8)TextToInteger(str_par_prop_member.buffer.at(9).c_str()),
         (u8)TextToInteger(str_par_prop_member.buffer.at(10).c_str()), (u8)TextToInteger(str_par_prop_member.buffer.at(11).c_str()),
       };
+      prop.use_y_based_zindex = static_cast<bool>(TextToInteger(str_par_prop_member.buffer.at(12).c_str()));
 
       prop.is_initialized = true;
       map->static_props.push_back(prop);

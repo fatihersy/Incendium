@@ -121,6 +121,7 @@ static_assert(sizeof(f64) == 8, "Expected float to be 8 bytes.");
  * @brief Any id set to this should be considered invalid,
  * and not actually pointing to a real object.
  */
+#define INVALID_IDI32 I32_MAX
 #define INVALID_IDU32 U32_MAX
 #define INVALID_IDU16 U16_MAX
 
@@ -537,6 +538,7 @@ typedef enum shader_id {
   SHADER_ID_PROGRESS_BAR_MASK,
   SHADER_ID_FADE_TRANSITION,
   SHADER_ID_FONT_OUTLINE,
+  SHADER_ID_POST_PROCESS,
   SHADER_ID_MAX,
 } shader_id;
 

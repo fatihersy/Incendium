@@ -82,6 +82,7 @@ typedef enum spawn_type {
   SPAWN_TYPE_ORANGE,
   SPAWN_TYPE_YELLOW,
   SPAWN_TYPE_RED,
+  SPAWN_TYPE_BOSS,
   SPAWN_TYPE_MAX
 } spawn_type;
 
@@ -201,6 +202,13 @@ typedef enum tilemap_prop_types {
   TILEMAP_PROP_TYPE_SPRITE,
   TILEMAP_PROP_TYPE_MAX,
 }tilemap_prop_types;
+
+typedef enum ingame_phases {
+  INGAME_PHASE_UNDEFINED,
+  INGAME_PHASE_CLEAR_ZOMBIES,
+  INGAME_PHASE_DEFEAT_BOSS,
+  INGAME_PHASE_MAX,
+}ingame_phases;
 
 typedef struct spritesheet {
   spritesheet_id sheet_id;
@@ -328,29 +336,48 @@ typedef struct tilesheet {
 } tilesheet;
 
 typedef struct worldmap_stage {
-  u16 map_id;
+  i32 map_id;
   std::string displayname;
   std::string filename;
   std::array<Rectangle, MAX_SPAWN_COLLISIONS> spawning_areas;
   Vector2 screen_location;
+  Vector2 boss_spawn_location;
+  i32 total_spawn_count;
+  i32 stage_level;
+  f32 spawn_scale;
+  f32 boss_scale;
   bool is_centered;
   bool is_active;
   worldmap_stage(void) {
-    this->map_id = INVALID_IDU16;
+    this->map_id = INVALID_IDI32;
     this->displayname.clear();
     this->filename.clear();
     this->spawning_areas.fill(ZERORECT);
     this->screen_location = ZEROVEC2;
+    this->boss_spawn_location = ZEROVEC2;
+    this->total_spawn_count = 0;
+    this->stage_level = 0;
+    this->spawn_scale = 0.f;
+    this->boss_scale = 0.f;
     this->is_centered = false;
     this->is_active = false;
   }
-  worldmap_stage(u16 map_id, std::string displayname, std::string filename, Vector2 screen_location, bool is_centered, bool is_active) {
-    this->map_id = map_id;
-    this->displayname = displayname;
-    this->filename = filename;
-    this->screen_location = NORMALIZE_VEC2(screen_location.x, screen_location.y, 3840.f, 2160.f);
-    this->is_centered = is_centered;
-    this->is_active = is_active;
+  worldmap_stage(
+    i32 in_id,std::string in_display_name, std::string in_filename, i32 in_stage_level,
+    i32 in_spw_count, f32 in_spw_scale, Vector2 in_boss_loc, f32 in_boss_scale, 
+    Vector2 in_screen_loc, bool in_is_centered, bool in_is_active
+  ) : worldmap_stage() {
+    this->map_id = in_id;
+    this->displayname = in_display_name;
+    this->filename = in_filename;
+    this->screen_location = NORMALIZE_VEC2(in_screen_loc.x, in_screen_loc.y, 3840.f, 2160.f);
+    this->boss_spawn_location = in_boss_loc;
+    this->total_spawn_count = in_spw_count;
+    this->stage_level = in_stage_level;
+    this->spawn_scale = in_spw_scale;
+    this->boss_scale = in_boss_scale;
+    this->is_centered = in_is_centered;
+    this->is_active = in_is_active;
   }
 } worldmap_stage;
 
@@ -496,8 +523,13 @@ typedef struct tilemap_stringtify_package {
   }
 }tilemap_stringtify_package;
 
+/**
+ * @param buffer.i32[0] = SPAWN_TYPE
+ * @param buffer.i32[1] = SPAWN_LEVEL
+ * @param buffer.i32[2] = SPAWN_RND_SCALE
+ */
 typedef struct Character2D {
-  u32 character_id;
+  i32 character_id;
   i32 health;
   i32 damage;
   f32 speed;
@@ -510,7 +542,7 @@ typedef struct Character2D {
   spritesheet take_damage_left_animation;
   spritesheet* last_played_animation;
   Vector2 position;
-  u16 rotation;
+  f32 rotation;
   f32 scale;
   f32 damage_break_time;
   bool is_dead;
@@ -520,7 +552,7 @@ typedef struct Character2D {
   data128 buffer;
 
   Character2D(void) {
-    this->character_id = INVALID_IDU32;
+    this->character_id = I32_MAX;
     this->health = 0;
     this->damage = 0;
     this->speed = 0.f;
@@ -533,7 +565,7 @@ typedef struct Character2D {
     this->take_damage_left_animation = spritesheet();
     this->last_played_animation = nullptr;
     this->position = ZEROVEC2;
-    this->rotation = 0u;
+    this->rotation = 0.f;
     this->scale = 0.f;
     this->damage_break_time = 0.f;
     this->is_dead = false;
@@ -541,11 +573,11 @@ typedef struct Character2D {
     this->initialized = false;
     this->buffer = data128();
   }
-  Character2D(u16 spawn_type, u16 player_level, u16 rnd_scale, Vector2 position, f32 speed) : Character2D() {
+  Character2D(i32 spawn_type, i32 player_level, i32 rnd_scale, Vector2 position, f32 speed) : Character2D() {
     type = ACTOR_TYPE_SPAWN;
-    buffer.u16[0] = spawn_type;
-    buffer.u16[1] = player_level;
-    buffer.u16[2] = rnd_scale;
+    buffer.i32[0] = spawn_type;
+    buffer.i32[1] = player_level;
+    buffer.i32[2] = rnd_scale;
     this->position = position;
     this->speed = speed;
     is_damagable = true;
@@ -725,18 +757,18 @@ typedef struct player_state {
   world_direction w_direction;
   Vector2 position;
   Vector2 position_centered;
-  u32 level;
-  u32 health_max;
-  u32 health_current;
-  u32 health_regen;
+  i32 level;
+  i32 health_max;
+  i32 health_current;
+  i32 health_regen;
   f32 health_perc;
-  u32 exp_to_next_level;
-  u32 exp_current;
+  i32 exp_to_next_level;
+  i32 exp_current;
   f32 exp_perc;
   f32 damage_break_time;
   f32 damage_break_current;
-  u32 damage;
-  u16 projectile_amouth;
+  i32 damage;
+  i16 projectile_amouth;
   f32 damage_area_multiply;
   f32 move_speed_multiply;
   f32 cooldown_multiply;
@@ -746,26 +778,78 @@ typedef struct player_state {
   bool is_moving;
   bool is_dead;
   bool is_damagable;
+  player_state(void) {
+    this->ability_system = ability_play_system();
+    zero_memory(this->stats, sizeof(character_stat) * CHARACTER_STATS_MAX);
+    this->starter_ability = ABILITY_TYPE_UNDEFINED;
+    this->collision = ZERORECT;
+    this->map_level_collision = ZERORECT;
+    this->dimentions = ZEROVEC2;
+    this->dimentions_div2 = ZEROVEC2;
+    this->move_left_sprite = spritesheet();
+    this->move_right_sprite = spritesheet();
+    this->idle_left_sprite = spritesheet();
+    this->idle_right_sprite = spritesheet();
+    this->take_damage_left_sprite = spritesheet();
+    this->take_damage_right_sprite = spritesheet();
+    this->wreck_left_sprite = spritesheet();
+    this->wreck_right_sprite = spritesheet();
+    this->last_played_animation = nullptr;
+    this->w_direction = WORLD_DIRECTION_UNDEFINED;
+    this->position = ZEROVEC2;
+    this->position_centered = ZEROVEC2;
+    this->level = 0;
+    this->health_max = 0;
+    this->health_current = 0;
+    this->health_regen = 0;
+    this->health_perc = 0.f;
+    this->exp_to_next_level = 0;
+    this->exp_current = 0;
+    this->exp_perc = 0.f;
+    this->damage_break_time = 0.f;
+    this->damage_break_current = 0;
+    this->damage = 0;
+    this->projectile_amouth = 0;
+    this->damage_area_multiply = 0.f;
+    this->move_speed_multiply = 0.f;
+    this->cooldown_multiply = 0.f;
+    this->exp_gain_multiply = 0.f;
+    this->is_player_have_ability_upgrade_points = false;
+    this->is_initialized = false;
+    this->is_moving = false;
+    this->is_dead = false;
+    this->is_damagable = false;
+  }
 } player_state;
 
 typedef struct ingame_info {
-  const Character2D* in_spawns;
-  const u32* p_spawn_system_spawn_count;
-  const Character2D* nearest_spawn;
- 
   player_state* player_state_dynamic;
-   
+  const std::vector<Character2D>* in_spawns;
+  const Character2D* nearest_spawn;
   const Vector2* mouse_pos_world;
   const Vector2* mouse_pos_screen;
-  const u16* remaining_waves_to_spawn_boss;
   const bool* is_game_end;
   const bool* is_game_paused;
+  const bool* show_pause_menu;
+  const ingame_phases* ingame_phase;
+  i32 collected_souls;
+  f32 play_time;
+  bool is_win;
 
   ingame_info(void) {
     this->in_spawns = nullptr;
-    this->p_spawn_system_spawn_count = nullptr;
     this->nearest_spawn = nullptr;
     this->player_state_dynamic = nullptr;
+    this->mouse_pos_world = nullptr;
+    this->mouse_pos_screen = nullptr;
+    this->is_game_end = nullptr;
+    this->is_game_paused = nullptr;
+    this->ingame_phase = nullptr;
+    this->show_pause_menu = nullptr;
+    
+    this->collected_souls = 0;
+    this->play_time = 0.f;
+    this->is_win = false;
   }
 } ingame_info;
 

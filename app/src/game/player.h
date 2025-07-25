@@ -22,8 +22,8 @@ bool player_system_initialize(void);
 
 void player_move_player(Vector2 new_pos);
 void player_add_exp_to_player(u32 exp);
-void player_take_damage(u16 damage);
-void player_heal_player(u16 amouth);
+void player_take_damage(i32 damage);
+void player_heal_player(i32 amouth);
 
 player_state* get_player_state(void);
 

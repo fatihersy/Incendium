@@ -15,32 +15,17 @@
 
 typedef enum in_game_stages {
   IN_GAME_STAGE_UNDEFINED,
-  IN_GAME_STAGE_MAP_CHOICE,
-  IN_GAME_STAGE_PASSIVE_CHOICE,
   IN_GAME_STAGE_PLAY,
   IN_GAME_STAGE_PLAY_DEBUG,
   IN_GAME_STAGE_PLAY_RESULTS,
   IN_GAME_STAGE_MAX,
 } in_game_stages;
 
-typedef struct end_game_results{
-  u16 collected_souls;
-  f32 play_time;
-  bool is_win;
-  end_game_results(void) {
-    this->collected_souls = 0u;
-    this->play_time = 0.f;
-    this->is_win = false;
-  }
-}end_game_results;
-
 typedef struct scene_in_game_state {
   std::array<worldmap_stage, MAX_WORLDMAP_LOCATIONS>  worldmap_locations;
   std::array<panel, MAX_UPDATE_ABILITY_PANEL_COUNT> ability_upg_panels;
-  std::array<panel, MAX_UPDATE_PASSIVE_PANEL_COUNT> passive_selection_panels;
-  panel worldmap_selection_panel;
-  panel debug_info_panel;
   panel default_panel;
+  panel debug_info_panel;
   std::array<ability, MAX_UPDATE_ABILITY_PANEL_COUNT> ability_upgrade_choices;
   bool is_upgrade_choices_ready;
   
@@ -49,13 +34,11 @@ typedef struct scene_in_game_state {
   const ingame_info* in_ingame_info;
   
   in_game_stages stage;
-  end_game_results end_game_result;
-  u16 hovered_stage;
-  u16 hovered_spawn;
+  i32 hovered_spawn;
   ability_type hovered_ability;
-  u16 hovered_projectile;
+  i32 hovered_projectile;
   bool has_game_started;
-  bool show_pause_menu;
+  ui_fade_control_system sig_fade;
 } scene_in_game_state;
 
 static scene_in_game_state * state;
@@ -80,6 +63,9 @@ static scene_in_game_state * state;
 #define ABILITY_UPG_PANEL_ICON_SIZE SIG_BASE_RENDER_WIDTH * .25f * .5f
 #define PASSIVE_SELECTION_PANEL_ICON_SIZE ABILITY_UPG_PANEL_ICON_SIZE
 #define CLOUDS_ANIMATION_DURATION TARGET_FPS * 1.5f // second
+#define GET_PLAYER_DYNAMIC_STAT(STAT_TYPE) __builtin_addressof(state->in_ingame_info->player_state_dynamic->stats[(static_cast<character_stats>(STAT_TYPE))])
+#define GET_PLAYER_DYNAMIC_ABILITY(ABILITY_TYPE) __builtin_addressof(state->in_ingame_info->player_state_dynamic->ability_system.abilities.at(ABILITY_TYPE))
+#define INGAME_FADE_DURATION 1 * TARGET_FPS
 
 bool scene_in_game_on_event(i32 code, event_context context);
 void begin_scene_in_game(void);
@@ -92,8 +78,9 @@ void draw_passive_selection_panel(const character_stat* stat,const Rectangle pan
 void draw_end_game_panel(void);
 void prepare_ability_upgrade_state(void);
 void end_ability_upgrade_state(u16 which_panel_chosen);
+void sig_begin_fade(void);
 
-void start_game(character_stats stat);
+bool start_game(character_stats stat);
 void reset_game();
 
 /**
@@ -109,7 +96,6 @@ bool initialize_scene_in_game(const app_settings * _in_app_settings) {
     TraceLog(LOG_ERROR, "scene_in_game::initialize_scene_in_game()::State allocation failed!");
     return false;
   }
-
   state->in_app_settings = _in_app_settings;
   if (!_in_app_settings || _in_app_settings == nullptr) {
     TraceLog(LOG_ERROR, "scene_in_game::initialize_scene_in_game()::App setting pointer is invalid");
@@ -139,9 +125,6 @@ bool initialize_scene_in_game(const app_settings * _in_app_settings) {
     return false;
   }
 
-  event_register(EVENT_CODE_ADD_CURRENCY_SOULS, scene_in_game_on_event);
-  event_register(EVENT_CODE_RESUME_GAME, scene_in_game_on_event);
-
   begin_scene_in_game();
   return true;
 }
@@ -153,39 +136,35 @@ void begin_scene_in_game(void) {
   );
   copy_memory(state->worldmap_locations.data(), get_worldmap_locations(), MAX_WORLDMAP_LOCATIONS * sizeof(worldmap_stage));
   _set_player_position(Vector2 {0.f, 0.f});
-  set_is_game_paused(true);
+  event_fire(EVENT_CODE_PAUSE_GAME, event_context());
   
   for (size_t itr_000 = 0; itr_000 < MAX_UPDATE_ABILITY_PANEL_COUNT; ++itr_000) {
     state->ability_upg_panels.at(itr_000) = state->default_panel;
   }
-  for (size_t itr_000 = 0; itr_000 < MAX_UPDATE_PASSIVE_PANEL_COUNT; ++itr_000) {
-    state->passive_selection_panels.at(itr_000) = state->default_panel;
-  }
-  state->worldmap_selection_panel = state->default_panel;
   state->debug_info_panel = state->default_panel;
 
-  state->stage = IN_GAME_STAGE_MAP_CHOICE;
-  state->hovered_stage = U16_MAX;
   state->hovered_spawn = U16_MAX;
   state->hovered_ability = ABILITY_TYPE_MAX;
   state->hovered_projectile = U16_MAX;
 
-  event_fire(EVENT_CODE_UI_START_FADEIN_EFFECT, event_context((u16)CLOUDS_ANIMATION_DURATION));
+
+  sig_begin_fade();
 }
-void start_game(character_stats stat) {
+bool start_game(character_stats stat) {
   if (!state) {
     TraceLog(LOG_ERROR, "scene_in_game::start_game()::state returned zero");
-    return;
+    return false;
   }
-  gm_start_game(*get_active_worldmap());
+  if(!gm_start_game(*get_active_worldmap())) {
+    return false;
+  }
 
   upgrade_dynamic_player_stat(stat);
   _set_player_position(ZEROVEC2);
   state->stage = IN_GAME_STAGE_PLAY;
+  return true;
 }
 void end_scene_in_game(void) {
-  gm_reset_game();
-
   //state->worldmap_locations       = one time set, no need to change every time;
   //state->default_panel            = no need to set it second time;
   //state->ability_upg_panels       = same as default_panel;
@@ -195,14 +174,11 @@ void end_scene_in_game(void) {
   //state->in_camera_metrics        = pointer from camera system, do not touch it here.
   //state->is_game_paused           = Handled by update, each frame fetches from game manager;
 
-  state->stage = IN_GAME_STAGE_MAP_CHOICE;
-  state->end_game_result = end_game_results();
-  state->hovered_stage = U16_MAX;
+  gm_end_game(state->in_ingame_info->is_win);
   state->hovered_spawn = U16_MAX;
   state->hovered_ability = ABILITY_TYPE_MAX;
   state->hovered_projectile = U16_MAX;
   state->has_game_started = false;
-  state->show_pause_menu = false;
 }
 
 void update_scene_in_game(void) {
@@ -211,27 +187,11 @@ void update_scene_in_game(void) {
   update_camera();
   in_game_update_bindings();
   update_user_interface();
+  if(state->sig_fade.fade_animation_playing){
+    process_fade_effect(__builtin_addressof(state->sig_fade));
+  }
 
   switch (state->stage) {
-    case IN_GAME_STAGE_MAP_CHOICE: {
-      update_game_manager();
-      event_fire(EVENT_CODE_CAMERA_SET_CAMERA_POSITION, event_context(SIG_BASE_RENDER_WIDTH * .5f, SIG_BASE_RENDER_HEIGHT * .5f));
-
-      if (state->show_pause_menu) {}
-      else if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON) && state->hovered_stage <= MAX_WORLDMAP_LOCATIONS) {
-        set_worldmap_location(state->hovered_stage);
-        state->stage = IN_GAME_STAGE_PASSIVE_CHOICE;
-      }
-      break;
-    }
-    case IN_GAME_STAGE_PASSIVE_CHOICE: {
-      update_game_manager();
-      event_fire(EVENT_CODE_CAMERA_SET_CAMERA_POSITION, event_context(
-        state->in_ingame_info->player_state_dynamic->position_centered.x,
-        state->in_ingame_info->player_state_dynamic->position_centered.y
-      ));
-      break;
-    }
     case IN_GAME_STAGE_PLAY: {
       event_fire(EVENT_CODE_CAMERA_SET_TARGET, event_context(
         state->in_ingame_info->player_state_dynamic->position_centered.x,
@@ -244,17 +204,12 @@ void update_scene_in_game(void) {
 
       if (!state->has_game_started) { return; }
       if (*state->in_ingame_info->is_game_paused) { return; }
-      else if (get_remaining_enemies() <= 0 || get_remaining_enemies() > MAX_SPAWN_COUNT) {
-        event_fire(EVENT_CODE_END_GAME, event_context());
-        state->end_game_result.is_win = true;
-      }
-      if (get_is_game_end()) {
+      if (*state->in_ingame_info->is_game_end) {
         state->stage = IN_GAME_STAGE_PLAY_RESULTS;
       }
 
       update_map();
       update_game_manager();
-      state->end_game_result.play_time += GetFrameTime();
       break;
     }
     case IN_GAME_STAGE_PLAY_DEBUG: {
@@ -282,23 +237,6 @@ void render_scene_in_game(void) {
   BeginMode2D(get_in_game_camera()->handle);
 
   switch (state->stage) {
-    case IN_GAME_STAGE_MAP_CHOICE: {
-      gui_draw_texture_id(TEX_ID_WORLDMAP_WO_CLOUDS, Rectangle {0, 0, static_cast<f32>(SIG_BASE_RENDER_WIDTH), static_cast<f32>(SIG_BASE_RENDER_HEIGHT)});
-      for (int i=0; i<MAX_WORLDMAP_LOCATIONS; ++i) {
-        if (state->worldmap_locations.at(i).is_active) {
-          Vector2 scrloc = Vector2 {
-            state->worldmap_locations.at(i).screen_location.x * SIG_BASE_RENDER_WIDTH, 
-            state->worldmap_locations.at(i).screen_location.y * SIG_BASE_RENDER_HEIGHT
-          };
-          gui_draw_map_stage_pin(state->hovered_stage == i, scrloc);
-        }
-      }
-      break;
-    }
-    case IN_GAME_STAGE_PASSIVE_CHOICE: {
-      render_map();
-      break;
-    }
     case IN_GAME_STAGE_PLAY: {
       render_map();
       if (!(*state->in_ingame_info->is_game_paused) || state->has_game_started) {
@@ -336,77 +274,13 @@ void render_interface_in_game(void) {
   STATE_ASSERT("render_interface_in_game")
   
   switch (state->stage) {
-    case IN_GAME_STAGE_MAP_CHOICE: {
-      if (state->show_pause_menu) {
-        gui_draw_pause_screen(false);
-      }
-      else {
-        for (int i=0; i<MAX_WORLDMAP_LOCATIONS; ++i) {
-          if (state->hovered_stage == i) {
-            panel* pnl = __builtin_addressof(state->worldmap_selection_panel);
-            Rectangle scrloc = Rectangle{
-              state->worldmap_locations.at(i).screen_location.x * SIG_BASE_RENDER_WIDTH - WORLDMAP_LOC_PIN_SIZE_DIV2, 
-              state->worldmap_locations.at(i).screen_location.y * SIG_BASE_RENDER_HEIGHT - WORLDMAP_LOC_PIN_SIZE_DIV2,
-              WORLDMAP_LOC_PIN_SIZE, WORLDMAP_LOC_PIN_SIZE
-            };
-            pnl->dest = Rectangle {scrloc.x + WORLDMAP_LOC_PIN_SIZE, scrloc.y + WORLDMAP_LOC_PIN_SIZE_DIV2, SIG_BASE_RENDER_WIDTH * .25f, SIG_BASE_RENDER_HEIGHT * .25f};
-            DrawCircleGradient(scrloc.x + WORLDMAP_LOC_PIN_SIZE_DIV2, scrloc.y + WORLDMAP_LOC_PIN_SIZE_DIV2, 100, Color{236,240,241,50}, Color{255, 255, 255, 0});
-
-            gui_panel((*pnl), pnl->dest, false);
-            BeginScissorMode(pnl->dest.x, pnl->dest.y, pnl->dest.width, pnl->dest.height);
-            {
-              gui_label(state->worldmap_locations.at(i).displayname.c_str(), FONT_TYPE_ABRACADABRA, 1, Vector2 {
-                pnl->dest.x + pnl->dest.width *.5f, pnl->dest.y + pnl->dest.height*.5f
-              }, WHITE, true, true);
-            }
-            EndScissorMode();
-          }
-        }
-      }
-      break;
-    }
-    case IN_GAME_STAGE_PASSIVE_CHOICE: {
-      if (state->show_pause_menu) {
-        gui_draw_pause_screen(false);
-      }
-      else {
-        Rectangle dest = Rectangle {
-          SIG_BASE_RENDER_WIDTH * .25f, SIG_BASE_RENDER_HEIGHT * .5f, 
-          SIG_BASE_RENDER_WIDTH * .25f, SIG_BASE_RENDER_HEIGHT * .8f 
-        };
-        f32 dest_x_buffer = dest.x;
-        for (size_t itr_000 = 0; itr_000 < MAX_UPDATE_PASSIVE_PANEL_COUNT; ++itr_000) {
-          panel* pnl = __builtin_addressof(state->passive_selection_panels.at(itr_000));
-          if (pnl->frame_tex_id <= ATLAS_TEX_ID_UNSPECIFIED || pnl->frame_tex_id >= ATLAS_TEX_ID_MAX || 
-            pnl->bg_tex_id    <= ATLAS_TEX_ID_UNSPECIFIED || pnl->bg_tex_id    >= ATLAS_TEX_ID_MAX ) 
-          {
-            *pnl = state->default_panel;
-          }
-          if(pnl->buffer.u16[0] <= 0 || pnl->buffer.u16[0] >= CHARACTER_STATS_MAX) {
-            pnl->buffer.u16[0] = get_random(1,CHARACTER_STATS_MAX-1);
-          }
-          dest.x = dest_x_buffer + ((dest.width + SCREEN_OFFSET.x) * itr_000);
-          const character_stat* stat = get_dynamic_player_state_stat(static_cast<character_stats>(pnl->buffer.u16[0]));
-          if(gui_panel_active(pnl, dest, true)) {
-            set_is_game_paused(false);
-            start_game(stat->id);
-            for (size_t itr_111 = 0; itr_111 < MAX_UPDATE_ABILITY_PANEL_COUNT; ++itr_111) {
-              state->passive_selection_panels.at(itr_111).buffer.u16[0] = 0;
-            }
-            break;
-          }
-          draw_passive_selection_panel(stat, dest);
-        }
-      }
-      break;
-    }
     case IN_GAME_STAGE_PLAY: {  
 
-      if (state->show_pause_menu) {
+      if (state->in_ingame_info->show_pause_menu) {
         gui_draw_pause_screen(state->has_game_started);
       }
       else if (!state->has_game_started) {
-        gui_label("Press Space to Start!", FONT_TYPE_ABRACADABRA, 1, Vector2 {0.f, SIG_BASE_RENDER_HEIGHT * .5f}, WHITE, true, true);
+        gui_label("Press Space to Start!", FONT_TYPE_ABRACADABRA, 1, Vector2 {SIG_BASE_RENDER_WIDTH * .5f, SIG_BASE_RENDER_HEIGHT * .75f}, WHITE, true, true);
       }
       else if (get_b_player_have_upgrade_points()) {
         if (state->is_upgrade_choices_ready) {
@@ -436,7 +310,7 @@ void render_interface_in_game(void) {
     }
     case IN_GAME_STAGE_PLAY_DEBUG: {  
 
-      if (state->show_pause_menu) {
+      if (state->in_ingame_info->show_pause_menu) {
         gui_draw_pause_screen(state->has_game_started);
       }
       else if (!state->has_game_started) { }
@@ -445,11 +319,11 @@ void render_interface_in_game(void) {
 
         gui_label_format(
           FONT_TYPE_ABRACADABRA, 1, mouse_pos_screen.x, mouse_pos_screen.y, 
-          WHITE, false, false, "world_pos {%.1f, %.1f}", gm_get_mouse_pos_world()->x, gm_get_mouse_pos_world()->y
+          WHITE, false, false, "world_pos {%.1f, %.1f}", state->in_ingame_info->mouse_pos_world->x, state->in_ingame_info->mouse_pos_world->y
         );
 
-        if(state->hovered_spawn < get_remaining_enemies()){
-          const Character2D* spawn = get_spawn_info(state->hovered_spawn);
+        if(static_cast<size_t>(state->hovered_spawn) < state->in_ingame_info->in_spawns->size()){
+          const Character2D* const spawn = __builtin_addressof(state->in_ingame_info->in_spawns->at(state->hovered_spawn));
           panel* const pnl = __builtin_addressof(state->debug_info_panel);
           pnl->dest = Rectangle {
             mouse_pos_screen.x, mouse_pos_screen.y, 
@@ -494,10 +368,9 @@ void render_interface_in_game(void) {
           }
           EndScissorMode();
         }
-
-        const ability* abl = get_dynamic_player_state_ability(state->hovered_ability);
-        if(state->hovered_ability > 0 && state->hovered_ability < ABILITY_TYPE_MAX && state->hovered_projectile >= 0 && state->hovered_projectile < abl->projectiles.size()){
-          panel* pnl = __builtin_addressof(state->debug_info_panel);
+        if(state->hovered_ability > 0 && state->hovered_ability < ABILITY_TYPE_MAX) {
+          const ability* const abl = GET_PLAYER_DYNAMIC_ABILITY(state->hovered_ability);
+          panel* const pnl = __builtin_addressof(state->debug_info_panel);
           pnl->dest = Rectangle {
             mouse_pos_screen.x, mouse_pos_screen.y, 
             SIG_BASE_RENDER_WIDTH * .4f, SIG_BASE_RENDER_HEIGHT * .3f
@@ -505,30 +378,31 @@ void render_interface_in_game(void) {
           i32 font_size = 1;
           i32 line_height = SIG_BASE_RENDER_HEIGHT * .05f;
           Vector2 debug_info_position_buffer = VECTOR2(pnl->dest.x, pnl->dest.y);
-          const projectile* prj = __builtin_addressof(abl->projectiles.at(state->hovered_projectile));
+          if (state->hovered_projectile >= 0 && static_cast<size_t>(state->hovered_projectile) < abl->projectiles.size()) {
+            const projectile* const prj = __builtin_addressof(abl->projectiles.at(state->hovered_projectile));
 
-          gui_panel((*pnl), pnl->dest, false);
-          BeginScissorMode(pnl->dest.x, pnl->dest.y, pnl->dest.width, pnl->dest.height);
-          {
-            gui_label_format(
-              FONT_TYPE_ABRACADABRA, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
-              WHITE, false, false, "Collision: {%.1f, %.1f, %.1f, %.1f}", prj->collision.x, prj->collision.y, prj->collision.width, prj->collision.height
-            );
-            debug_info_position_buffer.y += line_height;
-            gui_label_format(
-              FONT_TYPE_ABRACADABRA, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
-              WHITE, false, false, "Rotation: %.1f", prj->animations.at(prj->active_sprite).rotation
-            );
+            gui_panel((*pnl), pnl->dest, false);
+            BeginScissorMode(pnl->dest.x, pnl->dest.y, pnl->dest.width, pnl->dest.height);
+            {
+              gui_label_format(
+                FONT_TYPE_ABRACADABRA, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
+                WHITE, false, false, "Collision: {%.1f, %.1f, %.1f, %.1f}", prj->collision.x, prj->collision.y, prj->collision.width, prj->collision.height
+              );
+              debug_info_position_buffer.y += line_height;
+              gui_label_format(
+                FONT_TYPE_ABRACADABRA, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
+                WHITE, false, false, "Rotation: %.1f", prj->animations.at(prj->active_sprite).rotation
+              );
+            }
+            EndScissorMode();
           }
-          EndScissorMode();
         }
-        
-        gui_label_format(FONT_TYPE_ABRACADABRA, 1, SIG_BASE_RENDER_WIDTH * .75f, SCREEN_OFFSET.y, WHITE, false, false, "Remaining: %d", get_remaining_enemies());
+        gui_label_format(FONT_TYPE_ABRACADABRA, 1, SIG_BASE_RENDER_WIDTH * .75f, SCREEN_OFFSET.y, WHITE, false, false, "Remaining: %d", state->in_ingame_info->in_spawns->size());
         gui_label_format(FONT_TYPE_ABRACADABRA, 1, SIG_BASE_RENDER_WIDTH * .75f, SCREEN_OFFSET.y * 5.f, WHITE, false, false, "Souls: %d", get_currency_souls());
 
-        gui_label_format(FONT_TYPE_ABRACADABRA, 1, 0, SIG_BASE_RENDER_HEIGHT * .35f, WHITE, false, false, "Health: %d", _get_dynamic_player_state()->health_max);
-        gui_label_format(FONT_TYPE_ABRACADABRA, 1, 0, SIG_BASE_RENDER_HEIGHT * .40f, WHITE, false, false, "Current Health: %d", _get_dynamic_player_state()->health_current);
-        gui_label_format(FONT_TYPE_ABRACADABRA, 1, 0, SIG_BASE_RENDER_HEIGHT * .45f, WHITE, false, false, "Damage: %d", _get_dynamic_player_state()->damage);
+        gui_label_format(FONT_TYPE_ABRACADABRA, 1, 0, SIG_BASE_RENDER_HEIGHT * .35f, WHITE, false, false, "Health: %d", state->in_ingame_info->player_state_dynamic->health_max);
+        gui_label_format(FONT_TYPE_ABRACADABRA, 1, 0, SIG_BASE_RENDER_HEIGHT * .40f, WHITE, false, false, "Current Health: %d", state->in_ingame_info->player_state_dynamic->health_current);
+        gui_label_format(FONT_TYPE_ABRACADABRA, 1, 0, SIG_BASE_RENDER_HEIGHT * .45f, WHITE, false, false, "Damage: %d", state->in_ingame_info->player_state_dynamic->damage);
       }
 
       break;
@@ -536,7 +410,6 @@ void render_interface_in_game(void) {
     case IN_GAME_STAGE_PLAY_RESULTS: { 
       draw_end_game_panel();
       if(gui_menu_button("Accept", BTN_ID_IN_GAME_BUTTON_RETURN_MENU, Vector2 {0, 5}, SIG_BASE_RENDER_DIV2, true)) {
-        currency_souls_add(state->end_game_result.collected_souls);
         gm_save_game();
         end_scene_in_game();
         event_fire(EVENT_CODE_SCENE_MAIN_MENU, event_context());
@@ -553,38 +426,22 @@ void render_interface_in_game(void) {
 }
 void in_game_update_mouse_bindings(void) { 
   switch (state->stage) {
-    case IN_GAME_STAGE_MAP_CHOICE: {
-      state->hovered_stage = U16_MAX;
-      for (int i=0; i<MAX_WORLDMAP_LOCATIONS; ++i) {
-        Rectangle scrloc = Rectangle{
-          state->worldmap_locations.at(i).screen_location.x * SIG_BASE_RENDER_WIDTH - WORLDMAP_LOC_PIN_SIZE_DIV2, 
-          state->worldmap_locations.at(i).screen_location.y * SIG_BASE_RENDER_HEIGHT - WORLDMAP_LOC_PIN_SIZE_DIV2,
-          WORLDMAP_LOC_PIN_SIZE, WORLDMAP_LOC_PIN_SIZE
-        };
-        if (CheckCollisionPointRec( *state->in_ingame_info->mouse_pos_screen, scrloc)) {
-          state->hovered_stage = i;
-        }
-      }
-      break;
-    }
-    case IN_GAME_STAGE_PASSIVE_CHOICE: {
-      break;
-    }
     case IN_GAME_STAGE_PLAY: {
       break;
     }
     case IN_GAME_STAGE_PLAY_DEBUG: {
-      const Vector2* mouse_pos_world = gm_get_mouse_pos_world();
+      const Vector2* const mouse_pos_world = state->in_ingame_info->mouse_pos_world;
       state->hovered_spawn = U16_MAX;
-      for (int i=0; i<get_remaining_enemies(); ++i) {
-        const Character2D* spawn = get_spawn_info(i);
+      size_t _remaining_enemies = state->in_ingame_info->in_spawns->size();
+      for (size_t itr_000 = 0; itr_000 < _remaining_enemies; ++itr_000) {
+        const Character2D* const spawn = __builtin_addressof(state->in_ingame_info->in_spawns->at(itr_000));
         if (spawn) {
           if (CheckCollisionPointRec(*mouse_pos_world, spawn->collision)) {
-            state->hovered_spawn = i;
+            state->hovered_spawn = itr_000;
           }
         }
       }
-      const player_state* player = _get_dynamic_player_state();
+      const player_state* const player = state->in_ingame_info->player_state_dynamic;
       state->hovered_ability = ABILITY_TYPE_UNDEFINED;
       state->hovered_projectile = U16_MAX;
       for (size_t iter = 0; iter < player->ability_system.abilities.size(); ++iter) {
@@ -612,46 +469,24 @@ void in_game_update_mouse_bindings(void) {
 void in_game_update_keyboard_bindings(void) {
 
   switch (state->stage) {
-    case IN_GAME_STAGE_MAP_CHOICE: {
-      if (IsKeyReleased(KEY_ESCAPE)) {
-        state->show_pause_menu = !state->show_pause_menu;
-      }
-
-      break;
-    }
-    case IN_GAME_STAGE_PASSIVE_CHOICE: {
-      if (IsKeyReleased(KEY_ESCAPE)) {
-        state->show_pause_menu = !state->show_pause_menu;
-      }
-
-      if (IsKeyReleased(KEY_R)) {
-        for (size_t itr_000 = 0; itr_000 < MAX_UPDATE_PASSIVE_PANEL_COUNT; ++itr_000) {
-          state->passive_selection_panels.at(itr_000).buffer.u16[0] = 0;
-        }
-      }
-      break;
-    }
     case IN_GAME_STAGE_PLAY: {  
       if (!state->has_game_started) {
         if (IsKeyReleased(KEY_ESCAPE)) {
-          state->show_pause_menu = !state->show_pause_menu;
+          event_fire(EVENT_CODE_TOGGLE_GAME_PAUSE, event_context());
         }
         else if (IsKeyPressed(KEY_SPACE)) {
-          state->has_game_started = true;
-          set_is_game_paused(false);
+          event_fire(EVENT_CODE_RESUME_GAME, event_context());
         }
         return; 
       }
       if (!(*state->in_ingame_info->is_game_paused)) {
         if (IsKeyReleased(KEY_ESCAPE)) {
-          state->show_pause_menu = true;
-          set_is_game_paused(true);
+          event_fire(EVENT_CODE_PAUSE_GAME, event_context());
         }
       }
       else {
         if (IsKeyReleased(KEY_ESCAPE)) {
-          state->show_pause_menu = false;
-          set_is_game_paused(false);
+          event_fire(EVENT_CODE_RESUME_GAME, event_context());
         }
       }
       break;
@@ -688,7 +523,10 @@ if (UPG->level == 1) {\
 
 void draw_in_game_upgrade_panel(u16 which_panel, Rectangle panel_dest) {
   const ability* upg = __builtin_addressof(state->ability_upgrade_choices.at(which_panel));
-  const ability* abl = get_dynamic_player_state_ability(upg->type);
+  if (upg->type < 0 && upg->type >= state->in_ingame_info->player_state_dynamic->ability_system.abilities.size()) {
+    return;
+  }
+  const ability* abl = GET_PLAYER_DYNAMIC_ABILITY(upg->type);
   if (upg->type <= ABILITY_TYPE_UNDEFINED || upg->type >= ABILITY_TYPE_MAX) {
     TraceLog(LOG_WARNING, "scene_in_game::draw_in_game_upgrade_panel()::Upgraded ability is out of bounds"); 
     return;
@@ -782,31 +620,34 @@ void draw_end_game_panel() {
     true
   );
 
-  if (state->end_game_result.is_win) {
+  if (state->in_ingame_info->is_win) {
     gui_label(lc_txt(LOC_TEXT_INGAME_STAGE_RESULT_CLEARED), FONT_TYPE_ABRACADABRA, 1, SIG_BASE_RENDER_DIV2, WHITE, true, true);
   }
   else {
     gui_label(lc_txt(LOC_TEXT_INGAME_STAGE_RESULT_DEAD), FONT_TYPE_ABRACADABRA, 1, SIG_BASE_RENDER_DIV2, RED, true, true);
   }
-  u32 min  = (i32)state->end_game_result.play_time/60;
-  u32 secs = (i32)state->end_game_result.play_time%60;
+  u32 min  = (i32)state->in_ingame_info->play_time / 60.f;
+  u32 secs = (i32)state->in_ingame_info->play_time % 60;
   gui_label_format_v(FONT_TYPE_ABRACADABRA, 1, VECTOR2(static_cast<f32>(state->in_app_settings->render_width_div2), SIG_BASE_RENDER_HEIGHT * .55f), 
     WHITE, true, true, "%d:%d", min, secs
   );
 
   gui_label_format_v(FONT_TYPE_ABRACADABRA, 1, VECTOR2(static_cast<f32>(state->in_app_settings->render_width_div2), SIG_BASE_RENDER_HEIGHT * .75f), WHITE, true, true, 
-    "%s%d", lc_txt(LOC_TEXT_INGAME_STAGE_RESULT_COLLECTED_SOULS), state->end_game_result.collected_souls
+    "%s%d", lc_txt(LOC_TEXT_INGAME_STAGE_RESULT_COLLECTED_SOULS), state->in_ingame_info->collected_souls
   );
 }
 void prepare_ability_upgrade_state(void) {
-  set_is_game_paused(true);
+  event_fire(EVENT_CODE_PAUSE_GAME, event_context());
   for (int i=0; i<MAX_UPDATE_ABILITY_PANEL_COUNT; ++i) {
     panel* pnl = __builtin_addressof(state->ability_upg_panels.at(i));
     ability* pnl_slot = __builtin_addressof(state->ability_upgrade_choices.at(i));
     if(pnl->buffer.u16[0] <= 0 || pnl->buffer.u16[0] >= ABILITY_TYPE_MAX) {
       pnl->buffer.u16[0] = get_random(ABILITY_TYPE_UNDEFINED+1,ABILITY_TYPE_MAX-1);
     }
-    const ability* player_ability = get_dynamic_player_state_ability(static_cast<ability_type>(pnl->buffer.u16[0])); // INFO: do we need upgrade the ability player already have
+    if (pnl->buffer.u16[0] < 0 || pnl->buffer.u16[0] >= state->in_ingame_info->player_state_dynamic->ability_system.abilities.size()) {
+      continue;
+    }
+    const ability* player_ability = GET_PLAYER_DYNAMIC_ABILITY(static_cast<ability_type>(pnl->buffer.u16[0])); // INFO: do we need upgrade the ability player already have
     if (player_ability->type <= ABILITY_TYPE_UNDEFINED || player_ability->type >= ABILITY_TYPE_MAX) {
       *pnl_slot = _get_ability(static_cast<ability_type>(pnl->buffer.u16[0]));
     }
@@ -826,10 +667,10 @@ void end_ability_upgrade_state(u16 which_panel_chosen) {
     _add_ability(new_ability->type);
   }
   else {
-    _upgrade_ability(get_dynamic_player_state_ability(new_ability->type)); 
+    _upgrade_ability(GET_PLAYER_DYNAMIC_ABILITY(new_ability->type)); 
   }
 
-  set_is_game_paused(false);
+  event_fire(EVENT_CODE_RESUME_GAME, event_context());
   state->ability_upgrade_choices.fill(ability());
   set_dynamic_player_have_ability_upgrade_points(false);
   state->is_upgrade_choices_ready = false;
@@ -838,17 +679,16 @@ void end_ability_upgrade_state(u16 which_panel_chosen) {
   }
 }
 
-bool scene_in_game_on_event(i32 code, event_context context) {
+void sig_begin_fade(void) {
+  state->sig_fade.fade_animation_duration = INGAME_FADE_DURATION;
+  state->sig_fade.fade_type = FADE_TYPE_FADEOUT;
+  state->sig_fade.fade_animation_timer = 0.f;
+  state->sig_fade.fade_animation_playing = true;
+  state->sig_fade.is_fade_animation_played = false;
+}
+
+bool scene_in_game_on_event(i32 code, [[maybe_unused]] event_context context) {
   switch (code) {
-    case EVENT_CODE_ADD_CURRENCY_SOULS: {
-      state->end_game_result.collected_souls += context.data.u32[0];
-      return true;
-    }
-    case EVENT_CODE_RESUME_GAME: {
-      set_is_game_paused(false);
-      state->show_pause_menu = false;
-      return true;
-    }
     default: {
       TraceLog(LOG_WARNING, "scene_in_game::scene_in_game_on_event()::Unsuppported code.");
       return false;
@@ -859,14 +699,16 @@ bool scene_in_game_on_event(i32 code, event_context context) {
   return false;
 }
 
+
 #undef STATE_ASSERT
-#undef ABILITY_UPG_PANEL_ICON_SIZE
-#undef CLOUDS_ANIMATION_DURATION
-#undef FADE_ANIMATION_DURATION
-#undef DRAW_ABL_UPG_STAT_PNL
 #undef SIG_BASE_RENDER_SCALE
 #undef SIG_BASE_RENDER_DIV2
-#undef SIG_BASE_RENDER_RES_VEC
 #undef SIG_BASE_RENDER_WIDTH
 #undef SIG_BASE_RENDER_HEIGHT
 #undef SIG_SCREEN_POS
+#undef ABILITY_UPG_PANEL_ICON_SIZE
+#undef PASSIVE_SELECTION_PANEL_ICON_SIZE
+#undef CLOUDS_ANIMATION_DURATION
+#undef GET_PLAYER_DYNAMIC_STAT
+#undef GET_PLAYER_DYNAMIC_ABILITY
+#undef DRAW_ABL_UPG_STAT_PNL

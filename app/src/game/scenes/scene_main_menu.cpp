@@ -16,22 +16,35 @@ typedef enum main_menu_scene_type {
   MAIN_MENU_SCENE_SETTINGS,
   MAIN_MENU_SCENE_UPGRADE,
   MAIN_MENU_SCENE_EXTRAS,
+  MAIN_MENU_SCENE_TO_PLAY_MAP_CHOICE,
+  MAIN_MENU_SCENE_TO_PLAY_TRAIT_CHOICE,
 } main_menu_scene_type;
+
+typedef struct play_scene_info {
+  i32 hovered_stage;
+  play_scene_info(void) {
+    this->hovered_stage = 0;
+  }
+}play_scene_info;
 
 typedef struct main_menu_scene_state {
   panel upgrade_list_panel;
   panel upgrade_details_panel;
+  panel worldmap_selection_panel;
+  panel default_panel;
+  panel trait_selection_panel;
 
   const character_stat * hovered_stat;
   const camera_metrics * in_camera_metrics;
   const app_settings   * in_app_settings;
+  std::array<worldmap_stage, MAX_WORLDMAP_LOCATIONS> worldmap_locations;
   
   const Vector2* mouse_pos_screen;
   u32 deny_notify_timer;
-  main_menu_scene_type type;
-  scene_id next_scene;
-  bool in_scene_changing_process;
-  bool scene_changing_process_complete;
+  main_menu_scene_type mainmenu_state;
+
+  play_scene_info ingame_scene_feed;
+  ui_fade_control_system smm_fade;
 
   main_menu_scene_state(void) {
     this->upgrade_list_panel = panel();
@@ -41,10 +54,9 @@ typedef struct main_menu_scene_state {
     this->in_app_settings = nullptr;
     this->mouse_pos_screen = nullptr;
     this->deny_notify_timer = 0u;
-    this->type = MAIN_MENU_SCENE_DEFAULT;
-    this->next_scene = SCENE_TYPE_UNSPECIFIED;
-    this->in_scene_changing_process = false;
-    this->scene_changing_process_complete = false;
+    this->mainmenu_state = MAIN_MENU_SCENE_DEFAULT;
+    this->ingame_scene_feed = play_scene_info();
+    this->smm_fade = ui_fade_control_system();
   }
 } main_menu_scene_state;
 
@@ -69,6 +81,14 @@ bool begin_scene_main_menu(void);
 void draw_main_menu_upgrade_panel(void);
 void draw_main_menu_upgrade_list_panel(void);
 void draw_main_menu_upgrade_details_panel(void);
+void smm_update_bindings(void);
+void smm_update_keyboard_bindings(void);
+void smm_update_mouse_bindings(void);
+void smm_begin_fadeout(data64 data, void(*on_change_complete)(data64));
+void smm_begin_fadein(data64 data, void(*on_change_complete)(data64));
+
+void fade_on_complete_change_main_menu_type(data64 data);
+void fade_on_complete_change_scene(data64 data);
 
 bool initialize_scene_main_menu(const app_settings * _in_app_settings) {
   if (state) {
@@ -108,34 +128,60 @@ bool initialize_scene_main_menu(const app_settings * _in_app_settings) {
 }
 
 void update_scene_main_menu(void) {
-  event_fire(EVENT_CODE_CAMERA_SET_ZOOM, event_context(1.f));
-  event_fire(EVENT_CODE_CAMERA_SET_CAMERA_POSITION, event_context(0.f, 0.f));
-  event_fire(EVENT_CODE_CAMERA_SET_OFFSET, event_context(state->in_app_settings->render_width * .5f,state->in_app_settings->render_height * .5f));
-  update_camera();
   update_user_interface();
-  update_map();
-
   state->mouse_pos_screen = ui_get_mouse_pos_screen();
-
-  if (state->in_scene_changing_process && is_ui_fade_anim_about_to_complete()) {
-    state->scene_changing_process_complete = true;
+  smm_update_bindings();
+  update_camera();
+  update_map();
+  if(state->smm_fade.fade_animation_playing){
+    process_fade_effect(__builtin_addressof(state->smm_fade));
   }
-  if (state->in_scene_changing_process && is_ui_fade_anim_complete()) {
-    switch (state->next_scene) {
-        case SCENE_TYPE_UNSPECIFIED:
-        break;
-      case SCENE_TYPE_IN_GAME: {
-        event_fire(EVENT_CODE_SCENE_IN_GAME, event_context());
-        break;
+  else if (state->smm_fade.is_fade_animation_played) {
+    if (state->smm_fade.fade_type == FADE_TYPE_FADEOUT) {
+      state->smm_fade.on_change_complete(state->smm_fade.data);
+      smm_begin_fadein(data64(), nullptr);
+    }
+    else if(state->smm_fade.fade_type == FADE_TYPE_FADEIN) {
+      state->smm_fade = ui_fade_control_system();
+    }
+  }
+
+  switch (state->mainmenu_state) {
+    case MAIN_MENU_SCENE_DEFAULT: {
+      event_fire(EVENT_CODE_CAMERA_SET_ZOOM, event_context(1.f));
+      event_fire(EVENT_CODE_CAMERA_SET_CAMERA_POSITION, event_context(0.f, 0.f));
+      event_fire(EVENT_CODE_CAMERA_SET_OFFSET, event_context(state->in_app_settings->render_width * .5f,state->in_app_settings->render_height * .5f));
+      break;
+    }
+    case MAIN_MENU_SCENE_TO_PLAY_MAP_CHOICE: {
+      event_fire(EVENT_CODE_CAMERA_SET_ZOOM, event_context(1.f));
+      event_fire(EVENT_CODE_CAMERA_SET_CAMERA_POSITION, event_context(0.f, 0.f));
+      event_fire(EVENT_CODE_CAMERA_SET_OFFSET, event_context(0.f, 0.f));
+
+      if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON) && state->ingame_scene_feed.hovered_stage <= MAX_WORLDMAP_LOCATIONS) {
+        set_worldmap_location(state->ingame_scene_feed.hovered_stage);
+        state->mainmenu_state = MAIN_MENU_SCENE_TO_PLAY_TRAIT_CHOICE;
       }
-      case SCENE_TYPE_EDITOR: {
-        event_fire(EVENT_CODE_SCENE_EDITOR, event_context());
-        break;
-      }
-      default: {
-        TraceLog(LOG_ERROR, "scene_main_menu::update_scene_main_menu::Unknown scene");
-        break;
-      }
+      break;
+    }
+    case MAIN_MENU_SCENE_TO_PLAY_TRAIT_CHOICE: {
+      event_fire(EVENT_CODE_CAMERA_SET_ZOOM, event_context(1.f));
+      event_fire(EVENT_CODE_CAMERA_SET_CAMERA_POSITION, event_context(0.f, 0.f));
+      event_fire(EVENT_CODE_CAMERA_SET_OFFSET, event_context(state->in_app_settings->render_width * .5f,state->in_app_settings->render_height * .5f));
+      
+      break;
+    }
+    case MAIN_MENU_SCENE_SETTINGS: {
+      break;
+    }
+    case MAIN_MENU_SCENE_EXTRAS: {
+      break;
+    }
+    case MAIN_MENU_SCENE_UPGRADE: {
+      break;
+    }
+    default: {
+      break;
     }
   }
 }
@@ -143,56 +189,106 @@ void update_scene_main_menu(void) {
 void render_scene_main_menu(void) {
   BeginMode2D(get_in_game_camera()->handle);
   
-  if (!state->scene_changing_process_complete) {
-    render_map();
+  switch (state->mainmenu_state) {
+    case MAIN_MENU_SCENE_DEFAULT: {
+        render_map();
+        break;
+    }
+    case MAIN_MENU_SCENE_TO_PLAY_MAP_CHOICE: {
+      gui_draw_texture_id(TEX_ID_WORLDMAP_WO_CLOUDS, Rectangle {0, 0, static_cast<f32>(SMM_BASE_RENDER_WIDTH), static_cast<f32>(SMM_BASE_RENDER_HEIGHT)});
+      for (int i=0; i<MAX_WORLDMAP_LOCATIONS; ++i) {
+        if (state->worldmap_locations.at(i).is_active) {
+          Vector2 scrloc = Vector2 {
+            state->worldmap_locations.at(i).screen_location.x * SMM_BASE_RENDER_WIDTH, 
+            state->worldmap_locations.at(i).screen_location.y * SMM_BASE_RENDER_HEIGHT
+          };
+          gui_draw_map_stage_pin(state->ingame_scene_feed.hovered_stage == i, scrloc);
+        }
+      }
+      break;
+    }
+    case MAIN_MENU_SCENE_TO_PLAY_TRAIT_CHOICE: {
+      render_map();
+      break;
+    }
+    case MAIN_MENU_SCENE_SETTINGS: {
+        break;
+    }
+    case MAIN_MENU_SCENE_EXTRAS: {
+        break;
+    }
+    case MAIN_MENU_SCENE_UPGRADE: {
+        break;
+    }
+    default: { break; }
   }
   
   EndMode2D();
 }
 
 void render_interface_main_menu(void) {
-  if (!state->scene_changing_process_complete) {
-    if (state->type == MAIN_MENU_SCENE_DEFAULT) {
-        
-      gui_label_shader(GAME_TITLE, SHADER_ID_FONT_OUTLINE, FONT_TYPE_ABRACADABRA, 5, VECTOR2(SMM_BASE_RENDER_WIDTH * .5f, SMM_BASE_RENDER_HEIGHT * .25f), WHITE, true, true);
-
-      if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_PLAY), BTN_ID_MAINMENU_BUTTON_PLAY, VECTOR2(0.f, -21.f), SMM_BASE_RENDER_DIV2, true)) {
-        state->in_scene_changing_process = true;
-        state->next_scene = SCENE_TYPE_IN_GAME;
-        event_fire(EVENT_CODE_UI_START_FADEOUT_EFFECT, event_context((u16)MAIN_MENU_FADE_DURATION));
-      }
-      if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_UPGRADE), BTN_ID_MAINMENU_BUTTON_UPGRADE, VECTOR2(0.f, -10.5f), SMM_BASE_RENDER_DIV2, true)) {
-        state->type = MAIN_MENU_SCENE_UPGRADE;
-      }
-      if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_SETTINGS), BTN_ID_MAINMENU_BUTTON_SETTINGS, VECTOR2(0.f, 0.f), SMM_BASE_RENDER_DIV2, true)) {
-        ui_refresh_setting_sliders_to_default();
-        state->type = MAIN_MENU_SCENE_SETTINGS;
-      }
-      if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_EDITOR), BTN_ID_MAINMENU_BUTTON_EDITOR, VECTOR2(0.f, 10.5f), SMM_BASE_RENDER_DIV2, true)) {
-        state->in_scene_changing_process = true;
-        state->next_scene = SCENE_TYPE_EDITOR;
-        event_fire(EVENT_CODE_UI_START_FADEOUT_EFFECT, event_context((u16)MAIN_MENU_FADE_DURATION));
-      }
-      if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_EXIT), BTN_ID_MAINMENU_BUTTON_EXIT, VECTOR2(0.f, 21.f), SMM_BASE_RENDER_DIV2, true)) {
-        event_fire(EVENT_CODE_APPLICATION_QUIT, event_context());
-      }
-    } 
-    else if (state->type == MAIN_MENU_SCENE_SETTINGS) {
+  if (state->mainmenu_state == MAIN_MENU_SCENE_DEFAULT) {
+      
+    gui_label_shader(GAME_TITLE, SHADER_ID_FONT_OUTLINE, FONT_TYPE_ABRACADABRA, 5, VECTOR2(SMM_BASE_RENDER_WIDTH * .5f, SMM_BASE_RENDER_HEIGHT * .25f), WHITE, true, true);
+    if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_PLAY), BTN_ID_MAINMENU_BUTTON_PLAY, VECTOR2(0.f, -21.f), SMM_BASE_RENDER_DIV2, true)) {
+      smm_begin_fadeout(data64(MAIN_MENU_SCENE_TO_PLAY_MAP_CHOICE), fade_on_complete_change_main_menu_type);
+    }
+    if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_UPGRADE), BTN_ID_MAINMENU_BUTTON_UPGRADE, VECTOR2(0.f, -10.5f), SMM_BASE_RENDER_DIV2, true)) {
+      state->mainmenu_state = MAIN_MENU_SCENE_UPGRADE;
+    }
+    if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_SETTINGS), BTN_ID_MAINMENU_BUTTON_SETTINGS, VECTOR2(0.f, 0.f), SMM_BASE_RENDER_DIV2, true)) {
+      ui_refresh_setting_sliders_to_default();
+      state->mainmenu_state = MAIN_MENU_SCENE_SETTINGS;
+    }
+    if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_EDITOR), BTN_ID_MAINMENU_BUTTON_EDITOR, VECTOR2(0.f, 10.5f), SMM_BASE_RENDER_DIV2, true)) {
+      smm_begin_fadeout(data64(SCENE_TYPE_EDITOR), fade_on_complete_change_scene);
+    }
+    if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_EXIT), BTN_ID_MAINMENU_BUTTON_EXIT, VECTOR2(0.f, 21.f), SMM_BASE_RENDER_DIV2, true)) {
+      event_fire(EVENT_CODE_APPLICATION_QUIT, event_context());
+    }
+  } 
+  else if (state->mainmenu_state == MAIN_MENU_SCENE_SETTINGS) {
       gui_draw_settings_screen();
       if (gui_menu_button(lc_txt(LOC_TEXT_SETTINGS_BUTTON_CANCEL), BTN_ID_MAINMENU_SETTINGS_CANCEL, VECTOR2(-35.f, 66.5f), SMM_BASE_RENDER_DIV2, true)) {
-        state->type = MAIN_MENU_SCENE_DEFAULT;
+        state->mainmenu_state = MAIN_MENU_SCENE_DEFAULT;
       }
-    }
-    else if (state->type == MAIN_MENU_SCENE_UPGRADE) {
+  }
+  else if (state->mainmenu_state == MAIN_MENU_SCENE_UPGRADE) {
       draw_main_menu_upgrade_panel();
       if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_UPDATE_BUTTON_BACK), BTN_ID_MAINMENU_UPGRADE_BACK, VECTOR2(0.f, 66.5f), SMM_BASE_RENDER_DIV2, true)) {
-        state->type = MAIN_MENU_SCENE_DEFAULT;
+        state->mainmenu_state = MAIN_MENU_SCENE_DEFAULT;
       }
-    }
-
-
-    render_user_interface();
   }
+  else if (state->mainmenu_state == MAIN_MENU_SCENE_TO_PLAY_MAP_CHOICE) {
+      for (int itr_000 = 0; itr_000 < MAX_WORLDMAP_LOCATIONS; ++itr_000) {
+        if (state->ingame_scene_feed.hovered_stage == itr_000) {
+          panel* pnl = __builtin_addressof(state->worldmap_selection_panel);
+          Rectangle scrloc = Rectangle{
+            state->worldmap_locations.at(itr_000).screen_location.x * SMM_BASE_RENDER_WIDTH - WORLDMAP_LOC_PIN_SIZE_DIV2, 
+            state->worldmap_locations.at(itr_000).screen_location.y * SMM_BASE_RENDER_HEIGHT - WORLDMAP_LOC_PIN_SIZE_DIV2,
+            WORLDMAP_LOC_PIN_SIZE, WORLDMAP_LOC_PIN_SIZE
+          };
+          pnl->dest = Rectangle {scrloc.x + WORLDMAP_LOC_PIN_SIZE, scrloc.y + WORLDMAP_LOC_PIN_SIZE_DIV2, SMM_BASE_RENDER_WIDTH * .25f, SMM_BASE_RENDER_HEIGHT * .25f};
+          DrawCircleGradient(scrloc.x + WORLDMAP_LOC_PIN_SIZE_DIV2, scrloc.y + WORLDMAP_LOC_PIN_SIZE_DIV2, 100, Color{236,240,241,50}, Color{255, 255, 255, 0});
+
+          gui_panel((*pnl), pnl->dest, false);
+          BeginScissorMode(pnl->dest.x, pnl->dest.y, pnl->dest.width, pnl->dest.height);
+          {
+            gui_label(state->worldmap_locations.at(itr_000).displayname.c_str(), FONT_TYPE_ABRACADABRA, 1, Vector2 {
+              pnl->dest.x + pnl->dest.width *.5f, pnl->dest.y + pnl->dest.height*.5f
+            }, WHITE, true, true);
+          }
+          EndScissorMode();
+        }
+      }
+  }
+  else if(state->mainmenu_state == MAIN_MENU_SCENE_TO_PLAY_TRAIT_CHOICE) {
+    gui_panel(state->trait_selection_panel, Rectangle {
+      static_cast<f32>(SMM_BASE_RENDER_WIDTH) * .5f, static_cast<f32>(SMM_BASE_RENDER_HEIGHT) * .5f, 
+      static_cast<f32>(SMM_BASE_RENDER_WIDTH) * .75f, static_cast<f32>(SMM_BASE_RENDER_HEIGHT) * .75f}, true
+    );
+  }
+  render_user_interface();
 }
 
 [[__nodiscard__]] bool begin_scene_main_menu(void) {
@@ -202,15 +298,17 @@ void render_interface_main_menu(void) {
   }
 
   if (!game_manager_initialize( state->in_camera_metrics, state->in_app_settings, get_active_map_ptr())) { // Inits player & spawns
-    TraceLog(LOG_ERROR, "scene_in_game::initialize_scene_in_game()::game_manager_initialize() failed");
+    TraceLog(LOG_ERROR, "scene_in_game::begin_scene_main_menu()::game_manager_initialize() failed");
     return false;
   }
   set_worldmap_location(WORLDMAP_MAINMENU_MAP); // NOTE: Worldmap index 0 is mainmenu background now
 
-  state->type = MAIN_MENU_SCENE_DEFAULT;
-  state->next_scene = SCENE_TYPE_UNSPECIFIED;
-  state->in_scene_changing_process = false;
-  state->scene_changing_process_complete = false;
+  copy_memory(state->worldmap_locations.data(), get_worldmap_locations(), MAX_WORLDMAP_LOCATIONS * sizeof(worldmap_stage));
+
+  state->mainmenu_state = MAIN_MENU_SCENE_DEFAULT;
+  state->default_panel = panel( BTN_STATE_RELEASED, ATLAS_TEX_ID_CRIMSON_FANTASY_PANEL_BG, ATLAS_TEX_ID_CRIMSON_FANTASY_PANEL, 
+    Vector4 {6, 6, 6, 6}, Color { 30, 39, 46, 245}, Color { 52, 64, 76, 245}
+  );
   state->upgrade_list_panel = panel();
   state->upgrade_details_panel = panel();
   state->upgrade_list_panel.dest = Rectangle{ SMM_BASE_RENDER_WIDTH * .025f, SMM_BASE_RENDER_HEIGHT * .075f, SMM_BASE_RENDER_WIDTH * .65f, SMM_BASE_RENDER_HEIGHT * .85f};
@@ -218,16 +316,17 @@ void render_interface_main_menu(void) {
     state->upgrade_list_panel.dest.x + state->upgrade_list_panel.dest.width + SMM_BASE_RENDER_WIDTH * .005f,
     SMM_BASE_RENDER_HEIGHT * .075f,
     SMM_BASE_RENDER_WIDTH * .295f, SMM_BASE_RENDER_HEIGHT * .850f
-  };
+  };  
+
+  state->trait_selection_panel = state->default_panel;
+  state->worldmap_selection_panel = state->default_panel;
   gm_save_game();
   //event_fire(EVENT_CODE_PLAY_MAIN_MENU_THEME, event_context{}); TODO: Uncomment later
-
   return true;
 }
 void end_scene_main_menu(void) {
   event_fire(EVENT_CODE_RESET_MUSIC, event_context((i32)MUSIC_ID_MAIN_MENU_THEME));
 }
-
 void draw_main_menu_upgrade_panel(void) {
   Rectangle header_loc = {0, 0, static_cast<f32>(SMM_BASE_RENDER_WIDTH), SMM_BASE_RENDER_HEIGHT * .1f};
   Rectangle footer_loc = {0, 
@@ -254,7 +353,6 @@ void draw_main_menu_upgrade_panel(void) {
   draw_main_menu_upgrade_list_panel();
   draw_main_menu_upgrade_details_panel();
 }
-
 void draw_main_menu_upgrade_list_panel(void) {
   gui_panel(state->upgrade_list_panel, state->upgrade_list_panel.dest, false);
   f32 showcase_hover_scale = 1.1f;
@@ -339,7 +437,6 @@ void draw_main_menu_upgrade_list_panel(void) {
     }
   }
 }
-
 void draw_main_menu_upgrade_details_panel(void) {
   gui_panel(state->upgrade_details_panel, state->upgrade_details_panel.dest, false);
   if (!state->hovered_stat) {
@@ -461,5 +558,124 @@ void draw_main_menu_upgrade_details_panel(void) {
       event_fire(EVENT_CODE_PLAY_SOUND, event_context((i32)SOUND_ID_DENY));
       state->deny_notify_timer = DENY_NOTIFY_TIME;
     }
+  }
+}
+
+void smm_update_mouse_bindings(void) { 
+  switch (state->mainmenu_state) {
+    case MAIN_MENU_SCENE_DEFAULT: {
+      break;
+    }
+    case MAIN_MENU_SCENE_TO_PLAY_MAP_CHOICE: {
+      state->ingame_scene_feed.hovered_stage = U16_MAX;
+      for (int i=0; i<MAX_WORLDMAP_LOCATIONS; ++i) {
+        Rectangle scrloc = Rectangle{
+          state->worldmap_locations.at(i).screen_location.x * SMM_BASE_RENDER_WIDTH - WORLDMAP_LOC_PIN_SIZE_DIV2, 
+          state->worldmap_locations.at(i).screen_location.y * SMM_BASE_RENDER_HEIGHT - WORLDMAP_LOC_PIN_SIZE_DIV2,
+          WORLDMAP_LOC_PIN_SIZE, WORLDMAP_LOC_PIN_SIZE
+        };
+        if (CheckCollisionPointRec( *state->mouse_pos_screen, scrloc)) {
+          state->ingame_scene_feed.hovered_stage = i;
+        }
+      }
+      break;
+    }
+    case MAIN_MENU_SCENE_TO_PLAY_TRAIT_CHOICE: {
+      break;
+    }
+    case MAIN_MENU_SCENE_SETTINGS: {
+      break;
+    }
+    case MAIN_MENU_SCENE_EXTRAS: {
+      break;
+    }
+    case MAIN_MENU_SCENE_UPGRADE: {
+      break;
+    }
+    default: {
+      TraceLog(LOG_WARNING, "scene_in_game::smm_update_mouse_bindings()::Unsupported stage");
+      break;
+    }
+  }
+}
+void smm_update_keyboard_bindings(void) {
+  switch (state->mainmenu_state) {
+    case MAIN_MENU_SCENE_DEFAULT: {
+      break;
+    }
+    case MAIN_MENU_SCENE_TO_PLAY_MAP_CHOICE: {
+      if (IsKeyReleased(KEY_ESCAPE)) {
+        event_fire(EVENT_CODE_TOGGLE_GAME_PAUSE, event_context());
+      }
+      break;
+    }
+    case MAIN_MENU_SCENE_TO_PLAY_TRAIT_CHOICE: {
+      if (IsKeyReleased(KEY_R)) {
+        state->trait_selection_panel.buffer.u16[0] = 0;
+      }
+      break;
+    }
+    case MAIN_MENU_SCENE_SETTINGS: {
+      break;
+    }
+    case MAIN_MENU_SCENE_EXTRAS: {
+      break;
+    }
+    case MAIN_MENU_SCENE_UPGRADE: {
+      break;
+    }
+    default: {
+      TraceLog(LOG_WARNING, "scene_in_game::smm_update_keyboard_bindings()::Unsupported stage");
+      break;
+    }
+  }
+}
+void smm_update_bindings(void) {
+  smm_update_mouse_bindings();
+  smm_update_keyboard_bindings();
+}
+
+void smm_begin_fadeout(data64 data, void(*on_change_complete)(data64)) {
+  state->smm_fade.fade_animation_duration = MAIN_MENU_FADE_DURATION;
+  state->smm_fade.fade_type = FADE_TYPE_FADEOUT;
+  state->smm_fade.fade_animation_timer = 0.f;
+  state->smm_fade.fade_animation_playing = true;
+  state->smm_fade.is_fade_animation_played = false;
+  state->smm_fade.data = data;
+  state->smm_fade.on_change_complete = on_change_complete;
+}
+void smm_begin_fadein(data64 data, void(*on_change_complete)(data64)) {
+  state->smm_fade.fade_animation_duration = MAIN_MENU_FADE_DURATION;
+  state->smm_fade.fade_type = FADE_TYPE_FADEIN;
+  state->smm_fade.fade_animation_timer = 0.f;
+  state->smm_fade.fade_animation_playing = true;
+  state->smm_fade.is_fade_animation_played = false;
+  state->smm_fade.data = data;
+  state->smm_fade.on_change_complete = on_change_complete;
+}
+void fade_on_complete_change_main_menu_type(data64 data) {
+  state->mainmenu_state = static_cast<main_menu_scene_type>(data.i32[0]);
+}
+void fade_on_complete_change_scene(data64 data) {
+  scene_id scene = static_cast<scene_id>(data.i32[0]);
+  switch (scene) {
+    case SCENE_TYPE_MAIN_MENU: {
+      event_fire(EVENT_CODE_SCENE_MAIN_MENU, event_context());
+      return;
+    }
+    case SCENE_TYPE_IN_GAME: {
+      event_fire(EVENT_CODE_SCENE_IN_GAME, event_context());
+      return;
+    }
+    case SCENE_TYPE_EDITOR: {
+      event_fire(EVENT_CODE_SCENE_EDITOR, event_context());
+      return;
+    }
+    default: {
+      TraceLog(LOG_WARNING, "scene_main_menu::fade_on_complete_change_scene()::Unsupported scene id");
+      return;
+    }
+
+    TraceLog(LOG_ERROR, "scene_main_menu::fade_on_complete_change_scene()::Function ended unexpectedly");
   }
 }

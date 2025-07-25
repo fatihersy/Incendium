@@ -14,15 +14,14 @@ typedef enum spawn_movement_animations {
 } spawn_movement_animations; 
 
 typedef struct spawn_system_state {
-  Character2D spawns[MAX_SPAWN_COUNT]; // NOTE: See also clean-up function
-  u32 current_spawn_count;
+  std::vector<Character2D> spawns; // NOTE: See also clean-up function
   const camera_metrics* in_camera_metrics;
-  u32 next_spawn_id;
+  i32 next_spawn_id;
 } spawn_system_state;
 
 // To avoid dublicate symbol errors. Implementation in defines.h
 extern const u32 level_curve[MAX_PLAYER_LEVEL + 1];
-static spawn_system_state * state;
+static spawn_system_state * state = nullptr;
 
 #define CHECK_pSPAWN_COLLISION(REC1, SPAWN, NEW_POS) \
 CheckCollisionRecs(REC1, \
@@ -43,7 +42,7 @@ CheckCollisionRecs(REC1, \
 #define SPAWN_DAMAGE_CURVE(LEVEL, SCALE, TYPE) SPAWN_BASE_DAMAGE + (SPAWN_BASE_DAMAGE * ((SCALE * 0.4f) + (LEVEL * 0.6f) + (TYPE * 0.3f)) * level_curve[LEVEL] * 0.002f)
 
 void spawn_play_anim(Character2D* spawn, spawn_movement_animations sheet);
-void remove_spawn(u16 index);
+void remove_spawn(i32 index);
 void register_spawn_animation(Character2D* spawn, spawn_movement_animations movement);
 
 bool spawn_system_initialize(const camera_metrics* _camera_metrics) {
@@ -57,81 +56,74 @@ bool spawn_system_initialize(const camera_metrics* _camera_metrics) {
     return false;
   }
   state->in_camera_metrics = _camera_metrics;
-
-  state->current_spawn_count = 0;
   return true;
 }
 
-i32 damage_spawn(u32 _id, i32 damage) {
+i32 damage_spawn(i32 _id, i32 damage) {
   Character2D* character = nullptr;
-  Character2D* spawns = state->spawns;
-  u32 spawn_count = state->current_spawn_count;
+  std::vector<Character2D>& spawns = state->spawns;
 
-  for (u32 i = 0; i < spawn_count ; ++i) {
-    if(spawns[i].character_id == _id) {
-      character = &spawns[i];
+  for (size_t itr_000 = 0; itr_000 < spawns.size() ; ++itr_000) {
+    if(spawns.at(itr_000).character_id == _id) {
+      character = __builtin_addressof(spawns.at(itr_000));
       break;
     }
   }
-  if (!character) return INVALID_IDU16;
+  if (!character) return INVALID_IDI32;
   if (!character->is_damagable) { return character->health; }
 
   if(character->health - damage > 0 && character->health - damage < MAX_SPAWN_HEALTH) {
     character->is_damagable = false;
-    character->damage_break_time = character->take_damage_left_animation.fps /(f32)TARGET_FPS;
+    character->damage_break_time = character->take_damage_left_animation.fps / static_cast<f32>(TARGET_FPS);
     character->health -= damage;
     return character->health;
   }
   character->health = 0;
   character->is_dead = true;
   character->is_damagable = false;
-  character->damage_break_time = character->take_damage_left_animation.fps /(f32)TARGET_FPS;
+  character->damage_break_time = character->take_damage_left_animation.fps / static_cast<f32>(TARGET_FPS);
   
-  event_fire(EVENT_CODE_ADD_CURRENCY_SOULS, event_context((u32)character->scale));
-  event_fire(EVENT_CODE_PLAYER_ADD_EXP, event_context(32u)); // TODO: Make exp gain dynamic 
+  event_fire(EVENT_CODE_ADD_CURRENCY_SOULS, event_context((i32)character->scale));
+  event_fire(EVENT_CODE_PLAYER_ADD_EXP, event_context(static_cast<i32>(32))); // TODO: Make exp gain dynamic 
   return 0;
 }
 
 bool spawn_character(Character2D _character) {
-  if (state->current_spawn_count >= MAX_SPAWN_COUNT) {
+  if (_character.buffer.i32[0] <= SPAWN_TYPE_UNDEFINED || _character.buffer.i32[0] >= SPAWN_TYPE_MAX) {
     return false;
   }
-  // buffer.u16[0] = SPAWN_TYPE
-  // buffer.u16[1] = SPAWN_LEVEL
-  // buffer.u16[2] = SPAWN_RND_SCALE
-  Character2D *character = __builtin_addressof(_character);
-  character->scale = SPAWN_RND_SCALE_MIN + (SPAWN_RND_SCALE_MAX * character->buffer.u16[2] / 100.f);
-  character->scale += SPAWN_SCALE_INCREASE_BY_LEVEL(character->buffer.u16[1]);
+  spawn_type spw_type = static_cast<spawn_type>(_character.buffer.i32[0]);
+  _character.scale =  SPAWN_RND_SCALE_MIN + (SPAWN_RND_SCALE_MAX * _character.buffer.i32[2] / 100.f);
+  _character.scale += SPAWN_SCALE_INCREASE_BY_LEVEL(_character.buffer.i32[1]);
 
-  character->health = SPAWN_HEALTH_CURVE(character->buffer.u16[1], character->scale, character->buffer.u16[0]);
-  character->damage = SPAWN_DAMAGE_CURVE(character->buffer.u16[1], character->scale, character->buffer.u16[0]);
+  _character.health = SPAWN_HEALTH_CURVE(_character.buffer.i32[1], _character.scale, static_cast<f32>(spw_type));
+  _character.damage = SPAWN_DAMAGE_CURVE(_character.buffer.i32[1], _character.scale, static_cast<f32>(spw_type));
   
-  register_spawn_animation(character, SPAWN_ZOMBIE_ANIMATION_MOVE_LEFT);
+  register_spawn_animation(__builtin_addressof(_character), SPAWN_ZOMBIE_ANIMATION_MOVE_LEFT);
 
   // INFO: Setting collision equal to the any animation dimentions, as we consider each are equal.
-  character->collision.width = character->move_left_animation.current_frame_rect.width * character->scale;
-  character->collision.height = character->move_left_animation.current_frame_rect.height * character->scale;
-  character->collision.x = character->position.x;
-  character->collision.y = character->position.y;
-  if(CheckCollisionRecs(state->in_camera_metrics->frustum, character->collision)) { return false; }
+  _character.collision.width = _character.move_left_animation.current_frame_rect.width * _character.scale;
+  _character.collision.height = _character.move_left_animation.current_frame_rect.height * _character.scale;
+  _character.collision.x = _character.position.x;
+  _character.collision.y = _character.position.y;
+  if(spw_type != SPAWN_TYPE_BOSS && CheckCollisionRecs(state->in_camera_metrics->frustum, _character.collision)) { return false; }
 
-  register_spawn_animation(character, SPAWN_ZOMBIE_ANIMATION_MOVE_RIGHT);
-  register_spawn_animation(character, SPAWN_ZOMBIE_ANIMATION_TAKE_DAMAGE_LEFT);
-  register_spawn_animation(character, SPAWN_ZOMBIE_ANIMATION_TAKE_DAMAGE_RIGHT);
+  register_spawn_animation(__builtin_addressof(_character), SPAWN_ZOMBIE_ANIMATION_MOVE_RIGHT);
+  register_spawn_animation(__builtin_addressof(_character), SPAWN_ZOMBIE_ANIMATION_TAKE_DAMAGE_LEFT);
+  register_spawn_animation(__builtin_addressof(_character), SPAWN_ZOMBIE_ANIMATION_TAKE_DAMAGE_RIGHT);
 
-  character->w_direction = WORLD_DIRECTION_RIGHT;
-  character->character_id = state->next_spawn_id++;
-  character->initialized = true;
+  _character.w_direction = WORLD_DIRECTION_RIGHT;
+  _character.character_id = state->next_spawn_id++;
+  _character.initialized = true;
 
-  for (u32 i=0; i < state->current_spawn_count; ++i) {
-    if(CheckCollisionRecs(state->spawns[i].collision, character->collision)) { return false; }
+  for (size_t itr_000 = 0; itr_000 < state->spawns.size(); ++itr_000) {
+    if(CheckCollisionRecs(state->spawns.at(itr_000).collision, _character.collision)) { return false; }
   }
-  if(character->damage_break_time > character->take_damage_left_animation.fps * (f32)TARGET_FPS) {
-    character->damage_break_time = character->take_damage_left_animation.fps * (f32)TARGET_FPS;
+  if(_character.damage_break_time > _character.take_damage_left_animation.fps * static_cast<f32>(TARGET_FPS)) {
+    _character.damage_break_time = _character.take_damage_left_animation.fps  * static_cast<f32>(TARGET_FPS);
   }
 
-  state->spawns[state->current_spawn_count] = *character;
-  state->current_spawn_count++;
+  state->spawns.push_back(_character);
   return true;
 }
 
@@ -141,10 +133,10 @@ bool update_spawns(Vector2 player_position) {
     return false; 
   }
 
-  for (u32 i = 0; i < state->current_spawn_count && i < MAX_SPAWN_COUNT; ++i) {
-    Character2D *character = &state->spawns[i];
+  for (size_t itr_000 = 0; itr_000 < state->spawns.size(); ++itr_000) {
+    Character2D *character = __builtin_addressof(state->spawns.at(itr_000));
     if (!character->initialized) { 
-      remove_spawn(i);
+      remove_spawn(itr_000);
       continue; 
     }
     if (!character->is_damagable) {
@@ -154,7 +146,7 @@ bool update_spawns(Vector2 player_position) {
       else character->is_damagable = true;
     }
     if ((character->health <= 0 && character->is_damagable) || character->health > MAX_SPAWN_HEALTH) {
-      remove_spawn(i);
+      remove_spawn(itr_000);
       continue;
     }
 
@@ -163,17 +155,17 @@ bool update_spawns(Vector2 player_position) {
     Vector2 new_position = move_towards(character->position, player_position, character->speed);
     bool x0_collide = false;
     bool y0_collide = false;
-    for (u32 j=0; j<state->current_spawn_count; ++j) {
-      if (state->spawns[j].character_id == character->character_id) { continue; }
+    for (size_t itr_111 = 0; itr_111 < state->spawns.size(); ++itr_111) {
+      if (state->spawns.at(itr_111).character_id == character->character_id) { continue; }
 
       const Rectangle spw_col = character->collision;
       const Rectangle x0 = Rectangle {spw_col.x, new_position.y, spw_col.width, spw_col.height};
       const Rectangle y0 = Rectangle {new_position.x, spw_col.y, spw_col.width, spw_col.height};
 
-      if(CheckCollisionRecs(state->spawns[j].collision, x0)) {
+      if(CheckCollisionRecs(state->spawns.at(itr_111).collision, x0)) {
         x0_collide = true;
       }
-      if(CheckCollisionRecs(state->spawns[j].collision, y0)) {
+      if(CheckCollisionRecs(state->spawns.at(itr_111).collision, y0)) {
         y0_collide = true;
       }
     }
@@ -208,17 +200,17 @@ bool render_spawns(void) {
     return false;
   }
   // Enemies
-  for (u32 i = 0; i < state->current_spawn_count && i < MAX_SPAWN_COUNT; ++i) {
-    if (state->spawns[i].initialized) {
-      if(!state->spawns[i].is_dead) 
+  for (size_t itr_000 = 0; itr_000 < state->spawns.size(); ++itr_000) {
+    if (state->spawns.at(itr_000).initialized) {
+      if(!state->spawns.at(itr_000).is_dead) 
       {
-        if(state->spawns[i].is_damagable)
+        if(state->spawns.at(itr_000).is_damagable)
         {
-          switch (state->spawns[i].w_direction) 
+          switch (state->spawns.at(itr_000).w_direction) 
           {
-            case WORLD_DIRECTION_LEFT: spawn_play_anim(&state->spawns[i], SPAWN_ZOMBIE_ANIMATION_MOVE_LEFT);
+            case WORLD_DIRECTION_LEFT: spawn_play_anim(&state->spawns.at(itr_000), SPAWN_ZOMBIE_ANIMATION_MOVE_LEFT);
             break;
-            case WORLD_DIRECTION_RIGHT:spawn_play_anim(&state->spawns[i], SPAWN_ZOMBIE_ANIMATION_MOVE_RIGHT);
+            case WORLD_DIRECTION_RIGHT:spawn_play_anim(&state->spawns.at(itr_000), SPAWN_ZOMBIE_ANIMATION_MOVE_RIGHT);
             break;
             default: {
               TraceLog(LOG_WARNING, "spawn::render_spawns()::Spawn has no directions");
@@ -228,43 +220,34 @@ bool render_spawns(void) {
         }	
         else 
         {
-          (state->spawns[i].w_direction == WORLD_DIRECTION_LEFT) 
-            ? spawn_play_anim(&state->spawns[i], SPAWN_ZOMBIE_ANIMATION_TAKE_DAMAGE_LEFT)
-            : spawn_play_anim(&state->spawns[i], SPAWN_ZOMBIE_ANIMATION_TAKE_DAMAGE_RIGHT);
+          (state->spawns.at(itr_000).w_direction == WORLD_DIRECTION_LEFT) 
+            ? spawn_play_anim(&state->spawns.at(itr_000), SPAWN_ZOMBIE_ANIMATION_TAKE_DAMAGE_LEFT)
+            : spawn_play_anim(&state->spawns.at(itr_000), SPAWN_ZOMBIE_ANIMATION_TAKE_DAMAGE_RIGHT);
         }
       } 
       else 
       {
-        (state->spawns[i].w_direction == WORLD_DIRECTION_LEFT) 
-          ? spawn_play_anim(&state->spawns[i], SPAWN_ZOMBIE_ANIMATION_TAKE_DAMAGE_LEFT)
-          : spawn_play_anim(&state->spawns[i], SPAWN_ZOMBIE_ANIMATION_TAKE_DAMAGE_RIGHT);
+        (state->spawns.at(itr_000).w_direction == WORLD_DIRECTION_LEFT) 
+          ? spawn_play_anim(&state->spawns.at(itr_000), SPAWN_ZOMBIE_ANIMATION_TAKE_DAMAGE_LEFT)
+          : spawn_play_anim(&state->spawns.at(itr_000), SPAWN_ZOMBIE_ANIMATION_TAKE_DAMAGE_RIGHT);
       }
     }
   }
   return true;
 }
 
-Character2D *get_spawns() {
+std::vector<Character2D>* get_spawns(void) {
   if (!state) {
     TraceLog(LOG_ERROR, "spawn::get_spawns()::State was null");
     return 0;
   }
 
-  return state->spawns;
-}
-u32 *get_spawn_count() {
-  if (!state) {
-    TraceLog(LOG_ERROR, "spawn::get_spawn_count()::State was null");
-    return 0;
-  }
-
-  return &state->current_spawn_count;
+  return __builtin_addressof(state->spawns);
 }
 
 void clean_up_spawn_state(void) {
-  zero_memory(state->spawns, sizeof(Character2D) * MAX_SPAWN_COUNT);
+  state->spawns.clear();
 
-  state->current_spawn_count = 0;
   state->next_spawn_id = 0;
 }
 
@@ -297,25 +280,20 @@ void spawn_play_anim(Character2D* spawn, spawn_movement_animations movement) {
       break;
     }
   }
-
-  //DrawRectangleLinesEx(dest, .5f, RED);
 }
  
-void remove_spawn(u16 index) {
-  if (!state || !state->current_spawn_count) {
+void remove_spawn(i32 index) {
+  if (!state || state == nullptr) {
     TraceLog(LOG_WARNING, "spawn::remove_spawn()::State is not valid"); 
     return; 
   }
-  if (index >= state->current_spawn_count) {
+  if (static_cast<size_t>(index) >= state->spawns.size()) {
     TraceLog(LOG_WARNING, "spawn::remove_spawn()::Index is out of bounds"); 
     return; 
   }
-  Character2D *character = &state->spawns[index];
 
-  copy_memory(character, &state->spawns[state->current_spawn_count-1], sizeof(Character2D));
-  zero_memory(&state->spawns[state->current_spawn_count-1], sizeof(Character2D));
-  
-  if (state->current_spawn_count > 0) state->current_spawn_count--;
+  state->spawns.at(index) = state->spawns.back();
+  state->spawns.pop_back();
 }
 
 void register_spawn_animation(Character2D* spawn, spawn_movement_animations movement) {
@@ -326,7 +304,7 @@ void register_spawn_animation(Character2D* spawn, spawn_movement_animations move
 
   switch (movement) {
     case SPAWN_ZOMBIE_ANIMATION_MOVE_LEFT: {
-      switch (spawn->buffer.u16[0]) {
+      switch (spawn->buffer.i32[0]) {
         case SPAWN_TYPE_BROWN: {
           spawn->move_left_animation.sheet_id = SHEET_ID_SPAWN_BROWN_ZOMBIE_ANIMATION_MOVE_LEFT;
           set_sprite(&spawn->move_left_animation, true, false);
@@ -347,6 +325,11 @@ void register_spawn_animation(Character2D* spawn, spawn_movement_animations move
           set_sprite(&spawn->move_left_animation, true, false);
           return;
         }
+        case SPAWN_TYPE_BOSS: {
+          spawn->move_left_animation.sheet_id = SHEET_ID_SPAWN_RED_ZOMBIE_ANIMATION_MOVE_LEFT;
+          set_sprite(&spawn->move_left_animation, true, false);
+          return;
+        }
         default: {
           TraceLog(LOG_WARNING, "spawn::register_spawn_animation()::Unsupported spawn type");
           return;
@@ -355,7 +338,7 @@ void register_spawn_animation(Character2D* spawn, spawn_movement_animations move
       break;
     }
     case SPAWN_ZOMBIE_ANIMATION_MOVE_RIGHT: {
-      switch (spawn->buffer.u16[0]) {
+      switch (spawn->buffer.i32[0]) {
         case SPAWN_TYPE_BROWN: {
           spawn->move_right_animation.sheet_id = SHEET_ID_SPAWN_BROWN_ZOMBIE_ANIMATION_MOVE_RIGHT;
           set_sprite(&spawn->move_right_animation, true, false);
@@ -376,6 +359,11 @@ void register_spawn_animation(Character2D* spawn, spawn_movement_animations move
           set_sprite(&spawn->move_right_animation, true, false);
           return;
         }
+        case SPAWN_TYPE_BOSS: {
+          spawn->move_right_animation.sheet_id = SHEET_ID_SPAWN_RED_ZOMBIE_ANIMATION_MOVE_RIGHT;
+          set_sprite(&spawn->move_right_animation, true, false);
+          return;
+        }
         default: {
           TraceLog(LOG_WARNING, "spawn::register_spawn_animation()::Unsupported spawn type");
           return;
@@ -384,7 +372,7 @@ void register_spawn_animation(Character2D* spawn, spawn_movement_animations move
       break;
     }
     case SPAWN_ZOMBIE_ANIMATION_TAKE_DAMAGE_LEFT:  {
-      switch (spawn->buffer.u16[0]) {
+      switch (spawn->buffer.i32[0]) {
         case SPAWN_TYPE_BROWN: {
           spawn->take_damage_left_animation.sheet_id = SHEET_ID_SPAWN_BROWN_ZOMBIE_ANIMATION_TAKE_DAMAGE_LEFT;
           set_sprite(&spawn->take_damage_left_animation, true, false);
@@ -405,6 +393,11 @@ void register_spawn_animation(Character2D* spawn, spawn_movement_animations move
           set_sprite(&spawn->take_damage_left_animation, true, false);
           return;
         }
+        case SPAWN_TYPE_BOSS: {
+          spawn->take_damage_left_animation.sheet_id = SHEET_ID_SPAWN_RED_ZOMBIE_ANIMATION_TAKE_DAMAGE_LEFT;
+          set_sprite(&spawn->take_damage_left_animation, true, false);
+          return;
+        }
         default: {
           TraceLog(LOG_WARNING, "spawn::register_spawn_animation()::Unsupported spawn type");
           return;
@@ -413,7 +406,7 @@ void register_spawn_animation(Character2D* spawn, spawn_movement_animations move
       break;
     }
     case SPAWN_ZOMBIE_ANIMATION_TAKE_DAMAGE_RIGHT:  {
-      switch (spawn->buffer.u16[0]) {
+      switch (spawn->buffer.i32[0]) {
         case SPAWN_TYPE_BROWN: {
           spawn->take_damage_right_animation.sheet_id = SHEET_ID_SPAWN_BROWN_ZOMBIE_ANIMATION_TAKE_DAMAGE_RIGHT;
           set_sprite(&spawn->take_damage_right_animation, true, false);
@@ -430,6 +423,11 @@ void register_spawn_animation(Character2D* spawn, spawn_movement_animations move
           return;
         }
         case SPAWN_TYPE_RED: {
+          spawn->take_damage_right_animation.sheet_id = SHEET_ID_SPAWN_RED_ZOMBIE_ANIMATION_TAKE_DAMAGE_RIGHT;
+          set_sprite(&spawn->take_damage_right_animation, true, false);
+          return;
+        }
+        case SPAWN_TYPE_BOSS: {
           spawn->take_damage_right_animation.sheet_id = SHEET_ID_SPAWN_RED_ZOMBIE_ANIMATION_TAKE_DAMAGE_RIGHT;
           set_sprite(&spawn->take_damage_right_animation, true, false);
           return;

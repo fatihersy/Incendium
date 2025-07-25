@@ -17,12 +17,14 @@
 #include "game/resource.h"
 #include "game/scenes/scene_manager.h"
 #include "game/world.h"
+#include "game/fshader.h"
 
 typedef struct app_system_state {
   app_settings* settings;
   bool app_running;
   RenderTexture2D drawing_target;
   Camera2D screen_space_camera;
+  fshader* post_process_shader;
 } app_system_state;
 
 static app_system_state* state;
@@ -105,11 +107,17 @@ bool app_initialize(void) {
     TraceLog(LOG_WARNING, "app::app_initialize()::Scene manager initialize failed");
     return false;
   }
+  if (!initialize_shader_system()) {
+    TraceLog(LOG_WARNING, "app::app_initialize()::Shader system initialization failed");
+    return false;
+  }
+  state->post_process_shader = get_shader_by_enum(SHADER_ID_POST_PROCESS);
 
   event_register(EVENT_CODE_APPLICATION_QUIT, application_on_event);
   event_register(EVENT_CODE_TOGGLE_BORDERLESS, application_on_event);
   event_register(EVENT_CODE_TOGGLE_FULLSCREEN, application_on_event);
   event_register(EVENT_CODE_TOGGLE_WINDOWED, application_on_event);
+  event_register(EVENT_CODE_SET_POST_PROCESS_FADE_VALUE, application_on_event);
 
   state->drawing_target = LoadRenderTexture(state->settings->render_width, state->settings->render_height);
 
@@ -124,6 +132,8 @@ bool app_initialize(void) {
   else {
     toggle_windowed(state->settings->window_width, state->settings->window_height);
   }
+
+  event_fire(EVENT_CODE_SET_POST_PROCESS_FADE_VALUE, event_context(1.f));
 
   state->app_running = true;
   save_ini_file();
@@ -184,8 +194,12 @@ bool app_render(void) {
       Rectangle source = Rectangle {0, 0, (f32)state->drawing_target.texture.width, (f32)-state->drawing_target.texture.height};
       Rectangle dest = Rectangle {0, 0, static_cast<f32>(state->settings->window_width), static_cast<f32>(-state->settings->window_height)
       };
-      DrawTexturePro(state->drawing_target.texture, source, dest, ZEROVEC2, 0, WHITE);
-    EndMode2D();
+
+      BeginShaderMode(get_shader_by_enum(SHADER_ID_POST_PROCESS)->handle);
+        DrawTexturePro(state->drawing_target.texture, source, dest, ZEROVEC2, 0, WHITE);
+      EndShaderMode();
+    
+      EndMode2D();
   EndDrawing();
   return true;
 }
@@ -257,6 +271,11 @@ bool application_on_event(i32 code, event_context context) {
   }
   case EVENT_CODE_TOGGLE_WINDOWED: {
     toggle_windowed(context.data.i32[0], context.data.i32[1]);
+    return true;
+  }
+  case EVENT_CODE_SET_POST_PROCESS_FADE_VALUE: {
+    i32 process_uniform_loc = GetShaderLocation(state->post_process_shader->handle, "process");
+    set_shader_uniform(SHADER_ID_POST_PROCESS, process_uniform_loc, data128(static_cast<f32>(context.data.f32[0])));
     return true;
   }
   default:

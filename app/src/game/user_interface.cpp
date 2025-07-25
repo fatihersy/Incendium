@@ -28,10 +28,6 @@ typedef struct user_interface_system_state {
   spritesheet ss_to_draw_bg;
   Vector2 mouse_pos_screen;
   std::vector<localization_package> localization_info;
-  u16 fade_animation_duration;
-  f32 fade_animation_timer;
-  bool fadein;
-  bool fade_animation_playing;
 
   user_interface_system_state(void) {
     this->in_app_settings = nullptr;
@@ -49,10 +45,6 @@ typedef struct user_interface_system_state {
     this->ss_to_draw_bg = spritesheet();
     this->mouse_pos_screen = ZEROVEC2;
     this->localization_info.clear();
-    this->fade_animation_duration = 0u;
-    this->fade_animation_timer = 0.f;
-    this->fadein = false;
-    this->fade_animation_playing = false;
   }
 } user_interface_system_state;
 
@@ -113,7 +105,6 @@ void update_buttons(void);
 void update_sliders(void);
 void update_checkboxes(void);
  
-void draw_fade_effect();
 void draw_slider_body(slider* sdr);
 void draw_atlas_texture_stretch(atlas_texture_id body, Vector2 pos, Vector2 scale, Rectangle stretch_part, u16 stretch_part_mltp, bool should_center);
 void draw_atlas_texture_regular(atlas_texture_id _id, Rectangle dest, Color tint, bool should_center);
@@ -366,9 +357,6 @@ bool user_interface_system_initialize(void) {
   state->sliders.at(SDR_ID_SETTINGS_SOUND_SLIDER).on_right_button_trigger = ui_sound_slider_on_right_button_trigger;
 
   event_register(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, user_interface_on_event);
-  event_register(EVENT_CODE_UI_START_FADEIN_EFFECT, user_interface_on_event);
-  event_register(EVENT_CODE_UI_START_FADEOUT_EFFECT, user_interface_on_event);
-
   return true;
 }
 void update_user_interface(void) {
@@ -379,13 +367,6 @@ void update_user_interface(void) {
   update_buttons();
   update_sliders();
   update_checkboxes();
-  if (state->fade_animation_playing) {
-    if(state->fade_animation_timer == state->fade_animation_duration){
-      state->fade_animation_timer = 0;
-      state->fade_animation_playing = false;
-    }
-    else state->fade_animation_timer++; 
-  }
 }
  void update_buttons(void) {
   for (size_t itr_000 = 0; itr_000 < state->buttons.size(); ++itr_000) {
@@ -499,10 +480,6 @@ void update_checkboxes(void) {
   }
 }
 void render_user_interface(void) {
-  if (state->fade_animation_playing) {
-    draw_fade_effect();
-    return;
-  }
 }
  bool gui_menu_button(const char* text, button_id _id, Vector2 grid, Vector2 grid_location, bool play_on_click_sound) {
   grid_location.x -= state->buttons.at(_id).btn_type.dest_frame_dim.x * .5f;
@@ -1546,22 +1523,34 @@ void draw_text_shader(const char *text, shader_id sdr_id, Vector2 position, Font
     if ((textOffsetX != 0) || (codepoint != ' ')) textOffsetX += glyphWidth;  // avoid leading spaces
   }
 }
- void draw_fade_effect() {
+void process_fade_effect(ui_fade_control_system* fade) {
   if (!state) {
-    TraceLog(LOG_WARNING, "user_interface::draw_fade_effect()::User interface didn't initialized");
+    TraceLog(LOG_WARNING, "user_interface::process_fade_effect()::User interface didn't initialized");
     return;
   }
-  if (!state->fade_animation_playing) {
-    TraceLog(LOG_WARNING, "user_interface::draw_fade_effect()::Funtions called without starting animation");
+  if (!fade->fade_animation_playing || fade->is_fade_animation_played) {
     return;
   }
-  f32 process = state->fadein 
-    ? EaseQuadIn(state->fade_animation_timer,  0.f, 1.f, state->fade_animation_duration)
-    : EaseQuadOut(state->fade_animation_timer, 1.f,-1.f, state->fade_animation_duration);
-  BeginShaderMode(get_shader_by_enum(SHADER_ID_FADE_TRANSITION)->handle);
-  set_shader_uniform(SHADER_ID_FADE_TRANSITION, 0, data128(process));
-  draw_atlas_texture_regular(ATLAS_TEX_ID_BG_BLACK, Rectangle {0, 0, static_cast<f32>(UI_BASE_RENDER_WIDTH), static_cast<f32>(UI_BASE_RENDER_HEIGHT)}, WHITE, false);
-  EndShaderMode();
+  switch (fade->fade_type) {
+    case FADE_TYPE_FADEIN: {
+      f32 process = EaseQuadIn(fade->fade_animation_timer, 0.f, 1.f, fade->fade_animation_duration);
+      event_fire(EVENT_CODE_SET_POST_PROCESS_FADE_VALUE, event_context(static_cast<f32>(process)));
+      break;
+    }
+    case FADE_TYPE_FADEOUT: {
+      f32 process = EaseQuadOut(fade->fade_animation_timer, 1.f,-1.f, fade->fade_animation_duration);
+      event_fire(EVENT_CODE_SET_POST_PROCESS_FADE_VALUE, event_context(static_cast<f32>(process)));
+      break;
+    }
+    default: {
+      return;
+    }
+  }
+  if (fade->fade_animation_timer >= fade->fade_animation_duration) {
+    fade->is_fade_animation_played = true; 
+    fade->fade_animation_playing = false;
+  }
+  else fade->fade_animation_timer++;
 }
 /**
  * @brief relative if you want to draw from another atlas.
@@ -1801,12 +1790,6 @@ checkbox* get_checkbox_by_id(checkbox_id cb_id) {
       .at(id).current_value).content
   );
 }
- bool is_ui_fade_anim_complete(void) {
-  return state->fade_animation_timer == 0;
-}
- bool is_ui_fade_anim_about_to_complete(void) {
-  return state->fade_animation_timer == state->fade_animation_duration-1;
-}
  Font load_font(const char* file_name, i32 font_size, i32* _codepoints, i32 _codepoint_count) {
   if (!state) {
     TraceLog(LOG_ERROR, "user_interface::load_font()::State is not valid");
@@ -1901,20 +1884,6 @@ bool user_interface_on_event(i32 code, event_context context) {
   switch (code) {
     case EVENT_CODE_UI_UPDATE_PROGRESS_BAR: {
       state->prg_bars.at((i32)context.data.f32[0]).progress = context.data.f32[1];
-      return true;
-    }
-    case EVENT_CODE_UI_START_FADEIN_EFFECT: {
-      state->fade_animation_duration = context.data.u16[0];
-      state->fade_animation_playing = true;
-      state->fade_animation_timer = 0;
-      state->fadein = true;
-      return true;
-    }
-    case EVENT_CODE_UI_START_FADEOUT_EFFECT: {
-      state->fade_animation_duration = context.data.u16[0];
-      state->fade_animation_playing = true;
-      state->fade_animation_timer = 0;
-      state->fadein = false;
       return true;
     }
   };

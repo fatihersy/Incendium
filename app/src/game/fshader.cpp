@@ -16,10 +16,14 @@ void shader_add_uniform(shader_id _id, const char *_name, ShaderUniformDataType 
 
 bool initialize_shader_system(void) {
   if (state) {
-    return false;
+    return true;
   }
 
   state = (shader_system_state *)allocate_memory_linear(sizeof(shader_system_state), true);
+  if (!state || state == nullptr) {
+    TraceLog(LOG_ERROR, "fshader::initialize_shader_system()::State allocation failed");
+    return false;
+  }
 
   // NOTE: _path = "%s%s", SHADER_PATH, _path
   if (!load_shader(0, "prg_bar_mask.fs",    SHADER_ID_PROGRESS_BAR_MASK)) {
@@ -34,10 +38,15 @@ bool initialize_shader_system(void) {
     TraceLog(LOG_WARNING, "fshader::initialize_shader_system()::outline shader cannot loaded");
     return false;
   }
+  if(!load_shader(0, "post_process.fs",    SHADER_ID_POST_PROCESS)) {
+    TraceLog(LOG_WARNING, "fshader::initialize_shader_system()::post process shader cannot loaded");
+    return false;
+  }
 
   shader_add_uniform(SHADER_ID_PROGRESS_BAR_MASK, "progress", SHADER_UNIFORM_FLOAT);
   shader_add_uniform(SHADER_ID_FADE_TRANSITION, "process", SHADER_UNIFORM_FLOAT);
   shader_add_uniform(SHADER_ID_FONT_OUTLINE, "texture_size", SHADER_UNIFORM_VEC2);
+  shader_add_uniform(SHADER_ID_POST_PROCESS, "process", SHADER_UNIFORM_FLOAT);
 
   return true;
 }
@@ -67,7 +76,7 @@ void set_shader_uniform(shader_id _id, i32 index, data128 _data_pack) {
   switch (data_id) {
   case SHADER_UNIFORM_FLOAT: {
     shader->locations[index].data = _data_pack;
-    SetShaderValue( state->shaders[_id].handle, state->shaders[_id].locations[index].index, state->shaders[_id].locations[index].data.f32, data_id);
+    SetShaderValue(state->shaders[_id].handle, index, &state->shaders[_id].locations[index].data.f32, data_id);
     break;
   }
   case SHADER_UNIFORM_VEC2: {
@@ -107,7 +116,7 @@ void set_shader_uniform(shader_id _id, i32 index, data128 _data_pack) {
   }
   case SHADER_UNIFORM_SAMPLER2D: {
     shader->locations[index].data.address[0] = _data_pack.address;
-    SetShaderValue( state->shaders[_id].handle,  index,  state->shaders[_id].locations[index].data.address, data_id);
+    SetShaderValue(state->shaders[_id].handle,  index, state->shaders[_id].locations[index].data.address, data_id);
     break;
   }
   default: {

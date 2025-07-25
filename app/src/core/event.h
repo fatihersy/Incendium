@@ -64,10 +64,15 @@ typedef enum system_event_code {
   EVENT_CODE_TOGGLE_BORDERLESS,
   EVENT_CODE_TOGGLE_FULLSCREEN,
   EVENT_CODE_TOGGLE_WINDOWED,
+  EVENT_CODE_SET_POST_PROCESS_FADE_VALUE,
 	
   // game_manager
   EVENT_CODE_END_GAME,
   EVENT_CODE_DAMAGE_PLAYER_IF_COLLIDE,
+  EVENT_CODE_ADD_CURRENCY_SOULS,
+  EVENT_CODE_RESUME_GAME,
+  EVENT_CODE_PAUSE_GAME,
+  EVENT_CODE_TOGGLE_GAME_PAUSE,
 
   /**
    * @brief coll_data data128(i16[0], i16[1], i16[2], i16[3])
@@ -81,13 +86,9 @@ typedef enum system_event_code {
   EVENT_CODE_SCENE_MAIN_MENU,
 
   // scene_in_game
-  EVENT_CODE_ADD_CURRENCY_SOULS,
-  EVENT_CODE_RESUME_GAME,
 
   // user_interface
   EVENT_CODE_UI_UPDATE_PROGRESS_BAR,
-  EVENT_CODE_UI_START_FADEIN_EFFECT,
-  EVENT_CODE_UI_START_FADEOUT_EFFECT,
 
   // sound
   EVENT_CODE_PLAY_BUTTON_ON_CLICK,
@@ -105,6 +106,11 @@ typedef enum system_event_code {
   EVENT_CODE_CAMERA_SET_DRAWING_EXTENT,
   EVENT_CODE_CAMERA_SET_OFFSET,
   EVENT_CODE_CAMERA_SET_TARGET,
+
+  /**
+   * @brief state->cam_met.handle.target.x = context.data.f32[0];
+   * @brief state->cam_met.handle.target.y = context.data.f32[1];
+   */
   EVENT_CODE_CAMERA_SET_CAMERA_POSITION,
   EVENT_CODE_CAMERA_SET_ZOOM,
   EVENT_CODE_CAMERA_ADD_ZOOM,
