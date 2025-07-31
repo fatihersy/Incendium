@@ -10,22 +10,28 @@ const char * default_language = R"(
   display_text = "English",
   codepoints = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ",
   translates = {\
-    !!! = "Play"
-    !!" = "Upgrade"
-    !!# = "Settings"
-    !!$ = "Exit"
+    "Play"
+    "Upgrade"
+    "Settings"
+    "Exit"
   }
 }
 )";
+
+typedef struct loc_content_text {
+  std::string str;
+  loc_content_text(void) {
+    this->str = std::string("");
+  }
+}loc_content_text;
 
 #define LOC_MAX_CODEPOINTS 128
 #define SYMBOL_DIGITS_START_SYMBOL 0x21
 #define LOC_FILE_TEXT_SYMBOL_LENGTH 3
 #define LOC_FILE_PATH_PREFIX "./loc/"
 #define LOC_FILE_EXTENSION "._loc_data"
-#define loc_content_map std::vector<std::string>
+#define loc_content_map std::array<std::string, LOC_TEXT_MAX>
 #define loc_content_symbol std::string
-#define loc_content_text std::string
 #define loc_content_lang_name std::string
 #define loc_content_codepoints std::string
 
@@ -39,13 +45,12 @@ const char * default_language = R"(
 #define LOC_FILE_SYMBOL_SCOPE_END '}'
 
 typedef struct loc_file_scope {
-  u32 scope_start_offset;
-  u32 scope_end_offset;
+  i32 scope_start_offset;
+  i32 scope_end_offset;
 } loc_file_scope;
 
 typedef enum loc_reading_order {
   LOC_READING_ORDER_UNDEFINED,
-  LOC_READING_ORDER_SYMBOL,
   LOC_READING_ORDER_CONTENT,
   LOC_READING_ORDER_MAX,
 } loc_reading_order;
@@ -56,7 +61,7 @@ typedef struct loc_parser_system_state {
   
   loc_data _buffer;
   std::vector<u8> file_buffer;
-  u32 file_size;
+  i32 file_size;
 }loc_parser_system_state;
 
 static loc_parser_system_state * state;
@@ -67,12 +72,13 @@ loc_content_lang_name loc_parser_read_language_name(void);
 loc_content_codepoints loc_parser_read_codepoints(void);
 loc_content_map loc_parser_read_map(void);
 
-u32 loc_parser_go_to_variable(std::string variable_name);
+i32 loc_parser_go_to_variable(std::string variable_name);
 void loc_parser_read_content(void);
-std::string loc_parser_get_text(u32& offset, std::string text);
-std::string loc_parser_get_next_text(u32& offset);
-u32 loc_parser_go_to_next_statement(u32 offset);
-loc_file_scope loc_parser_get_scope_range(u32 offset);
+std::string loc_parser_get_text(i32& offset, std::string text);
+std::string loc_parser_get_next_text(i32& offset);
+i32 loc_parser_go_to_next_statement(i32 offset);
+loc_file_scope loc_parser_get_scope_range(i32 offset);
+i32 get_content_text_value(i32& offset);
 bool is_symbol_allowed(u8& c);
 bool is_variable_allowed(u8& c);
 
@@ -115,7 +121,7 @@ bool loc_parser_parse_localization_data_from_file(const char* file_name) {
   state->_buffer = loc_data();
   {
     int dataSize = 1;
-    u8* _str_tile = LoadFileData(file_path, &dataSize);
+    u8* _str_tile = LoadFileData(file_path, __builtin_addressof(dataSize));
     if (dataSize <= 0 || dataSize == I32_MAX) {
       TraceLog(LOG_ERROR, "loc_parser::loc_parser_parse_localization_data_from_file()::Reading data returned null");
       return false;
@@ -153,7 +159,7 @@ bool loc_parser_parse_localization_data(void) {
     loc_data data = loc_data();
     {
       int dataSize = 1;
-      u8* _str_tile = LoadFileData(file_names.paths[iter], &dataSize);
+      u8* _str_tile = LoadFileData(file_names.paths[iter], __builtin_addressof(dataSize));
       if (dataSize <= 0 || dataSize == I32_MAX) {
         TraceLog(LOG_ERROR, "loc_parser::loc_parser_parse_localization_data_from_file()::Reading data returned null");
         return false;
@@ -186,26 +192,59 @@ bool loc_parser_parse_localization_data(void) {
   return true;
 }
 
-loc_content_text loc_parser_get_next_content_text(u32& offset) {
-  loc_content_text text = std::string("");
+loc_content_text loc_parser_get_next_content_text(i32& offset) {
+  loc_content_text _loc_con = loc_content_text();
 
-  bool quote_found = false;
-  for (; offset<state->file_size; ++offset) {
-    if (!quote_found) {
+  i32 begin_quote = I32_MAX;
+  i32 end_quote = I32_MAX;
+  bool begin_quote_found = false;
+  bool end_quote_found = false;
+
+  for (; offset < state->file_size; ++offset) {
+    if (!begin_quote_found) {
       if (state->file_buffer.at(offset) == '"') {
-        quote_found = true;
+        begin_quote = offset + 1;
+        begin_quote_found = true;
       }
       continue;
-    } 
-    if (state->file_buffer.at(offset) == '"') {
-      offset++;
-      return text; 
     }
-    text.push_back(state->file_buffer.at(offset));
+    else if (!end_quote_found) {
+      if (state->file_buffer.at(offset) == '"') {
+        end_quote = offset;
+        end_quote_found = true;
+      }
+      continue;
+    }
+    else {
+      break;
+    }
   }
-  return text;
+
+  if (begin_quote < state->file_size && end_quote < state->file_size) {
+    _loc_con.str.assign(state->file_buffer.begin() + begin_quote, state->file_buffer.begin() + end_quote);
+  }
+  return _loc_con;
 }
-std::string loc_parser_get_text(u32& offset, std::string text) {
+i32 get_content_text_value(i32& offset) {
+  i32 loc_con_value = I32_MAX;
+  std::string value_str = std::string("");
+  bool number_found = false;
+
+  for (; offset < state->file_size; ++offset) {
+    u8 c = state->file_buffer.at(offset); 
+
+    if (c >= '0' && c <= '9') {
+      number_found = true;
+      value_str.push_back(c);
+    }
+    else if(number_found) break;
+  }
+  loc_con_value = TextToInteger(value_str.c_str());
+
+  return loc_con_value;
+}
+
+std::string loc_parser_get_text(i32& offset, std::string text) {
   std::string _text = std::string("");
 
   bool quote_found = false;
@@ -228,7 +267,7 @@ std::string loc_parser_get_text(u32& offset, std::string text) {
   }
   else return "";
 }
-std::string loc_parser_get_next_text(u32& offset) {
+std::string loc_parser_get_next_text(i32& offset) {
   std::string text = std::string("");
 
   bool quote_found = false;
@@ -247,7 +286,7 @@ std::string loc_parser_get_next_text(u32& offset) {
   }
   return text;
 }
-u32 loc_parser_go_to_next_statement(u32 offset) {
+i32 loc_parser_go_to_next_statement(i32 offset) {
   
   for (; offset < state->file_size; ++offset) {
     if(state->file_buffer.at(offset) == LOC_FILE_SYMBOL_STATEMENT_PARSER) {
@@ -257,10 +296,10 @@ u32 loc_parser_go_to_next_statement(u32 offset) {
 
   return U32_MAX;
 }
-loc_file_scope loc_parser_get_scope_range(u32 offset) {
+loc_file_scope loc_parser_get_scope_range(i32 offset) {
   loc_file_scope _scope = {
-    .scope_start_offset = U32_MAX,
-    .scope_end_offset = U32_MAX
+    .scope_start_offset = I32_MAX,
+    .scope_end_offset = I32_MAX
   };
   bool scope_start_found = false;
   
@@ -278,11 +317,11 @@ loc_file_scope loc_parser_get_scope_range(u32 offset) {
   return _scope;
 }
 
-u32 loc_parser_go_to_variable(std::string variable_name) {
+i32 loc_parser_go_to_variable(std::string variable_name) {
   std::string variable = std::string("");
   bool variable_found = false;
   bool in_variable_try = false;
-  u32 variable_search_offset = 0u;
+  i32 variable_search_offset = 0;
   do {
     variable.clear();
     in_variable_try = false;
@@ -316,7 +355,7 @@ u32 loc_parser_go_to_variable(std::string variable_name) {
   else return U32_MAX;
 }
 
-loc_content_symbol loc_parser_read_symbol(u32& offset) {
+loc_content_symbol loc_parser_read_symbol(i32& offset) {
   loc_content_symbol symbol = std::string("");
   char parser = '=';
 
@@ -336,7 +375,7 @@ loc_content_symbol loc_parser_read_symbol(u32& offset) {
   return symbol;
 }
 loc_content_lang_name loc_parser_read_language_name(void) {
-  u32 offset = loc_parser_go_to_variable(LOC_FILE_LANGUAGE_NAME_VARIABLE_NAME);
+  i32 offset = loc_parser_go_to_variable(LOC_FILE_LANGUAGE_NAME_VARIABLE_NAME);
 
   if (offset < state->file_size) {
     return loc_parser_get_next_text(offset);
@@ -344,7 +383,7 @@ loc_content_lang_name loc_parser_read_language_name(void) {
   else return "";
 }
 loc_content_codepoints loc_parser_read_codepoints(void) {
-  u32 offset = loc_parser_go_to_variable(LOC_FILE_CODEPOINTS_VARIABLE_NAME);
+  i32 offset = loc_parser_go_to_variable(LOC_FILE_CODEPOINTS_VARIABLE_NAME);
 
   if (offset < state->file_size) {
     return loc_parser_get_next_text(offset);
@@ -353,7 +392,7 @@ loc_content_codepoints loc_parser_read_codepoints(void) {
 }
 loc_content_map loc_parser_read_map(void) {
 
-  u32 offset = loc_parser_go_to_variable(LOC_FILE_MAP_VARIABLE_NAME);
+  i32 offset = loc_parser_go_to_variable(LOC_FILE_MAP_VARIABLE_NAME);
 
   loc_file_scope scope = loc_parser_get_scope_range(offset);
   offset = scope.scope_start_offset;
@@ -364,27 +403,29 @@ loc_content_map loc_parser_read_map(void) {
 
   loc_reading_order reading_order = static_cast<loc_reading_order>(LOC_READING_ORDER_UNDEFINED+1);
 
-  loc_content_symbol symbol = std::string("");
-  loc_content_text text = std::string("");
+  loc_content_text text = loc_content_text();
   loc_content_map content_map = {};
+  i32 next_index = 0;
 
-  for (u32 offset=scope.scope_start_offset; offset < scope.scope_end_offset;) {
+  for (i32 offset=scope.scope_start_offset; offset < scope.scope_end_offset;) {
     switch (reading_order) {
-      case LOC_READING_ORDER_SYMBOL: {
-        symbol = loc_parser_read_symbol(offset);
-        break;
-      }
       case LOC_READING_ORDER_CONTENT: {
         text = loc_parser_get_next_content_text(offset);
-        content_map.push_back(text);
-        break;
+        content_map.at(next_index) = text.str;
+        next_index++;
+        
+        if (static_cast<size_t>(next_index) < content_map.size()) {
+          break;
+        }
+        else {
+          return content_map;
+        }
       }
       default: {
         TraceLog(LOG_ERROR, "loc_parser::loc_parser_read_map()::Unsupported reading order stage");
         return content_map;
       }
     }
-    
     reading_order = static_cast<loc_reading_order>((reading_order % (loc_reading_order::LOC_READING_ORDER_MAX)) + 1);
     if (reading_order == loc_reading_order::LOC_READING_ORDER_MAX) {
       reading_order = static_cast<loc_reading_order>((reading_order % (loc_reading_order::LOC_READING_ORDER_MAX)) + 1);
@@ -394,10 +435,10 @@ loc_content_map loc_parser_read_map(void) {
   return content_map;
 }
 
-
 localized_languages loc_parser_get_loc_langs(void) {
   return localized_languages { .lang = state->lang_data };
 }
+
 bool loc_parser_set_active_language_by_name(std::string language_name) {
   if (!state) {
     TraceLog(LOG_ERROR, "loc_parser::loc_parser_set_active_language_by_name()::State is not valid");
@@ -407,25 +448,24 @@ bool loc_parser_set_active_language_by_name(std::string language_name) {
   for (size_t iter = 0; iter < state->lang_data.size(); iter++) {
     std::string _str = state->lang_data.at(iter).language_name;
     if(_str == language_name) {
-      state->active_loc = &state->lang_data.at(iter);
+      state->active_loc = __builtin_addressof(state->lang_data.at(iter));
       return true;
     }
   }
 
   return false;
 }
-bool loc_parser_set_active_language_by_index(unsigned int index) {  
+bool loc_parser_set_active_language_by_index(int index) {  
   if (!state) {
     TraceLog(LOG_ERROR, "loc_parser::loc_parser_set_active_language_by_index()::State is not valid");
     return false;
   }
-  if (index < 0 || index >= state->lang_data.size()) {
+  if ( index < 0 || static_cast<size_t>(index) > state->lang_data.size()) {
     TraceLog(LOG_ERROR, "loc_parser::loc_parser_set_active_language_by_index()::Language index is out of bound");
     return false;
   }
 
-  state->active_loc = &state->lang_data.at(index);
-
+  state->active_loc = __builtin_addressof(state->lang_data.at(index));
   return true;
 }
 loc_data* loc_parser_get_active_language(void) {
@@ -437,24 +477,16 @@ loc_data* loc_parser_get_active_language(void) {
   return state->active_loc;
 }
 
-const char* lc_txt(u32 index) {
+const char* lc_txt(i32 index) {
   if (!state) {
     TraceLog(LOG_ERROR, "loc_parser::lc_txt()::State is not valid");
     return "";
   }
-  if (index > state->active_loc->content.size()) {
+  if (static_cast<size_t>(index) > state->active_loc->content.size()) {
     TraceLog(LOG_ERROR, "loc_parser::lc_txt()::Out of range");
     return "";
   }
   return state->active_loc->content.at(index).c_str();
-}
-
-u32 symbol_to_index(const char* symbol) {
-  u32 first_digit  = static_cast<u32>(symbol[2] - SYMBOL_DIGITS_START_SYMBOL) * 1;
-  u32 second_digit = static_cast<u32>(symbol[1] - SYMBOL_DIGITS_START_SYMBOL) * 10;
-  u32 third_digit  = static_cast<u32>(symbol[0] - SYMBOL_DIGITS_START_SYMBOL) * 100;
-
-  return first_digit + second_digit + third_digit;
 }
 
 bool is_symbol_allowed(u8& c) {
@@ -470,7 +502,22 @@ bool is_variable_allowed(u8& c) {
   return false;
 }
 
+#undef LOC_MAX_CODEPOINTS
+#undef SYMBOL_DIGITS_START_SYMBOL
+#undef LOC_FILE_TEXT_SYMBOL_LENGTH
+#undef LOC_FILE_PATH_PREFIX
+#undef LOC_FILE_EXTENSION
 #undef loc_content_map
 #undef loc_content_symbol
 #undef loc_content_text
+#undef loc_content_lang_name
+#undef loc_content_codepoints
 
+#undef LOC_FILE_LANGUAGE_NAME_VARIABLE_NAME
+#undef LOC_FILE_CODEPOINTS_VARIABLE_NAME
+#undef LOC_FILE_MAP_VARIABLE_NAME
+
+#undef LOC_FILE_SYMBOL_VARIABLE_INITIALIZATION
+#undef LOC_FILE_SYMBOL_STATEMENT_PARSER
+#undef LOC_FILE_SYMBOL_SCOPE_START
+#undef LOC_FILE_SYMBOL_SCOPE_END

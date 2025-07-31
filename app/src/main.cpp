@@ -104,7 +104,7 @@ int entry(void)
 	if ( !SteamUser()->BLoggedOn() )
 	{
 		OutputDebugString( "Steam user is not logged in\n" );
-		alert( "Fatal Error", "Steam user must be logged in to play this game (SteamUser()->BLoggedOn() returned false).\n" );
+		alert( "Steam user must be logged in to play this game", "Fatal Error");
 		return EXIT_FAILURE;
 	}
 

@@ -122,12 +122,14 @@ void register_progress_bar_type(progress_bar_type_id _type_id, atlas_texture_id 
 void register_slider_type(slider_type_id _sdr_type_id, spritesheet_id _ss_sdr_body_type, f32 _scale, u16 _width_multiply, button_type_id _left_btn_type_id, button_type_id _right_btn_type_id, u16 _char_limit);
 
 void draw_text_shader(const char *text, shader_id sdr_id, Vector2 position, Font font, float fontsize, Color tint, bool center_horizontal, bool center_vertical, bool use_grid_align, Vector2 grid_coord);
+void draw_text_ex(const char *text, Vector2 position, Font font, f32 _fontsize, Color tint, bool center_horizontal, bool center_vertical, bool use_grid_align, Vector2 grid_coord);
 void DrawTextBoxed(Font font, const char *text, Rectangle rec, float fontSize, float spacing, bool wordWrap, Color tint);
 const char* wrap_text(const char* text, Font font, i32 font_size, Rectangle bounds, bool center_x);
 Font load_font(const char* file_name, i32 font_size, i32* _codepoints, i32 _codepoint_count);
 localization_package* load_localization(std::string language_name, u32 loc_index, std::string _codepoints, i32 font_size);
 localization_package* ui_get_localization_by_name(std::string language_name);
 localization_package* ui_get_localization_by_index(u32 _language_index);
+Vector2 ui_align_text(Rectangle in_dest, Vector2 in_text_measure, text_alignment align_to);
 
 bool ui_sound_slider_on_left_button_trigger(void);
 bool ui_sound_slider_on_right_button_trigger(void);
@@ -224,7 +226,7 @@ bool user_interface_system_initialize(void) {
   register_button_type(
     BTN_TYPE_SLIDER_RIGHT_BUTTON, SHEET_ID_SLIDER_RIGHT_BUTTON, Vector2{12, 12}, 3, false);
   register_button_type(
-    BTN_TYPE_FLAT_BUTTON, SHEET_ID_FLAT_BUTTON, Vector2{44, 14}, 2, false);
+    BTN_TYPE_FLAT_BUTTON, SHEET_ID_FLAT_BUTTON, Vector2{88, 13}, 2, false);
   }
   // BUTTON TYPES
 
@@ -283,20 +285,21 @@ bool user_interface_system_initialize(void) {
 
   // IN GAME
   {
-  register_button(BTN_ID_IN_GAME_BUTTON_RETURN_MENU, BTN_TYPE_MENU_BUTTON);
+    register_button(BTN_ID_IN_GAME_BUTTON_RETURN_MENU, BTN_TYPE_MENU_BUTTON);
   }
   // IN GAME
 
   // MAIN MENU
-  {  
-    register_button(BTN_ID_MAINMENU_BUTTON_PLAY,        BTN_TYPE_MENU_BUTTON);
-    register_button(BTN_ID_MAINMENU_BUTTON_EDITOR,      BTN_TYPE_MENU_BUTTON);
-    register_button(BTN_ID_MAINMENU_BUTTON_SETTINGS,    BTN_TYPE_MENU_BUTTON);
-    register_button(BTN_ID_MAINMENU_BUTTON_UPGRADE,     BTN_TYPE_MENU_BUTTON);
-    register_button(BTN_ID_MAINMENU_BUTTON_EXIT,        BTN_TYPE_MENU_BUTTON);
+  {
+    register_button(BTN_ID_MAINMENU_BUTTON_PLAY,        BTN_TYPE_FLAT_BUTTON);
+    register_button(BTN_ID_MAINMENU_BUTTON_EDITOR,      BTN_TYPE_FLAT_BUTTON);
+    register_button(BTN_ID_MAINMENU_BUTTON_SETTINGS,    BTN_TYPE_FLAT_BUTTON);
+    register_button(BTN_ID_MAINMENU_BUTTON_UPGRADE,     BTN_TYPE_FLAT_BUTTON);
+    register_button(BTN_ID_MAINMENU_BUTTON_EXIT,        BTN_TYPE_FLAT_BUTTON);
     register_button(BTN_ID_MAINMENU_SETTINGS_CANCEL,    BTN_TYPE_MENU_BUTTON);
     register_button(BTN_ID_MAINMENU_UPGRADE_BACK,       BTN_TYPE_MENU_BUTTON);
     register_button(BTN_ID_MAINMENU_UPGRADE_BUY_UPGRADE,BTN_TYPE_MENU_BUTTON);
+    register_button(BTN_ID_MAINMENU_MAP_CHOICE_BACK,    BTN_TYPE_MENU_BUTTON);
   }
   // MAIN MENU
 
@@ -481,16 +484,12 @@ void update_checkboxes(void) {
 }
 void render_user_interface(void) {
 }
- bool gui_menu_button(const char* text, button_id _id, Vector2 grid, Vector2 grid_location, bool play_on_click_sound) {
+bool gui_menu_button(const char* text, button_id _id, Vector2 grid, Vector2 grid_location, bool play_on_click_sound) {
   grid_location.x -= state->buttons.at(_id).btn_type.dest_frame_dim.x * .5f;
   grid_location.y -= state->buttons.at(_id).btn_type.dest_frame_dim.y * .5f;
-  return gui_button(text, _id,
-    MENU_BUTTON_FONT, MENU_BUTTON_FONT_SIZE_SCALE,
-    position_element_by_grid(grid_location, grid, SCREEN_OFFSET),
-    play_on_click_sound
-  );
+  return gui_button(text, _id, MENU_BUTTON_FONT, MENU_BUTTON_FONT_SIZE_SCALE, position_element_by_grid(grid_location, grid, SCREEN_OFFSET), play_on_click_sound);
 }
- bool gui_mini_button(const char* text, button_id _id, Vector2 grid, bool play_on_click_sound) {
+bool gui_mini_button(const char* text, button_id _id, Vector2 grid, bool play_on_click_sound) {
   return gui_button(text, _id, 
     MINI_BUTTON_FONT, MINI_BUTTON_FONT_SIZE_SCALE, 
     position_element_by_grid(UI_BASE_RENDER_DIV2, 
@@ -499,15 +498,15 @@ void render_user_interface(void) {
     play_on_click_sound
   );
 }
- bool gui_slider_button(button_id _id, Vector2 pos) {
+bool gui_slider_button(button_id _id, Vector2 pos) {
   return gui_button("", _id, Font {}, 0, pos, true);
 }
- bool gui_button(const char* text, button_id _id, Font font, i32 font_size_scale, Vector2 pos, bool play_on_click_sound) {
+bool gui_button(const char* text, button_id _id, Font font, i32 font_size_scale, Vector2 pos, bool play_on_click_sound) {
   if (_id >= BTN_ID_MAX || _id <= BTN_ID_UNDEFINED) {
     TraceLog(LOG_WARNING, "user_interface::gui_button()::Recieved button type out of bound");
     return false;
   }
-  button* _btn = __builtin_addressof(state->buttons.at(_id));
+  button* const _btn = __builtin_addressof(state->buttons.at(_id));
 
   if (!_btn->is_registered) {
     TraceLog(LOG_WARNING, "user_interface::gui_button()::The button is not registered");
@@ -533,25 +532,70 @@ void render_user_interface(void) {
   if (_btn->state == BTN_STATE_PRESSED) {
     draw_sprite_on_site_by_id(_btn->btn_type.ss_type, WHITE, VECTOR2(_btn->dest.x,_btn->dest.y), draw_sprite_scale, 0);
     if (!TextIsEqual(text, "")) {
-      draw_text(text, text_pos, font, font_size_scale, BUTTON_TEXT_PRESSED_COLOR, false, false, false, VECTOR2(0.f, 0.f));
+      draw_text_ex(text, text_pos, font, font_size_scale, BUTTON_TEXT_PRESSED_COLOR, false, false, false, VECTOR2(0.f, 0.f));
     }
     if (play_on_click_sound) event_fire(EVENT_CODE_PLAY_BUTTON_ON_CLICK, event_context((u16)true));
   } else {
     if (_btn->state == BTN_STATE_HOVER) {
       draw_sprite_on_site_by_id(_btn->btn_type.ss_type, WHITE, VECTOR2(_btn->dest.x,_btn->dest.y), draw_sprite_scale, 1);
       if (!TextIsEqual(text, "")) {
-        draw_text(text, text_pos, font, font_size_scale, BUTTON_TEXT_HOVER_COLOR, false, false, false, VECTOR2(0.f, 0.f));
+        draw_text_ex(text, text_pos, font, font_size_scale, BUTTON_TEXT_HOVER_COLOR, false, false, false, VECTOR2(0.f, 0.f));
       }
       event_fire(EVENT_CODE_RESET_SOUND, event_context((i32)SOUND_ID_BUTTON_ON_CLICK));
     }
     else {
       draw_sprite_on_site_by_id(_btn->btn_type.ss_type, WHITE, VECTOR2(_btn->dest.x,_btn->dest.y), draw_sprite_scale, 0);
       if (_btn->state != BTN_STATE_HOVER) {
-        draw_text(text, text_pos, font, font_size_scale, BUTTON_TEXT_UP_COLOR, false, false, false, VECTOR2(0.f, 0.f));
+        draw_text_ex(text, text_pos, font, font_size_scale, BUTTON_TEXT_UP_COLOR, false, false, false, VECTOR2(0.f, 0.f));
       }
     }
   }
   return _btn->state == BTN_STATE_RELEASED;
+}
+bool gui_draw_local_button(const char* text, local_button* const btn, const font_type _font_type, const i32 font_size_scale, const Vector2 pos, text_alignment align_to, const bool play_on_click_sound) {
+  if (!btn->is_active) {
+    return false;
+  } 
+  btn->on_screen = true;
+  btn->dest.x = pos.x;
+  btn->dest.y = pos.y;
+
+  Vector2 text_measure = ZEROVEC2;
+  Vector2 text_pos = ZEROVEC2;
+  const Font* const font = ui_get_font(_font_type);
+  if (font == nullptr) {
+    return false;
+  }
+
+  if (!TextIsEqual(text, "")) {
+    text_measure = MeasureTextEx( (*font), text, font->baseSize * font_size_scale, UI_FONT_SPACING);
+    text_pos = ui_align_text(btn->dest, text_measure, align_to);
+  }
+
+  Vector2 draw_sprite_scale = Vector2 {btn->btn_type.scale, btn->btn_type.scale};
+
+  if (btn->state == BTN_STATE_PRESSED) {
+    draw_sprite_on_site_by_id(btn->btn_type.ss_type, WHITE, VECTOR2(btn->dest.x, btn->dest.y), draw_sprite_scale, 0);
+    if (!TextIsEqual(text, "")) {
+      draw_text_ex(text, text_pos, (*font), font_size_scale, BUTTON_TEXT_PRESSED_COLOR, false, false, false, VECTOR2(0.f, 0.f));
+    }
+    if (play_on_click_sound) event_fire(EVENT_CODE_PLAY_BUTTON_ON_CLICK, event_context((u16)true));
+  } else {
+    if (btn->state == BTN_STATE_HOVER) {
+      draw_sprite_on_site_by_id(btn->btn_type.ss_type, WHITE, VECTOR2(btn->dest.x, btn->dest.y), draw_sprite_scale, 1);
+      if (!TextIsEqual(text, "")) {
+        draw_text_ex(text, text_pos, (*font), font_size_scale, BUTTON_TEXT_HOVER_COLOR, false, false, false, VECTOR2(0.f, 0.f));
+      }
+      event_fire(EVENT_CODE_RESET_SOUND, event_context((i32)SOUND_ID_BUTTON_ON_CLICK));
+    }
+    else {
+      draw_sprite_on_site_by_id(btn->btn_type.ss_type, WHITE, VECTOR2(btn->dest.x, btn->dest.y), draw_sprite_scale, 0);
+      if (btn->state != BTN_STATE_HOVER) {
+        draw_text_ex(text, text_pos, (*font), font_size_scale, BUTTON_TEXT_UP_COLOR, false, false, false, VECTOR2(0.f, 0.f));
+      }
+    }
+  }
+  return btn->state == BTN_STATE_RELEASED;
 }
 void gui_checkbox_grid(checkbox_id _id, Vector2 grid, Vector2 grid_location) {
   grid_location.x -= state->checkboxes.at(_id).cb_type.dest_frame_dim.x * .5f;
@@ -577,7 +621,7 @@ void gui_checkbox(checkbox_id _id, Vector2 pos) {
     draw_sprite_on_site_by_id(_cb->cb_type.ss_type, WHITE, VECTOR2(pos.x, pos.y), draw_sprite_scale, 0);
   }
 }
- void gui_progress_bar(progress_bar_id bar_id, Vector2 pos, bool _should_center) {
+void gui_progress_bar(progress_bar_id bar_id, Vector2 pos, bool _should_center) {
   if (!state) {
     TraceLog(LOG_ERROR, "user_interface::gui_player_experiance_process()::ui system didn't initialized");
     return;
@@ -620,7 +664,7 @@ void gui_checkbox(checkbox_id _id, Vector2 pos) {
   );
   EndShaderMode();
 }
- void draw_atlas_texture_stretch(atlas_texture_id body, Vector2 pos, Vector2 scale, Rectangle stretch_part, u16 stretch_part_mltp, bool should_center) {
+void draw_atlas_texture_stretch(atlas_texture_id body, Vector2 pos, Vector2 scale, Rectangle stretch_part, u16 stretch_part_mltp, bool should_center) {
   if (body >= ATLAS_TEX_ID_MAX || body <= ATLAS_TEX_ID_UNSPECIFIED) {
     TraceLog(LOG_ERROR, "user_interface::draw_repetitive_body_tex()::Recieved texture out of bound");
     return;
@@ -660,7 +704,7 @@ void gui_checkbox(checkbox_id _id, Vector2 pos) {
   gui_draw_atlas_texture_id_pro(body, stretch_part, second_dest, true, false);
   gui_draw_atlas_texture_id_pro(body, third_source, third_dest, true, false);
 }
- void gui_slider(slider_id _id, Vector2 pos, Vector2 grid) {
+void gui_slider(slider_id _id, Vector2 pos, Vector2 grid) {
   if (_id >= SDR_ID_MAX || _id <= SDR_ID_UNDEFINED || !state) {
     TraceLog(LOG_WARNING, "user_interface::gui_slider()::One of recieved ids was out of bound");
     return;
@@ -707,7 +751,7 @@ void gui_checkbox(checkbox_id _id, Vector2 pos) {
     }
   }
 }
- void draw_slider_body(slider* sdr) {
+void draw_slider_body(slider* sdr) {
   slider_type sdr_type = sdr->sdr_type;
 
   switch (sdr->sdr_type.id) {
@@ -772,7 +816,7 @@ void gui_checkbox(checkbox_id _id, Vector2 pos) {
     break;
   }
 }
- void gui_panel(panel pan, Rectangle dest, bool _should_center) {
+void gui_panel(panel pan, Rectangle dest, bool _should_center) {
   Rectangle bg_dest = dest;
   if (_should_center) {
     bg_dest.x -= bg_dest.width / 2.f;
@@ -781,8 +825,11 @@ void gui_checkbox(checkbox_id _id, Vector2 pos) {
   DrawRectanglePro(bg_dest, Vector2 {0, 0}, 0, pan.bg_tint);
   draw_atlas_texture_npatch(pan.frame_tex_id, dest, pan.offsets, _should_center);
 }
- bool gui_panel_active(panel* pan, Rectangle dest, bool _should_center) {
-
+bool gui_panel_active(panel* pan, Rectangle dest, bool _should_center) {
+  if (pan->signal_state == BTN_STATE_UNDEFINED) {
+    TraceLog(LOG_WARNING, "user_interface::gui_panel_active()::Panel was not meant to be active");
+    return false;
+  }
   if (_should_center) {
     dest.x -= dest.width / 2.f;
     dest.y -= dest.height / 2.f;
@@ -813,7 +860,7 @@ void gui_checkbox(checkbox_id _id, Vector2 pos) {
 
   return pan->current_state == pan->signal_state;
 }
- void gui_label(const char* text, font_type type, i32 font_size, Vector2 position, Color tint, bool _center_h, bool _center_v) {
+void gui_label(const char* text, font_type type, i32 font_size, Vector2 position, Color tint, bool _center_h, bool _center_v) {
   switch (type) {
     case FONT_TYPE_MEDIUM: {
       draw_text(text, position, UI_MEDIUM_FONT, font_size, tint, _center_h, _center_v, false, VECTOR2(0.f, 0.f));
@@ -839,7 +886,7 @@ void gui_checkbox(checkbox_id _id, Vector2 pos) {
     break;
   }
 }
- void gui_label_shader(const char* text, shader_id sdr_id, font_type type, i32 font_size, Vector2 position, Color tint, bool _center_h, bool _center_v) {
+void gui_label_shader(const char* text, shader_id sdr_id, font_type type, i32 font_size, Vector2 position, Color tint, bool _center_h, bool _center_v) {
   switch (type) {
     case FONT_TYPE_MEDIUM: {
       draw_text_shader(text, sdr_id, position, UI_MEDIUM_FONT, font_size * UI_MEDIUM_FONT_SIZE, tint, _center_h, _center_v, false, VECTOR2(0.f, 0.f));
@@ -865,7 +912,7 @@ void gui_checkbox(checkbox_id _id, Vector2 pos) {
     break;
   }
 }
- void gui_label_wrap(const char* text, font_type type, i32 font_size, Rectangle position, Color tint, bool _should_center) {
+void gui_label_wrap(const char* text, font_type type, i32 font_size, Rectangle position, Color tint, bool _should_center) {
   if (_should_center) {
     position.x -= (position.width / 2.f);
     position.y -= (position.height / 2.f);
@@ -895,7 +942,7 @@ void gui_checkbox(checkbox_id _id, Vector2 pos) {
     break;
   }
 }
- void gui_label_grid(const char* text, font_type type, i32 font_size, Vector2 position, Color tint, bool _center_h, bool _center_v, Vector2 grid_coord) {
+void gui_label_grid(const char* text, font_type type, i32 font_size, Vector2 position, Color tint, bool _center_h, bool _center_v, Vector2 grid_coord) {
   switch (type) {
     case FONT_TYPE_MEDIUM: {
       draw_text(text, position, UI_MEDIUM_FONT, font_size, tint, _center_h, _center_v, true, grid_coord);
@@ -921,7 +968,7 @@ void gui_checkbox(checkbox_id _id, Vector2 pos) {
     break;
   }
 }
- void gui_label_wrap_grid(const char* text, font_type type, i32 font_size, Rectangle position, Color tint, bool _should_center, Vector2 grid_pos) {
+void gui_label_wrap_grid(const char* text, font_type type, i32 font_size, Rectangle position, Color tint, bool _should_center, Vector2 grid_pos) {
   Vector2 _position = position_element_by_grid(grid_pos, VECTOR2(position.x, position.y), SCREEN_OFFSET);
   position.x = _position.x;
   position.y = _position.y;
@@ -956,7 +1003,7 @@ void gui_checkbox(checkbox_id _id, Vector2 pos) {
   }
 
 }
- void gui_draw_settings_screen(void) { // TODO: Return to settings later
+void gui_draw_settings_screen(void) { // TODO: Return to settings later
   Rectangle settings_bg_pnl_dest = Rectangle{UI_BASE_RENDER_WIDTH *.025f, UI_BASE_RENDER_HEIGHT *.075f, UI_BASE_RENDER_WIDTH * .950f, UI_BASE_RENDER_HEIGHT * .850f};
   Rectangle header_loc = {0, 0, static_cast<f32>( UI_BASE_RENDER_WIDTH), UI_BASE_RENDER_HEIGHT * .1f};
   Rectangle footer_loc = {0, UI_BASE_RENDER_HEIGHT - UI_BASE_RENDER_HEIGHT * .1f, static_cast<f32>(UI_BASE_RENDER_WIDTH), UI_BASE_RENDER_HEIGHT * .1f};
@@ -1007,7 +1054,7 @@ void gui_checkbox(checkbox_id _id, Vector2 pos) {
     save_ini_file();
   }
 }
- void ui_refresh_setting_sliders_to_default(void) {	
+void ui_refresh_setting_sliders_to_default(void) {	
 	/////////////////////// RESOLUTION SLIDER
   {
 	  slider *const ressdr = get_slider_by_id(SDR_ID_SETTINGS_RES_SLIDER);
@@ -1080,7 +1127,7 @@ void gui_checkbox(checkbox_id _id, Vector2 pos) {
 		}
   }
 }
- void gui_draw_pause_screen(bool in_game_play_state) {
+void gui_draw_pause_screen(bool in_game_play_state) {
   Rectangle dest = Rectangle {
     UI_BASE_RENDER_DIV2.x,
     UI_BASE_RENDER_DIV2.y,
@@ -1121,7 +1168,7 @@ bool gui_slider_add_option(slider_id _id, data_pack content, u32 _localization_s
     return false;
   }
 }
- void register_button_type(button_type_id _btn_type_id, spritesheet_id _ss_type, Vector2 frame_dim, f32 _scale, bool _should_center) {
+void register_button_type(button_type_id _btn_type_id, spritesheet_id _ss_type, Vector2 frame_dim, f32 _scale, bool _should_center) {
   if (_ss_type     >= SHEET_ID_SPRITESHEET_TYPE_MAX || _ss_type <= SHEET_ID_SPRITESHEET_UNSPECIFIED || 
       _btn_type_id >= BTN_TYPE_MAX         || _btn_type_id <= BTN_TYPE_UNDEFINED  ||
       !state) {
@@ -1139,7 +1186,7 @@ void register_button(button_id _btn_id, button_type_id _btn_type_id) {
     return;
   }
   button_type* _btn_type = __builtin_addressof(state->button_types.at(_btn_type_id));
-  button btn = button(_btn_id, state->button_types.at(_btn_type_id), BTN_STATE_UP, Rectangle{0.f, 0.f, _btn_type->dest_frame_dim.x, _btn_type->dest_frame_dim.y});
+  button btn = button(_btn_id, (*_btn_type), BTN_STATE_UP, Rectangle{0.f, 0.f, _btn_type->dest_frame_dim.x, _btn_type->dest_frame_dim.y});
 
   state->buttons.at(_btn_id) = btn;
 }
@@ -1172,7 +1219,7 @@ void register_checkbox_type(checkbox_type_id _cb_type_id, spritesheet_id _ss_typ
   checkbox_type cb_type = checkbox_type(_cb_type_id, _ss_type, frame_dim, VECTOR2(frame_dim.x * _scale, frame_dim.y * _scale), _scale, _should_center);
   state->checkbox_types.at(_cb_type_id) = cb_type;
 }
- void register_progress_bar(progress_bar_id _id, progress_bar_type_id _type_id, f32 width_multiply, Vector2 scale) {
+void register_progress_bar(progress_bar_id _id, progress_bar_type_id _type_id, f32 width_multiply, Vector2 scale) {
   if (_id     >= PRG_BAR_ID_MAX      || _id      <= PRG_BAR_ID_UNDEFINED      ||
       _type_id>= PRG_BAR_TYPE_ID_MAX || _type_id <= PRG_BAR_TYPE_ID_UNDEFINED ||
       !state) {
@@ -1189,7 +1236,7 @@ void register_checkbox_type(checkbox_type_id _cb_type_id, spritesheet_id _ss_typ
 
   state->prg_bars.at(_id) = prg_bar;
 }
- void register_progress_bar_type(progress_bar_type_id _type_id, atlas_texture_id _body_inside, atlas_texture_id _body_outside, shader_id _mask_shader_id) {
+void register_progress_bar_type(progress_bar_type_id _type_id, atlas_texture_id _body_inside, atlas_texture_id _body_outside, shader_id _mask_shader_id) {
   if (_type_id       >= PRG_BAR_TYPE_ID_MAX || _type_id       <= PRG_BAR_TYPE_ID_UNDEFINED ||
       _body_inside   >= ATLAS_TEX_ID_MAX          || _body_inside   <= ATLAS_TEX_ID_UNSPECIFIED        ||
       _body_outside  >= ATLAS_TEX_ID_MAX          || _body_outside  <= ATLAS_TEX_ID_UNSPECIFIED        ||
@@ -1206,7 +1253,7 @@ void register_checkbox_type(checkbox_type_id _cb_type_id, spritesheet_id _ss_typ
 
   state->prg_bar_types.at(_type_id) = prg_type;
 }
- void register_slider_type(
+void register_slider_type(
   slider_type_id _sdr_type_id, spritesheet_id _ss_sdr_body_type, f32 _scale, u16 _width_multiply,
   button_type_id _left_btn_type_id, button_type_id _right_btn_type_id, u16 _char_limit) {
   if (_ss_sdr_body_type >= SHEET_ID_SPRITESHEET_TYPE_MAX || _ss_sdr_body_type <= SHEET_ID_SPRITESHEET_UNSPECIFIED || 
@@ -1237,7 +1284,7 @@ void register_checkbox_type(checkbox_type_id _cb_type_id, spritesheet_id _ss_typ
 /**
  * @param _is_clickable for SDR_TYPE_PERCENT type sliders. Does not affect others
  */
- void register_slider(
+void register_slider(
   slider_id _sdr_id, slider_type_id _sdr_type_id, 
   button_id _left_btn_id, button_id _right_btn_id, bool _is_clickable, bool _localize_text) {
   if (_sdr_id       >= SDR_ID_MAX   || _sdr_id      <= SDR_ID_UNDEFINED  || 
@@ -1275,7 +1322,7 @@ void register_checkbox_type(checkbox_type_id _cb_type_id, spritesheet_id _ss_typ
 void gui_draw_atlas_texture_to_background(atlas_texture_id _id) {
   draw_atlas_texture_regular(_id, Rectangle {0, 0, static_cast<f32>(UI_BASE_RENDER_WIDTH), static_cast<f32>(UI_BASE_RENDER_HEIGHT)}, WHITE, false);
 }
- void gui_draw_spritesheet_to_background(spritesheet_id _id, Color _tint) {
+void gui_draw_spritesheet_to_background(spritesheet_id _id, Color _tint) {
   if (_id >= SHEET_ID_SPRITESHEET_TYPE_MAX || _id <= SHEET_ID_SPRITESHEET_UNSPECIFIED || !state) {
     TraceLog(LOG_WARNING, "user_interface::gui_draw_spritesheet_to_background()::Sprite type out of bound");
     return;
@@ -1291,7 +1338,7 @@ void gui_draw_atlas_texture_to_background(atlas_texture_id _id) {
  * @note  function, returns "Rectangle {}" if texture type returns null pointer
  * @return Rectangle { .x = 0, .y = 0, .width = tex->width, .height = tex->height}; 
  */
-  Rectangle get_atlas_texture_source_rect(atlas_texture_id _id) {
+Rectangle get_atlas_texture_source_rect(atlas_texture_id _id) {
   const atlas_texture* tex = ss_get_atlas_texture_by_enum(_id);
   if (!tex) { 
     TraceLog(LOG_WARNING, "user_interface::get_atlas_texture_source_rect()::Requested type was null");
@@ -1300,18 +1347,25 @@ void gui_draw_atlas_texture_to_background(atlas_texture_id _id) {
   
   return tex->source;
 }
+const std::array<button_type, BTN_TYPE_MAX>* get_button_types(void) {
+  if (!state || state == nullptr) {
+    TraceLog(LOG_WARNING, "user_interface::draw_texture_regular()::ID was out of bound"); 
+    return nullptr;
+  }
+
+  return __builtin_addressof(state->button_types);
+}
 /**
  * @brief Centers over -> dest.x -= dest.width / 2.f; 
  */
-  void draw_atlas_texture_regular(atlas_texture_id _id, Rectangle dest, Color tint, bool should_center) {
+void draw_atlas_texture_regular(atlas_texture_id _id, Rectangle dest, Color tint, bool should_center) {
   if (_id >= ATLAS_TEX_ID_MAX || _id <= ATLAS_TEX_ID_UNSPECIFIED) {
-    TraceLog(LOG_WARNING, 
-    "user_interface::draw_texture_regular()::ID was out of bound"); 
+    TraceLog(LOG_WARNING, "user_interface::draw_texture_regular()::ID was out of bound"); 
     return; 
   }
   const atlas_texture* tex = ss_get_atlas_texture_by_enum(_id);
-  if (!tex) { TraceLog(
-  LOG_WARNING, "user_interface::draw_texture_regular()::Tex was null");
+  if (!tex) { 
+    TraceLog(LOG_WARNING, "user_interface::draw_texture_regular()::Tex was null");
     return; 
   }
   if (should_center) {
@@ -1326,7 +1380,7 @@ void gui_draw_atlas_texture_to_background(atlas_texture_id _id) {
 /**
  * @brief Centers over -> dest.x -= dest.width / 2.f; 
  */
-  void draw_atlas_texture_npatch(atlas_texture_id _id, Rectangle dest, Vector4 offsets, bool should_center) {
+void draw_atlas_texture_npatch(atlas_texture_id _id, Rectangle dest, Vector4 offsets, bool should_center) {
   if (_id >= ATLAS_TEX_ID_MAX || _id <= ATLAS_TEX_ID_UNSPECIFIED) {
     TraceLog(LOG_WARNING, "user_interface::draw_atlas_texture_npatch()::ID was out of bound"); 
     return; 
@@ -1353,23 +1407,10 @@ void gui_draw_atlas_texture_to_background(atlas_texture_id _id) {
 
   DrawTextureNPatch(*tex->atlas_handle, npatch, dest, ZEROVEC2, 0, WHITE);
 }
- void gui_draw_map_stage_pin(bool have_hovered, Vector2 screen_loc) {
-  const Vector2 icon_size = NORMALIZE_VEC2(32.f, 32.f, 1280, 720);
-  Rectangle icon_loc = Rectangle {screen_loc.x, screen_loc.y, icon_size.x * static_cast<f32>(UI_BASE_RENDER_WIDTH), icon_size.y * static_cast<f32>(UI_BASE_RENDER_HEIGHT)}; 
-  icon_loc.x -= icon_loc.width  * .5f;
-  icon_loc.y -= icon_loc.height * .5f;
-  
-  if(have_hovered) {
-    gui_draw_texture_id_pro(TEX_ID_ASSET_ATLAS, Rectangle{1632, 928, 32, 32}, icon_loc); // INFO: MAP PIN TEXTURES
-  }
-  else {
-    gui_draw_texture_id_pro(TEX_ID_ASSET_ATLAS, Rectangle{1600, 928, 32, 32}, icon_loc);
-  }
-}
 /**
  * @brief grid_pos, grid_coord, grid_dim 
  */
- Vector2 position_element_by_grid(Vector2 grid_location, Vector2 grid, Vector2 grid_dim) {
+Vector2 position_element_by_grid(Vector2 grid_location, Vector2 grid, Vector2 grid_dim) {
   return Vector2{
       .x = grid_location.x + (grid.x * grid_dim.x) ,
       .y = grid_location.y + (grid.y * grid_dim.y) 
@@ -1393,7 +1434,7 @@ void draw_text_shader(const char *text, shader_id sdr_id, Vector2 position, Font
   float textOffsetX = 0.0f;
   float scaleFactor = fontsize/(float)font.baseSize;
 
-  for (int i = 0, k = 0; i < length; i++, k++)
+  for (int i = 0; i < length; i++)
   {
     int codepointByteCount = 0;
     int codepoint = GetCodepoint(&text[i], &codepointByteCount);
@@ -1424,11 +1465,49 @@ void draw_text_shader(const char *text, shader_id sdr_id, Vector2 position, Font
     }
     if ((textOffsetX != 0) || (codepoint != ' ')) textOffsetX += glyphWidth;
   }
+}
+
+/**
+ * @brief TODO: This function's purpose is replacing the font when unsupported characters 
+ */
+void draw_text_ex(const char *text, Vector2 position, Font font, f32 _fontsize, Color tint, bool center_horizontal, bool center_vertical, bool use_grid_align, Vector2 grid_coord) {
+  f32 font_size = _fontsize * font.baseSize;
+  Vector2 text_measure = MeasureTextEx(font, text, font_size, UI_FONT_SPACING);
+  Vector2 text_position = Vector2 { position.x, position.y };
+  if (use_grid_align) {
+    text_position = position_element_by_grid(text_position, grid_coord, SCREEN_OFFSET);
+  }
+  if (center_horizontal) {
+    text_position.x -= (text_measure.x * .5f);
+  }
+  if (center_vertical) {
+    text_position.y -= (text_measure.y * .5f);
+  }
+  int length = TextLength(text);
+
+  float textOffsetX = 0.0f;
+  float scaleFactor = font_size/(float)font.baseSize;
+
+  for (i32 itr_000 = 0; itr_000 < length; itr_000++)
+  {
+    int codepointByteCount = 0;
+    int codepoint = GetCodepoint(&text[itr_000], &codepointByteCount);
+    int index = GetGlyphIndex(font, codepoint);
+    float glyphWidth = 0;
+
+    glyphWidth = (font.glyphs[index].advanceX == 0) ? font.recs[index].width*scaleFactor : font.glyphs[index].advanceX*scaleFactor;
+    if (itr_000 + 1 < length) glyphWidth = glyphWidth + UI_FONT_SPACING;
+    
+    if ((codepoint != ' ') && (codepoint != '\t')) {
+      DrawTextCodepoint(font, codepoint, Vector2{ text_position.x + textOffsetX, text_position.y }, font_size, tint);
+    }
+    if ((textOffsetX != 0) || (codepoint != ' ')) textOffsetX += glyphWidth;
+  }
 } 
 /**
  * @brief NOTE: Source https://github.com/raysan5/raylib/blob/master/examples/text/text_rectangle_bounds.c
  */
- void DrawTextBoxed(Font font, const char *text, Rectangle rec, float fontSize, float spacing, bool wordWrap, Color tint) {
+void DrawTextBoxed(Font font, const char *text, Rectangle rec, float fontSize, float spacing, bool wordWrap, Color tint) {
   int length = TextLength(text);  // Total length in bytes of the text, scanned by codepoints in loop
   float textOffsetY = 0;          // Offset between lines (on line break '\n')
   float textOffsetX = 0.0f;       // Offset X to next character to draw
@@ -1555,7 +1634,7 @@ void process_fade_effect(ui_fade_control_system* fade) {
 /**
  * @brief relative if you want to draw from another atlas.
  */
- void gui_draw_atlas_texture_id_pro(atlas_texture_id _id, Rectangle src, Rectangle dest, bool relative, bool should_center) {
+void gui_draw_atlas_texture_id_pro(atlas_texture_id _id, Rectangle src, Rectangle dest, bool relative, bool should_center) {
   if (_id >= ATLAS_TEX_ID_MAX || _id <= ATLAS_TEX_ID_UNSPECIFIED) {
     TraceLog(LOG_WARNING, "user_interface::gui_draw_atlas_texture_id_pro()::ID was out of bound"); 
     return; 
@@ -1575,7 +1654,7 @@ void process_fade_effect(ui_fade_control_system* fade) {
   }
   DrawTexturePro(*tex->atlas_handle, src, dest, ZEROVEC2, 0, WHITE);
 }
- void gui_draw_atlas_texture_id(atlas_texture_id _id, Rectangle dest, Vector2 origin, f32 rotation) {
+void gui_draw_atlas_texture_id(atlas_texture_id _id, Rectangle dest, Vector2 origin, f32 rotation) {
   if (_id >= ATLAS_TEX_ID_MAX || _id <= ATLAS_TEX_ID_UNSPECIFIED) {
     TraceLog(LOG_WARNING, "user_interface::gui_draw_atlas_texture_id()::ID was out of bound"); 
     return; 
@@ -1588,7 +1667,7 @@ void process_fade_effect(ui_fade_control_system* fade) {
 
   DrawTexturePro(*tex->atlas_handle, tex->source, dest, origin, rotation, WHITE);
 }
- void gui_draw_atlas_texture_id_pro_grid(atlas_texture_id _id, Rectangle src, Rectangle dest, bool relative) {
+void gui_draw_atlas_texture_id_pro_grid(atlas_texture_id _id, Rectangle src, Rectangle dest, bool relative) {
   if (_id >= ATLAS_TEX_ID_MAX || _id <= ATLAS_TEX_ID_UNSPECIFIED) {
     TraceLog(LOG_WARNING, "user_interface::gui_draw_atlas_texture_id_pro_grid()::ID was out of bound"); 
     return; 
@@ -1607,7 +1686,7 @@ void process_fade_effect(ui_fade_control_system* fade) {
   dest.y = pos.y;
   DrawTexturePro(*tex->atlas_handle, src, dest, Vector2 { tex->source.width * .5f, tex->source.height *.5f }, 0, WHITE);
 }
- void gui_draw_atlas_texture_id_grid(atlas_texture_id _id, Rectangle dest) {
+void gui_draw_atlas_texture_id_grid(atlas_texture_id _id, Rectangle dest) {
   if (_id >= ATLAS_TEX_ID_MAX || _id <= ATLAS_TEX_ID_UNSPECIFIED) {
     TraceLog(LOG_WARNING, "user_interface::gui_draw_atlas_texture_id_grid()::ID was out of bound"); 
     return; 
@@ -1622,14 +1701,14 @@ void process_fade_effect(ui_fade_control_system* fade) {
   dest.y = pos.y;
   DrawTexturePro(*tex->atlas_handle, tex->source, dest, ZEROVEC2, 0, WHITE);
 }
- void gui_draw_spritesheet_id(spritesheet_id _id, Color _tint, Vector2 pos, Vector2 scale, u16 frame) {
+void gui_draw_spritesheet_id(spritesheet_id _id, Color _tint, Vector2 pos, Vector2 scale, u16 frame) {
   if (_id >= SHEET_ID_SPRITESHEET_TYPE_MAX || _id <= SHEET_ID_SPRITESHEET_UNSPECIFIED) {
     TraceLog(LOG_WARNING, "user_interface::gui_draw_spritesheet_id()::ID was out of bound"); 
     return; 
   }
   draw_sprite_on_site_by_id(_id, _tint, pos, scale, frame);
 }
- void gui_draw_texture_id_pro(texture_id _id, Rectangle src, Rectangle dest, Color tint, Vector2 origin) {
+void gui_draw_texture_id_pro(texture_id _id, Rectangle src, Rectangle dest, Color tint, Vector2 origin) {
   if (_id >= TEX_ID_MAX || _id <= TEX_ID_UNSPECIFIED) {
     TraceLog(LOG_WARNING, "user_interface::gui_draw_texture_id_pro()::ID was out of bound"); 
     return; 
@@ -1641,7 +1720,7 @@ void process_fade_effect(ui_fade_control_system* fade) {
   }
   DrawTexturePro(*tex, src, dest, origin, 0, tint);
 }
- void gui_draw_texture_id(texture_id _id, Rectangle dest) {
+void gui_draw_texture_id(const texture_id _id, const Rectangle dest, const Vector2 origin) {
   if (_id >= TEX_ID_MAX || _id <= TEX_ID_UNSPECIFIED) {
     TraceLog(LOG_WARNING, "user_interface::gui_draw_texture_id()::ID was out of bound"); 
     return; 
@@ -1651,12 +1730,9 @@ void process_fade_effect(ui_fade_control_system* fade) {
     TraceLog(LOG_WARNING, "user_interface::gui_draw_texture_id()::Tex was null");
     return; 
   }
-  DrawTexturePro(*tex, 
-  Rectangle{0.f, 0.f, (f32) tex->width, (f32) tex->height},
-  dest, 
-  ZEROVEC2, 0.f, WHITE);
+  DrawTexturePro(*tex, Rectangle{0.f, 0.f, (f32) tex->width, (f32) tex->height}, dest, origin, 0.f, WHITE);
 }
- void gui_draw_atlas_texture_id_scale(atlas_texture_id _id, Vector2 position, f32 scale, Color tint, bool should_center) {
+void gui_draw_atlas_texture_id_scale(atlas_texture_id _id, Vector2 position, f32 scale, Color tint, bool should_center) {
   if (_id >= ATLAS_TEX_ID_MAX || _id <= ATLAS_TEX_ID_UNSPECIFIED) {
     TraceLog(LOG_WARNING, "user_interface::gui_draw_atlas_texture_id_scale()::ID was out of bound"); 
     return; 
@@ -1722,7 +1798,17 @@ checkbox* get_checkbox_by_id(checkbox_id cb_id) {
 
   return __builtin_addressof(state->checkboxes.at(cb_id));
 }
- bool ui_set_slider_current_index(slider_id id, u16 index) {
+Vector2 ui_measure_text(const char* in_str, font_type in_font_type, f32 in_font_size) {
+  if (!state || state == nullptr) {
+    TraceLog(LOG_ERROR, "user_interface::ui_measure_text()::State is not valid");
+    return ZEROVEC2;
+  }
+  const Font* const _font = ui_get_font(in_font_type);
+  if (_font == nullptr) return ZEROVEC2;
+  
+  return MeasureTextEx( (*_font), in_str, in_font_size * _font->baseSize, UI_FONT_SPACING);
+}
+bool ui_set_slider_current_index(slider_id id, u16 index) {
   if (!state) {
     TraceLog(LOG_ERROR, "user_interface::ui_set_slider_current_index()::State is not valid");
     return false;
@@ -1735,7 +1821,7 @@ checkbox* get_checkbox_by_id(checkbox_id cb_id) {
   state->sliders.at(id).current_value = index;
   return true;
 }
- bool ui_set_slider_current_value(slider_id id, slider_option value) {
+bool ui_set_slider_current_value(slider_id id, slider_option value) {
   if (!state) {
     TraceLog(LOG_ERROR, "user_interface::ui_set_slider_current_value()::State is not valid");
     return false;
@@ -1749,20 +1835,20 @@ checkbox* get_checkbox_by_id(checkbox_id cb_id) {
   sdr.options.at(last_elem) = value;
   return true;
 }
- bool ui_sound_slider_on_left_button_trigger(void) {
+bool ui_sound_slider_on_left_button_trigger(void) {
   if (!state) {
     TraceLog(LOG_ERROR, "user_interface::ui_sound_slider_on_left_button_trigger()::State is not valid");
     return false;
   }
 
   SDR_AT(SDR_ID_SETTINGS_SOUND_SLIDER).current_value--;
-  if (SDR_AT(SDR_ID_SETTINGS_SOUND_SLIDER).current_value > 10) {
+  if (SDR_AT(SDR_ID_SETTINGS_SOUND_SLIDER).current_value < 0) {
     SDR_AT(SDR_ID_SETTINGS_SOUND_SLIDER).current_value = 0;
   }
   set_master_sound(SDR_AT(SDR_ID_SETTINGS_SOUND_SLIDER).current_value * 10);
   return true;
 }
- bool ui_sound_slider_on_right_button_trigger(void) {  
+bool ui_sound_slider_on_right_button_trigger(void) {  
   if (!state) {
     TraceLog(LOG_ERROR, "user_interface::ui_sound_slider_on_right_button_trigger()::State is not valid");
     return false;
@@ -1775,7 +1861,7 @@ checkbox* get_checkbox_by_id(checkbox_id cb_id) {
   set_master_sound(SDR_AT(SDR_ID_SETTINGS_SOUND_SLIDER).current_value * 10);
   return true;
 }
- data_pack* get_slider_current_value(slider_id id) {
+data_pack* get_slider_current_value(slider_id id) {
   if (!state) {
     TraceLog(LOG_WARNING, "user_interface::get_slider_current_value()::State is not valid"); 
     return nullptr;
@@ -1790,7 +1876,7 @@ checkbox* get_checkbox_by_id(checkbox_id cb_id) {
       .at(id).current_value).content
   );
 }
- Font load_font(const char* file_name, i32 font_size, i32* _codepoints, i32 _codepoint_count) {
+Font load_font(const char* file_name, i32 font_size, i32* _codepoints, i32 _codepoint_count) {
   if (!state) {
     TraceLog(LOG_ERROR, "user_interface::load_font()::State is not valid");
     return {};
@@ -1807,7 +1893,7 @@ checkbox* get_checkbox_by_id(checkbox_id cb_id) {
   }
   return font;
 }
- localization_package* load_localization(std::string language_name, u32 loc_index, std::string _codepoints, i32 font_size) {
+localization_package* load_localization(std::string language_name, u32 loc_index, std::string _codepoints, i32 font_size) {
   if (!state) {
     TraceLog(LOG_ERROR, "user_interface::load_localization()::State is not valid");
     return nullptr;
@@ -1838,7 +1924,7 @@ checkbox* get_checkbox_by_id(checkbox_id cb_id) {
     state->localization_info.size()-1
   );
 }
- localization_package* ui_get_localization_by_name(std::string language_name) {
+localization_package* ui_get_localization_by_name(std::string language_name) {
   if (!state) {
     TraceLog(LOG_ERROR, "user_interface::ui_get_localization_by_name()::State is not valid");
     return nullptr;
@@ -1852,7 +1938,7 @@ checkbox* get_checkbox_by_id(checkbox_id cb_id) {
 
   return nullptr;
 }
- localization_package* ui_get_localization_by_index(u32 _language_index) {
+localization_package* ui_get_localization_by_index(u32 _language_index) {
   if (!state) {
     TraceLog(LOG_ERROR, "user_interface::ui_get_localization_by_index()::State is not valid");
     return nullptr;
@@ -1866,14 +1952,50 @@ checkbox* get_checkbox_by_id(checkbox_id cb_id) {
 
   return nullptr;
 }
+Vector2 ui_align_text(Rectangle in_dest, Vector2 in_text_measure, text_alignment align_to) {
+    switch (align_to) {
+    case TEXT_ALIGN_TOP_LEFT: return Vector2 { in_dest.x, in_dest.y};
+    
+    case TEXT_ALIGN_TOP_CENTER: return Vector2 {
+      in_dest.x + (in_dest.width * .5f) - (in_text_measure.x * .5f),
+      in_dest.y
+    };
+    case TEXT_ALIGN_TOP_RIGHT: return Vector2 {
+      in_dest.x + in_dest.width - in_text_measure.x,
+      in_dest.y
+    };
+    case TEXT_ALIGN_DOWN_LEFT: return Vector2 {
+      in_dest.x,
+      in_dest.y + in_dest.height - in_text_measure.y
+    };
+    case TEXT_ALIGN_DOWN_CENTER: return Vector2 {
+      in_dest.x + (in_dest.width * .5f)  - (in_text_measure.x * .5f),
+      in_dest.y + in_dest.height         - in_text_measure.y
+    };
+    case TEXT_ALIGN_DOWN_RIGHT: return Vector2 {
+      in_dest.x + in_dest.width  - in_text_measure.x,
+      in_dest.y + in_dest.height - in_text_measure.y
+    };
+    case TEXT_ALIGN_LEFT_CENTER: return Vector2 {
+      in_dest.x,
+      in_dest.y + (in_dest.height * .5f) - (in_text_measure.y * .5f)
+    };
+    case TEXT_ALIGN_RIGHT_CENTER: return Vector2 {
+      in_dest.x + in_dest.width - in_text_measure.x,
+      in_dest.y + (in_dest.height * .5f) - (in_text_measure.y * .5f)
+    };
+    
+    default: return Vector2 {in_dest.x,in_dest.y};
+  }
+}
 // EXPOSED
- void ui_play_sprite_on_site(spritesheet *sheet, Color _tint, Rectangle dest) {
+void ui_play_sprite_on_site(spritesheet *sheet, Color _tint, Rectangle dest) {
   play_sprite_on_site(sheet, _tint, dest);
 }
 void ui_set_sprite(spritesheet *sheet, bool _play_looped, bool _play_once) {
   set_sprite(sheet, _play_looped, _play_once);
 }
- void ui_update_sprite(spritesheet *sheet) {
+void ui_update_sprite(spritesheet *sheet) {
   update_sprite(sheet);
 }
 // EXPOSED

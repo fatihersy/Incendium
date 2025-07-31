@@ -1,6 +1,4 @@
 #include "ftime.h"
-#include "time.h"
-
 #include "core/fmemory.h"
 
 const u32 random_table[RANDOM_TABLE_NUMBER_COUNT] = {
@@ -39,10 +37,9 @@ const u32 random_table[RANDOM_TABLE_NUMBER_COUNT] = {
 };
 
 typedef struct time_system_state {
-  time_t time;
-  struct tm * parsed_time;
   u16 rand_start_index;
   u16 rand_ind;
+  i32 padding;
 } time_system_state;
 
 static time_system_state *state;
@@ -52,22 +49,11 @@ void time_system_initialize(void) {
     return;
   }
   state = (time_system_state *)allocate_memory_linear(sizeof(time_system_state), true);
-  time(&state->time);
-  state->parsed_time = localtime(&state->time);
-  state->rand_start_index = ((
-    (state->parsed_time->tm_hour * state->parsed_time->tm_min) + 
-    (state->parsed_time->tm_sec * state->parsed_time->tm_mday)
-    ) % RANDOM_TABLE_NUMBER_COUNT
-  );
-  
 }
 void update_time(void) {
   if(state == nullptr) {
     return;
   }
-
-  time(&state->time);
-  state->parsed_time = localtime(&state->time);
 }
 
 i32 get_random(i32 min, i32 max) {
@@ -86,5 +72,3 @@ i32 get_random(i32 min, i32 max) {
   
   return rnd;
 }
-
-#undef STATE_ASSERT

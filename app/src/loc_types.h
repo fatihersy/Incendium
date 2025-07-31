@@ -9,8 +9,10 @@
 
 #define LOC_TEXT_LANGUAGE_NAME 0
 
-typedef enum loc_text_mainmenu {
-  LOC_TEXT_MAINMENU_BUTTON_TEXT_PLAY = 1,
+typedef enum loc_text {
+  LOC_TEXT_UNDEFINED,
+
+  LOC_TEXT_MAINMENU_BUTTON_TEXT_PLAY,
   LOC_TEXT_MAINMENU_BUTTON_TEXT_UPGRADE,
   LOC_TEXT_MAINMENU_BUTTON_TEXT_SETTINGS,
   LOC_TEXT_MAINMENU_BUTTON_TEXT_EXIT,
@@ -20,20 +22,20 @@ typedef enum loc_text_mainmenu {
   LOC_TEXT_MAINMENU_PAUSE_BUTTON_TEXT_RESUME,
   LOC_TEXT_MAINMENU_PAUSE_BUTTON_TEXT_EXIT_TO_MAINMENU,
   LOC_TEXT_MAINMENU_PAUSE_BUTTON_TEXT_EXIT_TO_DESKTOP,
-}loc_text_mainmenu;
+  LOC_TEXT_MAINMENU_MAP_CHOICE_BACK,
+  LOC_TEXT_MAINMENU_MAP_CHOICE_AVAILABLE_TRAITS_TITLE,
+  LOC_TEXT_MAINMENU_MAP_CHOICE_CHOSEN_TRAITS_TITLE,
+  LOC_TEXT_MAINMENU_MAP_CHOICE_CHOSEN_TRAIT_DESC_TITLE,
 
-typedef enum loc_text_settings {
-  LOC_TEXT_SETTINGS_SDR_WINDOW_MODE_WINDOWED = 25,
+  LOC_TEXT_SETTINGS_SDR_WINDOW_MODE_WINDOWED,
   LOC_TEXT_SETTINGS_SDR_WINDOW_MODE_BORDERLESS,
   LOC_TEXT_SETTINGS_SDR_WINDOW_MODE_FULLSCREEN,
   LOC_TEXT_SETTINGS_BUTTON_APPLY,
   LOC_TEXT_SETTINGS_BUTTON_CANCEL,
   LOC_TEXT_SETTINGS_BUTTON_ENGLISH,
   LOC_TEXT_SETTINGS_BUTTON_TURKISH,
-}loc_text_settings;
 
-typedef enum loc_text_editor {
-  LOC_TEXT_EDITOR_SDR_PROP_CHANGE_TREE = 45,
+  LOC_TEXT_EDITOR_SDR_PROP_CHANGE_TREE,
   LOC_TEXT_EDITOR_SDR_PROP_CHANGE_TOMBSTONE,
   LOC_TEXT_EDITOR_SDR_PROP_CHANGE_STONE,
   LOC_TEXT_EDITOR_SDR_PROP_CHANGE_SPIKE,
@@ -45,10 +47,8 @@ typedef enum loc_text_editor {
   LOC_TEXT_EDITOR_SDR_PROP_CHANGE_CANDLE,
   LOC_TEXT_EDITOR_SDR_PROP_CHANGE_BUILDING,
   LOC_TEXT_EDITOR_SDR_PROP_CHANGE_SPRITE,
-}loc_text_editor;
 
-typedef enum loc_text_ingame {
-  LOC_TEXT_INGAME_LABEL_PRESS_SPACE = 75,
+  LOC_TEXT_INGAME_LABEL_PRESS_SPACE,
   LOC_TEXT_INGAME_UPGRADE_ABILITY_NEW,
   LOC_TEXT_INGAME_UPGRADE_ABILITY_DAMAGE,
   LOC_TEXT_INGAME_UPGRADE_ABILITY_AMOUTH,
@@ -58,10 +58,8 @@ typedef enum loc_text_ingame {
   LOC_TEXT_INGAME_STAGE_RESULT_DEAD,
   LOC_TEXT_INGAME_STAGE_RESULT_COLLECTED_SOULS,
   LOC_TEXT_INGAME_STAGE_RESULT_ACCEPT,
-}loc_text_ingame;
 
-typedef enum loc_text_player {
-  LOC_TEXT_PLAYER_STAT_LIFE_ESSENCE = 100,
+  LOC_TEXT_PLAYER_STAT_LIFE_ESSENCE,
   LOC_TEXT_PLAYER_STAT_DESC_LIFE_ESSENCE,
   LOC_TEXT_PLAYER_STAT_BREAD,
   LOC_TEXT_PLAYER_STAT_DESC_BREAD,
@@ -80,38 +78,24 @@ typedef enum loc_text_player {
   LOC_TEXT_PLAYER_ABILITY_NAME_FIREBALL,
   LOC_TEXT_PLAYER_ABILITY_NAME_BULLET,
   LOC_TEXT_PLAYER_ABILITY_NAME_COMET,
-}loc_text_player;
 
-typedef enum loc_text_ingame_debug {
-  LOC_TEXT_INGAME_DEBUG_WORLDPOS = 125,
-  LOC_TEXT_INGAME_DEBUG_ID,
-  LOC_TEXT_INGAME_DEBUG_COLLISION,
-  LOC_TEXT_INGAME_DEBUG_POSITION,
-  LOC_TEXT_INGAME_DEBUG_HEALTH,
-  LOC_TEXT_INGAME_DEBUG_SCALE,
-  LOC_TEXT_INGAME_DEBUG_SPEED,
-  LOC_TEXT_INGAME_DEBUG_ROTATION,
-  LOC_TEXT_INGAME_DEBUG_CURRENT_HEALTH,
-  LOC_TEXT_INGAME_DEBUG_DAMAGE,
-  LOC_TEXT_INGAME_DEBUG_REMAINING,
-  LOC_TEXT_INGAME_DEBUG_SOULS,
-}loc_text_ingame_debug;
+  LOC_TEXT_MAX
+} loc_text;
 
 typedef struct loc_data {
   std::string language_name;
   std::string codepoints;
-  std::vector<std::string> content;
-  unsigned int index;
+  std::array<std::string, LOC_TEXT_MAX> content;
+  int index;
   loc_data(void) {
     this->language_name.clear();
     this->codepoints.clear();
-    this->content.clear();
-    this->index = 0u;
+    this->content.fill(std::string(""));
+    this->index = 0;
   }
 } loc_data;
 
 typedef struct loc_content {
- const char* symbol;
  const char* text;
 }loc_content;
 
@@ -119,7 +103,7 @@ typedef struct localized_languages {
   std::vector<loc_data> lang;
 } localized_languages;
 
-const char* lc_txt(unsigned int symbol);
+const char* lc_txt(int symbol);
 
 bool loc_parser_parse_localization_data_from_file(const char* file_name);
 bool loc_parser_parse_localization_data(void);
@@ -127,8 +111,5 @@ bool loc_parser_parse_localization_data(void);
 localized_languages loc_parser_get_loc_langs(void);
 loc_data* loc_parser_get_active_language(void);
 bool loc_parser_set_active_language_by_name(std::string language_name);
-bool loc_parser_set_active_language_by_index(unsigned int index);
-
-unsigned int symbol_to_index(const char* symbol);
-
+bool loc_parser_set_active_language_by_index(int index);
 #endif

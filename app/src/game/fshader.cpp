@@ -26,7 +26,7 @@ bool initialize_shader_system(void) {
   }
 
   // NOTE: _path = "%s%s", SHADER_PATH, _path
-  if (!load_shader(0, "prg_bar_mask.fs",    SHADER_ID_PROGRESS_BAR_MASK)) {
+  if (!load_shader(0, "prg_bar_mask.fs", SHADER_ID_PROGRESS_BAR_MASK)) {
     TraceLog(LOG_WARNING, "fshader::initialize_shader_system()::mask shader cannot loaded");
     return false;
   }
@@ -34,12 +34,16 @@ bool initialize_shader_system(void) {
     TraceLog(LOG_WARNING, "fshader::initialize_shader_system()::fade shader cannot loaded");
     return false;
   }
-  if(!load_shader(0, "font_outline.fs",    SHADER_ID_FONT_OUTLINE)) {
+  if(!load_shader(0, "font_outline.fs", SHADER_ID_FONT_OUTLINE)) {
     TraceLog(LOG_WARNING, "fshader::initialize_shader_system()::outline shader cannot loaded");
     return false;
   }
-  if(!load_shader(0, "post_process.fs",    SHADER_ID_POST_PROCESS)) {
+  if(!load_shader(0, "post_process.fs", SHADER_ID_POST_PROCESS)) {
     TraceLog(LOG_WARNING, "fshader::initialize_shader_system()::post process shader cannot loaded");
+    return false;
+  }
+  if(!load_shader(0, "map_choice_image.fs", SHADER_ID_MAP_CHOICE_IMAGE)) {
+    TraceLog(LOG_WARNING, "fshader::initialize_shader_system()::map choice image shader cannot loaded");
     return false;
   }
 

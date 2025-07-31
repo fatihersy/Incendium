@@ -65,7 +65,7 @@ bool resource_system_initialize(void) {
   load_texture_from_atlas(ATLAS_TEX_ID_CURRENCY_SOUL_ICON_45000,   Rectangle{1952, 736,    32,   32});
   load_texture_from_atlas(ATLAS_TEX_ID_FOG,                        Rectangle{1152,3296,   400,   64});
   load_texture_from_atlas(ATLAS_TEX_ID_HEADER,                     Rectangle{1824,  64,   192,   32});
-  load_texture_from_atlas(ATLAS_TEX_ID_LITTLE_SHOWCASE,            Rectangle{1592,  16,    88,   16});
+  load_texture_from_atlas(ATLAS_TEX_ID_LITTLE_SHOWCASE,            Rectangle{1504, 128,    88,   16});
 
   load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_PLAYER_ANIMATION_IDLE_LEFT,         VECTOR2(1584, 288), 15,   22,  32, 1,  4);
   load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_PLAYER_ANIMATION_IDLE_RIGHT,        VECTOR2(1584, 224), 15,   22,  32, 1,  4);
@@ -109,7 +109,7 @@ bool resource_system_initialize(void) {
   load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_ENVIRONMENTAL_PARTICLES, VECTOR2( 576, 3456), 5, 160,  96, 1, 12);
   load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_LIGHT_INSECTS,           VECTOR2(1248, 2400), 5,  58,  71, 1, 12);
   load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_CANDLE_FX,               VECTOR2(1088, 3360), 5,  64,  64, 1, 12);
-  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_GENERIC_LIGHT,           VECTOR2(1248, 2272),15, 128, 128, 1,  4);
+  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_GENERIC_LIGHT,           VECTOR2(1248, 2272), 4, 128, 128, 1,  4);
   
   load_tilesheet(TILESHEET_TYPE_MAP, ATLAS_TEX_ID_MAP_TILESET_TEXTURE, 49, 63, 32);
 

@@ -10,7 +10,6 @@
 void update_game_manager(void);
 void update_game_manager_debug(void);
 
-
 i32 get_currency_souls(void);
 void set_currency_souls(i32 value);
 bool get_b_player_have_upgrade_points(void);
@@ -19,6 +18,7 @@ void toggle_is_game_paused(void);
 
 const character_stat* get_static_player_state_stat(character_stats stat);
 const ingame_info* gm_get_ingame_info(void);
+const std::vector<character_trait>* gm_get_character_traits(void);
 
 [[nodiscard]] bool gm_start_game(worldmap_stage stage);
 void gm_end_game(bool is_win);

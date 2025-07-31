@@ -23,14 +23,32 @@ typedef struct game_manager_system_state {
   ingame_info game_info;
   Vector2 mouse_pos_world;
   Vector2 mouse_pos_screen;
+  std::vector<character_trait> traits;
 
   bool show_pause_menu;
   bool is_game_end;
   bool is_game_paused;
   bool game_manager_initialized;
+  game_manager_system_state(void) {
+    this->game_progression_data = nullptr;
+    this->in_camera_metrics = nullptr;
+    this->in_app_settings = nullptr;
+    this->in_active_map = nullptr;
+    this->stage = worldmap_stage();
+    this->ingame_phase = INGAME_PHASE_UNDEFINED;
+    this->player_state_static = player_state();
+    this->game_info = ingame_info();
+    this->mouse_pos_world = ZEROVEC2;
+    this->mouse_pos_screen = ZEROVEC2;
+    this->traits.clear();
+    this->show_pause_menu = false;
+    this->is_game_end = false;
+    this->is_game_paused = false;
+    this->game_manager_initialized = false;
+  }
 } game_manager_system_state;
 
-static game_manager_system_state * state;
+static game_manager_system_state * state = nullptr;
 
 // To avoid dublicate symbol errors. Implementation in defines.h
 extern const u32 level_curve[MAX_PLAYER_LEVEL+1];
@@ -52,11 +70,11 @@ bool game_manager_initialize(const camera_metrics * in_camera_metrics, const app
     return game_manager_reinit(in_camera_metrics, in_app_settings, in_active_map_ptr);
   }
   state = (game_manager_system_state *)allocate_memory_linear(sizeof(game_manager_system_state), true);
-  if (!state) {
+  if (!state || state == nullptr) {
     TraceLog(LOG_ERROR, "game_manager::game_manager_initialize()::Gama manager state allocation failed");
     return false;
   }
-  state->game_info = ingame_info();
+  *state = game_manager_system_state();
 
   if (!save_system_initialize()) {
     TraceLog(LOG_ERROR, "game_manager::game_manager_initialize()::Save system init returned false");
@@ -92,6 +110,27 @@ bool game_manager_initialize(const camera_metrics * in_camera_metrics, const app
   event_register(EVENT_CODE_RESUME_GAME, game_manager_on_event);
   event_register(EVENT_CODE_PAUSE_GAME, game_manager_on_event);
   event_register(EVENT_CODE_TOGGLE_GAME_PAUSE, game_manager_on_event);
+
+  // Traits
+  {
+    i32 next_trait_id = 0;
+    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_HEALTH, "Healty", "Increases your healt a bit", -1, data128(static_cast<i32>(300)), data128()));
+    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_HEALTH, "Tough", "Increases your healt a fair amouth", -2, data128(static_cast<i32>(800)), data128()));
+    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE, "Artillery", "Increases your damage a fair amouth", -2, data128(static_cast<i32>(8)), data128()));
+    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE, "Trait 4",  "Trait 4 description", -2, data128(static_cast<i32>(8)), data128()));
+    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE, "Trait 5",  "Trait 5 description", -2, data128(static_cast<i32>(8)), data128()));
+    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE, "Trait 6",  "Trait 6 description", -2, data128(static_cast<i32>(8)), data128()));
+    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE, "Trait 7",  "Trait 7 description", -2, data128(static_cast<i32>(8)), data128()));
+    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE, "Trait 8",  "Trait 8 description",  2, data128(static_cast<i32>(8)), data128()));
+    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE, "Trait 9",  "Trait 9 description",  2, data128(static_cast<i32>(8)), data128()));
+    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE, "Trait 10", "Trait 10 description", 2, data128(static_cast<i32>(8)), data128()));
+    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE, "Trait 11", "Trait 11 description", 2, data128(static_cast<i32>(8)), data128()));
+    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE, "Trait 12", "Trait 12 description", 2, data128(static_cast<i32>(8)), data128()));
+    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE, "Trait 13", "Trait 13 description", 2, data128(static_cast<i32>(8)), data128()));
+    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE, "Trait 14", "Trait 14 description", 2, data128(static_cast<i32>(8)), data128()));
+    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE, "Trait 15", "Trait 15 description", 2, data128(static_cast<i32>(8)), data128()));
+  }
+  // Traits
 
   return game_manager_reinit(in_camera_metrics, in_app_settings, in_active_map_ptr);
 }
@@ -685,6 +724,14 @@ const ingame_info* gm_get_ingame_info(void){
     return nullptr;
   }
   return __builtin_addressof(state->game_info); 
+}
+const std::vector<character_trait>* gm_get_character_traits(void) {
+  if (!state || state == nullptr) {
+    TraceLog(LOG_ERROR, "game_manager::gm_get_character_traits()::State is not valid");
+    return nullptr;
+  }
+
+  return __builtin_addressof(state->traits);
 }
 // GET / SET
 

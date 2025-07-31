@@ -85,7 +85,7 @@ typedef struct button_type {
     this->should_center = should_center;
   }
 } button_type;
-  
+
 typedef struct button {
   button_id id;
   button_type btn_type;
@@ -109,6 +109,31 @@ typedef struct button {
     this->is_registered = true;
   }
 } button;
+
+typedef struct local_button {
+  i32 id;
+  button_type btn_type;
+  button_state state;
+  Rectangle dest;
+  bool on_screen;
+  bool is_active;
+
+  local_button(void) {
+    this->id = 0;
+    this->btn_type = button_type();
+    this->state = BTN_STATE_UNDEFINED;
+    this->dest = ZERORECT;
+    this->on_screen = false;
+    this->is_active = false;
+  }
+  local_button(i32 id, button_type btn_type, button_state state, Rectangle dest) : local_button() {
+    this->id = id;
+    this->btn_type = btn_type;
+    this->state = state;
+    this->dest = dest;
+    this->is_active = true;
+  }
+} local_button;
   
 typedef struct checkbox_type {
   checkbox_type_id id;
@@ -351,6 +376,7 @@ const Vector2* ui_get_mouse_pos_screen(void);
 const Font* ui_get_font(font_type font);
 slider* get_slider_by_id(slider_id sdr_id);
 checkbox* get_checkbox_by_id(checkbox_id cb_id);
+Vector2 ui_measure_text(const char* in_str, font_type in_font_type, f32 in_font_size);
 bool is_ui_fade_anim_complete(void);
 void is_ui_fade_anim_reset(void);
 void ui_refresh_setting_sliders_to_default(void);
@@ -361,9 +387,11 @@ bool ui_set_slider_current_value(slider_id id, slider_option value);
 
 bool gui_slider_add_option(slider_id _id, data_pack content, u32 _localization_symbol, std::string _no_localized_text);
 Rectangle get_atlas_texture_source_rect(atlas_texture_id _id);
+const std::array<button_type, BTN_TYPE_MAX>* get_button_types(void); 
 
 bool gui_menu_button(const char* text, button_id _id, Vector2 grid, Vector2 grid_location, bool play_on_click_sound);
 bool gui_mini_button(const char* text, button_id _id, Vector2 grid, bool play_on_click_sound);
+bool gui_draw_local_button(const char* text, local_button* btn, font_type _font_type, i32 font_size_scale, Vector2 pos, text_alignment align_to, bool play_on_click_sound);
 bool gui_slider_button(button_id _id, Vector2 pos);
 void gui_checkbox_grid(checkbox_id _id, Vector2 grid, Vector2 grid_location);
 void gui_slider(slider_id _id, Vector2 pos, Vector2 grid);
@@ -383,8 +411,7 @@ void gui_draw_atlas_texture_id_scale(atlas_texture_id _id, Vector2 position, f32
 void gui_draw_atlas_texture_id_pro_grid(atlas_texture_id _id, Rectangle src, Rectangle dest, bool relative); 
 void gui_draw_atlas_texture_id_grid(atlas_texture_id _id, Rectangle dest); 
 void gui_draw_texture_id_pro(texture_id _id, Rectangle src, Rectangle dest, Color tint = WHITE, Vector2 origin = {0.f, 0.f});
-void gui_draw_texture_id(texture_id _id, Rectangle dest);
-void gui_draw_map_stage_pin(bool have_hovered, Vector2 screen_loc);
+void gui_draw_texture_id(const texture_id _id, const Rectangle dest, const Vector2 origin);
 void gui_draw_spritesheet_id(spritesheet_id _id, Color _tint, Vector2 pos, Vector2 scale, u16 frame); 
 void gui_draw_settings_screen(void);
 void gui_draw_pause_screen(bool in_game_play_state);

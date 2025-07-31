@@ -210,6 +210,19 @@ typedef enum ingame_phases {
   INGAME_PHASE_MAX,
 }ingame_phases;
 
+typedef enum text_alignment {
+  TEXT_ALIGN_UNDEFINED,
+  TEXT_ALIGN_TOP_LEFT,
+  TEXT_ALIGN_TOP_CENTER,
+  TEXT_ALIGN_TOP_RIGHT,
+  TEXT_ALIGN_DOWN_LEFT,
+  TEXT_ALIGN_DOWN_CENTER,
+  TEXT_ALIGN_DOWN_RIGHT,
+  TEXT_ALIGN_LEFT_CENTER,
+  TEXT_ALIGN_RIGHT_CENTER,
+  TEXT_ALIGN_MAX,
+}text_alignment;
+
 typedef struct spritesheet {
   spritesheet_id sheet_id;
   texture_id tex_id;
@@ -732,6 +745,36 @@ typedef struct character_stat {
     this->level = 1;
   }
 }character_stat;
+
+typedef struct character_trait {
+  i32 id;
+  character_stats type;
+  std::string title;
+  std::string description;
+  i32 point;
+
+  data128 mm_ex;
+  data128 general_buffer;
+
+  character_trait(void) {
+    this->id = 0;
+    this->type = CHARACTER_STATS_UNDEFINED;
+    this->title = std::string("");
+    this->description = std::string("");
+    this->mm_ex = data128();
+    this->general_buffer = data128();
+    this->point = 0;
+  }
+  character_trait(i32 _id, character_stats _type, const char* _title, const char * _description, i32 _point, data128 _mm_ex, data128 _general_buffer) : character_trait() {
+    this->id = _id;
+    this->type = _type;
+    this->title = _title;
+    this->description = _description;
+    this->point = _point;
+    this->mm_ex = _mm_ex;
+    this->general_buffer = _general_buffer;
+  }
+}character_trait;
 
 // LABEL: Player State
 typedef struct player_state {

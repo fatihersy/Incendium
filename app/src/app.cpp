@@ -159,7 +159,15 @@ bool app_update(void) {
     state->app_running = false;
   }
   if (IsKeyDown(KEY_LEFT_ALT) && IsKeyPressed(KEY_ENTER)) {
-   event_fire(EVENT_CODE_TOGGLE_BORDERLESS, event_context());
+    if (state->settings->window_state == 0) {
+      event_fire(EVENT_CODE_TOGGLE_BORDERLESS, event_context());
+    }
+    else {
+      event_fire(EVENT_CODE_TOGGLE_WINDOWED, event_context(
+        get_optimum_render_resolution(state->settings->display_ratio).first, 
+        get_optimum_render_resolution(state->settings->display_ratio).second
+      ));
+    }
   }
   
   if(IsWindowFocused() && !IsWindowState(FLAG_WINDOW_TOPMOST) && state->settings->window_state != 0) {
@@ -195,35 +203,52 @@ bool app_render(void) {
       Rectangle dest = Rectangle {0, 0, static_cast<f32>(state->settings->window_width), static_cast<f32>(-state->settings->window_height)
       };
 
-      BeginShaderMode(get_shader_by_enum(SHADER_ID_POST_PROCESS)->handle);
-        DrawTexturePro(state->drawing_target.texture, source, dest, ZEROVEC2, 0, WHITE);
-      EndShaderMode();
-    
-      EndMode2D();
+    BeginShaderMode(get_shader_by_enum(SHADER_ID_POST_PROCESS)->handle);
+      DrawTexturePro(state->drawing_target.texture, source, dest, ZEROVEC2, 0, WHITE);
+    EndShaderMode();
+
+    EndMode2D();
   EndDrawing();
   return true;
 }
 
 constexpr void toggle_borderless(void) {
-  set_resolution(GetMonitorWidth(GetCurrentMonitor()), GetMonitorHeight(GetCurrentMonitor()));
-  set_window_size(GetMonitorWidth(GetCurrentMonitor()), GetMonitorHeight(GetCurrentMonitor()));
-  event_fire(EVENT_CODE_CAMERA_SET_DRAWING_EXTENT, event_context(state->settings->render_width, state->settings->render_height));
-  UnloadRenderTexture(state->drawing_target);
-  state->drawing_target = LoadRenderTexture(state->settings->render_width, state->settings->render_height);
-
-  ToggleBorderlessWindowed();
-  state->settings->window_state = FLAG_BORDERLESS_WINDOWED_MODE;
+  if (state->settings->window_state == FLAG_BORDERLESS_WINDOWED_MODE) {
+    return;
+  }
+  else if (state->settings->window_state == FLAG_FULLSCREEN_MODE) {
+    ToggleFullscreen();
+    return;
+  }
+  else {
+    set_resolution(GetMonitorWidth(GetCurrentMonitor()), GetMonitorHeight(GetCurrentMonitor()));
+    set_window_size(GetMonitorWidth(GetCurrentMonitor()), GetMonitorHeight(GetCurrentMonitor()));
+    event_fire(EVENT_CODE_CAMERA_SET_DRAWING_EXTENT, event_context(state->settings->render_width, state->settings->render_height));
+    UnloadRenderTexture(state->drawing_target);
+    state->drawing_target = LoadRenderTexture(state->settings->render_width, state->settings->render_height);
+    
+    ToggleBorderlessWindowed();
+    state->settings->window_state = FLAG_BORDERLESS_WINDOWED_MODE;
+  }
 }
 constexpr void toggle_fullscreen(void) {
-  set_resolution(GetMonitorWidth(GetCurrentMonitor()), GetMonitorHeight(GetCurrentMonitor()));
-  set_window_size(GetMonitorWidth(GetCurrentMonitor()), GetMonitorHeight(GetCurrentMonitor()));
-  event_fire(EVENT_CODE_CAMERA_SET_DRAWING_EXTENT, event_context(state->settings->render_width, state->settings->render_height));
+  if (state->settings->window_state == FLAG_BORDERLESS_WINDOWED_MODE) {
+    ToggleBorderlessWindowed();
+  }
+  else if (state->settings->window_state == FLAG_FULLSCREEN_MODE) {
+    return;
+  }
+  else {
+    set_resolution(GetMonitorWidth(GetCurrentMonitor()), GetMonitorHeight(GetCurrentMonitor()));
+    set_window_size(GetMonitorWidth(GetCurrentMonitor()), GetMonitorHeight(GetCurrentMonitor()));
+    event_fire(EVENT_CODE_CAMERA_SET_DRAWING_EXTENT, event_context(state->settings->render_width, state->settings->render_height));
 
-  UnloadRenderTexture(state->drawing_target);
-  state->drawing_target = LoadRenderTexture(state->settings->render_width, state->settings->render_height);
+    UnloadRenderTexture(state->drawing_target);
+    state->drawing_target = LoadRenderTexture(state->settings->render_width, state->settings->render_height);
 
-  ToggleFullscreen();
-  state->settings->window_state = FLAG_FULLSCREEN_MODE;
+    ToggleFullscreen();
+    state->settings->window_state = FLAG_FULLSCREEN_MODE;
+  }
 }
 constexpr void toggle_windowed(i32 width, i32 height) {
   if (state->settings->window_state == FLAG_BORDERLESS_WINDOWED_MODE) {
