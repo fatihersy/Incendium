@@ -129,6 +129,12 @@ bool game_manager_initialize(const camera_metrics * in_camera_metrics, const app
     state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE, "Trait 13", "Trait 13 description", 2, data128(static_cast<i32>(8)), data128()));
     state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE, "Trait 14", "Trait 14 description", 2, data128(static_cast<i32>(8)), data128()));
     state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE, "Trait 15", "Trait 15 description", 2, data128(static_cast<i32>(8)), data128()));
+    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE, "Trait 16", "Trait 16 description", 2, data128(static_cast<i32>(8)), data128()));
+    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE, "Trait 17", "Trait 17 description", 2, data128(static_cast<i32>(8)), data128()));
+    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE, "Trait 18", "Trait 18 description", 2, data128(static_cast<i32>(8)), data128()));
+    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE, "Trait 19", "Trait 19 description", 2, data128(static_cast<i32>(8)), data128()));
+    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE, "Trait 20", "Trait 20 description", 2, data128(static_cast<i32>(8)), data128()));
+    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE, "Trait 21", "Trait 21 description", 2, data128(static_cast<i32>(8)), data128()));
   }
   // Traits
 

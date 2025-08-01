@@ -34,7 +34,10 @@ typedef struct main_menu_scene_state {
   panel worldmap_selection_panel;
   panel default_panel;
   panel trait_selection_background_panel;
-  panel trait_selection_panel;
+  panel positive_traits_selection_panel;
+  panel negative_traits_selection_panel;
+  panel chosen_traits_selection_panel;
+  panel trait_details_panel;
   std::vector<character_trait> positive_traits;
   std::vector<character_trait> negative_traits;
 
@@ -46,6 +49,8 @@ typedef struct main_menu_scene_state {
   const Vector2* mouse_pos_screen;
   u32 deny_notify_timer;
   main_menu_scene_type mainmenu_state;
+  bool is_dragging_scroll;
+  bool is_any_button_down;
 
   play_scene_info ingame_scene_feed;
   ui_fade_control_system smm_fade;
@@ -59,7 +64,10 @@ typedef struct main_menu_scene_state {
     this->worldmap_selection_panel = panel();
     this->default_panel = panel();
     this->trait_selection_background_panel = panel();
-    this->trait_selection_panel = panel();
+    this->positive_traits_selection_panel = panel();
+    this->negative_traits_selection_panel = panel();
+    this->chosen_traits_selection_panel = panel();
+    this->trait_details_panel = panel();
     this->positive_traits.clear();
     this->negative_traits.clear();
 
@@ -71,6 +79,8 @@ typedef struct main_menu_scene_state {
     this->mouse_pos_screen = nullptr;
     this->deny_notify_timer = 0u;
     this->mainmenu_state = MAIN_MENU_SCENE_DEFAULT;
+    this->is_dragging_scroll = false;
+    this->is_any_button_down = false;
 
     this->ingame_scene_feed = play_scene_info();
     this->smm_fade = ui_fade_control_system();
@@ -99,13 +109,14 @@ static main_menu_scene_state * state = nullptr;
 
 #define SMM_MAP_PIN_SOURCE_LOCATION_UP (Rectangle{1600, 928, 32, 32})
 #define SMM_MAP_PIN_SOURCE_LOCATION_HOVER (Rectangle{1632, 928, 32, 32})
+#define SMM_SCROLL_HANDLE_HEIGHT state->in_app_settings->render_height * .05f
 
 bool begin_scene_main_menu(void);
 void draw_main_menu_upgrade_panel(void);
 void draw_main_menu_upgrade_list_panel(void);
 void draw_main_menu_upgrade_details_panel(void);
 void draw_trait_selection_panel(void);
-void trait_selection_panel_list_traits(Rectangle rect, std::vector<character_trait> traits);
+void trait_selection_panel_list_traits(panel* const pnl, const Rectangle rect, const std::vector<character_trait> traits);
 void smm_update_mouse_bindings(void);
 void smm_update_keyboard_bindings(void);
 void smm_update_bindings(void);
@@ -187,9 +198,13 @@ void fade_on_complete_change_scene(data64 data);
     Vector4 {10, 10, 10, 10}, Color { 30, 39, 46, 245}, Color { 52, 64, 76, 245}
   );
   state->trait_selection_background_panel = state->default_panel;
-  state->trait_selection_panel = panel( BTN_STATE_UNDEFINED, ATLAS_TEX_ID_DARK_FANTASY_PANEL_BG, ATLAS_TEX_ID_DARK_FANTASY_PANEL, 
+  state->positive_traits_selection_panel = panel( BTN_STATE_UNDEFINED, ATLAS_TEX_ID_DARK_FANTASY_PANEL_BG, ATLAS_TEX_ID_DARK_FANTASY_PANEL, 
     Vector4 {6, 6, 6, 6}, Color { 30, 39, 46, 245}, Color { 52, 64, 76, 245}
   );
+  state->negative_traits_selection_panel = state->positive_traits_selection_panel;
+  state->chosen_traits_selection_panel = state->positive_traits_selection_panel;
+  state->trait_details_panel = state->positive_traits_selection_panel;
+
   state->worldmap_selection_panel = state->default_panel;
   state->upgrade_list_panel = panel();
   state->upgrade_details_panel = panel();
@@ -654,7 +669,7 @@ void draw_trait_selection_panel(void) {
     trail_panel_width,
     (positive_traits_sel_pan_dest.height * 2.f) + panel_height_gap
   };
-  Rectangle chosen_traits_desc_pan_dest = Rectangle {
+  Rectangle trait_desc_pan_dest = Rectangle {
     chosen_traits_sel_pan_dest.x + chosen_traits_sel_pan_dest.width + panel_width_gap, 
     chosen_traits_sel_pan_dest.y,
     trail_panel_width,
@@ -669,33 +684,95 @@ void draw_trait_selection_panel(void) {
     bg_trait_sel_pan_dest.y + bg_trait_sel_pan_dest.height * .01f
   };
   Vector2 chosen_trait_desc_title_label_dest = Vector2 {
-    chosen_traits_desc_pan_dest.x + chosen_traits_desc_pan_dest.width * .5f,
+    trait_desc_pan_dest.x + trait_desc_pan_dest.width * .5f,
     bg_trait_sel_pan_dest.y + bg_trait_sel_pan_dest.height * .01f
   };
 
+  state->trait_selection_background_panel.dest = bg_trait_sel_pan_dest;
   gui_panel(state->trait_selection_background_panel, bg_trait_sel_pan_dest, false);
 
-  gui_panel(state->trait_selection_panel, positive_traits_sel_pan_dest, false);
-  gui_panel(state->trait_selection_panel, negative_traits_sel_pan_dest, false);
-  gui_panel(state->trait_selection_panel, chosen_traits_sel_pan_dest, false);
-  gui_panel(state->trait_selection_panel, chosen_traits_desc_pan_dest, false);
+  state->positive_traits_selection_panel.dest = positive_traits_sel_pan_dest;
+  gui_panel(state->positive_traits_selection_panel, positive_traits_sel_pan_dest, false);
+  state->negative_traits_selection_panel.dest = negative_traits_sel_pan_dest;
+  gui_panel(state->negative_traits_selection_panel, negative_traits_sel_pan_dest, false);
+  state->chosen_traits_selection_panel.dest = chosen_traits_sel_pan_dest;
+  gui_panel(state->chosen_traits_selection_panel, chosen_traits_sel_pan_dest, false);
+  state->trait_details_panel.dest = trait_desc_pan_dest;
+  gui_panel(state->trait_details_panel, trait_desc_pan_dest, false);
 
   gui_label(lc_txt(LOC_TEXT_MAINMENU_MAP_CHOICE_AVAILABLE_TRAITS_TITLE), FONT_TYPE_ABRACADABRA, 1, available_traits_title_label_dest, WHITE, true, false);
   gui_label(lc_txt(LOC_TEXT_MAINMENU_MAP_CHOICE_CHOSEN_TRAITS_TITLE),    FONT_TYPE_ABRACADABRA, 1, chosen_traits_title_label_dest, WHITE, true, false);
   gui_label(lc_txt(LOC_TEXT_MAINMENU_MAP_CHOICE_CHOSEN_TRAIT_DESC_TITLE),FONT_TYPE_ABRACADABRA, 1, chosen_trait_desc_title_label_dest, WHITE, true, false);
 
-  trait_selection_panel_list_traits(positive_traits_sel_pan_dest, state->positive_traits);
+  Rectangle positive_selection_panel_with_padding = Rectangle {
+    positive_traits_sel_pan_dest.x      + (positive_traits_sel_pan_dest.width  * .025f),
+    positive_traits_sel_pan_dest.y      + (positive_traits_sel_pan_dest.height * .025f),
+    positive_traits_sel_pan_dest.width  - (positive_traits_sel_pan_dest.width  * .05f),
+    positive_traits_sel_pan_dest.height - (positive_traits_sel_pan_dest.height * .05f)
+  };
+  trait_selection_panel_list_traits(__builtin_addressof(state->positive_traits_selection_panel), positive_selection_panel_with_padding, state->positive_traits);
 }
-void trait_selection_panel_list_traits(Rectangle rect, std::vector<character_trait> traits) {
-  f32 trait_list_height_buffer = rect.y;
-  for (size_t itr_000 = 0; itr_000 < traits.size(); ++itr_000) {
-    const character_trait * const _trait = __builtin_addressof(traits.at(itr_000));
-    local_button* _lc_btn = smm_get_local_button(_trait->general_buffer.i32[0]);
-    Vector2 text_measure = ui_measure_text(_trait->title.c_str(), FONT_TYPE_ABRACADABRA, 1);
+void trait_selection_panel_list_traits(panel* const pnl, const Rectangle rect, const std::vector<character_trait> traits) {
+  BeginScissorMode(rect.x, rect.y, rect.width, rect.height);
+  {
+    const f32 scroll_handle_texture_w_ratio = 16.f / 16.f;
+    const f32 scroll_handle_width = SMM_SCROLL_HANDLE_HEIGHT * scroll_handle_texture_w_ratio;
+    const f32 scroll_handle_background_h_ratio = 16.f / 16.f;
+    const f32 scroll_background_height = SMM_SCROLL_HANDLE_HEIGHT * scroll_handle_background_h_ratio;
+    const f32 scroll_background_texture_w_ratio = 16.f / 16.f;
+    const f32 scroll_background_width = scroll_background_height * scroll_background_texture_w_ratio;
 
-    gui_draw_local_button(_trait->title.c_str(), _lc_btn, FONT_TYPE_ABRACADABRA, 1, VECTOR2(rect.x, trait_list_height_buffer), TEXT_ALIGN_LEFT_CENTER, false);
-    trait_list_height_buffer += text_measure.y + (text_measure.y * .1f);
+    const f32 panel_scroll_bg_x = rect.x + rect.width - scroll_background_width;
+
+    const Rectangle panel_scroll_bg_head_src  = Rectangle { 0.f, 0.f, 16.f, 11.f };
+    const f32 panel_scroll_bg_head_src_scale = panel_scroll_bg_head_src.height / panel_scroll_bg_head_src.width;
+    const Rectangle panel_scroll_bg_head_dest = Rectangle { 
+      panel_scroll_bg_x, rect.y, 
+      scroll_background_width, scroll_background_width * panel_scroll_bg_head_src_scale
+    };
+
+    const Rectangle panel_scroll_bg_bottom_src  = Rectangle { 0.f, 36.f, 16.f, 11.f };
+    const f32 panel_scroll_bg_bottom_src_scale = panel_scroll_bg_bottom_src.height / panel_scroll_bg_bottom_src.width;
+    const Rectangle panel_scroll_bg_bottom_dest = Rectangle {
+      panel_scroll_bg_x, rect.y + rect.height - (scroll_background_width * panel_scroll_bg_bottom_src_scale), 
+      scroll_background_width, (scroll_background_width * panel_scroll_bg_bottom_src_scale)
+    };
+
+    const Rectangle panel_scroll_bg_body_src  = Rectangle { 0.f, 16.f, 16.f, 16.f };
+    const Rectangle panel_scroll_bg_body_dest = Rectangle {
+      panel_scroll_bg_x, panel_scroll_bg_head_dest.y + panel_scroll_bg_head_dest.height, 
+      scroll_background_width, panel_scroll_bg_bottom_dest.y - panel_scroll_bg_head_dest.y - panel_scroll_bg_head_dest.height
+    };
+
+    f32 trait_list_height_buffer = rect.y;
+    Vector2 text_measure = ZEROVEC2;
+    for (size_t itr_000 = 0; itr_000 < traits.size(); ++itr_000) {
+      const character_trait * const _trait = __builtin_addressof(traits.at(itr_000));
+      local_button* _lc_btn = smm_get_local_button(_trait->general_buffer.i32[0]);
+      text_measure = ui_measure_text(_trait->title.c_str(), FONT_TYPE_ABRACADABRA, 1);
+
+      gui_draw_local_button(_trait->title.c_str(), _lc_btn, FONT_TYPE_ABRACADABRA, 1, 
+        VECTOR2(rect.x, trait_list_height_buffer + (pnl->buffer.f32[0] * pnl->scroll)), 
+          TEXT_ALIGN_LEFT_CENTER, false
+      );
+      trait_list_height_buffer += text_measure.y + (text_measure.y * .1f);
+    }
+    pnl->buffer.f32[0] = trait_list_height_buffer - rect.y - rect.height - (text_measure.y * .2f);
+    pnl->scroll_handle.x = rect.x + rect.width - scroll_handle_width;
+    pnl->scroll_handle.width = scroll_handle_width;
+    pnl->scroll_handle.height = SMM_SCROLL_HANDLE_HEIGHT;
+    pnl->scroll_handle.y = FMAX(pnl->scroll_handle.y, rect.y + panel_scroll_bg_head_dest.height);
+    pnl->scroll_handle.y = FMIN(pnl->scroll_handle.y, rect.y + rect.height - panel_scroll_bg_bottom_dest.height - pnl->scroll_handle.height);
+    pnl->scroll = 
+      (pnl->scroll_handle.y - rect.y - panel_scroll_bg_head_dest.height) / 
+      (rect.height - pnl->scroll_handle.height - panel_scroll_bg_bottom_dest.height - panel_scroll_bg_head_dest.height) * -1;
+
+    gui_draw_atlas_texture_id_pro(ATLAS_TEX_ID_PANEL_SCROLL, panel_scroll_bg_head_src, panel_scroll_bg_head_dest, false);
+    gui_draw_atlas_texture_id_pro(ATLAS_TEX_ID_PANEL_SCROLL, panel_scroll_bg_body_src, panel_scroll_bg_body_dest, false, TEXTURE_WRAP_CLAMP);
+    gui_draw_atlas_texture_id_pro(ATLAS_TEX_ID_PANEL_SCROLL, panel_scroll_bg_bottom_src, panel_scroll_bg_bottom_dest, false);
+    gui_draw_atlas_texture_id_pro(ATLAS_TEX_ID_PANEL_SCROLL_HANDLE, Rectangle {0.f, 0.f, 16.f, 16.f}, pnl->scroll_handle, false);
   }
+  EndScissorMode();
 }
 
 void smm_update_mouse_bindings(void) { 
@@ -730,6 +807,31 @@ void smm_update_mouse_bindings(void) {
       break;
     }
     case MAIN_MENU_SCENE_TO_PLAY_TRAIT_CHOICE: {
+      if (CheckCollisionPointRec( (*state->mouse_pos_screen), state->positive_traits_selection_panel.dest)) {
+        panel* pnl = &state->positive_traits_selection_panel;
+        pnl->scroll_handle.y += GetMouseWheelMove() * -10.f;
+        
+        if (IsMouseButtonDown(MOUSE_LEFT_BUTTON) && !state->is_any_button_down && !state->is_dragging_scroll && CheckCollisionPointRec( (*state->mouse_pos_screen), pnl->scroll_handle)) {
+          pnl->is_dragging_scroll = true;
+          state->is_dragging_scroll = true;
+        }
+      }
+
+      if (IsMouseButtonDown(MOUSE_LEFT_BUTTON)) 
+      {
+        if (state->positive_traits_selection_panel.is_dragging_scroll) {
+          panel* pnl = __builtin_addressof(state->positive_traits_selection_panel);
+          i32 mouse_pos_y = state->mouse_pos_screen->y;
+          pnl->scroll_handle.y = mouse_pos_y - pnl->scroll_handle.height * .5f;
+        }
+      }
+      if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON)) 
+      {
+        if (state->positive_traits_selection_panel.is_dragging_scroll) {
+          state->positive_traits_selection_panel.is_dragging_scroll = false;
+          state->is_dragging_scroll = false;
+        }
+      }
       break;
     }
     case MAIN_MENU_SCENE_SETTINGS: {
@@ -759,9 +861,6 @@ void smm_update_keyboard_bindings(void) {
       break;
     }
     case MAIN_MENU_SCENE_TO_PLAY_TRAIT_CHOICE: {
-      if (IsKeyReleased(KEY_R)) {
-        state->trait_selection_panel.buffer.u16[0] = 0;
-      }
       break;
     }
     case MAIN_MENU_SCENE_SETTINGS: {

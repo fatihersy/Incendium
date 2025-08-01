@@ -1634,25 +1634,30 @@ void process_fade_effect(ui_fade_control_system* fade) {
 /**
  * @brief relative if you want to draw from another atlas.
  */
-void gui_draw_atlas_texture_id_pro(atlas_texture_id _id, Rectangle src, Rectangle dest, bool relative, bool should_center) {
+void gui_draw_atlas_texture_id_pro(atlas_texture_id _id, Rectangle src, Rectangle dest, bool should_center, i32 texture_wrap) {
   if (_id >= ATLAS_TEX_ID_MAX || _id <= ATLAS_TEX_ID_UNSPECIFIED) {
     TraceLog(LOG_WARNING, "user_interface::gui_draw_atlas_texture_id_pro()::ID was out of bound"); 
     return; 
   }
   const atlas_texture* tex = ss_get_atlas_texture_by_enum(_id);
+  Rectangle source = tex->source;
   if (!tex) { 
     TraceLog(LOG_WARNING, "user_interface::gui_draw_atlas_texture_id_pro()::Tex was null");
     return; 
   }
-  if (relative) {
-    src.x += tex->source.x;
-    src.y += tex->source.y;
-  }
+  source.x += src.x;
+  source.y += src.y;
+  source.width  = src.width;
+  source.height = src.height;
   if (should_center) {
     dest.x -= dest.width / 2.f;
     dest.y -= dest.height / 2.f;
   }
-  DrawTexturePro(*tex->atlas_handle, src, dest, ZEROVEC2, 0, WHITE);
+  SetTextureWrap(*tex->atlas_handle, texture_wrap);
+  DrawTexturePro(*tex->atlas_handle, source, dest, ZEROVEC2, 0, WHITE);
+  if (texture_wrap != TEXTURE_WRAP_REPEAT) {
+    SetTextureWrap(*tex->atlas_handle, TEXTURE_WRAP_REPEAT); // Repeat is default
+  }
 }
 void gui_draw_atlas_texture_id(atlas_texture_id _id, Rectangle dest, Vector2 origin, f32 rotation) {
   if (_id >= ATLAS_TEX_ID_MAX || _id <= ATLAS_TEX_ID_UNSPECIFIED) {
