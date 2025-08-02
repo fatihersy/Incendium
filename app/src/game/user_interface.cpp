@@ -1031,10 +1031,7 @@ void gui_draw_settings_screen(void) { // TODO: Return to settings later
     else if (window_mod == FLAG_FULLSCREEN_MODE && !IsWindowFullscreen()) {
       event_fire(EVENT_CODE_TOGGLE_FULLSCREEN, event_context());
     }
-    else if (window_mod == 0 && (IsWindowState(FLAG_BORDERLESS_WINDOWED_MODE) || IsWindowFullscreen())) {
-      event_fire(EVENT_CODE_TOGGLE_WINDOWED, event_context(static_cast<i32>(new_res.x), static_cast<i32>(new_res.y)));
-    }
-    else if (window_mod == 0 && (state->in_app_settings->window_width != new_res.x || state->in_app_settings->window_height != new_res.y)) {
+    else if (window_mod == 0) {
       event_fire(EVENT_CODE_TOGGLE_WINDOWED, event_context(static_cast<i32>(new_res.x), static_cast<i32>(new_res.y)));
     }
     
@@ -1143,7 +1140,7 @@ void gui_draw_pause_screen(bool in_game_play_state) {
   }
   if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_SETTINGS), BTN_ID_PAUSEMENU_BUTTON_SETTINGS, Vector2 {0.f, -5.f}, UI_BASE_RENDER_DIV2, true)) {}
   if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_PAUSE_BUTTON_TEXT_EXIT_TO_MAINMENU), BTN_ID_PAUSEMENU_BUTTON_EXIT_TO_MAIN_MENU, Vector2 { 0.f, 5.f}, UI_BASE_RENDER_DIV2, true)) {
-    event_fire(EVENT_CODE_SCENE_MAIN_MENU, event_context());
+    event_fire(EVENT_CODE_SCENE_MAIN_MENU, event_context(static_cast<i32>(false)));
   }
   if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_PAUSE_BUTTON_TEXT_EXIT_TO_DESKTOP), BTN_ID_PAUSEMENU_BUTTON_EXIT_TO_DESKTOP, Vector2 { 0.f, 15.f}, UI_BASE_RENDER_DIV2, true)) {
     event_fire(EVENT_CODE_APPLICATION_QUIT, event_context());

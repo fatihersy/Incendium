@@ -44,7 +44,7 @@ bool scene_manager_reinit(void) {
     return false;
   }
 
-  return event_fire(EVENT_CODE_SCENE_MAIN_MENU, event_context());
+  return event_fire(EVENT_CODE_SCENE_MAIN_MENU, event_context(static_cast<i32>(true)));
 }
 
 void update_scene_scene(void) {
@@ -53,7 +53,7 @@ void update_scene_scene(void) {
     case SCENE_TYPE_IN_GAME:   update_scene_in_game();       break;
     case SCENE_TYPE_EDITOR:    update_scene_editor();        break;
     default: {
-      event_fire(EVENT_CODE_SCENE_MAIN_MENU, event_context());
+      event_fire(EVENT_CODE_SCENE_MAIN_MENU, event_context(static_cast<i32>(true)));
       return;
     }
   }
@@ -64,7 +64,7 @@ void render_scene_world(void) {
     case SCENE_TYPE_IN_GAME:   render_scene_in_game();       break;
     case SCENE_TYPE_EDITOR:    render_scene_editor();        break;
     default: {
-      event_fire(EVENT_CODE_SCENE_MAIN_MENU, event_context());
+      event_fire(EVENT_CODE_SCENE_MAIN_MENU, event_context(static_cast<i32>(true)));
       return;
     }
   }
@@ -75,7 +75,7 @@ void render_scene_interface(void) {
     case SCENE_TYPE_MAIN_MENU: render_interface_main_menu(); break;
     case SCENE_TYPE_EDITOR:    render_interface_editor();    break;
     default: {
-      event_fire(EVENT_CODE_SCENE_MAIN_MENU, event_context());
+      event_fire(EVENT_CODE_SCENE_MAIN_MENU, event_context(static_cast<i32>(true)));
       return;
     }
   }
@@ -102,28 +102,35 @@ bool scene_manager_on_event(i32 code,[[maybe_unused]] event_context context) {
   case EVENT_CODE_SCENE_IN_GAME: {
     end_scene(state->scene_data);
     state->scene_data = SCENE_TYPE_IN_GAME;
-    if(!initialize_scene_in_game(state->in_app_settings)) {
-      TraceLog(LOG_ERROR, "scene_manager::EVENT_CODE_SCENE_IN_GAME::User interface failed to initialize!");
-      return false;
+    if(!initialize_scene_in_game(state->in_app_settings, context.data.i32[0])) {
+      if (!begin_scene_in_game(context.data.i32[0])) {
+        TraceLog(LOG_ERROR, "scene_manager::EVENT_CODE_SCENE_IN_GAME::User interface failed to initialize!");
+        return false;
+      }
     }
     return true;
-    break;
   }
   case EVENT_CODE_SCENE_EDITOR: {
     end_scene(state->scene_data);
     state->scene_data = SCENE_TYPE_EDITOR;
-    if(!initialize_scene_editor(state->in_app_settings)) {
-      TraceLog(LOG_ERROR, "scene_manager::EVENT_CODE_SCENE_EDITOR::User interface failed to initialize!");
-      return false;
+    if(!initialize_scene_editor(state->in_app_settings, context.data.i32[0])) {
+      if (!begin_scene_editor(context.data.i32[0])) {
+        TraceLog(LOG_ERROR, "scene_manager::EVENT_CODE_SCENE_IN_GAME::User interface failed to initialize!");
+        return false;
+      }
     }
     return true;
-    break;
   }
   case EVENT_CODE_SCENE_MAIN_MENU: {
     end_scene(state->scene_data);
     state->scene_data = SCENE_TYPE_MAIN_MENU;
-
-    return initialize_scene_main_menu(state->in_app_settings);
+    if (!initialize_scene_main_menu(state->in_app_settings, context.data.i32[0])) {
+      if (!begin_scene_main_menu(context.data.i32[0])) {
+        TraceLog(LOG_ERROR, "scene_manager::EVENT_CODE_SCENE_IN_GAME::User interface failed to initialize!");
+        return false;
+      }
+    }
+    return true;
   }
   default:
     break;

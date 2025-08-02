@@ -111,7 +111,6 @@ static main_menu_scene_state * state = nullptr;
 #define SMM_MAP_PIN_SOURCE_LOCATION_HOVER (Rectangle{1632, 928, 32, 32})
 #define SMM_SCROLL_HANDLE_HEIGHT state->in_app_settings->render_height * .05f
 
-bool begin_scene_main_menu(void);
 void draw_main_menu_upgrade_panel(void);
 void draw_main_menu_upgrade_list_panel(void);
 void draw_main_menu_upgrade_details_panel(void);
@@ -128,9 +127,9 @@ local_button* smm_get_local_button(i32 _id);
 void fade_on_complete_change_main_menu_type(data64 data);
 void fade_on_complete_change_scene(data64 data);
 
-[[__nodiscard__]] bool initialize_scene_main_menu(const app_settings * _in_app_settings) {
+[[__nodiscard__]] bool initialize_scene_main_menu(const app_settings * _in_app_settings, bool fade_in) {
   if (state) {
-    return begin_scene_main_menu();
+    return begin_scene_main_menu(fade_in);
   }
   state = (main_menu_scene_state *)allocate_memory_linear(sizeof(main_menu_scene_state), true);
   if (state == nullptr) {
@@ -162,14 +161,13 @@ void fade_on_complete_change_scene(data64 data);
     return false;
   }
 
-  return begin_scene_main_menu();
+  return begin_scene_main_menu(fade_in);
 }
-[[__nodiscard__]] bool begin_scene_main_menu(void) {
+[[__nodiscard__]] bool begin_scene_main_menu(bool fade_in) {
   if (!user_interface_system_initialize()) {
     TraceLog(LOG_ERROR, "scene_main_menu::begin_scene_main_menu()::User interface failed to initialize!");
     return false;
   }
-
   if (!game_manager_initialize( state->in_camera_metrics, state->in_app_settings, get_active_map_ptr())) { // Inits player & spawns
     TraceLog(LOG_ERROR, "scene_in_game::begin_scene_main_menu()::game_manager_initialize() failed");
     return false;
@@ -216,6 +214,10 @@ void fade_on_complete_change_scene(data64 data);
   };
 
   gm_save_game();
+
+  if (fade_in) {
+    smm_begin_fadein(data64(), nullptr);
+  }
   //event_fire(EVENT_CODE_PLAY_MAIN_MENU_THEME, event_context{}); TODO: Uncomment later
   return true;
 }
@@ -232,14 +234,8 @@ void update_scene_main_menu(void) {
   if(state->smm_fade.fade_animation_playing){
     process_fade_effect(__builtin_addressof(state->smm_fade));
   }
-  else if (state->smm_fade.is_fade_animation_played) {
-    if (state->smm_fade.fade_type == FADE_TYPE_FADEOUT) {
-      state->smm_fade.on_change_complete(state->smm_fade.data);
-      smm_begin_fadein(data64(), nullptr);
-    }
-    else if(state->smm_fade.fade_type == FADE_TYPE_FADEIN) {
-      state->smm_fade = ui_fade_control_system();
-    }
+  else if (state->smm_fade.is_fade_animation_played && state->smm_fade.on_change_complete != nullptr) {
+    state->smm_fade.on_change_complete(state->smm_fade.data);
   }
   
   switch (state->mainmenu_state) {
@@ -908,6 +904,11 @@ void smm_update_local_buttons(void) {
 }
 
 void smm_begin_fadeout(data64 data, void(*on_change_complete)(data64)) {
+  if (!state || state == nullptr ) {
+    TraceLog(LOG_ERROR, "scene_main_menu::smm_begin_fadeout()::State is not valid");
+    return;
+  }
+
   state->smm_fade.fade_animation_duration = MAIN_MENU_FADE_DURATION;
   state->smm_fade.fade_type = FADE_TYPE_FADEOUT;
   state->smm_fade.fade_animation_timer = 0.f;
@@ -968,8 +969,8 @@ void fade_on_complete_change_main_menu_type(data64 data) {
     TraceLog(LOG_INFO, "scene_main_menu::fade_on_complete_change_main_menu_type()::State is not valid");
     return;
   }
-
   state->mainmenu_state = static_cast<main_menu_scene_type>(data.i32[0]);
+  smm_begin_fadein(data64(), nullptr);
 }
 void fade_on_complete_change_scene(data64 data) {
   if (!state || state == nullptr ) {
@@ -980,15 +981,18 @@ void fade_on_complete_change_scene(data64 data) {
   scene_id scene = static_cast<scene_id>(data.i32[0]);
   switch (scene) {
     case SCENE_TYPE_MAIN_MENU: {
-      event_fire(EVENT_CODE_SCENE_MAIN_MENU, event_context());
+      state->smm_fade = ui_fade_control_system();
+      event_fire(EVENT_CODE_SCENE_MAIN_MENU, event_context(static_cast<i32>(true)));
       return;
     }
     case SCENE_TYPE_IN_GAME: {
-      event_fire(EVENT_CODE_SCENE_IN_GAME, event_context());
+      state->smm_fade = ui_fade_control_system();
+      event_fire(EVENT_CODE_SCENE_IN_GAME, event_context(static_cast<i32>(true)));
       return;
     }
     case SCENE_TYPE_EDITOR: {
-      event_fire(EVENT_CODE_SCENE_EDITOR, event_context());
+      state->smm_fade = ui_fade_control_system();
+      event_fire(EVENT_CODE_SCENE_EDITOR, event_context(static_cast<i32>(true)));
       return;
     }
     default: {

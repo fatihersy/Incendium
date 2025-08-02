@@ -71,6 +71,7 @@ typedef struct scene_editor_state {
   u16 edit_layer;
   u16 selected_stage;
   editor_state_selection_type selection_type;
+  ui_fade_control_system se_fade;
   // WARN: RESET EVERYTHING IN THERE WHEN CLOSING EDITOR
 
   // WARN: Those variables will be initialized one time in the initialize function
@@ -100,7 +101,6 @@ typedef struct scene_editor_state {
 
 static scene_editor_state * state;
 
-constexpr void begin_scene_editor(void);
 constexpr void editor_update_bindings(void);
 constexpr void editor_update_movement(void);
 constexpr void editor_update_mouse_bindings(void);
@@ -123,15 +123,16 @@ constexpr bool scene_editor_map_prop_type_slc_slider_on_left_button_trigger(void
 constexpr bool scene_editor_map_prop_type_slc_slider_on_right_button_trigger(void);
 
 constexpr bool scene_editor_is_map_prop_y_based_checkbox_on_change_trigger(void);
+void se_begin_fadeout(data64 data, void(*on_change_complete)(data64));
+void se_begin_fadein(data64 data, void(*on_change_complete)(data64));
 
 #define SE_BASE_RENDER_WIDTH state->in_app_settings->render_width
 #define SE_BASE_RENDER_HEIGHT state->in_app_settings->render_height
+#define EDITOR_FADE_DURATION 1 * TARGET_FPS
 
-bool initialize_scene_editor(const app_settings * _in_app_settings) {
+[[__nodiscard__]] bool initialize_scene_editor(const app_settings * _in_app_settings, bool fade_in) {
   if (state) {
-    begin_scene_editor();
-    update_tilemap_prop_type();
-    return true;
+    return begin_scene_editor(fade_in);
   }
   state = (scene_editor_state*)allocate_memory_linear(sizeof(scene_editor_state), true);
   if (!state) {
@@ -321,11 +322,14 @@ bool initialize_scene_editor(const app_settings * _in_app_settings) {
     is_prop_y_based_checkbox->pfn_on_change = scene_editor_is_map_prop_y_based_checkbox_on_change_trigger;
   }
 
-  begin_scene_editor();
-  update_tilemap_prop_type();
-  return true;
+  return begin_scene_editor(fade_in);
 }
-constexpr void begin_scene_editor(void) {
+[[__nodiscard__]] bool begin_scene_editor(bool fade_in) {
+  if (!state || state == nullptr) {
+    TraceLog(LOG_ERROR, "scene_editor::begin_scene_editor()::State is not valid");
+    return false;
+  }
+
   state->b_show_tilesheet_tile_selection_screen = false;
   state->b_show_prop_selection_screen = false;
   state->b_show_prop_edit_screen = false;
@@ -352,6 +356,12 @@ constexpr void begin_scene_editor(void) {
   sdr_layer->options.at(0).no_localized_text = TextFormat("%d", state->edit_layer);
 
   event_fire(EVENT_CODE_CAMERA_SET_CAMERA_POSITION, event_context(data128(state->target.x, state->target.y)));
+
+  if (fade_in) {
+    se_begin_fadein(data64(), nullptr);
+  }
+  update_tilemap_prop_type();
+  return true;
 }
 void end_scene_editor(void) {
   if (!state) {
@@ -379,6 +389,21 @@ void update_scene_editor(void) {
 
   update_map();
   update_camera();
+  
+  if(state->se_fade.fade_animation_playing){
+    process_fade_effect(__builtin_addressof(state->se_fade));
+  }
+  else if (state->se_fade.is_fade_animation_played) {
+    if (state->se_fade.fade_type == FADE_TYPE_FADEOUT) {
+      if (state->se_fade.on_change_complete != nullptr) {
+        state->se_fade.on_change_complete(state->se_fade.data);
+      }
+      se_begin_fadein(data64(), nullptr);
+    }
+    else if(state->se_fade.fade_type == FADE_TYPE_FADEIN) {
+      state->se_fade = ui_fade_control_system();
+    }
+  }
 
   state->mouse_pos_screen.x = GetMousePosition().x * get_app_settings()->scale_ratio.at(0);
   state->mouse_pos_screen.y = GetMousePosition().y * get_app_settings()->scale_ratio.at(1);
@@ -1381,6 +1406,34 @@ constexpr void scene_editor_selection_cleanup(void) {
   state->sel_map_coll_addr_from_map = nullptr;
   state->b_dragging_map_element = false;
 }
+void se_begin_fadeout(data64 data, void(*on_change_complete)(data64)) {
+  if (!state || state == nullptr ) {
+    TraceLog(LOG_ERROR, "scene_editor::se_begin_fadeout()::State is not valid");
+    return;
+  }
+
+  state->se_fade.fade_animation_duration = EDITOR_FADE_DURATION;
+  state->se_fade.fade_type = FADE_TYPE_FADEOUT;
+  state->se_fade.fade_animation_timer = 0.f;
+  state->se_fade.fade_animation_playing = true;
+  state->se_fade.is_fade_animation_played = false;
+  state->se_fade.data = data;
+  state->se_fade.on_change_complete = on_change_complete;
+}
+void se_begin_fadein(data64 data, void(*on_change_complete)(data64)) {
+  if (!state || state == nullptr ) {
+    TraceLog(LOG_ERROR, "scene_editor::se_begin_fadein()::State is not valid");
+    return;
+  }
+
+  state->se_fade.fade_animation_duration = EDITOR_FADE_DURATION;
+  state->se_fade.fade_type = FADE_TYPE_FADEIN;
+  state->se_fade.fade_animation_timer = 0.f;
+  state->se_fade.fade_animation_playing = true;
+  state->se_fade.is_fade_animation_played = false;
+  state->se_fade.data = data;
+  state->se_fade.on_change_complete = on_change_complete;
+}
 
 #undef add_prop_tree
 #undef add_prop_tombstone
@@ -1402,4 +1455,4 @@ constexpr void scene_editor_selection_cleanup(void) {
 #undef MAP_COLLISION_DRAG_HANDLE_DIM
 #undef MAP_COLLISION_DRAG_HANDLE_DIM_DIV2
 #undef MAP_COLLISION_PANEL_COLLISION_DRAW_STARTING_HEIGHT
-
+#undef EDITOR_FADE_DURATION

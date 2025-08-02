@@ -45,7 +45,6 @@ static scene_in_game_state * state;
 
 #define STATE_ASSERT(FUNCTION) if (!state) {                                              \
   TraceLog(LOG_ERROR, "scene_in_game::" FUNCTION "::In game state was not initialized");  \
-  event_fire(EVENT_CODE_SCENE_MAIN_MENU, event_context());                                \
   return;                                                                                 \
 }
 
@@ -68,7 +67,6 @@ static scene_in_game_state * state;
 #define INGAME_FADE_DURATION 1 * TARGET_FPS
 
 bool scene_in_game_on_event(i32 code, event_context context);
-void begin_scene_in_game(void);
 void in_game_update_bindings(void);
 void in_game_update_mouse_bindings(void);
 void in_game_update_keyboard_bindings(void);
@@ -86,10 +84,9 @@ void reset_game();
 /**
  * @brief Requires world system, world init moved to app, as well as its loading time
  */
-bool initialize_scene_in_game(const app_settings * _in_app_settings) {
+[[__nodiscard__]] bool initialize_scene_in_game(const app_settings * _in_app_settings, bool fade_in) {
   if (state) {
-    begin_scene_in_game();
-    return false;
+    return begin_scene_in_game(fade_in);
   }
   state = (scene_in_game_state *)allocate_memory_linear(sizeof(scene_in_game_state), true);
   if (state == nullptr) {
@@ -125,12 +122,14 @@ bool initialize_scene_in_game(const app_settings * _in_app_settings) {
     return false;
   }
 
-  begin_scene_in_game();
-  return true;
+  return begin_scene_in_game(fade_in);
 }
 
-void begin_scene_in_game(void) {
-  
+[[__nodiscard__]] bool begin_scene_in_game(bool fade_in) {
+  if (!state || state == nullptr) {
+    TraceLog(LOG_ERROR, "scene_in_game::begin_scene_in_game()::State is not valid");
+    return false;
+  }
   state->default_panel = panel( BTN_STATE_RELEASED, ATLAS_TEX_ID_CRIMSON_FANTASY_PANEL_BG, ATLAS_TEX_ID_CRIMSON_FANTASY_PANEL, 
     Vector4 {6, 6, 6, 6}, Color { 30, 39, 46, 245}, Color { 52, 64, 76, 245}
   );
@@ -147,8 +146,10 @@ void begin_scene_in_game(void) {
   state->hovered_ability = ABILITY_TYPE_MAX;
   state->hovered_projectile = U16_MAX;
 
-
-  sig_begin_fade();
+  if (fade_in) {
+    sig_begin_fade();
+  }
+  return true;
 }
 bool start_game(character_stats stat) {
   if (!state) {
@@ -412,7 +413,7 @@ void render_interface_in_game(void) {
       if(gui_menu_button("Accept", BTN_ID_IN_GAME_BUTTON_RETURN_MENU, Vector2 {0, 5}, SIG_BASE_RENDER_DIV2, true)) {
         gm_save_game();
         end_scene_in_game();
-        event_fire(EVENT_CODE_SCENE_MAIN_MENU, event_context());
+        event_fire(EVENT_CODE_SCENE_MAIN_MENU, event_context(static_cast<i32>(false)));
       }
       break; 
     }
