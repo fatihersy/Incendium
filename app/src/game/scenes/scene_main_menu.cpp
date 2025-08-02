@@ -115,7 +115,7 @@ void draw_main_menu_upgrade_panel(void);
 void draw_main_menu_upgrade_list_panel(void);
 void draw_main_menu_upgrade_details_panel(void);
 void draw_trait_selection_panel(void);
-void trait_selection_panel_list_traits(panel* const pnl, const Rectangle rect, const std::vector<character_trait> traits);
+void trait_selection_panel_list_traits(panel* const pnl, const Rectangle rect, std::vector<character_trait> * const traits);
 void smm_update_mouse_bindings(void);
 void smm_update_keyboard_bindings(void);
 void smm_update_bindings(void);
@@ -144,10 +144,7 @@ void fade_on_complete_change_scene(data64 data);
   }
   state->in_app_settings = _in_app_settings;
 
-  if(!create_camera(
-    state->in_app_settings->render_width_div2, state->in_app_settings->render_height_div2,
-    state->in_app_settings->render_width, state->in_app_settings->render_height
-  )) {
+  if(!create_camera(state->in_app_settings->render_width_div2, state->in_app_settings->render_height_div2,state->in_app_settings->render_width, state->in_app_settings->render_height)) {
     TraceLog(LOG_ERROR, "scene_main_menu::initialize_scene_main_menu()::Creating camera failed");
     return false;
   }
@@ -706,9 +703,25 @@ void draw_trait_selection_panel(void) {
     positive_traits_sel_pan_dest.width  - (positive_traits_sel_pan_dest.width  * .05f),
     positive_traits_sel_pan_dest.height - (positive_traits_sel_pan_dest.height * .05f)
   };
-  trait_selection_panel_list_traits(__builtin_addressof(state->positive_traits_selection_panel), positive_selection_panel_with_padding, state->positive_traits);
+  trait_selection_panel_list_traits(__builtin_addressof(state->positive_traits_selection_panel), positive_selection_panel_with_padding, __builtin_addressof(state->positive_traits));
+
+  Rectangle negative_selection_panel_with_padding = Rectangle {
+    negative_traits_sel_pan_dest.x      + (negative_traits_sel_pan_dest.width  * .025f),
+    negative_traits_sel_pan_dest.y      + (negative_traits_sel_pan_dest.height * .025f),
+    negative_traits_sel_pan_dest.width  - (negative_traits_sel_pan_dest.width  * .05f),
+    negative_traits_sel_pan_dest.height - (negative_traits_sel_pan_dest.height * .05f)
+  };
+  trait_selection_panel_list_traits(__builtin_addressof(state->negative_traits_selection_panel), negative_selection_panel_with_padding, __builtin_addressof(state->negative_traits));
+
+  Rectangle chosen_panel_with_padding = Rectangle {
+    chosen_traits_sel_pan_dest.x      + (chosen_traits_sel_pan_dest.width  * .025f),
+    chosen_traits_sel_pan_dest.y      + (chosen_traits_sel_pan_dest.height * .025f),
+    chosen_traits_sel_pan_dest.width  - (chosen_traits_sel_pan_dest.width  * .05f),
+    chosen_traits_sel_pan_dest.height - (chosen_traits_sel_pan_dest.height * .05f)
+  };
+  trait_selection_panel_list_traits(__builtin_addressof(state->chosen_traits_selection_panel), chosen_panel_with_padding, __builtin_addressof(state->chosen_traits));
 }
-void trait_selection_panel_list_traits(panel* const pnl, const Rectangle rect, const std::vector<character_trait> traits) {
+void trait_selection_panel_list_traits(panel* const pnl, const Rectangle rect, std::vector<character_trait> * const traits) {
   BeginScissorMode(rect.x, rect.y, rect.width, rect.height);
   {
     const f32 scroll_handle_texture_w_ratio = 16.f / 16.f;
@@ -740,20 +753,26 @@ void trait_selection_panel_list_traits(panel* const pnl, const Rectangle rect, c
       scroll_background_width, panel_scroll_bg_bottom_dest.y - panel_scroll_bg_head_dest.y - panel_scroll_bg_head_dest.height
     };
 
-    f32 trait_list_height_buffer = rect.y;
+    f32 trait_list_height_buffer = 0.f;
     Vector2 text_measure = ZEROVEC2;
-    for (size_t itr_000 = 0; itr_000 < traits.size(); ++itr_000) {
-      const character_trait * const _trait = __builtin_addressof(traits.at(itr_000));
+    for (size_t itr_000 = 0; itr_000 < traits->size(); ++itr_000) {
+      const character_trait * const _trait = __builtin_addressof(traits->at(itr_000));
       local_button* _lc_btn = smm_get_local_button(_trait->general_buffer.i32[0]);
       text_measure = ui_measure_text(_trait->title.c_str(), FONT_TYPE_ABRACADABRA, 1);
 
-      gui_draw_local_button(_trait->title.c_str(), _lc_btn, FONT_TYPE_ABRACADABRA, 1, 
-        VECTOR2(rect.x, trait_list_height_buffer + (pnl->buffer.f32[0] * pnl->scroll)), 
-          TEXT_ALIGN_LEFT_CENTER, false
-      );
+      if (gui_draw_local_button(
+        _trait->title.c_str(), _lc_btn, FONT_TYPE_ABRACADABRA, 1, 
+        VECTOR2(rect.x, rect.y + trait_list_height_buffer + (pnl->buffer.f32[0] * pnl->scroll)), TEXT_ALIGN_LEFT_CENTER, false)
+      ) {
+        if (trait_list_height_buffer + (pnl->buffer.f32[0] * pnl->scroll) < rect.height) {
+          state->chosen_traits.push_back(*_trait);
+          traits->erase(traits->begin() + itr_000);
+        }
+      }
+      
       trait_list_height_buffer += text_measure.y + (text_measure.y * .1f);
     }
-    pnl->buffer.f32[0] = trait_list_height_buffer - rect.y - rect.height - (text_measure.y * .2f);
+    pnl->buffer.f32[0] = trait_list_height_buffer - rect.height - (text_measure.y * .2f);
     pnl->scroll_handle.x = rect.x + rect.width - scroll_handle_width;
     pnl->scroll_handle.width = scroll_handle_width;
     pnl->scroll_handle.height = SMM_SCROLL_HANDLE_HEIGHT;
@@ -763,10 +782,16 @@ void trait_selection_panel_list_traits(panel* const pnl, const Rectangle rect, c
       (pnl->scroll_handle.y - rect.y - panel_scroll_bg_head_dest.height) / 
       (rect.height - pnl->scroll_handle.height - panel_scroll_bg_bottom_dest.height - panel_scroll_bg_head_dest.height) * -1;
 
-    gui_draw_atlas_texture_id_pro(ATLAS_TEX_ID_PANEL_SCROLL, panel_scroll_bg_head_src, panel_scroll_bg_head_dest, false);
-    gui_draw_atlas_texture_id_pro(ATLAS_TEX_ID_PANEL_SCROLL, panel_scroll_bg_body_src, panel_scroll_bg_body_dest, false, TEXTURE_WRAP_CLAMP);
-    gui_draw_atlas_texture_id_pro(ATLAS_TEX_ID_PANEL_SCROLL, panel_scroll_bg_bottom_src, panel_scroll_bg_bottom_dest, false);
-    gui_draw_atlas_texture_id_pro(ATLAS_TEX_ID_PANEL_SCROLL_HANDLE, Rectangle {0.f, 0.f, 16.f, 16.f}, pnl->scroll_handle, false);
+    if (trait_list_height_buffer > rect.height) {
+      gui_draw_atlas_texture_id_pro(ATLAS_TEX_ID_PANEL_SCROLL, panel_scroll_bg_head_src, panel_scroll_bg_head_dest, false);
+      gui_draw_atlas_texture_id_pro(ATLAS_TEX_ID_PANEL_SCROLL, panel_scroll_bg_body_src, panel_scroll_bg_body_dest, false, TEXTURE_WRAP_CLAMP);
+      gui_draw_atlas_texture_id_pro(ATLAS_TEX_ID_PANEL_SCROLL, panel_scroll_bg_bottom_src, panel_scroll_bg_bottom_dest, false);
+      gui_draw_atlas_texture_id_pro(ATLAS_TEX_ID_PANEL_SCROLL_HANDLE, Rectangle {0.f, 0.f, 16.f, 16.f}, pnl->scroll_handle, false);
+      pnl->is_scrolling_active = true;
+    }
+    else {
+      pnl->is_scrolling_active = false;
+    }
   }
   EndScissorMode();
 }
@@ -805,11 +830,41 @@ void smm_update_mouse_bindings(void) {
     case MAIN_MENU_SCENE_TO_PLAY_TRAIT_CHOICE: {
       if (CheckCollisionPointRec( (*state->mouse_pos_screen), state->positive_traits_selection_panel.dest)) {
         panel* pnl = &state->positive_traits_selection_panel;
-        pnl->scroll_handle.y += GetMouseWheelMove() * -10.f;
-        
-        if (IsMouseButtonDown(MOUSE_LEFT_BUTTON) && !state->is_any_button_down && !state->is_dragging_scroll && CheckCollisionPointRec( (*state->mouse_pos_screen), pnl->scroll_handle)) {
-          pnl->is_dragging_scroll = true;
-          state->is_dragging_scroll = true;
+
+        if (pnl->is_scrolling_active) {
+          pnl->scroll_handle.y += GetMouseWheelMove() * -10.f;
+        }
+        if (pnl->is_scrolling_active && IsMouseButtonDown(MOUSE_LEFT_BUTTON)) {
+          if (!state->is_any_button_down && !state->is_dragging_scroll && CheckCollisionPointRec( (*state->mouse_pos_screen), pnl->scroll_handle)) {
+            pnl->is_dragging_scroll = true;
+            state->is_dragging_scroll = true;
+          }
+        }
+      }
+      if (CheckCollisionPointRec( (*state->mouse_pos_screen), state->negative_traits_selection_panel.dest)) {
+        panel* pnl = &state->negative_traits_selection_panel;
+
+        if (pnl->is_scrolling_active) {
+          pnl->scroll_handle.y += GetMouseWheelMove() * -10.f;
+        }
+        if (pnl->is_scrolling_active && IsMouseButtonDown(MOUSE_LEFT_BUTTON)) {
+          if (!state->is_any_button_down && !state->is_dragging_scroll && CheckCollisionPointRec( (*state->mouse_pos_screen), pnl->scroll_handle)) {
+            pnl->is_dragging_scroll = true;
+            state->is_dragging_scroll = true;
+          }
+        }
+      }
+      if (CheckCollisionPointRec( (*state->mouse_pos_screen), state->chosen_traits_selection_panel.dest)) {
+        panel* pnl = &state->chosen_traits_selection_panel;
+
+        if (pnl->is_scrolling_active) {
+          pnl->scroll_handle.y += GetMouseWheelMove() * -10.f;
+        }
+        if (pnl->is_scrolling_active && IsMouseButtonDown(MOUSE_LEFT_BUTTON)) {
+          if (!state->is_any_button_down && !state->is_dragging_scroll && CheckCollisionPointRec( (*state->mouse_pos_screen), pnl->scroll_handle)) {
+            pnl->is_dragging_scroll = true;
+            state->is_dragging_scroll = true;
+          }
         }
       }
 
@@ -817,14 +872,29 @@ void smm_update_mouse_bindings(void) {
       {
         if (state->positive_traits_selection_panel.is_dragging_scroll) {
           panel* pnl = __builtin_addressof(state->positive_traits_selection_panel);
-          i32 mouse_pos_y = state->mouse_pos_screen->y;
-          pnl->scroll_handle.y = mouse_pos_y - pnl->scroll_handle.height * .5f;
+          pnl->scroll_handle.y = state->mouse_pos_screen->y - pnl->scroll_handle.height * .5f;
+        }
+        if (state->negative_traits_selection_panel.is_dragging_scroll) {
+          panel* pnl = __builtin_addressof(state->negative_traits_selection_panel);
+          pnl->scroll_handle.y = state->mouse_pos_screen->y - pnl->scroll_handle.height * .5f;
+        }
+        if (state->chosen_traits_selection_panel.is_dragging_scroll) {
+          panel* pnl = __builtin_addressof(state->chosen_traits_selection_panel);
+          pnl->scroll_handle.y = state->mouse_pos_screen->y - pnl->scroll_handle.height * .5f;
         }
       }
       if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON)) 
       {
         if (state->positive_traits_selection_panel.is_dragging_scroll) {
           state->positive_traits_selection_panel.is_dragging_scroll = false;
+          state->is_dragging_scroll = false;
+        }
+        if (state->negative_traits_selection_panel.is_dragging_scroll) {
+          state->negative_traits_selection_panel.is_dragging_scroll = false;
+          state->is_dragging_scroll = false;
+        }
+        if (state->chosen_traits_selection_panel.is_dragging_scroll) {
+          state->chosen_traits_selection_panel.is_dragging_scroll = false;
           state->is_dragging_scroll = false;
         }
       }
@@ -885,19 +955,17 @@ void smm_update_local_buttons(void) {
 
     if (CheckCollisionPointRec(*state->mouse_pos_screen, _btn->dest)) {
       if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
-        _btn->state = BTN_STATE_PRESSED;
+        _btn->current_state = BTN_STATE_PRESSED;
       } else {
-        if (_btn->state == BTN_STATE_PRESSED) { 
-          _btn->state = BTN_STATE_RELEASED;
+        if (_btn->current_state == BTN_STATE_PRESSED) { 
+          _btn->current_state = BTN_STATE_RELEASED;
         }
-        else if (_btn->state != BTN_STATE_HOVER) {
-          _btn->state = BTN_STATE_HOVER;
+        else if (_btn->current_state != BTN_STATE_HOVER) {
+          _btn->current_state = BTN_STATE_HOVER;
         }
       }
     } else {
-      if (_btn->state != BTN_STATE_UP) { 
-        _btn->state = BTN_STATE_UP;
-      }
+      _btn->current_state = BTN_STATE_UP;
     }
     _btn->on_screen = false;
   }
@@ -946,8 +1014,8 @@ void smm_add_local_button(i32 _id, button_type_id _btn_type_id, button_state sig
   button_type trait_on_click_button_type = get_button_types()->at(_btn_type_id);
 
   state->general_purpose_buttons.push_back(local_button(_id, trait_on_click_button_type, signal_state, 
-    Rectangle {
-      0, 0, trait_on_click_button_type.dest_frame_dim.x, trait_on_click_button_type.dest_frame_dim.y
+    Rectangle {0, 0, 
+      trait_on_click_button_type.dest_frame_dim.x, trait_on_click_button_type.dest_frame_dim.y
     }
   ));
 }
@@ -969,7 +1037,54 @@ void fade_on_complete_change_main_menu_type(data64 data) {
     TraceLog(LOG_INFO, "scene_main_menu::fade_on_complete_change_main_menu_type()::State is not valid");
     return;
   }
-  state->mainmenu_state = static_cast<main_menu_scene_type>(data.i32[0]);
+  switch (static_cast<main_menu_scene_type>(data.i32[0])) {
+    case MAIN_MENU_SCENE_DEFAULT: {
+      state->mainmenu_state = MAIN_MENU_SCENE_DEFAULT;
+      break;
+    }
+    case MAIN_MENU_SCENE_SETTINGS: {
+      state->mainmenu_state = MAIN_MENU_SCENE_SETTINGS;
+      break;
+    }
+    case MAIN_MENU_SCENE_UPGRADE: {
+      state->mainmenu_state = MAIN_MENU_SCENE_UPGRADE;
+      break;
+    }
+    case MAIN_MENU_SCENE_EXTRAS: {
+      state->mainmenu_state = MAIN_MENU_SCENE_EXTRAS;
+      break;
+    }
+    case MAIN_MENU_SCENE_TO_PLAY_MAP_CHOICE: {
+      state->mainmenu_state = MAIN_MENU_SCENE_TO_PLAY_MAP_CHOICE;
+      break;
+    }
+    case MAIN_MENU_SCENE_TO_PLAY_TRAIT_CHOICE: {
+      state->positive_traits.clear();
+      state->negative_traits.clear();
+      state->chosen_traits.clear();
+      state->general_purpose_buttons.clear();
+
+      const std::vector<character_trait> * const gm_traits = gm_get_character_traits();
+      for (size_t itr_000 = 0; itr_000 < gm_traits->size(); ++itr_000) {
+        character_trait _trait = gm_traits->at(itr_000);
+      
+        _trait.general_buffer.i32[0] = state->next_local_button_id;
+        smm_add_local_button(state->next_local_button_id++, BTN_TYPE_FLAT_BUTTON, BTN_STATE_RELEASED);
+      
+        if (_trait.point > 0) state->positive_traits.push_back(_trait);
+        else state->negative_traits.push_back(_trait);
+      }
+      state->mainmenu_state = MAIN_MENU_SCENE_TO_PLAY_TRAIT_CHOICE;
+      break;
+    }
+    default: {
+      TraceLog(LOG_WARNING, "scene_main_menu::fade_on_complete_change_main_menu_type()::Unsupported main menu scene type");
+      state->mainmenu_state = MAIN_MENU_SCENE_DEFAULT;
+      break;
+    }
+  }
+
+  
   smm_begin_fadein(data64(), nullptr);
 }
 void fade_on_complete_change_scene(data64 data) {

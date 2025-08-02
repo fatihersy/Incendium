@@ -381,19 +381,17 @@ void update_user_interface(void) {
     button* btn = __builtin_addressof(state->buttons.at(itr_000));
     if (CheckCollisionPointRec(state->mouse_pos_screen, btn->dest)) {
       if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
-        btn->state = BTN_STATE_PRESSED;
+        btn->current_state = BTN_STATE_PRESSED;
       } else {
-        if (btn->state == BTN_STATE_PRESSED) { 
-          btn->state = BTN_STATE_RELEASED;
+        if (btn->current_state == BTN_STATE_PRESSED) { 
+          btn->current_state = BTN_STATE_RELEASED;
         }
-        else if (btn->state != BTN_STATE_HOVER) {
-          btn->state = BTN_STATE_HOVER;
+        else if (btn->current_state != BTN_STATE_HOVER) {
+          btn->current_state = BTN_STATE_HOVER;
         }
       }
     } else {
-      if (btn->state != BTN_STATE_UP) { 
-        btn->state = BTN_STATE_UP;
-      }
+      btn->current_state = BTN_STATE_UP;
     }
     btn->on_screen = false;
   }
@@ -529,14 +527,14 @@ bool gui_button(const char* text, button_id _id, Font font, i32 font_size_scale,
 
   Vector2 draw_sprite_scale = Vector2 {_btn->btn_type.scale,_btn->btn_type.scale};
 
-  if (_btn->state == BTN_STATE_PRESSED) {
+  if (_btn->current_state == BTN_STATE_PRESSED) {
     draw_sprite_on_site_by_id(_btn->btn_type.ss_type, WHITE, VECTOR2(_btn->dest.x,_btn->dest.y), draw_sprite_scale, 0);
     if (!TextIsEqual(text, "")) {
       draw_text_ex(text, text_pos, font, font_size_scale, BUTTON_TEXT_PRESSED_COLOR, false, false, false, VECTOR2(0.f, 0.f));
     }
     if (play_on_click_sound) event_fire(EVENT_CODE_PLAY_BUTTON_ON_CLICK, event_context((u16)true));
   } else {
-    if (_btn->state == BTN_STATE_HOVER) {
+    if (_btn->current_state == BTN_STATE_HOVER) {
       draw_sprite_on_site_by_id(_btn->btn_type.ss_type, WHITE, VECTOR2(_btn->dest.x,_btn->dest.y), draw_sprite_scale, 1);
       if (!TextIsEqual(text, "")) {
         draw_text_ex(text, text_pos, font, font_size_scale, BUTTON_TEXT_HOVER_COLOR, false, false, false, VECTOR2(0.f, 0.f));
@@ -545,12 +543,12 @@ bool gui_button(const char* text, button_id _id, Font font, i32 font_size_scale,
     }
     else {
       draw_sprite_on_site_by_id(_btn->btn_type.ss_type, WHITE, VECTOR2(_btn->dest.x,_btn->dest.y), draw_sprite_scale, 0);
-      if (_btn->state != BTN_STATE_HOVER) {
+      if (_btn->current_state != BTN_STATE_HOVER) {
         draw_text_ex(text, text_pos, font, font_size_scale, BUTTON_TEXT_UP_COLOR, false, false, false, VECTOR2(0.f, 0.f));
       }
     }
   }
-  return _btn->state == BTN_STATE_RELEASED;
+  return _btn->current_state == _btn->signal_state;
 }
 bool gui_draw_local_button(const char* text, local_button* const btn, const font_type _font_type, const i32 font_size_scale, const Vector2 pos, text_alignment align_to, const bool play_on_click_sound) {
   if (!btn->is_active) {
@@ -574,14 +572,14 @@ bool gui_draw_local_button(const char* text, local_button* const btn, const font
 
   Vector2 draw_sprite_scale = Vector2 {btn->btn_type.scale, btn->btn_type.scale};
 
-  if (btn->state == BTN_STATE_PRESSED) {
+  if (btn->current_state == BTN_STATE_PRESSED) {
     draw_sprite_on_site_by_id(btn->btn_type.ss_type, WHITE, VECTOR2(btn->dest.x, btn->dest.y), draw_sprite_scale, 0);
     if (!TextIsEqual(text, "")) {
       draw_text_ex(text, text_pos, (*font), font_size_scale, BUTTON_TEXT_PRESSED_COLOR, false, false, false, VECTOR2(0.f, 0.f));
     }
     if (play_on_click_sound) event_fire(EVENT_CODE_PLAY_BUTTON_ON_CLICK, event_context((u16)true));
   } else {
-    if (btn->state == BTN_STATE_HOVER) {
+    if (btn->current_state == BTN_STATE_HOVER) {
       draw_sprite_on_site_by_id(btn->btn_type.ss_type, WHITE, VECTOR2(btn->dest.x, btn->dest.y), draw_sprite_scale, 1);
       if (!TextIsEqual(text, "")) {
         draw_text_ex(text, text_pos, (*font), font_size_scale, BUTTON_TEXT_HOVER_COLOR, false, false, false, VECTOR2(0.f, 0.f));
@@ -590,12 +588,12 @@ bool gui_draw_local_button(const char* text, local_button* const btn, const font
     }
     else {
       draw_sprite_on_site_by_id(btn->btn_type.ss_type, WHITE, VECTOR2(btn->dest.x, btn->dest.y), draw_sprite_scale, 0);
-      if (btn->state != BTN_STATE_HOVER) {
+      if (btn->current_state != BTN_STATE_HOVER) {
         draw_text_ex(text, text_pos, (*font), font_size_scale, BUTTON_TEXT_UP_COLOR, false, false, false, VECTOR2(0.f, 0.f));
       }
     }
   }
-  return btn->state == BTN_STATE_RELEASED;
+  return btn->current_state == btn->signal_state;
 }
 void gui_checkbox_grid(checkbox_id _id, Vector2 grid, Vector2 grid_location) {
   grid_location.x -= state->checkboxes.at(_id).cb_type.dest_frame_dim.x * .5f;
@@ -1183,7 +1181,7 @@ void register_button(button_id _btn_id, button_type_id _btn_type_id) {
     return;
   }
   button_type* _btn_type = __builtin_addressof(state->button_types.at(_btn_type_id));
-  button btn = button(_btn_id, (*_btn_type), BTN_STATE_UP, Rectangle{0.f, 0.f, _btn_type->dest_frame_dim.x, _btn_type->dest_frame_dim.y});
+  button btn = button(_btn_id, (*_btn_type), BTN_STATE_RELEASED, Rectangle{0.f, 0.f, _btn_type->dest_frame_dim.x, _btn_type->dest_frame_dim.y});
 
   state->buttons.at(_btn_id) = btn;
 }

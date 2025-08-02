@@ -97,6 +97,54 @@ typedef struct scene_editor_state {
   panel collision_placement_panel;
   panel prop_edit_panel;
   // WARN: This variables will be initialized one time in the initialize function
+
+  scene_editor_state(void) {
+    this->mouse_pos_world = ZEROVEC2;
+    this->mouse_pos_screen = ZEROVEC2;
+    this->target = ZEROVEC2;
+    this->mouse_focus = MOUSE_FOCUS_UNFOCUSED;
+    this->b_show_tilesheet_tile_selection_screen = false;
+    this->b_show_prop_selection_screen = false;
+    this->b_show_prop_edit_screen = false;
+    this->b_show_collision_placement_screen = false;
+    this->b_dragging_map_element = false;
+    this->b_show_pause_menu = false;
+    this->b_prop_selection_screen_update_prop_sprites = false;
+    this->tilemap_props_static_selected = nullptr;
+    this->tilemap_props_sprite_selected = nullptr;
+    this->selected_prop_static_map_prop_address = nullptr;
+    this->selected_prop_sprite_map_prop_address = nullptr;
+    this->selected_prop_static_panel_selection_copy = tilemap_prop_static();
+    this->selected_prop_sprite_panel_selection_copy = tilemap_prop_sprite();
+    this->sel_map_coll_addr_from_map = nullptr;
+    this->map_collision_buffer_to_place = map_collision();
+    this->selected_tile = tile();
+    this->edit_layer = 0u;
+    this->selected_stage = 0u;
+    this->selection_type = SLC_TYPE_UNSELECTED;
+    this->se_fade = ui_fade_control_system();
+    this->default_sheet = TILESHEET_TYPE_UNSPECIFIED;
+    this->tilemap_props_trees = nullptr;
+    this->tilemap_props_tombstones = nullptr;
+    this->tilemap_props_stones = nullptr;
+    this->tilemap_props_spikes = nullptr;
+    this->tilemap_props_skulls = nullptr;
+    this->tilemap_props_pillars = nullptr;
+    this->tilemap_props_lamps = nullptr;
+    this->tilemap_props_fence = nullptr;
+    this->tilemap_props_details = nullptr;
+    this->tilemap_props_candles = nullptr;
+    this->tilemap_props_buildings = nullptr;
+    this->tilemap_props_sprite = nullptr;
+    this->active_map_ptr = nullptr;
+    this->in_camera_metrics = nullptr;
+    this->in_app_settings = nullptr;
+    this->worldmap_locations.fill(worldmap_stage());
+    this->prop_selection_panel = panel();
+    this->tile_selection_panel = panel();
+    this->collision_placement_panel = panel();
+    this->prop_edit_panel = panel();
+  }
 } scene_editor_state;
 
 static scene_editor_state * state;
@@ -139,6 +187,8 @@ void se_begin_fadein(data64 data, void(*on_change_complete)(data64));
     TraceLog(LOG_ERROR, "scene_editor::initialize_scene_editor()::State allocation failed!");
     return false;
   }
+  *state = scene_editor_state();
+
   if (!_in_app_settings || _in_app_settings == nullptr) {
     TraceLog(LOG_ERROR, "scene_editor::initialize_scene_editor()::App settings pointer is invalid");
     return false;

@@ -33,6 +33,7 @@ typedef struct panel {
   Rectangle scroll_handle;
   bool draggable;
   bool is_dragging_scroll;
+  bool is_scrolling_active;
   
   data128 buffer;
   panel() {
@@ -49,6 +50,7 @@ typedef struct panel {
       this->scroll_handle = ZERORECT;
       this->draggable     = false;
       this->is_dragging_scroll = false;
+      this->is_scrolling_active = false;
       this->buffer = data128();
   };
   panel(button_state signal_state, atlas_texture_id bg_tex_id, atlas_texture_id frame_tex_id, Vector4 offsets, Color bg_tint, Color hover_tint = Color { 52, 64, 76, 245}) : panel() {
@@ -89,14 +91,16 @@ typedef struct button_type {
 typedef struct button {
   button_id id;
   button_type btn_type;
-  button_state state;
+  button_state current_state;
+  button_state signal_state;
   Rectangle dest;
   bool on_screen;
   bool is_registered;
   button(void) {
     this->id = BTN_ID_UNDEFINED;
     this->btn_type = button_type();
-    this->state = BTN_STATE_UNDEFINED;
+    this->current_state = BTN_STATE_UNDEFINED;
+    this->signal_state  = BTN_STATE_UNDEFINED;
     this->dest = ZERORECT;
     this->on_screen = false;
     this->is_registered = false;
@@ -104,7 +108,7 @@ typedef struct button {
   button(button_id id, button_type btn_type, button_state state, Rectangle dest) : button() {
     this->id = id;
     this->btn_type = btn_type;
-    this->state = state;
+    this->signal_state  = state;
     this->dest = dest;
     this->is_registered = true;
   }
@@ -113,7 +117,8 @@ typedef struct button {
 typedef struct local_button {
   i32 id;
   button_type btn_type;
-  button_state state;
+  button_state current_state;
+  button_state signal_state;
   Rectangle dest;
   bool on_screen;
   bool is_active;
@@ -121,7 +126,8 @@ typedef struct local_button {
   local_button(void) {
     this->id = 0;
     this->btn_type = button_type();
-    this->state = BTN_STATE_UNDEFINED;
+    this->current_state = BTN_STATE_UNDEFINED;
+    this->signal_state  = BTN_STATE_UNDEFINED;
     this->dest = ZERORECT;
     this->on_screen = false;
     this->is_active = false;
@@ -129,7 +135,7 @@ typedef struct local_button {
   local_button(i32 id, button_type btn_type, button_state state, Rectangle dest) : local_button() {
     this->id = id;
     this->btn_type = btn_type;
-    this->state = state;
+    this->signal_state  = state;
     this->dest = dest;
     this->is_active = true;
   }

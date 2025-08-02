@@ -24,9 +24,9 @@ typedef enum in_game_stages {
 typedef struct scene_in_game_state {
   std::array<worldmap_stage, MAX_WORLDMAP_LOCATIONS>  worldmap_locations;
   std::array<panel, MAX_UPDATE_ABILITY_PANEL_COUNT> ability_upg_panels;
+  std::array<ability, MAX_UPDATE_ABILITY_PANEL_COUNT> ability_upgrade_choices;
   panel default_panel;
   panel debug_info_panel;
-  std::array<ability, MAX_UPDATE_ABILITY_PANEL_COUNT> ability_upgrade_choices;
   bool is_upgrade_choices_ready;
   
   const camera_metrics* in_camera_metrics;
@@ -39,9 +39,27 @@ typedef struct scene_in_game_state {
   i32 hovered_projectile;
   bool has_game_started;
   ui_fade_control_system sig_fade;
+
+  scene_in_game_state(void) {
+    this->worldmap_locations.fill(worldmap_stage());
+    this->ability_upg_panels.fill(panel());
+    this->ability_upgrade_choices.fill(ability());
+    this->default_panel = panel();
+    this->debug_info_panel = panel();
+    this->is_upgrade_choices_ready = false;
+    this->in_camera_metrics = nullptr;
+    this->in_app_settings = nullptr;
+    this->in_ingame_info = nullptr;
+    this->stage = IN_GAME_STAGE_UNDEFINED;
+    this->hovered_spawn = I32_MAX;
+    this->hovered_ability = ABILITY_TYPE_UNDEFINED;
+    this->hovered_projectile = I32_MAX;
+    this->has_game_started = false;
+    this->sig_fade = ui_fade_control_system();
+  }
 } scene_in_game_state;
 
-static scene_in_game_state * state;
+static scene_in_game_state * state = nullptr;
 
 #define STATE_ASSERT(FUNCTION) if (!state) {                                              \
   TraceLog(LOG_ERROR, "scene_in_game::" FUNCTION "::In game state was not initialized");  \
@@ -93,16 +111,15 @@ void reset_game();
     TraceLog(LOG_ERROR, "scene_in_game::initialize_scene_in_game()::State allocation failed!");
     return false;
   }
+  *state = scene_in_game_state();
+
   state->in_app_settings = _in_app_settings;
   if (!_in_app_settings || _in_app_settings == nullptr) {
     TraceLog(LOG_ERROR, "scene_in_game::initialize_scene_in_game()::App setting pointer is invalid");
     return false;
   }
 
-  if(!create_camera(
-    state->in_app_settings->render_width_div2, state->in_app_settings->render_height_div2, 
-    state->in_app_settings->render_width, state->in_app_settings->render_height
-  )) {
+  if(!create_camera(state->in_app_settings->render_width_div2, state->in_app_settings->render_height_div2, state->in_app_settings->render_width, state->in_app_settings->render_height)) {
     TraceLog(LOG_ERROR, "scene_in_game::initialize_scene_in_game()::Creating camera failed");
     return false;
   }
@@ -679,7 +696,6 @@ void end_ability_upgrade_state(u16 which_panel_chosen) {
     state->ability_upg_panels.at(itr_000).buffer.u16[0] = 0;
   }
 }
-
 void sig_begin_fade(void) {
   state->sig_fade.fade_animation_duration = INGAME_FADE_DURATION;
   state->sig_fade.fade_type = FADE_TYPE_FADEOUT;
@@ -700,7 +716,6 @@ bool scene_in_game_on_event(i32 code, [[maybe_unused]] event_context context) {
   return false;
 }
 
-
 #undef STATE_ASSERT
 #undef SIG_BASE_RENDER_SCALE
 #undef SIG_BASE_RENDER_DIV2
@@ -713,3 +728,4 @@ bool scene_in_game_on_event(i32 code, [[maybe_unused]] event_context context) {
 #undef GET_PLAYER_DYNAMIC_STAT
 #undef GET_PLAYER_DYNAMIC_ABILITY
 #undef DRAW_ABL_UPG_STAT_PNL
+#undef INGAME_FADE_DURATION
