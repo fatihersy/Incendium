@@ -875,6 +875,7 @@ typedef struct ingame_info {
   const bool* is_game_paused;
   const bool* show_pause_menu;
   const ingame_phases* ingame_phase;
+  std::vector<character_trait>* chosen_traits;
   i32 collected_souls;
   f32 play_time;
   bool is_win;
@@ -889,6 +890,7 @@ typedef struct ingame_info {
     this->is_game_paused = nullptr;
     this->ingame_phase = nullptr;
     this->show_pause_menu = nullptr;
+    this->chosen_traits = nullptr;
     
     this->collected_souls = 0;
     this->play_time = 0.f;

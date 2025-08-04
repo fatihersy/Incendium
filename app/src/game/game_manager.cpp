@@ -24,6 +24,7 @@ typedef struct game_manager_system_state {
   Vector2 mouse_pos_world;
   Vector2 mouse_pos_screen;
   std::vector<character_trait> traits;
+  std::vector<character_trait> chosen_traits;
 
   bool show_pause_menu;
   bool is_game_end;
@@ -94,14 +95,15 @@ bool game_manager_initialize(const camera_metrics * in_camera_metrics, const app
   }
   state->player_state_static = *get_player_state();
   
-  state->game_info.player_state_dynamic          = get_player_state();
-  state->game_info.in_spawns                     = get_spawns();
-  state->game_info.mouse_pos_world               = __builtin_addressof(state->mouse_pos_world);
-  state->game_info.mouse_pos_screen              = __builtin_addressof(state->mouse_pos_screen);
-  state->game_info.is_game_end                   = __builtin_addressof(state->is_game_end);
-  state->game_info.is_game_paused                = __builtin_addressof(state->is_game_paused);
-  state->game_info.ingame_phase                  = __builtin_addressof(state->ingame_phase);
-  state->game_info.show_pause_menu               = __builtin_addressof(state->show_pause_menu);
+  state->game_info.player_state_dynamic = get_player_state();
+  state->game_info.in_spawns            = get_spawns();
+  state->game_info.mouse_pos_world      = __builtin_addressof(state->mouse_pos_world);
+  state->game_info.mouse_pos_screen     = __builtin_addressof(state->mouse_pos_screen);
+  state->game_info.is_game_end          = __builtin_addressof(state->is_game_end);
+  state->game_info.is_game_paused       = __builtin_addressof(state->is_game_paused);
+  state->game_info.ingame_phase         = __builtin_addressof(state->ingame_phase);
+  state->game_info.show_pause_menu      = __builtin_addressof(state->show_pause_menu);
+  state->game_info.chosen_traits        = __builtin_addressof(state->chosen_traits);
 
   event_register(EVENT_CODE_END_GAME, game_manager_on_event);
   event_register(EVENT_CODE_DAMAGE_PLAYER_IF_COLLIDE, game_manager_on_event);

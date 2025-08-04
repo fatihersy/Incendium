@@ -291,15 +291,17 @@ bool user_interface_system_initialize(void) {
 
   // MAIN MENU
   {
-    register_button(BTN_ID_MAINMENU_BUTTON_PLAY,        BTN_TYPE_FLAT_BUTTON);
-    register_button(BTN_ID_MAINMENU_BUTTON_EDITOR,      BTN_TYPE_FLAT_BUTTON);
-    register_button(BTN_ID_MAINMENU_BUTTON_SETTINGS,    BTN_TYPE_FLAT_BUTTON);
-    register_button(BTN_ID_MAINMENU_BUTTON_UPGRADE,     BTN_TYPE_FLAT_BUTTON);
-    register_button(BTN_ID_MAINMENU_BUTTON_EXIT,        BTN_TYPE_FLAT_BUTTON);
-    register_button(BTN_ID_MAINMENU_SETTINGS_CANCEL,    BTN_TYPE_MENU_BUTTON);
-    register_button(BTN_ID_MAINMENU_UPGRADE_BACK,       BTN_TYPE_MENU_BUTTON);
-    register_button(BTN_ID_MAINMENU_UPGRADE_BUY_UPGRADE,BTN_TYPE_MENU_BUTTON);
-    register_button(BTN_ID_MAINMENU_MAP_CHOICE_BACK,    BTN_TYPE_MENU_BUTTON);
+    register_button(BTN_ID_MAINMENU_BUTTON_PLAY,          BTN_TYPE_FLAT_BUTTON);
+    register_button(BTN_ID_MAINMENU_BUTTON_EDITOR,        BTN_TYPE_FLAT_BUTTON);
+    register_button(BTN_ID_MAINMENU_BUTTON_SETTINGS,      BTN_TYPE_FLAT_BUTTON);
+    register_button(BTN_ID_MAINMENU_BUTTON_UPGRADE,       BTN_TYPE_FLAT_BUTTON);
+    register_button(BTN_ID_MAINMENU_BUTTON_EXIT,          BTN_TYPE_FLAT_BUTTON);
+    register_button(BTN_ID_MAINMENU_SETTINGS_CANCEL,      BTN_TYPE_MENU_BUTTON);
+    register_button(BTN_ID_MAINMENU_UPGRADE_BACK,         BTN_TYPE_MENU_BUTTON);
+    register_button(BTN_ID_MAINMENU_UPGRADE_BUY_UPGRADE,  BTN_TYPE_MENU_BUTTON);
+    register_button(BTN_ID_MAINMENU_MAP_CHOICE_BACK,      BTN_TYPE_MENU_BUTTON);
+    register_button(BTN_ID_MAINMENU_TRAIT_CHOICE_BACK,    BTN_TYPE_MENU_BUTTON);
+    register_button(BTN_ID_MAINMENU_TRAIT_CHOICE_ACCEPT, BTN_TYPE_MENU_BUTTON);
   }
   // MAIN MENU
 
@@ -485,7 +487,9 @@ void render_user_interface(void) {
 bool gui_menu_button(const char* text, button_id _id, Vector2 grid, Vector2 grid_location, bool play_on_click_sound) {
   grid_location.x -= state->buttons.at(_id).btn_type.dest_frame_dim.x * .5f;
   grid_location.y -= state->buttons.at(_id).btn_type.dest_frame_dim.y * .5f;
-  return gui_button(text, _id, MENU_BUTTON_FONT, MENU_BUTTON_FONT_SIZE_SCALE, position_element_by_grid(grid_location, grid, SCREEN_OFFSET), play_on_click_sound);
+  return gui_button(text, _id, MENU_BUTTON_FONT, MENU_BUTTON_FONT_SIZE_SCALE, position_element_by_grid(grid_location, grid, Vector2 {
+    UI_BASE_RENDER_WIDTH * .00390625f, UI_BASE_RENDER_HEIGHT * .00694f
+  }), play_on_click_sound);
 }
 bool gui_mini_button(const char* text, button_id _id, Vector2 grid, bool play_on_click_sound) {
   return gui_button(text, _id, 
