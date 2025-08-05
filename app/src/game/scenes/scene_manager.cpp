@@ -103,10 +103,8 @@ bool scene_manager_on_event(i32 code,[[maybe_unused]] event_context context) {
     end_scene(state->scene_data);
     state->scene_data = SCENE_TYPE_IN_GAME;
     if(!initialize_scene_in_game(state->in_app_settings, context.data.i32[0])) {
-      if (!begin_scene_in_game(context.data.i32[0])) {
-        TraceLog(LOG_ERROR, "scene_manager::EVENT_CODE_SCENE_IN_GAME::User interface failed to initialize!");
-        return false;
-      }
+      TraceLog(LOG_ERROR, "scene_manager::EVENT_CODE_SCENE_IN_GAME::User interface failed to initialize!");
+      return false;
     }
     return true;
   }
@@ -114,10 +112,8 @@ bool scene_manager_on_event(i32 code,[[maybe_unused]] event_context context) {
     end_scene(state->scene_data);
     state->scene_data = SCENE_TYPE_EDITOR;
     if(!initialize_scene_editor(state->in_app_settings, context.data.i32[0])) {
-      if (!begin_scene_editor(context.data.i32[0])) {
-        TraceLog(LOG_ERROR, "scene_manager::EVENT_CODE_SCENE_IN_GAME::User interface failed to initialize!");
-        return false;
-      }
+      TraceLog(LOG_ERROR, "scene_manager::EVENT_CODE_SCENE_IN_GAME::User interface failed to initialize!");
+      return false;
     }
     return true;
   }
@@ -125,10 +121,8 @@ bool scene_manager_on_event(i32 code,[[maybe_unused]] event_context context) {
     end_scene(state->scene_data);
     state->scene_data = SCENE_TYPE_MAIN_MENU;
     if (!initialize_scene_main_menu(state->in_app_settings, context.data.i32[0])) {
-      if (!begin_scene_main_menu(context.data.i32[0])) {
-        TraceLog(LOG_ERROR, "scene_manager::EVENT_CODE_SCENE_IN_GAME::User interface failed to initialize!");
-        return false;
-      }
+      TraceLog(LOG_ERROR, "scene_manager::EVENT_CODE_SCENE_IN_GAME::User interface failed to initialize!");
+      return false;
     }
     return true;
   }

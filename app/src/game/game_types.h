@@ -717,9 +717,9 @@ typedef struct ability_play_system {
 
 typedef struct character_stat {
   character_stats id;
-  u16 level;
-  u32 passive_display_name_symbol;
-  u32 passive_desc_symbol;
+  i32 level;
+  i32 passive_display_name_symbol;
+  i32 passive_desc_symbol;
   Rectangle passive_icon_src;
   i32 upgrade_cost;
 
@@ -734,8 +734,7 @@ typedef struct character_stat {
     this->upgrade_cost = 0;
     this->buffer = data128();
   }
-  character_stat(character_stats id, u32 display_name_symbol, u32 desc_symbol, Rectangle icon_src, i32 upgrade_cost, data128 buffer = data128()) : character_stat()
-  {
+  character_stat(character_stats id, u32 display_name_symbol, u32 desc_symbol, Rectangle icon_src, i32 upgrade_cost, data128 buffer = data128()) : character_stat() {
     this->id = id;
     this->passive_display_name_symbol = display_name_symbol;
     this->passive_desc_symbol = desc_symbol;
@@ -753,33 +752,34 @@ typedef struct character_trait {
   std::string description;
   i32 point;
 
-  data128 mm_ex;
-  data128 general_buffer;
+  data128 ingame_use;
+  data128 ui_use;
 
   character_trait(void) {
     this->id = 0;
     this->type = CHARACTER_STATS_UNDEFINED;
     this->title = std::string("");
     this->description = std::string("");
-    this->mm_ex = data128();
-    this->general_buffer = data128();
+    this->ingame_use = data128();
+    this->ui_use = data128();
     this->point = 0;
   }
-  character_trait(i32 _id, character_stats _type, const char* _title, const char * _description, i32 _point, data128 _mm_ex, data128 _general_buffer) : character_trait() {
+  character_trait(i32 _id, character_stats _type, const char* _title, const char * _description, i32 _point, data128 ingame_use, data128 ui_use) : character_trait() {
     this->id = _id;
     this->type = _type;
     this->title = _title;
     this->description = _description;
     this->point = _point;
-    this->mm_ex = _mm_ex;
-    this->general_buffer = _general_buffer;
+    this->ingame_use = ingame_use;
+    this->ui_use = ui_use;
   }
 }character_trait;
 
 // LABEL: Player State
 typedef struct player_state {
   ability_play_system ability_system;
-  character_stat stats[CHARACTER_STATS_MAX];
+  std::array<character_stat, CHARACTER_STATS_MAX> stats_total;
+  std::array<character_stat, CHARACTER_STATS_MAX> stats_base;
   ability_type starter_ability;
   
   Rectangle collision;
@@ -796,26 +796,19 @@ typedef struct player_state {
   spritesheet wreck_right_sprite;
   spritesheet* last_played_animation;
 
-  
   world_direction w_direction;
   Vector2 position;
   Vector2 position_centered;
-  i32 level;
-  i32 health_max;
-  i32 health_current;
-  i32 health_regen;
-  f32 health_perc;
+  f32 damage_break_time;
+  f32 damage_break_current;
   i32 exp_to_next_level;
   i32 exp_current;
   f32 exp_perc;
-  f32 damage_break_time;
-  f32 damage_break_current;
-  i32 damage;
-  i16 projectile_amouth;
-  f32 damage_area_multiply;
-  f32 move_speed_multiply;
-  f32 cooldown_multiply;
-  f32 exp_gain_multiply;
+  f32 health_perc;
+  f32 health_current;
+
+  i32 level;
+
   bool is_player_have_ability_upgrade_points;
   bool is_initialized;
   bool is_moving;
@@ -823,7 +816,8 @@ typedef struct player_state {
   bool is_damagable;
   player_state(void) {
     this->ability_system = ability_play_system();
-    zero_memory(this->stats, sizeof(character_stat) * CHARACTER_STATS_MAX);
+    this->stats_base.fill(character_stat());
+    this->stats_total.fill(character_stat());
     this->starter_ability = ABILITY_TYPE_UNDEFINED;
     this->collision = ZERORECT;
     this->map_level_collision = ZERORECT;
@@ -841,22 +835,14 @@ typedef struct player_state {
     this->w_direction = WORLD_DIRECTION_UNDEFINED;
     this->position = ZEROVEC2;
     this->position_centered = ZEROVEC2;
-    this->level = 0;
-    this->health_max = 0;
-    this->health_current = 0;
-    this->health_regen = 0;
-    this->health_perc = 0.f;
-    this->exp_to_next_level = 0;
-    this->exp_current = 0;
-    this->exp_perc = 0.f;
     this->damage_break_time = 0.f;
-    this->damage_break_current = 0;
-    this->damage = 0;
-    this->projectile_amouth = 0;
-    this->damage_area_multiply = 0.f;
-    this->move_speed_multiply = 0.f;
-    this->cooldown_multiply = 0.f;
-    this->exp_gain_multiply = 0.f;
+    this->damage_break_current = 0.f;
+    this->exp_to_next_level = 0.f;
+    this->exp_current = 0.f;
+    this->exp_perc = 0.f;
+    this->health_perc = 0.f;
+    this->health_current = 0.f;;
+    this->level = 0;
     this->is_player_have_ability_upgrade_points = false;
     this->is_initialized = false;
     this->is_moving = false;

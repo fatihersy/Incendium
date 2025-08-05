@@ -9,7 +9,7 @@
 
 #define SAVE_GAME_VAR_NUM_START_SYMBOL 0x21 // Refers to ASCII exclamation mark. First visible character on the chart. To debug.
 
-#define encode_stat(STAT) encode_integer(slot_data->p_player.stats[STAT].level)
+#define encode_stat(STAT) encode_integer(slot_data->p_player.stats_base[STAT].level)
 
 typedef struct encode_integer_result {
   char txt[VARIABLE_ENCODED_TEXT_LENGTH];
@@ -137,56 +137,56 @@ void parse_data(save_slots slot) {
       i = save_game_get_entry(i);
       u32 val = decode_integer();
 
-      save_slot->p_player.stats[CHARACTER_STATS_HEALTH].level = val;
+      save_slot->p_player.stats_base[CHARACTER_STATS_HEALTH].level = val;
       break; 
     }
     case SAVE_DATA_STATS_HP_REGEN: {
       i = save_game_get_entry(i);
       u32 val = decode_integer();
 
-      save_slot->p_player.stats[CHARACTER_STATS_HP_REGEN].level = val;
+      save_slot->p_player.stats_base[CHARACTER_STATS_HP_REGEN].level = val;
       break; 
     }
     case SAVE_DATA_STATS_MOVE_SPEED: {
       i = save_game_get_entry(i);
       u32 val = decode_integer();
 
-      save_slot->p_player.stats[CHARACTER_STATS_MOVE_SPEED].level = val;
+      save_slot->p_player.stats_base[CHARACTER_STATS_MOVE_SPEED].level = val;
       break; 
     }
     case SAVE_DATA_STATS_AOE: {
       i = save_game_get_entry(i);
       u32 val = decode_integer();
 
-      save_slot->p_player.stats[CHARACTER_STATS_AOE].level = val;
+      save_slot->p_player.stats_base[CHARACTER_STATS_AOE].level = val;
       break; 
     }
     case SAVE_DATA_STATS_DAMAGE: {
       i = save_game_get_entry(i);
       u32 val = decode_integer();
 
-      save_slot->p_player.stats[CHARACTER_STATS_DAMAGE].level = val;
+      save_slot->p_player.stats_base[CHARACTER_STATS_DAMAGE].level = val;
       break; 
     }
     case SAVE_DATA_STATS_ABILITY_CD: {
       i = save_game_get_entry(i);
       u32 val = decode_integer();
 
-      save_slot->p_player.stats[CHARACTER_STATS_ABILITY_CD].level = val;
+      save_slot->p_player.stats_base[CHARACTER_STATS_ABILITY_CD].level = val;
       break; 
     }
     case SAVE_DATA_STATS_PROJECTILE_AMOUTH: {
       i = save_game_get_entry(i);
       u32 val = decode_integer();
 
-      save_slot->p_player.stats[CHARACTER_STATS_PROJECTILE_AMOUTH].level = val;
+      save_slot->p_player.stats_base[CHARACTER_STATS_PROJECTILE_AMOUTH].level = val;
       break; 
     }
     case SAVE_DATA_STATS_EXP_GAIN: {
       i = save_game_get_entry(i);
       u32 val = decode_integer();
 
-      save_slot->p_player.stats[CHARACTER_STATS_EXP_GAIN].level = val;
+      save_slot->p_player.stats_base[CHARACTER_STATS_EXP_GAIN].level = val;
       break; 
     }
     default: {

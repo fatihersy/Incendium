@@ -354,8 +354,8 @@ typedef struct ui_fade_control_system {
   bool fade_animation_playing;
   bool is_fade_animation_played;
 
-  data64 data;
-  void (*on_change_complete)(data64 data);
+  data128 data;
+  void (*on_change_complete)(data128);
 
   ui_fade_control_system(void) {
     this->fade_animation_duration = 0;
@@ -363,7 +363,7 @@ typedef struct ui_fade_control_system {
     this->fade_type = FADE_TYPE_UNDEFINED;
     this->fade_animation_playing = false;
     this->is_fade_animation_played = false;
-    this->data = data64();
+    this->data = data128();
     this->on_change_complete = nullptr;
   }
 } ui_fade_control_system;

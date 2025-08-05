@@ -110,6 +110,8 @@ static main_menu_scene_state * state = nullptr;
 #define SMM_MAP_PIN_SOURCE_LOCATION_HOVER (Rectangle{1632, 928, 32, 32})
 #define SMM_SCROLL_HANDLE_HEIGHT state->in_app_settings->render_height * .05f
 
+[[__nodiscard__]] bool begin_scene_main_menu(bool fade_in);
+
 void draw_main_menu_upgrade_panel(void);
 void draw_main_menu_upgrade_list_panel(void);
 void draw_main_menu_upgrade_details_panel(void);
@@ -119,12 +121,15 @@ void smm_update_mouse_bindings(void);
 void smm_update_keyboard_bindings(void);
 void smm_update_bindings(void);
 void smm_update_local_buttons(void);
-void smm_begin_fadeout(data64 data, void(*on_change_complete)(data64));
-void smm_begin_fadein(data64 data, void(*on_change_complete)(data64));
+void smm_begin_fadeout(data128 data, void(*on_change_complete)(data128));
+void smm_begin_fadein(data128 data, void(*on_change_complete)(data128));
 void smm_add_local_button(i32 _id, button_type_id _btn_type_id, button_state signal_state);
 local_button* smm_get_local_button(i32 _id);
-void fade_on_complete_change_main_menu_type(data64 data);
-void fade_on_complete_change_scene(data64 data);
+void fade_on_complete_change_main_menu_type(data128 data);
+void fade_on_complete_change_scene(data128 data);
+
+void begin_scene_change(main_menu_scene_type mms, event_context context = event_context());
+void begin_scene_change(scene_id sid, event_context context = event_context());
 
 void positive_trait_button_on_click(size_t index);
 void negative_trait_button_on_click(size_t index);
@@ -174,21 +179,6 @@ void chosen_trait_button_on_click(size_t index);
   }
   state->ingame_info = gm_get_ingame_info();
 
-  state->positive_traits.clear();
-  state->negative_traits.clear();
-  state->general_purpose_buttons.clear();
-
-  const std::vector<character_trait> * const gm_traits = gm_get_character_traits();
-  for (size_t itr_000 = 0; itr_000 < gm_traits->size(); ++itr_000) {
-    character_trait _trait = gm_traits->at(itr_000);
-
-    _trait.general_buffer.i32[0] = state->next_local_button_id;
-    smm_add_local_button(state->next_local_button_id++, BTN_TYPE_FLAT_BUTTON, BTN_STATE_RELEASED);
-
-    if (_trait.point > 0) state->positive_traits.push_back(_trait);
-    else state->negative_traits.push_back(_trait);
-  }
-  
   set_worldmap_location(WORLDMAP_MAINMENU_MAP); // NOTE: Worldmap index 0 is mainmenu background now
 
   copy_memory(state->worldmap_locations.data(), get_worldmap_locations(), MAX_WORLDMAP_LOCATIONS * sizeof(worldmap_stage));
@@ -212,7 +202,7 @@ void chosen_trait_button_on_click(size_t index);
   gm_save_game();
 
   if (fade_in) {
-    smm_begin_fadein(data64(), nullptr);
+    smm_begin_fadein(data128(), nullptr);
   }
   //event_fire(EVENT_CODE_PLAY_MAIN_MENU_THEME, event_context{}); TODO: Uncomment later
   return true;
@@ -332,7 +322,7 @@ void render_interface_main_menu(void) {
       
     gui_label_shader(GAME_TITLE, SHADER_ID_FONT_OUTLINE, FONT_TYPE_ABRACADABRA, 5, VECTOR2(SMM_BASE_RENDER_WIDTH * .5f, SMM_BASE_RENDER_HEIGHT * .25f), WHITE, true, true);
     if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_PLAY), BTN_ID_MAINMENU_BUTTON_PLAY, VECTOR2(0.f, -21.f), SMM_BASE_RENDER_DIV2, true)) {
-      smm_begin_fadeout(data64(MAIN_MENU_SCENE_TO_PLAY_MAP_CHOICE), fade_on_complete_change_main_menu_type);
+      begin_scene_change(MAIN_MENU_SCENE_TO_PLAY_MAP_CHOICE);
     }
     if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_UPGRADE), BTN_ID_MAINMENU_BUTTON_UPGRADE, VECTOR2(0.f, -10.5f), SMM_BASE_RENDER_DIV2, true)) {
       state->mainmenu_state = MAIN_MENU_SCENE_UPGRADE;
@@ -342,7 +332,7 @@ void render_interface_main_menu(void) {
       state->mainmenu_state = MAIN_MENU_SCENE_SETTINGS;
     }
     if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_EDITOR), BTN_ID_MAINMENU_BUTTON_EDITOR, VECTOR2(0.f, 10.5f), SMM_BASE_RENDER_DIV2, true)) {
-      smm_begin_fadeout(data64(SCENE_TYPE_EDITOR), fade_on_complete_change_scene);
+      smm_begin_fadeout(data128(SCENE_TYPE_EDITOR, true), fade_on_complete_change_scene);
     }
     if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_EXIT), BTN_ID_MAINMENU_BUTTON_EXIT, VECTOR2(0.f, 21.f), SMM_BASE_RENDER_DIV2, true)) {
       event_fire(EVENT_CODE_APPLICATION_QUIT, event_context());
@@ -398,11 +388,11 @@ void render_interface_main_menu(void) {
     draw_trait_selection_panel();
 
     if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_TRAIT_CHOICE_BUTTON_BACK), BTN_ID_MAINMENU_TRAIT_CHOICE_BACK, VECTOR2(-35.f, 66.5f), SMM_BASE_RENDER_DIV2, true)) {
-      state->mainmenu_state = MAIN_MENU_SCENE_DEFAULT;
+      begin_scene_change(MAIN_MENU_SCENE_DEFAULT);
     }
 
     if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_TRAIT_CHOICE_BUTTON_ACCEPT), BTN_ID_MAINMENU_TRAIT_CHOICE_ACCEPT, VECTOR2(35.f, 66.5f), SMM_BASE_RENDER_DIV2, true)) {
-      TraceLog(LOG_INFO, "scene_main_menu::render_interface_main_menu()::MAIN_MENU_SCENE_TO_PLAY_TRAIT_CHOICE::Trait choice Accept button");
+      smm_begin_fadeout(data128(SCENE_TYPE_IN_GAME, true), fade_on_complete_change_scene);
     }
   }
   render_user_interface();
@@ -567,7 +557,7 @@ void draw_main_menu_upgrade_details_panel(void) {
   gui_label_wrap(lc_txt(state->hovered_stat->passive_desc_symbol), FONT_TYPE_ABRACADABRA, 1, description_pos, WHITE, false);
 
   character_stat pseudo_update = *state->hovered_stat;
-  upgrade_stat_pseudo(&pseudo_update);
+  game_manager_set_stat_value_by_level(&pseudo_update, pseudo_update.level++);
   Vector2 upg_stat_text_pos = {
     state->upgrade_details_panel.dest.x + state->upgrade_details_panel.dest.width * .5f,
     state->upgrade_details_panel.dest.y + state->upgrade_details_panel.dest.height * .5f,
@@ -639,7 +629,8 @@ void draw_main_menu_upgrade_details_panel(void) {
   if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_UPDATE_BUTTON_UPGRADE), BTN_ID_MAINMENU_UPGRADE_BUY_UPGRADE, Vector2 {0.f, 0.f}, button_location, false)) {
     if (((i32)get_currency_souls() - state->hovered_stat->upgrade_cost) >= 0) {
       currency_souls_add(-state->hovered_stat->upgrade_cost);
-      upgrade_static_player_stat(state->hovered_stat->id);
+      i32 level = get_static_player_state_stat(state->hovered_stat->id)->level;
+      set_static_player_state_stat(state->hovered_stat->id, level+1);
       gm_save_game();
       event_fire(EVENT_CODE_PLAY_BUTTON_ON_CLICK, event_context((u16)true));
     } else {
@@ -779,7 +770,7 @@ void trait_selection_panel_list_traits(panel* const pnl, const Rectangle rect, s
     character_trait * _trait = nullptr;
     for (size_t itr_000 = 0; itr_000 < traits->size(); ++itr_000) {
       _trait = __builtin_addressof(traits->at(itr_000));
-      local_button* _lc_btn = smm_get_local_button(_trait->general_buffer.i32[0]);
+      local_button* _lc_btn = smm_get_local_button(_trait->ui_use.i32[0]);
       text_measure = ui_measure_text(_trait->title.c_str(), FONT_TYPE_ABRACADABRA, 1);
 
       if (gui_draw_local_button(
@@ -847,7 +838,7 @@ void smm_update_mouse_bindings(void) {
       
       if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON) && state->ingame_scene_feed.hovered_stage <= MAX_WORLDMAP_LOCATIONS) {
         set_worldmap_location(state->ingame_scene_feed.hovered_stage);
-        state->mainmenu_state = MAIN_MENU_SCENE_TO_PLAY_TRAIT_CHOICE;
+        begin_scene_change(MAIN_MENU_SCENE_TO_PLAY_TRAIT_CHOICE, event_context());
       }
       break;
     }
@@ -995,11 +986,12 @@ void smm_update_local_buttons(void) {
   }
 }
 
-void smm_begin_fadeout(data64 data, void(*on_change_complete)(data64)) {
+void smm_begin_fadeout(data128 data, void(*on_change_complete)(data128)) {
   if (!state || state == nullptr ) {
     TraceLog(LOG_ERROR, "scene_main_menu::smm_begin_fadeout()::State is not valid");
     return;
   }
+  state->smm_fade = ui_fade_control_system();
 
   state->smm_fade.fade_animation_duration = MAIN_MENU_FADE_DURATION;
   state->smm_fade.fade_type = FADE_TYPE_FADEOUT;
@@ -1009,12 +1001,11 @@ void smm_begin_fadeout(data64 data, void(*on_change_complete)(data64)) {
   state->smm_fade.data = data;
   state->smm_fade.on_change_complete = on_change_complete;
 }
-void smm_begin_fadein(data64 data, void(*on_change_complete)(data64)) {
+void smm_begin_fadein(data128 data, void(*on_change_complete)(data128)) {
   if (!state || state == nullptr ) {
     TraceLog(LOG_ERROR, "scene_main_menu::smm_begin_fadein()::State is not valid");
     return;
   }
-
   state->smm_fade.fade_animation_duration = MAIN_MENU_FADE_DURATION;
   state->smm_fade.fade_type = FADE_TYPE_FADEIN;
   state->smm_fade.fade_animation_timer = 0.f;
@@ -1056,13 +1047,30 @@ local_button* smm_get_local_button(i32 _id) {
   }
   return nullptr;
 }
-void fade_on_complete_change_main_menu_type(data64 data) {
+void fade_on_complete_change_main_menu_type(data128 data) {
   if (!state || state == nullptr ) {
     TraceLog(LOG_INFO, "scene_main_menu::fade_on_complete_change_main_menu_type()::State is not valid");
     return;
   }
-  switch (static_cast<main_menu_scene_type>(data.i32[0])) {
+  main_menu_scene_type scene = static_cast<main_menu_scene_type>(data.i32[0]);
+  begin_scene_change(scene, event_context(data.i32[1] ,data.i32[2] ,data.i32[3]));
+
+  smm_begin_fadein(data128(), nullptr);
+}
+void fade_on_complete_change_scene(data128 data) {
+  if (!state || state == nullptr ) {
+    TraceLog(LOG_ERROR, "scene_main_menu::fade_on_complete_change_scene()::State is not valid");
+    return;
+  }
+  scene_id scene = static_cast<scene_id>(data.i32[0]);
+  state->smm_fade = ui_fade_control_system();
+  begin_scene_change(scene, event_context(data.i32[1] ,data.i32[2] ,data.i32[3]));
+}
+
+void begin_scene_change(main_menu_scene_type mms, [[__maybe_unused__]] event_context context) {
+  switch (mms) {
     case MAIN_MENU_SCENE_DEFAULT: {
+      set_worldmap_location(WORLDMAP_MAINMENU_MAP);
       state->mainmenu_state = MAIN_MENU_SCENE_DEFAULT;
       break;
     }
@@ -1087,12 +1095,11 @@ void fade_on_complete_change_main_menu_type(data64 data) {
       state->negative_traits.clear();
       state->ingame_info->chosen_traits->clear();
       state->general_purpose_buttons.clear();
-
       const std::vector<character_trait> * const gm_traits = gm_get_character_traits();
       for (size_t itr_000 = 0; itr_000 < gm_traits->size(); ++itr_000) {
         character_trait _trait = gm_traits->at(itr_000);
       
-        _trait.general_buffer.i32[0] = state->next_local_button_id;
+        _trait.ui_use.i32[0] = state->next_local_button_id;
         smm_add_local_button(state->next_local_button_id++, BTN_TYPE_FLAT_BUTTON, BTN_STATE_RELEASED);
       
         if (_trait.point > 0) state->positive_traits.push_back(_trait);
@@ -1102,45 +1109,39 @@ void fade_on_complete_change_main_menu_type(data64 data) {
       break;
     }
     default: {
-      TraceLog(LOG_WARNING, "scene_main_menu::fade_on_complete_change_main_menu_type()::Unsupported main menu scene type");
+      TraceLog(LOG_WARNING, "scene_main_menu::begin_scene_change()::Unsupported main menu scene type");
       state->mainmenu_state = MAIN_MENU_SCENE_DEFAULT;
       break;
     }
   }
-
-  
-  smm_begin_fadein(data64(), nullptr);
 }
-void fade_on_complete_change_scene(data64 data) {
+void begin_scene_change(scene_id sid, event_context context) {
   if (!state || state == nullptr ) {
-    TraceLog(LOG_ERROR, "scene_main_menu::fade_on_complete_change_scene()::State is not valid");
+    TraceLog(LOG_ERROR, "scene_main_menu::begin_scene_change()::State is not valid");
     return;
   }
 
-  scene_id scene = static_cast<scene_id>(data.i32[0]);
-  switch (scene) {
+  switch (sid) {
     case SCENE_TYPE_MAIN_MENU: {
-      state->smm_fade = ui_fade_control_system();
+      event_fire(EVENT_CODE_SCENE_MAIN_MENU, context);
+      return; 
+    }
+    case SCENE_TYPE_IN_GAME: {
+      event_fire(EVENT_CODE_SCENE_IN_GAME, context);
+      return; 
+    }
+    case SCENE_TYPE_EDITOR: {
+      event_fire(EVENT_CODE_SCENE_EDITOR, context);
+      return; 
+    }
+    default: {
+      TraceLog(LOG_WARNING, "scene_main_menu::begin_scene_change()::Unsupported scene type");
       event_fire(EVENT_CODE_SCENE_MAIN_MENU, event_context(static_cast<i32>(true)));
       return;
     }
-    case SCENE_TYPE_IN_GAME: {
-      state->smm_fade = ui_fade_control_system();
-      event_fire(EVENT_CODE_SCENE_IN_GAME, event_context(static_cast<i32>(true)));
-      return;
-    }
-    case SCENE_TYPE_EDITOR: {
-      state->smm_fade = ui_fade_control_system();
-      event_fire(EVENT_CODE_SCENE_EDITOR, event_context(static_cast<i32>(true)));
-      return;
-    }
-    default: {
-      TraceLog(LOG_WARNING, "scene_main_menu::fade_on_complete_change_scene()::Unsupported scene id");
-      return;
-    }
-
-    TraceLog(LOG_ERROR, "scene_main_menu::fade_on_complete_change_scene()::Function ended unexpectedly");
   }
+
+  TraceLog(LOG_ERROR, "scene_main_menu::begin_scene_change()::Function ended unexpectedly");
 }
 
 void positive_trait_button_on_click(size_t index) {

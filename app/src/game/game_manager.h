@@ -26,10 +26,8 @@ void gm_save_game(void);
 void gm_load_game(void);
 void gm_damage_spawn_if_collide(data128 coll_data, i32 damage, collision_type coll_check);
 void gm_damage_player_if_collide(data128 coll_data, i32 damage, collision_type coll_check);
-void upgrade_dynamic_player_stat(character_stats stat_id, u16 level = 0);
-void upgrade_static_player_stat(character_stats stat_id, u16 level = 0);
-void refresh_player_stats(bool refresh_dynamic_state, bool refresh_static_state);
-void upgrade_stat_pseudo(character_stat* stat);
+void game_manager_set_stat_value_by_level(character_stat* stat, i32 level);
+void set_static_player_state_stat(character_stats stat_id, i32 level);
 void currency_souls_add(i32 value);
 
 bool    _add_ability(ability_type _type);

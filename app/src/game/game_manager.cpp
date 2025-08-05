@@ -61,10 +61,10 @@ extern const u32 level_curve[MAX_PLAYER_LEVEL+1];
 
 bool game_manager_on_event(i32 code, event_context context);
 bool game_manager_reinit(const camera_metrics * in_camera_metrics, const app_settings * in_app_settings,tilemap ** const in_active_map_ptr);
-void game_manager_set_stats(character_stat* stat, u32 level);
 void populate_map_with_spawns(i32 min_count);
 bool spawn_boss(void);
 void generate_in_game_info(void);
+void game_manager_sum_stat_value(character_stat* stat, data128 lhs, data128 rhs);
 
 bool game_manager_initialize(const camera_metrics * in_camera_metrics, const app_settings * in_app_settings, tilemap ** const in_active_map_ptr) {
   if (state) {
@@ -116,11 +116,21 @@ bool game_manager_initialize(const camera_metrics * in_camera_metrics, const app
   // Traits
   {
     i32 next_trait_id = 0;
-    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_HEALTH, "Healty", "Increases your healt a bit", -1, data128(static_cast<i32>(300)), data128()));
-    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_HEALTH, "Tough", "Increases your healt a fair amouth", -2, data128(static_cast<i32>(800)), data128()));
-    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE, "Artillery", "Increases your damage a fair amouth", -2, data128(static_cast<i32>(8)), data128()));
-    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE, "Trait 4",  "Trait 4 description", -2, data128(static_cast<i32>(8)), data128()));
-    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE, "Trait 5",  "Trait 5 description", -2, data128(static_cast<i32>(8)), data128()));
+    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_HEALTH,     
+      "Healty", "Increases your healt a bit", -1, data128(static_cast<i32>(300)), data128())
+    );
+    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_HEALTH,     
+      "Tough", "Increases your healt a fair amouth", -2, data128(static_cast<i32>(800)), data128())
+    );
+    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE,     
+      "Artillery", "Increases your damage a fair amouth", -2, data128(static_cast<i32>(8)), data128())
+    );
+    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_MOVE_SPEED, 
+      "Bunny Hop", "Increases your speed a bit", -1, data128(static_cast<f32>(1000)), data128())
+    );
+    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_MOVE_SPEED, 
+      "Flash",  "Increases your speed a fair amouth", -2, data128(static_cast<f32>(5000)), data128())
+    );
     state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE, "Trait 6",  "Trait 6 description", -2, data128(static_cast<i32>(8)), data128()));
     state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE, "Trait 7",  "Trait 7 description", -2, data128(static_cast<i32>(8)), data128()));
     state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE, "Trait 8",  "Trait 8 description",  2, data128(static_cast<i32>(8)), data128()));
@@ -279,21 +289,32 @@ void render_game(void) {
  * @brief Start game before, then upgrade the stat
  */
 bool gm_start_game(worldmap_stage stage) {
-  if (!state) {
-    TraceLog(LOG_ERROR, "game_manager::gm_start_game()::State returned null");
+  if (!state || state == nullptr) {
+    TraceLog(LOG_ERROR, "game_manager::gm_start_game()::State is invalid");
     return false;
   }
   state->stage = stage;
-  if (_add_ability(state->game_info.player_state_dynamic->starter_ability)) {
-    refresh_player_stats(true, false);
+  _add_ability(state->game_info.player_state_dynamic->starter_ability);
+
+  const std::array<character_stat, CHARACTER_STATS_MAX> * const _base_stat_ptr = __builtin_addressof(state->game_info.player_state_dynamic->stats_base);
+  std::array<character_stat, CHARACTER_STATS_MAX> * const _base_total_ptr = __builtin_addressof(state->game_info.player_state_dynamic->stats_total);
+
+  for (size_t itr_000 = 0; itr_000 < state->chosen_traits.size(); ++itr_000) {
+    const character_trait * const _trait_ptr = __builtin_addressof(state->chosen_traits.at(itr_000));
+    if (_trait_ptr->type < 0 && _trait_ptr->type >= CHARACTER_STATS_MAX) {
+      TraceLog(LOG_WARNING, "game_manager::gm_start_game()::Trait type is out of bound");
+      continue;
+    }
+    const character_stat * const _stat_base_ptr = __builtin_addressof(_base_stat_ptr->at(_trait_ptr->type));
+    character_stat * const _stat_total_ptr = __builtin_addressof(_base_total_ptr->at(_trait_ptr->type));
+    
+    game_manager_sum_stat_value(_stat_total_ptr, _stat_base_ptr->buffer, _trait_ptr->ingame_use);
   }
-  else return false;
   
   populate_map_with_spawns(stage.total_spawn_count);
   if (state->game_info.in_spawns->size() <= 0) {
     return false;
   }
-  TraceLog(LOG_INFO, "Spawn Count: %llu", state->game_info.in_spawns->size());
 
   event_fire(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, event_context((f32)PRG_BAR_ID_PLAYER_EXPERIANCE, (f32)state->game_info.player_state_dynamic->exp_perc));
   event_fire(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, event_context((f32)PRG_BAR_ID_PLAYER_HEALTH, (f32)state->game_info.player_state_dynamic->health_perc));
@@ -301,13 +322,12 @@ bool gm_start_game(worldmap_stage stage) {
   state->ingame_phase = INGAME_PHASE_CLEAR_ZOMBIES;
   state->is_game_end = false;
   state->is_game_paused = false;
-
   return true;
 }
 void gm_end_game(bool is_win) {
   clean_up_spawn_state();
 
-  copy_memory(state->game_info.player_state_dynamic, __builtin_addressof(state->player_state_static), sizeof(player_state));
+  *state->game_info.player_state_dynamic = state->player_state_static;
   state->game_info.is_win = is_win;
   state->is_game_end = true;
   state->is_game_paused = false;
@@ -321,12 +341,18 @@ void gm_save_game(void) {
 void gm_load_game(void) {
   state->game_progression_data = get_save_data(SAVE_SLOT_CURRENT_SESSION);
 
-  for (size_t iter=0; iter < CHARACTER_STATS_MAX; ++iter) {
-    state->player_state_static.stats[iter].level = state->game_progression_data->p_player.stats[iter].level;
+  for (size_t itr_000 = 0; itr_000 < state->player_state_static.stats_base.size(); ++itr_000) {
+    i32 level = state->game_progression_data->p_player.stats_base.at(itr_000).level;
+    if (level > 0 || level < MAX_PLAYER_LEVEL) {
+      set_static_player_state_stat(static_cast<character_stats>(itr_000), state->game_progression_data->p_player.stats_base.at(itr_000).level);
+    }
+    else {
+      set_static_player_state_stat(static_cast<character_stats>(itr_000), 1);
+    }
   }
-  copy_memory(state->game_info.player_state_dynamic, __builtin_addressof(state->player_state_static), sizeof(player_state));
-
-  refresh_player_stats(false, true);
+  
+  state->player_state_static.stats_total = state->player_state_static.stats_base;
+  *state->game_info.player_state_dynamic = state->player_state_static;
 }
 void gm_damage_spawn_if_collide(data128 coll_data, i32 damage, collision_type coll_check) {
   switch (coll_check) {
@@ -430,250 +456,7 @@ bool spawn_boss(void) {
 
   return spawn_character(_boss);
 }
-void upgrade_dynamic_player_stat(character_stats stat_id, u16 level) {
-  if (!state || !state->game_info.player_state_dynamic->is_initialized) {
-    TraceLog(LOG_ERROR, "game_manager::upgrade_dynamic_player_stat()::State is not valid");
-    return;
-  }
-  if ( stat_id >= CHARACTER_STATS_MAX || stat_id <= CHARACTER_STATS_UNDEFINED) {
-    TraceLog(LOG_ERROR, "game_manager::upgrade_dynamic_player_stat()::stat id out of bound");
-    return;
-  }
-  character_stat* stat = __builtin_addressof(state->game_info.player_state_dynamic->stats[stat_id]);
-  if (level > 0 && level <= MAX_PASSIVE_UPGRADE_TIER) stat->level = level;
-  else {
-    if (stat->level > MAX_PASSIVE_UPGRADE_TIER || stat->level < 0) {
-      TraceLog(LOG_ERROR, "game_manager::upgrade_dynamic_player_stat()::stat level out of bound");
-      return;
-    }
-    stat->level++;
-  }
-  game_manager_set_stats(stat, stat->level);
 
-  player_state* player = state->game_info.player_state_dynamic;
-
-  switch (stat->id) {
-    case CHARACTER_STATS_HEALTH: { 
-      player->health_max = stat->buffer.u32[0];
-      player->health_current = player->health_max;
-      player->health_perc = (f32) player->health_current / (f32) player->health_max;
-      return; 
-    }
-    case CHARACTER_STATS_HP_REGEN: {
-      player->health_regen = stat->buffer.u32[0];
-      return; 
-    }
-    case CHARACTER_STATS_MOVE_SPEED: { 
-      player->move_speed_multiply = stat->buffer.f32[0];
-      return; 
-    }
-    case CHARACTER_STATS_AOE: {
-      player->damage_area_multiply = stat->buffer.f32[0];
-      return; 
-    }
-    case CHARACTER_STATS_DAMAGE: {
-      player->damage = stat->buffer.u32[0];
-      return; 
-    }
-    case CHARACTER_STATS_ABILITY_CD: {
-      player->cooldown_multiply = stat->buffer.f32[0];
-      return; 
-    }
-    case CHARACTER_STATS_PROJECTILE_AMOUTH: {
-      player->projectile_amouth = stat->buffer.u16[0];
-      return; 
-    }
-    case CHARACTER_STATS_EXP_GAIN: {
-      player->exp_gain_multiply = stat->buffer.f32[0];
-      return;
-    }
-    default: {
-      TraceLog(LOG_ERROR, "game_manager::upgrade_player_stat()::Recieved ");
-      return;
-    }
-  }
-  TraceLog(LOG_ERROR, "game_manager::upgrade_dynamic_player_stat()::Function terminated unexpectedly");
-}
-void upgrade_static_player_stat(character_stats stat_id, u16 level) {
-  if (!state || !state->player_state_static.is_initialized) {
-    TraceLog(LOG_ERROR, "game_manager::upgrade_static_player_stat()::State is not valid");
-    return;
-  }
-  if ( stat_id >= CHARACTER_STATS_MAX || stat_id <= CHARACTER_STATS_UNDEFINED) {
-    TraceLog(LOG_ERROR, "game_manager::upgrade_static_player_stat()::stat id out of bound");
-    return;
-  }
-  character_stat* stat = __builtin_addressof(state->player_state_static.stats[stat_id]);
-
-  if (level > 0 && level <= MAX_PASSIVE_UPGRADE_TIER) stat->level = level;
-  else {
-    if (stat->level > MAX_PASSIVE_UPGRADE_TIER || stat->level < 0) {
-      TraceLog(LOG_ERROR, "game_manager::upgrade_static_player_stat()::stat level out of bound");
-      return;
-    }
-    stat->level++;
-  }
-  game_manager_set_stats(stat, stat->level);
-
-  player_state* player = __builtin_addressof(state->player_state_static);
-
-  switch (stat->id) {
-    case CHARACTER_STATS_HEALTH: { 
-      player->health_max = stat->buffer.u32[0];
-      player->health_current = player->health_max;
-      return; 
-    }
-    case CHARACTER_STATS_HP_REGEN: {
-      player->health_regen = stat->buffer.u32[0];
-      return; 
-    }
-    case CHARACTER_STATS_MOVE_SPEED: { 
-      player->move_speed_multiply = stat->buffer.f32[0];
-      return; 
-    }
-    case CHARACTER_STATS_AOE: {
-      player->damage_area_multiply = stat->buffer.f32[0];
-      return; 
-    }
-    case CHARACTER_STATS_DAMAGE: {
-      player->damage = stat->buffer.u32[0];
-      return; 
-    }
-    case CHARACTER_STATS_ABILITY_CD: {
-      player->cooldown_multiply = stat->buffer.f32[0];
-      return; 
-    }
-    case CHARACTER_STATS_PROJECTILE_AMOUTH: {
-      player->projectile_amouth = stat->buffer.u16[0];
-      return; 
-    }
-    case CHARACTER_STATS_EXP_GAIN: {
-      player->exp_gain_multiply = stat->buffer.f32[0];
-      return;
-    }
-    default: {
-      TraceLog(LOG_ERROR, "game_manager::upgrade_player_stat()::Recieved ");
-      return;
-    }
-  }
-  TraceLog(LOG_ERROR, "game_manager::upgrade_static_player_stat()::Function terminated unexpectedly");
-}
-/**
- * @brief default player is dynamic
- */
-void refresh_player_stats(bool refresh_dynamic_state, bool refresh_static_state) {
-  if (!state) {
-    TraceLog(LOG_ERROR, "game_manager::refresh_player_stats()::State returned null");
-    return;
-  }
-  if (refresh_dynamic_state) {
-    if (state->game_info.player_state_dynamic != nullptr && !state->game_info.player_state_dynamic->is_initialized) {
-      TraceLog(LOG_ERROR, "game_manager::refresh_player_stats()::stat returned null");
-      return;
-    }
-    for (size_t stat = CHARACTER_STATS_UNDEFINED+1; stat < CHARACTER_STATS_MAX; stat++) {
-      upgrade_dynamic_player_stat(static_cast<character_stats>(stat), state->game_info.player_state_dynamic->stats[stat].level);
-    }
-    return;
-  }
-  if(refresh_static_state) {
-    if (!state->player_state_static.is_initialized) {
-      TraceLog(LOG_ERROR, "game_manager::refresh_player_stats()::stat returned null");
-      return;
-    }
-    for (size_t stat = CHARACTER_STATS_UNDEFINED+1; stat < CHARACTER_STATS_MAX; stat++) {
-      upgrade_static_player_stat(static_cast<character_stats>(stat), state->player_state_static.stats[stat].level);
-    }
-    return;
-  }
-}
-void game_manager_set_stats(character_stat* stat, u32 level) {
-  if (!state) {
-    TraceLog(LOG_ERROR, "game_manager::game_manager_set_stats()::State is not valid");
-    return;
-  }
-  if (!stat) {
-    TraceLog(LOG_ERROR, "game_manager::game_manager_set_stats()::stat is not valid");
-    return;
-  }
-  if (stat->id >= CHARACTER_STATS_MAX || stat->id <= CHARACTER_STATS_UNDEFINED) {
-    return;
-  }
-  if (level != 0 && level > MAX_PASSIVE_UPGRADE_TIER) {
-    TraceLog(LOG_ERROR, "game_manager::game_manager_set_stats()::stat level is not valid");
-    return;
-  }
-
-  u32 next_curve_value = level_curve[level];
-  stat->upgrade_cost = next_curve_value;
-  switch (stat->id) {
-    case CHARACTER_STATS_HEALTH:{
-      const u32 value = next_curve_value * 2;
-
-      stat->buffer.u32[0] = value;
-      break;
-    }
-    case CHARACTER_STATS_HP_REGEN:{ 
-      const u32 value = next_curve_value / 1000.f;
-
-      stat->buffer.u32[0] = value;
-      break;
-    }
-    case CHARACTER_STATS_MOVE_SPEED:{
-      const f32 value = next_curve_value / 1000.f;
-
-      stat->buffer.f32[0] = value;
-      break;
-    }
-    case CHARACTER_STATS_AOE:{
-      const f32 value = next_curve_value / 1000.f;
-
-      stat->buffer.f32[0] = value;
-      break;
-    }
-    case CHARACTER_STATS_DAMAGE:{
-      const u32 value = next_curve_value * .1f;
-
-      stat->buffer.u32[0] = value;
-      break;
-    }
-    case CHARACTER_STATS_ABILITY_CD:{
-      const f32 value = next_curve_value / 1000.f;
-
-      stat->buffer.f32[0] = value;
-      break;
-    }
-    case CHARACTER_STATS_PROJECTILE_AMOUTH:{
-      const u16 value = stat->level;
-
-      stat->buffer.u16[0] = value;
-      break;
-    }
-    case CHARACTER_STATS_EXP_GAIN:{
-      const u32 value = next_curve_value / 1000.f;
-
-      stat->buffer.u32[0] = value;
-      break;
-    }
-  default:{
-    TraceLog(LOG_ERROR, "game_manager::game_manager_set_stats()::Unsuppported stat id");
-    break;
-  }
-  }
-}
-void upgrade_stat_pseudo(character_stat* stat) {
-  if ( stat->id >= CHARACTER_STATS_MAX || stat->id <= CHARACTER_STATS_UNDEFINED) {
-    TraceLog(LOG_ERROR, "game_manager::upgrade_stat_pseudo()::stat id out of bound");
-    return;
-  }
-  if (stat->level < 0 && stat->level >= MAX_PASSIVE_UPGRADE_TIER){
-    TraceLog(LOG_ERROR, "game_manager::upgrade_stat_pseudo()::stat level out of bound");
-    return;
-  }
-  stat->level++;
-
-  game_manager_set_stats(stat, stat->level);
-}
 void currency_souls_add(i32 value) {
   state->game_info.collected_souls += value;
 }
@@ -718,7 +501,15 @@ const character_stat* get_static_player_state_stat(character_stats stat) {
     return nullptr;
   }
   
-  return __builtin_addressof(state->player_state_static.stats[stat]);
+  return __builtin_addressof(state->player_state_static.stats_base.at(stat));
+}
+void set_static_player_state_stat(character_stats stat_id, i32 level) {
+  if (stat_id >= CHARACTER_STATS_MAX || stat_id <= CHARACTER_STATS_UNDEFINED) {
+    return;
+  }
+  character_stat * _stat_ptr = __builtin_addressof(state->player_state_static.stats_base.at(stat_id));
+  
+  game_manager_set_stat_value_by_level(_stat_ptr, level);
 }
 void toggle_is_game_paused(void) {
   state->is_game_paused = !state->is_game_paused;
@@ -740,6 +531,125 @@ const std::vector<character_trait>* gm_get_character_traits(void) {
   }
 
   return __builtin_addressof(state->traits);
+}
+void game_manager_set_stat_value_by_level(character_stat* stat, i32 level) {
+  if (!state) {
+    TraceLog(LOG_ERROR, "game_manager::game_manager_set_stats()::State is not valid");
+    return;
+  }
+  if (!stat) {
+    TraceLog(LOG_ERROR, "game_manager::game_manager_set_stats()::stat is not valid");
+    return;
+  }
+  if (stat->id >= CHARACTER_STATS_MAX || stat->id <= CHARACTER_STATS_UNDEFINED) {
+    return;
+  }
+
+  i32 next_curve_value = level_curve[level];
+  stat->upgrade_cost = next_curve_value;
+  stat->level = level;
+  switch (stat->id) {
+    case CHARACTER_STATS_HEALTH:{
+      const i32 value = next_curve_value * 2;
+
+      stat->buffer.i32[0] = value;
+      break;
+    }
+    case CHARACTER_STATS_HP_REGEN:{ 
+      const i32 value = next_curve_value / 1000.f;
+
+      stat->buffer.i32[0] = value;
+      break;
+    }
+    case CHARACTER_STATS_MOVE_SPEED:{
+      const f32 value = next_curve_value / 1000.f;
+
+      stat->buffer.f32[0] = value;
+      break;
+    }
+    case CHARACTER_STATS_AOE:{
+      const f32 value = next_curve_value / 1000.f;
+
+      stat->buffer.f32[0] = value;
+      break;
+    }
+    case CHARACTER_STATS_DAMAGE:{
+      const i32 value = next_curve_value * .1f;
+
+      stat->buffer.i32[0] = value;
+      break;
+    }
+    case CHARACTER_STATS_ABILITY_CD:{
+      const f32 value = next_curve_value / 1000.f;
+
+      stat->buffer.f32[0] = value;
+      break;
+    }
+    case CHARACTER_STATS_PROJECTILE_AMOUTH:{
+      const i32 value = stat->level;
+
+      stat->buffer.i32[0] = value;
+      break;
+    }
+    case CHARACTER_STATS_EXP_GAIN:{
+      const i32 value = next_curve_value / 1000.f;
+
+      stat->buffer.i32[0] = value;
+      break;
+    }
+    default:{
+      TraceLog(LOG_ERROR, "game_manager::game_manager_set_stats()::Unsuppported stat id");
+      break;
+    }
+  }
+}
+void game_manager_sum_stat_value(character_stat* stat, data128 lhs, data128 rhs) {
+  if (!state || state == nullptr) {
+    TraceLog(LOG_ERROR, "game_manager::game_manager_sum_stat_value()::State is not valid");
+    return;
+  }
+  if (!stat || stat == nullptr) {
+    TraceLog(LOG_ERROR, "game_manager::game_manager_sum_stat_value()::stat is not valid");
+    return;
+  }
+  switch (stat->id) {
+    case CHARACTER_STATS_HEALTH:{
+      stat->buffer.i32[0] = lhs.i32[0] + rhs.i32[0];
+      break;
+    }
+    case CHARACTER_STATS_HP_REGEN:{ 
+      stat->buffer.i32[0] = lhs.i32[0] + rhs.i32[0];
+      break;
+    }
+    case CHARACTER_STATS_MOVE_SPEED:{
+      stat->buffer.f32[0] = lhs.f32[0] + rhs.f32[0];
+      break;
+    }
+    case CHARACTER_STATS_AOE:{
+      stat->buffer.f32[0] = lhs.f32[0] + rhs.f32[0];
+      break;
+    }
+    case CHARACTER_STATS_DAMAGE:{
+      stat->buffer.i32[0] = lhs.i32[0] + rhs.i32[0];
+      break;
+    }
+    case CHARACTER_STATS_ABILITY_CD:{
+      stat->buffer.f32[0] = lhs.f32[0] + rhs.f32[0];
+      break;
+    }
+    case CHARACTER_STATS_PROJECTILE_AMOUTH:{
+      stat->buffer.i32[0] = lhs.i32[0] + rhs.i32[0];
+      break;
+    }
+    case CHARACTER_STATS_EXP_GAIN:{
+      stat->buffer.i32[0] = lhs.i32[0] + rhs.i32[0];
+      break;
+    }
+    default:{
+      TraceLog(LOG_ERROR, "game_manager::game_manager_sum_stat_value()::Unsuppported stat id");
+      break;
+    }
+  }
 }
 // GET / SET
 
@@ -767,7 +677,7 @@ bool _add_ability(ability_type _type) {
   }
   abl.p_owner = state->game_info.player_state_dynamic;
   abl.is_initialized = true;
-  abl.proj_count += state->game_info.player_state_dynamic->projectile_amouth;
+  abl.proj_count += state->game_info.player_state_dynamic->stats_base.at(CHARACTER_STATS_PROJECTILE_AMOUTH).buffer.i32[0];
   abl.is_active = true;
 
   refresh_ability(__builtin_addressof(abl));

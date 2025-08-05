@@ -5,7 +5,6 @@
 #include <game/game_types.h>
 
 [[__nodiscard__]] bool initialize_scene_editor(const app_settings * _in_app_settings, bool fade_in);
-[[__nodiscard__]] bool begin_scene_editor(bool fade_in);
 void end_scene_editor(void);
 
 void update_scene_editor(void);

@@ -147,7 +147,9 @@ typedef struct scene_editor_state {
   }
 } scene_editor_state;
 
-static scene_editor_state * state;
+static scene_editor_state * state = nullptr;
+
+[[__nodiscard__]] bool begin_scene_editor(bool fade_in);
 
 constexpr void editor_update_bindings(void);
 constexpr void editor_update_movement(void);
@@ -171,8 +173,8 @@ constexpr bool scene_editor_map_prop_type_slc_slider_on_left_button_trigger(void
 constexpr bool scene_editor_map_prop_type_slc_slider_on_right_button_trigger(void);
 
 constexpr bool scene_editor_is_map_prop_y_based_checkbox_on_change_trigger(void);
-void se_begin_fadeout(data64 data, void(*on_change_complete)(data64));
-void se_begin_fadein(data64 data, void(*on_change_complete)(data64));
+void se_begin_fadeout(data128 data, void(*on_change_complete)(data128));
+void se_begin_fadein(data128 data, void(*on_change_complete)(data128));
 
 #define SE_BASE_RENDER_WIDTH state->in_app_settings->render_width
 #define SE_BASE_RENDER_HEIGHT state->in_app_settings->render_height
@@ -408,7 +410,7 @@ void se_begin_fadein(data64 data, void(*on_change_complete)(data64));
   event_fire(EVENT_CODE_CAMERA_SET_CAMERA_POSITION, event_context(data128(state->target.x, state->target.y)));
 
   if (fade_in) {
-    se_begin_fadein(data64(), nullptr);
+    se_begin_fadein(data128(), nullptr);
   }
   update_tilemap_prop_type();
   return true;
@@ -430,9 +432,10 @@ void update_scene_editor(void) {
   }
   if(!IsWindowFocused()) {
     state->mouse_focus = MOUSE_FOCUS_UNFOCUSED;
-    return;
   }
-  else state->mouse_focus = MOUSE_FOCUS_MAP;
+  else {
+    state->mouse_focus = MOUSE_FOCUS_MAP;
+  }
 
   editor_update_bindings();
   event_fire(EVENT_CODE_CAMERA_SET_TARGET, event_context(data128(state->target.x, state->target.y)));
@@ -448,7 +451,7 @@ void update_scene_editor(void) {
       if (state->se_fade.on_change_complete != nullptr) {
         state->se_fade.on_change_complete(state->se_fade.data);
       }
-      se_begin_fadein(data64(), nullptr);
+      se_begin_fadein(data128(), nullptr);
     }
     else if(state->se_fade.fade_type == FADE_TYPE_FADEIN) {
       state->se_fade = ui_fade_control_system();
@@ -1456,7 +1459,7 @@ constexpr void scene_editor_selection_cleanup(void) {
   state->sel_map_coll_addr_from_map = nullptr;
   state->b_dragging_map_element = false;
 }
-void se_begin_fadeout(data64 data, void(*on_change_complete)(data64)) {
+void se_begin_fadeout(data128 data, void(*on_change_complete)(data128)) {
   if (!state || state == nullptr ) {
     TraceLog(LOG_ERROR, "scene_editor::se_begin_fadeout()::State is not valid");
     return;
@@ -1470,7 +1473,7 @@ void se_begin_fadeout(data64 data, void(*on_change_complete)(data64)) {
   state->se_fade.data = data;
   state->se_fade.on_change_complete = on_change_complete;
 }
-void se_begin_fadein(data64 data, void(*on_change_complete)(data64)) {
+void se_begin_fadein(data128 data, void(*on_change_complete)(data128)) {
   if (!state || state == nullptr ) {
     TraceLog(LOG_ERROR, "scene_editor::se_begin_fadein()::State is not valid");
     return;
