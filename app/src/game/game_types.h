@@ -215,9 +215,9 @@ typedef enum text_alignment {
   TEXT_ALIGN_TOP_LEFT,
   TEXT_ALIGN_TOP_CENTER,
   TEXT_ALIGN_TOP_RIGHT,
-  TEXT_ALIGN_DOWN_LEFT,
-  TEXT_ALIGN_DOWN_CENTER,
-  TEXT_ALIGN_DOWN_RIGHT,
+  TEXT_ALIGN_BOTTOM_LEFT,
+  TEXT_ALIGN_BOTTOM_CENTER,
+  TEXT_ALIGN_BOTTOM_RIGHT,
   TEXT_ALIGN_LEFT_CENTER,
   TEXT_ALIGN_RIGHT_CENTER,
   TEXT_ALIGN_MAX,
@@ -586,13 +586,12 @@ typedef struct Character2D {
     this->initialized = false;
     this->buffer = data128();
   }
-  Character2D(i32 spawn_type, i32 player_level, i32 rnd_scale, Vector2 position, f32 speed) : Character2D() {
+  Character2D(i32 spawn_type, i32 player_level, i32 rnd_scale, Vector2 position) : Character2D() {
     type = ACTOR_TYPE_SPAWN;
     buffer.i32[0] = spawn_type;
     buffer.i32[1] = player_level;
     buffer.i32[2] = rnd_scale;
     this->position = position;
-    this->speed = speed;
     is_damagable = true;
   }
   Character2D(Rectangle collision, i32 damage) : Character2D() {
@@ -805,7 +804,7 @@ typedef struct player_state {
   i32 exp_current;
   f32 exp_perc;
   f32 health_perc;
-  f32 health_current;
+  i32 health_current;
 
   i32 level;
 

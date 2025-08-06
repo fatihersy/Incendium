@@ -33,13 +33,14 @@ CheckCollisionRecs(REC1, \
 #define SPAWN_RND_SCALE_MAX 2.5f
 #define SPAWN_SCALE_INCREASE_BY_LEVEL(LEVEL) LEVEL * .1
 
-#define SPAWN_BASE_HEALTH 14
-#define SPAWN_HEALTH_SCALE_CURVE .5f
-#define SPAWN_HEALTH_CURVE(LEVEL, SCALE, TYPE) SPAWN_BASE_HEALTH + (SPAWN_BASE_HEALTH * ((SCALE * 0.4f) + (LEVEL * 0.6f) + (TYPE * 0.3f)) * level_curve[LEVEL] * 0.002f)
+#define SPAWN_BASE_HEALTH 300
+#define SPAWN_HEALTH_CURVE(LEVEL, SCALE, TYPE) (SPAWN_BASE_HEALTH + (SPAWN_BASE_HEALTH * ((SCALE * 0.4f) + (LEVEL * 0.6f) + (TYPE * 0.3f)) * level_curve[LEVEL] * 0.002f))
 
-#define SPAWN_BASE_DAMAGE 5
-#define SPAWN_DAMAGE_SCALE_CURVE .5f
-#define SPAWN_DAMAGE_CURVE(LEVEL, SCALE, TYPE) SPAWN_BASE_DAMAGE + (SPAWN_BASE_DAMAGE * ((SCALE * 0.4f) + (LEVEL * 0.6f) + (TYPE * 0.3f)) * level_curve[LEVEL] * 0.002f)
+#define SPAWN_BASE_DAMAGE 170
+#define SPAWN_DAMAGE_CURVE(LEVEL, SCALE, TYPE) (SPAWN_BASE_DAMAGE + (SPAWN_BASE_DAMAGE * ((SCALE * 0.45f) + (LEVEL * 0.6f) + (TYPE * 0.3f)) * level_curve[LEVEL] * 0.002f))
+
+#define SPAWN_BASE_SPEED 50
+#define SPAWN_SPEED_CURVE(LEVEL, SCALE, TYPE) (SPAWN_BASE_SPEED + ((SPAWN_BASE_SPEED * (LEVEL + (LEVEL * 0.2f)) + (TYPE + (TYPE * 0.25f))) / SCALE))
 
 void spawn_play_anim(Character2D* spawn, spawn_movement_animations sheet);
 void remove_spawn(i32 index);
@@ -98,6 +99,7 @@ bool spawn_character(Character2D _character) {
 
   _character.health = SPAWN_HEALTH_CURVE(_character.buffer.i32[1], _character.scale, static_cast<f32>(spw_type));
   _character.damage = SPAWN_DAMAGE_CURVE(_character.buffer.i32[1], _character.scale, static_cast<f32>(spw_type));
+  _character.speed =  SPAWN_SPEED_CURVE(_character.buffer.i32[1], _character.scale, static_cast<f32>(spw_type));
   
   register_spawn_animation(__builtin_addressof(_character), SPAWN_ZOMBIE_ANIMATION_MOVE_LEFT);
 
@@ -152,7 +154,7 @@ bool update_spawns(Vector2 player_position) {
 
     if (character->is_dead) { continue; }
 
-    Vector2 new_position = move_towards(character->position, player_position, character->speed);
+    Vector2 new_position = move_towards(character->position, player_position, character->speed * GetFrameTime());
     bool x0_collide = false;
     bool y0_collide = false;
     for (size_t itr_111 = 0; itr_111 < state->spawns.size(); ++itr_111) {

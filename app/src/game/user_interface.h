@@ -69,6 +69,10 @@ typedef struct button_type {
   Vector2 source_frame_dim;
   Vector2 dest_frame_dim;
   f32 scale;
+  Color forground_color_btn_state_up;
+  Color forground_color_btn_state_hover;
+  Color forground_color_btn_state_pressed;
+
   bool should_center;
   button_type(void) {
     this->id = BTN_TYPE_UNDEFINED;
@@ -77,14 +81,24 @@ typedef struct button_type {
     this->dest_frame_dim = ZEROVEC2;
     this->scale = 0.f;
     this->should_center = false;
+    this->forground_color_btn_state_up = WHITE;
+    this->forground_color_btn_state_hover = WHITE;
+    this->forground_color_btn_state_pressed = WHITE;
   }
-  button_type(button_type_id id, spritesheet_id ss_type, Vector2 source_frame_dim, Vector2 dest_frame_dim, f32 scale, bool should_center) {
+  button_type(button_type_id id, spritesheet_id ss_type, Vector2 source_frame_dim, Vector2 dest_frame_dim, f32 scale, bool should_center, 
+    Color _forground_color_btn_state_up = WHITE,
+    Color _forground_color_btn_state_hover = WHITE,
+    Color _forground_color_btn_state_pressed = WHITE
+  ) {
     this->id = id;
     this->ss_type = ss_type;
     this->source_frame_dim = source_frame_dim;
     this->dest_frame_dim = dest_frame_dim;
     this->scale = scale;
     this->should_center = should_center;
+    this->forground_color_btn_state_up = _forground_color_btn_state_up;
+    this->forground_color_btn_state_hover = _forground_color_btn_state_hover;
+    this->forground_color_btn_state_pressed = _forground_color_btn_state_pressed;
   }
 } button_type;
 
@@ -310,31 +324,37 @@ typedef struct slider {
 } slider;
 
 typedef struct progress_bar_type {
-  //texture_id body_repetitive;
+  progress_bar_type_id id;
   atlas_texture_id body_inside;
   atlas_texture_id body_outside;
   shader_id mask_shader_id;
+  Rectangle body_inside_scissor;
   progress_bar_type(void) {
+    this->id = PRG_BAR_TYPE_ID_UNDEFINED;
     this->body_inside = ATLAS_TEX_ID_UNSPECIFIED;
     this->body_outside = ATLAS_TEX_ID_UNSPECIFIED;
     this->mask_shader_id = SHADER_ID_UNSPECIFIED;
+    this->body_inside_scissor = ZERORECT;
+  }
+  progress_bar_type(progress_bar_type_id _type_id, atlas_texture_id body_inside, atlas_texture_id body_outside, shader_id mask_shader_id, Rectangle body_inside_scissor) : progress_bar_type() {
+    this->id = _type_id;
+    this->body_inside = body_inside;
+    this->body_outside = body_outside;
+    this->mask_shader_id = mask_shader_id;
+    this->body_inside_scissor = body_inside_scissor;
   }
 } progress_bar_type;
 
 typedef struct progress_bar {
   progress_bar_id id;
   progress_bar_type type;
-
-  f32 width_multiply;
-  Vector2 scale;
-
+  Rectangle dest;
   f32 progress;
   bool is_initialized;
   progress_bar(void) {
     this->id = PRG_BAR_ID_UNDEFINED;
     this->type = progress_bar_type();
-    this->width_multiply = 0.f;
-    this->scale = ZEROVEC2;
+    this->dest = ZERORECT;
     this->progress = 0.f;
     this->is_initialized = false;
   }
@@ -403,9 +423,10 @@ void gui_checkbox_grid(checkbox_id _id, Vector2 grid, Vector2 grid_location);
 void gui_slider(slider_id _id, Vector2 pos, Vector2 grid);
 void gui_draw_texture_to_background(texture_id _id);
 void gui_draw_spritesheet_to_background(spritesheet_id _id, Color _tint);
-void gui_progress_bar(progress_bar_id bar_id, Vector2 pos, bool _should_center);
+void gui_progress_bar(progress_bar_id bar_id, Rectangle dest, bool _should_center);
 void gui_panel(panel pan, Rectangle dest, bool _should_center);
 bool gui_panel_active(panel* panel, Rectangle dest, bool _should_center);
+void gui_label_box(const char* text, font_type type, i32 font_size, Rectangle dest, Color tint, text_alignment alignment);
 void gui_label(const char* text, font_type type, i32 font_size, Vector2 position, Color tint, bool _center_h, bool _center_v);
 void gui_label_shader(const char* text, shader_id sdr_id, font_type type, i32 font_size, Vector2 position, Color tint, bool _center_h, bool _center_v);
 void gui_label_wrap(const char* text, font_type type, i32 font_size, Rectangle position, Color tint, bool _should_center);
@@ -427,6 +448,7 @@ void ui_play_sprite_on_site(spritesheet *sheet, Color _tint, Rectangle dest);
 void ui_set_sprite(spritesheet *sheet, bool _play_looped, bool _play_once);
 void ui_update_sprite(spritesheet *sheet);
 
+#define gui_label_box_format(FONT, FONT_SIZE, RECT, COLOR, ALIGN, TEXT, ...) gui_label_box(TextFormat(TEXT, __VA_ARGS__), FONT, FONT_SIZE, RECT, COLOR, ALIGN)
 #define gui_label_format(FONT, FONT_SIZE, X,Y, COLOR, CENTER_H, CENTER_V, TEXT, ...) gui_label(TextFormat(TEXT, __VA_ARGS__), FONT, FONT_SIZE, Vector2{X,Y}, COLOR, CENTER_H, CENTER_V)
 #define gui_label_format_v(FONT, FONT_SIZE, POS, COLOR, CENTER_H, CENTER_V, TEXT, ...) gui_label(TextFormat(TEXT, __VA_ARGS__), FONT, FONT_SIZE, POS, COLOR, CENTER_H, CENTER_V)
 #define gui_label_format_grid(FONT, FONT_SIZE, X,Y, GRID_SCALE, COLOR, CENTER_H, CENTER_V, TEXT, ...) gui_label_grid(TextFormat(TEXT, __VA_ARGS__), FONT, FONT_SIZE, Vector2{X,Y}, COLOR, CENTER_H, CENTER_V, GRID_SCALE)

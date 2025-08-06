@@ -123,7 +123,7 @@ void smm_update_bindings(void);
 void smm_update_local_buttons(void);
 void smm_begin_fadeout(data128 data, void(*on_change_complete)(data128));
 void smm_begin_fadein(data128 data, void(*on_change_complete)(data128));
-void smm_add_local_button(i32 _id, button_type_id _btn_type_id, button_state signal_state);
+local_button* smm_add_local_button(i32 _id, button_type_id _btn_type_id, button_state signal_state);
 local_button* smm_get_local_button(i32 _id);
 void fade_on_complete_change_main_menu_type(data128 data);
 void fade_on_complete_change_scene(data128 data);
@@ -264,8 +264,8 @@ void render_scene_main_menu(void) {
   
   switch (state->mainmenu_state) {
     case MAIN_MENU_SCENE_DEFAULT: {
-        render_map();
-        break;
+      render_map();
+      break;
     }
     case MAIN_MENU_SCENE_TO_PLAY_MAP_CHOICE: {
       const f32 image_ratio = 3840.f / 2160.f; // INFO: ratio of map texture
@@ -304,13 +304,15 @@ void render_scene_main_menu(void) {
       break;
     }
     case MAIN_MENU_SCENE_SETTINGS: {
-        break;
+      render_map();
+      break;
     }
     case MAIN_MENU_SCENE_EXTRAS: {
-        break;
+      break;
     }
     case MAIN_MENU_SCENE_UPGRADE: {
-        break;
+      render_map();
+      break;
     }
     default: { break; }
   }
@@ -557,7 +559,7 @@ void draw_main_menu_upgrade_details_panel(void) {
   gui_label_wrap(lc_txt(state->hovered_stat->passive_desc_symbol), FONT_TYPE_ABRACADABRA, 1, description_pos, WHITE, false);
 
   character_stat pseudo_update = *state->hovered_stat;
-  game_manager_set_stat_value_by_level(&pseudo_update, pseudo_update.level++);
+  game_manager_set_stat_value_by_level(&pseudo_update, pseudo_update.level+1);
   Vector2 upg_stat_text_pos = {
     state->upgrade_details_panel.dest.x + state->upgrade_details_panel.dest.width * .5f,
     state->upgrade_details_panel.dest.y + state->upgrade_details_panel.dest.height * .5f,
@@ -586,7 +588,7 @@ void draw_main_menu_upgrade_details_panel(void) {
       DRAW_UPGRADE_LABEL(upg_stat_text_pos, "%d -> %d", state->hovered_stat->buffer.u16[0], pseudo_update.buffer.u16[0]) break;
     }
     case CHARACTER_STATS_EXP_GAIN: {
-      DRAW_UPGRADE_LABEL(upg_stat_text_pos, "%d -> %d", state->hovered_stat->buffer.u32[0], pseudo_update.buffer.u32[0]) break;
+      DRAW_UPGRADE_LABEL(upg_stat_text_pos, "%.1f -> %.1f", state->hovered_stat->buffer.f32[0], pseudo_update.buffer.f32[0]) break;
     }
     default: {
       TraceLog(LOG_ERROR, "game_manager::upgrade_player_stat()::Unsuppported stat id");
@@ -772,18 +774,33 @@ void trait_selection_panel_list_traits(panel* const pnl, const Rectangle rect, s
       _trait = __builtin_addressof(traits->at(itr_000));
       local_button* _lc_btn = smm_get_local_button(_trait->ui_use.i32[0]);
       text_measure = ui_measure_text(_trait->title.c_str(), FONT_TYPE_ABRACADABRA, 1);
+      Vector2 _lc_btn_pos = VECTOR2(rect.x, rect.y + trait_list_height_buffer + (pnl->buffer.f32[0] * pnl->scroll));
+      Rectangle _lc_btn_dest = Rectangle {
+        _lc_btn_pos.x, _lc_btn_pos.y, _lc_btn->btn_type.dest_frame_dim.x, _lc_btn->btn_type.dest_frame_dim.y
+      };
 
-      if (gui_draw_local_button(
-        _trait->title.c_str(), _lc_btn, FONT_TYPE_ABRACADABRA, 1, 
-        VECTOR2(rect.x, rect.y + trait_list_height_buffer + (pnl->buffer.f32[0] * pnl->scroll)), TEXT_ALIGN_LEFT_CENTER, false)
-      ) {
+      if (gui_draw_local_button(_trait->title.c_str(), _lc_btn, FONT_TYPE_ABRACADABRA, 1, _lc_btn_pos, TEXT_ALIGN_LEFT_CENTER, false)) {
         if (trait_list_height_buffer + (pnl->buffer.f32[0] * pnl->scroll) < rect.height) {
           trait_button_on_click_pfn(itr_000);
           _lc_btn->current_state = BTN_STATE_UP;
           continue;
         }
       }
-      
+      switch (_lc_btn->current_state) {
+        case BTN_STATE_UP:{
+          gui_label_box_format(FONT_TYPE_ABRACADABRA, 1, _lc_btn_dest, _lc_btn->btn_type.forground_color_btn_state_up, TEXT_ALIGN_RIGHT_CENTER, "%d", _trait->point);
+          break;
+        }
+        case BTN_STATE_HOVER:{
+          gui_label_box_format(FONT_TYPE_ABRACADABRA, 1, _lc_btn_dest, _lc_btn->btn_type.forground_color_btn_state_hover, TEXT_ALIGN_RIGHT_CENTER, "%d", _trait->point);
+          break;
+        }
+        case BTN_STATE_PRESSED:{
+          gui_label_box_format(FONT_TYPE_ABRACADABRA, 1, _lc_btn_dest, _lc_btn->btn_type.forground_color_btn_state_pressed, TEXT_ALIGN_RIGHT_CENTER, "%d", _trait->point);
+          break;
+        }
+        default: break; 
+      }
       trait_list_height_buffer += text_measure.y + (text_measure.y * .1f);
     }
     pnl->buffer.f32[0] = trait_list_height_buffer - rect.height - (text_measure.y * .2f);
@@ -1014,25 +1031,25 @@ void smm_begin_fadein(data128 data, void(*on_change_complete)(data128)) {
   state->smm_fade.data = data;
   state->smm_fade.on_change_complete = on_change_complete;
 }
-void smm_add_local_button(i32 _id, button_type_id _btn_type_id, button_state signal_state) {
+local_button* smm_add_local_button(i32 _id, button_type_id _btn_type_id, button_state signal_state) {
   if (!state || state == nullptr) {
     TraceLog(LOG_ERROR, "scene_main_menu::smm_add_local_button()::State is not valid");
-    return;
+    return nullptr;
   }
   for (size_t itr_000 = 0; itr_000 < state->general_purpose_buttons.size(); ++itr_000) {
     const local_button * const _btn = __builtin_addressof(state->general_purpose_buttons.at(itr_000));
     if (_btn->id == _id) {
       TraceLog(LOG_WARNING, "scene_main_menu::smm_add_local_button()::Button ids overlapping");
-      return;
+      return nullptr;
     }
   }
   button_type trait_on_click_button_type = get_button_types()->at(_btn_type_id);
 
-  state->general_purpose_buttons.push_back(local_button(_id, trait_on_click_button_type, signal_state, 
+  return __builtin_addressof(state->general_purpose_buttons.emplace_back(local_button(_id, trait_on_click_button_type, signal_state, 
     Rectangle {0, 0, 
       trait_on_click_button_type.dest_frame_dim.x, trait_on_click_button_type.dest_frame_dim.y
-    }
-  ));
+    }))
+  );
 }
 local_button* smm_get_local_button(i32 _id) {
   if (!state || state == nullptr) {
@@ -1100,10 +1117,19 @@ void begin_scene_change(main_menu_scene_type mms, [[__maybe_unused__]] event_con
         character_trait _trait = gm_traits->at(itr_000);
       
         _trait.ui_use.i32[0] = state->next_local_button_id;
-        smm_add_local_button(state->next_local_button_id++, BTN_TYPE_FLAT_BUTTON, BTN_STATE_RELEASED);
-      
-        if (_trait.point > 0) state->positive_traits.push_back(_trait);
-        else state->negative_traits.push_back(_trait);
+        local_button * lcl_btn_ptr = smm_add_local_button(state->next_local_button_id++, BTN_TYPE_FLAT_BUTTON, BTN_STATE_RELEASED);
+        if (_trait.point > 0) {
+          lcl_btn_ptr->btn_type.forground_color_btn_state_up = GREEN;
+          lcl_btn_ptr->btn_type.forground_color_btn_state_hover = GREEN;
+          lcl_btn_ptr->btn_type.forground_color_btn_state_pressed = GREEN;
+          state->positive_traits.push_back(_trait);
+        }
+        else {
+          lcl_btn_ptr->btn_type.forground_color_btn_state_up = RED;
+          lcl_btn_ptr->btn_type.forground_color_btn_state_hover = RED;
+          lcl_btn_ptr->btn_type.forground_color_btn_state_pressed = RED;
+          state->negative_traits.push_back(_trait);
+        }
       }
       state->mainmenu_state = MAIN_MENU_SCENE_TO_PLAY_TRAIT_CHOICE;
       break;

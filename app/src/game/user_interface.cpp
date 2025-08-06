@@ -77,7 +77,7 @@ static user_interface_system_state * state = nullptr;
 #define LABEL_FONT UI_ABRACADABRA_FONT
 #define LABEL_FONT_SIZE_SCALE 1
 #define DEFAULT_MENU_BUTTON_SCALE 4
-#define SLIDER_FONT UI_ABRACADABRA_FONT
+#define SLIDER_FONT FONT_TYPE_ABRACADABRA
 #define DEFAULT_SLIDER_FONT_SIZE 1
 #define DEFAULT_PERCENT_SLIDER_CIRCLE_AMOUTH 10
 
@@ -106,7 +106,7 @@ void update_sliders(void);
 void update_checkboxes(void);
  
 void draw_slider_body(slider* sdr);
-void draw_atlas_texture_stretch(atlas_texture_id body, Vector2 pos, Vector2 scale, Rectangle stretch_part, u16 stretch_part_mltp, bool should_center);
+void draw_atlas_texture_stretch(atlas_texture_id tex_id, Rectangle stretch_part, Rectangle dest, bool should_center);
 void draw_atlas_texture_regular(atlas_texture_id _id, Rectangle dest, Color tint, bool should_center);
 void draw_atlas_texture_npatch(atlas_texture_id _id, Rectangle dest, Vector4 offsets, bool should_center);
 void gui_draw_settings_screen(void);
@@ -117,8 +117,8 @@ void register_checkbox(checkbox_id _cb_id, checkbox_type_id _cb_type_id);
 void register_checkbox_type(checkbox_type_id _cb_type_id, spritesheet_id _ss_type, Vector2 frame_dim, f32 _scale, bool _should_center);
 void register_button(button_id _btn_id, button_type_id _btn_type_id);
 void register_button_type(button_type_id _btn_type_id, spritesheet_id _ss_type, Vector2 frame_dim, f32 _scale, bool _should_center);
-void register_progress_bar(progress_bar_id _id, progress_bar_type_id _type_id, f32 width_multiply, Vector2 scale);
-void register_progress_bar_type(progress_bar_type_id _type_id, atlas_texture_id _body_inside, atlas_texture_id _body_outside, shader_id _mask_shader_id);
+void register_progress_bar(progress_bar_id _id, progress_bar_type_id _type_id);
+void register_progress_bar_type(progress_bar_type_id _type_id, atlas_texture_id _body_inside, atlas_texture_id _body_outside, shader_id _mask_shader_id, Rectangle inner_scissor);
 void register_slider_type(slider_type_id _sdr_type_id, spritesheet_id _ss_sdr_body_type, f32 _scale, u16 _width_multiply, button_type_id _left_btn_type_id, button_type_id _right_btn_type_id, u16 _char_limit);
 
 void draw_text_shader(const char *text, shader_id sdr_id, Vector2 position, Font font, float fontsize, Color tint, bool center_horizontal, bool center_vertical, bool use_grid_align, Vector2 grid_coord);
@@ -134,7 +134,38 @@ Vector2 ui_align_text(Rectangle in_dest, Vector2 in_text_measure, text_alignment
 bool ui_sound_slider_on_left_button_trigger(void);
 bool ui_sound_slider_on_right_button_trigger(void);
 
-constexpr void draw_text(const char* text, Vector2 pos, Font font, i32 fontsize, Color color, bool center_horizontal, bool center_vertical, bool use_grid_align, Vector2 grid_coord) {
+constexpr Font font_type_to_font(font_type in_font_type) {
+  switch (in_font_type) {
+    case FONT_TYPE_MEDIUM: {
+      return UI_MEDIUM_FONT;
+      break;
+    }
+    case FONT_TYPE_BOLD: {
+      return UI_BOLD_FONT;
+      break;
+    }
+    case FONT_TYPE_LIGHT: {
+      return UI_LIGHT_FONT;
+      break;
+    }
+    case FONT_TYPE_ITALIC: {
+      return UI_ITALIC_FONT;
+      break;
+    }
+    case FONT_TYPE_ABRACADABRA: {
+      return UI_ABRACADABRA_FONT;
+      break;
+    }
+    default: return GetFontDefault();
+  }
+  return GetFontDefault();
+}
+constexpr void draw_text_simple(const char* text, Vector2 pos, font_type in_font_type, i32 fontsize, Color color) {
+  Font font = font_type_to_font(in_font_type);
+  DrawTextEx(font, text, pos, font.baseSize * fontsize, UI_FONT_SPACING, color);
+}
+constexpr void draw_text(const char* text, Vector2 pos, font_type in_font_type, i32 fontsize, Color color, bool center_horizontal, bool center_vertical, bool use_grid_align, Vector2 grid_coord) {
+  Font font = font_type_to_font(in_font_type);
   Vector2 text_measure = MeasureTextEx(font, text, font.baseSize * fontsize, UI_FONT_SPACING);
   Vector2 text_position = pos;
   if (use_grid_align) {
@@ -252,28 +283,16 @@ bool user_interface_system_initialize(void) {
 
   // PROGRES BAR TYPES
   {
-    register_progress_bar_type(
-      PRG_BAR_TYPE_ID_CRIMSON_FANT_BAR,
-      ATLAS_TEX_ID_PROGRESS_BAR_INSIDE_FULL, ATLAS_TEX_ID_PROGRESS_BAR_OUTSIDE_FULL,
-      SHADER_ID_PROGRESS_BAR_MASK
+    register_progress_bar_type( PRG_BAR_TYPE_ID_CRIMSON_FANT_BAR, ATLAS_TEX_ID_PROGRESS_BAR_INSIDE_FULL, ATLAS_TEX_ID_PROGRESS_BAR_OUTSIDE_FULL, SHADER_ID_PROGRESS_BAR_MASK, 
+      Rectangle {3.f, 0.f, 42.f, 4}
     );
   }
   // PROGRES BAR TYPES
 
   // PROGRES BARS
   {
-    register_progress_bar(
-      PRG_BAR_ID_PLAYER_EXPERIANCE,
-      PRG_BAR_TYPE_ID_CRIMSON_FANT_BAR,
-      5,
-      Vector2 {3,3}
-    );
-    register_progress_bar(
-      PRG_BAR_ID_PLAYER_HEALTH,
-      PRG_BAR_TYPE_ID_CRIMSON_FANT_BAR,
-      3,
-      Vector2 {3,3}
-    );
+    register_progress_bar(PRG_BAR_ID_PLAYER_EXPERIANCE,PRG_BAR_TYPE_ID_CRIMSON_FANT_BAR);
+    register_progress_bar(PRG_BAR_ID_PLAYER_HEALTH,PRG_BAR_TYPE_ID_CRIMSON_FANT_BAR);
   }
   // PROGRES BARS
 
@@ -532,26 +551,26 @@ bool gui_button(const char* text, button_id _id, Font font, i32 font_size_scale,
   Vector2 draw_sprite_scale = Vector2 {_btn->btn_type.scale,_btn->btn_type.scale};
 
   if (_btn->current_state == BTN_STATE_PRESSED) {
-    draw_sprite_on_site_by_id(_btn->btn_type.ss_type, WHITE, VECTOR2(_btn->dest.x,_btn->dest.y), draw_sprite_scale, 0);
+    draw_sprite_on_site_by_id(_btn->btn_type.ss_type, WHITE, VECTOR2(_btn->dest.x,_btn->dest.y), draw_sprite_scale, 1);
     if (!TextIsEqual(text, "")) {
-      draw_text_ex(text, text_pos, font, font_size_scale, BUTTON_TEXT_PRESSED_COLOR, false, false, false, VECTOR2(0.f, 0.f));
+      draw_text_ex(text, text_pos, font, font_size_scale, _btn->btn_type.forground_color_btn_state_pressed, false, false, false, VECTOR2(0.f, 0.f));
     }
     if (play_on_click_sound) event_fire(EVENT_CODE_PLAY_BUTTON_ON_CLICK, event_context((u16)true));
-  } else {
-    if (_btn->current_state == BTN_STATE_HOVER) {
-      draw_sprite_on_site_by_id(_btn->btn_type.ss_type, WHITE, VECTOR2(_btn->dest.x,_btn->dest.y), draw_sprite_scale, 1);
-      if (!TextIsEqual(text, "")) {
-        draw_text_ex(text, text_pos, font, font_size_scale, BUTTON_TEXT_HOVER_COLOR, false, false, false, VECTOR2(0.f, 0.f));
-      }
-      event_fire(EVENT_CODE_RESET_SOUND, event_context((i32)SOUND_ID_BUTTON_ON_CLICK));
+  }
+  if (_btn->current_state == BTN_STATE_HOVER) {
+    draw_sprite_on_site_by_id(_btn->btn_type.ss_type, WHITE, VECTOR2(_btn->dest.x,_btn->dest.y), draw_sprite_scale, 1);
+    if (!TextIsEqual(text, "")) {
+      draw_text_ex(text, text_pos, font, font_size_scale, _btn->btn_type.forground_color_btn_state_hover, false, false, false, VECTOR2(0.f, 0.f));
     }
-    else {
-      draw_sprite_on_site_by_id(_btn->btn_type.ss_type, WHITE, VECTOR2(_btn->dest.x,_btn->dest.y), draw_sprite_scale, 0);
-      if (_btn->current_state != BTN_STATE_HOVER) {
-        draw_text_ex(text, text_pos, font, font_size_scale, BUTTON_TEXT_UP_COLOR, false, false, false, VECTOR2(0.f, 0.f));
-      }
+    event_fire(EVENT_CODE_RESET_SOUND, event_context((i32)SOUND_ID_BUTTON_ON_CLICK));
+  }
+  if (_btn->current_state == BTN_STATE_UP) {
+    draw_sprite_on_site_by_id(_btn->btn_type.ss_type, WHITE, VECTOR2(_btn->dest.x,_btn->dest.y), draw_sprite_scale, 0);
+    if (_btn->current_state != BTN_STATE_HOVER) {
+      draw_text_ex(text, text_pos, font, font_size_scale, _btn->btn_type.forground_color_btn_state_up, false, false, false, VECTOR2(0.f, 0.f));
     }
   }
+  
   return _btn->current_state == _btn->signal_state;
 }
 bool gui_draw_local_button(const char* text, local_button* const btn, const font_type _font_type, const i32 font_size_scale, const Vector2 pos, text_alignment align_to, const bool play_on_click_sound) {
@@ -577,26 +596,26 @@ bool gui_draw_local_button(const char* text, local_button* const btn, const font
   Vector2 draw_sprite_scale = Vector2 {btn->btn_type.scale, btn->btn_type.scale};
 
   if (btn->current_state == BTN_STATE_PRESSED) {
-    draw_sprite_on_site_by_id(btn->btn_type.ss_type, WHITE, VECTOR2(btn->dest.x, btn->dest.y), draw_sprite_scale, 0);
+    draw_sprite_on_site_by_id(btn->btn_type.ss_type, WHITE, VECTOR2(btn->dest.x, btn->dest.y), draw_sprite_scale, 1);
     if (!TextIsEqual(text, "")) {
-      draw_text_ex(text, text_pos, (*font), font_size_scale, BUTTON_TEXT_PRESSED_COLOR, false, false, false, VECTOR2(0.f, 0.f));
+      draw_text_ex(text, text_pos, (*font), font_size_scale, btn->btn_type.forground_color_btn_state_pressed, false, false, false, VECTOR2(0.f, 0.f));
     }
     if (play_on_click_sound) event_fire(EVENT_CODE_PLAY_BUTTON_ON_CLICK, event_context((u16)true));
-  } else {
-    if (btn->current_state == BTN_STATE_HOVER) {
-      draw_sprite_on_site_by_id(btn->btn_type.ss_type, WHITE, VECTOR2(btn->dest.x, btn->dest.y), draw_sprite_scale, 1);
-      if (!TextIsEqual(text, "")) {
-        draw_text_ex(text, text_pos, (*font), font_size_scale, BUTTON_TEXT_HOVER_COLOR, false, false, false, VECTOR2(0.f, 0.f));
-      }
-      event_fire(EVENT_CODE_RESET_SOUND, event_context((i32)SOUND_ID_BUTTON_ON_CLICK));
+  } 
+  if (btn->current_state == BTN_STATE_HOVER) {
+    draw_sprite_on_site_by_id(btn->btn_type.ss_type, WHITE, VECTOR2(btn->dest.x, btn->dest.y), draw_sprite_scale, 1);
+    if (!TextIsEqual(text, "")) {
+      draw_text_ex(text, text_pos, (*font), font_size_scale, btn->btn_type.forground_color_btn_state_hover, false, false, false, VECTOR2(0.f, 0.f));
     }
-    else {
-      draw_sprite_on_site_by_id(btn->btn_type.ss_type, WHITE, VECTOR2(btn->dest.x, btn->dest.y), draw_sprite_scale, 0);
-      if (btn->current_state != BTN_STATE_HOVER) {
-        draw_text_ex(text, text_pos, (*font), font_size_scale, BUTTON_TEXT_UP_COLOR, false, false, false, VECTOR2(0.f, 0.f));
-      }
+    event_fire(EVENT_CODE_RESET_SOUND, event_context((i32)SOUND_ID_BUTTON_ON_CLICK));
+  }
+  if (btn->current_state == BTN_STATE_UP) {
+    draw_sprite_on_site_by_id(btn->btn_type.ss_type, WHITE, VECTOR2(btn->dest.x, btn->dest.y), draw_sprite_scale, 0);
+    if (btn->current_state != BTN_STATE_HOVER) {
+      draw_text_ex(text, text_pos, (*font), font_size_scale, btn->btn_type.forground_color_btn_state_up, false, false, false, VECTOR2(0.f, 0.f));
     }
   }
+  
   return btn->current_state == btn->signal_state;
 }
 void gui_checkbox_grid(checkbox_id _id, Vector2 grid, Vector2 grid_location) {
@@ -623,88 +642,95 @@ void gui_checkbox(checkbox_id _id, Vector2 pos) {
     draw_sprite_on_site_by_id(_cb->cb_type.ss_type, WHITE, VECTOR2(pos.x, pos.y), draw_sprite_scale, 0);
   }
 }
-void gui_progress_bar(progress_bar_id bar_id, Vector2 pos, bool _should_center) {
+void gui_progress_bar(progress_bar_id bar_id, Rectangle dest, bool _should_center) {
   if (!state) {
     TraceLog(LOG_ERROR, "user_interface::gui_player_experiance_process()::ui system didn't initialized");
     return;
   }
   progress_bar prg_bar = state->prg_bars.at(bar_id);
-
   if (!prg_bar.is_initialized) {
     TraceLog(LOG_ERROR, "user_interface::gui_player_experiance_process()::Player experiance process bar didn't initialized");
     return;
   }
   const atlas_texture* inside_tex = ss_get_atlas_texture_by_enum(prg_bar.type.body_inside);
+  const atlas_texture* outside_tex = ss_get_atlas_texture_by_enum(prg_bar.type.body_outside);
   const Texture2D* atlas = ss_get_texture_by_enum(ATLAS_TEXTURE_ID);
   if (!inside_tex) {
     TraceLog(LOG_ERROR, "user_interface::gui_player_experiance_process()::progress bar atlas is null");
     return;
   }
+  if (_should_center) {
+    dest.x -= dest.width * .5f;
+    dest.y -= dest.height * .5f;
+  }
+  Rectangle strecth_part_inside = Rectangle {23.f, 0.f, 14.f, 4.f};
+  Rectangle strecth_part_outside = Rectangle {16.f, 0.f, 16.f, 4.f};
+  f32 left_src_width_ratio = strecth_part_outside.x / outside_tex->source.height;
+  Rectangle left_source_outside = Rectangle {0, 0, strecth_part_outside.x, outside_tex->source.height};
+
+  Rectangle& scissor = prg_bar.type.body_inside_scissor;
+  f32 norm_x = scissor.x / left_source_outside.width;
+  f32 norm_y = scissor.y / outside_tex->source.height;
+  f32 norm_width = (scissor.x + scissor.width) / outside_tex->source.width;
+  f32 norm_height = scissor.height / outside_tex->source.height;
+  Rectangle left_dest   = Rectangle {dest.x, dest.y,  dest.height * left_src_width_ratio, dest.height};
+  Rectangle scr_rect = {
+    dest.x + (left_dest.width * norm_x), 
+    dest.y + (dest.height * norm_y),
+    dest.width * norm_width,
+    dest.height + (dest.height * norm_height),
+  };
   f32 start_uv = inside_tex->source.x / atlas->width;
   f32 end_uv = (inside_tex->source.x + inside_tex->source.width) / atlas->width;
-
-  f32 process = start_uv + (end_uv - start_uv) * prg_bar.progress;
-
-  draw_atlas_texture_stretch(
-    prg_bar.type.body_outside, 
-    pos, 
-    prg_bar.scale, 
-    Rectangle {.x = 27, .y = 0, .width = 10, .height = 9},
-    prg_bar.width_multiply,
-    _should_center
-  );
+  f32 progress = start_uv + (end_uv - start_uv) * prg_bar.progress;
 
   BeginShaderMode(get_shader_by_enum(prg_bar.type.mask_shader_id)->handle);
-  set_shader_uniform(prg_bar.type.mask_shader_id, 0, data128(process));
-  draw_atlas_texture_stretch(
-    prg_bar.type.body_inside, 
-    pos,
-    prg_bar.scale, 
-    Rectangle {.x = 27, .y = 0, .width = 10, .height = 9},
-    prg_bar.width_multiply,
-    _should_center
-  );
+  {
+    i32 loc = get_uniform_location(prg_bar.type.mask_shader_id, "progress");
+    set_shader_uniform(prg_bar.type.mask_shader_id, loc, data128(progress));
+    BeginScissorMode(scr_rect.x,scr_rect.y,scr_rect.width,scr_rect.height);
+      draw_atlas_texture_stretch(prg_bar.type.body_inside, strecth_part_inside, dest, false);
+    EndScissorMode();
+  }
   EndShaderMode();
+
+  draw_atlas_texture_stretch(prg_bar.type.body_outside, strecth_part_outside, dest, false);
 }
-void draw_atlas_texture_stretch(atlas_texture_id body, Vector2 pos, Vector2 scale, Rectangle stretch_part, u16 stretch_part_mltp, bool should_center) {
-  if (body >= ATLAS_TEX_ID_MAX || body <= ATLAS_TEX_ID_UNSPECIFIED) {
+void draw_atlas_texture_stretch(atlas_texture_id tex_id, Rectangle stretch_part, Rectangle dest, bool should_center) {
+  if (tex_id >= ATLAS_TEX_ID_MAX || tex_id <= ATLAS_TEX_ID_UNSPECIFIED) {
     TraceLog(LOG_ERROR, "user_interface::draw_repetitive_body_tex()::Recieved texture out of bound");
     return;
   }
-  const atlas_texture* body_tex = ss_get_atlas_texture_by_enum(body);
-  if (!body_tex) {
+  const atlas_texture* tex = ss_get_atlas_texture_by_enum(tex_id);
+  if (!tex) {
     TraceLog(LOG_ERROR, "user_interface::draw_repetitive_body_tex()::Recieved texture returned NULL");
     return;
   }
-
-  Rectangle first_source = Rectangle{
-    .x = 0, .y = 0,
-    .width = stretch_part.x, .height = stretch_part.height,
-  };
-  Rectangle first_dest = Rectangle{
-    .x = pos.x, .y = pos.y,
-    .width = first_source.width * scale.x, .height = first_source.height * scale.y,
-  };
-  Rectangle second_dest = Rectangle{
-    .x = pos.x + first_dest.width, .y = pos.y,
-    .width = stretch_part.width * scale.x * stretch_part_mltp, .height = stretch_part.height * scale.y,
-  };
-  Rectangle third_source = Rectangle{
-    .x = stretch_part.x + stretch_part.width, .y = 0,
-    .width = body_tex->source.width - (stretch_part.x + stretch_part.width), .height = stretch_part.height,
-  };
-  Rectangle third_dest = Rectangle{
-    .x = pos.x + first_dest.width + second_dest.width, .y = pos.y,
-    .width = third_source.width * scale.x, .height = third_source.height * scale.y,
-  };
   if (should_center) {
-    first_dest.x  -= first_dest.width + (second_dest.width / 2.f);
-    second_dest.x -= first_dest.width + (second_dest.width / 2.f);
-    third_dest.x  -= first_dest.width + (second_dest.width / 2.f);
+    dest.x -= dest.width * .5f;
+    dest.y -= dest.height * .5f;
   }
-  gui_draw_atlas_texture_id_pro(body, first_source, first_dest, true, false);
-  gui_draw_atlas_texture_id_pro(body, stretch_part, second_dest, true, false);
-  gui_draw_atlas_texture_id_pro(body, third_source, third_dest, true, false);
+  f32 left_src_width_ratio = stretch_part.x / tex->source.height;
+  Rectangle left_source = Rectangle {0, 0, stretch_part.x, tex->source.height};
+  Rectangle right_source = Rectangle {
+    stretch_part.x + stretch_part.width, 0.f,
+    tex->source.width - (left_source.width + stretch_part.width), tex->source.height
+  };
+  f32 right_src_width_ratio = (tex->source.width - (left_source.width + stretch_part.width)) / tex->source.height;
+  
+  Rectangle left_dest   = Rectangle {dest.x, dest.y,  dest.height * left_src_width_ratio, dest.height};
+  Rectangle right_dest = Rectangle {
+    dest.x + dest.width - (dest.height * right_src_width_ratio), dest.y,
+    dest.height * right_src_width_ratio, dest.height
+  };
+  Rectangle second_dest  = Rectangle {
+    left_dest.x + left_dest.width, dest.y,
+    dest.width - (left_dest.width + right_dest.width), dest.height
+  };
+
+  gui_draw_atlas_texture_id_pro(tex_id, left_source, left_dest, false);
+  gui_draw_atlas_texture_id_pro(tex_id, stretch_part, second_dest, false, TEXTURE_WRAP_CLAMP);
+  gui_draw_atlas_texture_id_pro(tex_id, right_source, right_dest, false);
 }
 void gui_slider(slider_id _id, Vector2 pos, Vector2 grid) {
   if (_id >= SDR_ID_MAX || _id <= SDR_ID_UNDEFINED || !state) {
@@ -862,31 +888,14 @@ bool gui_panel_active(panel* pan, Rectangle dest, bool _should_center) {
 
   return pan->current_state == pan->signal_state;
 }
+void gui_label_box(const char* text, font_type type, i32 font_size, Rectangle dest, Color tint, text_alignment alignment) {
+  Font font = font_type_to_font(type);
+  Vector2 text_measure = MeasureTextEx(font, text, font.baseSize * font_size, UI_FONT_SPACING);
+  Vector2 position = ui_align_text(dest, text_measure, alignment);
+  draw_text_simple(text, position, type, font_size, tint);
+}
 void gui_label(const char* text, font_type type, i32 font_size, Vector2 position, Color tint, bool _center_h, bool _center_v) {
-  switch (type) {
-    case FONT_TYPE_MEDIUM: {
-      draw_text(text, position, UI_MEDIUM_FONT, font_size, tint, _center_h, _center_v, false, VECTOR2(0.f, 0.f));
-      break;
-    }
-    case FONT_TYPE_BOLD: {
-      draw_text(text, position, UI_BOLD_FONT, font_size, tint, _center_h, _center_v, false, VECTOR2(0.f, 0.f));
-      break;
-    }
-    case FONT_TYPE_LIGHT: {
-      draw_text(text, position, UI_LIGHT_FONT, font_size, tint, _center_h, _center_v, false, VECTOR2(0.f, 0.f));
-      break;
-    }
-    case FONT_TYPE_ITALIC: {
-      draw_text(text, position, UI_ITALIC_FONT, font_size, tint, _center_h, _center_v, false, VECTOR2(0.f, 0.f));
-      break;
-    }
-    case FONT_TYPE_ABRACADABRA: {
-      draw_text(text, position, UI_ABRACADABRA_FONT, font_size, tint, _center_h, _center_v, false, VECTOR2(0.f, 0.f));
-      break;
-    }
-    default: TraceLog(LOG_WARNING, "user_interface::gui_label()::Unsupported font type");
-    break;
-  }
+  draw_text(text, position, type, font_size, tint, _center_h, _center_v, false, VECTOR2(0.f, 0.f));
 }
 void gui_label_shader(const char* text, shader_id sdr_id, font_type type, i32 font_size, Vector2 position, Color tint, bool _center_h, bool _center_v) {
   switch (type) {
@@ -945,30 +954,7 @@ void gui_label_wrap(const char* text, font_type type, i32 font_size, Rectangle p
   }
 }
 void gui_label_grid(const char* text, font_type type, i32 font_size, Vector2 position, Color tint, bool _center_h, bool _center_v, Vector2 grid_coord) {
-  switch (type) {
-    case FONT_TYPE_MEDIUM: {
-      draw_text(text, position, UI_MEDIUM_FONT, font_size, tint, _center_h, _center_v, true, grid_coord);
-      break;
-    }
-    case FONT_TYPE_BOLD: {
-      draw_text(text, position, UI_BOLD_FONT, font_size, tint, _center_h, _center_v, true, grid_coord);
-      break;
-    }
-    case FONT_TYPE_LIGHT: {
-      draw_text(text, position, UI_LIGHT_FONT, font_size, tint, _center_h, _center_v, true, grid_coord);
-      break;
-    }
-    case FONT_TYPE_ITALIC: {
-      draw_text(text, position, UI_ITALIC_FONT, font_size, tint, _center_h, _center_v, true, grid_coord);
-      break;
-    }
-    case FONT_TYPE_ABRACADABRA: {
-      draw_text(text, position, UI_ABRACADABRA_FONT, font_size, tint, _center_h, _center_v, true, grid_coord);
-      break;
-    }
-    default: TraceLog(LOG_WARNING, "user_interface::gui_label()::Unsupported font type");
-    break;
-  }
+  draw_text(text, position, type, font_size, tint, _center_h, _center_v, true, grid_coord);
 }
 void gui_label_wrap_grid(const char* text, font_type type, i32 font_size, Rectangle position, Color tint, bool _should_center, Vector2 grid_pos) {
   Vector2 _position = position_element_by_grid(grid_pos, VECTOR2(position.x, position.y), SCREEN_OFFSET);
@@ -1218,7 +1204,7 @@ void register_checkbox_type(checkbox_type_id _cb_type_id, spritesheet_id _ss_typ
   checkbox_type cb_type = checkbox_type(_cb_type_id, _ss_type, frame_dim, VECTOR2(frame_dim.x * _scale, frame_dim.y * _scale), _scale, _should_center);
   state->checkbox_types.at(_cb_type_id) = cb_type;
 }
-void register_progress_bar(progress_bar_id _id, progress_bar_type_id _type_id, f32 width_multiply, Vector2 scale) {
+void register_progress_bar(progress_bar_id _id, progress_bar_type_id _type_id) {
   if (_id     >= PRG_BAR_ID_MAX      || _id      <= PRG_BAR_ID_UNDEFINED      ||
       _type_id>= PRG_BAR_TYPE_ID_MAX || _type_id <= PRG_BAR_TYPE_ID_UNDEFINED ||
       !state) {
@@ -1229,13 +1215,11 @@ void register_progress_bar(progress_bar_id _id, progress_bar_type_id _type_id, f
 
   prg_bar.type = state->prg_bar_types.at(_type_id);
   prg_bar.id = _id;
-  prg_bar.scale = scale;
-  prg_bar.width_multiply = width_multiply;
   prg_bar.is_initialized = true;
 
   state->prg_bars.at(_id) = prg_bar;
 }
-void register_progress_bar_type(progress_bar_type_id _type_id, atlas_texture_id _body_inside, atlas_texture_id _body_outside, shader_id _mask_shader_id) {
+void register_progress_bar_type(progress_bar_type_id _type_id, atlas_texture_id _body_inside, atlas_texture_id _body_outside, shader_id _mask_shader_id, Rectangle inner_scissor) {
   if (_type_id       >= PRG_BAR_TYPE_ID_MAX || _type_id       <= PRG_BAR_TYPE_ID_UNDEFINED ||
       _body_inside   >= ATLAS_TEX_ID_MAX          || _body_inside   <= ATLAS_TEX_ID_UNSPECIFIED        ||
       _body_outside  >= ATLAS_TEX_ID_MAX          || _body_outside  <= ATLAS_TEX_ID_UNSPECIFIED        ||
@@ -1244,13 +1228,8 @@ void register_progress_bar_type(progress_bar_type_id _type_id, atlas_texture_id 
     TraceLog(LOG_WARNING, "user_interface::register_progress_bar_type()::Recieved id was out of bound");
     return;
   }
-  progress_bar_type prg_type = progress_bar_type();
-
-  prg_type.body_inside     = _body_inside;
-  prg_type.body_outside    = _body_outside;
-  prg_type.mask_shader_id  = _mask_shader_id;
-
-  state->prg_bar_types.at(_type_id) = prg_type;
+  
+  state->prg_bar_types.at(_type_id) = progress_bar_type(_type_id, _body_inside, _body_outside, _mask_shader_id, inner_scissor);;
 }
 void register_slider_type(
   slider_type_id _sdr_type_id, spritesheet_id _ss_sdr_body_type, f32 _scale, u16 _width_multiply,
@@ -1968,15 +1947,15 @@ Vector2 ui_align_text(Rectangle in_dest, Vector2 in_text_measure, text_alignment
       in_dest.x + in_dest.width - in_text_measure.x,
       in_dest.y
     };
-    case TEXT_ALIGN_DOWN_LEFT: return Vector2 {
+    case TEXT_ALIGN_BOTTOM_LEFT: return Vector2 {
       in_dest.x,
       in_dest.y + in_dest.height - in_text_measure.y
     };
-    case TEXT_ALIGN_DOWN_CENTER: return Vector2 {
+    case TEXT_ALIGN_BOTTOM_CENTER: return Vector2 {
       in_dest.x + (in_dest.width * .5f)  - (in_text_measure.x * .5f),
       in_dest.y + in_dest.height         - in_text_measure.y
     };
-    case TEXT_ALIGN_DOWN_RIGHT: return Vector2 {
+    case TEXT_ALIGN_BOTTOM_RIGHT: return Vector2 {
       in_dest.x + in_dest.width  - in_text_measure.x,
       in_dest.y + in_dest.height - in_text_measure.y
     };

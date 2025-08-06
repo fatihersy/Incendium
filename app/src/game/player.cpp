@@ -103,7 +103,7 @@ void player_system_reinit(void) {
   player->exp_current = 0;
   player->stats_base.at(CHARACTER_STATS_HEALTH).buffer.i32[0] = 0; // INFO: Will be Modified by player stats
   player->health_current = 0;
-  player->health_perc = static_cast<f32>(player->health_current) / static_cast<f32>(player->stats_base.at(CHARACTER_STATS_HEALTH).buffer.i32[0]);
+  player->health_perc = 0.f;
 
   player->last_played_animation = &player->idle_left_sprite; // The position player starts. To avoid from the error when move firstly called
   
@@ -136,7 +136,7 @@ void player_add_exp_to_player(i32 exp) {
 }
 void player_take_damage(i32 damage) {
   if(!player->is_damagable || player->is_dead) return;
-  if((player->health_current - damage) > 0 && (player->health_current - damage) <= player->stats_base.at(CHARACTER_STATS_HEALTH).buffer.i32[0]) {
+  if((player->health_current - damage) > 0 && (player->health_current - damage) <= player->stats_total.at(CHARACTER_STATS_HEALTH).buffer.i32[0]) {
     player->health_current -= damage;
     player->is_damagable = false;
     player->damage_break_current = player->damage_break_time;
@@ -146,17 +146,17 @@ void player_take_damage(i32 damage) {
     player->is_dead = true;
     event_fire(EVENT_CODE_END_GAME, event_context());
   }
-  player->health_perc = static_cast<f32>(player->health_current) / static_cast<f32>(player->stats_base.at(CHARACTER_STATS_HEALTH).buffer.i32[0]);
+  player->health_perc = static_cast<f32>(player->health_current) / static_cast<f32>(player->stats_total.at(CHARACTER_STATS_HEALTH).buffer.i32[0]);
 }
 void player_heal_player(i32 amouth){
   if(player->is_dead) return;
-  if(player->health_current + amouth <= player->stats_base.at(CHARACTER_STATS_HEALTH).buffer.i32[0]) {
+  if(player->health_current + amouth <= player->stats_total.at(CHARACTER_STATS_HEALTH).buffer.i32[0]) {
     player->health_current += amouth;
   }
   else {
-    player->health_current = player->stats_base.at(CHARACTER_STATS_HEALTH).buffer.i32[0];
+    player->health_current = player->stats_total.at(CHARACTER_STATS_HEALTH).buffer.i32[0];
   }
-  player->health_perc = static_cast<f32>(player->health_current) / static_cast<f32>(player->stats_base.at(CHARACTER_STATS_HEALTH).buffer.i32[0]);
+  player->health_perc = static_cast<f32>(player->health_current) / static_cast<f32>(player->stats_total.at(CHARACTER_STATS_HEALTH).buffer.i32[0]);
 }
 
 player_update_results update_player(void) {

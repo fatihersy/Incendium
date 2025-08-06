@@ -6,7 +6,7 @@
     "workbench.statusBar.visible": true,
     "workbench.colorCustomizations": {
         "editor.selectionHighlightBackground": "#c03a2bf1",
-        "editor.selectionBackground": "#ecf0f144"
+        //"editor.selectionBackground": "#ecf0f144"
     },
     "editor.minimap.enabled": false,
     "editor.lineNumbers": "on",

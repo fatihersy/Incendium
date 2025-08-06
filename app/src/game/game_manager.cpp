@@ -315,7 +315,9 @@ bool gm_start_game(worldmap_stage stage) {
   if (state->game_info.in_spawns->size() <= 0) {
     return false;
   }
-
+  player_state * p_player_dynamic = state->game_info.player_state_dynamic;
+  p_player_dynamic->health_current = p_player_dynamic->stats_total.at(CHARACTER_STATS_HEALTH).buffer.i32[0];
+  p_player_dynamic->health_perc = static_cast<f32>(p_player_dynamic->health_current) / static_cast<f32>(p_player_dynamic->stats_total.at(CHARACTER_STATS_HEALTH).buffer.i32[0]);
   event_fire(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, event_context((f32)PRG_BAR_ID_PLAYER_EXPERIANCE, (f32)state->game_info.player_state_dynamic->exp_perc));
   event_fire(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, event_context((f32)PRG_BAR_ID_PLAYER_HEALTH, (f32)state->game_info.player_state_dynamic->health_perc));
 
@@ -432,14 +434,11 @@ void populate_map_with_spawns(i32 min_count) {
       static_cast<f32>(get_random((i32)state->stage.spawning_areas.at(0).x, (i32)state->stage.spawning_areas.at(0).x + state->stage.spawning_areas.at(0).width)),
       static_cast<f32>(get_random((i32)state->stage.spawning_areas.at(0).y, (i32)state->stage.spawning_areas.at(0).y + state->stage.spawning_areas.at(0).height))
     };
-    spawn_character(Character2D(
-      static_cast<i32>(get_random(SPAWN_TYPE_UNDEFINED+1, SPAWN_TYPE_MAX-2)),
-      static_cast<i32>(state->game_info.player_state_dynamic->level),
-      static_cast<i32>(get_random(0, 100)),
-      position,
-      1.f)
-    )
-      ? ++itr_000 : --spawn_trying_limit;
+    if (spawn_character(Character2D(static_cast<i32>(get_random(SPAWN_TYPE_UNDEFINED+1, SPAWN_TYPE_MAX-2)),
+      static_cast<i32>(state->game_info.player_state_dynamic->level),static_cast<i32>(get_random(0, 100)), position))
+    ) 
+    { ++itr_000; }
+    else { --spawn_trying_limit; }
   }
 }
 
@@ -450,8 +449,7 @@ bool spawn_boss(void) {
     SPAWN_TYPE_BOSS,
     GET_BOSS_LEVEL(stage.stage_level, state->stage.boss_scale),
     GET_BOSS_SCALE(state->stage.boss_scale), 
-    state->stage.boss_spawn_location, 
-    GET_BOSS_SPEED(state->stage.boss_scale)
+    state->stage.boss_spawn_location
   );
 
   return spawn_character(_boss);
@@ -562,7 +560,7 @@ void game_manager_set_stat_value_by_level(character_stat* stat, i32 level) {
       break;
     }
     case CHARACTER_STATS_MOVE_SPEED:{
-      const f32 value = next_curve_value / 1000.f;
+      const f32 value = next_curve_value * .05f;
 
       stat->buffer.f32[0] = value;
       break;
@@ -592,9 +590,9 @@ void game_manager_set_stat_value_by_level(character_stat* stat, i32 level) {
       break;
     }
     case CHARACTER_STATS_EXP_GAIN:{
-      const i32 value = next_curve_value / 1000.f;
+      const f32 value = next_curve_value / 1000.f;
 
-      stat->buffer.i32[0] = value;
+      stat->buffer.f32[0] = value;
       break;
     }
     default:{
@@ -642,7 +640,7 @@ void game_manager_sum_stat_value(character_stat* stat, data128 lhs, data128 rhs)
       break;
     }
     case CHARACTER_STATS_EXP_GAIN:{
-      stat->buffer.i32[0] = lhs.i32[0] + rhs.i32[0];
+      stat->buffer.f32[0] = lhs.f32[0] + rhs.f32[0];
       break;
     }
     default:{

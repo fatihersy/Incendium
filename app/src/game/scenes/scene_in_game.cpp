@@ -331,11 +331,26 @@ void render_interface_in_game(void) {
         else { prepare_ability_upgrade_state(); }
       }
       else {
-        gui_progress_bar(PRG_BAR_ID_PLAYER_EXPERIANCE, Vector2{SIG_BASE_RENDER_WIDTH * .5f, SCREEN_OFFSET.y}, true);
-        gui_progress_bar(PRG_BAR_ID_PLAYER_HEALTH, SCREEN_OFFSET, false);
+        gui_progress_bar(PRG_BAR_ID_PLAYER_EXPERIANCE, Rectangle {0, 0, 
+          static_cast<f32>(state->in_app_settings->render_width), static_cast<f32>(state->in_app_settings->render_height) * .01f
+        }, false);
 
-        gui_label_format(FONT_TYPE_ABRACADABRA, 1, SIG_BASE_RENDER_WIDTH * .75f, SCREEN_OFFSET.y * 5.f, WHITE, false, false, 
+        gui_progress_bar(PRG_BAR_ID_PLAYER_HEALTH, Rectangle {
+            static_cast<f32>(state->in_app_settings->render_width) * .5f,
+            static_cast<f32>(state->in_app_settings->render_height) * .9f,
+            static_cast<f32>(state->in_app_settings->render_width) * .2f,
+            static_cast<f32>(state->in_app_settings->render_height) * .01f,
+          }, true
+        );
+        
+        gui_label_format(FONT_TYPE_ABRACADABRA, 1, SIG_BASE_RENDER_WIDTH * .75f, SCREEN_OFFSET.y * 1.f, WHITE, false, false, 
           "Move speed: %.1f", state->in_ingame_info->player_state_dynamic->stats_total.at(CHARACTER_STATS_MOVE_SPEED).buffer.f32[0]
+        );
+        gui_label_format(FONT_TYPE_ABRACADABRA, 1, SIG_BASE_RENDER_WIDTH * .75f, SCREEN_OFFSET.y * 5.f, WHITE, false, false, 
+          "Health: %d", state->in_ingame_info->player_state_dynamic->stats_total.at(CHARACTER_STATS_HEALTH).buffer.i32[0]
+        );
+        gui_label_format(FONT_TYPE_ABRACADABRA, 1, SIG_BASE_RENDER_WIDTH * .75f, SCREEN_OFFSET.y * 10.f, WHITE, false, false, 
+          "Damage: %d", state->in_ingame_info->player_state_dynamic->stats_total.at(CHARACTER_STATS_DAMAGE).buffer.i32[0]
         );
       }
       render_user_interface();

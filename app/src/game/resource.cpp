@@ -50,7 +50,7 @@ bool resource_system_initialize(void) {
 
   load_texture_from_atlas(ATLAS_TEX_ID_MAP_TILESET_TEXTURE,        Rectangle{    0,    0, 1568, 2016 });
   load_texture_from_atlas(ATLAS_TEX_ID_PROGRESS_BAR_OUTSIDE_FULL,  Rectangle{ 1568,  112,   48,    4 });
-  load_texture_from_atlas(ATLAS_TEX_ID_PROGRESS_BAR_INSIDE_FULL,   Rectangle{ 1504,  112,   58,    3 });
+  load_texture_from_atlas(ATLAS_TEX_ID_PROGRESS_BAR_INSIDE_FULL,   Rectangle{ 1504,  112,   58,    4 });
   load_texture_from_atlas(ATLAS_TEX_ID_CRIMSON_FANTASY_PANEL,      Rectangle{ 1504,   32,   48,   48 });
   load_texture_from_atlas(ATLAS_TEX_ID_CRIMSON_FANTASY_PANEL_BG,   Rectangle{ 1552,   32,   48,   48 });
   load_texture_from_atlas(ATLAS_TEX_ID_DARK_FANTASY_PANEL,         Rectangle{ 1728,    0,   80,   64 });
