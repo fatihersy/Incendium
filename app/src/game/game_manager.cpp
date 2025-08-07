@@ -234,7 +234,7 @@ void update_game_manager(void) {
       }
     }
 
-    update_spawns(state->game_info.player_state_dynamic->position_centered);
+    //update_spawns(state->game_info.player_state_dynamic->position_centered);
 
     generate_in_game_info();
 

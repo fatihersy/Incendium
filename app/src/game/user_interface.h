@@ -329,6 +329,8 @@ typedef struct progress_bar_type {
   atlas_texture_id body_outside;
   shader_id mask_shader_id;
   Rectangle body_inside_scissor;
+  Rectangle strecth_part_inside;
+  Rectangle strecth_part_outside;
   progress_bar_type(void) {
     this->id = PRG_BAR_TYPE_ID_UNDEFINED;
     this->body_inside = ATLAS_TEX_ID_UNSPECIFIED;
@@ -336,12 +338,16 @@ typedef struct progress_bar_type {
     this->mask_shader_id = SHADER_ID_UNSPECIFIED;
     this->body_inside_scissor = ZERORECT;
   }
-  progress_bar_type(progress_bar_type_id _type_id, atlas_texture_id body_inside, atlas_texture_id body_outside, shader_id mask_shader_id, Rectangle body_inside_scissor) : progress_bar_type() {
+  progress_bar_type(
+    progress_bar_type_id _type_id, atlas_texture_id body_inside, atlas_texture_id body_outside, shader_id mask_shader_id, 
+    Rectangle body_inside_scissor, Rectangle strecth_part_inside, Rectangle strecth_part_outside) : progress_bar_type() {
     this->id = _type_id;
     this->body_inside = body_inside;
     this->body_outside = body_outside;
     this->mask_shader_id = mask_shader_id;
     this->body_inside_scissor = body_inside_scissor;
+    this->strecth_part_inside = strecth_part_inside;
+    this->strecth_part_outside = strecth_part_outside;
   }
 } progress_bar_type;
 
@@ -412,7 +418,7 @@ bool ui_set_slider_current_index(slider_id id, u16 index);
 bool ui_set_slider_current_value(slider_id id, slider_option value);
 
 bool gui_slider_add_option(slider_id _id, data_pack content, u32 _localization_symbol, std::string _no_localized_text);
-Rectangle get_atlas_texture_source_rect(atlas_texture_id _id);
+const Rectangle * get_atlas_texture_source_rect(atlas_texture_id _id);
 const std::array<button_type, BTN_TYPE_MAX>* get_button_types(void); 
 
 bool gui_menu_button(const char* text, button_id _id, Vector2 grid, Vector2 grid_location, bool play_on_click_sound);
@@ -433,11 +439,10 @@ void gui_label_wrap(const char* text, font_type type, i32 font_size, Rectangle p
 void gui_label_grid(const char* text, font_type type, i32 font_size, Vector2 position, Color tint, bool _center_h, bool _center_v, Vector2 grid_coord);
 void gui_label_wrap_grid(const char* text, font_type type, i32 font_size, Rectangle position, Color tint, bool _should_center, Vector2 grid_pos);
 void gui_draw_atlas_texture_id_pro(atlas_texture_id _id, Rectangle src, Rectangle dest, bool should_center, i32 texture_wrap = TEXTURE_WRAP_REPEAT);
-void gui_draw_atlas_texture_id(atlas_texture_id _id, Rectangle dest, Vector2 origin, f32 rotation); 
+void gui_draw_atlas_texture_id(atlas_texture_id _id, Rectangle dest, Vector2 origin, f32 rotation, Color tint = WHITE); 
 void gui_draw_atlas_texture_id_scale(atlas_texture_id _id, Vector2 position, f32 scale, Color tint, bool should_center); 
-void gui_draw_atlas_texture_id_pro_grid(atlas_texture_id _id, Rectangle src, Rectangle dest, bool relative); 
-void gui_draw_atlas_texture_id_grid(atlas_texture_id _id, Rectangle dest); 
-void gui_draw_texture_id_pro(texture_id _id, Rectangle src, Rectangle dest, Color tint = WHITE, Vector2 origin = {0.f, 0.f});
+void gui_draw_atlas_texture_id_pro_grid(atlas_texture_id _id, Rectangle src, Rectangle dest, bool relative);
+void gui_draw_texture_id_pro(texture_id _id, Rectangle src, Rectangle dest, Color tint = WHITE, Vector2 origin = ZEROVEC2);
 void gui_draw_texture_id(const texture_id _id, const Rectangle dest, const Vector2 origin);
 void gui_draw_spritesheet_id(spritesheet_id _id, Color _tint, Vector2 pos, Vector2 scale, u16 frame); 
 void gui_draw_settings_screen(void);

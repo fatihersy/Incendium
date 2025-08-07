@@ -118,7 +118,7 @@ void register_checkbox_type(checkbox_type_id _cb_type_id, spritesheet_id _ss_typ
 void register_button(button_id _btn_id, button_type_id _btn_type_id);
 void register_button_type(button_type_id _btn_type_id, spritesheet_id _ss_type, Vector2 frame_dim, f32 _scale, bool _should_center);
 void register_progress_bar(progress_bar_id _id, progress_bar_type_id _type_id);
-void register_progress_bar_type(progress_bar_type_id _type_id, atlas_texture_id _body_inside, atlas_texture_id _body_outside, shader_id _mask_shader_id, Rectangle inner_scissor);
+void register_progress_bar_type(progress_bar_type prg_bar_type);
 void register_slider_type(slider_type_id _sdr_type_id, spritesheet_id _ss_sdr_body_type, f32 _scale, u16 _width_multiply, button_type_id _left_btn_type_id, button_type_id _right_btn_type_id, u16 _char_limit);
 
 void draw_text_shader(const char *text, shader_id sdr_id, Vector2 position, Font font, float fontsize, Color tint, bool center_horizontal, bool center_vertical, bool use_grid_align, Vector2 grid_coord);
@@ -283,15 +283,20 @@ bool user_interface_system_initialize(void) {
 
   // PROGRES BAR TYPES
   {
-    register_progress_bar_type( PRG_BAR_TYPE_ID_CRIMSON_FANT_BAR, ATLAS_TEX_ID_PROGRESS_BAR_INSIDE_FULL, ATLAS_TEX_ID_PROGRESS_BAR_OUTSIDE_FULL, SHADER_ID_PROGRESS_BAR_MASK, 
-      Rectangle {3.f, 0.f, 42.f, 4}
+    register_progress_bar_type(progress_bar_type(
+      PRG_BAR_TYPE_ID_CRIMSON_FANT_BAR, ATLAS_TEX_ID_PROGRESS_BAR_INSIDE_FULL, ATLAS_TEX_ID_PROGRESS_BAR_OUTSIDE_FULL, SHADER_ID_PROGRESS_BAR_MASK, 
+      Rectangle {3.f, 0.f, 42.f, 4}, Rectangle {23.f, 0.f, 14.f, 4.f}, Rectangle {16.f, 0.f, 16.f, 4.f})
+    );
+    register_progress_bar_type(progress_bar_type(
+      PRG_BAR_TYPE_ID_DARK_FANTASY_BOSSBAR_6, ATLAS_TEX_ID_DARK_FANTASY_BOSSBAR_6_INSIDE, ATLAS_TEX_ID_DARK_FANTASY_BOSSBAR_6_OUTSIDE, SHADER_ID_PROGRESS_BAR_MASK, 
+      Rectangle {0.f, 0.f, 192.f, 7}, Rectangle {32.f, 0.f, 128.f, 7}, Rectangle {32.f, 0.f, 128.f, 7})
     );
   }
   // PROGRES BAR TYPES
 
   // PROGRES BARS
   {
-    register_progress_bar(PRG_BAR_ID_PLAYER_EXPERIANCE,PRG_BAR_TYPE_ID_CRIMSON_FANT_BAR);
+    register_progress_bar(PRG_BAR_ID_PLAYER_EXPERIANCE,PRG_BAR_TYPE_ID_DARK_FANTASY_BOSSBAR_6);
     register_progress_bar(PRG_BAR_ID_PLAYER_HEALTH,PRG_BAR_TYPE_ID_CRIMSON_FANT_BAR);
   }
   // PROGRES BARS
@@ -663,15 +668,15 @@ void gui_progress_bar(progress_bar_id bar_id, Rectangle dest, bool _should_cente
     dest.x -= dest.width * .5f;
     dest.y -= dest.height * .5f;
   }
-  Rectangle strecth_part_inside = Rectangle {23.f, 0.f, 14.f, 4.f};
-  Rectangle strecth_part_outside = Rectangle {16.f, 0.f, 16.f, 4.f};
+  Rectangle strecth_part_inside = prg_bar.type.strecth_part_inside;
+  Rectangle strecth_part_outside = prg_bar.type.strecth_part_outside;
   f32 left_src_width_ratio = strecth_part_outside.x / outside_tex->source.height;
   Rectangle left_source_outside = Rectangle {0, 0, strecth_part_outside.x, outside_tex->source.height};
 
   Rectangle& scissor = prg_bar.type.body_inside_scissor;
   f32 norm_x = scissor.x / left_source_outside.width;
   f32 norm_y = scissor.y / outside_tex->source.height;
-  f32 norm_width = (scissor.x + scissor.width) / outside_tex->source.width;
+  f32 norm_width = (scissor.width) / outside_tex->source.width;
   f32 norm_height = scissor.height / outside_tex->source.height;
   Rectangle left_dest   = Rectangle {dest.x, dest.y,  dest.height * left_src_width_ratio, dest.height};
   Rectangle scr_rect = {
@@ -684,15 +689,15 @@ void gui_progress_bar(progress_bar_id bar_id, Rectangle dest, bool _should_cente
   f32 end_uv = (inside_tex->source.x + inside_tex->source.width) / atlas->width;
   f32 progress = start_uv + (end_uv - start_uv) * prg_bar.progress;
 
-  BeginShaderMode(get_shader_by_enum(prg_bar.type.mask_shader_id)->handle);
-  {
-    i32 loc = get_uniform_location(prg_bar.type.mask_shader_id, "progress");
-    set_shader_uniform(prg_bar.type.mask_shader_id, loc, data128(progress));
-    BeginScissorMode(scr_rect.x,scr_rect.y,scr_rect.width,scr_rect.height);
+  BeginScissorMode(scr_rect.x,scr_rect.y,scr_rect.width,scr_rect.height);
+    BeginShaderMode(get_shader_by_enum(prg_bar.type.mask_shader_id)->handle);
+    {
+      i32 loc = get_uniform_location(prg_bar.type.mask_shader_id, "progress");
+      set_shader_uniform(prg_bar.type.mask_shader_id, loc, data128(progress));
       draw_atlas_texture_stretch(prg_bar.type.body_inside, strecth_part_inside, dest, false);
-    EndScissorMode();
-  }
-  EndShaderMode();
+    }
+    EndShaderMode();
+  EndScissorMode();
 
   draw_atlas_texture_stretch(prg_bar.type.body_outside, strecth_part_outside, dest, false);
 }
@@ -727,7 +732,6 @@ void draw_atlas_texture_stretch(atlas_texture_id tex_id, Rectangle stretch_part,
     left_dest.x + left_dest.width, dest.y,
     dest.width - (left_dest.width + right_dest.width), dest.height
   };
-
   gui_draw_atlas_texture_id_pro(tex_id, left_source, left_dest, false);
   gui_draw_atlas_texture_id_pro(tex_id, stretch_part, second_dest, false, TEXTURE_WRAP_CLAMP);
   gui_draw_atlas_texture_id_pro(tex_id, right_source, right_dest, false);
@@ -1219,17 +1223,17 @@ void register_progress_bar(progress_bar_id _id, progress_bar_type_id _type_id) {
 
   state->prg_bars.at(_id) = prg_bar;
 }
-void register_progress_bar_type(progress_bar_type_id _type_id, atlas_texture_id _body_inside, atlas_texture_id _body_outside, shader_id _mask_shader_id, Rectangle inner_scissor) {
-  if (_type_id       >= PRG_BAR_TYPE_ID_MAX || _type_id       <= PRG_BAR_TYPE_ID_UNDEFINED ||
-      _body_inside   >= ATLAS_TEX_ID_MAX          || _body_inside   <= ATLAS_TEX_ID_UNSPECIFIED        ||
-      _body_outside  >= ATLAS_TEX_ID_MAX          || _body_outside  <= ATLAS_TEX_ID_UNSPECIFIED        ||
-      _mask_shader_id>= SHADER_ID_MAX       || _mask_shader_id<= SHADER_ID_UNSPECIFIED     ||
-      !state) {
+void register_progress_bar_type(progress_bar_type prg_bar_type) {
+  if (prg_bar_type.id             >= PRG_BAR_TYPE_ID_MAX || prg_bar_type.id            <= PRG_BAR_TYPE_ID_UNDEFINED ||
+      prg_bar_type.body_inside    >= ATLAS_TEX_ID_MAX    || prg_bar_type.body_inside   <= ATLAS_TEX_ID_UNSPECIFIED  ||
+      prg_bar_type.body_outside   >= ATLAS_TEX_ID_MAX    || prg_bar_type.body_outside  <= ATLAS_TEX_ID_UNSPECIFIED  ||
+      prg_bar_type.mask_shader_id >= SHADER_ID_MAX       || prg_bar_type.mask_shader_id<= SHADER_ID_UNSPECIFIED     || !state) 
+      {
     TraceLog(LOG_WARNING, "user_interface::register_progress_bar_type()::Recieved id was out of bound");
     return;
   }
   
-  state->prg_bar_types.at(_type_id) = progress_bar_type(_type_id, _body_inside, _body_outside, _mask_shader_id, inner_scissor);;
+  state->prg_bar_types.at(prg_bar_type.id) = prg_bar_type;
 }
 void register_slider_type(
   slider_type_id _sdr_type_id, spritesheet_id _ss_sdr_body_type, f32 _scale, u16 _width_multiply,
@@ -1316,14 +1320,14 @@ void gui_draw_spritesheet_to_background(spritesheet_id _id, Color _tint) {
  * @note  function, returns "Rectangle {}" if texture type returns null pointer
  * @return Rectangle { .x = 0, .y = 0, .width = tex->width, .height = tex->height}; 
  */
-Rectangle get_atlas_texture_source_rect(atlas_texture_id _id) {
+const Rectangle * get_atlas_texture_source_rect(atlas_texture_id _id) {
   const atlas_texture* tex = ss_get_atlas_texture_by_enum(_id);
   if (!tex) { 
     TraceLog(LOG_WARNING, "user_interface::get_atlas_texture_source_rect()::Requested type was null");
-    return ZERORECT; 
+    return nullptr; 
   }
   
-  return tex->source;
+  return __builtin_addressof(tex->source);
 }
 const std::array<button_type, BTN_TYPE_MAX>* get_button_types(void) {
   if (!state || state == nullptr) {
@@ -1637,7 +1641,7 @@ void gui_draw_atlas_texture_id_pro(atlas_texture_id _id, Rectangle src, Rectangl
     SetTextureWrap(*tex->atlas_handle, TEXTURE_WRAP_REPEAT); // Repeat is default
   }
 }
-void gui_draw_atlas_texture_id(atlas_texture_id _id, Rectangle dest, Vector2 origin, f32 rotation) {
+void gui_draw_atlas_texture_id(atlas_texture_id _id, Rectangle dest, Vector2 origin, f32 rotation, Color tint) {
   if (_id >= ATLAS_TEX_ID_MAX || _id <= ATLAS_TEX_ID_UNSPECIFIED) {
     TraceLog(LOG_WARNING, "user_interface::gui_draw_atlas_texture_id()::ID was out of bound"); 
     return; 
@@ -1648,7 +1652,7 @@ void gui_draw_atlas_texture_id(atlas_texture_id _id, Rectangle dest, Vector2 ori
     return; 
   }
 
-  DrawTexturePro(*tex->atlas_handle, tex->source, dest, origin, rotation, WHITE);
+  DrawTexturePro(*tex->atlas_handle, tex->source, dest, origin, rotation, tint);
 }
 void gui_draw_atlas_texture_id_pro_grid(atlas_texture_id _id, Rectangle src, Rectangle dest, bool relative) {
   if (_id >= ATLAS_TEX_ID_MAX || _id <= ATLAS_TEX_ID_UNSPECIFIED) {
@@ -1668,21 +1672,6 @@ void gui_draw_atlas_texture_id_pro_grid(atlas_texture_id _id, Rectangle src, Rec
   dest.x = pos.x;
   dest.y = pos.y;
   DrawTexturePro(*tex->atlas_handle, src, dest, Vector2 { tex->source.width * .5f, tex->source.height *.5f }, 0, WHITE);
-}
-void gui_draw_atlas_texture_id_grid(atlas_texture_id _id, Rectangle dest) {
-  if (_id >= ATLAS_TEX_ID_MAX || _id <= ATLAS_TEX_ID_UNSPECIFIED) {
-    TraceLog(LOG_WARNING, "user_interface::gui_draw_atlas_texture_id_grid()::ID was out of bound"); 
-    return; 
-  }
-  const atlas_texture* tex = ss_get_atlas_texture_by_enum(_id);
-  if (!tex) { 
-    TraceLog(LOG_WARNING, "user_interface::gui_draw_atlas_texture_id_grid()::Tex was null");
-    return; 
-  }
-  Vector2 pos = position_element_by_grid(UI_BASE_RENDER_DIV2, VECTOR2(dest.x, dest.y), SCREEN_OFFSET);
-  dest.x = pos.x;
-  dest.y = pos.y;
-  DrawTexturePro(*tex->atlas_handle, tex->source, dest, ZEROVEC2, 0, WHITE);
 }
 void gui_draw_spritesheet_id(spritesheet_id _id, Color _tint, Vector2 pos, Vector2 scale, u16 frame) {
   if (_id >= SHEET_ID_SPRITESHEET_TYPE_MAX || _id <= SHEET_ID_SPRITESHEET_UNSPECIFIED) {

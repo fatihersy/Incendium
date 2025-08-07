@@ -89,6 +89,7 @@ if (UPG->level == 1) {\
   gui_label_format(FONT_TYPE_ABRACADABRA, upgr_font_size, (f32)start_upgradables_x_exis, (f32)upgradables_height_buffer, WHITE, false, false, TEXT, __VA_ARGS__);\
   upgradables_height_buffer += btw_space_gap;\
 }}
+#define HEALTH_BAR_WIDTH static_cast<f32>(state->in_app_settings->render_width) * .15f
 
 [[__nodiscard__]] bool begin_scene_in_game(bool fade_in);
 
@@ -100,6 +101,7 @@ void initialize_worldmap_locations(void);
 void draw_in_game_upgrade_panel(u16 which_panel, Rectangle panel_dest);
 void draw_passive_selection_panel(const character_stat* stat,const Rectangle panel_dest);
 void draw_end_game_panel(void);
+void draw_ingame_stage_play_ui(void);
 void prepare_ability_upgrade_state(void);
 void end_ability_upgrade_state(u16 which_panel_chosen);
 void sig_begin_fade(void);
@@ -331,27 +333,7 @@ void render_interface_in_game(void) {
         else { prepare_ability_upgrade_state(); }
       }
       else {
-        gui_progress_bar(PRG_BAR_ID_PLAYER_EXPERIANCE, Rectangle {0, 0, 
-          static_cast<f32>(state->in_app_settings->render_width), static_cast<f32>(state->in_app_settings->render_height) * .01f
-        }, false);
-
-        gui_progress_bar(PRG_BAR_ID_PLAYER_HEALTH, Rectangle {
-            static_cast<f32>(state->in_app_settings->render_width) * .5f,
-            static_cast<f32>(state->in_app_settings->render_height) * .9f,
-            static_cast<f32>(state->in_app_settings->render_width) * .2f,
-            static_cast<f32>(state->in_app_settings->render_height) * .01f,
-          }, true
-        );
-        
-        gui_label_format(FONT_TYPE_ABRACADABRA, 1, SIG_BASE_RENDER_WIDTH * .75f, SCREEN_OFFSET.y * 1.f, WHITE, false, false, 
-          "Move speed: %.1f", state->in_ingame_info->player_state_dynamic->stats_total.at(CHARACTER_STATS_MOVE_SPEED).buffer.f32[0]
-        );
-        gui_label_format(FONT_TYPE_ABRACADABRA, 1, SIG_BASE_RENDER_WIDTH * .75f, SCREEN_OFFSET.y * 5.f, WHITE, false, false, 
-          "Health: %d", state->in_ingame_info->player_state_dynamic->stats_total.at(CHARACTER_STATS_HEALTH).buffer.i32[0]
-        );
-        gui_label_format(FONT_TYPE_ABRACADABRA, 1, SIG_BASE_RENDER_WIDTH * .75f, SCREEN_OFFSET.y * 10.f, WHITE, false, false, 
-          "Damage: %d", state->in_ingame_info->player_state_dynamic->stats_total.at(CHARACTER_STATS_DAMAGE).buffer.i32[0]
-        );
+        draw_ingame_stage_play_ui();
       }
       render_user_interface();
       return;
@@ -679,6 +661,49 @@ void draw_end_game_panel(void) {
     "%s%d", lc_txt(LOC_TEXT_INGAME_STAGE_RESULT_COLLECTED_SOULS), state->in_ingame_info->collected_souls
   );
 }
+void draw_ingame_stage_play_ui(void) {
+  Rectangle exp_bar_dest = Rectangle {0, 0, static_cast<f32>(state->in_app_settings->render_width), static_cast<f32>(state->in_app_settings->render_height) * .05f};
+  gui_progress_bar(PRG_BAR_ID_PLAYER_EXPERIANCE, exp_bar_dest, false);
+  const Rectangle * exp_bar_orn = get_atlas_texture_source_rect(ATLAS_TEX_ID_DARK_FANTASY_BOSSBAR_6_MIDDLE);
+  f32 exp_bar_orn_height_scale = exp_bar_orn->width / exp_bar_orn->height;
+  Rectangle exp_bar_orn_dest = Rectangle { exp_bar_dest.x + exp_bar_dest.width * .5f,  exp_bar_dest.y,  exp_bar_dest.height * exp_bar_orn_height_scale,  exp_bar_dest.height};
+  gui_draw_atlas_texture_id(ATLAS_TEX_ID_DARK_FANTASY_BOSSBAR_6_MIDDLE, exp_bar_orn_dest, Vector2{exp_bar_orn_dest.width * .5f, 0.f}, 0.f);
+
+  f32 render_width_scale = static_cast<f32>(state->in_app_settings->render_width) / static_cast<f32>(state->in_app_settings->render_height);
+  Rectangle portrait_dest = Rectangle {
+    static_cast<f32>(state->in_app_settings->render_width)  * .025f,
+    static_cast<f32>(state->in_app_settings->render_height) * .025f * render_width_scale,
+    static_cast<f32>(state->in_app_settings->render_height) * .15f,
+    static_cast<f32>(state->in_app_settings->render_height) * .15f
+  };
+  gui_draw_atlas_texture_id(ATLAS_TEX_ID_DARK_FANTASY_PANEL_BG, portrait_dest, ZEROVEC2, 0.f, Color {121, 58, 128, 150});
+  gui_draw_atlas_texture_id(ATLAS_TEX_ID_INQUISITOR_PORTRAIT, portrait_dest, ZEROVEC2, 0.f);
+  gui_draw_atlas_texture_id(ATLAS_TEX_ID_PORTRAIT_FRAME, portrait_dest, ZEROVEC2, 0.f);
+    
+  f32 slot_gap = portrait_dest.width * .075f;
+  gui_progress_bar(PRG_BAR_ID_PLAYER_HEALTH, Rectangle {
+      portrait_dest.x + portrait_dest.width + slot_gap,
+      portrait_dest.y + portrait_dest.height * .65f,
+      HEALTH_BAR_WIDTH,
+      static_cast<f32>(state->in_app_settings->render_height) * .02f,
+    }, false
+  );
+
+  for (size_t itr_000 = 0; itr_000 < state->in_ingame_info->player_state_dynamic->ability_system.abilities.size(); ++itr_000) {
+    const ability* const abl = __builtin_addressof(state->in_ingame_info->player_state_dynamic->ability_system.abilities.at(itr_000));
+    if (!abl->is_active) continue;
+    
+    Rectangle ability_slot_dest = Rectangle {
+      portrait_dest.x + portrait_dest.width + slot_gap + (slot_gap * itr_000),
+      portrait_dest.y,
+      portrait_dest.width * .25f,
+      portrait_dest.height * .25f
+    };
+    gui_draw_atlas_texture_id(ATLAS_TEX_ID_DARK_FANTASY_PANEL_BG, ability_slot_dest, ZEROVEC2, 0.f, Color {121, 58, 128, 150});
+    gui_draw_texture_id_pro(TEX_ID_ASSET_ATLAS, abl->icon_src, ability_slot_dest);
+    gui_draw_atlas_texture_id(ATLAS_TEX_ID_ABILITY_SLOT_FRAME, ability_slot_dest, ZEROVEC2, 0.f);
+  }
+}
 void prepare_ability_upgrade_state(void) {
   event_fire(EVENT_CODE_PAUSE_GAME, event_context());
   for (int i=0; i<MAX_UPDATE_ABILITY_PANEL_COUNT; ++i) {
@@ -754,3 +779,4 @@ bool scene_in_game_on_event(i32 code, [[maybe_unused]] event_context context) {
 #undef GET_PLAYER_DYNAMIC_ABILITY
 #undef INGAME_FADE_DURATION
 #undef DRAW_ABL_UPG_STAT_PNL
+#undef HEALTH_BAR_WIDTH

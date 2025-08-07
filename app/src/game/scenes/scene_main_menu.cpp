@@ -462,7 +462,7 @@ void draw_main_menu_upgrade_list_panel(void) {
       }
       
       // TITLE
-      Rectangle header_tex_src_rect = get_atlas_texture_source_rect(ATLAS_TEX_ID_LITTLE_SHOWCASE);
+      Rectangle header_tex_src_rect = ( * get_atlas_texture_source_rect(ATLAS_TEX_ID_LITTLE_SHOWCASE) );
       header_tex_src_rect.width  *= 2.75f;
       header_tex_src_rect.height *= 3.f;
       Rectangle header_tex_pos = {
@@ -479,9 +479,9 @@ void draw_main_menu_upgrade_list_panel(void) {
       // TITLE
       
       // STARS
-      Rectangle tier_symbol_src_rect = get_atlas_texture_source_rect(ATLAS_TEX_ID_PASSIVE_UPGRADE_TIER_STAR);
-      f32 star_spacing = tier_symbol_src_rect.width * 1.25f;
-      f32 tier_symbols_total_width = tier_symbol_src_rect.width + (MAX_PASSIVE_UPGRADE_TIER - 1.f) * star_spacing;
+      const Rectangle * tier_symbol_src_rect = get_atlas_texture_source_rect(ATLAS_TEX_ID_PASSIVE_UPGRADE_TIER_STAR);
+      f32 star_spacing = tier_symbol_src_rect->width * 1.25f;
+      f32 tier_symbols_total_width = tier_symbol_src_rect->width + (MAX_PASSIVE_UPGRADE_TIER - 1.f) * star_spacing;
       f32 tier_symbols_left_edge = showcase_position.x + (showcase_new_dim - tier_symbols_total_width) / 2.f;
       f32 tier_symbols_vertical_center = showcase_position.y + showcase_new_dim * .8f;
       // STARS
@@ -532,9 +532,9 @@ void draw_main_menu_upgrade_details_panel(void) {
   };
   gui_draw_texture_id_pro(TEX_ID_ASSET_ATLAS, state->hovered_stat->passive_icon_src, icon_pos);
 
-  Rectangle tier_symbol_src_rect = get_atlas_texture_source_rect(ATLAS_TEX_ID_PASSIVE_UPGRADE_TIER_STAR);
-  f32 star_spacing = tier_symbol_src_rect.width * 1.25f;
-  f32 tier_symbols_total_width = tier_symbol_src_rect.width + (MAX_PASSIVE_UPGRADE_TIER - 1.f) * star_spacing;
+  const Rectangle * tier_symbol_src_rect = get_atlas_texture_source_rect(ATLAS_TEX_ID_PASSIVE_UPGRADE_TIER_STAR);
+  f32 star_spacing = tier_symbol_src_rect->width * 1.25f;
+  f32 tier_symbols_total_width = tier_symbol_src_rect->width + (MAX_PASSIVE_UPGRADE_TIER - 1.f) * star_spacing;
   f32 tier_symbols_left_edge = state->upgrade_details_panel.dest.x + (state->upgrade_details_panel.dest.width - tier_symbols_total_width) / 2.f;
   f32 tier_symbols_vertical_position = icon_pos.y + icon_pos.height + detail_panel_element_spacing * .5f;
   for (i32 i = 0; i < MAX_PASSIVE_UPGRADE_TIER; ++i) {
@@ -548,7 +548,7 @@ void draw_main_menu_upgrade_details_panel(void) {
 
   Vector2 title_pos = VECTOR2(
     state->upgrade_details_panel.dest.x + state->upgrade_details_panel.dest.width * .5f,
-    tier_symbols_vertical_position + tier_symbol_src_rect.height + detail_panel_element_spacing * .5f
+    tier_symbols_vertical_position + tier_symbol_src_rect->height + detail_panel_element_spacing * .5f
   );
   gui_label(lc_txt(state->hovered_stat->passive_display_name_symbol), FONT_TYPE_ABRACADABRA, 1, title_pos, WHITE, true, true);
 
