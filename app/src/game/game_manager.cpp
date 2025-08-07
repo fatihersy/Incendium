@@ -216,7 +216,6 @@ void update_game_manager(void) {
       }
       if ( !is_collided_x && pur.move_request.x) {
         player_move_player(VECTOR2(pur.move_request.x, 0.f));
-        //player_move_player(VECTOR2(0.f, 2.f));
       }
       if ( !is_collided_y && pur.move_request.y) {
         player_move_player(VECTOR2(0.f, pur.move_request.y));
@@ -233,8 +232,7 @@ void update_game_manager(void) {
         gm_end_game(true);
       }
     }
-
-    //update_spawns(state->game_info.player_state_dynamic->position_centered);
+    update_spawns(state->game_info.player_state_dynamic->position_centered);
 
     generate_in_game_info();
 

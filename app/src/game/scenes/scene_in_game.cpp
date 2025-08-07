@@ -40,6 +40,7 @@ typedef struct scene_in_game_state {
   ability_type hovered_ability;
   i32 hovered_projectile;
   ui_fade_control_system sig_fade;
+  f32 eta_ingame_play_stage;
 
   scene_in_game_state(void) {
     this->worldmap_locations.fill(worldmap_stage());
@@ -56,6 +57,7 @@ typedef struct scene_in_game_state {
     this->hovered_ability = ABILITY_TYPE_UNDEFINED;
     this->hovered_projectile = I32_MAX;
     this->sig_fade = ui_fade_control_system();
+    this->eta_ingame_play_stage = 0.f;
   }
 } scene_in_game_state;
 
@@ -227,6 +229,7 @@ void update_scene_in_game(void) {
       }
       update_map();
       update_game_manager();
+      state->eta_ingame_play_stage += GetFrameTime(); 
 
       if ( (*state->in_ingame_info->is_game_end) ) {
         state->stage = IN_GAME_STAGE_PLAY_RESULTS;
@@ -664,45 +667,71 @@ void draw_end_game_panel(void) {
 void draw_ingame_stage_play_ui(void) {
   Rectangle exp_bar_dest = Rectangle {0, 0, static_cast<f32>(state->in_app_settings->render_width), static_cast<f32>(state->in_app_settings->render_height) * .05f};
   gui_progress_bar(PRG_BAR_ID_PLAYER_EXPERIANCE, exp_bar_dest, false);
-  const Rectangle * exp_bar_orn = get_atlas_texture_source_rect(ATLAS_TEX_ID_DARK_FANTASY_BOSSBAR_6_MIDDLE);
-  f32 exp_bar_orn_height_scale = exp_bar_orn->width / exp_bar_orn->height;
-  Rectangle exp_bar_orn_dest = Rectangle { exp_bar_dest.x + exp_bar_dest.width * .5f,  exp_bar_dest.y,  exp_bar_dest.height * exp_bar_orn_height_scale,  exp_bar_dest.height};
+  const Rectangle * exp_bar_orn_src_rect = get_atlas_texture_source_rect(ATLAS_TEX_ID_DARK_FANTASY_BOSSBAR_6_MIDDLE);
+  f32 exp_bar_orn_height_scale = exp_bar_orn_src_rect->width / exp_bar_orn_src_rect->height;
+  f32 exp_bar_orn_width = exp_bar_dest.height * exp_bar_orn_height_scale;
+  Rectangle exp_bar_orn_dest = Rectangle { 
+    exp_bar_dest.x + exp_bar_dest.width * .5f + ((exp_bar_orn_width / exp_bar_orn_src_rect->width) * .5f),  exp_bar_dest.y,  
+    exp_bar_orn_width,  exp_bar_dest.height
+  };
   gui_draw_atlas_texture_id(ATLAS_TEX_ID_DARK_FANTASY_BOSSBAR_6_MIDDLE, exp_bar_orn_dest, Vector2{exp_bar_orn_dest.width * .5f, 0.f}, 0.f);
 
-  f32 render_width_scale = static_cast<f32>(state->in_app_settings->render_width) / static_cast<f32>(state->in_app_settings->render_height);
+  f32 ingame_user_panel_dims = static_cast<f32>(state->in_app_settings->render_height) * .15f;
+  f32 slot_gap = ingame_user_panel_dims * .075f;
+  f32 ability_slot_dest_width = ingame_user_panel_dims * .35f;
+  f32 ingame_user_panel_total_width = ingame_user_panel_dims + ((slot_gap + ability_slot_dest_width) * MAX_ABILITY_PLAYER_CAN_HAVE_IN_THE_SAME_TIME);
   Rectangle portrait_dest = Rectangle {
-    static_cast<f32>(state->in_app_settings->render_width)  * .025f,
-    static_cast<f32>(state->in_app_settings->render_height) * .025f * render_width_scale,
-    static_cast<f32>(state->in_app_settings->render_height) * .15f,
-    static_cast<f32>(state->in_app_settings->render_height) * .15f
+    (static_cast<f32>(state->in_app_settings->render_width_div2)) - (ingame_user_panel_total_width * .5f),
+    static_cast<f32>(state->in_app_settings->render_height) * .8f,
+    ingame_user_panel_dims, ingame_user_panel_dims
   };
+
   gui_draw_atlas_texture_id(ATLAS_TEX_ID_DARK_FANTASY_PANEL_BG, portrait_dest, ZEROVEC2, 0.f, Color {121, 58, 128, 150});
   gui_draw_atlas_texture_id(ATLAS_TEX_ID_INQUISITOR_PORTRAIT, portrait_dest, ZEROVEC2, 0.f);
   gui_draw_atlas_texture_id(ATLAS_TEX_ID_PORTRAIT_FRAME, portrait_dest, ZEROVEC2, 0.f);
+  
+  i32 drawed_ability_count = 0;
+  size_t last_drawed_ability = 0;
+  for (size_t itr_000 = 0; itr_000 < MAX_ABILITY_PLAYER_CAN_HAVE_IN_THE_SAME_TIME; ++itr_000) {
+    f32 ability_slot_dest_x_axis_wo_distance = portrait_dest.x + portrait_dest.width + slot_gap + (ability_slot_dest_width * itr_000);
+    Rectangle ability_slot_dest = Rectangle {
+      ability_slot_dest_x_axis_wo_distance + (slot_gap * itr_000),
+      portrait_dest.y,
+      ability_slot_dest_width,
+      ability_slot_dest_width
+    };
+    gui_draw_atlas_texture_id(ATLAS_TEX_ID_DARK_FANTASY_PANEL_BG, ability_slot_dest, ZEROVEC2, 0.f, Color {121, 58, 128, 150});
     
-  f32 slot_gap = portrait_dest.width * .075f;
+    for (; last_drawed_ability < state->in_ingame_info->player_state_dynamic->ability_system.abilities.size(); ++last_drawed_ability) {
+      const ability* const abl = __builtin_addressof(state->in_ingame_info->player_state_dynamic->ability_system.abilities.at(last_drawed_ability));
+      if (abl->is_active) {
+        gui_draw_texture_id_pro(TEX_ID_ASSET_ATLAS, abl->icon_src, Rectangle {
+          ability_slot_dest_x_axis_wo_distance + (slot_gap * drawed_ability_count), 
+          ability_slot_dest.y,
+          ability_slot_dest.width, ability_slot_dest.height,
+        });
+        last_drawed_ability++;
+        drawed_ability_count++;
+        break;
+      }
+    }
+    gui_draw_atlas_texture_id(ATLAS_TEX_ID_ABILITY_SLOT_FRAME, ability_slot_dest, ZEROVEC2, 0.f);
+  }
+  
   gui_progress_bar(PRG_BAR_ID_PLAYER_HEALTH, Rectangle {
       portrait_dest.x + portrait_dest.width + slot_gap,
-      portrait_dest.y + portrait_dest.height * .65f,
+      portrait_dest.y + ability_slot_dest_width + slot_gap,
       HEALTH_BAR_WIDTH,
       static_cast<f32>(state->in_app_settings->render_height) * .02f,
     }, false
   );
 
-  for (size_t itr_000 = 0; itr_000 < state->in_ingame_info->player_state_dynamic->ability_system.abilities.size(); ++itr_000) {
-    const ability* const abl = __builtin_addressof(state->in_ingame_info->player_state_dynamic->ability_system.abilities.at(itr_000));
-    if (!abl->is_active) continue;
-    
-    Rectangle ability_slot_dest = Rectangle {
-      portrait_dest.x + portrait_dest.width + slot_gap + (slot_gap * itr_000),
-      portrait_dest.y,
-      portrait_dest.width * .25f,
-      portrait_dest.height * .25f
-    };
-    gui_draw_atlas_texture_id(ATLAS_TEX_ID_DARK_FANTASY_PANEL_BG, ability_slot_dest, ZEROVEC2, 0.f, Color {121, 58, 128, 150});
-    gui_draw_texture_id_pro(TEX_ID_ASSET_ATLAS, abl->icon_src, ability_slot_dest);
-    gui_draw_atlas_texture_id(ATLAS_TEX_ID_ABILITY_SLOT_FRAME, ability_slot_dest, ZEROVEC2, 0.f);
-  }
+  gui_label_format(FONT_TYPE_ABRACADABRA, 1, 
+    static_cast<f32>(state->in_app_settings->render_width_div2), 
+    static_cast<f32>(state->in_app_settings->render_height * .05f), WHITE, true, false, "%.2d:%.2d", 
+    static_cast<i32>(state->eta_ingame_play_stage / 60.f),
+    static_cast<i32>(state->eta_ingame_play_stage)
+  );
 }
 void prepare_ability_upgrade_state(void) {
   event_fire(EVENT_CODE_PAUSE_GAME, event_context());

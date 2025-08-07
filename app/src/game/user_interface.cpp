@@ -395,6 +395,7 @@ void update_user_interface(void) {
 
   update_buttons();
   update_sliders();
+
   update_checkboxes();
 }
  void update_buttons(void) {

@@ -51,11 +51,11 @@ bool resource_system_initialize(void) {
   load_texture_from_atlas(ATLAS_TEX_ID_MAP_TILESET_TEXTURE,           Rectangle{    0,    0, 1568, 2016 });
   load_texture_from_atlas(ATLAS_TEX_ID_INQUISITOR_PORTRAIT,           Rectangle{ 1936,    0,   16,   16 });
   load_texture_from_atlas(ATLAS_TEX_ID_PORTRAIT_FRAME,                Rectangle{ 1952,    0,   36,   34 });
-  load_texture_from_atlas(ATLAS_TEX_ID_ABILITY_SLOT_FRAME,            Rectangle{ 2000,    0,   13,   12 });
+  load_texture_from_atlas(ATLAS_TEX_ID_ABILITY_SLOT_FRAME,            Rectangle{ 2000,    0,   16,   16 });
   load_texture_from_atlas(ATLAS_TEX_ID_PROGRESS_BAR_OUTSIDE_FULL,     Rectangle{ 1568,  112,   48,    4 });
   load_texture_from_atlas(ATLAS_TEX_ID_PROGRESS_BAR_INSIDE_FULL,      Rectangle{ 1504,  112,   58,    4 });
   load_texture_from_atlas(ATLAS_TEX_ID_DARK_FANTASY_BOSSBAR_6_OUTSIDE,Rectangle{ 1680, 1088,  192,    7 });
-  load_texture_from_atlas(ATLAS_TEX_ID_DARK_FANTASY_BOSSBAR_6_INSIDE, Rectangle{ 1680, 1120,   32,    7 });
+  load_texture_from_atlas(ATLAS_TEX_ID_DARK_FANTASY_BOSSBAR_6_INSIDE, Rectangle{ 1680, 1104,  192,    7 });
   load_texture_from_atlas(ATLAS_TEX_ID_DARK_FANTASY_BOSSBAR_6_MIDDLE, Rectangle{ 1680, 1120,   32,    7 });
   load_texture_from_atlas(ATLAS_TEX_ID_CRIMSON_FANTASY_PANEL,         Rectangle{ 1504,   32,   48,   48 });
   load_texture_from_atlas(ATLAS_TEX_ID_CRIMSON_FANTASY_PANEL_BG,      Rectangle{ 1552,   32,   48,   48 });

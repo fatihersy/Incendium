@@ -133,6 +133,7 @@ void player_add_exp_to_player(i32 exp) {
     player->exp_current += exp;
   }
   player->exp_perc = static_cast<f32>(player->exp_current) / static_cast<f32>(player->exp_to_next_level);
+  event_fire(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, event_context((f32)PRG_BAR_ID_PLAYER_EXPERIANCE, (f32)player->exp_perc));
 }
 void player_take_damage(i32 damage) {
   if(!player->is_damagable || player->is_dead) return;
@@ -147,6 +148,8 @@ void player_take_damage(i32 damage) {
     event_fire(EVENT_CODE_END_GAME, event_context());
   }
   player->health_perc = static_cast<f32>(player->health_current) / static_cast<f32>(player->stats_total.at(CHARACTER_STATS_HEALTH).buffer.i32[0]);
+  
+  event_fire(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, event_context((f32)PRG_BAR_ID_PLAYER_HEALTH, (f32)player->health_perc));
 }
 void player_heal_player(i32 amouth){
   if(player->is_dead) return;
@@ -338,7 +341,6 @@ bool player_system_on_event(i32 code, event_context context) {
     switch (code) {
         case EVENT_CODE_PLAYER_ADD_EXP: {
           player_add_exp_to_player(context.data.i32[0]);
-          event_fire(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, event_context((f32)PRG_BAR_ID_PLAYER_EXPERIANCE, (f32)player->exp_perc));
           return true;
         }
         case EVENT_CODE_PLAYER_SET_POSITION: {
@@ -350,7 +352,6 @@ bool player_system_on_event(i32 code, event_context context) {
         }
         case EVENT_CODE_PLAYER_TAKE_DAMAGE: {
           player_take_damage(context.data.i32[0]);
-          event_fire(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, event_context((f32)PRG_BAR_ID_PLAYER_HEALTH, (f32)player->health_perc));
           return true;
         }
         default: return false; // TODO: Warn
