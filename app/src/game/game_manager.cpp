@@ -64,7 +64,7 @@ bool game_manager_reinit(const camera_metrics * in_camera_metrics, const app_set
 void populate_map_with_spawns(i32 min_count);
 bool spawn_boss(void);
 void generate_in_game_info(void);
-void game_manager_sum_stat_value(character_stat* stat, data128 lhs, data128 rhs);
+void game_manager_set_stat_trait_value_by_level(character_stat* stat, data128 value);
 
 bool game_manager_initialize(const camera_metrics * in_camera_metrics, const app_settings * in_app_settings, tilemap ** const in_active_map_ptr) {
   if (state) {
@@ -117,36 +117,36 @@ bool game_manager_initialize(const camera_metrics * in_camera_metrics, const app
   {
     i32 next_trait_id = 0;
     state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_HEALTH,     
-      "Healty", "Increases your healt a bit", -1, data128(static_cast<i32>(300)), data128())
+      "Healty", "Increases your healt a bit", -1, data128(static_cast<i32>(300)))
     );
     state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_HEALTH,     
-      "Tough", "Increases your healt a fair amouth", -2, data128(static_cast<i32>(800)), data128())
+      "Tough", "Increases your healt a fair amouth", -2, data128(static_cast<i32>(800)))
     );
     state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE,     
-      "Artillery", "Increases your damage a fair amouth", -2, data128(static_cast<i32>(8)), data128())
+      "Artillery", "Increases your damage a fair amouth", -2, data128(static_cast<i32>(8)))
     );
     state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_MOVE_SPEED, 
-      "Bunny Hop", "Increases your speed a bit", -1, data128(static_cast<f32>(1000)), data128())
+      "Bunny Hop", "Increases your speed a bit", -1, data128(static_cast<f32>(1000)))
     );
     state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_MOVE_SPEED, 
-      "Flash",  "Increases your speed a fair amouth", -2, data128(static_cast<f32>(5000)), data128())
+      "Flash",  "Increases your speed a fair amouth", -2, data128(static_cast<f32>(5000)))
     );
-    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE, "Trait 6",  "Trait 6 description", -2, data128(static_cast<i32>(8)), data128()));
-    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE, "Trait 7",  "Trait 7 description", -2, data128(static_cast<i32>(8)), data128()));
-    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE, "Trait 8",  "Trait 8 description",  2, data128(static_cast<i32>(8)), data128()));
-    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE, "Trait 9",  "Trait 9 description",  2, data128(static_cast<i32>(8)), data128()));
-    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE, "Trait 10", "Trait 10 description", 2, data128(static_cast<i32>(8)), data128()));
-    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE, "Trait 11", "Trait 11 description", 2, data128(static_cast<i32>(8)), data128()));
-    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE, "Trait 12", "Trait 12 description", 2, data128(static_cast<i32>(8)), data128()));
-    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE, "Trait 13", "Trait 13 description", 2, data128(static_cast<i32>(8)), data128()));
-    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE, "Trait 14", "Trait 14 description", 2, data128(static_cast<i32>(8)), data128()));
-    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE, "Trait 15", "Trait 15 description", 2, data128(static_cast<i32>(8)), data128()));
-    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE, "Trait 16", "Trait 16 description", 2, data128(static_cast<i32>(8)), data128()));
-    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE, "Trait 17", "Trait 17 description", 2, data128(static_cast<i32>(8)), data128()));
-    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE, "Trait 18", "Trait 18 description", 2, data128(static_cast<i32>(8)), data128()));
-    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE, "Trait 19", "Trait 19 description", 2, data128(static_cast<i32>(8)), data128()));
-    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE, "Trait 20", "Trait 20 description", 2, data128(static_cast<i32>(8)), data128()));
-    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE, "Trait 21", "Trait 21 description", 2, data128(static_cast<i32>(8)), data128()));
+    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE, "Trait 6",  "Trait 6 description", -2, data128(static_cast<i32>(8))));
+    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE, "Trait 7",  "Trait 7 description", -2, data128(static_cast<i32>(8))));
+    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE, "Trait 8",  "Trait 8 description",  2, data128(static_cast<i32>(8))));
+    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE, "Trait 9",  "Trait 9 description",  2, data128(static_cast<i32>(8))));
+    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE, "Trait 10", "Trait 10 description", 2, data128(static_cast<i32>(8))));
+    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE, "Trait 11", "Trait 11 description", 2, data128(static_cast<i32>(8))));
+    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE, "Trait 12", "Trait 12 description", 2, data128(static_cast<i32>(8))));
+    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE, "Trait 13", "Trait 13 description", 2, data128(static_cast<i32>(8))));
+    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE, "Trait 14", "Trait 14 description", 2, data128(static_cast<i32>(8))));
+    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE, "Trait 15", "Trait 15 description", 2, data128(static_cast<i32>(8))));
+    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE, "Trait 16", "Trait 16 description", 2, data128(static_cast<i32>(8))));
+    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE, "Trait 17", "Trait 17 description", 2, data128(static_cast<i32>(8))));
+    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE, "Trait 18", "Trait 18 description", 2, data128(static_cast<i32>(8))));
+    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE, "Trait 19", "Trait 19 description", 2, data128(static_cast<i32>(8))));
+    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE, "Trait 20", "Trait 20 description", 2, data128(static_cast<i32>(8))));
+    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE, "Trait 21", "Trait 21 description", 2, data128(static_cast<i32>(8))));
   }
   // Traits
 
@@ -294,8 +294,7 @@ bool gm_start_game(worldmap_stage stage) {
   state->stage = stage;
   _add_ability(state->game_info.player_state_dynamic->starter_ability);
 
-  const std::array<character_stat, CHARACTER_STATS_MAX> * const _base_stat_ptr = __builtin_addressof(state->game_info.player_state_dynamic->stats_base);
-  std::array<character_stat, CHARACTER_STATS_MAX> * const _base_total_ptr = __builtin_addressof(state->game_info.player_state_dynamic->stats_total);
+  std::array<character_stat, CHARACTER_STATS_MAX> * const _stat_array_ptr = __builtin_addressof(state->game_info.player_state_dynamic->stats);
 
   for (size_t itr_000 = 0; itr_000 < state->chosen_traits.size(); ++itr_000) {
     const character_trait * const _trait_ptr = __builtin_addressof(state->chosen_traits.at(itr_000));
@@ -303,10 +302,9 @@ bool gm_start_game(worldmap_stage stage) {
       TraceLog(LOG_WARNING, "game_manager::gm_start_game()::Trait type is out of bound");
       continue;
     }
-    const character_stat * const _stat_base_ptr = __builtin_addressof(_base_stat_ptr->at(_trait_ptr->type));
-    character_stat * const _stat_total_ptr = __builtin_addressof(_base_total_ptr->at(_trait_ptr->type));
+    character_stat * const _stat_ptr = __builtin_addressof(_stat_array_ptr->at(_trait_ptr->type));
     
-    game_manager_sum_stat_value(_stat_total_ptr, _stat_base_ptr->buffer, _trait_ptr->ingame_use);
+    game_manager_set_stat_trait_value_by_level(_stat_ptr, _trait_ptr->ingame_ops);
   }
   
   populate_map_with_spawns(stage.total_spawn_count);
@@ -314,8 +312,8 @@ bool gm_start_game(worldmap_stage stage) {
     return false;
   }
   player_state * p_player_dynamic = state->game_info.player_state_dynamic;
-  p_player_dynamic->health_current = p_player_dynamic->stats_total.at(CHARACTER_STATS_HEALTH).buffer.i32[0];
-  p_player_dynamic->health_perc = static_cast<f32>(p_player_dynamic->health_current) / static_cast<f32>(p_player_dynamic->stats_total.at(CHARACTER_STATS_HEALTH).buffer.i32[0]);
+  p_player_dynamic->health_current = p_player_dynamic->stats.at(CHARACTER_STATS_HEALTH).buffer.i32[3];
+  p_player_dynamic->health_perc = static_cast<f32>(p_player_dynamic->health_current) / static_cast<f32>(p_player_dynamic->stats.at(CHARACTER_STATS_HEALTH).buffer.i32[3]);
   event_fire(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, event_context((f32)PRG_BAR_ID_PLAYER_EXPERIANCE, (f32)state->game_info.player_state_dynamic->exp_perc));
   event_fire(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, event_context((f32)PRG_BAR_ID_PLAYER_HEALTH, (f32)state->game_info.player_state_dynamic->health_perc));
 
@@ -341,17 +339,17 @@ void gm_save_game(void) {
 void gm_load_game(void) {
   state->game_progression_data = get_save_data(SAVE_SLOT_CURRENT_SESSION);
 
-  for (size_t itr_000 = 0; itr_000 < state->player_state_static.stats_base.size(); ++itr_000) {
-    i32 level = state->game_progression_data->p_player.stats_base.at(itr_000).level;
+  for (size_t itr_000 = 0; itr_000 < state->player_state_static.stats.size(); ++itr_000) {
+    i32 level = state->game_progression_data->p_player.stats.at(itr_000).level;
     if (level > 0 || level < MAX_PLAYER_LEVEL) {
-      set_static_player_state_stat(static_cast<character_stats>(itr_000), state->game_progression_data->p_player.stats_base.at(itr_000).level);
+      set_static_player_state_stat(static_cast<character_stats>(itr_000), state->game_progression_data->p_player.stats.at(itr_000).level);
     }
     else {
       set_static_player_state_stat(static_cast<character_stats>(itr_000), 1);
     }
   }
   
-  state->player_state_static.stats_total = state->player_state_static.stats_base;
+  state->player_state_static.stats = state->player_state_static.stats;
   *state->game_info.player_state_dynamic = state->player_state_static;
 }
 void gm_damage_spawn_if_collide(data128 coll_data, i32 damage, collision_type coll_check) {
@@ -497,13 +495,13 @@ const character_stat* get_static_player_state_stat(character_stats stat) {
     return nullptr;
   }
   
-  return __builtin_addressof(state->player_state_static.stats_base.at(stat));
+  return __builtin_addressof(state->player_state_static.stats.at(stat));
 }
 void set_static_player_state_stat(character_stats stat_id, i32 level) {
   if (stat_id >= CHARACTER_STATS_MAX || stat_id <= CHARACTER_STATS_UNDEFINED) {
     return;
   }
-  character_stat * _stat_ptr = __builtin_addressof(state->player_state_static.stats_base.at(stat_id));
+  character_stat * _stat_ptr = __builtin_addressof(state->player_state_static.stats.at(stat_id));
   
   game_manager_set_stat_value_by_level(_stat_ptr, level);
 }
@@ -548,58 +546,75 @@ void game_manager_set_stat_value_by_level(character_stat* stat, i32 level) {
     case CHARACTER_STATS_HEALTH:{
       const i32 value = next_curve_value * 2;
 
-      stat->buffer.i32[0] = value;
-      break;
+      stat->buffer.i32[1] = value;
+      stat->buffer.i32[3] = stat->buffer.i32[0] + stat->buffer.i32[1] + stat->buffer.i32[2];
+      return;
     }
     case CHARACTER_STATS_HP_REGEN:{ 
       const i32 value = next_curve_value / 1000.f;
 
-      stat->buffer.i32[0] = value;
-      break;
+      stat->buffer.i32[1] = value;
+      stat->buffer.i32[3] = stat->buffer.i32[0] + stat->buffer.i32[1] + stat->buffer.i32[2];
+      return;
     }
     case CHARACTER_STATS_MOVE_SPEED:{
       const f32 value = next_curve_value * .05f;
 
-      stat->buffer.f32[0] = value;
-      break;
+      stat->buffer.f32[1] = value;
+      stat->buffer.f32[3] = stat->buffer.f32[0] + stat->buffer.f32[1] + stat->buffer.f32[2];
+      return;
     }
     case CHARACTER_STATS_AOE:{
       const f32 value = next_curve_value / 1000.f;
 
-      stat->buffer.f32[0] = value;
-      break;
+      stat->buffer.f32[1] = value;
+      stat->buffer.f32[3] = stat->buffer.f32[0] + stat->buffer.f32[1] + stat->buffer.f32[2];
+      return;
     }
     case CHARACTER_STATS_DAMAGE:{
       const i32 value = next_curve_value * .1f;
 
-      stat->buffer.i32[0] = value;
-      break;
+      stat->buffer.i32[1] = value;
+      stat->buffer.i32[3] = stat->buffer.i32[0] + stat->buffer.i32[1] + stat->buffer.i32[2];
+      return;
     }
     case CHARACTER_STATS_ABILITY_CD:{
       const f32 value = next_curve_value / 1000.f;
 
-      stat->buffer.f32[0] = value;
-      break;
+      stat->buffer.f32[1] = value;
+      stat->buffer.f32[3] = stat->buffer.f32[0] + stat->buffer.f32[1] + stat->buffer.f32[2];
+      return;
     }
     case CHARACTER_STATS_PROJECTILE_AMOUTH:{
       const i32 value = stat->level;
 
-      stat->buffer.i32[0] = value;
-      break;
+      stat->buffer.i32[1] = value;
+      stat->buffer.i32[3] = stat->buffer.i32[0] + stat->buffer.i32[1] + stat->buffer.i32[2];
+      return;
     }
     case CHARACTER_STATS_EXP_GAIN:{
       const f32 value = next_curve_value / 1000.f;
 
-      stat->buffer.f32[0] = value;
-      break;
+      stat->buffer.f32[1] = value;
+      stat->buffer.f32[3] = stat->buffer.f32[0] + stat->buffer.f32[1] + stat->buffer.f32[2];
+      return;
+    }
+    case CHARACTER_STATS_TOTAL_TRAIT_POINTS:{
+      const i32 value = next_curve_value / 100.f;
+
+      stat->buffer.i32[1] = value;
+      stat->buffer.i32[3] = stat->buffer.i32[0] + stat->buffer.i32[1] + stat->buffer.i32[2];
+      return;
     }
     default:{
       TraceLog(LOG_ERROR, "game_manager::game_manager_set_stats()::Unsuppported stat id");
-      break;
+      return;
     }
   }
+
+  TraceLog(LOG_ERROR, "game_manager::game_manager_set_stats()::Function ended unexpectedly");
 }
-void game_manager_sum_stat_value(character_stat* stat, data128 lhs, data128 rhs) {
+void game_manager_set_stat_trait_value_by_level(character_stat* stat, data128 value) {
   if (!state || state == nullptr) {
     TraceLog(LOG_ERROR, "game_manager::game_manager_sum_stat_value()::State is not valid");
     return;
@@ -610,35 +625,48 @@ void game_manager_sum_stat_value(character_stat* stat, data128 lhs, data128 rhs)
   }
   switch (stat->id) {
     case CHARACTER_STATS_HEALTH:{
-      stat->buffer.i32[0] = lhs.i32[0] + rhs.i32[0];
+      stat->buffer.i32[2] = value.i32[0];
+      stat->buffer.i32[3] = stat->buffer.i32[0] + stat->buffer.i32[1] + stat->buffer.i32[2];
       break;
     }
     case CHARACTER_STATS_HP_REGEN:{ 
-      stat->buffer.i32[0] = lhs.i32[0] + rhs.i32[0];
+      stat->buffer.i32[2] = value.i32[0];
+      stat->buffer.i32[3] = stat->buffer.i32[0] + stat->buffer.i32[1] + stat->buffer.i32[2];
       break;
     }
     case CHARACTER_STATS_MOVE_SPEED:{
-      stat->buffer.f32[0] = lhs.f32[0] + rhs.f32[0];
+      stat->buffer.f32[2] = value.f32[0];
+      stat->buffer.f32[3] = stat->buffer.f32[0] + stat->buffer.f32[1] + stat->buffer.f32[2];
       break;
     }
     case CHARACTER_STATS_AOE:{
-      stat->buffer.f32[0] = lhs.f32[0] + rhs.f32[0];
+      stat->buffer.f32[2] = value.f32[0];
+      stat->buffer.f32[3] = stat->buffer.f32[0] + stat->buffer.f32[1] + stat->buffer.f32[2];
       break;
     }
     case CHARACTER_STATS_DAMAGE:{
-      stat->buffer.i32[0] = lhs.i32[0] + rhs.i32[0];
+      stat->buffer.i32[2] = value.i32[0];
+      stat->buffer.f32[3] = stat->buffer.f32[0] + stat->buffer.f32[1] + stat->buffer.f32[2];
       break;
     }
     case CHARACTER_STATS_ABILITY_CD:{
-      stat->buffer.f32[0] = lhs.f32[0] + rhs.f32[0];
+      stat->buffer.f32[2] = value.f32[0];
+      stat->buffer.f32[3] = stat->buffer.f32[0] + stat->buffer.f32[1] + stat->buffer.f32[2];
       break;
     }
     case CHARACTER_STATS_PROJECTILE_AMOUTH:{
-      stat->buffer.i32[0] = lhs.i32[0] + rhs.i32[0];
+      stat->buffer.i32[2] = value.i32[0];
+      stat->buffer.i32[3] = stat->buffer.i32[0] + stat->buffer.i32[1] + stat->buffer.i32[2];
       break;
     }
     case CHARACTER_STATS_EXP_GAIN:{
-      stat->buffer.f32[0] = lhs.f32[0] + rhs.f32[0];
+      stat->buffer.f32[2] = value.f32[0];
+      stat->buffer.f32[3] = stat->buffer.f32[0] + stat->buffer.f32[1] + stat->buffer.f32[2];
+      break;
+    }
+    case CHARACTER_STATS_TOTAL_TRAIT_POINTS:{
+      stat->buffer.i32[2] = value.i32[0];
+      stat->buffer.i32[3] = stat->buffer.i32[0] + stat->buffer.i32[1] + stat->buffer.i32[2];
       break;
     }
     default:{
@@ -673,7 +701,7 @@ bool _add_ability(ability_type _type) {
   }
   abl.p_owner = state->game_info.player_state_dynamic;
   abl.is_initialized = true;
-  abl.proj_count += state->game_info.player_state_dynamic->stats_base.at(CHARACTER_STATS_PROJECTILE_AMOUTH).buffer.i32[0];
+  abl.proj_count += state->game_info.player_state_dynamic->stats.at(CHARACTER_STATS_PROJECTILE_AMOUTH).buffer.i32[3];
   abl.is_active = true;
 
   refresh_ability(__builtin_addressof(abl));

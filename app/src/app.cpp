@@ -121,7 +121,7 @@ bool app_initialize(void) {
 
   state->drawing_target = LoadRenderTexture(state->settings->render_width, state->settings->render_height);
 
-  SetTargetFPS(TARGET_FPS); // TODO: SetTargetFPS() Doesn't work
+  SetTargetFPS(GetMonitorRefreshRate(0));
   SetExitKey(KEY_END);
   if (state->settings->window_state == FLAG_BORDERLESS_WINDOWED_MODE) {
     toggle_borderless();
@@ -145,8 +145,6 @@ bool window_should_close(void) {
 }
 
 bool app_update(void) {
-  //if (GetFPS() > TARGET_FPS) return true;
-
   if (!state) {
     TraceLog(LOG_FATAL, "app::app_update()::App state is not valid!");
     return false;
@@ -191,8 +189,6 @@ bool app_update(void) {
 }
 
 bool app_render(void) {
-  //if (GetFPS() > TARGET_FPS) return true;
-
   BeginTextureMode(state->drawing_target);
     ClearBackground(CLEAR_BACKGROUND_COLOR);
 

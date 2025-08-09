@@ -44,29 +44,33 @@ bool player_system_initialize(void) {
   set_sprite(&player->wreck_right_sprite,       true, false);
 
   {
-    player->stats_base[CHARACTER_STATS_HEALTH] = character_stat(CHARACTER_STATS_HEALTH, 
+    player->stats.at(CHARACTER_STATS_HEALTH) = character_stat(CHARACTER_STATS_HEALTH, 
       LOC_TEXT_PLAYER_STAT_LIFE_ESSENCE, LOC_TEXT_PLAYER_STAT_DESC_LIFE_ESSENCE, Rectangle{2016, 640, 32, 32}, (i32) level_curve[1]
     );
-    player->stats_base[CHARACTER_STATS_HP_REGEN] = character_stat(CHARACTER_STATS_HP_REGEN, 
+    player->stats.at(CHARACTER_STATS_HP_REGEN) = character_stat(CHARACTER_STATS_HP_REGEN, 
       LOC_TEXT_PLAYER_STAT_BREAD, LOC_TEXT_PLAYER_STAT_DESC_BREAD, Rectangle{1856, 896, 32, 32}, (i32) level_curve[1]
     );
-    player->stats_base[CHARACTER_STATS_MOVE_SPEED] = character_stat(CHARACTER_STATS_MOVE_SPEED, 
+    player->stats.at(CHARACTER_STATS_MOVE_SPEED) = character_stat(CHARACTER_STATS_MOVE_SPEED, 
       LOC_TEXT_PLAYER_STAT_CARDINAL_BOOTS, LOC_TEXT_PLAYER_STAT_DESC_CARDINAL_BOOTS, Rectangle{1632, 960, 32, 32}, (i32) level_curve[1]
     );
-    player->stats_base[CHARACTER_STATS_AOE] =  character_stat(CHARACTER_STATS_AOE, 
+    player->stats.at(CHARACTER_STATS_AOE) =  character_stat(CHARACTER_STATS_AOE, 
       LOC_TEXT_PLAYER_STAT_BLAST_SCROLL, LOC_TEXT_PLAYER_STAT_DESC_BLAST_SCROLL, Rectangle{1888, 640, 32, 32}, (i32)  level_curve[1]
     );
-    player->stats_base[CHARACTER_STATS_DAMAGE] =  character_stat(CHARACTER_STATS_DAMAGE, 
+    player->stats.at(CHARACTER_STATS_DAMAGE) =  character_stat(CHARACTER_STATS_DAMAGE, 
       LOC_TEXT_PLAYER_STAT_HEAVY_CROSS, LOC_TEXT_PLAYER_STAT_DESC_HEAVY_CROSS, Rectangle{1856, 640, 32, 32}, (i32) level_curve[1]
     );
-    player->stats_base[CHARACTER_STATS_ABILITY_CD] = character_stat(CHARACTER_STATS_ABILITY_CD, 
+    player->stats.at(CHARACTER_STATS_ABILITY_CD) = character_stat(CHARACTER_STATS_ABILITY_CD, 
       LOC_TEXT_PLAYER_STAT_HOURGLASS, LOC_TEXT_PLAYER_STAT_DESC_HOURGLASS, Rectangle{1696, 672, 32, 32}, (i32)level_curve[1]
     );
-    player->stats_base[CHARACTER_STATS_PROJECTILE_AMOUTH] = character_stat(CHARACTER_STATS_PROJECTILE_AMOUTH, 
+    player->stats.at(CHARACTER_STATS_PROJECTILE_AMOUTH) = character_stat(CHARACTER_STATS_PROJECTILE_AMOUTH, 
       LOC_TEXT_PLAYER_STAT_SECOND_HAND, LOC_TEXT_PLAYER_STAT_DESC_SECOND_HAND, Rectangle{1632, 1056, 32, 32}, (i32) level_curve[1]
     );
-    player->stats_base[CHARACTER_STATS_EXP_GAIN] =  character_stat(CHARACTER_STATS_EXP_GAIN, 
+    player->stats.at(CHARACTER_STATS_EXP_GAIN) =  character_stat(CHARACTER_STATS_EXP_GAIN, 
       LOC_TEXT_PLAYER_STAT_SEEING_EYES, LOC_TEXT_PLAYER_STAT_DESC_SEEING_EYES, Rectangle{1760, 640, 32, 32}, (i32) level_curve[1]
+    );
+    player->stats.at(CHARACTER_STATS_TOTAL_TRAIT_POINTS) =  character_stat(CHARACTER_STATS_TOTAL_TRAIT_POINTS, 
+      LOC_TEXT_PLAYER_STAT_TOTAL_TRAIT_POINTS, LOC_TEXT_PLAYER_STAT_DESC_TOTAL_TRAIT_POINTS, Rectangle{2272, 640, 32, 32}, (i32) level_curve[1],
+      data128(static_cast<i32>(7))
     );
   }
 
@@ -101,7 +105,7 @@ void player_system_reinit(void) {
   player->level = 1;
   player->exp_to_next_level = level_curve[player->level];
   player->exp_current = 0;
-  player->stats_base.at(CHARACTER_STATS_HEALTH).buffer.i32[0] = 0; // INFO: Will be Modified by player stats
+  player->stats.at(CHARACTER_STATS_HEALTH).buffer.i32[0] = 0; // INFO: Will be Modified by player stats
   player->health_current = 0;
   player->health_perc = 0.f;
 
@@ -137,7 +141,7 @@ void player_add_exp_to_player(i32 exp) {
 }
 void player_take_damage(i32 damage) {
   if(!player->is_damagable || player->is_dead) return;
-  if((player->health_current - damage) > 0 && (player->health_current - damage) <= player->stats_total.at(CHARACTER_STATS_HEALTH).buffer.i32[0]) {
+  if((player->health_current - damage) > 0 && (player->health_current - damage) <= player->stats.at(CHARACTER_STATS_HEALTH).buffer.i32[3]) {
     player->health_current -= damage;
     player->is_damagable = false;
     player->damage_break_current = player->damage_break_time;
@@ -147,19 +151,19 @@ void player_take_damage(i32 damage) {
     player->is_dead = true;
     event_fire(EVENT_CODE_END_GAME, event_context());
   }
-  player->health_perc = static_cast<f32>(player->health_current) / static_cast<f32>(player->stats_total.at(CHARACTER_STATS_HEALTH).buffer.i32[0]);
+  player->health_perc = static_cast<f32>(player->health_current) / static_cast<f32>(player->stats.at(CHARACTER_STATS_HEALTH).buffer.i32[3]);
   
   event_fire(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, event_context((f32)PRG_BAR_ID_PLAYER_HEALTH, (f32)player->health_perc));
 }
 void player_heal_player(i32 amouth){
   if(player->is_dead) return;
-  if(player->health_current + amouth <= player->stats_total.at(CHARACTER_STATS_HEALTH).buffer.i32[0]) {
+  if(player->health_current + amouth <= player->stats.at(CHARACTER_STATS_HEALTH).buffer.i32[3]) {
     player->health_current += amouth;
   }
   else {
-    player->health_current = player->stats_total.at(CHARACTER_STATS_HEALTH).buffer.i32[0];
+    player->health_current = player->stats.at(CHARACTER_STATS_HEALTH).buffer.i32[3];
   }
-  player->health_perc = static_cast<f32>(player->health_current) / static_cast<f32>(player->stats_total.at(CHARACTER_STATS_HEALTH).buffer.i32[0]);
+  player->health_perc = static_cast<f32>(player->health_current) / static_cast<f32>(player->stats.at(CHARACTER_STATS_HEALTH).buffer.i32[3]);
 }
 
 player_update_results update_player(void) {
@@ -174,16 +178,16 @@ player_update_results update_player(void) {
   }
   Vector2 new_position = ZEROVEC2;
   if (IsKeyDown(KEY_W)) {
-    new_position.y -= player->stats_total.at(CHARACTER_STATS_MOVE_SPEED).buffer.f32[0] * GetFrameTime();
+    new_position.y -= player->stats.at(CHARACTER_STATS_MOVE_SPEED).buffer.f32[3] * GetFrameTime();
   }
   if (IsKeyDown(KEY_A)) {
-    new_position.x -= player->stats_total.at(CHARACTER_STATS_MOVE_SPEED).buffer.f32[0] * GetFrameTime();
+    new_position.x -= player->stats.at(CHARACTER_STATS_MOVE_SPEED).buffer.f32[3] * GetFrameTime();
   }
   if (IsKeyDown(KEY_S)) {
-    new_position.y += player->stats_total.at(CHARACTER_STATS_MOVE_SPEED).buffer.f32[0] * GetFrameTime();
+    new_position.y += player->stats.at(CHARACTER_STATS_MOVE_SPEED).buffer.f32[3] * GetFrameTime();
   }
   if (IsKeyDown(KEY_D)) {
-    new_position.x += player->stats_total.at(CHARACTER_STATS_MOVE_SPEED).buffer.f32[0] * GetFrameTime();
+    new_position.x += player->stats.at(CHARACTER_STATS_MOVE_SPEED).buffer.f32[3] * GetFrameTime();
   }
   update_sprite(player->last_played_animation);
   

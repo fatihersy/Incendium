@@ -40,6 +40,7 @@ typedef struct main_menu_scene_state {
   panel trait_details_panel;
   std::vector<character_trait> positive_traits;
   std::vector<character_trait> negative_traits;
+  i32 available_trait_points;
 
   const character_stat * hovered_stat;
   const camera_metrics * in_camera_metrics;
@@ -70,6 +71,7 @@ typedef struct main_menu_scene_state {
     this->trait_details_panel = panel();
     this->positive_traits.clear();
     this->negative_traits.clear();
+    this->available_trait_points = 0;
 
     this->hovered_stat = nullptr;
     this->in_camera_metrics = nullptr;
@@ -567,31 +569,34 @@ void draw_main_menu_upgrade_details_panel(void) {
 
   switch (state->hovered_stat->id) {
     case CHARACTER_STATS_HEALTH: {
-      DRAW_UPGRADE_LABEL(upg_stat_text_pos, "%d -> %d", state->hovered_stat->buffer.u32[0], pseudo_update.buffer.u32[0]) break;
+      DRAW_UPGRADE_LABEL(upg_stat_text_pos, "%d -> %d", state->hovered_stat->buffer.i32[1], pseudo_update.buffer.i32[1]) break;
     }
     case CHARACTER_STATS_HP_REGEN: {
-      DRAW_UPGRADE_LABEL(upg_stat_text_pos, "%d -> %d", state->hovered_stat->buffer.u32[0], pseudo_update.buffer.u32[0]) break;
+      DRAW_UPGRADE_LABEL(upg_stat_text_pos, "%d -> %d", state->hovered_stat->buffer.i32[1], pseudo_update.buffer.i32[1]) break;
     }
     case CHARACTER_STATS_MOVE_SPEED: {
-      DRAW_UPGRADE_LABEL(upg_stat_text_pos, "%.1f -> %.1f", state->hovered_stat->buffer.f32[0], pseudo_update.buffer.f32[0]) break;
+      DRAW_UPGRADE_LABEL(upg_stat_text_pos, "%.1f -> %.1f", state->hovered_stat->buffer.f32[1], pseudo_update.buffer.f32[1]) break;
     }
     case CHARACTER_STATS_AOE: {
-      DRAW_UPGRADE_LABEL(upg_stat_text_pos, "%.1f -> %.1f", state->hovered_stat->buffer.f32[0], pseudo_update.buffer.f32[0]) break;
+      DRAW_UPGRADE_LABEL(upg_stat_text_pos, "%.1f -> %.1f", state->hovered_stat->buffer.f32[1], pseudo_update.buffer.f32[1]) break;
     }
     case CHARACTER_STATS_DAMAGE: {
-      DRAW_UPGRADE_LABEL(upg_stat_text_pos, "%d -> %d", state->hovered_stat->buffer.u32[0], pseudo_update.buffer.u32[0]) break;
+      DRAW_UPGRADE_LABEL(upg_stat_text_pos, "%d -> %d", state->hovered_stat->buffer.i32[1], pseudo_update.buffer.i32[1]) break;
     }
     case CHARACTER_STATS_ABILITY_CD: {
-      DRAW_UPGRADE_LABEL(upg_stat_text_pos, "%.1f -> %.1f", state->hovered_stat->buffer.f32[0], pseudo_update.buffer.f32[0]) break;
+      DRAW_UPGRADE_LABEL(upg_stat_text_pos, "%.1f -> %.1f", state->hovered_stat->buffer.f32[1], pseudo_update.buffer.f32[1]) break;
     }
     case CHARACTER_STATS_PROJECTILE_AMOUTH: {
-      DRAW_UPGRADE_LABEL(upg_stat_text_pos, "%d -> %d", state->hovered_stat->buffer.u16[0], pseudo_update.buffer.u16[0]) break;
+      DRAW_UPGRADE_LABEL(upg_stat_text_pos, "%d -> %d", state->hovered_stat->buffer.i32[1], pseudo_update.buffer.i32[1]) break;
     }
     case CHARACTER_STATS_EXP_GAIN: {
-      DRAW_UPGRADE_LABEL(upg_stat_text_pos, "%.1f -> %.1f", state->hovered_stat->buffer.f32[0], pseudo_update.buffer.f32[0]) break;
+      DRAW_UPGRADE_LABEL(upg_stat_text_pos, "%.1f -> %.1f", state->hovered_stat->buffer.f32[1], pseudo_update.buffer.f32[1]) break;
+    }
+    case CHARACTER_STATS_TOTAL_TRAIT_POINTS: {
+      DRAW_UPGRADE_LABEL(upg_stat_text_pos, "%d -> %d", state->hovered_stat->buffer.i32[1], pseudo_update.buffer.i32[1]) break;
     }
     default: {
-      TraceLog(LOG_ERROR, "game_manager::upgrade_player_stat()::Unsuppported stat id");
+      TraceLog(LOG_ERROR, "scene_main_menu::draw_main_menu_upgrade_details_panel()::Unsuppported stat id");
       break;
     }
   }
@@ -734,6 +739,17 @@ void draw_trait_selection_panel(void) {
     __builtin_addressof(state->chosen_traits_selection_panel), chosen_panel_with_padding, state->ingame_info->chosen_traits, chosen_trait_button_on_click
   );
 
+  const char * lc_txt_remaining_trt_pnts = lc_txt(LOC_TEXT_MAINMENU_TRAIT_CHOICE_PANEL_REMANING_TRAIT_POINTS);
+  Vector2 txt_measure_remaining_trt_pnts = ui_measure_text(lc_txt_remaining_trt_pnts, FONT_TYPE_ABRACADABRA, 1);
+  f32 remaining_traits_dest_width = state->in_app_settings->render_width * .2f;
+  Rectangle remaining_traits_dest = Rectangle {
+    bg_trait_sel_pan_dest.x + (bg_trait_sel_pan_dest.width * .5f) - (remaining_traits_dest_width * .5f),
+    bg_trait_sel_pan_dest.y + bg_trait_sel_pan_dest.height * .99f - txt_measure_remaining_trt_pnts.y,
+    remaining_traits_dest_width,
+    txt_measure_remaining_trt_pnts.y
+  };
+  gui_label_box_format(FONT_TYPE_ABRACADABRA, 1, remaining_traits_dest, WHITE, TEXT_ALIGN_TOP_LEFT, "%s:", lc_txt_remaining_trt_pnts);
+  gui_label_box_format(FONT_TYPE_ABRACADABRA, 1, remaining_traits_dest, WHITE, TEXT_ALIGN_TOP_RIGHT, "%d", state->available_trait_points);
 }
 void trait_selection_panel_list_traits(panel* const pnl, const Rectangle rect, std::vector<character_trait> * const traits, void (*trait_button_on_click_pfn)(size_t index)) {
   BeginScissorMode(rect.x, rect.y, rect.width, rect.height);
@@ -772,7 +788,7 @@ void trait_selection_panel_list_traits(panel* const pnl, const Rectangle rect, s
     character_trait * _trait = nullptr;
     for (size_t itr_000 = 0; itr_000 < traits->size(); ++itr_000) {
       _trait = __builtin_addressof(traits->at(itr_000));
-      local_button* _lc_btn = smm_get_local_button(_trait->ui_use.i32[0]);
+      local_button* _lc_btn = smm_get_local_button(_trait->ui_ops.i32[0]);
       text_measure = ui_measure_text(_trait->title.c_str(), FONT_TYPE_ABRACADABRA, 1);
       Vector2 _lc_btn_pos = VECTOR2(rect.x, rect.y + trait_list_height_buffer + (pnl->buffer.f32[0] * pnl->scroll));
       Rectangle _lc_btn_dest = Rectangle {
@@ -1116,9 +1132,9 @@ void begin_scene_change(main_menu_scene_type mms, [[__maybe_unused__]] event_con
       for (size_t itr_000 = 0; itr_000 < gm_traits->size(); ++itr_000) {
         character_trait _trait = gm_traits->at(itr_000);
       
-        _trait.ui_use.i32[0] = state->next_local_button_id;
+        _trait.ui_ops.i32[0] = state->next_local_button_id;
         local_button * lcl_btn_ptr = smm_add_local_button(state->next_local_button_id++, BTN_TYPE_FLAT_BUTTON, BTN_STATE_RELEASED);
-        if (_trait.point > 0) {
+        if (_trait.point < 0) {
           lcl_btn_ptr->btn_type.forground_color_btn_state_up = GREEN;
           lcl_btn_ptr->btn_type.forground_color_btn_state_hover = GREEN;
           lcl_btn_ptr->btn_type.forground_color_btn_state_pressed = GREEN;
@@ -1131,6 +1147,7 @@ void begin_scene_change(main_menu_scene_type mms, [[__maybe_unused__]] event_con
           state->negative_traits.push_back(_trait);
         }
       }
+      state->available_trait_points = get_static_player_state_stat(CHARACTER_STATS_TOTAL_TRAIT_POINTS)->buffer.i32[3];
       state->mainmenu_state = MAIN_MENU_SCENE_TO_PLAY_TRAIT_CHOICE;
       break;
     }
@@ -1171,13 +1188,20 @@ void begin_scene_change(scene_id sid, event_context context) {
 }
 
 void positive_trait_button_on_click(size_t index) {
-  character_trait * _trait_ptr = __builtin_addressof(state->positive_traits.at(index));;
-
-  state->ingame_info->chosen_traits->push_back(*_trait_ptr);
-  state->positive_traits.erase(state->positive_traits.begin() + index);
+  character_trait * _trait_ptr = __builtin_addressof(state->positive_traits.at(index));
+  if (state->available_trait_points >= std::abs(_trait_ptr->point)) {
+    state->available_trait_points += _trait_ptr->point; // INFO: Positive traits have negative points by default
+    
+    state->ingame_info->chosen_traits->push_back(*_trait_ptr);
+    state->positive_traits.erase(state->positive_traits.begin() + index);
+  }
+  else {
+    event_fire(EVENT_CODE_PLAY_SOUND, event_context(SOUND_ID_DENY));
+  }
 }
 void negative_trait_button_on_click(size_t index) {
-  character_trait * _trait_ptr = __builtin_addressof(state->negative_traits.at(index));;
+  character_trait * _trait_ptr = __builtin_addressof(state->negative_traits.at(index));
+  state->available_trait_points += _trait_ptr->point;
 
   state->ingame_info->chosen_traits->push_back(*_trait_ptr);
   state->negative_traits.erase(state->negative_traits.begin() + index);
@@ -1186,10 +1210,11 @@ void chosen_trait_button_on_click(size_t index) {
   character_trait * _trait_ptr = __builtin_addressof(state->ingame_info->chosen_traits->at(index));
 
   if (_trait_ptr->point < 0) {
-    state->negative_traits.push_back(*_trait_ptr);
-  }
-  else {
     state->positive_traits.push_back(*_trait_ptr);
   }
+  else {
+    state->negative_traits.push_back(*_trait_ptr);
+  }
+  state->available_trait_points -= _trait_ptr->point;
   state->ingame_info->chosen_traits->erase(state->ingame_info->chosen_traits->begin() + index);
 }

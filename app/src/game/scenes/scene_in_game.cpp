@@ -429,13 +429,13 @@ void render_interface_in_game(void) {
         "Souls: %d", get_currency_souls()
       );
       gui_label_format(FONT_TYPE_ABRACADABRA, 1, 0, SIG_BASE_RENDER_HEIGHT * .35f, WHITE, false, false, 
-        "Health: %d", state->in_ingame_info->player_state_dynamic->stats_base.at(CHARACTER_STATS_HEALTH).buffer.i32[0]
+        "Health: %d", state->in_ingame_info->player_state_dynamic->stats.at(CHARACTER_STATS_HEALTH).buffer.i32[3]
       );
       gui_label_format(FONT_TYPE_ABRACADABRA, 1, 0, SIG_BASE_RENDER_HEIGHT * .40f, WHITE, false, false, 
         "Current Health: %d", state->in_ingame_info->player_state_dynamic->health_current
       );
       gui_label_format(FONT_TYPE_ABRACADABRA, 1, 0, SIG_BASE_RENDER_HEIGHT * .45f, WHITE, false, false, 
-        "Damage: %d", state->in_ingame_info->player_state_dynamic->stats_base.at(CHARACTER_STATS_DAMAGE).buffer.i32[0]
+        "Damage: %d", state->in_ingame_info->player_state_dynamic->stats.at(CHARACTER_STATS_DAMAGE).buffer.i32[3]
       );
       
       render_user_interface();

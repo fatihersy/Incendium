@@ -134,6 +134,7 @@ typedef enum character_stats {
   CHARACTER_STATS_ABILITY_CD,
   CHARACTER_STATS_PROJECTILE_AMOUTH,
   CHARACTER_STATS_EXP_GAIN,
+  CHARACTER_STATS_TOTAL_TRAIT_POINTS,
   CHARACTER_STATS_MAX,
 } character_stats;
 
@@ -715,6 +716,12 @@ typedef struct ability_play_system {
   }
 } ability_play_system;
 
+/**
+* @brief buffer[0] : Default value
+* @brief buffer[1] : Level value
+* @brief buffer[2] : Trait value
+* @brief buffer[3] : Total value
+*/
 typedef struct character_stat {
   character_stats id;
   i32 level;
@@ -752,34 +759,32 @@ typedef struct character_trait {
   std::string description;
   i32 point;
 
-  data128 ingame_use;
-  data128 ui_use;
+  data128 ingame_ops;
+  data128 ui_ops;
 
   character_trait(void) {
     this->id = 0;
     this->type = CHARACTER_STATS_UNDEFINED;
     this->title = std::string("");
     this->description = std::string("");
-    this->ingame_use = data128();
-    this->ui_use = data128();
+    this->ingame_ops = data128();
+    this->ui_ops = data128();
     this->point = 0;
   }
-  character_trait(i32 _id, character_stats _type, const char* _title, const char * _description, i32 _point, data128 ingame_use, data128 ui_use) : character_trait() {
+  character_trait(i32 _id, character_stats _type, const char* _title, const char * _description, i32 _point, data128 buffer) : character_trait() {
     this->id = _id;
     this->type = _type;
     this->title = _title;
     this->description = _description;
     this->point = _point;
-    this->ingame_use = ingame_use;
-    this->ui_use = ui_use;
+    this->ingame_ops = buffer;
   }
 }character_trait;
 
 // LABEL: Player State
 typedef struct player_state {
   ability_play_system ability_system;
-  std::array<character_stat, CHARACTER_STATS_MAX> stats_total;
-  std::array<character_stat, CHARACTER_STATS_MAX> stats_base;
+  std::array<character_stat, CHARACTER_STATS_MAX> stats;
   ability_type starter_ability;
   
   Rectangle collision;
@@ -816,8 +821,7 @@ typedef struct player_state {
   bool is_damagable;
   player_state(void) {
     this->ability_system = ability_play_system();
-    this->stats_base.fill(character_stat());
-    this->stats_total.fill(character_stat());
+    this->stats.fill(character_stat());
     this->starter_ability = ABILITY_TYPE_UNDEFINED;
     this->collision = ZERORECT;
     this->map_level_collision = ZERORECT;

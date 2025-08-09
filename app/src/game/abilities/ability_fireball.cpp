@@ -106,7 +106,7 @@ void update_ability_fireball(ability* abl) {
 
     event_fire(EVENT_CODE_DAMAGE_ANY_SPAWN_IF_COLLIDE, event_context(
       static_cast<i16>(prj.collision.x),     static_cast<i16>(prj.collision.y), static_cast<i16>(prj.collision.width), static_cast<i16>(prj.collision.height),
-      static_cast<i16>(prj.damage + player->stats_total.at(CHARACTER_STATS_DAMAGE).buffer.i32[0]),
+      static_cast<i16>(prj.damage + player->stats.at(CHARACTER_STATS_DAMAGE).buffer.i32[3]),
       static_cast<i16>(COLLISION_TYPE_RECTANGLE_RECTANGLE)
     ));
     update_sprite(&prj.animations.at(0));
