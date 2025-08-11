@@ -8,15 +8,23 @@
 
 // To avoid dublicate symbol errors. Implementation in defines.h
 extern const u32 level_curve[MAX_PLAYER_LEVEL+1];
-#define PLAYER_SCALE 3.f
+#define PLAYER_SCALE 3
+
+typedef struct player_system_state {
+  const camera_metrics * in_camera_metrics;
+  const app_settings * in_app_settings;
+  const ingame_info * in_ingame_info;
+} player_system_state;
 
 static player_state* player = nullptr;
+static player_system_state* state = nullptr;
 
 bool player_system_on_event(i32 code, event_context context);
 void player_system_reinit(void);
 void play_anim(spritesheet_id player_anim_sheet);
+void player_update_sprite(void);
 
-bool player_system_initialize(void) {
+bool player_system_initialize(const camera_metrics* in_camera_metrics,const app_settings* in_app_settings,const ingame_info* in_ingame_info) {
   if (player){ 
     player_system_reinit();
     return true;
@@ -26,22 +34,39 @@ bool player_system_initialize(void) {
     TraceLog(LOG_ERROR, "player::player_system_initialize()::Failed to allocate player state");
     return false;
   }
-  player->move_left_sprite.sheet_id = SHEET_ID_PLAYER_ANIMATION_MOVE_LEFT;
+  *player = player_state();
+  state = (player_system_state*)allocate_memory_linear(sizeof(player_system_state), true);
+  if (!state) {
+    TraceLog(LOG_ERROR, "player::player_system_initialize()::Failed to allocate player system");
+    return false;
+  }
+  *state = player_system_state();
+  state->in_camera_metrics = in_camera_metrics;
+  state->in_app_settings = in_app_settings;
+  state->in_ingame_info = in_ingame_info;
+
   player->move_right_sprite.sheet_id = SHEET_ID_PLAYER_ANIMATION_MOVE_RIGHT;
-  player->idle_left_sprite.sheet_id = SHEET_ID_PLAYER_ANIMATION_IDLE_LEFT;
   player->idle_right_sprite.sheet_id = SHEET_ID_PLAYER_ANIMATION_IDLE_RIGHT;
-  player->take_damage_left_sprite.sheet_id =  SHEET_ID_PLAYER_ANIMATION_TAKE_DAMAGE_LEFT;
   player->take_damage_right_sprite.sheet_id = SHEET_ID_PLAYER_ANIMATION_TAKE_DAMAGE_RIGHT;
-  player->wreck_left_sprite.sheet_id = SHEET_ID_PLAYER_ANIMATION_WRECK_LEFT;
   player->wreck_right_sprite.sheet_id = SHEET_ID_PLAYER_ANIMATION_WRECK_RIGHT;
-  set_sprite(&player->move_left_sprite,         true, false);
+  player->attack_1_sprite.sheet_id = SHEET_ID_PLAYER_ANIMATION_ATTACK_1;
+  player->attack_2_sprite.sheet_id = SHEET_ID_PLAYER_ANIMATION_ATTACK_2;
+  player->attack_3_sprite.sheet_id = SHEET_ID_PLAYER_ANIMATION_ATTACK_3;
+  player->attack_down_sprite.sheet_id =  SHEET_ID_PLAYER_ANIMATION_ATTACK_DOWN;
+  player->attack_up_sprite.sheet_id = SHEET_ID_PLAYER_ANIMATION_ATTACK_UP;
+  player->roll_sprite.sheet_id = SHEET_ID_PLAYER_ANIMATION_ROLL;
+  player->dash_sprite.sheet_id = SHEET_ID_PLAYER_ANIMATION_DASH;
   set_sprite(&player->move_right_sprite,        true, false);
-  set_sprite(&player->idle_left_sprite,         true, false);
   set_sprite(&player->idle_right_sprite,        true, false);
-  set_sprite(&player->take_damage_left_sprite,  true, false);
   set_sprite(&player->take_damage_right_sprite, true, false);
-  set_sprite(&player->wreck_left_sprite,        true, false);
   set_sprite(&player->wreck_right_sprite,       true, false);
+  set_sprite(&player->attack_1_sprite,          true, false);
+  set_sprite(&player->attack_2_sprite,          true, false);
+  set_sprite(&player->attack_3_sprite,          true, false);
+  set_sprite(&player->attack_down_sprite,       true, false);
+  set_sprite(&player->attack_up_sprite,         true, false);
+  set_sprite(&player->roll_sprite,              true, false);
+  set_sprite(&player->dash_sprite,              true, false);
 
   {
     player->stats.at(CHARACTER_STATS_HEALTH) = character_stat(CHARACTER_STATS_HEALTH, 
@@ -84,18 +109,9 @@ bool player_system_initialize(void) {
 }
 void player_system_reinit(void) {
   
-  player->position.x = 0.f;
-  player->position.y = 0.f;
-  player->dimentions = Vector2{22.f, 32.f};
-  player->dimentions.x *= PLAYER_SCALE;
-  player->dimentions.y *= PLAYER_SCALE;
-  player->dimentions_div2 = Vector2{ player->dimentions.x * .5f, player->dimentions.y * .5f };
-  player->collision = Rectangle {
-    .x = player->position.x - player->dimentions_div2.x,
-    .y = player->position.y - player->dimentions_div2.y,
-    .width = player->dimentions.x,
-    .height = player->dimentions.y
-  };
+  player->position = ZEROVEC2;
+  player->collision.width = (player->idle_right_sprite.coord.width * .9f) * PLAYER_SCALE; // INFO: player collision scales with idle spritesheet
+  player->collision.height = (player->idle_right_sprite.coord.height * .9f) * PLAYER_SCALE;
   player->is_dead = false;
   player->is_moving = false;
   player->w_direction = WORLD_DIRECTION_LEFT;
@@ -108,21 +124,93 @@ void player_system_reinit(void) {
   player->stats.at(CHARACTER_STATS_HEALTH).buffer.i32[0] = 0; // INFO: Will be Modified by player stats
   player->health_current = 0;
   player->health_perc = 0.f;
-
-  player->last_played_animation = &player->idle_left_sprite; // The position player starts. To avoid from the error when move firstly called
   
   player->starter_ability = ABILITY_TYPE_FIREBALL;
   player->is_initialized = true;
 }
 
-player_state* get_player_state(void) {
-  if (!player) {
-    return nullptr;
+player_update_results update_player(void) {
+  if (!player) return player_update_results();
+  if (player->is_dead) { 
+    return player_update_results(); 
   }
-  //TraceLog(LOG_INFO, "player->position:{%f, %f}", player->position.x, player->position.y);
-  return player;
+  
+  if(!player->is_damagable) {
+    if(player->damage_break_current <= 0) { player->is_damagable = true; }
+    else { player->damage_break_current -= GetFrameTime(); }
+  }
+  Vector2 new_position = ZEROVEC2;
+  if (IsKeyDown(KEY_W)) {
+    new_position.y -= player->stats.at(CHARACTER_STATS_MOVE_SPEED).buffer.f32[3] * GetFrameTime();
+  }
+  if (IsKeyDown(KEY_A)) {
+    new_position.x -= player->stats.at(CHARACTER_STATS_MOVE_SPEED).buffer.f32[3] * GetFrameTime();
+  }
+  if (IsKeyDown(KEY_S)) {
+    new_position.y += player->stats.at(CHARACTER_STATS_MOVE_SPEED).buffer.f32[3] * GetFrameTime();
+  }
+  if (IsKeyDown(KEY_D)) {
+    new_position.x += player->stats.at(CHARACTER_STATS_MOVE_SPEED).buffer.f32[3] * GetFrameTime();
+  }
+  player_update_sprite();
+  
+  return player_update_results(new_position, true);
+}
+bool render_player(void) {
+  if (!player) { return false; }
+  spritesheet& _sheet = player->current_anim_to_play;
+  const Rectangle& frame_rect = player->current_anim_to_play.current_frame_rect;
+  
+  play_sprite_on_site_ex(
+    __builtin_addressof(_sheet), 
+    Rectangle {frame_rect.x + _sheet.offset.x, frame_rect.y + _sheet.offset.y, frame_rect.width, frame_rect.height}, 
+    player->current_anim_to_play.coord, 
+    player->current_anim_to_play.origin, 
+    player->current_anim_to_play.rotation, 
+    WHITE
+  );
+  DrawRectangleLines(static_cast<i32>(player->collision.x),static_cast<i32>(player->collision.y),static_cast<i32>(player->collision.width),static_cast<i32>(player->collision.height), WHITE);
+
+  #if DEBUG_COLLISIONS
+    DrawRectangleLines(static_cast<i32>(player->collision.x),static_cast<i32>(player->collision.y),static_cast<i32>(player->collision.width),static_cast<i32>(player->collision.height), WHITE);
+  #endif
+  return true;
 }
 
+void player_move_player(Vector2 new_pos) {
+  if (!player) {
+    TraceLog(LOG_ERROR, "player::player_move_player()::Player state is null");
+    return;
+  }
+  if (new_pos.x < 0.f) {
+    player->w_direction = WORLD_DIRECTION_LEFT;
+  }
+  else if (new_pos.x > 0.f) {
+    player->w_direction = WORLD_DIRECTION_RIGHT;
+  }
+  else if(new_pos.x == 0.f && new_pos.y == 0.f) {
+    player->is_moving = false;
+    return;
+  }
+  
+  player->is_moving = true;
+  player->position.x += new_pos.x;
+  player->position.y += new_pos.y;
+
+  player->collision = Rectangle {
+    player->position.x - (player->collision.width * .5f),
+    player->position.y - (player->collision.height * .5f),
+    player->collision.width,
+    player->collision.height
+  };
+
+  player->map_level_collision = Rectangle {
+    player->collision.x + (player->collision.width * .25f),
+    player->collision.y + (player->collision.height * .8f),
+    player->collision.width * .5f,
+    player->collision.height * .2f
+  };
+}
 void player_add_exp_to_player(i32 exp) {
   i32 curr = player->exp_current;
   i32 to_next = player->exp_to_next_level;
@@ -165,180 +253,54 @@ void player_heal_player(i32 amouth){
   }
   player->health_perc = static_cast<f32>(player->health_current) / static_cast<f32>(player->stats.at(CHARACTER_STATS_HEALTH).buffer.i32[3]);
 }
+void player_update_sprite(void) {
+  if (!player || player == nullptr) { return; }
 
-player_update_results update_player(void) {
-  if (!player) return player_update_results();
-  if (player->is_dead) { 
-    return player_update_results(); 
-  }
-  
-  if(!player->is_damagable) {
-    if(player->damage_break_current <= 0) { player->is_damagable = true; }
-    else { player->damage_break_current -= GetFrameTime(); }
-  }
-  Vector2 new_position = ZEROVEC2;
-  if (IsKeyDown(KEY_W)) {
-    new_position.y -= player->stats.at(CHARACTER_STATS_MOVE_SPEED).buffer.f32[3] * GetFrameTime();
-  }
-  if (IsKeyDown(KEY_A)) {
-    new_position.x -= player->stats.at(CHARACTER_STATS_MOVE_SPEED).buffer.f32[3] * GetFrameTime();
-  }
-  if (IsKeyDown(KEY_S)) {
-    new_position.y += player->stats.at(CHARACTER_STATS_MOVE_SPEED).buffer.f32[3] * GetFrameTime();
-  }
-  if (IsKeyDown(KEY_D)) {
-    new_position.x += player->stats.at(CHARACTER_STATS_MOVE_SPEED).buffer.f32[3] * GetFrameTime();
-  }
-  update_sprite(player->last_played_animation);
-  
-  return player_update_results(new_position, true);
-}
-void player_move_player(Vector2 new_pos) {
-  if (!player) {
-    TraceLog(LOG_ERROR, "player::player_move_player()::Player state is null");
-    return;
-  }
-  if (new_pos.x < 0.f) {
-    player->w_direction = WORLD_DIRECTION_LEFT;
-  }
-  else if (new_pos.x > 0.f) {
-    player->w_direction = WORLD_DIRECTION_RIGHT;
-  }
-  else if(new_pos.x == 0.f && new_pos.y == 0.f) {
-    player->is_moving = false;
-    return;
-  }
-  
-  player->is_moving = true;
-  player->position.x += new_pos.x;
-  player->position.y += new_pos.y;
-
-  player->collision.x = player->position.x;
-  player->collision.y = player->position.y;
-  player->collision.width = player->dimentions.x;
-  player->collision.height = player->dimentions.y;
-
-  player->map_level_collision = Rectangle {
-    player->collision.x + (player->collision.width * .25f),
-    player->collision.y + (player->collision.height * .8f),
-    player->collision.width * .5f,
-    player->collision.height * .2f
-  };
-}
-
-bool render_player(void) {
-  if (!player) { return false; }
-
-  if(!player->is_dead) 
-	{
-    if(player->is_damagable)
-		{
-      if(player->is_moving) 
-			{
-				switch (player->w_direction) 
-      	{
-        	case WORLD_DIRECTION_LEFT: play_anim(SHEET_ID_PLAYER_ANIMATION_MOVE_LEFT);
-        	break;
-        	case WORLD_DIRECTION_RIGHT: play_anim(SHEET_ID_PLAYER_ANIMATION_MOVE_RIGHT);
-        	break;
-        	default: {
-            TraceLog(LOG_WARNING, "player::render_player()::Player has no directions");
-            break;
-        	}
-      	}
-			} 
-      else 
-			{
-				switch (player->w_direction) {
-        	case WORLD_DIRECTION_LEFT: play_anim(SHEET_ID_PLAYER_ANIMATION_IDLE_LEFT);
-        	break;
-        	case WORLD_DIRECTION_RIGHT:play_anim(SHEET_ID_PLAYER_ANIMATION_IDLE_RIGHT);
-        	break;
-        	default: {
-        		TraceLog(LOG_WARNING, "player::render_player()::Player has no directions");
-        		break;
-        	}
-      	}
+  if( not player->is_dead ) {
+    if(player->is_damagable) {
+      if(player->is_moving) {
+        if (player->current_anim_to_play.sheet_id != player->move_right_sprite.sheet_id) {
+          player->current_anim_to_play = player->move_right_sprite;
+        }
+			}
+      else {
+        if (player->current_anim_to_play.sheet_id != player->idle_right_sprite.sheet_id) {
+          player->current_anim_to_play = player->idle_right_sprite;
+        }
 			}
     }	
-    else 
-		{
-      (player->w_direction == WORLD_DIRECTION_LEFT) 
-        ? play_anim(SHEET_ID_PLAYER_ANIMATION_TAKE_DAMAGE_LEFT)
-        : play_anim(SHEET_ID_PLAYER_ANIMATION_TAKE_DAMAGE_RIGHT);
+    else {
+      if (player->current_anim_to_play.sheet_id != player->take_damage_right_sprite.sheet_id) {
+        player->current_anim_to_play = player->take_damage_right_sprite;
+      }
     }
   } 
-  else 
-	{
-    (player->w_direction == WORLD_DIRECTION_LEFT) 
-      ? play_anim(SHEET_ID_PLAYER_ANIMATION_WRECK_LEFT)
-      : play_anim(SHEET_ID_PLAYER_ANIMATION_WRECK_RIGHT);
+  else {
+    if (player->current_anim_to_play.sheet_id != player->wreck_right_sprite.sheet_id) {
+      player->current_anim_to_play = player->wreck_right_sprite;
+    }
   }
+  spritesheet& _sheet = player->current_anim_to_play;
+  if (player->w_direction == WORLD_DIRECTION_LEFT && _sheet.current_frame_rect.width > 0) {
+    _sheet.current_frame_rect.width *= -1;
+  }
+  if (player->w_direction == WORLD_DIRECTION_RIGHT && _sheet.current_frame_rect.width < 0) {
+    _sheet.current_frame_rect.width *= -1;
+  }
+  _sheet.coord = Rectangle { 
+    player->position.x, player->position.y,
+    std::abs(_sheet.current_frame_rect.width) * PLAYER_SCALE, std::abs(_sheet.current_frame_rect.height) * PLAYER_SCALE
+  };
+  _sheet.origin = Vector2 { _sheet.coord.width * .5f, _sheet.coord.height * .5f};
   
-  #if DEBUG_COLLISIONS
-    DrawRectangleLines(
-      static_cast<i32>(player->collision.x),
-      static_cast<i32>(player->collision.y),
-      static_cast<i32>(player->collision.width),
-      static_cast<i32>(player->collision.height),
-      WHITE
-    );
-  #endif
-  return true;
+  update_sprite(__builtin_addressof(_sheet));
 }
 
-void play_anim(spritesheet_id player_anim_sheet) {
-  Rectangle dest = Rectangle {
-    .x = player->position.x,
-    .y = player->position.y,
-    .width = player->dimentions.x,
-    .height = player->dimentions.y
-  };
-  switch (player_anim_sheet) {
-    case SHEET_ID_PLAYER_ANIMATION_MOVE_LEFT: {
-      play_sprite_on_site(&player->move_left_sprite, WHITE, dest);
-      player->last_played_animation = &player->move_left_sprite;
-      break;
-    }
-    case SHEET_ID_PLAYER_ANIMATION_MOVE_RIGHT: {
-      play_sprite_on_site(&player->move_right_sprite, WHITE, dest);
-      player->last_played_animation = &player->move_right_sprite;
-      break;
-    }
-    case SHEET_ID_PLAYER_ANIMATION_IDLE_LEFT:  {
-      play_sprite_on_site(&player->idle_left_sprite, WHITE, dest);
-      player->last_played_animation = &player->idle_left_sprite;
-      break;
-    }
-    case SHEET_ID_PLAYER_ANIMATION_IDLE_RIGHT:  {
-      play_sprite_on_site(&player->idle_right_sprite, WHITE, dest);
-      player->last_played_animation = &player->idle_right_sprite;
-      break;
-    }
-    case SHEET_ID_PLAYER_ANIMATION_TAKE_DAMAGE_LEFT:  {
-      play_sprite_on_site(&player->take_damage_left_sprite, WHITE, dest);
-      player->last_played_animation = &player->take_damage_left_sprite;
-      break;
-    }
-    case SHEET_ID_PLAYER_ANIMATION_TAKE_DAMAGE_RIGHT:  {
-      play_sprite_on_site(&player->take_damage_right_sprite, WHITE, dest);
-      player->last_played_animation = &player->take_damage_right_sprite;
-      break;
-    }
-    case SHEET_ID_PLAYER_ANIMATION_WRECK_LEFT:  {
-      play_sprite_on_site(&player->wreck_left_sprite, WHITE, dest);
-      player->last_played_animation = &player->wreck_left_sprite;
-      break;
-    }
-    case SHEET_ID_PLAYER_ANIMATION_WRECK_RIGHT:  {
-      play_sprite_on_site(&player->wreck_right_sprite, WHITE, dest);
-      player->last_played_animation = &player->wreck_right_sprite;
-      break;
-    }
-    
-    default: TraceLog(LOG_ERROR, "player::move()::move function called with unspecified value.");
-    break;
+player_state* get_player_state(void) {
+  if (!player) {
+    return nullptr;
   }
+  return player;
 }
 
 bool player_system_on_event(i32 code, event_context context) {
@@ -363,4 +325,3 @@ bool player_system_on_event(i32 code, event_context context) {
 
     return false;
 }
-

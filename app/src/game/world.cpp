@@ -508,6 +508,9 @@ void _sort_render_y_based_queue(void) {
   }
   sort_render_y_based_queue(state->active_map_stage.map_id);
 }
+Rectangle wld_calc_mainmenu_prop_dest(const tilemap * const _tilemap, Rectangle dest, f32 scale) {
+  return calc_mainmenu_prop_dest(_tilemap, dest, scale, state->in_app_settings);
+}
 
 // EXPOSED
 tile _get_tile_from_sheet_by_mouse_pos(Vector2 _mouse_pos) {

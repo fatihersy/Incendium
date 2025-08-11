@@ -13,15 +13,14 @@
 #include "game/world.h"
 #include "game/camera.h"
 
-typedef enum in_game_stages {
-  IN_GAME_STAGE_UNDEFINED,
-  IN_GAME_STAGE_IDLE,
-  IN_GAME_STAGE_PLAY,
-  IN_GAME_STAGE_PAUSE,
-  IN_GAME_STAGE_PLAY_DEBUG,
-  IN_GAME_STAGE_PLAY_RESULTS,
-  IN_GAME_STAGE_MAX,
-} in_game_stages;
+typedef enum sig_ingame_state {
+  INGAME_STATE_UNDEFINED,
+  INGAME_STATE_IDLE,
+  INGAME_STATE_PLAY,
+  INGAME_STATE_PAUSE,
+  INGAME_STATE_PLAY_DEBUG,
+  INGAME_STATE_MAX,
+} sig_ingame_state;
 
 typedef struct scene_in_game_state {
   std::array<worldmap_stage, MAX_WORLDMAP_LOCATIONS>  worldmap_locations;
@@ -35,12 +34,12 @@ typedef struct scene_in_game_state {
   const app_settings* in_app_settings;
   const ingame_info* in_ingame_info;
   
-  in_game_stages stage;
+  sig_ingame_state ingame_state;
+  sig_ingame_state ingame_state_prev;
   i32 hovered_spawn;
   ability_type hovered_ability;
   i32 hovered_projectile;
   ui_fade_control_system sig_fade;
-  f32 eta_ingame_play_stage;
 
   scene_in_game_state(void) {
     this->worldmap_locations.fill(worldmap_stage());
@@ -52,12 +51,11 @@ typedef struct scene_in_game_state {
     this->in_camera_metrics = nullptr;
     this->in_app_settings = nullptr;
     this->in_ingame_info = nullptr;
-    this->stage = IN_GAME_STAGE_UNDEFINED;
+    this->ingame_state = INGAME_STATE_UNDEFINED;
     this->hovered_spawn = I32_MAX;
     this->hovered_ability = ABILITY_TYPE_UNDEFINED;
     this->hovered_projectile = I32_MAX;
     this->sig_fade = ui_fade_control_system();
-    this->eta_ingame_play_stage = 0.f;
   }
 } scene_in_game_state;
 
@@ -103,10 +101,11 @@ void initialize_worldmap_locations(void);
 void draw_in_game_upgrade_panel(u16 which_panel, Rectangle panel_dest);
 void draw_passive_selection_panel(const character_stat* stat,const Rectangle panel_dest);
 void draw_end_game_panel(void);
-void draw_ingame_stage_play_ui(void);
+void draw_ingame_state_play_ui(void);
 void prepare_ability_upgrade_state(void);
 void end_ability_upgrade_state(u16 which_panel_chosen);
 void sig_begin_fade(void);
+void sig_change_ingame_state(sig_ingame_state state);
 
 bool start_game(void);
 void reset_game(void);
@@ -151,6 +150,10 @@ void reset_game(void);
     return false;
   }
 
+  event_register(EVENT_CODE_PAUSE_GAME, scene_in_game_on_event);
+  event_register(EVENT_CODE_RESUME_GAME, scene_in_game_on_event);
+  event_register(EVENT_CODE_TOGGLE_GAME_PAUSE, scene_in_game_on_event);
+
   return begin_scene_in_game(fade_in);
 }
 
@@ -164,7 +167,6 @@ void reset_game(void);
   );
   copy_memory(state->worldmap_locations.data(), get_worldmap_locations(), MAX_WORLDMAP_LOCATIONS * sizeof(worldmap_stage));
   _set_player_position(Vector2 {0.f, 0.f});
-  event_fire(EVENT_CODE_PAUSE_GAME, event_context());
   
   for (size_t itr_000 = 0; itr_000 < MAX_UPDATE_ABILITY_PANEL_COUNT; ++itr_000) {
     state->ability_upg_panels.at(itr_000) = state->default_panel;
@@ -174,7 +176,7 @@ void reset_game(void);
   state->hovered_spawn = U16_MAX;
   state->hovered_ability = ABILITY_TYPE_MAX;
   state->hovered_projectile = U16_MAX;
-  state->stage = IN_GAME_STAGE_IDLE;
+  sig_change_ingame_state(INGAME_STATE_IDLE);
 
   if (fade_in) {
     sig_begin_fade();
@@ -190,9 +192,8 @@ bool start_game(void) {
     return false;
   }
   
-  
   _set_player_position(ZEROVEC2);
-  state->stage = IN_GAME_STAGE_PLAY;
+  sig_change_ingame_state(INGAME_STATE_PLAY);
   return true;
 }
 void end_scene_in_game(void) {
@@ -216,40 +217,51 @@ void update_scene_in_game(void) {
     process_fade_effect(__builtin_addressof(state->sig_fade));
   }
 
-  switch (state->stage) {
-    case IN_GAME_STAGE_IDLE: { break; }
-    case IN_GAME_STAGE_PAUSE: { break; }
-    case IN_GAME_STAGE_PLAY: {
-      event_fire(EVENT_CODE_CAMERA_SET_TARGET, event_context(
-        state->in_ingame_info->player_state_dynamic->position_centered.x,
-        state->in_ingame_info->player_state_dynamic->position_centered.y
-      ));
-      if (IsKeyDown(KEY_LEFT_SHIFT) && IsKeyReleased(KEY_D)) {
-        state->stage = IN_GAME_STAGE_PLAY_DEBUG;
-      }
-      update_map();
-      update_game_manager();
-      state->eta_ingame_play_stage += GetFrameTime(); 
-
-      if ( (*state->in_ingame_info->is_game_end) ) {
-        state->stage = IN_GAME_STAGE_PLAY_RESULTS;
+  switch (state->ingame_state) {
+    case INGAME_STATE_IDLE: { break; }
+    case INGAME_STATE_PAUSE: { break; }
+    case INGAME_STATE_PLAY: {
+      switch ( (*state->in_ingame_info->ingame_phase) ) {
+        case INGAME_PHASE_CLEAR_ZOMBIES: {
+          event_fire(EVENT_CODE_CAMERA_SET_TARGET, event_context(
+            state->in_ingame_info->player_state_dynamic->position.x,
+            state->in_ingame_info->player_state_dynamic->position.y
+          ));
+          update_map();
+          update_game_manager();
+          break;
+        }
+        case INGAME_PHASE_DEFEAT_BOSS: {
+          event_fire(EVENT_CODE_CAMERA_SET_TARGET, event_context(
+            state->in_ingame_info->player_state_dynamic->position.x,
+            state->in_ingame_info->player_state_dynamic->position.y
+          ));
+          update_map();
+          update_game_manager();
+          break;
+        }
+        case INGAME_PHASE_RESULTS: {
+          break; 
+        }
+        default: {
+          TraceLog(LOG_ERROR, "scene_in_game::update_scene_in_game()::INGAME_STATE_PLAY::Unknown in-game phase");
+          gm_end_game(false);
+          event_fire(EVENT_CODE_SCENE_MAIN_MENU, event_context());
+          break;
+        }
       }
       break;
     }
-    case IN_GAME_STAGE_PLAY_DEBUG: {
-      if (IsKeyDown(KEY_LEFT_SHIFT) && IsKeyReleased(KEY_D)) {
-        state->stage = IN_GAME_STAGE_PLAY;
-      }
+    case INGAME_STATE_PLAY_DEBUG: {
       update_map();
       update_game_manager_debug();
 
       event_fire(EVENT_CODE_CAMERA_SET_TARGET, event_context(
-        state->in_ingame_info->player_state_dynamic->position_centered.x,
-        state->in_ingame_info->player_state_dynamic->position_centered.y
+        state->in_ingame_info->player_state_dynamic->position.x,
+        state->in_ingame_info->player_state_dynamic->position.y
       ));
       break;
     }
-    case IN_GAME_STAGE_PLAY_RESULTS: { break; }
     default: {
       TraceLog(LOG_WARNING, "scene_in_game::update_scene_in_game()::Unsupported stage");
       break;
@@ -260,37 +272,45 @@ void render_scene_in_game(void) {
   STATE_ASSERT("render_scene_in_game")
   BeginMode2D(get_in_game_camera()->handle);
 
-  switch (state->stage) {
-    case IN_GAME_STAGE_IDLE: {  
+  switch (state->ingame_state) {
+    case INGAME_STATE_IDLE: {  
       render_map(); 
       //render_game();
       break; 
     }
-    case IN_GAME_STAGE_PAUSE: { 
+    case INGAME_STATE_PAUSE: { 
       render_map(); 
       render_game();
       break; 
     }
-    case IN_GAME_STAGE_PLAY: {
+    case INGAME_STATE_PLAY: {
       render_map();
       const ingame_info* const iginf = gm_get_ingame_info();
       i32 bottom_of_the_screen = state->in_camera_metrics->frustum.y + state->in_camera_metrics->frustum.height;
       i32 top_of_the_screen = state->in_camera_metrics->frustum.y;
-      i32 player_texture_begin = iginf->player_state_dynamic->position.y + iginf->player_state_dynamic->dimentions.y;
+      i32 player_texture_begin = iginf->player_state_dynamic->collision.y + iginf->player_state_dynamic->collision.height;
       
       _render_props_y_based(top_of_the_screen, player_texture_begin);
       render_game();
       _render_props_y_based(player_texture_begin, bottom_of_the_screen);
+
+      switch ( (*state->in_ingame_info->ingame_phase) ) {
+        case INGAME_PHASE_CLEAR_ZOMBIES: { break; }
+        case INGAME_PHASE_DEFEAT_BOSS: { break; }
+        case INGAME_PHASE_RESULTS: { break; }
+        default: {
+          TraceLog(LOG_ERROR, "scene_in_game::render_scene_in_game()::INGAME_STATE_PLAY::Unknown in-game phase");
+          gm_end_game(false);
+          event_fire(EVENT_CODE_SCENE_MAIN_MENU, event_context());
+          break;
+        }
+      }
       break;
     }
-    case IN_GAME_STAGE_PLAY_DEBUG: {
+    case INGAME_STATE_PLAY_DEBUG: {
       render_map();
       render_game();
       break;
-    }
-    case IN_GAME_STAGE_PLAY_RESULTS: {
-      render_map();
-      break; 
     }
     default: {
       TraceLog(LOG_WARNING, "scene_in_game::render_scene_in_game()::Unsupported stage");
@@ -303,45 +323,71 @@ void render_scene_in_game(void) {
 void render_interface_in_game(void) {
   STATE_ASSERT("render_interface_in_game")
   
-  switch (state->stage) {
-    case IN_GAME_STAGE_IDLE: { 
+  switch (state->ingame_state) {
+    case INGAME_STATE_IDLE: { 
       gui_label("Press Space to Start!", FONT_TYPE_ABRACADABRA, 1, Vector2 {SIG_BASE_RENDER_WIDTH * .5f, SIG_BASE_RENDER_HEIGHT * .75f}, WHITE, true, true);
       render_user_interface();
       return; 
     }
-    case IN_GAME_STAGE_PAUSE: {
+    case INGAME_STATE_PAUSE: {
       gui_draw_pause_screen(true); // true for drawing resume button
       render_user_interface();
       return; 
     }
-    case IN_GAME_STAGE_PLAY: {  
-      if (get_b_player_have_upgrade_points()) {
-        if (state->is_upgrade_choices_ready) {
-          Rectangle dest = Rectangle {
-            SIG_BASE_RENDER_WIDTH * .25f, SIG_BASE_RENDER_HEIGHT * .5f, 
-            SIG_BASE_RENDER_WIDTH * .25f, SIG_BASE_RENDER_HEIGHT * .5f 
-          };
-          f32 dest_x_buffer = dest.x;
-          for (size_t itr_000 = 0; itr_000 < MAX_UPDATE_ABILITY_PANEL_COUNT; ++itr_000) {
-            panel* pnl = __builtin_addressof(state->ability_upg_panels.at(itr_000));
-            dest.x = dest_x_buffer + ((dest.width + SCREEN_OFFSET.x) * itr_000);
-
-            if(gui_panel_active(pnl, dest, true)) {
-              end_ability_upgrade_state(itr_000);
-              break;
+    case INGAME_STATE_PLAY: {  
+      switch ( (*state->in_ingame_info->ingame_phase) ) {
+        case INGAME_PHASE_CLEAR_ZOMBIES: {
+          if (get_b_player_have_upgrade_points()) {
+            if (state->is_upgrade_choices_ready) {
+              Rectangle dest = Rectangle {
+                SIG_BASE_RENDER_WIDTH * .25f, SIG_BASE_RENDER_HEIGHT * .5f, 
+                SIG_BASE_RENDER_WIDTH * .25f, SIG_BASE_RENDER_HEIGHT * .5f 
+              };
+              f32 dest_x_buffer = dest.x;
+              for (size_t itr_000 = 0; itr_000 < MAX_UPDATE_ABILITY_PANEL_COUNT; ++itr_000) {
+                panel* pnl = __builtin_addressof(state->ability_upg_panels.at(itr_000));
+                dest.x = dest_x_buffer + ((dest.width + SCREEN_OFFSET.x) * itr_000);
+              
+                if(gui_panel_active(pnl, dest, true)) {
+                  end_ability_upgrade_state(itr_000);
+                  break;
+                }
+                draw_in_game_upgrade_panel(itr_000, dest);
+              }
             }
-            draw_in_game_upgrade_panel(itr_000, dest);
+            else { prepare_ability_upgrade_state(); }
           }
+          else {
+            draw_ingame_state_play_ui();
+          }
+          render_user_interface();
+          break;
         }
-        else { prepare_ability_upgrade_state(); }
+        case INGAME_PHASE_DEFEAT_BOSS: {
+          draw_ingame_state_play_ui();
+          render_user_interface();
+          break;
+        }
+        case INGAME_PHASE_RESULTS: {
+          draw_end_game_panel();
+          if(gui_menu_button("Accept", BTN_ID_IN_GAME_BUTTON_RETURN_MENU, Vector2 {0, 5}, SIG_BASE_RENDER_DIV2, true)) {
+            gm_save_game();
+            end_scene_in_game();
+            event_fire(EVENT_CODE_SCENE_MAIN_MENU, event_context(static_cast<i32>(false)));
+          }
+          render_user_interface();
+          break;
+        }
+        default: {
+          TraceLog(LOG_ERROR, "scene_in_game::render_scene_in_game()::INGAME_STATE_PLAY::Unknown in-game phase");
+          gm_end_game(false);
+          event_fire(EVENT_CODE_SCENE_MAIN_MENU, event_context());
+          break;
+        }
       }
-      else {
-        draw_ingame_stage_play_ui();
-      }
-      render_user_interface();
       return;
     }
-    case IN_GAME_STAGE_PLAY_DEBUG: {
+    case INGAME_STATE_PLAY_DEBUG: {
       const Vector2& mouse_pos_screen = (*state->in_ingame_info->mouse_pos_screen);
       gui_label_format(
         FONT_TYPE_ABRACADABRA, 1, mouse_pos_screen.x, mouse_pos_screen.y, 
@@ -441,16 +487,6 @@ void render_interface_in_game(void) {
       render_user_interface();
       return;
     }
-    case IN_GAME_STAGE_PLAY_RESULTS: { 
-      draw_end_game_panel();
-      if(gui_menu_button("Accept", BTN_ID_IN_GAME_BUTTON_RETURN_MENU, Vector2 {0, 5}, SIG_BASE_RENDER_DIV2, true)) {
-        gm_save_game();
-        end_scene_in_game();
-        event_fire(EVENT_CODE_SCENE_MAIN_MENU, event_context(static_cast<i32>(false)));
-      }
-      render_user_interface();
-      return; 
-    }
     default: {
       TraceLog(LOG_WARNING, "scene_in_game::render_interface_in_game()::Unsupported stage");
       render_user_interface();
@@ -461,13 +497,30 @@ void render_interface_in_game(void) {
   TraceLog(LOG_WARNING, "scene_in_game::render_interface_in_game()::Function ended unexpectedly");
 }
 void in_game_update_mouse_bindings(void) { 
-  switch (state->stage) {
-    case IN_GAME_STAGE_IDLE: { break; }
-    case IN_GAME_STAGE_PAUSE: { break; }
-    case IN_GAME_STAGE_PLAY: {
+  switch (state->ingame_state) {
+    case INGAME_STATE_IDLE: { break; }
+    case INGAME_STATE_PAUSE: { break; }
+    case INGAME_STATE_PLAY: {
+      switch ( (*state->in_ingame_info->ingame_phase) ) {
+        case INGAME_PHASE_CLEAR_ZOMBIES: {
+          break;
+        }
+        case INGAME_PHASE_DEFEAT_BOSS: {
+          break;
+        }
+        case INGAME_PHASE_RESULTS: {
+          break;
+        }
+        default: {
+          TraceLog(LOG_ERROR, "scene_in_game::render_scene_in_game()::INGAME_STATE_PLAY::Unknown in-game phase");
+          gm_end_game(false);
+          event_fire(EVENT_CODE_SCENE_MAIN_MENU, event_context());
+          break;
+        }
+      }
       break;
     }
-    case IN_GAME_STAGE_PLAY_DEBUG: {
+    case INGAME_STATE_PLAY_DEBUG: {
       const Vector2* const mouse_pos_world = state->in_ingame_info->mouse_pos_world;
       state->hovered_spawn = U16_MAX;
       size_t _remaining_enemies = state->in_ingame_info->in_spawns->size();
@@ -497,7 +550,6 @@ void in_game_update_mouse_bindings(void) {
       }
       break;
     }
-    case IN_GAME_STAGE_PLAY_RESULTS: { break; }
     default: {
       TraceLog(LOG_WARNING, "scene_in_game::update_scene_in_game()::Unsupported stage");
       break;
@@ -505,39 +557,60 @@ void in_game_update_mouse_bindings(void) {
   }
 }
 void in_game_update_keyboard_bindings(void) {
-  switch (state->stage) {
-    case IN_GAME_STAGE_IDLE: { 
+  switch (state->ingame_state) {
+    case INGAME_STATE_IDLE: { 
       if (IsKeyReleased(KEY_ESCAPE)) {
-        event_fire(EVENT_CODE_TOGGLE_GAME_PAUSE, event_context());
+        sig_change_ingame_state(INGAME_STATE_PAUSE);
       }
-      else if (IsKeyPressed(KEY_SPACE) && state->in_ingame_info->is_game_paused) {
-        event_fire(EVENT_CODE_RESUME_GAME, event_context());
-        state->stage = IN_GAME_STAGE_PLAY;
+      else if (IsKeyPressed(KEY_SPACE)) {
         start_game();
       }
       break; 
     }
-    case IN_GAME_STAGE_PAUSE: { 
+    case INGAME_STATE_PAUSE: { 
       if (IsKeyReleased(KEY_ESCAPE)) {
-        event_fire(EVENT_CODE_RESUME_GAME, event_context());
-        state->stage = IN_GAME_STAGE_PLAY;
+        state->ingame_state = state->ingame_state_prev;
       }
       break; 
     }
-    case IN_GAME_STAGE_PLAY: {  
-      if (IsKeyReleased(KEY_ESCAPE)) {
-        event_fire(EVENT_CODE_PAUSE_GAME, event_context());
-        state->stage = IN_GAME_STAGE_PAUSE;
+    case INGAME_STATE_PLAY: {  
+      switch ( (*state->in_ingame_info->ingame_phase) ) {
+        case INGAME_PHASE_CLEAR_ZOMBIES: {
+          if (IsKeyDown(KEY_LEFT_SHIFT) && IsKeyReleased(KEY_D)) {
+            sig_change_ingame_state(INGAME_STATE_PLAY_DEBUG);
+          }
+          if (IsKeyReleased(KEY_ESCAPE)) {
+            sig_change_ingame_state(INGAME_STATE_PAUSE);
+          }
+          break;
+        }
+        case INGAME_PHASE_DEFEAT_BOSS: {
+          if (IsKeyDown(KEY_LEFT_SHIFT) && IsKeyReleased(KEY_D)) {
+            sig_change_ingame_state(INGAME_STATE_PLAY_DEBUG);
+          }
+          if (IsKeyReleased(KEY_ESCAPE)) {
+            sig_change_ingame_state(INGAME_STATE_PAUSE);
+          }
+          break;
+        }
+        case INGAME_PHASE_RESULTS: {
+          break;
+        }
+        default: {
+          TraceLog(LOG_ERROR, "scene_in_game::render_scene_in_game()::INGAME_STATE_PLAY::Unknown in-game phase");
+          gm_end_game(false);
+          event_fire(EVENT_CODE_SCENE_MAIN_MENU, event_context());
+          break;
+        }
       }
       break;
     }
-    case IN_GAME_STAGE_PLAY_DEBUG: {  
+    case INGAME_STATE_PLAY_DEBUG: {  
       if (IsKeyReleased(KEY_ESCAPE)) {
-        state->stage = IN_GAME_STAGE_PLAY;
+        sig_change_ingame_state(INGAME_STATE_PLAY);
       }
       break;
     }
-    case IN_GAME_STAGE_PLAY_RESULTS: { break; }
     default: {
       TraceLog(LOG_WARNING, "scene_in_game::in_game_update_keyboard_bindings()::Unsupported stage");
       break;
@@ -649,22 +722,22 @@ void draw_end_game_panel(void) {
   );
 
   if (state->in_ingame_info->is_win) {
-    gui_label(lc_txt(LOC_TEXT_INGAME_STAGE_RESULT_CLEARED), FONT_TYPE_ABRACADABRA, 1, SIG_BASE_RENDER_DIV2, WHITE, true, true);
+    gui_label(lc_txt(LOC_TEXT_INGAME_STATE_RESULT_CLEARED), FONT_TYPE_ABRACADABRA, 1, SIG_BASE_RENDER_DIV2, WHITE, true, true);
   }
   else {
-    gui_label(lc_txt(LOC_TEXT_INGAME_STAGE_RESULT_DEAD), FONT_TYPE_ABRACADABRA, 1, SIG_BASE_RENDER_DIV2, RED, true, true);
+    gui_label(lc_txt(LOC_TEXT_INGAME_STATE_RESULT_DEAD), FONT_TYPE_ABRACADABRA, 1, SIG_BASE_RENDER_DIV2, RED, true, true);
   }
-  u32 min  = (i32)state->in_ingame_info->play_time / 60.f;
-  u32 secs = (i32)state->in_ingame_info->play_time % 60;
+  i32 min  = state->in_ingame_info->play_time / 60.f;
+  i32 secs = (i32)state->in_ingame_info->play_time % 60;
   gui_label_format_v(FONT_TYPE_ABRACADABRA, 1, VECTOR2(static_cast<f32>(state->in_app_settings->render_width_div2), SIG_BASE_RENDER_HEIGHT * .55f), 
     WHITE, true, true, "%d:%d", min, secs
   );
 
   gui_label_format_v(FONT_TYPE_ABRACADABRA, 1, VECTOR2(static_cast<f32>(state->in_app_settings->render_width_div2), SIG_BASE_RENDER_HEIGHT * .75f), WHITE, true, true, 
-    "%s%d", lc_txt(LOC_TEXT_INGAME_STAGE_RESULT_COLLECTED_SOULS), state->in_ingame_info->collected_souls
+    "%s%d", lc_txt(LOC_TEXT_INGAME_STATE_RESULT_COLLECTED_SOULS), state->in_ingame_info->collected_souls
   );
 }
-void draw_ingame_stage_play_ui(void) {
+void draw_ingame_state_play_ui(void) {
   Rectangle exp_bar_dest = Rectangle {0, 0, static_cast<f32>(state->in_app_settings->render_width), static_cast<f32>(state->in_app_settings->render_height) * .05f};
   gui_progress_bar(PRG_BAR_ID_PLAYER_EXPERIANCE, exp_bar_dest, false);
   const Rectangle * exp_bar_orn_src_rect = get_atlas_texture_source_rect(ATLAS_TEX_ID_DARK_FANTASY_BOSSBAR_6_MIDDLE);
@@ -729,12 +802,11 @@ void draw_ingame_stage_play_ui(void) {
   gui_label_format(FONT_TYPE_ABRACADABRA, 1, 
     static_cast<f32>(state->in_app_settings->render_width_div2), 
     static_cast<f32>(state->in_app_settings->render_height * .05f), WHITE, true, false, "%.2d:%.2d", 
-    static_cast<i32>(state->eta_ingame_play_stage / 60.f),
-    static_cast<i32>(state->eta_ingame_play_stage)
+    static_cast<i32>(state->in_ingame_info->play_time / 60.f),
+    static_cast<i32>(state->in_ingame_info->play_time)
   );
 }
 void prepare_ability_upgrade_state(void) {
-  event_fire(EVENT_CODE_PAUSE_GAME, event_context());
   for (int i=0; i<MAX_UPDATE_ABILITY_PANEL_COUNT; ++i) {
     panel* pnl = __builtin_addressof(state->ability_upg_panels.at(i));
     ability* pnl_slot = __builtin_addressof(state->ability_upgrade_choices.at(i));
@@ -766,8 +838,6 @@ void end_ability_upgrade_state(u16 which_panel_chosen) {
   else {
     _upgrade_ability(GET_PLAYER_DYNAMIC_ABILITY(new_ability->type)); 
   }
-
-  event_fire(EVENT_CODE_RESUME_GAME, event_context());
   state->ability_upgrade_choices.fill(ability());
   set_dynamic_player_have_ability_upgrade_points(false);
   state->is_upgrade_choices_ready = false;
@@ -782,9 +852,56 @@ void sig_begin_fade(void) {
   state->sig_fade.fade_animation_playing = true;
   state->sig_fade.is_fade_animation_played = false;
 }
+void sig_change_ingame_state(sig_ingame_state ingame_state) {
+  switch (ingame_state) {
+    case INGAME_STATE_IDLE: {
+      state->ingame_state = INGAME_STATE_IDLE;
+      state->ingame_state_prev = INGAME_STATE_IDLE;
+      return;
+    }
+    case INGAME_STATE_PLAY: {
+      state->ingame_state = INGAME_STATE_PLAY;
+      state->ingame_state_prev = INGAME_STATE_PLAY;
+      return;
+    }
+    case INGAME_STATE_PAUSE: {
+      state->ingame_state = INGAME_STATE_PAUSE;
+      return;
+    }
+    case INGAME_STATE_PLAY_DEBUG: {
+      state->ingame_state = INGAME_STATE_PLAY_DEBUG;
+      state->ingame_state_prev = INGAME_STATE_PLAY_DEBUG;
+      return;
+    }
+    default: {
+      TraceLog(LOG_WARNING, "scene_in_game::sig_change_ingame_state()::Unknown in-game state");
+      return;
+    }
+  }
+
+  TraceLog(LOG_WARNING, "scene_in_game::sig_change_ingame_state()::Function ended unexpectedly");
+}
 
 bool scene_in_game_on_event(i32 code, [[maybe_unused]] event_context context) {
   switch (code) {
+    case EVENT_CODE_PAUSE_GAME: {
+      sig_change_ingame_state(INGAME_STATE_PAUSE);
+      return true;
+    }
+    case EVENT_CODE_RESUME_GAME: {
+      sig_change_ingame_state(state->ingame_state_prev);
+      return true;
+    }
+    case EVENT_CODE_TOGGLE_GAME_PAUSE: {
+      if (state->ingame_state != INGAME_STATE_PAUSE) {
+        sig_change_ingame_state(INGAME_STATE_PAUSE);
+      }
+      else {
+        sig_change_ingame_state(state->ingame_state_prev);
+      }
+      return true;
+    }
+
     default: {
       TraceLog(LOG_WARNING, "scene_in_game::scene_in_game_on_event()::Unsuppported code.");
       return false;
@@ -809,3 +926,10 @@ bool scene_in_game_on_event(i32 code, [[maybe_unused]] event_context context) {
 #undef INGAME_FADE_DURATION
 #undef DRAW_ABL_UPG_STAT_PNL
 #undef HEALTH_BAR_WIDTH
+
+/**
+    case INGAME_STATE_PLAY_RESULTS: { 
+
+    }
+*/
+

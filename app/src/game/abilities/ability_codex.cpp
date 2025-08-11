@@ -7,13 +7,6 @@
 
 #include "game/spritesheet.h"
 
-#define CODEX_BOOK_POSITION_BY_PLAYER(PLAYER_POS, PLAYER_DIM) {\
-  Rectangle { PLAYER_POS.x - PLAYER_DIM.x * .2f, PLAYER_POS.y - PLAYER_DIM.y * .2f, 32, 32 }\
-}
-#define CODEX_BOOK_POSITION_BY_ABILITY(ABILITY_POS) {\
-  Rectangle { ABILITY_POS.x, ABILITY_POS.y, 32, 32 }\
-}
-
 typedef struct ability_codex_state {
   std::array<ability, ABILITY_TYPE_MAX> abilities;
 
@@ -97,7 +90,11 @@ void update_ability_codex(ability* abl) {
   }
   u16 frame_counter_max = 1 * TARGET_FPS;
   player_state* p_player = reinterpret_cast<player_state*>(abl->p_owner);
-  Rectangle book_position = CODEX_BOOK_POSITION_BY_PLAYER(p_player->position, p_player->dimentions);
+  Rectangle book_position = Rectangle { 
+    p_player->collision.x - p_player->collision.width * .2f, 
+    p_player->collision.y - p_player->collision.height * .2f, 
+    32, 32 
+  };
   abl->position.x = book_position.x;
   abl->position.y = book_position.y;
 
@@ -163,7 +160,7 @@ void render_ability_codex(ability* abl) {
     play_sprite_on_site(__builtin_addressof(prj.animations.at(prj.active_sprite)), WHITE, Rectangle { prj.position.x, prj.position.y, dim.x, dim.y });
   }
   const Texture2D * icon_tex = ss_get_texture_by_enum(TEX_ID_ASSET_ATLAS);
-  Rectangle codex_book_dest = CODEX_BOOK_POSITION_BY_ABILITY(abl->position);
+  Rectangle codex_book_dest = Rectangle { abl->position.x, abl->position.y, 32, 32 };
 
   DrawTexturePro(*icon_tex, abl->icon_src, codex_book_dest, VECTOR2(0, 0), 0.f, WHITE);
 }

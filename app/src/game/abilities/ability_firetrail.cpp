@@ -91,10 +91,7 @@ void update_ability_firetrail(ability* abl) {
   player_state* p_player = reinterpret_cast<player_state*>(abl->p_owner);
 
   Vector2 ability_projectile_dimentions = Vector2 {abl->proj_dim.x * abl->proj_collision_scale.x, abl->proj_dim.y * abl->proj_collision_scale.y};
-  Vector2 ability_position = VECTOR2(
-    p_player->position.x + p_player->dimentions_div2.x, 
-    p_player->position.y + p_player->dimentions.y
-  );
+  Vector2 ability_position = VECTOR2(p_player->position.x, p_player->collision.y + p_player->collision.height);
   abl->position = ability_position;
 
   for (size_t itr_000 = 0; itr_000 < abl->projectiles.size(); itr_000++) {
@@ -118,8 +115,10 @@ void update_ability_firetrail(ability* abl) {
   };
 
   Rectangle player_collision = Rectangle {
-    p_player->collision.x + (p_player->dimentions.x * .25f), p_player->collision.y + (p_player->dimentions.y * .8f),
-    p_player->dimentions.x * .5f, p_player->dimentions.y * .2f 
+    p_player->collision.x + (p_player->collision.width * .25f), 
+    p_player->collision.y + (p_player->collision.height * .8f),
+    p_player->collision.width * .5f, 
+    p_player->collision.height * .2f 
   };
 
   if (!CheckCollisionRecs(last_placed_projectile_dest, player_collision)) {

@@ -969,9 +969,6 @@ void smm_update_keyboard_bindings(void) {
       break;
     }
     case MAIN_MENU_SCENE_TO_PLAY_MAP_CHOICE: {
-      if (IsKeyReleased(KEY_ESCAPE)) {
-        event_fire(EVENT_CODE_TOGGLE_GAME_PAUSE, event_context());
-      }
       break;
     }
     case MAIN_MENU_SCENE_TO_PLAY_TRAIT_CHOICE: {

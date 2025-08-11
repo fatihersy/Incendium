@@ -14,7 +14,6 @@ i32 get_currency_souls(void);
 void set_currency_souls(i32 value);
 bool get_b_player_have_upgrade_points(void);
 void set_dynamic_player_have_ability_upgrade_points(bool _b);
-void toggle_is_game_paused(void);
 
 const character_stat* get_static_player_state_stat(character_stats stat);
 const ingame_info* gm_get_ingame_info(void);
@@ -32,7 +31,6 @@ void currency_souls_add(i32 value);
 
 bool    _add_ability(ability_type _type);
 bool    _upgrade_ability(ability* abl);
-u16     _spawn_character(Character2D _character);
 void    _set_player_position(Vector2 position);
 ability _get_next_level(ability abl);
 ability _get_ability(ability_type type);

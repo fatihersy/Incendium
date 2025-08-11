@@ -26,6 +26,7 @@ tile _get_tile_from_sheet_by_mouse_pos(Vector2 _mouse_pos);
 tile _get_tile_from_map_by_mouse_pos(i32 from_layer, Vector2 _mouse_pos);
 void _render_props_y_based(i32 start_y, i32 end_y);
 void _sort_render_y_based_queue(void);
+Rectangle wld_calc_mainmenu_prop_dest(const tilemap * const _tilemap, Rectangle dest, f32 scale);
 
 bool add_prop_curr_map(tilemap_prop_static prop_static);
 bool add_prop_curr_map(tilemap_prop_sprite prop_sprite);

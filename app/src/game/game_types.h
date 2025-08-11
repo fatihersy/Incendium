@@ -209,6 +209,7 @@ typedef enum ingame_phases {
   INGAME_PHASE_UNDEFINED,
   INGAME_PHASE_CLEAR_ZOMBIES,
   INGAME_PHASE_DEFEAT_BOSS,
+  INGAME_PHASE_RESULTS,
   INGAME_PHASE_MAX,
 }ingame_phases;
 
@@ -225,18 +226,40 @@ typedef enum text_alignment {
   TEXT_ALIGN_MAX,
 }text_alignment;
 
+typedef enum spawn_movement_animations {
+  SPAWN_ZOMBIE_ANIMATION_UNDEFINED,
+  SPAWN_ZOMBIE_ANIMATION_MOVE_LEFT,
+  SPAWN_ZOMBIE_ANIMATION_MOVE_RIGHT,
+  SPAWN_ZOMBIE_ANIMATION_TAKE_DAMAGE_LEFT,
+  SPAWN_ZOMBIE_ANIMATION_TAKE_DAMAGE_RIGHT,
+  SPAWN_ZOMBIE_ANIMATION_MAX,
+} spawn_movement_animations;
+
+typedef enum player_animation_set {
+  PLAYER_ANIMATION_UNDEFINED,
+  //PLAYER_ANIMATION_MOVE_LEFT,
+  PLAYER_ANIMATION_MOVE_RIGHT,
+  //PLAYER_ANIMATION_TAKE_DAMAGE_LEFT,
+  PLAYER_ANIMATION_TAKE_DAMAGE_RIGHT,
+  //PLAYER_ANIMATION_IDLE_LEFT,
+  PLAYER_ANIMATION_IDLE_RIGHT,
+  //PLAYER_ANIMATION_WRECK_LEFT,
+  PLAYER_ANIMATION_WRECK_RIGHT,
+  PLAYER_ANIMATION_MAX,
+} player_animation_set;
+
 typedef struct spritesheet {
   spritesheet_id sheet_id;
   texture_id tex_id;
   Texture2D* tex_handle;
   Vector2 offset;
   Vector2 origin;
-  u16 col_total;
-  u16 row_total;
-  u16 frame_total;
-  u16 current_col;
-  u16 current_row;
-  u16 current_frame;
+  i32 col_total;
+  i32 row_total;
+  i32 frame_total;
+  i32 current_col;
+  i32 current_row;
+  i32 current_frame;
   Rectangle current_frame_rect;
   Rectangle coord;
 
@@ -257,12 +280,12 @@ typedef struct spritesheet {
     this->tex_handle = nullptr;
     this->offset = ZEROVEC2;
     this->origin = ZEROVEC2;
-    this->col_total = 0u;
-    this->row_total = 0u;
-    this->frame_total = 0u;
-    this->current_col = 0u;
-    this->current_row = 0u;
-    this->current_frame = 0u;
+    this->col_total = 0;
+    this->row_total = 0;
+    this->frame_total = 0;
+    this->current_col = 0;
+    this->current_row = 0;
+    this->current_frame = 0;
     this->current_frame_rect = ZERORECT;
     this->coord = ZERORECT;
     this->tint = WHITE;
@@ -555,7 +578,7 @@ typedef struct Character2D {
   spritesheet move_left_animation;
   spritesheet take_damage_right_animation;
   spritesheet take_damage_left_animation;
-  spritesheet* last_played_animation;
+  spawn_movement_animations last_played_animation;
   Vector2 position;
   f32 rotation;
   f32 scale;
@@ -578,7 +601,7 @@ typedef struct Character2D {
     this->move_left_animation = spritesheet();
     this->take_damage_right_animation = spritesheet();
     this->take_damage_left_animation = spritesheet();
-    this->last_played_animation = nullptr;
+    this->last_played_animation = SPAWN_ZOMBIE_ANIMATION_UNDEFINED;
     this->position = ZEROVEC2;
     this->rotation = 0.f;
     this->scale = 0.f;
@@ -734,14 +757,14 @@ typedef struct character_stat {
 
   character_stat(void) {
     this->id = CHARACTER_STATS_UNDEFINED;
-    this->level = 0u;
-    this->passive_display_name_symbol = 0u;
-    this->passive_desc_symbol = 0u;
+    this->level = 0;
+    this->passive_display_name_symbol = 0;
+    this->passive_desc_symbol = 0;
     this->passive_icon_src = ZERORECT;
     this->upgrade_cost = 0;
     this->buffer = data128();
   }
-  character_stat(character_stats id, u32 display_name_symbol, u32 desc_symbol, Rectangle icon_src, i32 upgrade_cost, data128 buffer = data128()) : character_stat() {
+  character_stat(character_stats id, i32 display_name_symbol, i32 desc_symbol, Rectangle icon_src, i32 upgrade_cost, data128 buffer = data128()) : character_stat() {
     this->id = id;
     this->passive_display_name_symbol = display_name_symbol;
     this->passive_desc_symbol = desc_symbol;
@@ -789,21 +812,22 @@ typedef struct player_state {
   
   Rectangle collision;
   Rectangle map_level_collision;
-  Vector2 dimentions;
-  Vector2 dimentions_div2;
-  spritesheet move_left_sprite;
+
   spritesheet move_right_sprite;
-  spritesheet idle_left_sprite;
   spritesheet idle_right_sprite;
-  spritesheet take_damage_left_sprite;
   spritesheet take_damage_right_sprite;
-  spritesheet wreck_left_sprite;
   spritesheet wreck_right_sprite;
-  spritesheet* last_played_animation;
+  spritesheet attack_1_sprite;
+  spritesheet attack_2_sprite;
+  spritesheet attack_3_sprite;
+  spritesheet attack_down_sprite;
+  spritesheet attack_up_sprite;
+  spritesheet roll_sprite;
+  spritesheet dash_sprite;
+  spritesheet current_anim_to_play;
 
   world_direction w_direction;
   Vector2 position;
-  Vector2 position_centered;
   f32 damage_break_time;
   f32 damage_break_current;
   i32 exp_to_next_level;
@@ -825,20 +849,20 @@ typedef struct player_state {
     this->starter_ability = ABILITY_TYPE_UNDEFINED;
     this->collision = ZERORECT;
     this->map_level_collision = ZERORECT;
-    this->dimentions = ZEROVEC2;
-    this->dimentions_div2 = ZEROVEC2;
-    this->move_left_sprite = spritesheet();
     this->move_right_sprite = spritesheet();
-    this->idle_left_sprite = spritesheet();
     this->idle_right_sprite = spritesheet();
-    this->take_damage_left_sprite = spritesheet();
     this->take_damage_right_sprite = spritesheet();
-    this->wreck_left_sprite = spritesheet();
     this->wreck_right_sprite = spritesheet();
-    this->last_played_animation = nullptr;
+    this->attack_1_sprite = spritesheet();
+    this->attack_2_sprite = spritesheet();
+    this->attack_3_sprite = spritesheet();
+    this->attack_down_sprite = spritesheet();
+    this->attack_up_sprite = spritesheet();
+    this->roll_sprite = spritesheet();
+    this->dash_sprite = spritesheet();
+    this->current_anim_to_play = spritesheet();
     this->w_direction = WORLD_DIRECTION_UNDEFINED;
     this->position = ZEROVEC2;
-    this->position_centered = ZEROVEC2;
     this->damage_break_time = 0.f;
     this->damage_break_current = 0.f;
     this->exp_to_next_level = 0.f;
@@ -861,14 +885,13 @@ typedef struct ingame_info {
   const Character2D* nearest_spawn;
   const Vector2* mouse_pos_world;
   const Vector2* mouse_pos_screen;
-  const bool* is_game_end;
-  const bool* is_game_paused;
-  const bool* show_pause_menu;
   const ingame_phases* ingame_phase;
   std::vector<character_trait>* chosen_traits;
+
   i32 collected_souls;
   f32 play_time;
   bool is_win;
+  i32 stage_boss_id;
 
   ingame_info(void) {
     this->in_spawns = nullptr;
@@ -876,15 +899,13 @@ typedef struct ingame_info {
     this->player_state_dynamic = nullptr;
     this->mouse_pos_world = nullptr;
     this->mouse_pos_screen = nullptr;
-    this->is_game_end = nullptr;
-    this->is_game_paused = nullptr;
     this->ingame_phase = nullptr;
-    this->show_pause_menu = nullptr;
     this->chosen_traits = nullptr;
     
     this->collected_souls = 0;
     this->play_time = 0.f;
     this->is_win = false;
+    this->stage_boss_id = -1;
   }
 } ingame_info;
 

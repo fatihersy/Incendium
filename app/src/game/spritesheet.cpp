@@ -3,11 +3,11 @@
 
 void update_sprite(spritesheet *const sheet);
 constexpr void render_sprite(const spritesheet * sheet,const Color _tint,const Rectangle dest);
-constexpr void render_sprite_pro(const spritesheet * sheet, const Rectangle dest, const Vector2 origin, const f32 rotation, const Color _tint);
+constexpr void render_sprite_pro(const spritesheet * sheet, const Rectangle source, const Rectangle dest, const Vector2 origin, const f32 rotation, const Color _tint);
  
 void update_sprite(spritesheet *const sheet) {
-  if (!sheet) {
-    TraceLog(LOG_ERROR, "spritesheet::update_sprite()::Sheet is null");
+  if (!sheet || sheet == nullptr ) {
+    TraceLog(LOG_ERROR, "spritesheet::update_sprite()::Sheet is invalid");
     return;
   }
   if (sheet->fps == 0) {
@@ -40,82 +40,57 @@ void update_sprite(spritesheet *const sheet) {
     }
   }
 
-  sheet->current_frame_rect.x = sheet->current_col * sheet->current_frame_rect.width;
-  sheet->current_frame_rect.y = sheet->current_row * sheet->current_frame_rect.height;
+  sheet->current_frame_rect.x = sheet->current_col * std::abs(sheet->current_frame_rect.width);
+  sheet->current_frame_rect.y = sheet->current_row * std::abs(sheet->current_frame_rect.height);
 }
 constexpr void render_sprite(const spritesheet * sheet,const Color _tint,const Rectangle dest) {
-  if (!sheet || !sheet->tex_handle) {
+  if (!sheet || sheet == nullptr || !sheet->tex_handle) {
     TraceLog(LOG_ERROR, "spritesheet::render_sprite()::Sheet is not valid");
     return;
   }
   Rectangle source = Rectangle {
-    sheet->current_frame_rect.x + sheet->offset.x,
-    sheet->current_frame_rect.y + sheet->offset.y,
-    sheet->current_frame_rect.width,
-    sheet->current_frame_rect.height,
+    sheet->current_frame_rect.x + sheet->offset.x, sheet->current_frame_rect.y + sheet->offset.y,
+    sheet->current_frame_rect.width, sheet->current_frame_rect.height,
   };
 
   DrawTexturePro(*sheet->tex_handle, source, dest, sheet->origin, sheet->rotation, _tint);
 
   #if DEBUG_COLLISIONS
-    Rectangle coll_dest = Rectangle {
-      dest.x - sheet->origin.x,
-      dest.y - sheet->origin.y,
-      dest.width,
-      dest.height
-    };
-    DrawRectangleLines(
-      static_cast<i32>(coll_dest.x), 
-      static_cast<i32>(coll_dest.y), 
-      static_cast<i32>(coll_dest.width), 
-      static_cast<i32>(coll_dest.height), 
-      WHITE
-    );
+    Rectangle coll_dest = Rectangle { dest.x - sheet->origin.x, dest.y - sheet->origin.y, dest.width, dest.height};
+    DrawRectangleLines( static_cast<i32>(coll_dest.x),  static_cast<i32>(coll_dest.y),  static_cast<i32>(coll_dest.width),  static_cast<i32>(coll_dest.height), WHITE);
   #endif
 }
-constexpr void render_sprite_pro(const spritesheet * sheet, const Rectangle dest, const Vector2 origin, const f32 rotation, const Color _tint) {
-  if (!sheet || !sheet->tex_handle) {
+constexpr void render_sprite_pro(const spritesheet * sheet, const Rectangle source, const Rectangle dest, const Vector2 origin, const f32 rotation, const Color _tint) {
+  if (!sheet || sheet == nullptr || !sheet->tex_handle) {
     TraceLog(LOG_ERROR, "spritesheet::render_sprite()::Sheet is not valid");
     return;
   }
-  Rectangle source = Rectangle {
-    sheet->current_frame_rect.x + sheet->offset.x,
-    sheet->current_frame_rect.y + sheet->offset.y,
-    sheet->current_frame_rect.width,
-    sheet->current_frame_rect.height,
-  };
 
   DrawTexturePro(*sheet->tex_handle, source, dest, origin, rotation, _tint);
 
   #if DEBUG_COLLISIONS
-    Rectangle coll_dest = Rectangle {
-      dest.x - origin.x,
-      dest.y - origin.y,
-      dest.width,
-      dest.height
-    };
-    DrawRectangleLines(
-      static_cast<i32>(coll_dest.x), 
-      static_cast<i32>(coll_dest.y), 
-      static_cast<i32>(coll_dest.width), 
-      static_cast<i32>(coll_dest.height), 
-      WHITE
-    );
+    Rectangle coll_dest = Rectangle { dest.x - origin.x, dest.y - origin.y, dest.width, dest.height};
+    DrawRectangleLines( static_cast<i32>(coll_dest.x),  static_cast<i32>(coll_dest.y),  static_cast<i32>(coll_dest.width),  static_cast<i32>(coll_dest.height), WHITE);
   #endif
 }
 void set_sprite(spritesheet *const sheet, bool _play_looped, bool _play_once) {
-  if (!sheet || sheet->sheet_id >= SHEET_ID_SPRITESHEET_TYPE_MAX || sheet->sheet_id <= SHEET_ID_SPRITESHEET_UNSPECIFIED) {
+  if (!sheet || sheet == nullptr || sheet->sheet_id >= SHEET_ID_SPRITESHEET_TYPE_MAX || sheet->sheet_id <= SHEET_ID_SPRITESHEET_UNSPECIFIED) {
     TraceLog(LOG_ERROR, "spritesheet::register_sprite()::Sheet is not valid");
     return;
   }
-  *sheet = *get_spritesheet_by_enum(sheet->sheet_id);
+  const spritesheet * const _sheet_ptr = get_spritesheet_by_enum(sheet->sheet_id);
+  if (!_sheet_ptr || _sheet_ptr == nullptr) {
+    TraceLog(LOG_ERROR, "spritesheet::register_sprite()::Sheet resourse pointer is not valid");
+    return;
+  }
+  *sheet = (*_sheet_ptr);
   
   sheet->play_looped = _play_looped;
   sheet->play_once = _play_once;
   sheet->is_started = false;
 }
 void play_sprite_on_site(spritesheet *const sheet, Color _tint, const Rectangle dest) {
-  if (!sheet || sheet->sheet_id >= SHEET_ID_SPRITESHEET_TYPE_MAX || sheet->sheet_id <= SHEET_ID_SPRITESHEET_UNSPECIFIED) {
+  if (!sheet || sheet == nullptr || sheet->sheet_id >= SHEET_ID_SPRITESHEET_TYPE_MAX || sheet->sheet_id <= SHEET_ID_SPRITESHEET_UNSPECIFIED) {
     TraceLog(LOG_ERROR, "spritesheet::play_sprite_on_site()::Sheet is not valid");
     return;
   }
@@ -125,12 +100,29 @@ void play_sprite_on_site(spritesheet *const sheet, Color _tint, const Rectangle 
   sheet->is_started = true;
   sheet->is_played = true;
   sheet->tint = _tint;
-
   render_sprite(sheet, _tint, dest);
 }
 void play_sprite_on_site_pro(spritesheet *const sheet, const Rectangle dest, const Vector2 origin, const f32 rotation, const Color _tint) {
-  if (!sheet || sheet->sheet_id >= SHEET_ID_SPRITESHEET_TYPE_MAX || sheet->sheet_id <= SHEET_ID_SPRITESHEET_UNSPECIFIED) {
-    TraceLog(LOG_ERROR, "spritesheet::play_sprite_on_site()::Sheet is not valid");
+  if (!sheet || sheet == nullptr || sheet->sheet_id >= SHEET_ID_SPRITESHEET_TYPE_MAX || sheet->sheet_id <= SHEET_ID_SPRITESHEET_UNSPECIFIED) {
+    TraceLog(LOG_ERROR, "spritesheet::play_sprite_on_site_pro()::Sheet is not valid");
+    return;
+  }
+  if (sheet->play_once && sheet->is_played && !sheet->is_started) { return; }
+
+  sheet->playmod = ON_SITE;
+  sheet->is_started = true;
+  sheet->is_played = true;
+  
+  Rectangle source = Rectangle {
+    sheet->current_frame_rect.x + sheet->offset.x, sheet->current_frame_rect.y + sheet->offset.y,
+    sheet->current_frame_rect.width, sheet->current_frame_rect.height,
+  };
+
+  render_sprite_pro(sheet, source, dest, origin, rotation, _tint);
+}
+void play_sprite_on_site_ex(spritesheet *const sheet, const Rectangle source, const Rectangle dest, const Vector2 origin, const f32 rotation, const Color _tint) {
+  if (!sheet || sheet == nullptr || sheet->sheet_id >= SHEET_ID_SPRITESHEET_TYPE_MAX || sheet->sheet_id <= SHEET_ID_SPRITESHEET_UNSPECIFIED) {
+    TraceLog(LOG_ERROR, "spritesheet::play_sprite_on_site_ex()::Sheet is not valid");
     return;
   }
   if (sheet->play_once && sheet->is_played && !sheet->is_started) { return; }
@@ -139,81 +131,65 @@ void play_sprite_on_site_pro(spritesheet *const sheet, const Rectangle dest, con
   sheet->is_started = true;
   sheet->is_played = true;
 
-  render_sprite_pro(sheet, dest, origin, rotation, _tint);
+  render_sprite_pro(sheet, source, dest, origin, rotation, _tint);
 }
 
-void draw_sprite_on_site_by_id(spritesheet_id _id, Color _tint, Vector2 pos, Vector2 scale, u16 frame) {
+void draw_sprite_on_site_by_id(spritesheet_id _id, Color _tint, Vector2 pos, Vector2 scale, i32 frame) {
   if (_id > SHEET_ID_SPRITESHEET_TYPE_MAX || _id <= SHEET_ID_SPRITESHEET_UNSPECIFIED) {
-    TraceLog(LOG_ERROR, "spritesheet::draw_sprite_on_site()::invalid sprite type");
+    TraceLog(LOG_ERROR, "spritesheet::draw_sprite_on_site_by_id()::invalid sprite type");
     return;
   }
-  spritesheet sheet = *get_spritesheet_by_enum(_id);
+  const spritesheet * const _sheet_ptr = get_spritesheet_by_enum(_id);
+  if (!_sheet_ptr || _sheet_ptr == nullptr ) {
+    TraceLog(LOG_ERROR, "spritesheet::draw_sprite_on_site_by_id()::Recieved sheet is invalid");
+    return;
+  }
+  spritesheet sheet = (*_sheet_ptr);
   if (sheet.sheet_id >= SHEET_ID_SPRITESHEET_TYPE_MAX || sheet.sheet_id <= SHEET_ID_SPRITESHEET_UNSPECIFIED) {
-    TraceLog(LOG_ERROR, "spritesheet::play_sprite_on_site()::Recieved spritesheet doesn't exist or invalid");
+    TraceLog(LOG_ERROR, "spritesheet::draw_sprite_on_site_by_id()::Recieved spritesheet doesn't exist or invalid");
     return;
   }
-  u16 col = frame % sheet.col_total;
-  u16 row = frame / sheet.col_total;
+  i32 col = frame % sheet.col_total;
+  i32 row = frame / sheet.col_total;
 
   Rectangle source = Rectangle{
     sheet.offset.x + sheet.current_frame_rect.width * col, 
     sheet.offset.y + sheet.current_frame_rect.height * row,
-    sheet.current_frame_rect.width, 
+    sheet.current_frame_rect.width,
     sheet.current_frame_rect.height
   };
-  Rectangle dest = Rectangle{
-    pos.x, 
-    pos.y,
-    sheet.current_frame_rect.width * scale.x, 
-    sheet.current_frame_rect.height * scale.y
-  };
-  DrawTexturePro(*sheet.tex_handle,source,dest, ZEROVEC2, 0, _tint);
+  Rectangle dest = Rectangle{ pos.x,  pos.y, sheet.current_frame_rect.width * scale.x,  sheet.current_frame_rect.height * scale.y};
+  DrawTexturePro(*sheet.tex_handle,source,dest, ZEROVEC2, 0.f, _tint);
   
   #if DEBUG_COLLISIONS
-    DrawRectangleLines(
-      static_cast<i32>(dest.x), 
-      static_cast<i32>(dest.y), 
-      static_cast<i32>(dest.width), 
-      static_cast<i32>(dest.height), 
-      WHITE
-    );
+    DrawRectangleLines(static_cast<i32>(dest.x), static_cast<i32>(dest.y), static_cast<i32>(dest.width), static_cast<i32>(dest.height), WHITE);
   #endif
 }
 
-void draw_sprite_on_site(spritesheet *const sheet, Color _tint, Vector2 pos, Vector2 scale, u16 frame) {
-  if (!sheet || sheet->sheet_id > SHEET_ID_SPRITESHEET_TYPE_MAX || sheet->sheet_id <= SHEET_ID_SPRITESHEET_UNSPECIFIED) {
+void draw_sprite_on_site(spritesheet *const sheet, Color _tint, Vector2 pos, Vector2 scale, i32 frame) {
+  if (!sheet || sheet == nullptr  || sheet->sheet_id > SHEET_ID_SPRITESHEET_TYPE_MAX || sheet->sheet_id <= SHEET_ID_SPRITESHEET_UNSPECIFIED) {
     TraceLog(LOG_ERROR, "spritesheet::draw_sprite_on_site()::invalid sprite type");
     return;
   }
-  u16 col = frame % sheet->col_total;
-  u16 row = frame / sheet->row_total;
+  i32 col = frame % sheet->col_total;
+  i32 row = frame / sheet->row_total;
 
   Rectangle source = Rectangle{
-    sheet->offset.x + sheet->current_frame_rect.width * col, 
+    sheet->offset.x + sheet->current_frame_rect.width * col,
     sheet->offset.y + sheet->current_frame_rect.height * row,
-    sheet->current_frame_rect.width, 
+    sheet->current_frame_rect.width,
     sheet->current_frame_rect.height
   };
-  Rectangle dest = Rectangle{
-    pos.x, 
-    pos.y,
-    sheet->current_frame_rect.width * scale.x, 
-    sheet->current_frame_rect.height * scale.y
-  };
-  DrawTexturePro(*sheet->tex_handle,source,dest, ZEROVEC2, 0, _tint);
+  Rectangle dest = Rectangle{ pos.x,  pos.y, sheet->current_frame_rect.width * scale.x,  sheet->current_frame_rect.height * scale.y};
+
+  DrawTexturePro(*sheet->tex_handle,source,dest, ZEROVEC2, 0.f, _tint);
   
   #if DEBUG_COLLISIONS
-    DrawRectangleLines(
-      static_cast<i32>(dest.x), 
-      static_cast<i32>(dest.y), 
-      static_cast<i32>(dest.width), 
-      static_cast<i32>(dest.height), 
-      WHITE
-    );
+    DrawRectangleLines( static_cast<i32>(dest.x),  static_cast<i32>(dest.y),  static_cast<i32>(dest.width),  static_cast<i32>(dest.height), WHITE);
   #endif
 }
 void stop_sprite(spritesheet *const sheet, bool reset) {
-  if (!sheet)  {
+  if (!sheet || sheet == nullptr)  {
     TraceLog(LOG_ERROR, "resource::stop_sprite()::Sheet is invalid");
     return;
   }
@@ -228,7 +204,7 @@ void stop_sprite(spritesheet *const sheet, bool reset) {
   sheet->is_started = false;
 }
 void reset_sprite(spritesheet *const sheet, bool _retrospective) {
-  if (!sheet)  {
+  if (!sheet || sheet == nullptr)  {
     TraceLog(LOG_ERROR, "resource::reset_sprite()::sheet is invalid");
     return;
   }

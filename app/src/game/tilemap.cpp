@@ -166,7 +166,9 @@ void render_tilemap(const tilemap* _tilemap, Rectangle camera_view) {
         const tilemap_prop_static * map_prop_ptr = _queue_prop_ptr->data.prop_static;
         if (!map_prop_ptr->is_initialized) continue;
         
-        Rectangle prop_rect = map_prop_ptr->dest; 
+        Rectangle prop_rect = map_prop_ptr->dest;
+        prop_rect.width *= map_prop_ptr->scale;
+        prop_rect.height *= map_prop_ptr->scale;
 
         if (!CheckCollisionRecs(camera_view, prop_rect)) { continue; }
       
@@ -279,7 +281,7 @@ void render_props_y_based_by_zindex(const tilemap* _tilemap, size_t index, Recta
     }
     if (_queue_prop_ptr->type == TILEMAP_PROP_TYPE_SPRITE) 
     {
-      if (_queue_prop_ptr->data.prop_static == nullptr) continue;
+      if (_queue_prop_ptr->data.prop_sprite == nullptr) continue;
       tilemap_prop_sprite *const map_prop_ptr = _queue_prop_ptr->data.prop_sprite;
       if (!map_prop_ptr->is_initialized) continue;
       if (!CheckCollisionRecs(camera_view, map_prop_ptr->sprite.coord)) { continue; }
@@ -294,10 +296,12 @@ void render_props_y_based_by_zindex(const tilemap* _tilemap, size_t index, Recta
     }
     else
     {
-      if (_queue_prop_ptr->data.prop_sprite == nullptr) continue;
+      if (_queue_prop_ptr->data.prop_static == nullptr) continue;
       const tilemap_prop_static * map_prop_ptr = _queue_prop_ptr->data.prop_static;
       if (!map_prop_ptr->is_initialized) continue;
-      Rectangle prop_rect = map_prop_ptr->dest; 
+      Rectangle prop_rect = map_prop_ptr->dest;
+      prop_rect.width *= map_prop_ptr->scale;
+      prop_rect.height *= map_prop_ptr->scale;
       if (!CheckCollisionRecs(camera_view, prop_rect)) { continue; }
     
       const Texture2D* tex = get_texture_by_enum(map_prop_ptr->tex_id); 
@@ -331,6 +335,8 @@ void render_props_y_based_by_zindex(const tilemap* _tilemap, size_t index, Recta
     }
   }
 }
+
+// INFO: See also calc_mainmenu_prop_dest()
 void render_mainmenu(const tilemap* _tilemap, Rectangle camera_view, const app_settings * in_settings) {
   if (!_tilemap) {
     TraceLog(LOG_ERROR, "tilemap::render_tilemap()::Provided map was null");
@@ -377,16 +383,15 @@ void render_mainmenu(const tilemap* _tilemap, Rectangle camera_view, const app_s
         continue;
       }
       if (_queue_prop_ptr->type == TILEMAP_PROP_TYPE_SPRITE) {
-        
-        if (_queue_prop_ptr->data.prop_static == nullptr) continue;
+        if (_queue_prop_ptr->data.prop_sprite == nullptr) continue;
         tilemap_prop_sprite* const map_prop_ptr = _queue_prop_ptr->data.prop_sprite;
         if (!map_prop_ptr->is_initialized) continue;
         
         Rectangle coord = Rectangle { // Position can be usable as a dimention since it's a square and centered
           (map_prop_ptr->sprite.coord.x      / (-_tilemap->position.x)) * -map_position.x,
           (map_prop_ptr->sprite.coord.y      / (-_tilemap->position.y)) * -map_position.y,
-          ((map_prop_ptr->sprite.coord.width  * map_prop_ptr->scale) / (-_tilemap->position.x)) * -map_position.x,
-          ((map_prop_ptr->sprite.coord.height * map_prop_ptr->scale) / (-_tilemap->position.y)) * -map_position.y,
+          ((map_prop_ptr->sprite.coord.width) / (-_tilemap->position.x)) * -map_position.x,
+          ((map_prop_ptr->sprite.coord.height) / (-_tilemap->position.y)) * -map_position.y,
         };
         Vector2 origin = Vector2 {coord.width  * .5f, coord.height * .5f};
 
@@ -396,7 +401,7 @@ void render_mainmenu(const tilemap* _tilemap, Rectangle camera_view, const app_s
         continue;
       }
       if (_queue_prop_ptr->type != TILEMAP_PROP_TYPE_SPRITE) {
-        if (_queue_prop_ptr->data.prop_sprite == nullptr) continue;
+        if (_queue_prop_ptr->data.prop_static == nullptr) continue;
         
         const tilemap_prop_static * map_prop_ptr = _queue_prop_ptr->data.prop_static;
         if (!map_prop_ptr->is_initialized) continue;
@@ -407,8 +412,8 @@ void render_mainmenu(const tilemap* _tilemap, Rectangle camera_view, const app_s
         Rectangle prop_rect = Rectangle { // Position can be usable as a dimention since it's a square and centered
           (map_prop_ptr->dest.x      / (-_tilemap->position.x)) * -map_position.x,
           (map_prop_ptr->dest.y      / (-_tilemap->position.y)) * -map_position.y,
-          ((map_prop_ptr->dest.width) / (-_tilemap->position.x)) * -map_position.x,
-          ((map_prop_ptr->dest.height) / (-_tilemap->position.y)) * -map_position.y,
+          ((map_prop_ptr->dest.width  * map_prop_ptr->scale) / (-_tilemap->position.x)) * -map_position.x,
+          ((map_prop_ptr->dest.height * map_prop_ptr->scale) / (-_tilemap->position.y)) * -map_position.y,
         };
         Vector2 origin = Vector2 {prop_rect.width * .5f, prop_rect.height * .5f};
 
@@ -462,6 +467,20 @@ Vector2 get_tilesheet_dim(const tilesheet* sheet) {
   return Vector2 {
     (sheet->tile_count_x * sheet->offset) * sheet->dest_tile_size,
     (sheet->tile_count_y * sheet->offset) * sheet->dest_tile_size,
+  };
+}
+Rectangle calc_mainmenu_prop_dest(const tilemap * const _tilemap, Rectangle dest, f32 scale, const app_settings * in_settings) {
+  const f32 dynamic_tile_size = static_cast<f32>(in_settings->render_height) / TOTAL_NUMBER_OF_TILES_TO_THE_HEIGHT; // Based off of certain amouth tiles along render height
+
+  Vector2 map_position = Vector2 {
+    ((_tilemap->map_dim * dynamic_tile_size) * -0.5f),
+    ((_tilemap->map_dim * dynamic_tile_size) * -0.5f)
+  };
+  return Rectangle { // Position can be usable as a dimention since it's a square and centered
+    (dest.x      / (-_tilemap->position.x)) * -map_position.x,
+    (dest.y      / (-_tilemap->position.y)) * -map_position.y,
+    ((dest.width  * scale) / (-_tilemap->position.x)) * -map_position.x,
+    ((dest.height * scale) / (-_tilemap->position.y)) * -map_position.y,
   };
 }
 tile get_tile_from_sheet_by_mouse_pos(const tilesheet* sheet,const Vector2 mouse_pos,const f32 zoom) {
@@ -697,7 +716,7 @@ void str_to_map(tilemap* const map, tilemap_stringtify_package* const out_packag
       
       prop.dest = Rectangle {
         TextToFloat(str_par_prop_member.buffer.at(6).c_str()), TextToFloat(str_par_prop_member.buffer.at(7).c_str()),
-        prop.source.width * prop.scale, prop.source.height * prop.scale,
+        prop.source.width, prop.source.height,
       };
       prop.tint = Color {
         (u8)TextToInteger(str_par_prop_member.buffer.at(8).c_str()), (u8)TextToInteger(str_par_prop_member.buffer.at(9).c_str()),

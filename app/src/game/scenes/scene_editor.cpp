@@ -690,9 +690,14 @@ void render_interface_editor(void) {
       }
       EndScissorMode();
 
-      Vector2 prop_pos = GetWorldToScreen2D(Vector2{ (*p_prop)->dest.x, (*p_prop)->dest.y}, state->in_camera_metrics->handle);
-      f32 relative_width = (*p_prop)->dest.width * (*p_prop)->scale * state->in_camera_metrics->handle.zoom;
-      f32 relative_height = (*p_prop)->dest.height * (*p_prop)->scale * state->in_camera_metrics->handle.zoom;
+      Rectangle prop_dest = (*p_prop)->dest;
+      if (state->selected_stage == WORLDMAP_MAINMENU_MAP) {
+        prop_dest = wld_calc_mainmenu_prop_dest((*state->active_map_ptr), prop_dest, (*p_prop)->scale);
+      }
+
+      Vector2 prop_pos = GetWorldToScreen2D(Vector2{ prop_dest.x, prop_dest.y}, state->in_camera_metrics->handle);
+      f32 relative_width = prop_dest.width * state->in_camera_metrics->handle.zoom;
+      f32 relative_height = prop_dest.height * state->in_camera_metrics->handle.zoom;
       
       prop_pos.x -= relative_width * 0.5f; // To center to its origin
       prop_pos.y -= relative_height * 0.5f;
@@ -1207,7 +1212,9 @@ constexpr bool scene_editor_scale_slider_on_left_button_trigger(void) {
     return false;
   }
   if (state->selected_prop_static_map_prop_address != nullptr) {
-    state->selected_prop_static_map_prop_address->scale -= .15f;
+    tilemap_prop_static * map_prop_ptr = state->selected_prop_static_map_prop_address;
+    map_prop_ptr->scale -= .15f;
+    
     return true;
   }
   if (state->selected_prop_sprite_map_prop_address != nullptr) {
@@ -1229,7 +1236,8 @@ constexpr bool scene_editor_scale_slider_on_right_button_trigger(void) {
     return false;
   }
   if (state->selected_prop_static_map_prop_address != nullptr) {
-    state->selected_prop_static_map_prop_address->scale += .15f;
+    tilemap_prop_static * map_prop_ptr = state->selected_prop_static_map_prop_address;
+    map_prop_ptr->scale += .15f;
     return true;
   }
   if (state->selected_prop_sprite_map_prop_address != nullptr) {

@@ -87,9 +87,7 @@ void update_ability_fireball(ability* abl) {
     return;
   }
   player_state* player = reinterpret_cast<player_state*>(abl->p_owner);
-
-  abl->position.x  = player->position.x + player->dimentions_div2.x;
-  abl->position.y  = player->position.y + player->dimentions_div2.y;
+  abl->position = player->position;
   abl->rotation += abl->proj_speed;
 
   if (abl->rotation > 360) abl->rotation = 0;

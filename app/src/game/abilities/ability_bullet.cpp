@@ -86,9 +86,7 @@ void update_ability_bullet(ability* abl) {
     return;
   }
   player_state* player = reinterpret_cast<player_state*>(abl->p_owner);
-
-  abl->position.x  = player->position.x + player->dimentions_div2.x;
-  abl->position.y  = player->position.y + player->dimentions_div2.y;
+  abl->position = player->position;
 
   for (size_t iter = 0; iter < abl->projectiles.size(); iter++) {
     projectile& prj = abl->projectiles.at(iter);

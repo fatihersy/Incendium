@@ -42,9 +42,9 @@ typedef struct save_game_system_state {
 
 static save_game_system_state * state;
 
-u32 save_game_get_entry(u32 offset);
+size_t save_game_get_entry(size_t offset);
 encode_integer_result encode_integer(i32 val);
-encode_string_result encode_string(const char* str, u16 len);
+encode_string_result encode_string(const char* str, i32 len);
 void parse_data(save_slots slot);
 i32 decode_integer(void);
 
@@ -127,73 +127,73 @@ bool save_save_data(save_slots slot) {
 void parse_data(save_slots slot) {
   save_game_entry_order entry_order = static_cast<save_game_entry_order>(save_game_entry_order::SAVE_DATA_ORDER_START+1);
   save_data* save_slot = &state->save_slots.at(slot);
-  for (i32 i=0; i<state->file_datasize; ++i) {
+  for (i32 itr_000 = 0; itr_000 < state->file_datasize; ++itr_000) {
     switch (entry_order) {
     case SAVE_DATA_ORDER_CURRENCY_SOULS_PLAYER_HAVE: {
-      i = save_game_get_entry(i);
+      itr_000 = save_game_get_entry(itr_000);
       i32 val = decode_integer();
 
       save_slot->currency_souls_player_have = val;
       break;
     }
     case SAVE_DATA_STATS_HEALTH: {
-      i = save_game_get_entry(i);
+      itr_000 = save_game_get_entry(itr_000);
       i32 val = decode_integer();
 
       save_slot->p_player.stats[CHARACTER_STATS_HEALTH].level = val;
       break; 
     }
     case SAVE_DATA_STATS_HP_REGEN: {
-      i = save_game_get_entry(i);
+      itr_000 = save_game_get_entry(itr_000);
       i32 val = decode_integer();
 
       save_slot->p_player.stats[CHARACTER_STATS_HP_REGEN].level = val;
       break; 
     }
     case SAVE_DATA_STATS_MOVE_SPEED: {
-      i = save_game_get_entry(i);
+      itr_000 = save_game_get_entry(itr_000);
       i32 val = decode_integer();
 
       save_slot->p_player.stats[CHARACTER_STATS_MOVE_SPEED].level = val;
       break; 
     }
     case SAVE_DATA_STATS_AOE: {
-      i = save_game_get_entry(i);
+      itr_000 = save_game_get_entry(itr_000);
       i32 val = decode_integer();
 
       save_slot->p_player.stats[CHARACTER_STATS_AOE].level = val;
       break; 
     }
     case SAVE_DATA_STATS_DAMAGE: {
-      i = save_game_get_entry(i);
+      itr_000 = save_game_get_entry(itr_000);
       i32 val = decode_integer();
 
       save_slot->p_player.stats[CHARACTER_STATS_DAMAGE].level = val;
       break; 
     }
     case SAVE_DATA_STATS_ABILITY_CD: {
-      i = save_game_get_entry(i);
+      itr_000 = save_game_get_entry(itr_000);
       i32 val = decode_integer();
 
       save_slot->p_player.stats[CHARACTER_STATS_ABILITY_CD].level = val;
       break; 
     }
     case SAVE_DATA_STATS_PROJECTILE_AMOUTH: {
-      i = save_game_get_entry(i);
+      itr_000 = save_game_get_entry(itr_000);
       i32 val = decode_integer();
 
       save_slot->p_player.stats[CHARACTER_STATS_PROJECTILE_AMOUTH].level = val;
       break; 
     }
     case SAVE_DATA_STATS_EXP_GAIN: {
-      i = save_game_get_entry(i);
+      itr_000 = save_game_get_entry(itr_000);
       i32 val = decode_integer();
 
       save_slot->p_player.stats[CHARACTER_STATS_EXP_GAIN].level = val;
       break; 
     }
     case SAVE_DATA_STATS_TOTAL_TRAIT_POINTS: {
-      i = save_game_get_entry(i);
+      itr_000 = save_game_get_entry(itr_000);
       i32 val = decode_integer();
 
       save_slot->p_player.stats[CHARACTER_STATS_TOTAL_TRAIT_POINTS].level = val;
@@ -215,24 +215,24 @@ void parse_data(save_slots slot) {
 save_data* get_save_data(save_slots slot) {
   if (!state) {
     TraceLog(LOG_ERROR, "save_game::get_save_data()::State is not valid");
-    return 0;
+    return nullptr;
   }
   return &state->save_slots.at(slot);
 }
-u32 save_game_get_entry(u32 offset) {
-  u32 data_counter = 0;
-  u32 out_offset = 0;
+size_t save_game_get_entry(size_t offset) {
+  size_t data_counter = 0;
+  size_t out_offset = 0;
 
-  for (u32 i=offset; i<TOTAL_SAVE_FILE_SIZE; ++i) {
+  for (size_t itr_000 = offset; itr_000 < TOTAL_SAVE_FILE_SIZE; ++itr_000) {
     u8 header_symbol[HEADER_SYMBOL_LENGTH_NULL_TERMINATED] = {};
-    copy_memory(header_symbol, state->file_buffer + i, HEADER_SYMBOL_LENGTH);
+    copy_memory(header_symbol, state->file_buffer + itr_000, HEADER_SYMBOL_LENGTH);
 
     if (TextIsEqual((const char*)header_symbol, HEADER_SYMBOL_ENTRY)) {
       break;
     }
 
-    state->variable_buffer[data_counter] = state->file_buffer[i];
-    out_offset = i;
+    state->variable_buffer[data_counter] = state->file_buffer[itr_000];
+    out_offset = itr_000;
     data_counter++;
   }
 
@@ -241,14 +241,14 @@ u32 save_game_get_entry(u32 offset) {
 encode_integer_result encode_integer(i32 val) {
   encode_integer_result result = {};
   const char* souls_text = TextFormat("%d", val);
-  i32 val_str_len = TextLength(souls_text);
-  for (i32 i=0; i<val_str_len; ++i) {
-    result.txt[i] = souls_text[i] + SAVE_GAME_VAR_NUM_START_SYMBOL;
+  size_t val_str_len = TextLength(souls_text);
+  for (size_t itr_000 = 0; itr_000 < val_str_len; ++itr_000) {
+    result.txt[itr_000] = souls_text[itr_000] + SAVE_GAME_VAR_NUM_START_SYMBOL;
   }
 
   return result;
 }
-encode_string_result encode_string(const char* str, u16 len) {
+encode_string_result encode_string(const char* str, i32 len) {
   encode_string_result result = {};
 
   copy_memory(result.txt, str, len);
@@ -256,10 +256,10 @@ encode_string_result encode_string(const char* str, u16 len) {
   return result;
 }
 i32 decode_integer(void) {
-  u32 var_len = TextLength((const char*)state->variable_buffer);
+  i32 var_len = TextLength((const char*)state->variable_buffer);
   char txt_val[VARIABLE_ENCODED_TEXT_LENGTH] = {};
-  for (u32 i=0; i<var_len; ++i) {
-    txt_val[i] = state->variable_buffer[i] - SAVE_GAME_VAR_NUM_START_SYMBOL;
+  for (i32 itr_000 = 0; itr_000 < var_len; ++itr_000) {
+    txt_val[itr_000] = state->variable_buffer[itr_000] - SAVE_GAME_VAR_NUM_START_SYMBOL;
   }
 
   return TextToInteger(txt_val);

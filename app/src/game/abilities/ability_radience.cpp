@@ -92,8 +92,6 @@ void update_ability_radience(ability* abl) {
   }
   player_state* p_player = reinterpret_cast<player_state*>(abl->p_owner);
   abl->position    = p_player->position;
-  abl->position.x += p_player->dimentions_div2.x;
-  abl->position.y += p_player->dimentions_div2.y;
 
   projectile& prj  = abl->projectiles.at(0);
   if (!prj.is_active) { return; }
