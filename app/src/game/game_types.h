@@ -379,7 +379,6 @@ typedef struct worldmap_stage {
   std::string filename;
   std::array<Rectangle, MAX_SPAWN_COLLISIONS> spawning_areas;
   Vector2 screen_location;
-  Vector2 boss_spawn_location;
   i32 total_spawn_count;
   i32 stage_level;
   f32 spawn_scale;
@@ -392,7 +391,6 @@ typedef struct worldmap_stage {
     this->filename.clear();
     this->spawning_areas.fill(ZERORECT);
     this->screen_location = ZEROVEC2;
-    this->boss_spawn_location = ZEROVEC2;
     this->total_spawn_count = 0;
     this->stage_level = 0;
     this->spawn_scale = 0.f;
@@ -402,14 +400,13 @@ typedef struct worldmap_stage {
   }
   worldmap_stage(
     i32 in_id,std::string in_display_name, std::string in_filename, i32 in_stage_level,
-    i32 in_spw_count, f32 in_spw_scale, Vector2 in_boss_loc, f32 in_boss_scale, 
+    i32 in_spw_count, f32 in_spw_scale, f32 in_boss_scale, 
     Vector2 in_screen_loc, bool in_is_centered, bool in_is_active
   ) : worldmap_stage() {
     this->map_id = in_id;
     this->displayname = in_display_name;
     this->filename = in_filename;
     this->screen_location = NORMALIZE_VEC2(in_screen_loc.x, in_screen_loc.y, 3840.f, 2160.f);
-    this->boss_spawn_location = in_boss_loc;
     this->total_spawn_count = in_spw_count;
     this->stage_level = in_stage_level;
     this->spawn_scale = in_spw_scale;
@@ -568,7 +565,8 @@ typedef struct tilemap_stringtify_package {
  */
 typedef struct Character2D {
   i32 character_id;
-  i32 health;
+  i32 health_max;
+  i32 health_current;
   i32 damage;
   f32 speed;
   actor_type type;
@@ -591,7 +589,8 @@ typedef struct Character2D {
 
   Character2D(void) {
     this->character_id = I32_MAX;
-    this->health = 0;
+    this->health_max = 0;
+    this->health_current = 0;
     this->damage = 0;
     this->speed = 0.f;
     this->type = ACTOR_TYPE_UNDEFINED;

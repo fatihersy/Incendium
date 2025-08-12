@@ -323,7 +323,7 @@ void render_scene_main_menu(void) {
 }
 void render_interface_main_menu(void) {
   if (state->mainmenu_state == MAIN_MENU_SCENE_DEFAULT) {
-      
+    
     gui_label_shader(GAME_TITLE, SHADER_ID_FONT_OUTLINE, FONT_TYPE_ABRACADABRA, 5, VECTOR2(SMM_BASE_RENDER_WIDTH * .5f, SMM_BASE_RENDER_HEIGHT * .25f), WHITE, true, true);
     if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_PLAY), BTN_ID_MAINMENU_BUTTON_PLAY, VECTOR2(0.f, -21.f), SMM_BASE_RENDER_DIV2, true)) {
       begin_scene_change(MAIN_MENU_SCENE_TO_PLAY_MAP_CHOICE);

@@ -34,6 +34,7 @@ bool    _upgrade_ability(ability* abl);
 void    _set_player_position(Vector2 position);
 ability _get_next_level(ability abl);
 ability _get_ability(ability_type type);
+const Character2D * _get_spawn_by_id(i32 _id);
 
 void render_game(void);
 

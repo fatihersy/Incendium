@@ -51,8 +51,9 @@ bool initialize_shader_system(void) {
   }
 
   shader_add_uniform(SHADER_ID_PROGRESS_BAR_MASK, "progress", SHADER_UNIFORM_FLOAT);
+  shader_add_uniform(SHADER_ID_PROGRESS_BAR_MASK, "tint", SHADER_UNIFORM_VEC4);
   shader_add_uniform(SHADER_ID_FADE_TRANSITION, "process", SHADER_UNIFORM_FLOAT);
-  shader_add_uniform(SHADER_ID_FONT_OUTLINE, "texture_size", SHADER_UNIFORM_VEC2);
+  //shader_add_uniform(SHADER_ID_FONT_OUTLINE, "texture_size", SHADER_UNIFORM_VEC2);
   shader_add_uniform(SHADER_ID_POST_PROCESS, "process", SHADER_UNIFORM_FLOAT);
 
   return true;
@@ -72,69 +73,74 @@ fshader *get_shader_by_enum(shader_id _id) {
 }
 i32 get_uniform_location(shader_id _id, const char * uni_name) {
   if (_id >= SHADER_ID_MAX || _id <= SHADER_ID_UNSPECIFIED) {
-    TraceLog(LOG_WARNING, "fshader::get_uniform_location_by_id()::Shader type out of bound");
+    TraceLog(LOG_WARNING, "fshader::get_uniform_location()::Shader type out of bound");
     return -1;
   }
   return GetShaderLocation(state->shaders.at(_id).handle, uni_name);
 }
 
-void set_shader_uniform(shader_id _id, i32 index, data128 _data_pack) {
+void set_shader_uniform(shader_id _id, const char* uni_name, data128 _data_pack) {
   if (_id >= SHADER_ID_MAX || _id <= SHADER_ID_UNSPECIFIED) {
-    TraceLog(LOG_ERROR,
-    "fshader::shader_add_attribute()::Shader type out of bound");
+    TraceLog(LOG_ERROR, "fshader::set_shader_uniform()::Shader type out of bound");
     return;
   }
-  fshader* shader = __builtin_addressof(state->shaders.at(_id));
-  ShaderUniformDataType data_id = shader->locations[index].uni_data_type;
+  fshader& _shader = state->shaders.at(_id);
+  i32 uni_loc = GetShaderLocation(state->shaders.at(_id).handle, uni_name);
 
+  if (uni_loc < 0) {
+    TraceLog(LOG_ERROR, "fshader::set_shader_uniform()::Shader index out of bound");
+    return;
+  }
+
+  ShaderUniformDataType data_id = _shader.locations.at(uni_loc).uni_data_type;
   switch (data_id) {
   case SHADER_UNIFORM_FLOAT: {
-    shader->locations[index].data = _data_pack;
-    SetShaderValue(state->shaders.at(_id).handle, index, &state->shaders.at(_id).locations[index].data.f32, data_id);
+    _shader.locations.at(uni_loc).data = _data_pack;
+    SetShaderValue(state->shaders.at(_id).handle, uni_loc, &state->shaders.at(_id).locations.at(uni_loc).data.f32, data_id);
     break;
   }
   case SHADER_UNIFORM_VEC2: {
-    shader->locations[index].data = _data_pack;
-    SetShaderValue(state->shaders.at(_id).handle, index, &state->shaders.at(_id).locations[index].data.f32, data_id);
+    _shader.locations.at(uni_loc).data = _data_pack;
+    SetShaderValue(state->shaders.at(_id).handle, uni_loc, &state->shaders.at(_id).locations.at(uni_loc).data.f32, data_id);
     break;
   }
   case SHADER_UNIFORM_VEC3: {
-    shader->locations[index].data = _data_pack;
-    SetShaderValue(state->shaders.at(_id).handle, index, &state->shaders.at(_id).locations[index].data.f32, data_id);
+    _shader.locations.at(uni_loc).data = _data_pack;
+    SetShaderValue(state->shaders.at(_id).handle, uni_loc, &state->shaders.at(_id).locations.at(uni_loc).data.f32, data_id);
     break;
   }
   case SHADER_UNIFORM_VEC4: {
-    shader->locations[index].data = _data_pack;
-    SetShaderValue(state->shaders.at(_id).handle, index, &state->shaders.at(_id).locations[index].data.f32, data_id);
+    _shader.locations.at(uni_loc).data = _data_pack;
+    SetShaderValue(state->shaders.at(_id).handle, uni_loc, &state->shaders.at(_id).locations.at(uni_loc).data.f32, data_id);
     break;
   }
   case SHADER_UNIFORM_INT: {
-    shader->locations[index].data = _data_pack;
-    SetShaderValue(state->shaders.at(_id).handle, index, &state->shaders.at(_id).locations[index].data.i32[0], data_id);
+    _shader.locations.at(uni_loc).data = _data_pack;
+    SetShaderValue(state->shaders.at(_id).handle, uni_loc, &state->shaders.at(_id).locations.at(uni_loc).data.i32[0], data_id);
     break;
   }
   case SHADER_UNIFORM_IVEC2: {
-    shader->locations[index].data = _data_pack;
-    SetShaderValue(state->shaders.at(_id).handle, index, &state->shaders.at(_id).locations[index].data.i32, data_id);
+    _shader.locations.at(uni_loc).data = _data_pack;
+    SetShaderValue(state->shaders.at(_id).handle, uni_loc, &state->shaders.at(_id).locations.at(uni_loc).data.i32, data_id);
     break;
   }
   case SHADER_UNIFORM_IVEC3: {
-    shader->locations[index].data = _data_pack;
-    SetShaderValue(state->shaders.at(_id).handle, index, &state->shaders.at(_id).locations[index].data.i32, data_id);
+    _shader.locations.at(uni_loc).data = _data_pack;
+    SetShaderValue(state->shaders.at(_id).handle, uni_loc, &state->shaders.at(_id).locations.at(uni_loc).data.i32, data_id);
     break;
   }
   case SHADER_UNIFORM_IVEC4: {
-    shader->locations[index].data = _data_pack;
-    SetShaderValue(state->shaders.at(_id).handle, index, &state->shaders.at(_id).locations[index].data.i32, data_id);
+    _shader.locations.at(uni_loc).data = _data_pack;
+    SetShaderValue(state->shaders.at(_id).handle, uni_loc, &state->shaders.at(_id).locations.at(uni_loc).data.i32, data_id);
     break;
   }
   case SHADER_UNIFORM_SAMPLER2D: {
-    shader->locations[index].data.address[0] = _data_pack.address;
-    SetShaderValue(state->shaders.at(_id).handle,  index, state->shaders.at(_id).locations[index].data.address, data_id);
+    _shader.locations.at(uni_loc).data.address[0] = _data_pack.address;
+    SetShaderValue(state->shaders.at(_id).handle,  uni_loc, state->shaders.at(_id).locations.at(uni_loc).data.address, data_id);
     break;
   }
   default: {
-    TraceLog(LOG_ERROR,"fshader::shader_add_uniform()::Error while setting shader value");
+    TraceLog(LOG_ERROR,"fshader::set_shader_uniform()::Error while setting shader value");
     return;
   }
   }
@@ -163,15 +169,13 @@ bool load_shader(const char *_vs_path, const char *_fs_path, shader_id _id) {
 
 void shader_add_uniform(shader_id _id, const char *_name, ShaderUniformDataType _data_id) {
   if (_id >= SHADER_ID_MAX || _id <= SHADER_ID_UNSPECIFIED) {
-    TraceLog(LOG_ERROR, "fshader::shader_add_attribute()::Shader type out of bound");
+    TraceLog(LOG_ERROR, "fshader::shader_add_uniform()::Shader type out of bound");
     return;
   }
-  i32 total_loc = state->shaders.at(_id).total_locations;
+  const i32 uniform_loc = GetShaderLocation(state->shaders.at(_id).handle, _name);
 
-  state->shaders.at(_id).locations.at(total_loc).index = GetShaderLocation(state->shaders.at(_id).handle, _name);
-  state->shaders.at(_id).locations.at(total_loc).name = _name;
-  state->shaders.at(_id).locations.at(total_loc).uni_data_type = _data_id;
+  state->shaders.at(_id).locations.at(uniform_loc).name = _name;
+  state->shaders.at(_id).locations.at(uniform_loc).uni_data_type = _data_id;
 
-  total_loc++;
-  state->shaders.at(_id).total_locations = total_loc;
+  state->shaders.at(_id).total_locations++;
 }

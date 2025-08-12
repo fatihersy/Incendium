@@ -6,12 +6,10 @@
 
 typedef struct fshader_location {
   std::string name;
-  i32 index;
   data128 data;
   ShaderUniformDataType uni_data_type;
   fshader_location(void) {
     this->name.clear();
-    this->index = 0;
     this->data = data128();
     this->uni_data_type = SHADER_UNIFORM_FLOAT;
   }
@@ -33,7 +31,7 @@ typedef struct fshader {
 const char* shader_path(const char* _path);
 fshader* get_shader_by_enum(shader_id _id);
 i32 get_uniform_location(shader_id _id, const char * uni_name);
-void set_shader_uniform(shader_id _id, i32 index, data128 _data_pack);
+void set_shader_uniform(shader_id _id, const char* uni_name, data128 _data_pack);
 
 
 #endif

@@ -295,8 +295,7 @@ bool application_on_event(i32 code, event_context context) {
     return true;
   }
   case EVENT_CODE_SET_POST_PROCESS_FADE_VALUE: {
-    i32 process_uniform_loc = GetShaderLocation(state->post_process_shader->handle, "process");
-    set_shader_uniform(SHADER_ID_POST_PROCESS, process_uniform_loc, data128(static_cast<f32>(context.data.f32[0])));
+    set_shader_uniform(SHADER_ID_POST_PROCESS, "process", data128(static_cast<f32>(context.data.f32[0])));
     return true;
   }
   default:

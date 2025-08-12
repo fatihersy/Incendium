@@ -101,7 +101,9 @@ void initialize_worldmap_locations(void);
 void draw_in_game_upgrade_panel(u16 which_panel, Rectangle panel_dest);
 void draw_passive_selection_panel(const character_stat* stat,const Rectangle panel_dest);
 void draw_end_game_panel(void);
-void draw_ingame_state_play_ui(void);
+void draw_ingame_state_play_general(void);
+void draw_ingame_state_play_ui_clear_zombies(void);
+void draw_ingame_state_play_ui_defeat_boss(void);
 void prepare_ability_upgrade_state(void);
 void end_ability_upgrade_state(u16 which_panel_chosen);
 void sig_begin_fade(void);
@@ -223,12 +225,14 @@ void update_scene_in_game(void) {
     case INGAME_STATE_PLAY: {
       switch ( (*state->in_ingame_info->ingame_phase) ) {
         case INGAME_PHASE_CLEAR_ZOMBIES: {
-          event_fire(EVENT_CODE_CAMERA_SET_TARGET, event_context(
-            state->in_ingame_info->player_state_dynamic->position.x,
-            state->in_ingame_info->player_state_dynamic->position.y
-          ));
-          update_map();
-          update_game_manager();
+          if (not state->in_ingame_info->player_state_dynamic->is_player_have_ability_upgrade_points) {
+            event_fire(EVENT_CODE_CAMERA_SET_TARGET, event_context(
+              state->in_ingame_info->player_state_dynamic->position.x,
+              state->in_ingame_info->player_state_dynamic->position.y
+            ));
+            update_map();
+            update_game_manager();
+          }
           break;
         }
         case INGAME_PHASE_DEFEAT_BOSS: {
@@ -358,13 +362,15 @@ void render_interface_in_game(void) {
             else { prepare_ability_upgrade_state(); }
           }
           else {
-            draw_ingame_state_play_ui();
           }
+          draw_ingame_state_play_general();
+          draw_ingame_state_play_ui_clear_zombies();
           render_user_interface();
           break;
         }
         case INGAME_PHASE_DEFEAT_BOSS: {
-          draw_ingame_state_play_ui();
+          draw_ingame_state_play_general();
+          draw_ingame_state_play_ui_defeat_boss();
           render_user_interface();
           break;
         }
@@ -424,7 +430,7 @@ void render_interface_in_game(void) {
             debug_info_position_buffer.y += line_height;
             gui_label_format(
               FONT_TYPE_ABRACADABRA, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
-              WHITE, false, false, "Health: %d", spawn->health
+              WHITE, false, false, "Health: %d", spawn->health_current
             );
             debug_info_position_buffer.y += line_height;
             gui_label_format(
@@ -737,18 +743,7 @@ void draw_end_game_panel(void) {
     "%s%d", lc_txt(LOC_TEXT_INGAME_STATE_RESULT_COLLECTED_SOULS), state->in_ingame_info->collected_souls
   );
 }
-void draw_ingame_state_play_ui(void) {
-  Rectangle exp_bar_dest = Rectangle {0, 0, static_cast<f32>(state->in_app_settings->render_width), static_cast<f32>(state->in_app_settings->render_height) * .05f};
-  gui_progress_bar(PRG_BAR_ID_PLAYER_EXPERIANCE, exp_bar_dest, false);
-  const Rectangle * exp_bar_orn_src_rect = get_atlas_texture_source_rect(ATLAS_TEX_ID_DARK_FANTASY_BOSSBAR_6_MIDDLE);
-  f32 exp_bar_orn_height_scale = exp_bar_orn_src_rect->width / exp_bar_orn_src_rect->height;
-  f32 exp_bar_orn_width = exp_bar_dest.height * exp_bar_orn_height_scale;
-  Rectangle exp_bar_orn_dest = Rectangle { 
-    exp_bar_dest.x + exp_bar_dest.width * .5f + ((exp_bar_orn_width / exp_bar_orn_src_rect->width) * .5f),  exp_bar_dest.y,  
-    exp_bar_orn_width,  exp_bar_dest.height
-  };
-  gui_draw_atlas_texture_id(ATLAS_TEX_ID_DARK_FANTASY_BOSSBAR_6_MIDDLE, exp_bar_orn_dest, Vector2{exp_bar_orn_dest.width * .5f, 0.f}, 0.f);
-
+void draw_ingame_state_play_general(void) {
   f32 ingame_user_panel_dims = static_cast<f32>(state->in_app_settings->render_height) * .15f;
   f32 slot_gap = ingame_user_panel_dims * .075f;
   f32 ability_slot_dest_width = ingame_user_panel_dims * .35f;
@@ -798,6 +793,18 @@ void draw_ingame_state_play_ui(void) {
       static_cast<f32>(state->in_app_settings->render_height) * .02f,
     }, false
   );
+}
+void draw_ingame_state_play_ui_clear_zombies(void) {
+  Rectangle exp_bar_dest = Rectangle {0, 0, static_cast<f32>(state->in_app_settings->render_width), static_cast<f32>(state->in_app_settings->render_height) * .05f};
+  gui_progress_bar(PRG_BAR_ID_PLAYER_EXPERIANCE, exp_bar_dest, false);
+  const Rectangle * exp_bar_orn_src_rect = get_atlas_texture_source_rect(ATLAS_TEX_ID_DARK_FANTASY_BOSSBAR_6_MIDDLE);
+  f32 exp_bar_orn_height_scale = exp_bar_orn_src_rect->width / exp_bar_orn_src_rect->height;
+  f32 exp_bar_orn_width = exp_bar_dest.height * exp_bar_orn_height_scale;
+  Rectangle exp_bar_orn_dest = Rectangle { 
+    exp_bar_dest.x + exp_bar_dest.width * .5f + ((exp_bar_orn_width / exp_bar_orn_src_rect->width) * .5f),  exp_bar_dest.y,  
+    exp_bar_orn_width,  exp_bar_dest.height
+  };
+  gui_draw_atlas_texture_id(ATLAS_TEX_ID_DARK_FANTASY_BOSSBAR_6_MIDDLE, exp_bar_orn_dest, Vector2{exp_bar_orn_dest.width * .5f, 0.f}, 0.f);
 
   gui_label_format(FONT_TYPE_ABRACADABRA, 1, 
     static_cast<f32>(state->in_app_settings->render_width_div2), 
@@ -805,6 +812,26 @@ void draw_ingame_state_play_ui(void) {
     static_cast<i32>(state->in_ingame_info->play_time / 60.f),
     static_cast<i32>(state->in_ingame_info->play_time)
   );
+}
+void draw_ingame_state_play_ui_defeat_boss(void) {
+  f32 boss_health_bar_width = static_cast<f32>(state->in_app_settings->render_width) * .5f;
+  Rectangle boss_health_bar_dest = Rectangle {
+    static_cast<f32>(state->in_app_settings->render_width_div2) - (boss_health_bar_width * .5f), 
+    static_cast<f32>(state->in_app_settings->render_height * .05f), 
+    boss_health_bar_width,
+    static_cast<f32>(state->in_app_settings->render_height * .035f) 
+  };
+  gui_progress_bar(PRG_BAR_ID_BOSS_HEALTH, boss_health_bar_dest, false, WHITE, BLUE);
+
+  const Character2D * const boss = _get_spawn_by_id(state->in_ingame_info->stage_boss_id);
+  Vector2 label_pos = VECTOR2(static_cast<f32>(state->in_app_settings->render_width_div2), static_cast<f32>(state->in_app_settings->render_height * .75f));
+  if (boss) {
+    f32 boss_health_perc = static_cast<f32>(boss->health_current) / static_cast<f32>(boss->health_max);
+    gui_label_format(FONT_TYPE_ABRACADABRA, 1, label_pos.x, label_pos.y, WHITE, true, false, "Boss health: %.1f", boss_health_perc);
+  }
+  else {
+    gui_label("Boss health: -1", FONT_TYPE_ABRACADABRA, 1, label_pos, WHITE, true, false);
+  }
 }
 void prepare_ability_upgrade_state(void) {
   for (int i=0; i<MAX_UPDATE_ABILITY_PANEL_COUNT; ++i) {

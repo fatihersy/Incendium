@@ -54,7 +54,7 @@ bool spawn_system_initialize(const camera_metrics* _camera_metrics, const ingame
     return true;
   }
   state = (spawn_system_state *)allocate_memory_linear(sizeof(spawn_system_state), true);
-  if (!state || state == nullptr) {
+  if (not state or state == nullptr) {
     TraceLog(LOG_ERROR, "spawn::spawn_system_initialize()::Spawn system init failed");
     return false;
   }
@@ -75,15 +75,15 @@ i32 damage_spawn(i32 _id, i32 damage) {
     }
   }
   if (!character || character == nullptr) return INVALID_IDI32;
-  if (!character->is_damagable) { return character->health; }
+  if (!character->is_damagable) { return character->health_current; }
 
-  if(character->health - damage > 0 && character->health - damage < MAX_SPAWN_HEALTH) {
+  if(character->health_current - damage > 0 && character->health_current - damage < MAX_SPAWN_HEALTH) {
     character->is_damagable = false;
     character->damage_break_time = character->take_damage_left_animation.fps / static_cast<f32>(TARGET_FPS);
-    character->health -= damage;
-    return character->health;
+    character->health_current -= damage;
+    return character->health_current;
   }
-  character->health = 0;
+  character->health_current = 0;
   character->is_dead = true;
   character->is_damagable = false;
   character->damage_break_time = character->take_damage_left_animation.fps / static_cast<f32>(TARGET_FPS);
@@ -95,16 +95,18 @@ i32 damage_spawn(i32 _id, i32 damage) {
 
 i32 spawn_character(Character2D _character) {
   if (_character.buffer.i32[0] <= SPAWN_TYPE_UNDEFINED || _character.buffer.i32[0] >= SPAWN_TYPE_MAX) {
-    return false;
+    return -1;
   }
   spawn_type spw_type = static_cast<spawn_type>(_character.buffer.i32[0]);
   _character.scale =  SPAWN_RND_SCALE_MIN + (SPAWN_RND_SCALE_MAX * _character.buffer.i32[2] / 100.f);
   _character.scale += SPAWN_SCALE_INCREASE_BY_LEVEL(_character.buffer.i32[1]);
 
-  _character.health = SPAWN_HEALTH_CURVE(_character.buffer.i32[1], _character.scale, static_cast<f32>(spw_type));
+  _character.health_max = SPAWN_HEALTH_CURVE(_character.buffer.i32[1], _character.scale, static_cast<f32>(spw_type));
   _character.damage = SPAWN_DAMAGE_CURVE(_character.buffer.i32[1], _character.scale, static_cast<f32>(spw_type));
   _character.speed =  SPAWN_SPEED_CURVE(_character.buffer.i32[1], _character.scale, static_cast<f32>(spw_type));
   
+  _character.health_current = _character.health_max;
+
   register_spawn_animation(__builtin_addressof(_character), SPAWN_ZOMBIE_ANIMATION_MOVE_LEFT);
 
   // INFO: Setting collision equal to the any animation dimentions, as we consider each are equal.
@@ -112,7 +114,7 @@ i32 spawn_character(Character2D _character) {
   _character.collision.height = _character.move_left_animation.current_frame_rect.height * _character.scale;
   _character.collision.x = _character.position.x;
   _character.collision.y = _character.position.y;
-  if(spw_type != SPAWN_TYPE_BOSS && CheckCollisionRecs(state->in_camera_metrics->frustum, _character.collision)) { return false; }
+  if(CheckCollisionRecs(state->in_camera_metrics->frustum, _character.collision)) { return -1; }
 
   register_spawn_animation(__builtin_addressof(_character), SPAWN_ZOMBIE_ANIMATION_MOVE_RIGHT);
   register_spawn_animation(__builtin_addressof(_character), SPAWN_ZOMBIE_ANIMATION_TAKE_DAMAGE_LEFT);
@@ -124,18 +126,18 @@ i32 spawn_character(Character2D _character) {
   _character.initialized = true;
 
   for (size_t itr_000 = 0; itr_000 < state->spawns.size(); ++itr_000) {
-    if(CheckCollisionRecs(state->spawns.at(itr_000).collision, _character.collision)) { return false; }
+    if(CheckCollisionRecs(state->spawns.at(itr_000).collision, _character.collision)) { return -1; }
   }
   if(_character.damage_break_time > _character.take_damage_left_animation.fps * static_cast<f32>(TARGET_FPS)) {
     _character.damage_break_time = _character.take_damage_left_animation.fps  * static_cast<f32>(TARGET_FPS);
   }
 
   state->spawns.push_back(_character);
-  return true;
+  return _character.character_id;
 }
 
 bool update_spawns(Vector2 player_position) {
-  if (!state) { 
+  if (not state or state == nullptr) { 
     TraceLog(LOG_ERROR, "spawn::update_spawns()::State is not valid");
     return false; 
   }
@@ -152,7 +154,7 @@ bool update_spawns(Vector2 player_position) {
       }
       else character->is_damagable = true;
     }
-    if ((character->health <= 0 && character->is_damagable) || character->health > MAX_SPAWN_HEALTH) {
+    if ((character->health_current <= 0 && character->is_damagable) || character->health_current > MAX_SPAWN_HEALTH) {
       remove_spawn(itr_000);
       continue;
     }
@@ -202,7 +204,7 @@ bool update_spawns(Vector2 player_position) {
   return true;
 }
 bool render_spawns(void) {
-  if (!state) {
+  if (not state or state == nullptr) {
     TraceLog(LOG_ERROR, "spawn::render_spawns()::State is not valid");
     return false;
   }
@@ -244,12 +246,27 @@ bool render_spawns(void) {
 }
 
 std::vector<Character2D>* get_spawns(void) {
-  if (!state) {
+  if (not state or state == nullptr) {
     TraceLog(LOG_ERROR, "spawn::get_spawns()::State was null");
     return nullptr;
   }
 
   return __builtin_addressof(state->spawns);
+}
+const Character2D * get_spawn_by_id(i32 _id) {
+  if (not state or state == nullptr) {
+    TraceLog(LOG_ERROR, "spawn::get_spawn_by_id()::State is invalid");
+    return nullptr;
+  }
+  std::vector<Character2D>& spawns = state->spawns;
+
+  for (size_t itr_000 = 0; itr_000 < spawns.size() ; ++itr_000) {
+    if(spawns.at(itr_000).character_id == _id) {
+      return __builtin_addressof(spawns.at(itr_000));
+    }
+  }
+
+  return nullptr;
 }
 
 void clean_up_spawn_state(void) {

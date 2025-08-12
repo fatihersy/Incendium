@@ -9,6 +9,7 @@ bool update_spawns(Vector2 player_position);
 bool render_spawns(void);
 
 std::vector<Character2D>* get_spawns(void);
+const Character2D * get_spawn_by_id(i32 _id);
 
 i32 spawn_character(Character2D _character);
 i32 damage_spawn(i32 _id, i32 damage);

@@ -106,7 +106,7 @@ void update_sliders(void);
 void update_checkboxes(void);
  
 void draw_slider_body(slider* sdr);
-void draw_atlas_texture_stretch(atlas_texture_id tex_id, Rectangle stretch_part, Rectangle dest, bool should_center);
+void draw_atlas_texture_stretch(atlas_texture_id tex_id, Rectangle stretch_part, Rectangle dest, bool should_center, Color tint = WHITE);
 void draw_atlas_texture_regular(atlas_texture_id _id, Rectangle dest, Color tint, bool should_center);
 void draw_atlas_texture_npatch(atlas_texture_id _id, Rectangle dest, Vector4 offsets, bool should_center);
 void gui_draw_settings_screen(void);
@@ -288,7 +288,11 @@ bool user_interface_system_initialize(void) {
       Rectangle {3.f, 0.f, 42.f, 4}, Rectangle {23.f, 0.f, 14.f, 4.f}, Rectangle {16.f, 0.f, 16.f, 4.f})
     );
     register_progress_bar_type(progress_bar_type(
-      PRG_BAR_TYPE_ID_DARK_FANTASY_BOSSBAR_6, ATLAS_TEX_ID_DARK_FANTASY_BOSSBAR_6_INSIDE, ATLAS_TEX_ID_DARK_FANTASY_BOSSBAR_6_OUTSIDE, SHADER_ID_PROGRESS_BAR_MASK, 
+      PRG_BAR_TYPE_ID_DARK_FANTASY_BOSSBAR_6_YELLOW_INNER, ATLAS_TEX_ID_DARK_FANTASY_BOSSBAR_6_INSIDE_YELLOW, ATLAS_TEX_ID_DARK_FANTASY_BOSSBAR_6_OUTSIDE, SHADER_ID_PROGRESS_BAR_MASK, 
+      Rectangle {0.f, 0.f, 192.f, 7}, Rectangle {32.f, 0.f, 128.f, 7}, Rectangle {32.f, 0.f, 128.f, 7})
+    );
+    register_progress_bar_type(progress_bar_type(
+      PRG_BAR_TYPE_ID_DARK_FANTASY_BOSSBAR_6_WHITE_INNER, ATLAS_TEX_ID_DARK_FANTASY_BOSSBAR_6_INSIDE_WHITE, ATLAS_TEX_ID_DARK_FANTASY_BOSSBAR_6_OUTSIDE, SHADER_ID_PROGRESS_BAR_MASK, 
       Rectangle {0.f, 0.f, 192.f, 7}, Rectangle {32.f, 0.f, 128.f, 7}, Rectangle {32.f, 0.f, 128.f, 7})
     );
   }
@@ -296,8 +300,9 @@ bool user_interface_system_initialize(void) {
 
   // PROGRES BARS
   {
-    register_progress_bar(PRG_BAR_ID_PLAYER_EXPERIANCE,PRG_BAR_TYPE_ID_DARK_FANTASY_BOSSBAR_6);
-    register_progress_bar(PRG_BAR_ID_PLAYER_HEALTH,PRG_BAR_TYPE_ID_CRIMSON_FANT_BAR);
+    register_progress_bar(PRG_BAR_ID_PLAYER_EXPERIANCE, PRG_BAR_TYPE_ID_DARK_FANTASY_BOSSBAR_6_YELLOW_INNER);
+    register_progress_bar(PRG_BAR_ID_PLAYER_HEALTH, PRG_BAR_TYPE_ID_CRIMSON_FANT_BAR);
+    register_progress_bar(PRG_BAR_ID_BOSS_HEALTH, PRG_BAR_TYPE_ID_DARK_FANTASY_BOSSBAR_6_WHITE_INNER);
   }
   // PROGRES BARS
 
@@ -648,7 +653,7 @@ void gui_checkbox(checkbox_id _id, Vector2 pos) {
     draw_sprite_on_site_by_id(_cb->cb_type.ss_type, WHITE, VECTOR2(pos.x, pos.y), draw_sprite_scale, 0);
   }
 }
-void gui_progress_bar(progress_bar_id bar_id, Rectangle dest, bool _should_center) {
+void gui_progress_bar(progress_bar_id bar_id, Rectangle dest, bool _should_center, [[maybe_unused]] Color inside_tint, Color outside_tint) {
   if (!state) {
     TraceLog(LOG_ERROR, "user_interface::gui_player_experiance_process()::ui system didn't initialized");
     return;
@@ -693,16 +698,19 @@ void gui_progress_bar(progress_bar_id bar_id, Rectangle dest, bool _should_cente
   BeginScissorMode(scr_rect.x,scr_rect.y,scr_rect.width,scr_rect.height);
     BeginShaderMode(get_shader_by_enum(prg_bar.type.mask_shader_id)->handle);
     {
-      i32 loc = get_uniform_location(prg_bar.type.mask_shader_id, "progress");
-      set_shader_uniform(prg_bar.type.mask_shader_id, loc, data128(progress));
+      set_shader_uniform(prg_bar.type.mask_shader_id, "process", data128(progress));
+      set_shader_uniform(prg_bar.type.mask_shader_id, "tint", data128(.5f));
+      // static_cast<f32>(inside_tint.r), static_cast<f32>(inside_tint.g),
+      // static_cast<f32>(inside_tint.b), static_cast<f32>(inside_tint.a)
+      //);
       draw_atlas_texture_stretch(prg_bar.type.body_inside, strecth_part_inside, dest, false);
     }
     EndShaderMode();
   EndScissorMode();
 
-  draw_atlas_texture_stretch(prg_bar.type.body_outside, strecth_part_outside, dest, false);
+  draw_atlas_texture_stretch(prg_bar.type.body_outside, strecth_part_outside, dest, false, outside_tint);
 }
-void draw_atlas_texture_stretch(atlas_texture_id tex_id, Rectangle stretch_part, Rectangle dest, bool should_center) {
+void draw_atlas_texture_stretch(atlas_texture_id tex_id, Rectangle stretch_part, Rectangle dest, bool should_center, Color tint) {
   if (tex_id >= ATLAS_TEX_ID_MAX || tex_id <= ATLAS_TEX_ID_UNSPECIFIED) {
     TraceLog(LOG_ERROR, "user_interface::draw_repetitive_body_tex()::Recieved texture out of bound");
     return;
@@ -733,9 +741,9 @@ void draw_atlas_texture_stretch(atlas_texture_id tex_id, Rectangle stretch_part,
     left_dest.x + left_dest.width, dest.y,
     dest.width - (left_dest.width + right_dest.width), dest.height
   };
-  gui_draw_atlas_texture_id_pro(tex_id, left_source, left_dest, false);
-  gui_draw_atlas_texture_id_pro(tex_id, stretch_part, second_dest, false, TEXTURE_WRAP_CLAMP);
-  gui_draw_atlas_texture_id_pro(tex_id, right_source, right_dest, false);
+  gui_draw_atlas_texture_id_pro(tex_id, left_source, left_dest, false, TEXTURE_WRAP_REPEAT, tint);
+  gui_draw_atlas_texture_id_pro(tex_id, stretch_part, second_dest, false, TEXTURE_WRAP_CLAMP, tint);
+  gui_draw_atlas_texture_id_pro(tex_id, right_source, right_dest, false, TEXTURE_WRAP_REPEAT, tint);
 }
 void gui_slider(slider_id _id, Vector2 pos, Vector2 grid) {
   if (_id >= SDR_ID_MAX || _id <= SDR_ID_UNDEFINED || !state) {
@@ -1428,14 +1436,13 @@ void draw_text_shader(const char *text, shader_id sdr_id, Vector2 position, Font
     if (i + 1 < length) glyphWidth = glyphWidth + UI_FONT_SPACING;
     
     if ((codepoint != ' ') && (codepoint != '\t')) {
-      f32 letter_width  = (font.recs[index].width + 2.0f*font.glyphPadding) * scaleFactor;
-      f32 letter_height = (font.recs[index].height + 2.0f*font.glyphPadding) * scaleFactor;
+      //f32 letter_width  = (font.recs[index].width + 2.0f*font.glyphPadding) * scaleFactor;
+      //f32 letter_height = (font.recs[index].height + 2.0f*font.glyphPadding) * scaleFactor;
 
       switch (sdr_id) {
         case SHADER_ID_FONT_OUTLINE: {
           BeginShaderMode(get_shader_by_enum(SHADER_ID_FONT_OUTLINE)->handle);
-            i32 uni_tex_size_loc = GetShaderLocation(get_shader_by_enum(SHADER_ID_FONT_OUTLINE)->handle, "texture_size");
-            set_shader_uniform(SHADER_ID_FONT_OUTLINE, uni_tex_size_loc, data128(letter_width, letter_height));
+            //set_shader_uniform(SHADER_ID_FONT_OUTLINE, "texture_size", data128(letter_width, letter_height));
           DrawTextCodepoint(font, codepoint, Vector2{ text_position.x + textOffsetX, text_position.y }, fontsize, tint);
           EndShaderMode();
           break;
@@ -1617,7 +1624,7 @@ void process_fade_effect(ui_fade_control_system* fade) {
 /**
  * @brief relative if you want to draw from another atlas.
  */
-void gui_draw_atlas_texture_id_pro(atlas_texture_id _id, Rectangle src, Rectangle dest, bool should_center, i32 texture_wrap) {
+void gui_draw_atlas_texture_id_pro(atlas_texture_id _id, Rectangle src, Rectangle dest, bool should_center, i32 texture_wrap, Color tint) {
   if (_id >= ATLAS_TEX_ID_MAX || _id <= ATLAS_TEX_ID_UNSPECIFIED) {
     TraceLog(LOG_WARNING, "user_interface::gui_draw_atlas_texture_id_pro()::ID was out of bound"); 
     return; 
@@ -1637,7 +1644,7 @@ void gui_draw_atlas_texture_id_pro(atlas_texture_id _id, Rectangle src, Rectangl
     dest.y -= dest.height / 2.f;
   }
   SetTextureWrap(*tex->atlas_handle, texture_wrap);
-  DrawTexturePro(*tex->atlas_handle, source, dest, ZEROVEC2, 0, WHITE);
+  DrawTexturePro(*tex->atlas_handle, source, dest, ZEROVEC2, 0, tint);
   if (texture_wrap != TEXTURE_WRAP_REPEAT) {
     SetTextureWrap(*tex->atlas_handle, TEXTURE_WRAP_REPEAT); // Repeat is default
   }
