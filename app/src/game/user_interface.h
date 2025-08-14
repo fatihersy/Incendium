@@ -429,7 +429,7 @@ void gui_checkbox_grid(checkbox_id _id, Vector2 grid, Vector2 grid_location);
 void gui_slider(slider_id _id, Vector2 pos, Vector2 grid);
 void gui_draw_texture_to_background(texture_id _id);
 void gui_draw_spritesheet_to_background(spritesheet_id _id, Color _tint);
-void gui_progress_bar(progress_bar_id bar_id, Rectangle dest, bool _should_center, Color tint = WHITE, Color outside_tint = WHITE);
+void gui_progress_bar(progress_bar_id bar_id, Rectangle dest, bool _should_center, Color tint = BLANK, Color outside_tint = WHITE);
 void gui_panel(panel pan, Rectangle dest, bool _should_center);
 bool gui_panel_active(panel* panel, Rectangle dest, bool _should_center);
 void gui_label_box(const char* text, font_type type, i32 font_size, Rectangle dest, Color tint, text_alignment alignment);

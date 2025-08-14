@@ -124,7 +124,7 @@ typedef enum ability_type {
   ABILITY_TYPE_MAX,
 } ability_type;
 
-typedef enum character_stats {
+typedef enum character_stat_id {
   CHARACTER_STATS_UNDEFINED,
   CHARACTER_STATS_HEALTH,
   CHARACTER_STATS_HP_REGEN,
@@ -136,7 +136,7 @@ typedef enum character_stats {
   CHARACTER_STATS_EXP_GAIN,
   CHARACTER_STATS_TOTAL_TRAIT_POINTS,
   CHARACTER_STATS_MAX,
-} character_stats;
+} character_stat_id;
 
 typedef enum font_type {
   FONT_TYPE_UNDEFINED,
@@ -583,6 +583,7 @@ typedef struct Character2D {
   f32 damage_break_time;
   bool is_dead;
   bool is_damagable;
+  bool is_on_screen;
   bool initialized;
 
   data128 buffer;
@@ -745,8 +746,9 @@ typedef struct ability_play_system {
 * @brief buffer[3] : Total value
 */
 typedef struct character_stat {
-  character_stats id;
-  i32 level;
+  character_stat_id id;
+  i32 base_level;
+  i32 current_level;
   i32 passive_display_name_symbol;
   i32 passive_desc_symbol;
   Rectangle passive_icon_src;
@@ -756,27 +758,29 @@ typedef struct character_stat {
 
   character_stat(void) {
     this->id = CHARACTER_STATS_UNDEFINED;
-    this->level = 0;
+    this->base_level = 0;
+    this->current_level = 0;
     this->passive_display_name_symbol = 0;
     this->passive_desc_symbol = 0;
     this->passive_icon_src = ZERORECT;
     this->upgrade_cost = 0;
     this->buffer = data128();
   }
-  character_stat(character_stats id, i32 display_name_symbol, i32 desc_symbol, Rectangle icon_src, i32 upgrade_cost, data128 buffer = data128()) : character_stat() {
+  character_stat(character_stat_id id, i32 display_name_symbol, i32 desc_symbol, Rectangle icon_src, i32 base_level, i32 upgrade_cost, data128 buffer = data128()) : character_stat() {
     this->id = id;
+    this->base_level = base_level;
+    this->current_level = base_level;
     this->passive_display_name_symbol = display_name_symbol;
     this->passive_desc_symbol = desc_symbol;
     this->passive_icon_src = icon_src;
     this->upgrade_cost = upgrade_cost;
     this->buffer = buffer;
-    this->level = 1;
   }
 }character_stat;
 
 typedef struct character_trait {
   i32 id;
-  character_stats type;
+  character_stat_id type;
   std::string title;
   std::string description;
   i32 point;
@@ -793,7 +797,7 @@ typedef struct character_trait {
     this->ui_ops = data128();
     this->point = 0;
   }
-  character_trait(i32 _id, character_stats _type, const char* _title, const char * _description, i32 _point, data128 buffer) : character_trait() {
+  character_trait(i32 _id, character_stat_id _type, const char* _title, const char * _description, i32 _point, data128 buffer) : character_trait() {
     this->id = _id;
     this->type = _type;
     this->title = _title;

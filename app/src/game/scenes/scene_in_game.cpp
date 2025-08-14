@@ -78,7 +78,7 @@ static scene_in_game_state * state = nullptr;
 #define ABILITY_UPG_PANEL_ICON_SIZE SIG_BASE_RENDER_WIDTH * .25f * .5f
 #define PASSIVE_SELECTION_PANEL_ICON_SIZE ABILITY_UPG_PANEL_ICON_SIZE
 #define CLOUDS_ANIMATION_DURATION TARGET_FPS * 1.5f // second
-#define GET_PLAYER_DYNAMIC_STAT(STAT_TYPE) __builtin_addressof(state->in_ingame_info->player_state_dynamic->stats[(static_cast<character_stats>(STAT_TYPE))])
+#define GET_PLAYER_DYNAMIC_STAT(STAT_TYPE) __builtin_addressof(state->in_ingame_info->player_state_dynamic->stats[(static_cast<character_stat_id>(STAT_TYPE))])
 #define GET_PLAYER_DYNAMIC_ABILITY(ABILITY_TYPE) __builtin_addressof(state->in_ingame_info->player_state_dynamic->ability_system.abilities.at(ABILITY_TYPE))
 #define INGAME_FADE_DURATION 1 * TARGET_FPS
 #define DRAW_ABL_UPG_STAT_PNL(UPG, TEXT, ...){ \
@@ -821,17 +821,104 @@ void draw_ingame_state_play_ui_defeat_boss(void) {
     boss_health_bar_width,
     static_cast<f32>(state->in_app_settings->render_height * .035f) 
   };
-  gui_progress_bar(PRG_BAR_ID_BOSS_HEALTH, boss_health_bar_dest, false, WHITE, BLUE);
+  gui_progress_bar(PRG_BAR_ID_BOSS_HEALTH, boss_health_bar_dest, false, Color {192, 57, 43, 96});
 
   const Character2D * const boss = _get_spawn_by_id(state->in_ingame_info->stage_boss_id);
   Vector2 label_pos = VECTOR2(static_cast<f32>(state->in_app_settings->render_width_div2), static_cast<f32>(state->in_app_settings->render_height * .75f));
   if (boss) {
     f32 boss_health_perc = static_cast<f32>(boss->health_current) / static_cast<f32>(boss->health_max);
     gui_label_format(FONT_TYPE_ABRACADABRA, 1, label_pos.x, label_pos.y, WHITE, true, false, "Boss health: %.1f", boss_health_perc);
+
+    if (not boss->is_on_screen) {
+      const Vector2 boss_location = Vector2 {
+        boss->position.x + boss->collision.width * .5f,
+        boss->position.y + boss->collision.height * .5f,
+      };
+      const f32 rotation = get_movement_rotation(state->in_ingame_info->player_state_dynamic->position, boss_location) + 90.f;
+      Vector2 arrow_pos_world = move_towards(state->in_ingame_info->player_state_dynamic->position, boss_location, static_cast<f32>(state->in_app_settings->render_height * .4f));
+      Vector2 arrow_pos_screen = GetWorldToScreen2D(arrow_pos_world, state->in_camera_metrics->handle);
+      Rectangle boss_location_indicator_dest = Rectangle {
+        arrow_pos_screen.x, arrow_pos_screen.y, 
+        static_cast<f32>(state->in_app_settings->render_height * .035f),
+        static_cast<f32>(state->in_app_settings->render_height * .035f) 
+      };
+      gui_draw_atlas_texture_id(ATLAS_TEX_ID_ARROW, boss_location_indicator_dest, ZEROVEC2, rotation);
+    }
   }
   else {
     gui_label("Boss health: -1", FONT_TYPE_ABRACADABRA, 1, label_pos, WHITE, true, false);
   }
+
+  // DEBUG TODO: Remove later
+    {
+      player_state * _player = state->in_ingame_info->player_state_dynamic;
+      i32 font_size = 1;
+      i32 line_height = SIG_BASE_RENDER_HEIGHT * .05f;
+      Vector2 debug_info_position_buffer = VECTOR2(
+        0.f,
+        0.f
+      );
+      gui_label_format(
+        FONT_TYPE_ABRACADABRA, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
+        WHITE, false, false, "Health max: %d", _player->stats.at(CHARACTER_STATS_HEALTH).buffer.i32[3]
+      );
+      debug_info_position_buffer.y += line_height;
+      gui_label_format(
+        FONT_TYPE_ABRACADABRA, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
+        WHITE, false, false, "Health Curr: %d", _player->health_current
+      );
+      debug_info_position_buffer.y += line_height;
+      gui_label_format(
+        FONT_TYPE_ABRACADABRA, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
+        WHITE, false, false, "Health Regen: %d", _player->stats.at(CHARACTER_STATS_HP_REGEN).buffer.i32[3]
+      );
+      debug_info_position_buffer.y += line_height;
+      gui_label_format(
+        FONT_TYPE_ABRACADABRA, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
+        WHITE, false, false, "Move Speed: %.1f", _player->stats.at(CHARACTER_STATS_MOVE_SPEED).buffer.f32[3]
+      );
+      debug_info_position_buffer.y += line_height;
+      gui_label_format(
+        FONT_TYPE_ABRACADABRA, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
+        WHITE, false, false, "AOE: %.1f", _player->stats.at(CHARACTER_STATS_AOE).buffer.f32[3]
+      );
+      debug_info_position_buffer.y += line_height;
+      gui_label_format(
+        FONT_TYPE_ABRACADABRA, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
+        WHITE, false, false, "Damage: %d", _player->stats.at(CHARACTER_STATS_DAMAGE).buffer.i32[3]
+      );
+      debug_info_position_buffer.y += line_height;
+      gui_label_format(
+        FONT_TYPE_ABRACADABRA, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
+        WHITE, false, false, "Ability CD: %.1f", _player->stats.at(CHARACTER_STATS_ABILITY_CD).buffer.f32[3]
+      );
+      debug_info_position_buffer.y += line_height;
+      gui_label_format(
+        FONT_TYPE_ABRACADABRA, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
+        WHITE, false, false, "Projectile Amouth: %d", _player->stats.at(CHARACTER_STATS_PROJECTILE_AMOUTH).buffer.i32[3]
+      );
+      debug_info_position_buffer.y += line_height;
+      gui_label_format(
+        FONT_TYPE_ABRACADABRA, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
+        WHITE, false, false, "Exp Gain: %.1f", _player->stats.at(CHARACTER_STATS_EXP_GAIN).buffer.f32[3]
+      );
+      debug_info_position_buffer.y += line_height;
+      gui_label_format(
+        FONT_TYPE_ABRACADABRA, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
+        WHITE, false, false, "Total TP: %d", _player->stats.at(CHARACTER_STATS_TOTAL_TRAIT_POINTS).buffer.i32[3]
+      );
+    }
+    //CHARACTER_STATS_HEALTH, i32
+    //CHARACTER_STATS_HP_REGEN, i32
+    //CHARACTER_STATS_MOVE_SPEED, f32
+    //CHARACTER_STATS_AOE, f32
+    //CHARACTER_STATS_DAMAGE, i32
+    //CHARACTER_STATS_ABILITY_CD, f32
+    //CHARACTER_STATS_PROJECTILE_AMOUTH, i32
+    //CHARACTER_STATS_EXP_GAIN, f32
+    //CHARACTER_STATS_TOTAL_TRAIT_POINTS, i32
+  // DEBUG
+
 }
 void prepare_ability_upgrade_state(void) {
   for (int i=0; i<MAX_UPDATE_ABILITY_PANEL_COUNT; ++i) {
@@ -953,10 +1040,3 @@ bool scene_in_game_on_event(i32 code, [[maybe_unused]] event_context context) {
 #undef INGAME_FADE_DURATION
 #undef DRAW_ABL_UPG_STAT_PNL
 #undef HEALTH_BAR_WIDTH
-
-/**
-    case INGAME_STATE_PLAY_RESULTS: { 
-
-    }
-*/
-

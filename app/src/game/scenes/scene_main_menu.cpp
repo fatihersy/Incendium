@@ -444,9 +444,8 @@ void draw_main_menu_upgrade_list_panel(void) {
 
   for (i32 iter = 0; iter < MAIN_MENU_UPGRADE_PANEL_ROW; ++iter) {
     for (i32 j = 0; j < MAIN_MENU_UPGRADE_PANEL_COL; ++j) {
-      const character_stat *stat = get_static_player_state_stat(static_cast<character_stats>((MAIN_MENU_UPGRADE_PANEL_COL * iter) + j + 1));
-      if (!stat || stat->id >= CHARACTER_STATS_MAX ||
-        stat->id <= CHARACTER_STATS_UNDEFINED) {
+      const character_stat *stat = get_static_player_state_stat(static_cast<character_stat_id>((MAIN_MENU_UPGRADE_PANEL_COL * iter) + j + 1));
+      if (not stat or stat == nullptr or stat->id >= CHARACTER_STATS_MAX or stat->id <= CHARACTER_STATS_UNDEFINED) {
         continue;
       }
       bool hovered = false;
@@ -498,9 +497,9 @@ void draw_main_menu_upgrade_list_panel(void) {
       gui_draw_atlas_texture_id(ATLAS_TEX_ID_DARK_FANTASY_PANEL_BG, Rectangle {showcase_position.x, showcase_position.y, showcase_new_dim, showcase_new_dim}, VECTOR2(0, 0), 0.f);
       gui_draw_atlas_texture_id(ATLAS_TEX_ID_DARK_FANTASY_PANEL,    Rectangle {showcase_position.x, showcase_position.y, showcase_new_dim, showcase_new_dim}, VECTOR2(0, 0), 0.f);
 
-      for (i32 i = 0; i < MAX_PASSIVE_UPGRADE_TIER; ++i) {
-        Vector2 tier_pos = {tier_symbols_left_edge + i * star_spacing, tier_symbols_vertical_center};
-        if (i < stat->level-1) {
+      for (i32 itr_000 = 0; itr_000 < MAX_PASSIVE_UPGRADE_TIER; ++itr_000) {
+        Vector2 tier_pos = {tier_symbols_left_edge + itr_000 * star_spacing, tier_symbols_vertical_center};
+        if (itr_000 < stat->current_level - stat->base_level) {
           gui_draw_atlas_texture_id_scale(ATLAS_TEX_ID_PASSIVE_UPGRADE_TIER_STAR, tier_pos, 1.f, RED, false);
         } else {
           gui_draw_atlas_texture_id_scale(ATLAS_TEX_ID_PASSIVE_UPGRADE_TIER_STAR, tier_pos, 1.f, WHITE, false);
@@ -539,9 +538,9 @@ void draw_main_menu_upgrade_details_panel(void) {
   f32 tier_symbols_total_width = tier_symbol_src_rect->width + (MAX_PASSIVE_UPGRADE_TIER - 1.f) * star_spacing;
   f32 tier_symbols_left_edge = state->upgrade_details_panel.dest.x + (state->upgrade_details_panel.dest.width - tier_symbols_total_width) / 2.f;
   f32 tier_symbols_vertical_position = icon_pos.y + icon_pos.height + detail_panel_element_spacing * .5f;
-  for (i32 i = 0; i < MAX_PASSIVE_UPGRADE_TIER; ++i) {
-    Vector2 tier_pos = {tier_symbols_left_edge + i * star_spacing, tier_symbols_vertical_position};
-    if (i < state->hovered_stat->level-1) {
+  for (i32 itr_000 = 0; itr_000 < MAX_PASSIVE_UPGRADE_TIER; ++itr_000) {
+    Vector2 tier_pos = {tier_symbols_left_edge + itr_000 * star_spacing, tier_symbols_vertical_position};
+    if (itr_000 < state->hovered_stat->current_level - state->hovered_stat->base_level) {
       gui_draw_atlas_texture_id_scale(ATLAS_TEX_ID_PASSIVE_UPGRADE_TIER_STAR, tier_pos, 1.f, RED, false);
     } else {
       gui_draw_atlas_texture_id_scale(ATLAS_TEX_ID_PASSIVE_UPGRADE_TIER_STAR, tier_pos, 1.f, WHITE, false);
@@ -561,7 +560,7 @@ void draw_main_menu_upgrade_details_panel(void) {
   gui_label_wrap(lc_txt(state->hovered_stat->passive_desc_symbol), FONT_TYPE_ABRACADABRA, 1, description_pos, WHITE, false);
 
   character_stat pseudo_update = *state->hovered_stat;
-  game_manager_set_stat_value_by_level(&pseudo_update, pseudo_update.level+1);
+  game_manager_set_stat_value_by_level(&pseudo_update, pseudo_update.current_level+1);
   Vector2 upg_stat_text_pos = {
     state->upgrade_details_panel.dest.x + state->upgrade_details_panel.dest.width * .5f,
     state->upgrade_details_panel.dest.y + state->upgrade_details_panel.dest.height * .5f,
@@ -636,7 +635,7 @@ void draw_main_menu_upgrade_details_panel(void) {
   if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_UPDATE_BUTTON_UPGRADE), BTN_ID_MAINMENU_UPGRADE_BUY_UPGRADE, Vector2 {0.f, 0.f}, button_location, false)) {
     if (((i32)get_currency_souls() - state->hovered_stat->upgrade_cost) >= 0) {
       currency_souls_add(-state->hovered_stat->upgrade_cost);
-      i32 level = get_static_player_state_stat(state->hovered_stat->id)->level;
+      i32 level = get_static_player_state_stat(state->hovered_stat->id)->current_level;
       set_static_player_state_stat(state->hovered_stat->id, level+1);
       gm_save_game();
       event_fire(EVENT_CODE_PLAY_BUTTON_ON_CLICK, event_context((u16)true));

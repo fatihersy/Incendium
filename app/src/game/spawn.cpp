@@ -161,6 +161,8 @@ bool update_spawns(Vector2 player_position) {
 
     if (character->is_dead) { continue; }
 
+    character->is_on_screen = CheckCollisionRecs(character->collision, state->in_camera_metrics->frustum);
+
     Vector2 new_position = move_towards(character->position, player_position, character->speed * GetFrameTime());
     bool x0_collide = false;
     bool y0_collide = false;

@@ -52,6 +52,7 @@ bool resource_system_initialize(void) {
   load_texture_from_atlas(ATLAS_TEX_ID_INQUISITOR_PORTRAIT,                  Rectangle{ 1936,    0,   16,   16 });
   load_texture_from_atlas(ATLAS_TEX_ID_PORTRAIT_FRAME,                       Rectangle{ 1952,    0,   36,   34 });
   load_texture_from_atlas(ATLAS_TEX_ID_ABILITY_SLOT_FRAME,                   Rectangle{ 2000,    0,   16,   16 });
+  load_texture_from_atlas(ATLAS_TEX_ID_ARROW,                                Rectangle{ 1696,    0,   11,   11 });
   load_texture_from_atlas(ATLAS_TEX_ID_PROGRESS_BAR_OUTSIDE_FULL,            Rectangle{ 1568,  112,   48,    4 });
   load_texture_from_atlas(ATLAS_TEX_ID_PROGRESS_BAR_INSIDE_FULL,             Rectangle{ 1504,  112,   58,    4 });
   load_texture_from_atlas(ATLAS_TEX_ID_DARK_FANTASY_BOSSBAR_6_OUTSIDE,       Rectangle{ 1680, 1088,  192,    7 });
@@ -77,7 +78,7 @@ bool resource_system_initialize(void) {
   load_texture_from_atlas(ATLAS_TEX_ID_PANEL_SCROLL_HANDLE,                  Rectangle{ 1520,  144,   16,   16 });
 
   //load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_PLAYER_ANIMATION_IDLE_LEFT,         VECTOR2(1584,  288), 15,   22,  32, 1,  4);
-  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_PLAYER_ANIMATION_IDLE_RIGHT,        VECTOR2(1584,  224), 15,   22,  32, 1,  4);
+  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_PLAYER_ANIMATION_IDLE_RIGHT,        VECTOR2(1584,  224), 10,   22,  32, 1,  4);
   //load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_PLAYER_ANIMATION_MOVE_LEFT,         VECTOR2(1584,  320), 10,   22,  32, 1,  6);
   load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_PLAYER_ANIMATION_MOVE_RIGHT,        VECTOR2(1584,  160), 10,   22,  32, 1,  6);
   //load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_PLAYER_ANIMATION_TAKE_DAMAGE_LEFT,  VECTOR2(1584,  256), 13,   22,  32, 1,  3);

@@ -653,7 +653,7 @@ void gui_checkbox(checkbox_id _id, Vector2 pos) {
     draw_sprite_on_site_by_id(_cb->cb_type.ss_type, WHITE, VECTOR2(pos.x, pos.y), draw_sprite_scale, 0);
   }
 }
-void gui_progress_bar(progress_bar_id bar_id, Rectangle dest, bool _should_center, [[maybe_unused]] Color inside_tint, Color outside_tint) {
+void gui_progress_bar(progress_bar_id bar_id, Rectangle dest, bool _should_center, Color inside_tint, Color outside_tint) {
   if (!state) {
     TraceLog(LOG_ERROR, "user_interface::gui_player_experiance_process()::ui system didn't initialized");
     return;
@@ -698,11 +698,11 @@ void gui_progress_bar(progress_bar_id bar_id, Rectangle dest, bool _should_cente
   BeginScissorMode(scr_rect.x,scr_rect.y,scr_rect.width,scr_rect.height);
     BeginShaderMode(get_shader_by_enum(prg_bar.type.mask_shader_id)->handle);
     {
-      set_shader_uniform(prg_bar.type.mask_shader_id, "process", data128(progress));
-      set_shader_uniform(prg_bar.type.mask_shader_id, "tint", data128(.5f));
-      // static_cast<f32>(inside_tint.r), static_cast<f32>(inside_tint.g),
-      // static_cast<f32>(inside_tint.b), static_cast<f32>(inside_tint.a)
-      //);
+      set_shader_uniform(prg_bar.type.mask_shader_id, "progress", data128(progress));
+      set_shader_uniform(prg_bar.type.mask_shader_id, "tint", data128(
+        static_cast<f32>(inside_tint.r), static_cast<f32>(inside_tint.g),
+        static_cast<f32>(inside_tint.b), static_cast<f32>(inside_tint.a)
+      ));
       draw_atlas_texture_stretch(prg_bar.type.body_inside, strecth_part_inside, dest, false);
     }
     EndShaderMode();

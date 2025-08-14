@@ -173,6 +173,10 @@ void shader_add_uniform(shader_id _id, const char *_name, ShaderUniformDataType 
     return;
   }
   const i32 uniform_loc = GetShaderLocation(state->shaders.at(_id).handle, _name);
+  if (uniform_loc < 0) {
+    TraceLog(LOG_ERROR, "fshader::shader_add_uniform()::Shader uniform cannot found");
+    return;
+  }
 
   state->shaders.at(_id).locations.at(uniform_loc).name = _name;
   state->shaders.at(_id).locations.at(uniform_loc).uni_data_type = _data_id;

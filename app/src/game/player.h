@@ -26,6 +26,7 @@ void player_take_damage(i32 damage);
 void player_heal_player(i32 amouth);
 
 player_state* get_player_state(void);
+const player_state* get_default_player(void);
 
 player_update_results update_player(void);
 bool render_player(void);

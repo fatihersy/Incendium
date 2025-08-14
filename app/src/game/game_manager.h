@@ -15,7 +15,7 @@ void set_currency_souls(i32 value);
 bool get_b_player_have_upgrade_points(void);
 void set_dynamic_player_have_ability_upgrade_points(bool _b);
 
-const character_stat* get_static_player_state_stat(character_stats stat);
+const character_stat* get_static_player_state_stat(character_stat_id stat);
 const ingame_info* gm_get_ingame_info(void);
 const std::vector<character_trait>* gm_get_character_traits(void);
 
@@ -26,7 +26,7 @@ void gm_load_game(void);
 void gm_damage_spawn_if_collide(data128 coll_data, i32 damage, collision_type coll_check);
 void gm_damage_player_if_collide(data128 coll_data, i32 damage, collision_type coll_check);
 void game_manager_set_stat_value_by_level(character_stat* stat, i32 level);
-void set_static_player_state_stat(character_stats stat_id, i32 level);
+void set_static_player_state_stat(character_stat_id stat_id, i32 level);
 void currency_souls_add(i32 value);
 
 bool    _add_ability(ability_type _type);
