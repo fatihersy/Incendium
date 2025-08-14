@@ -10,8 +10,7 @@
 void update_game_manager(void);
 void update_game_manager_debug(void);
 
-i32 get_currency_souls(void);
-void set_currency_souls(i32 value);
+i32 get_currency_souls_total(void);
 bool get_b_player_have_upgrade_points(void);
 void set_dynamic_player_have_ability_upgrade_points(bool _b);
 
@@ -29,11 +28,12 @@ void game_manager_set_stat_value_by_level(character_stat* stat, i32 level);
 void set_static_player_state_stat(character_stat_id stat_id, i32 level);
 void currency_souls_add(i32 value);
 
-bool    _add_ability(ability_type _type);
+bool    _add_ability(ability_id _type);
 bool    _upgrade_ability(ability* abl);
 void    _set_player_position(Vector2 position);
 ability _get_next_level(ability abl);
-ability _get_ability(ability_type type);
+const ability * _get_ability(ability_id _id);
+const std::array<ability, ABILITY_ID_MAX> * _get_all_abilities(void);
 const Character2D * _get_spawn_by_id(i32 _id);
 
 void render_game(void);

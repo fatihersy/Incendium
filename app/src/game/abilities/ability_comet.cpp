@@ -9,7 +9,7 @@
 #include "game/spritesheet.h"
 
 typedef struct ability_comet_state {
-  std::array<ability, ABILITY_TYPE_MAX> abilities;
+  std::array<ability, ABILITY_ID_MAX> abilities;
 
   const camera_metrics* in_camera_metrics;
   const app_settings* in_settings;
@@ -34,7 +34,7 @@ bool ability_comet_initialize(const camera_metrics* _camera_metrics,const app_se
 }
 
 void upgrade_ability_comet(ability* abl) {
-  if (abl->type <= ABILITY_TYPE_UNDEFINED || abl->type >= ABILITY_TYPE_MAX) {
+  if (abl->id <= ABILITY_ID_UNDEFINED || abl->id >= ABILITY_ID_MAX) {
     TraceLog(LOG_WARNING, "ability::upgrade_ability()::Ability is not initialized");
     return;
   }
@@ -62,7 +62,7 @@ ability get_ability_comet(void) {
   }
 
   std::array<ability_upgradables, ABILITY_UPG_MAX> comet_upgr = {ABILITY_UPG_DAMAGE, ABILITY_UPG_HITBOX, ABILITY_UPG_AMOUNT, ABILITY_UPG_UNDEFINED, ABILITY_UPG_UNDEFINED};
-  return ability("Comet", ABILITY_TYPE_COMET,
+  return ability("Comet", ABILITY_ID_COMET,
     comet_upgr,
     0.f, 1.2f, Vector2 {1.2f, 1.2f}, 1, 7, 0.f, 15,
     Vector2{30.f, 30.f}, Rectangle{2144, 736, 32, 32}
@@ -78,8 +78,8 @@ void update_ability_comet(ability* abl) {
     TraceLog(LOG_WARNING, "ability::update_comet()::Ability is not valid");
     return;
   }
-  if (abl->type != ABILITY_TYPE_COMET) {
-    TraceLog(LOG_WARNING, "ability::update_comet()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_TYPE_COMET, abl->type);
+  if (abl->id != ABILITY_ID_COMET) {
+    TraceLog(LOG_WARNING, "ability::update_comet()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_ID_COMET, abl->id);
     return;
   }
   if (!abl->is_active || !abl->is_initialized) {
@@ -135,8 +135,8 @@ void render_ability_comet(ability* abl){
     TraceLog(LOG_WARNING, "ability::render_comet()::Ability is not valid");
     return;
   }
-  if (abl->type != ABILITY_TYPE_COMET) {
-    TraceLog(LOG_WARNING, "ability::render_comet()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_TYPE_COMET, abl->type);
+  if (abl->id != ABILITY_ID_COMET) {
+    TraceLog(LOG_WARNING, "ability::render_comet()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_ID_COMET, abl->id);
     return;
   }
   if (!abl->is_active || !abl->is_initialized) {
@@ -161,8 +161,8 @@ void refresh_ability_comet(ability* abl) {
     TraceLog(LOG_WARNING, "ability::refresh_ability_comet()::Ability is null");
     return;
   }
-  if (abl->type != ABILITY_TYPE_COMET) {
-    TraceLog(LOG_WARNING, "ability::refresh_ability_comet()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_TYPE_COMET, abl->type);
+  if (abl->id != ABILITY_ID_COMET) {
+    TraceLog(LOG_WARNING, "ability::refresh_ability_comet()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_ID_COMET, abl->id);
     return;
   }
   if (abl->proj_count > MAX_ABILITY_PROJECTILE_COUNT) {

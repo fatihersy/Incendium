@@ -91,8 +91,9 @@ bool game_manager_initialize(const camera_metrics * in_camera_metrics, const app
   }
   state->player_state_static = (*get_default_player());
   
-  state->game_info.player_state_dynamic = get_player_state();
   state->game_info.in_spawns            = get_spawns();
+  state->game_info.player_state_dynamic = get_player_state();
+  state->game_info.player_state_static  = __builtin_addressof(state->player_state_static);
   state->game_info.mouse_pos_world      = __builtin_addressof(state->mouse_pos_world);
   state->game_info.mouse_pos_screen     = __builtin_addressof(state->mouse_pos_screen);
   state->game_info.ingame_phase         = __builtin_addressof(state->ingame_phase);
@@ -157,7 +158,7 @@ bool game_manager_reinit(const camera_metrics * in_camera_metrics, const app_set
   state->in_camera_metrics = in_camera_metrics;
   state->in_app_settings = in_app_settings;
   state->in_active_map = in_active_map_ptr;
-
+  *state->game_info.player_state_dynamic = state->player_state_static;
   return true;
 }
 
@@ -182,8 +183,8 @@ void update_game_manager(void) {
           }
         }
         update_spawns(state->game_info.player_state_dynamic->position);
-        update_abilities(__builtin_addressof(state->game_info.player_state_dynamic->ability_system));
         generate_in_game_info();
+        update_abilities(__builtin_addressof(state->game_info.player_state_dynamic->ability_system));
       }
       else {
         gm_end_game(false);
@@ -305,6 +306,7 @@ bool gm_start_game(worldmap_stage stage) {
     }
     state->game_info.player_state_dynamic = _player;
   }
+  *state->game_info.player_state_dynamic = state->player_state_static;
   state->stage = stage;
   _add_ability(state->game_info.player_state_dynamic->starter_ability);
 
@@ -321,10 +323,10 @@ bool gm_start_game(worldmap_stage stage) {
     game_manager_set_stat_trait_value_by_level(_stat_ptr, _trait_ptr->ingame_ops);
   }
   
-  //populate_map_with_spawns(stage.total_spawn_count);
-  //if (state->game_info.in_spawns->size() <= 0) {
-  //  return false;
-  //}
+  populate_map_with_spawns(stage.total_spawn_count);
+  if (state->game_info.in_spawns->size() <= 0) {
+    return false;
+  }
   player_state& p_player_dynamic = (*state->game_info.player_state_dynamic);
   p_player_dynamic.health_current = p_player_dynamic.stats.at(CHARACTER_STATS_HEALTH).buffer.i32[3];
   p_player_dynamic.health_perc = static_cast<f32>(p_player_dynamic.health_current) / static_cast<f32>(p_player_dynamic.stats.at(CHARACTER_STATS_HEALTH).buffer.i32[3]);
@@ -352,8 +354,8 @@ void gm_load_game(void) {
 
   for (size_t itr_000 = 0; itr_000 < state->player_state_static.stats.size(); ++itr_000) {
     i32 level = state->game_progression_data->player_data.stats.at(itr_000).current_level;
-    character_stat_id stat_id = state->game_progression_data->player_data.stats.at(itr_000).id;
-    if (level >= 0 and level < MAX_PLAYER_LEVEL and stat_id > CHARACTER_STATS_UNDEFINED and stat_id < CHARACTER_STATS_MAX) {
+    const character_stat& stat = state->player_state_static.stats.at(itr_000);
+    if (level - stat.base_level >= 0 and level < MAX_PLAYER_LEVEL) {
       set_static_player_state_stat(static_cast<character_stat_id>(itr_000), state->game_progression_data->player_data.stats.at(itr_000).current_level);
     }
     else {
@@ -475,7 +477,7 @@ i32 spawn_boss(void) {
 }
 
 void currency_souls_add(i32 value) {
-  state->game_info.collected_souls += value;
+  state->game_progression_data->currency_souls_player_have += value;
 }
 void generate_in_game_info(void) {
   if (!state || state == nullptr) {
@@ -539,7 +541,7 @@ void gm_update_player(void) {
       }
     }
 
-    for (size_t itr_000 = 0; itr_000 < ABILITY_TYPE_MAX; ++itr_000) {
+    for (size_t itr_000 = 0; itr_000 < ABILITY_ID_MAX; ++itr_000) {
       if (state->game_info.player_state_dynamic->ability_system.abilities.at(itr_000).is_active) {
         state->game_info.player_state_dynamic->ability_system.abilities.at(itr_000).ability_play_time += GetFrameTime();
       }
@@ -549,7 +551,7 @@ void gm_update_player(void) {
 // OPS
 
 // GET / SET
-i32 get_currency_souls(void) {
+i32 get_currency_souls_total(void) {
   return state->game_progression_data->currency_souls_player_have;
 }
 bool get_b_player_have_upgrade_points(void) {
@@ -572,9 +574,6 @@ void set_static_player_state_stat(character_stat_id stat_id, i32 level) {
   character_stat * _stat_ptr = __builtin_addressof(state->player_state_static.stats.at(stat_id));
   
   game_manager_set_stat_value_by_level(_stat_ptr, level);
-}
-void set_currency_souls(i32 value) {
-  state->game_progression_data->currency_souls_player_have = value;
 }
 const ingame_info* gm_get_ingame_info(void){
   if (not state or state == nullptr) {
@@ -605,7 +604,7 @@ void game_manager_set_stat_value_by_level(character_stat* stat, i32 level) {
   }
 
   i32 next_curve_value = level_curve[level];
-  stat->upgrade_cost = next_curve_value;
+  stat->upgrade_cost = level_curve[ (level+1) - stat->base_level ];
   stat->current_level = level;
   switch (stat->id) {
     case CHARACTER_STATS_HEALTH:{
@@ -743,22 +742,25 @@ void game_manager_set_stat_trait_value_by_level(character_stat* stat, data128 va
 // GET / SET
 
 // Exposed functions
-ability _get_ability(ability_type type) {
-  if (type <= ABILITY_TYPE_UNDEFINED or type >= ABILITY_TYPE_MAX) {
-    TraceLog(LOG_INFO, "game_manager::_get_ability()::Ability type is out of bound");
-    return ability();
+const ability * _get_ability(ability_id _id) {
+  if (_id <= ABILITY_ID_UNDEFINED or _id >= ABILITY_ID_MAX) {
+    TraceLog(LOG_INFO, "game_manager::_get_ability()::Ability id is out of bound");
+    return nullptr;
   }
-  return get_ability(type);
+  return get_ability(_id);
+}
+const std::array<ability, ABILITY_ID_MAX> * _get_all_abilities(void) {
+  return get_all_abilities();
 }
 const Character2D * _get_spawn_by_id(i32 _id) {
   return get_spawn_by_id(_id);
 }
-bool _add_ability(ability_type _type) {
-  if (_type <= ABILITY_TYPE_UNDEFINED or _type >= ABILITY_TYPE_MAX) {
-    TraceLog(LOG_INFO, "game_manager::_add_ability()::Ability type is out of bound");
+bool _add_ability(ability_id _id) {
+  if (_id <= ABILITY_ID_UNDEFINED or _id >= ABILITY_ID_MAX) {
+    TraceLog(LOG_INFO, "game_manager::_add_ability()::Ability id is out of bound");
     return false;
   }
-  ability abl = get_ability(_type);
+  ability abl = (*get_ability(_id));
   ability_play_system* system = __builtin_addressof(state->game_info.player_state_dynamic->ability_system);
   if (not system or system == nullptr) {
     TraceLog(LOG_WARNING, "game_manager::_add_ability()::Recieved system was NULL");
@@ -770,7 +772,7 @@ bool _add_ability(ability_type _type) {
   abl.is_active = true;
 
   refresh_ability(__builtin_addressof(abl));
-  system->abilities.at(_type) = abl;
+  system->abilities.at(_id) = abl;
   return true;
 }
 bool _upgrade_ability(ability* abl) {
@@ -784,7 +786,7 @@ bool _upgrade_ability(ability* abl) {
   return true;
 }
 ability _get_next_level(ability abl) {
-  if (not abl.is_initialized or abl.type <= ABILITY_TYPE_UNDEFINED or abl.type >= ABILITY_TYPE_MAX) {
+  if (not abl.is_initialized or abl.id <= ABILITY_ID_UNDEFINED or abl.id >= ABILITY_ID_MAX) {
     TraceLog(LOG_WARNING, "game_manager::_get_next_level()::Recieved ability has not initialized yet");
     return ability();
   }

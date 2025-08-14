@@ -22,7 +22,7 @@
     "editor.showFoldingControls" :"mouseover",
     "editor.renderWhitespace": "none",
     "editor.quickSuggestionsDelay": 0,
-    "editor.fontFamily": "miosevka regular",
+    "editor.fontFamily": "miosevka medium",
     "editor.fontSize": 14,
     "editor.fontLigatures": true,
     "editor.bracketPairColorization.enabled": true,
@@ -36,7 +36,7 @@
     "editor.tokenColorCustomizations": {
         "textMateRules": []
     },
-    "terminal.integrated.fontFamily": "miosevka regular",
+    "terminal.integrated.fontFamily": "miosevka medium",
     "terminal.integrated.defaultProfile.windows": "pwsh7",
     "terminal.integrated.defaultProfile.linux": "fish",
     "terminal.integrated.profiles.windows": {

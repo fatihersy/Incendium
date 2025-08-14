@@ -31,7 +31,7 @@ bool ability_bullet_initialize(const camera_metrics* _camera_metrics, const app_
 }
 
 void upgrade_ability_bullet(ability* abl) {
-  if (abl->type <= ABILITY_TYPE_UNDEFINED || abl->type >= ABILITY_TYPE_MAX) {
+  if (abl->id <= ABILITY_ID_UNDEFINED || abl->id >= ABILITY_ID_MAX) {
     TraceLog(LOG_WARNING, "ability::upgrade_ability()::Ability is not initialized");
     return;
   }
@@ -58,7 +58,7 @@ ability get_ability_bullet(void) {
     return ability();
   }
   std::array<ability_upgradables, ABILITY_UPG_MAX> bullet_upgr = {ABILITY_UPG_DAMAGE, ABILITY_UPG_HITBOX, ABILITY_UPG_AMOUNT, ABILITY_UPG_UNDEFINED, ABILITY_UPG_UNDEFINED};
-  return ability("Bullet", ABILITY_TYPE_BULLET,
+  return ability("Bullet", ABILITY_ID_BULLET,
     bullet_upgr,
     0.f, 1.f, Vector2 {1.f, 1.f}, 1, 3, 1.75f, 15,
     Vector2{30.f, 30.f}, Rectangle{2368, 736, 32, 32}
@@ -74,8 +74,8 @@ void update_ability_bullet(ability* abl) {
     TraceLog(LOG_WARNING, "ability::update_bullet()::Ability is not valid");
     return;
   }
-  if (abl->type != ABILITY_TYPE_BULLET) {
-    TraceLog(LOG_WARNING, "ability::update_bullet()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_TYPE_BULLET, abl->type);
+  if (abl->id != ABILITY_ID_BULLET) {
+    TraceLog(LOG_WARNING, "ability::update_bullet()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_ID_BULLET, abl->id);
     return;
   }
   if (!abl->is_active || !abl->is_initialized) {
@@ -87,12 +87,13 @@ void update_ability_bullet(ability* abl) {
   }
   player_state* player = reinterpret_cast<player_state*>(abl->p_owner);
   abl->position = player->position;
+  const f32& aoe_scale = player->stats.at(CHARACTER_STATS_AOE).buffer.f32[3];
 
   for (size_t iter = 0; iter < abl->projectiles.size(); iter++) {
     projectile& prj = abl->projectiles.at(iter);
     if (!prj.is_active) { continue; }
 
-    if (prj.duration <= 0) {
+    if (abl->mm_ex.f32[0] <= 0) {
       prj.position = player->position;
       prj.duration = abl->proj_duration;
       prj.direction = player->w_direction;
@@ -101,12 +102,20 @@ void update_ability_bullet(ability* abl) {
      prj.duration -= GetFrameTime();
     }
     prj.position.x += prj.direction == WORLD_DIRECTION_RIGHT ? abl->proj_speed : -abl->proj_speed;
-
     prj.collision.x = prj.position.x - prj.collision.width  * .5f;
     prj.collision.y = prj.position.y - prj.collision.height * .5f;
 
+    const f32 prj_collision_width = prj.collision.width * aoe_scale;
+    const f32 prj_collision_height = prj.collision.height * aoe_scale;
+    Rectangle prj_collision = Rectangle {
+      prj.collision.x - (prj_collision_width  * .5f),
+      prj.collision.y - (prj_collision_height * .5f),
+      prj_collision_width,
+      prj_collision_height,
+    };
+
     event_fire(EVENT_CODE_DAMAGE_ANY_SPAWN_IF_COLLIDE, event_context(
-      static_cast<i16>(prj.collision.x), static_cast<i16>(prj.collision.y), static_cast<i16>(prj.collision.width), static_cast<i16>(prj.collision.height),
+      static_cast<i16>(prj_collision.x), static_cast<i16>(prj_collision.y), static_cast<i16>(prj_collision.width), static_cast<i16>(prj_collision.height),
       static_cast<i16>(prj.damage + player->stats.at(CHARACTER_STATS_DAMAGE).buffer.i32[3]),
       static_cast<i16>(COLLISION_TYPE_RECTANGLE_RECTANGLE)
     ));
@@ -118,14 +127,15 @@ void render_ability_bullet(ability* abl){
     TraceLog(LOG_WARNING, "ability::render_bullet()::Ability is not valid");
     return;
   }
-  if (abl->type != ABILITY_TYPE_BULLET) {
-    TraceLog(LOG_WARNING, "ability::render_bullet()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_TYPE_BULLET, abl->type);
+  if (abl->id != ABILITY_ID_BULLET) {
+    TraceLog(LOG_WARNING, "ability::render_bullet()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_ID_BULLET, abl->id);
     return;
   }
   if (!abl->is_active || !abl->is_initialized) {
     TraceLog(LOG_WARNING, "ability::render_bullet()::Ability is not active or not initialized");
     return;
   }
+  const f32& aoe_scale = state->in_ingame_info->player_state_dynamic->stats.at(CHARACTER_STATS_AOE).buffer.f32[3];
 
   for (size_t itr_000 = 0; itr_000 < abl->projectiles.size(); ++itr_000) {
     projectile& prj = abl->projectiles.at(itr_000);
@@ -135,6 +145,8 @@ void render_ability_bullet(ability* abl){
       prj.animations.at(prj.active_sprite).current_frame_rect.width  * abl->proj_sprite_scale,
       prj.animations.at(prj.active_sprite).current_frame_rect.height * abl->proj_sprite_scale
     };
+    dim.x += (dim.x * aoe_scale);
+    dim.y += (dim.y * aoe_scale);
     prj.animations.at(prj.active_sprite).origin.x = dim.x / 2.f;
     prj.animations.at(prj.active_sprite).origin.y = dim.y / 2.f;
     play_sprite_on_site(__builtin_addressof(prj.animations.at(prj.active_sprite)), WHITE, Rectangle { prj.position.x, prj.position.y, dim.x, dim.y });
@@ -145,8 +157,8 @@ void refresh_ability_bullet(ability* abl) {
     TraceLog(LOG_WARNING, "ability::refresh_ability_bullet()::Ability is null");
     return;
   }
-  if (abl->type != ABILITY_TYPE_BULLET) {
-    TraceLog(LOG_WARNING, "ability::refresh_ability_bullet()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_TYPE_BULLET, abl->type);
+  if (abl->id != ABILITY_ID_BULLET) {
+    TraceLog(LOG_WARNING, "ability::refresh_ability_bullet()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_ID_BULLET, abl->id);
     return;
   }
   if (!abl->is_active || !abl->is_initialized) {

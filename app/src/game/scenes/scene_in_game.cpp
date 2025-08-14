@@ -37,7 +37,7 @@ typedef struct scene_in_game_state {
   sig_ingame_state ingame_state;
   sig_ingame_state ingame_state_prev;
   i32 hovered_spawn;
-  ability_type hovered_ability;
+  ability_id hovered_ability;
   i32 hovered_projectile;
   ui_fade_control_system sig_fade;
 
@@ -53,7 +53,7 @@ typedef struct scene_in_game_state {
     this->in_ingame_info = nullptr;
     this->ingame_state = INGAME_STATE_UNDEFINED;
     this->hovered_spawn = I32_MAX;
-    this->hovered_ability = ABILITY_TYPE_UNDEFINED;
+    this->hovered_ability = ABILITY_ID_UNDEFINED;
     this->hovered_projectile = I32_MAX;
     this->sig_fade = ui_fade_control_system();
   }
@@ -176,7 +176,7 @@ void reset_game(void);
   state->debug_info_panel = state->default_panel;
 
   state->hovered_spawn = U16_MAX;
-  state->hovered_ability = ABILITY_TYPE_MAX;
+  state->hovered_ability = ABILITY_ID_MAX;
   state->hovered_projectile = U16_MAX;
   sig_change_ingame_state(INGAME_STATE_IDLE);
 
@@ -205,7 +205,7 @@ void end_scene_in_game(void) {
 
   gm_end_game(state->in_ingame_info->is_win);
   state->hovered_spawn = U16_MAX;
-  state->hovered_ability = ABILITY_TYPE_MAX;
+  state->hovered_ability = ABILITY_ID_MAX;
   state->hovered_projectile = U16_MAX;
 }
 
@@ -338,7 +338,7 @@ void render_interface_in_game(void) {
       render_user_interface();
       return; 
     }
-    case INGAME_STATE_PLAY: {  
+    case INGAME_STATE_PLAY: {
       switch ( (*state->in_ingame_info->ingame_phase) ) {
         case INGAME_PHASE_CLEAR_ZOMBIES: {
           if (get_b_player_have_upgrade_points()) {
@@ -445,7 +445,7 @@ void render_interface_in_game(void) {
           }
           EndScissorMode();
       }
-      if(state->hovered_ability > 0 && state->hovered_ability < ABILITY_TYPE_MAX) {
+      if(state->hovered_ability > 0 && state->hovered_ability < ABILITY_ID_MAX) {
           const ability* const abl = GET_PLAYER_DYNAMIC_ABILITY(state->hovered_ability);
           panel* const pnl = __builtin_addressof(state->debug_info_panel);
           pnl->dest = Rectangle {
@@ -478,7 +478,10 @@ void render_interface_in_game(void) {
         "Remaining: %d", state->in_ingame_info->in_spawns->size()
       );
       gui_label_format(FONT_TYPE_ABRACADABRA, 1, SIG_BASE_RENDER_WIDTH * .75f, SCREEN_OFFSET.y * 5.f, WHITE, false, false, 
-        "Souls: %d", get_currency_souls()
+        "Collected Souls: %d", state->in_ingame_info->collected_souls
+      );
+      gui_label_format(FONT_TYPE_ABRACADABRA, 1, SIG_BASE_RENDER_WIDTH * .75f, SCREEN_OFFSET.y * 5.f, WHITE, false, false, 
+        "Total Souls: %d", state->in_ingame_info->collected_souls
       );
       gui_label_format(FONT_TYPE_ABRACADABRA, 1, 0, SIG_BASE_RENDER_HEIGHT * .35f, WHITE, false, false, 
         "Health: %d", state->in_ingame_info->player_state_dynamic->stats.at(CHARACTER_STATS_HEALTH).buffer.i32[3]
@@ -539,7 +542,7 @@ void in_game_update_mouse_bindings(void) {
         }
       }
       const player_state* const player = state->in_ingame_info->player_state_dynamic;
-      state->hovered_ability = ABILITY_TYPE_UNDEFINED;
+      state->hovered_ability = ABILITY_ID_UNDEFINED;
       state->hovered_projectile = U16_MAX;
       for (size_t iter = 0; iter < player->ability_system.abilities.size(); ++iter) {
         const ability* abl = __builtin_addressof(player->ability_system.abilities.at(iter));
@@ -548,7 +551,7 @@ void in_game_update_mouse_bindings(void) {
           const projectile* prj = __builtin_addressof(abl->projectiles.at(j));
           if (!prj || !prj->is_active) { continue; }
           if (CheckCollisionPointRec(*mouse_pos_world, prj->collision)) {
-            state->hovered_ability = abl->type;
+            state->hovered_ability = abl->id;
             state->hovered_projectile = j;
             break;
           }
@@ -630,11 +633,11 @@ void in_game_update_bindings(void) {
 
 void draw_in_game_upgrade_panel(u16 which_panel, Rectangle panel_dest) {
   const ability* upg = __builtin_addressof(state->ability_upgrade_choices.at(which_panel));
-  if (upg->type < 0 && upg->type >= state->in_ingame_info->player_state_dynamic->ability_system.abilities.size()) {
+  if (upg->id < 0 && upg->id >= state->in_ingame_info->player_state_dynamic->ability_system.abilities.size()) {
     return;
   }
-  const ability* abl = GET_PLAYER_DYNAMIC_ABILITY(upg->type);
-  if (upg->type <= ABILITY_TYPE_UNDEFINED || upg->type >= ABILITY_TYPE_MAX) {
+  const ability* abl = GET_PLAYER_DYNAMIC_ABILITY(upg->id);
+  if (upg->id <= ABILITY_ID_UNDEFINED || upg->id >= ABILITY_ID_MAX) {
     TraceLog(LOG_WARNING, "scene_in_game::draw_in_game_upgrade_panel()::Upgraded ability is out of bounds"); 
     return;
   }
@@ -793,63 +796,9 @@ void draw_ingame_state_play_general(void) {
       static_cast<f32>(state->in_app_settings->render_height) * .02f,
     }, false
   );
-}
-void draw_ingame_state_play_ui_clear_zombies(void) {
-  Rectangle exp_bar_dest = Rectangle {0, 0, static_cast<f32>(state->in_app_settings->render_width), static_cast<f32>(state->in_app_settings->render_height) * .05f};
-  gui_progress_bar(PRG_BAR_ID_PLAYER_EXPERIANCE, exp_bar_dest, false);
-  const Rectangle * exp_bar_orn_src_rect = get_atlas_texture_source_rect(ATLAS_TEX_ID_DARK_FANTASY_BOSSBAR_6_MIDDLE);
-  f32 exp_bar_orn_height_scale = exp_bar_orn_src_rect->width / exp_bar_orn_src_rect->height;
-  f32 exp_bar_orn_width = exp_bar_dest.height * exp_bar_orn_height_scale;
-  Rectangle exp_bar_orn_dest = Rectangle { 
-    exp_bar_dest.x + exp_bar_dest.width * .5f + ((exp_bar_orn_width / exp_bar_orn_src_rect->width) * .5f),  exp_bar_dest.y,  
-    exp_bar_orn_width,  exp_bar_dest.height
-  };
-  gui_draw_atlas_texture_id(ATLAS_TEX_ID_DARK_FANTASY_BOSSBAR_6_MIDDLE, exp_bar_orn_dest, Vector2{exp_bar_orn_dest.width * .5f, 0.f}, 0.f);
 
-  gui_label_format(FONT_TYPE_ABRACADABRA, 1, 
-    static_cast<f32>(state->in_app_settings->render_width_div2), 
-    static_cast<f32>(state->in_app_settings->render_height * .05f), WHITE, true, false, "%.2d:%.2d", 
-    static_cast<i32>(state->in_ingame_info->play_time / 60.f),
-    static_cast<i32>(state->in_ingame_info->play_time)
-  );
-}
-void draw_ingame_state_play_ui_defeat_boss(void) {
-  f32 boss_health_bar_width = static_cast<f32>(state->in_app_settings->render_width) * .5f;
-  Rectangle boss_health_bar_dest = Rectangle {
-    static_cast<f32>(state->in_app_settings->render_width_div2) - (boss_health_bar_width * .5f), 
-    static_cast<f32>(state->in_app_settings->render_height * .05f), 
-    boss_health_bar_width,
-    static_cast<f32>(state->in_app_settings->render_height * .035f) 
-  };
-  gui_progress_bar(PRG_BAR_ID_BOSS_HEALTH, boss_health_bar_dest, false, Color {192, 57, 43, 96});
 
-  const Character2D * const boss = _get_spawn_by_id(state->in_ingame_info->stage_boss_id);
-  Vector2 label_pos = VECTOR2(static_cast<f32>(state->in_app_settings->render_width_div2), static_cast<f32>(state->in_app_settings->render_height * .75f));
-  if (boss) {
-    f32 boss_health_perc = static_cast<f32>(boss->health_current) / static_cast<f32>(boss->health_max);
-    gui_label_format(FONT_TYPE_ABRACADABRA, 1, label_pos.x, label_pos.y, WHITE, true, false, "Boss health: %.1f", boss_health_perc);
-
-    if (not boss->is_on_screen) {
-      const Vector2 boss_location = Vector2 {
-        boss->position.x + boss->collision.width * .5f,
-        boss->position.y + boss->collision.height * .5f,
-      };
-      const f32 rotation = get_movement_rotation(state->in_ingame_info->player_state_dynamic->position, boss_location) + 90.f;
-      Vector2 arrow_pos_world = move_towards(state->in_ingame_info->player_state_dynamic->position, boss_location, static_cast<f32>(state->in_app_settings->render_height * .4f));
-      Vector2 arrow_pos_screen = GetWorldToScreen2D(arrow_pos_world, state->in_camera_metrics->handle);
-      Rectangle boss_location_indicator_dest = Rectangle {
-        arrow_pos_screen.x, arrow_pos_screen.y, 
-        static_cast<f32>(state->in_app_settings->render_height * .035f),
-        static_cast<f32>(state->in_app_settings->render_height * .035f) 
-      };
-      gui_draw_atlas_texture_id(ATLAS_TEX_ID_ARROW, boss_location_indicator_dest, ZEROVEC2, rotation);
-    }
-  }
-  else {
-    gui_label("Boss health: -1", FONT_TYPE_ABRACADABRA, 1, label_pos, WHITE, true, false);
-  }
-
-  // DEBUG TODO: Remove later
+    /* DEBUG TODO: Remove later
     {
       player_state * _player = state->in_ingame_info->player_state_dynamic;
       i32 font_size = 1;
@@ -908,36 +857,83 @@ void draw_ingame_state_play_ui_defeat_boss(void) {
         WHITE, false, false, "Total TP: %d", _player->stats.at(CHARACTER_STATS_TOTAL_TRAIT_POINTS).buffer.i32[3]
       );
     }
-    //CHARACTER_STATS_HEALTH, i32
-    //CHARACTER_STATS_HP_REGEN, i32
-    //CHARACTER_STATS_MOVE_SPEED, f32
-    //CHARACTER_STATS_AOE, f32
-    //CHARACTER_STATS_DAMAGE, i32
-    //CHARACTER_STATS_ABILITY_CD, f32
-    //CHARACTER_STATS_PROJECTILE_AMOUTH, i32
-    //CHARACTER_STATS_EXP_GAIN, f32
-    //CHARACTER_STATS_TOTAL_TRAIT_POINTS, i32
-  // DEBUG
+  // DEBUG */
 
+
+}
+void draw_ingame_state_play_ui_clear_zombies(void) {
+  Rectangle exp_bar_dest = Rectangle {0, 0, static_cast<f32>(state->in_app_settings->render_width), static_cast<f32>(state->in_app_settings->render_height) * .05f};
+  gui_progress_bar(PRG_BAR_ID_PLAYER_EXPERIANCE, exp_bar_dest, false);
+  const Rectangle * exp_bar_orn_src_rect = get_atlas_texture_source_rect(ATLAS_TEX_ID_DARK_FANTASY_BOSSBAR_6_MIDDLE);
+  f32 exp_bar_orn_height_scale = exp_bar_orn_src_rect->width / exp_bar_orn_src_rect->height;
+  f32 exp_bar_orn_width = exp_bar_dest.height * exp_bar_orn_height_scale;
+  Rectangle exp_bar_orn_dest = Rectangle { 
+    exp_bar_dest.x + exp_bar_dest.width * .5f + ((exp_bar_orn_width / exp_bar_orn_src_rect->width) * .5f),  exp_bar_dest.y,  
+    exp_bar_orn_width,  exp_bar_dest.height
+  };
+  gui_draw_atlas_texture_id(ATLAS_TEX_ID_DARK_FANTASY_BOSSBAR_6_MIDDLE, exp_bar_orn_dest, Vector2{exp_bar_orn_dest.width * .5f, 0.f}, 0.f);
+
+  gui_label_format(FONT_TYPE_ABRACADABRA, 1, 
+    static_cast<f32>(state->in_app_settings->render_width_div2), 
+    static_cast<f32>(state->in_app_settings->render_height * .05f), WHITE, true, false, "%.2d:%.2d", 
+    static_cast<i32>(state->in_ingame_info->play_time / 60.f),
+    static_cast<i32>(state->in_ingame_info->play_time)
+  );
+}
+void draw_ingame_state_play_ui_defeat_boss(void) {
+  f32 boss_health_bar_width = static_cast<f32>(state->in_app_settings->render_width) * .5f;
+  Rectangle boss_health_bar_dest = Rectangle {
+    static_cast<f32>(state->in_app_settings->render_width_div2) - (boss_health_bar_width * .5f), 
+    static_cast<f32>(state->in_app_settings->render_height * .05f), 
+    boss_health_bar_width,
+    static_cast<f32>(state->in_app_settings->render_height * .035f) 
+  };
+  gui_progress_bar(PRG_BAR_ID_BOSS_HEALTH, boss_health_bar_dest, false, Color {192, 57, 43, 96});
+
+  const Character2D * const boss = _get_spawn_by_id(state->in_ingame_info->stage_boss_id);
+  Vector2 label_pos = VECTOR2(static_cast<f32>(state->in_app_settings->render_width_div2), static_cast<f32>(state->in_app_settings->render_height * .75f));
+  if (boss) {
+    f32 boss_health_perc = static_cast<f32>(boss->health_current) / static_cast<f32>(boss->health_max);
+    gui_label_format(FONT_TYPE_ABRACADABRA, 1, label_pos.x, label_pos.y, WHITE, true, false, "Boss health: %.1f", boss_health_perc);
+
+    if (not boss->is_on_screen) {
+      const Vector2 boss_location = Vector2 {
+        boss->position.x + boss->collision.width * .5f,
+        boss->position.y + boss->collision.height * .5f,
+      };
+      const f32 rotation = get_movement_rotation(state->in_ingame_info->player_state_dynamic->position, boss_location) + 90.f;
+      Vector2 arrow_pos_world = move_towards(state->in_ingame_info->player_state_dynamic->position, boss_location, static_cast<f32>(state->in_app_settings->render_height * .4f));
+      Vector2 arrow_pos_screen = GetWorldToScreen2D(arrow_pos_world, state->in_camera_metrics->handle);
+      Rectangle boss_location_indicator_dest = Rectangle {
+        arrow_pos_screen.x, arrow_pos_screen.y, 
+        static_cast<f32>(state->in_app_settings->render_height * .035f),
+        static_cast<f32>(state->in_app_settings->render_height * .035f) 
+      };
+      gui_draw_atlas_texture_id(ATLAS_TEX_ID_ARROW, boss_location_indicator_dest, ZEROVEC2, rotation);
+    }
+  }
+  else {
+    gui_label("Boss health: -1", FONT_TYPE_ABRACADABRA, 1, label_pos, WHITE, true, false);
+  }
 }
 void prepare_ability_upgrade_state(void) {
   for (int i=0; i<MAX_UPDATE_ABILITY_PANEL_COUNT; ++i) {
     panel* pnl = __builtin_addressof(state->ability_upg_panels.at(i));
     ability* pnl_slot = __builtin_addressof(state->ability_upgrade_choices.at(i));
-    if(pnl->buffer.u16[0] <= 0 || pnl->buffer.u16[0] >= ABILITY_TYPE_MAX) {
-      pnl->buffer.u16[0] = get_random(ABILITY_TYPE_UNDEFINED+1,ABILITY_TYPE_MAX-1);
+    if(pnl->buffer.u16[0] <= 0 || pnl->buffer.u16[0] >= ABILITY_ID_MAX) {
+      pnl->buffer.u16[0] = get_random(ABILITY_ID_UNDEFINED+1,ABILITY_ID_MAX-1);
     }
     if (pnl->buffer.u16[0] < 0 || pnl->buffer.u16[0] >= state->in_ingame_info->player_state_dynamic->ability_system.abilities.size()) {
       continue;
     }
-    const ability* player_ability = GET_PLAYER_DYNAMIC_ABILITY(static_cast<ability_type>(pnl->buffer.u16[0])); // INFO: do we need upgrade the ability player already have
-    if (player_ability->type <= ABILITY_TYPE_UNDEFINED || player_ability->type >= ABILITY_TYPE_MAX) {
-      *pnl_slot = _get_ability(static_cast<ability_type>(pnl->buffer.u16[0]));
+    const ability* player_ability = GET_PLAYER_DYNAMIC_ABILITY(static_cast<ability_id>(pnl->buffer.u16[0])); // INFO: do we need upgrade the ability player already have
+    if (player_ability->id <= ABILITY_ID_UNDEFINED || player_ability->id >= ABILITY_ID_MAX) {
+      *pnl_slot = (*_get_ability(static_cast<ability_id>(pnl->buffer.u16[0])));
     }
     else {
       *pnl_slot = _get_next_level(*player_ability);
     }
-    if (pnl_slot->type <= ABILITY_TYPE_UNDEFINED || pnl_slot->type >= ABILITY_TYPE_MAX) {
+    if (pnl_slot->id <= ABILITY_ID_UNDEFINED || pnl_slot->id >= ABILITY_ID_MAX) {
       TraceLog(LOG_WARNING, "scene_in_game::make_passive_selection_panel_ready()::Ability didn't registered yet"); 
       continue;
     }
@@ -947,10 +943,10 @@ void prepare_ability_upgrade_state(void) {
 void end_ability_upgrade_state(u16 which_panel_chosen) {
   ability* new_ability = __builtin_addressof(state->ability_upgrade_choices.at(which_panel_chosen));
   if (new_ability->level >= MAX_ABILITY_LEVEL || new_ability->level <= 1) {
-    _add_ability(new_ability->type);
+    _add_ability(new_ability->id);
   }
   else {
-    _upgrade_ability(GET_PLAYER_DYNAMIC_ABILITY(new_ability->type)); 
+    _upgrade_ability(GET_PLAYER_DYNAMIC_ABILITY(new_ability->id)); 
   }
   state->ability_upgrade_choices.fill(ability());
   set_dynamic_player_have_ability_upgrade_points(false);

@@ -6,18 +6,20 @@ constexpr void render_sprite(const spritesheet * sheet,const Color _tint,const R
 constexpr void render_sprite_pro(const spritesheet * sheet, const Rectangle source, const Rectangle dest, const Vector2 origin, const f32 rotation, const Color _tint);
  
 void update_sprite(spritesheet *const sheet) {
-  if (!sheet || sheet == nullptr ) {
+  if (not sheet or sheet == nullptr) {
     TraceLog(LOG_ERROR, "spritesheet::update_sprite()::Sheet is invalid");
     return;
   }
-  if (sheet->fps == 0) {
+  if (sheet->fps <= 0) {
     TraceLog(LOG_ERROR, "spritesheet::update_sprite()::Sheet not meant to be playable");
     return;
   }
-  sheet->counter++;
+  sheet->time_accumulator += GetFrameTime();
+  f32 time_per_frame = 1.0f / static_cast<f32>(sheet->fps);
 
-  if (sheet->counter >= 60 / sheet->fps) {
-    sheet->counter = 0;
+  while (sheet->time_accumulator >= time_per_frame) 
+  {
+    sheet->time_accumulator -= time_per_frame;
     sheet->current_col++;
     sheet->current_frame++;
     if (sheet->current_col >= sheet->col_total) {
@@ -194,7 +196,7 @@ void stop_sprite(spritesheet *const sheet, bool reset) {
     return;
   }
   if (reset) {
-    sheet->counter = 0;
+    sheet->time_accumulator = 0.f;
     sheet->current_col = 0;
     sheet->current_row = 0;
     sheet->current_frame_rect.x = 0;
@@ -208,7 +210,7 @@ void reset_sprite(spritesheet *const sheet, bool _retrospective) {
     TraceLog(LOG_ERROR, "resource::reset_sprite()::sheet is invalid");
     return;
   }
-  sheet->counter = 0;
+  sheet->time_accumulator = 0.f;
   sheet->current_col = 0;
   sheet->current_row = 0;
   sheet->current_frame = 0;

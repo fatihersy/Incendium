@@ -8,7 +8,7 @@
 #include "game/spritesheet.h"
 
 typedef struct ability_fireball_state {
-  std::array<ability, ABILITY_TYPE_MAX> abilities;
+  std::array<ability, ABILITY_ID_MAX> abilities;
 
   const camera_metrics* in_camera_metrics;
   const app_settings* in_settings;
@@ -32,14 +32,14 @@ bool ability_fireball_initialize(const camera_metrics* _camera_metrics,const app
 }
 
 void upgrade_ability_fireball(ability* abl) {
-  if (abl->type <= ABILITY_TYPE_UNDEFINED || abl->type >= ABILITY_TYPE_MAX) {
+  if (abl->id <= ABILITY_ID_UNDEFINED || abl->id >= ABILITY_ID_MAX) {
     TraceLog(LOG_WARNING, "ability::upgrade_ability()::Ability is not initialized");
     return;
   }
   ++abl->level;
 
-  for (int i=0; i<ABILITY_UPG_MAX; ++i) {
-    switch (abl->upgradables.at(i)) {
+  for (size_t itr_000 = 0; itr_000 < ABILITY_UPG_MAX; ++itr_000) {
+    switch (abl->upgradables.at(itr_000)) {
       case ABILITY_UPG_DAMAGE: {
         abl->base_damage += abl->level * 2;
         break;
@@ -59,7 +59,7 @@ ability get_ability_fireball(void) {
     return ability();
   }
   std::array<ability_upgradables, ABILITY_UPG_MAX> fireball_upgr = {ABILITY_UPG_DAMAGE, ABILITY_UPG_SPEED, ABILITY_UPG_AMOUNT, ABILITY_UPG_UNDEFINED, ABILITY_UPG_UNDEFINED};
-  return ability("Fireball", ABILITY_TYPE_FIREBALL,
+  return ability("Fireball", ABILITY_ID_FIREBALL,
     fireball_upgr,
     0.f, 1.f, Vector2 {1.f, 1.f}, 1, 1, 0.f, 15,
     Vector2{30.f, 30.f}, Rectangle{2176, 736, 32, 32}
@@ -75,8 +75,8 @@ void update_ability_fireball(ability* abl) {
     TraceLog(LOG_WARNING, "ability::update_fireball()::Ability is not valid");
     return;
   }
-  if (abl->type != ABILITY_TYPE_FIREBALL) {
-    TraceLog(LOG_WARNING, "ability::update_fireball()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_TYPE_FIREBALL, abl->type);
+  if (abl->id != ABILITY_ID_FIREBALL) {
+    TraceLog(LOG_WARNING, "ability::update_fireball()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_ID_FIREBALL, abl->id);
     return;
   }
   if (!abl->is_active || !abl->is_initialized) {
@@ -89,6 +89,7 @@ void update_ability_fireball(ability* abl) {
   player_state* player = reinterpret_cast<player_state*>(abl->p_owner);
   abl->position = player->position;
   abl->rotation += abl->proj_speed;
+  const f32& aoe_scale = player->stats.at(CHARACTER_STATS_AOE).buffer.f32[3];
 
   if (abl->rotation > 360) abl->rotation = 0;
 
@@ -101,9 +102,18 @@ void update_ability_fireball(ability* abl) {
     prj.position = get_a_point_of_a_circle( abl->position, (abl->level * 3.f) + player->collision.height + 15, angle);
     prj.collision.x = prj.position.x - (prj.collision.width * .5f);
     prj.collision.y = prj.position.y - (prj.collision.width * .5f);
+    
+    const f32 prj_collision_width = prj.collision.width * aoe_scale;
+    const f32 prj_collision_height = prj.collision.height * aoe_scale;
+    Rectangle prj_collision = Rectangle {
+      prj.collision.x - (prj_collision_width  * .5f),
+      prj.collision.y - (prj_collision_height * .5f),
+      prj_collision_width,
+      prj_collision_height,
+    };
 
     event_fire(EVENT_CODE_DAMAGE_ANY_SPAWN_IF_COLLIDE, event_context(
-      static_cast<i16>(prj.collision.x),     static_cast<i16>(prj.collision.y), static_cast<i16>(prj.collision.width), static_cast<i16>(prj.collision.height),
+      static_cast<i16>(prj_collision.x),     static_cast<i16>(prj_collision.y), static_cast<i16>(prj_collision.width), static_cast<i16>(prj_collision.height),
       static_cast<i16>(prj.damage + player->stats.at(CHARACTER_STATS_DAMAGE).buffer.i32[3]),
       static_cast<i16>(COLLISION_TYPE_RECTANGLE_RECTANGLE)
     ));
@@ -116,14 +126,15 @@ void render_ability_fireball(ability* abl){
     TraceLog(LOG_WARNING, "ability::render_fireball()::Ability is not valid");
     return;
   }
-  if (abl->type != ABILITY_TYPE_FIREBALL) {
-    TraceLog(LOG_WARNING, "ability::render_fireball()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_TYPE_FIREBALL, abl->type);
+  if (abl->id != ABILITY_ID_FIREBALL) {
+    TraceLog(LOG_WARNING, "ability::render_fireball()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_ID_FIREBALL, abl->id);
     return;
   }
   if (!abl->is_active || !abl->is_initialized) {
     TraceLog(LOG_WARNING, "ability::render_fireball()::Ability is not active or not initialized");
     return;
   }
+  const f32& aoe_scale = state->in_ingame_info->player_state_dynamic->stats.at(CHARACTER_STATS_AOE).buffer.f32[3];
 
   for (size_t itr_000 = 0; itr_000 < abl->projectiles.size(); ++itr_000) {
     projectile& prj = abl->projectiles.at(itr_000);
@@ -132,6 +143,8 @@ void render_ability_fireball(ability* abl){
       prj.animations.at(prj.active_sprite).current_frame_rect.width  * abl->proj_sprite_scale,
       prj.animations.at(prj.active_sprite).current_frame_rect.height * abl->proj_sprite_scale
     };
+    dim.x += (dim.x * aoe_scale * .5f);
+    dim.y += (dim.y * aoe_scale * .5f);
     prj.animations.at(prj.active_sprite).origin.x = dim.x / 2.f;
     prj.animations.at(prj.active_sprite).origin.y = dim.y / 2.f;
     play_sprite_on_site(__builtin_addressof(prj.animations.at(prj.active_sprite)), WHITE, Rectangle { prj.position.x, prj.position.y, dim.x, dim.y });
@@ -143,8 +156,8 @@ void refresh_ability_fireball(ability* abl) {
     TraceLog(LOG_WARNING, "ability::refresh_ability_fireball()::Ability is null");
     return;
   }
-  if (abl->type != ABILITY_TYPE_FIREBALL) {
-    TraceLog(LOG_WARNING, "ability::refresh_ability_fireball()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_TYPE_FIREBALL, abl->type);
+  if (abl->id != ABILITY_ID_FIREBALL) {
+    TraceLog(LOG_WARNING, "ability::refresh_ability_fireball()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_ID_FIREBALL, abl->id);
     return;
   }
   if (abl->proj_count > MAX_ABILITY_PROJECTILE_COUNT) {

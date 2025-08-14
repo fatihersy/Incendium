@@ -6,7 +6,8 @@
 
 [[__nodiscard__]] bool ability_system_initialize(const camera_metrics* _camera_metrics,const app_settings* settings,const ingame_info* _ingame_info);
 
-ability get_ability(ability_type _type);
+const ability* get_ability(ability_id _type);
+const std::array<ability, ABILITY_ID_MAX> * get_all_abilities(void);
 ability get_next_level(ability abl);
 void upgrade_ability(ability* abl);
 void refresh_ability(ability* abl);

@@ -7,24 +7,47 @@
 #include "game/spritesheet.h"
 
 typedef struct ability_firetrail_state {
-  std::array<ability, ABILITY_TYPE_MAX> abilities;
+  std::array<ability, ABILITY_ID_MAX> abilities;
 
   const camera_metrics* in_camera_metrics;
   const app_settings* in_settings;
-  const ingame_info* in_ingame_info; 
+  const ingame_info* in_ingame_info;
+
+  ability_firetrail_state(void) {
+    this->abilities.fill(ability());
+    this->in_camera_metrics = nullptr;
+    this->in_settings = nullptr;
+    this->in_ingame_info = nullptr;
+  }
 } ability_firetrail_state;
-static ability_firetrail_state * state;
+
+static ability_firetrail_state * state = nullptr;
 
 bool ability_firetrail_initialize(const camera_metrics* _camera_metrics,const app_settings* _settings,const ingame_info* _ingame_info) {
-  if (state) {
-    TraceLog(LOG_WARNING, "ability::ability_system_initialize()::Init called multiple times");
+  if (state and state != nullptr) {
+    TraceLog(LOG_WARNING, "ability_firetrail::ability_firetrail_initialize()::Init called multiple times");
     return false;
   }
   state = (ability_firetrail_state*)allocate_memory_linear(sizeof(ability_firetrail_state),true);
-  if (!state) {
-    TraceLog(LOG_ERROR, "ability::ability_system_initialize()::Failed to allocate memory");
+  if (not state or state == nullptr) {
+    TraceLog(LOG_ERROR, "ability_firetrail::ability_firetrail_initialize()::Failed to allocate memory");
     return false;
   }
+  *state = ability_firetrail_state();
+
+  if (not _camera_metrics or _camera_metrics == nullptr) {
+    TraceLog(LOG_ERROR, "ability_firetrail::ability_firetrail_initialize()::Camera metric pointer is invalid");
+    return false;
+  }
+  if (not _settings or _settings == nullptr) {
+    TraceLog(LOG_ERROR, "ability_firetrail::ability_firetrail_initialize()::Settings pointer is invalid");
+    return false;
+  }
+  if (not _ingame_info or _ingame_info == nullptr) {
+    TraceLog(LOG_ERROR, "ability_firetrail::ability_firetrail_initialize()::Game info pointer is invalid");
+    return false;
+  }
+
   state->in_settings = _settings;
   state->in_camera_metrics = _camera_metrics;
   state->in_ingame_info = _ingame_info;
@@ -32,7 +55,7 @@ bool ability_firetrail_initialize(const camera_metrics* _camera_metrics,const ap
 }
 
 void upgrade_ability_firetrail(ability* abl) {
-  if (abl->type <= ABILITY_TYPE_UNDEFINED || abl->type >= ABILITY_TYPE_MAX) {
+  if (abl->id <= ABILITY_ID_UNDEFINED || abl->id >= ABILITY_ID_MAX) {
     TraceLog(LOG_WARNING, "ability::upgrade_ability()::Ability is not initialized");
     return;
   }
@@ -56,13 +79,13 @@ void upgrade_ability_firetrail(ability* abl) {
 }
 
 ability get_ability_firetrail(void) {
-  if (!state) {
+  if (not state or state == nullptr) {
     return ability();
   }
   std::array<ability_upgradables, ABILITY_UPG_MAX> fire_trail_upgr = {ABILITY_UPG_DAMAGE, ABILITY_UPG_HITBOX, ABILITY_UPG_UNDEFINED, ABILITY_UPG_UNDEFINED, ABILITY_UPG_UNDEFINED};
-  return ability("Fire Trail", ABILITY_TYPE_FIRETRAIL,
+  return ability("Fire Trail", ABILITY_ID_FIRETRAIL,
     fire_trail_upgr,
-    0.f, 3.5f, Vector2 {.25f, .25f}, 0u, 0u, 3.f, 11u,
+    0.5f, 3.5f, Vector2 {.25f, .25f}, 0, 0, 3.f, 3,
     Vector2{128.f, 128.f}, Rectangle{2304.f, 736.f, 32.f, 32.f}
   );
 }
@@ -73,26 +96,30 @@ ability get_ability_firetrail_next_level(ability abl) {
 
 void update_ability_firetrail(ability* abl) {
   if (abl == nullptr) {
-    TraceLog(LOG_WARNING, "ability::update_firetrail()::Ability is not valid");
+    TraceLog(LOG_WARNING, "ability::update_ability_firetrail()::Ability is not valid");
     return;
   }
-  if (abl->type != ABILITY_TYPE_FIRETRAIL) {
-    TraceLog(LOG_WARNING, "ability::update_firetrail()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_TYPE_FIRETRAIL, abl->type);
+  if (abl->id != ABILITY_ID_FIRETRAIL) {
+    TraceLog(LOG_WARNING, "ability::update_ability_firetrail()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_ID_FIRETRAIL, abl->id);
     return;
   }
   if (!abl->is_active || !abl->is_initialized) {
-    TraceLog(LOG_WARNING, "ability::update_firetrail()::Ability is not active or not initialized");
+    TraceLog(LOG_WARNING, "ability::update_ability_firetrail()::Ability is not active or not initialized");
     return;
   }
   if (abl->p_owner == nullptr || state->in_ingame_info == nullptr || state->in_ingame_info->nearest_spawn == nullptr) {
-    TraceLog(LOG_WARNING, "ability::update_firetrail()::Ability pointer(s) not valid");
+    TraceLog(LOG_WARNING, "ability::update_ability_firetrail()::Ability pointer(s) not valid");
     return;
   }
   player_state* p_player = reinterpret_cast<player_state*>(abl->p_owner);
+  const f32& cd_stat = p_player->stats.at(CHARACTER_STATS_ABILITY_CD).buffer.f32[3];
 
   Vector2 ability_projectile_dimentions = Vector2 {abl->proj_dim.x * abl->proj_collision_scale.x, abl->proj_dim.y * abl->proj_collision_scale.y};
   Vector2 ability_position = VECTOR2(p_player->position.x, p_player->collision.y + p_player->collision.height);
   abl->position = ability_position;
+
+  f32& cd_accumulator = abl->ability_cooldown_accumulator;
+  const f32& cd_duration = abl->ability_cooldown_duration - (cd_stat * abl->ability_cooldown_duration);
 
   for (size_t itr_000 = 0; itr_000 < abl->projectiles.size(); itr_000++) {
     projectile* prj = __builtin_addressof(abl->projectiles.at(itr_000));
@@ -121,7 +148,9 @@ void update_ability_firetrail(ability* abl) {
     p_player->collision.height * .2f 
   };
 
-  if (!CheckCollisionRecs(last_placed_projectile_dest, player_collision)) {
+  cd_accumulator += GetFrameTime();
+  if (!CheckCollisionRecs(last_placed_projectile_dest, player_collision) and cd_duration < cd_accumulator) {
+    cd_accumulator = 0.f;
     projectile prj = projectile();
     prj.position = ability_position;
 
@@ -162,8 +191,8 @@ void render_ability_firetrail(ability* abl) {
     TraceLog(LOG_WARNING, "ability::render_firetrail()::Ability is not valid");
     return;
   }
-  if (abl->type != ABILITY_TYPE_FIRETRAIL) {
-    TraceLog(LOG_WARNING, "ability::render_firetrail()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_TYPE_FIRETRAIL, abl->type);
+  if (abl->id != ABILITY_ID_FIRETRAIL) {
+    TraceLog(LOG_WARNING, "ability::render_firetrail()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_ID_FIRETRAIL, abl->id);
     return;
   }
   if (!abl->is_active || !abl->is_initialized) {
@@ -186,8 +215,8 @@ void refresh_ability_firetrail(ability* abl) {
     TraceLog(LOG_WARNING, "ability::refresh_ability_firetrail()::Ability is null");
     return;
   }
-  if (abl->type != ABILITY_TYPE_FIRETRAIL) {
-    TraceLog(LOG_WARNING, "ability::refresh_ability_firetrail()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_TYPE_FIRETRAIL, abl->type);
+  if (abl->id != ABILITY_ID_FIRETRAIL) {
+    TraceLog(LOG_WARNING, "ability::refresh_ability_firetrail()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_ID_FIRETRAIL, abl->id);
     return;
   }
   if (abl->proj_count > MAX_ABILITY_PROJECTILE_COUNT) {

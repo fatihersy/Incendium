@@ -11,13 +11,17 @@
 #define RADIENCE_CIRCLE_RADIUS_CHANGE 50.f
 
 typedef struct ability_radience_state {
-  std::array<ability, ABILITY_TYPE_MAX> abilities;
-
   const camera_metrics* in_camera_metrics;
   const app_settings* in_settings;
-  const ingame_info* in_ingame_info; 
+  const ingame_info* in_ingame_info;
+
+  ability_radience_state(void) {
+    this->in_camera_metrics = nullptr;
+    this->in_settings = nullptr;
+    this->in_ingame_info = nullptr;
+  }
 } ability_radience_state;
-static ability_radience_state * state;
+static ability_radience_state * state = nullptr;
 
 bool ability_radience_initialize(const camera_metrics* _camera_metrics,const app_settings* _settings,const ingame_info* _ingame_info) {
   if (state) {
@@ -25,10 +29,12 @@ bool ability_radience_initialize(const camera_metrics* _camera_metrics,const app
     return false;
   }
   state = (ability_radience_state*)allocate_memory_linear(sizeof(ability_radience_state),true);
-  if (!state) {
+  if (not state or state == nullptr) {
     TraceLog(LOG_ERROR, "ability::ability_system_initialize()::Failed to allocate memory");
     return false;
   }
+  *state = ability_radience_state();
+  
   state->in_settings = _settings;
   state->in_camera_metrics = _camera_metrics;
   state->in_ingame_info = _ingame_info;
@@ -36,14 +42,14 @@ bool ability_radience_initialize(const camera_metrics* _camera_metrics,const app
 }
 
 void upgrade_ability_radience(ability* abl) {
-  if (abl->type <= ABILITY_TYPE_UNDEFINED || abl->type >= ABILITY_TYPE_MAX) {
+  if (abl->id <= ABILITY_ID_UNDEFINED or abl->id >= ABILITY_ID_MAX) {
     TraceLog(LOG_WARNING, "ability::upgrade_ability()::Ability is not initialized");
     return;
   }
   ++abl->level;
 
-  for (int i=0; i<ABILITY_UPG_MAX; ++i) {
-    switch (abl->upgradables.at(i)) {
+  for (size_t itr_000 = 0; itr_000 < ABILITY_UPG_MAX; ++itr_000) {
+    switch (abl->upgradables.at(itr_000)) {
       case ABILITY_UPG_DAMAGE: {
         abl->base_damage += abl->level * 2;
         break;
@@ -59,11 +65,11 @@ void upgrade_ability_radience(ability* abl) {
   }
 }
 ability get_ability_radience(void) {
-  if (!state) {
+  if (not state or state == nullptr) {
     return ability();
   }
   std::array<ability_upgradables, ABILITY_UPG_MAX> radience_upgr = {ABILITY_UPG_DAMAGE, ABILITY_UPG_HITBOX, ABILITY_UPG_UNDEFINED, ABILITY_UPG_UNDEFINED, ABILITY_UPG_UNDEFINED};
-  return ability("Radience", ABILITY_TYPE_RADIANCE,
+  return ability("Radience", ABILITY_ID_RADIANCE,
     radience_upgr,
     0.f, 2.2f, Vector2 {0.8f, 0.8f}, 1, 0, 0.f, 11,
     Vector2{128.f, 128.f}, Rectangle{2272, 1376, 32, 32}
@@ -75,26 +81,26 @@ ability get_ability_radience_next_level(ability abl) {
 }
 
 void update_ability_radience(ability* abl) {
-  if (abl == nullptr) {
+  if (abl and abl == nullptr) {
     TraceLog(LOG_WARNING, "ability::update_radience()::Ability is not valid");
     return;
   }
-  if (abl->type != ABILITY_TYPE_RADIANCE) {
-    TraceLog(LOG_WARNING, "ability::update_radience()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_TYPE_RADIANCE, abl->type);
+  if (abl->id != ABILITY_ID_RADIANCE) {
+    TraceLog(LOG_WARNING, "ability::update_radience()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_ID_RADIANCE, abl->id);
     return;
   }
-  if (!abl->is_active || !abl->is_initialized) {
+  if (not abl->is_active or not abl->is_initialized) {
     TraceLog(LOG_WARNING, "ability::update_radience()::Ability is not active or not initialized");
     return;
   }
-  if (abl->p_owner == nullptr || state->in_ingame_info == nullptr || state->in_ingame_info->nearest_spawn == nullptr) {
+  if (abl->p_owner == nullptr or state->in_ingame_info == nullptr or state->in_ingame_info->nearest_spawn == nullptr) {
     return;
   }
   player_state* p_player = reinterpret_cast<player_state*>(abl->p_owner);
   abl->position    = p_player->position;
 
   projectile& prj  = abl->projectiles.at(0);
-  if (!prj.is_active) { return; }
+  if (not prj.is_active) { return; }
 
   prj.position    = abl->position;
   prj.collision.x = prj.position.x;
@@ -138,19 +144,19 @@ void update_ability_radience(ability* abl) {
 }
 
 void render_ability_radience(ability* abl){
-  if (abl == nullptr) {
+  if (abl and abl == nullptr) {
     TraceLog(LOG_WARNING, "ability::render_radience()::Ability is not valid");
     return;
   }
-  if (abl->type != ABILITY_TYPE_RADIANCE) {
-    TraceLog(LOG_WARNING, "ability::render_radience()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_TYPE_RADIANCE, abl->type);
+  if (abl->id != ABILITY_ID_RADIANCE) {
+    TraceLog(LOG_WARNING, "ability::render_radience()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_ID_RADIANCE, abl->id);
     return;
   }
-  if (!abl->is_active || !abl->is_initialized) {
+  if (not abl->is_active or not abl->is_initialized) {
     TraceLog(LOG_WARNING, "ability::render_radience()::Ability is not active or not initialized");
     return;
   }
-  if (!abl->projectiles.at(0).is_active) { return; }
+  if (not abl->projectiles.at(0).is_active) { return; }
   projectile * prj = __builtin_addressof(abl->projectiles.at(0));
   
   Vector2 dim = Vector2 {
@@ -174,12 +180,12 @@ void render_ability_radience(ability* abl){
 }
 
 void refresh_ability_radience(ability* abl) { 
-  if (abl == nullptr) {
+  if (abl and abl == nullptr) {
     TraceLog(LOG_WARNING, "ability::refresh_ability_radience()::Ability is null");
     return;
   }
-  if (abl->type != ABILITY_TYPE_RADIANCE) {
-    TraceLog(LOG_WARNING, "ability::refresh_ability_radience()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_TYPE_RADIANCE, abl->type);
+  if (abl->id != ABILITY_ID_RADIANCE) {
+    TraceLog(LOG_WARNING, "ability::refresh_ability_radience()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_ID_RADIANCE, abl->id);
     return;
   }
   if (abl->proj_count > MAX_ABILITY_PROJECTILE_COUNT) {

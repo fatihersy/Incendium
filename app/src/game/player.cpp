@@ -9,13 +9,14 @@
 // To avoid dublicate symbol errors. Implementation in defines.h
 extern const u32 level_curve[MAX_PLAYER_LEVEL+1];
 #define PLAYER_SCALE 3
+#define PLAYER_DAMAGE_BREAK_TIME .5f
 
 typedef struct player_system_state {
   const camera_metrics * in_camera_metrics;
   const app_settings * in_app_settings;
   const ingame_info * in_ingame_info;
 
-  player_state static_player;
+  player_state dynamic_player;
   player_state defualt_player;
 
   player_system_state(void) {
@@ -23,7 +24,7 @@ typedef struct player_system_state {
   this->in_app_settings = nullptr;
   this->in_ingame_info = nullptr;
 
-  this->static_player = player_state();
+  this->dynamic_player = player_state();
   this->defualt_player = player_state();
   }
 } player_system_state;
@@ -46,6 +47,20 @@ bool player_system_initialize(const camera_metrics* in_camera_metrics,const app_
     return false;
   }
   *state = player_system_state();
+
+  if (not in_camera_metrics or in_camera_metrics == nullptr) {
+    TraceLog(LOG_ERROR, "player::player_system_initialize()::Camera metric pointer is invalid");
+    return false;
+  }
+  if (not in_app_settings or in_app_settings == nullptr) {
+    TraceLog(LOG_ERROR, "player::player_system_initialize()::Settings pointer is invalid");
+    return false;
+  }
+  if (not in_ingame_info or in_ingame_info == nullptr) {
+    TraceLog(LOG_ERROR, "player::player_system_initialize()::Game info pointer is invalid");
+    return false;
+  }
+
   state->in_camera_metrics = in_camera_metrics;
   state->in_app_settings = in_app_settings;
   state->in_ingame_info = in_ingame_info;
@@ -101,15 +116,6 @@ bool player_system_initialize(const camera_metrics* in_camera_metrics,const app_
     state->defualt_player.stats.at(CHARACTER_STATS_TOTAL_TRAIT_POINTS) =  character_stat(CHARACTER_STATS_TOTAL_TRAIT_POINTS, LOC_TEXT_PLAYER_STAT_TOTAL_TRAIT_POINTS, LOC_TEXT_PLAYER_STAT_DESC_TOTAL_TRAIT_POINTS, 
       Rectangle{2272, 640, 32, 32}, 1, (i32) level_curve[1], data128(static_cast<i32>(7))
     );
-    //CHARACTER_STATS_HEALTH, i32
-    //CHARACTER_STATS_HP_REGEN, i32
-    //CHARACTER_STATS_MOVE_SPEED, f32
-    //CHARACTER_STATS_AOE, f32
-    //CHARACTER_STATS_DAMAGE, i32
-    //CHARACTER_STATS_ABILITY_CD, f32
-    //CHARACTER_STATS_PROJECTILE_AMOUTH, i32
-    //CHARACTER_STATS_EXP_GAIN, f32
-    //CHARACTER_STATS_TOTAL_TRAIT_POINTS, i32
   }
 
   state->defualt_player.position = ZEROVEC2;
@@ -119,7 +125,7 @@ bool player_system_initialize(const camera_metrics* in_camera_metrics,const app_
   state->defualt_player.is_moving = false;
   state->defualt_player.w_direction = WORLD_DIRECTION_LEFT;
   state->defualt_player.is_damagable = true;
-  state->defualt_player.damage_break_time = .2f; //ms
+  state->defualt_player.damage_break_time = PLAYER_DAMAGE_BREAK_TIME;
   state->defualt_player.damage_break_current = state->defualt_player.damage_break_time;
   state->defualt_player.level = 1;
   state->defualt_player.exp_to_next_level = level_curve[state->defualt_player.level];
@@ -127,7 +133,7 @@ bool player_system_initialize(const camera_metrics* in_camera_metrics,const app_
   state->defualt_player.stats.at(CHARACTER_STATS_HEALTH).buffer.i32[0] = 0; // INFO: Will be Modified by player stats
   state->defualt_player.health_current = 0;
   state->defualt_player.health_perc = 0.f;
-  state->defualt_player.starter_ability = ABILITY_TYPE_FIREBALL;
+  state->defualt_player.starter_ability = ABILITY_ID_UNDEFINED;
   state->defualt_player.is_initialized = true;
 
   event_register(EVENT_CODE_PLAYER_ADD_EXP, player_system_on_event);
@@ -143,60 +149,77 @@ void player_system_reinit(void) {
     TraceLog(LOG_ERROR, "player::player_system_reinit()::State is invalid");
     return;
   }
-  state->static_player = state->defualt_player;
+  state->dynamic_player = state->defualt_player;
 }
 
 player_update_results update_player(void) {
   if (not state or state == nullptr) return player_update_results();
-  if (state->static_player.is_dead) { 
+  if (state->dynamic_player.is_dead) { 
     return player_update_results(); 
   }
-  
-  if(!state->static_player.is_damagable) {
-    if(state->static_player.damage_break_current <= 0) { state->static_player.is_damagable = true; }
-    else { state->static_player.damage_break_current -= GetFrameTime(); }
+
+  if(!state->dynamic_player.is_damagable) {
+    if(state->dynamic_player.damage_break_current <= 0) { state->dynamic_player.is_damagable = true; }
+    else { state->dynamic_player.damage_break_current -= GetFrameTime(); }
   }
   Vector2 new_position = ZEROVEC2;
   if (IsKeyDown(KEY_W)) {
-    new_position.y -= state->static_player.stats.at(CHARACTER_STATS_MOVE_SPEED).buffer.f32[3] * GetFrameTime();
+    new_position.y -= state->dynamic_player.stats.at(CHARACTER_STATS_MOVE_SPEED).buffer.f32[3] * GetFrameTime();
   }
   if (IsKeyDown(KEY_A)) {
-    new_position.x -= state->static_player.stats.at(CHARACTER_STATS_MOVE_SPEED).buffer.f32[3] * GetFrameTime();
+    new_position.x -= state->dynamic_player.stats.at(CHARACTER_STATS_MOVE_SPEED).buffer.f32[3] * GetFrameTime();
   }
   if (IsKeyDown(KEY_S)) {
-    new_position.y += state->static_player.stats.at(CHARACTER_STATS_MOVE_SPEED).buffer.f32[3] * GetFrameTime();
+    new_position.y += state->dynamic_player.stats.at(CHARACTER_STATS_MOVE_SPEED).buffer.f32[3] * GetFrameTime();
   }
   if (IsKeyDown(KEY_D)) {
-    new_position.x += state->static_player.stats.at(CHARACTER_STATS_MOVE_SPEED).buffer.f32[3] * GetFrameTime();
+    new_position.x += state->dynamic_player.stats.at(CHARACTER_STATS_MOVE_SPEED).buffer.f32[3] * GetFrameTime();
   }
   player_update_sprite();
   
+  const i32 elapsed_time = static_cast<i32>(GetTime());
+  i32& last_time_hp_regen_fired = state->in_ingame_info->player_state_dynamic->stats.at(CHARACTER_STATS_HP_REGEN).mm_ex.i32[0];
+  const i32& hp_max = state->in_ingame_info->player_state_dynamic->stats.at(CHARACTER_STATS_HEALTH).buffer.i32[3];
+  i32& hp_current = state->in_ingame_info->player_state_dynamic->health_current;
+
+  if (last_time_hp_regen_fired < elapsed_time and hp_current < hp_max) {
+    last_time_hp_regen_fired = elapsed_time;
+    const i32& hp_regen_amouth = state->in_ingame_info->player_state_dynamic->stats.at(CHARACTER_STATS_HP_REGEN).buffer.i32[3];
+    hp_current += hp_regen_amouth;
+    hp_current = FCLAMP(hp_current, 0, hp_max);
+  }
+
+  state->dynamic_player.health_perc = static_cast<f32>(state->dynamic_player.health_current) / static_cast<f32>(state->dynamic_player.stats.at(CHARACTER_STATS_HEALTH).buffer.i32[3]);
+  event_fire(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, event_context((f32)PRG_BAR_ID_PLAYER_HEALTH, (f32)state->dynamic_player.health_perc));
+
   return player_update_results(new_position, true);
 }
 bool render_player(void) {
   if (not state or state == nullptr) { return false; }
   
-  spritesheet& _sheet = state->static_player.current_anim_to_play;
-  const Rectangle& frame_rect = state->static_player.current_anim_to_play.current_frame_rect;
+  spritesheet& _sheet = state->dynamic_player.current_anim_to_play;
+  const Rectangle& frame_rect = state->dynamic_player.current_anim_to_play.current_frame_rect;
   
   play_sprite_on_site_ex(
     __builtin_addressof(_sheet), 
     Rectangle {frame_rect.x + _sheet.offset.x, frame_rect.y + _sheet.offset.y, frame_rect.width, frame_rect.height}, 
-    state->static_player.current_anim_to_play.coord, 
-    state->static_player.current_anim_to_play.origin, 
-    state->static_player.current_anim_to_play.rotation, 
-    WHITE
-  );
-  DrawRectangleLines(
-    static_cast<i32>(state->static_player.collision.x), static_cast<i32>(state->static_player.collision.y),
-    static_cast<i32>(state->static_player.collision.width), static_cast<i32>(state->static_player.collision.height), 
+    state->dynamic_player.current_anim_to_play.coord, 
+    state->dynamic_player.current_anim_to_play.origin, 
+    state->dynamic_player.current_anim_to_play.rotation, 
     WHITE
   );
 
+  // TODO: Remove Later
+  //DrawRectangleLines(
+  //  static_cast<i32>(state->dynamic_player.collision.x), static_cast<i32>(state->dynamic_player.collision.y),
+  //  static_cast<i32>(state->dynamic_player.collision.width), static_cast<i32>(state->dynamic_player.collision.height), 
+  //  WHITE
+  //);
+
   #if DEBUG_COLLISIONS
     DrawRectangleLines(
-      static_cast<i32>(state->static_player.collision.x), static_cast<i32>(state->static_player.collision.y),
-      static_cast<i32>(state->static_player.collision.width), static_cast<i32>(state->static_player.collision.height), 
+      static_cast<i32>(state->dynamic_player.collision.x), static_cast<i32>(state->dynamic_player.collision.y),
+      static_cast<i32>(state->dynamic_player.collision.width), static_cast<i32>(state->dynamic_player.collision.height), 
       WHITE
     );
   #endif
@@ -209,118 +232,117 @@ void player_move_player(Vector2 new_pos) {
     return;
   }
   if (new_pos.x < 0.f) {
-    state->static_player.w_direction = WORLD_DIRECTION_LEFT;
+    state->dynamic_player.w_direction = WORLD_DIRECTION_LEFT;
   }
   else if (new_pos.x > 0.f) {
-    state->static_player.w_direction = WORLD_DIRECTION_RIGHT;
+    state->dynamic_player.w_direction = WORLD_DIRECTION_RIGHT;
   }
   else if(new_pos.x == 0.f && new_pos.y == 0.f) {
-    state->static_player.is_moving = false;
+    state->dynamic_player.is_moving = false;
     return;
   }
   
-  state->static_player.is_moving = true;
-  state->static_player.position.x += new_pos.x;
-  state->static_player.position.y += new_pos.y;
+  state->dynamic_player.is_moving = true;
+  state->dynamic_player.position.x += new_pos.x;
+  state->dynamic_player.position.y += new_pos.y;
 
-  state->static_player.collision = Rectangle {
-    state->static_player.position.x - (state->static_player.collision.width * .5f),
-    state->static_player.position.y - (state->static_player.collision.height * .5f),
-    state->static_player.collision.width,
-    state->static_player.collision.height
+  state->dynamic_player.collision = Rectangle {
+    state->dynamic_player.position.x - (state->dynamic_player.collision.width * .5f),
+    state->dynamic_player.position.y - (state->dynamic_player.collision.height * .5f),
+    state->dynamic_player.collision.width,
+    state->dynamic_player.collision.height
   };
 
-  state->static_player.map_level_collision = Rectangle {
-    state->static_player.collision.x + (state->static_player.collision.width * .25f),
-    state->static_player.collision.y + (state->static_player.collision.height * .8f),
-    state->static_player.collision.width * .5f,
-    state->static_player.collision.height * .2f
+  state->dynamic_player.map_level_collision = Rectangle {
+    state->dynamic_player.collision.x + (state->dynamic_player.collision.width * .25f),
+    state->dynamic_player.collision.y + (state->dynamic_player.collision.height * .8f),
+    state->dynamic_player.collision.width * .5f,
+    state->dynamic_player.collision.height * .2f
   };
 }
-void player_add_exp_to_player(i32 exp) {
+void player_add_exp_to_player(i32 raw_exp) {
   if (not state or state == nullptr) { return; }
 
-  i32 curr = state->static_player.exp_current;
-  i32 to_next = state->static_player.exp_to_next_level;
+  i32 curr = state->dynamic_player.exp_current;
+  i32 to_next = state->dynamic_player.exp_to_next_level;
+  i32 exp = raw_exp + (raw_exp * state->dynamic_player.stats.at(CHARACTER_STATS_EXP_GAIN).buffer.f32[3]);
+
   if ( curr + exp >= to_next) 
   {
-    state->static_player.exp_current = (curr + exp) - to_next;
-    state->static_player.level++;
-    state->static_player.exp_to_next_level = level_curve[state->static_player.level];
-    state->static_player.is_player_have_ability_upgrade_points = true;
+    state->dynamic_player.exp_current = (curr + exp) - to_next;
+    state->dynamic_player.level++;
+    state->dynamic_player.exp_to_next_level = level_curve[state->dynamic_player.level];
+    state->dynamic_player.is_player_have_ability_upgrade_points = true;
   }
   else {
-    state->static_player.exp_current += exp;
+    state->dynamic_player.exp_current += exp;
   }
-  state->static_player.exp_perc = static_cast<f32>(state->static_player.exp_current) / static_cast<f32>(state->static_player.exp_to_next_level);
-  event_fire(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, event_context((f32)PRG_BAR_ID_PLAYER_EXPERIANCE, (f32)state->static_player.exp_perc));
+  state->dynamic_player.exp_perc = static_cast<f32>(state->dynamic_player.exp_current) / static_cast<f32>(state->dynamic_player.exp_to_next_level);
+  event_fire(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, event_context((f32)PRG_BAR_ID_PLAYER_EXPERIANCE, (f32)state->dynamic_player.exp_perc));
 }
 void player_take_damage(i32 damage) {
   if (not state or state == nullptr) { return; }
 
-  if(!state->static_player.is_damagable || state->static_player.is_dead) return;
-  if((state->static_player.health_current - damage) > 0 && (state->static_player.health_current - damage) <= state->static_player.stats.at(CHARACTER_STATS_HEALTH).buffer.i32[3]) {
-    state->static_player.health_current -= damage;
-    state->static_player.is_damagable = false;
-    state->static_player.damage_break_current = state->static_player.damage_break_time;
+  if(!state->dynamic_player.is_damagable || state->dynamic_player.is_dead) return;
+  if((state->dynamic_player.health_current - damage) > 0 && (state->dynamic_player.health_current - damage) <= state->dynamic_player.stats.at(CHARACTER_STATS_HEALTH).buffer.i32[3]) {
+    state->dynamic_player.health_current -= damage;
+    state->dynamic_player.is_damagable = false;
+    state->dynamic_player.damage_break_current = state->dynamic_player.damage_break_time;
   }
   else {
-    state->static_player.health_current = 0;
-    state->static_player.is_dead = true;
+    state->dynamic_player.health_current = 0;
+    state->dynamic_player.is_dead = true;
     event_fire(EVENT_CODE_END_GAME, event_context());
   }
-  state->static_player.health_perc = static_cast<f32>(state->static_player.health_current) / static_cast<f32>(state->static_player.stats.at(CHARACTER_STATS_HEALTH).buffer.i32[3]);
-  
-  event_fire(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, event_context((f32)PRG_BAR_ID_PLAYER_HEALTH, (f32)state->static_player.health_perc));
 }
 void player_heal_player(i32 amouth){
   if (not state or state == nullptr) { return; }
 
-  if(state->static_player.is_dead) return;
-  if(state->static_player.health_current + amouth <= state->static_player.stats.at(CHARACTER_STATS_HEALTH).buffer.i32[3]) {
-    state->static_player.health_current += amouth;
+  if(state->dynamic_player.is_dead) return;
+  if(state->dynamic_player.health_current + amouth <= state->dynamic_player.stats.at(CHARACTER_STATS_HEALTH).buffer.i32[3]) {
+    state->dynamic_player.health_current += amouth;
   }
   else {
-    state->static_player.health_current = state->static_player.stats.at(CHARACTER_STATS_HEALTH).buffer.i32[3];
+    state->dynamic_player.health_current = state->dynamic_player.stats.at(CHARACTER_STATS_HEALTH).buffer.i32[3];
   }
-  state->static_player.health_perc = static_cast<f32>(state->static_player.health_current) / static_cast<f32>(state->static_player.stats.at(CHARACTER_STATS_HEALTH).buffer.i32[3]);
+  state->dynamic_player.health_perc = static_cast<f32>(state->dynamic_player.health_current) / static_cast<f32>(state->dynamic_player.stats.at(CHARACTER_STATS_HEALTH).buffer.i32[3]);
 }
 void player_update_sprite(void) {
   if (not state or state == nullptr) { return; }
 
-  if( not state->static_player.is_dead ) {
-    if(state->static_player.is_damagable) {
-      if(state->static_player.is_moving) {
-        if (state->static_player.current_anim_to_play.sheet_id != state->static_player.move_right_sprite.sheet_id) {
-          state->static_player.current_anim_to_play = state->static_player.move_right_sprite;
+  if( not state->dynamic_player.is_dead ) {
+    if(state->dynamic_player.is_damagable) {
+      if(state->dynamic_player.is_moving) {
+        if (state->dynamic_player.current_anim_to_play.sheet_id != state->dynamic_player.move_right_sprite.sheet_id) {
+          state->dynamic_player.current_anim_to_play = state->dynamic_player.move_right_sprite;
         }
 			}
       else {
-        if (state->static_player.current_anim_to_play.sheet_id != state->static_player.idle_right_sprite.sheet_id) {
-          state->static_player.current_anim_to_play = state->static_player.idle_right_sprite;
+        if (state->dynamic_player.current_anim_to_play.sheet_id != state->dynamic_player.idle_right_sprite.sheet_id) {
+          state->dynamic_player.current_anim_to_play = state->dynamic_player.idle_right_sprite;
         }
 			}
     }	
     else {
-      if (state->static_player.current_anim_to_play.sheet_id != state->static_player.take_damage_right_sprite.sheet_id) {
-        state->static_player.current_anim_to_play = state->static_player.take_damage_right_sprite;
+      if (state->dynamic_player.current_anim_to_play.sheet_id != state->dynamic_player.take_damage_right_sprite.sheet_id) {
+        state->dynamic_player.current_anim_to_play = state->dynamic_player.take_damage_right_sprite;
       }
     }
   } 
   else {
-    if (state->static_player.current_anim_to_play.sheet_id != state->static_player.wreck_right_sprite.sheet_id) {
-      state->static_player.current_anim_to_play = state->static_player.wreck_right_sprite;
+    if (state->dynamic_player.current_anim_to_play.sheet_id != state->dynamic_player.wreck_right_sprite.sheet_id) {
+      state->dynamic_player.current_anim_to_play = state->dynamic_player.wreck_right_sprite;
     }
   }
-  spritesheet& _sheet = state->static_player.current_anim_to_play;
-  if (state->static_player.w_direction == WORLD_DIRECTION_LEFT && _sheet.current_frame_rect.width > 0) {
+  spritesheet& _sheet = state->dynamic_player.current_anim_to_play;
+  if (state->dynamic_player.w_direction == WORLD_DIRECTION_LEFT && _sheet.current_frame_rect.width > 0) {
     _sheet.current_frame_rect.width *= -1;
   }
-  if (state->static_player.w_direction == WORLD_DIRECTION_RIGHT && _sheet.current_frame_rect.width < 0) {
+  if (state->dynamic_player.w_direction == WORLD_DIRECTION_RIGHT && _sheet.current_frame_rect.width < 0) {
     _sheet.current_frame_rect.width *= -1;
   }
   _sheet.coord = Rectangle { 
-    state->static_player.position.x, state->static_player.position.y,
+    state->dynamic_player.position.x, state->dynamic_player.position.y,
     std::abs(_sheet.current_frame_rect.width) * PLAYER_SCALE, std::abs(_sheet.current_frame_rect.height) * PLAYER_SCALE
   };
   _sheet.origin = Vector2 { _sheet.coord.width * .5f, _sheet.coord.height * .5f};
@@ -332,13 +354,13 @@ player_state* get_player_state(void) {
   if (not state or state == nullptr) {
     return nullptr;
   }
-  return __builtin_addressof(state->static_player);
+  return __builtin_addressof(state->dynamic_player);
 }
 const player_state* get_default_player(void) {
   if (not state or state == nullptr) {
     return nullptr;
   }
-  return __builtin_addressof(state->static_player);
+  return __builtin_addressof(state->defualt_player);
 }
 
 bool player_system_on_event(i32 code, event_context context) {
@@ -348,10 +370,10 @@ bool player_system_on_event(i32 code, event_context context) {
           return true;
         }
         case EVENT_CODE_PLAYER_SET_POSITION: {
-          state->static_player.position.x = context.data.f32[0]; 
-          state->static_player.position.y = context.data.f32[1]; 
-          state->static_player.collision.x = state->static_player.position.x; 
-          state->static_player.collision.y = state->static_player.position.y; 
+          state->dynamic_player.position.x = context.data.f32[0]; 
+          state->dynamic_player.position.y = context.data.f32[1]; 
+          state->dynamic_player.collision.x = state->dynamic_player.position.x; 
+          state->dynamic_player.collision.y = state->dynamic_player.position.y; 
           return true;
         }
         case EVENT_CODE_PLAYER_TAKE_DAMAGE: {

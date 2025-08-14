@@ -113,16 +113,16 @@ typedef enum ability_upgradables {
 } ability_upgradables;
 
 // LABEL: Ability types
-typedef enum ability_type {
-  ABILITY_TYPE_UNDEFINED,
-  ABILITY_TYPE_FIREBALL,
-  ABILITY_TYPE_BULLET,
-  ABILITY_TYPE_RADIANCE,
-  ABILITY_TYPE_COMET,
-  ABILITY_TYPE_CODEX,
-  ABILITY_TYPE_FIRETRAIL,
-  ABILITY_TYPE_MAX,
-} ability_type;
+typedef enum ability_id {
+  ABILITY_ID_UNDEFINED,
+  ABILITY_ID_FIREBALL,
+  ABILITY_ID_BULLET,
+  ABILITY_ID_RADIANCE,
+  ABILITY_ID_COMET,
+  ABILITY_ID_CODEX,
+  ABILITY_ID_FIRETRAIL,
+  ABILITY_ID_MAX,
+} ability_id;
 
 typedef enum character_stat_id {
   CHARACTER_STATS_UNDEFINED,
@@ -265,8 +265,8 @@ typedef struct spritesheet {
 
   Color tint;
   f32 rotation;
-  i16 fps;
-  i16 counter;
+  i32 fps;
+  f32 time_accumulator;
   world_direction w_direction;
   spritesheet_playmod playmod;
   bool is_started;
@@ -291,7 +291,7 @@ typedef struct spritesheet {
     this->tint = WHITE;
     this->rotation = 0.f;
     this->fps = 0;
-    this->counter = 0;
+    this->time_accumulator = 0.f;
     this->w_direction = WORLD_DIRECTION_UNDEFINED;
     this->playmod = SPRITESHEET_PLAYMOD_UNSPECIFIED;
     this->is_started = false;
@@ -346,11 +346,11 @@ typedef struct tilesheet {
   Texture2D *atlas_handle;
 
   tile_symbol tile_symbols[MAX_TILESHEET_UNIQUE_TILESLOTS_X][MAX_TILESHEET_UNIQUE_TILESLOTS_Y];
-  u16 tile_count_x;
-  u16 tile_count_y;
-  u16 tile_count;
-  u16 tile_size;
-  u16 dest_tile_size;
+  i32 tile_count_x;
+  i32 tile_count_y;
+  i32 tile_count;
+  i32 tile_size;
+  i32 dest_tile_size;
 
   Vector2 position;
   f32 offset;
@@ -387,8 +387,8 @@ typedef struct worldmap_stage {
   bool is_active;
   worldmap_stage(void) {
     this->map_id = INVALID_IDI32;
-    this->displayname.clear();
-    this->filename.clear();
+    this->displayname = std::string("");
+    this->filename = std::string("");
     this->spawning_areas.fill(ZERORECT);
     this->screen_location = ZEROVEC2;
     this->total_spawn_count = 0;
@@ -417,8 +417,8 @@ typedef struct worldmap_stage {
 } worldmap_stage;
 
 typedef struct tilemap_prop_static {
-  i32 prop_id;
   i32 map_id;
+  i32 prop_id;
 	texture_id tex_id;
   tilemap_prop_types prop_type;
   Rectangle source;
@@ -440,6 +440,7 @@ typedef struct tilemap_prop_static {
     this->zindex = 0;
     this->rotation = 0.f;
     this->scale = 0.f;
+    this->tint = WHITE;
     this->origin = ZEROVEC2;
     this->is_initialized = false;
     this->use_y_based_zindex = false;
@@ -529,9 +530,9 @@ typedef struct tilemap {
   Vector2 position;
   i32 next_map_id;
   i32 next_collision_id;
-  u16 map_dim_total;
-  u16 map_dim;
-  u16 tile_size;
+  i32 map_dim_total;
+  i32 map_dim;
+  i32 tile_size;
   tile_symbol tiles[MAX_TILEMAP_LAYERS][MAX_TILEMAP_TILESLOT_X][MAX_TILEMAP_TILESLOT_Y];
   std::vector<tilemap_prop_static> static_props;
   std::vector<tilemap_prop_sprite> sprite_props;
@@ -539,6 +540,25 @@ typedef struct tilemap {
   std::array<std::vector<tilemap_prop_address>, MAX_Y_INDEX_SLOT> render_y_based_queue;
   std::vector<map_collision> collisions;
   bool is_initialized;
+  tilemap(void) {
+    zero_memory(tiles, sizeof(tile_symbol) * MAX_TILEMAP_LAYERS * MAX_TILEMAP_TILESLOT_X * MAX_TILEMAP_TILESLOT_Y);
+
+    this->filename.fill(std::string(""));
+    this->propfile = std::string("");
+    this->collisionfile = std::string("");
+    this->position = ZEROVEC2;
+    this->next_map_id = 0;
+    this->next_collision_id = 0;
+    this->map_dim_total = 0;
+    this->map_dim = 0;
+    this->tile_size = 0;
+    this->static_props = std::vector<tilemap_prop_static>();
+    this->sprite_props = std::vector<tilemap_prop_sprite>();
+    this->render_z_index_queue.fill(std::vector<tilemap_prop_address>());
+    this->render_y_based_queue.fill(std::vector<tilemap_prop_address>());
+    this->collisions = std::vector<map_collision>();
+    this->is_initialized = false;
+  }
 } tilemap;
 
 typedef struct tilemap_stringtify_package {
@@ -608,6 +628,7 @@ typedef struct Character2D {
     this->damage_break_time = 0.f;
     this->is_dead = false;
     this->is_damagable = false;
+    this->is_on_screen = false;
     this->initialized = false;
     this->buffer = data128();
   }
@@ -631,9 +652,9 @@ typedef struct Character2D {
  * @brief mm_ex buffer  summary: {u16[0]} = {counter, }
  */
 typedef struct projectile {
-  u16 id;
+  i32 id;
   std::vector<spritesheet> animations;
-  i16 active_sprite;
+  i32 active_sprite;
   Vector2 position;
   Rectangle collision;
   world_direction direction;
@@ -642,12 +663,12 @@ typedef struct projectile {
   data256 vec_ex;
   data128 mm_ex;
 
-  u16 damage;
+  i32 damage;
   f32 duration;
   bool is_active;
 
   projectile(void) {
-    this->id = 0u;
+    this->id = 0;
     this->animations.clear();
     this->active_sprite = -1;
     this->position = ZEROVEC2;
@@ -655,14 +676,14 @@ typedef struct projectile {
     this->direction = WORLD_DIRECTION_UNDEFINED;
     this->vec_ex = data256();
     this->mm_ex = data128();
-    this->damage = 0u;
+    this->damage = 0;
     this->duration = 0.f;
     this->is_active = false;
   }
 } projectile;
 
 typedef struct ability {
-  ability_type type;
+  ability_id id;
   std::string display_name;
   std::vector<projectile> projectiles;
   std::vector<spritesheet_id> animation_ids;
@@ -671,53 +692,62 @@ typedef struct ability {
   
   Vector2 proj_dim;
   Vector2 position;
-  f32 ability_cooldown_duration;
-  f32 ability_play_time;
-  f32 proj_sprite_scale;
   Vector2 proj_collision_scale;
+  f32 proj_sprite_scale;
+  f32 ability_play_time;
+  f32 ability_cooldown_duration;
+  f32 ability_cooldown_accumulator;
   f32 proj_duration;
-  u16 proj_count;
-  u16 proj_speed;
-  u16 level;
-  u16 base_damage;
-  u16 rotation;
+  i32 proj_count;
+  i32 proj_speed;
+  i32 level;
+  i32 base_damage;
+  i32 rotation;
   Rectangle icon_src;
   bool is_active;
   bool is_initialized;
 
+  data128 ui_use;
   data128 mm_ex;
   data256 vec_ex;
 
   ability(void) {
-    this->p_owner = nullptr;
+    this->id = ABILITY_ID_UNDEFINED;
     this->display_name.clear();
     this->projectiles.clear();
-    this->upgradables.fill(ABILITY_UPG_UNDEFINED);
     this->animation_ids.clear();
-    this->type = ABILITY_TYPE_UNDEFINED;
+    this->p_owner = nullptr;
+    this->upgradables.fill(ABILITY_UPG_UNDEFINED);
+
+    this->proj_dim = ZEROVEC2;
+    this->position = ZEROVEC2;
+    this->ability_cooldown_duration = 0.f;
+    this->ability_cooldown_accumulator = 0.f;
     this->ability_play_time = 0.f;
     this->proj_sprite_scale = 1.f;
     this->proj_collision_scale = Vector2 { 1.f, 1.f };
-    this->proj_count = 0u;
-    this->proj_speed = 0u;
     this->proj_duration = 0.f;
-    this->proj_dim = ZEROVEC2;
+    this->proj_count = 0;
+    this->proj_speed = 0;
+    this->level = 0;
+    this->base_damage = 0;
+    this->rotation = 0;
     this->icon_src = ZERORECT;
-    this->position = ZEROVEC2;
-    this->level = 0u;
-    this->base_damage = 0u;
-    this->rotation = 0u;
     this->is_active = false;
     this->is_initialized = false;
+
+    this->ui_use = data128();
+    this->mm_ex = data128();
+    this->vec_ex = data256();
   };
   ability(
-    std::string name, ability_type type, 
+    std::string name, ability_id id, 
     std::array<ability_upgradables, ABILITY_UPG_MAX> upgrs, 
-    f32 ability_cooldown, f32 proj_sprite_scale, Vector2 proj_collision_scale, u16 proj_count, u16 proj_speed, f32 proj_duration, u16 base_damage,
+    f32 ability_cooldown, f32 proj_sprite_scale, Vector2 proj_collision_scale, i32 proj_count, i32 proj_speed, f32 proj_duration, i32 base_damage,
     Vector2 proj_dim, Rectangle icon_src) : ability()
   {
     this->display_name = name;
-    this->type = type;
+    this->id = id;
     this->upgradables = upgrs;
     this->ability_cooldown_duration = ability_cooldown;
     this->proj_sprite_scale = proj_sprite_scale;
@@ -733,7 +763,7 @@ typedef struct ability {
 }ability;
 
 typedef struct ability_play_system {
-  std::array<ability, ABILITY_TYPE_MAX> abilities;
+  std::array<ability, ABILITY_ID_MAX> abilities;
   ability_play_system(void) {
     this->abilities.fill(ability());
   }
@@ -753,8 +783,9 @@ typedef struct character_stat {
   i32 passive_desc_symbol;
   Rectangle passive_icon_src;
   i32 upgrade_cost;
-
-  data128 buffer;
+  
+  data128 buffer; // INFO: To store information
+  data128 mm_ex; // INFO: To calculate things
 
   character_stat(void) {
     this->id = CHARACTER_STATS_UNDEFINED;
@@ -765,6 +796,7 @@ typedef struct character_stat {
     this->passive_icon_src = ZERORECT;
     this->upgrade_cost = 0;
     this->buffer = data128();
+    this->mm_ex = data128();
   }
   character_stat(character_stat_id id, i32 display_name_symbol, i32 desc_symbol, Rectangle icon_src, i32 base_level, i32 upgrade_cost, data128 buffer = data128()) : character_stat() {
     this->id = id;
@@ -811,7 +843,7 @@ typedef struct character_trait {
 typedef struct player_state {
   ability_play_system ability_system;
   std::array<character_stat, CHARACTER_STATS_MAX> stats;
-  ability_type starter_ability;
+  ability_id starter_ability;
   
   Rectangle collision;
   Rectangle map_level_collision;
@@ -849,7 +881,7 @@ typedef struct player_state {
   player_state(void) {
     this->ability_system = ability_play_system();
     this->stats.fill(character_stat());
-    this->starter_ability = ABILITY_TYPE_UNDEFINED;
+    this->starter_ability = ABILITY_ID_UNDEFINED;
     this->collision = ZERORECT;
     this->map_level_collision = ZERORECT;
     this->move_right_sprite = spritesheet();
@@ -884,6 +916,7 @@ typedef struct player_state {
 
 typedef struct ingame_info {
   player_state* player_state_dynamic;
+  const player_state* player_state_static;
   const std::vector<Character2D>* in_spawns;
   const Character2D* nearest_spawn;
   const Vector2* mouse_pos_world;

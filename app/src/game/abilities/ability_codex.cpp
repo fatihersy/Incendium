@@ -8,24 +8,30 @@
 #include "game/spritesheet.h"
 
 typedef struct ability_codex_state {
-  std::array<ability, ABILITY_TYPE_MAX> abilities;
-
   const camera_metrics* in_camera_metrics;
   const app_settings* in_settings;
   const ingame_info* in_ingame_info; 
+
+  ability_codex_state(void) {
+    this->in_camera_metrics = nullptr;
+    this->in_settings = nullptr;
+    this->in_ingame_info = nullptr;
+  }
 } ability_codex_state;
-static ability_codex_state * state;
+static ability_codex_state * state = nullptr;
 
 bool ability_codex_initialize(const camera_metrics* _camera_metrics,const app_settings* _settings,const ingame_info* _ingame_info) {
-  if (state) {
+  if (state and state != nullptr) {
     TraceLog(LOG_WARNING, "ability::ability_system_initialize()::Init called multiple times");
     return false;
   }
   state = (ability_codex_state*)allocate_memory_linear(sizeof(ability_codex_state),true);
-  if (!state) {
+  if (not state or state == nullptr) {
     TraceLog(LOG_ERROR, "ability::ability_system_initialize()::Failed to allocate memory");
     return false;
   }
+  *state = ability_codex_state();
+
   state->in_settings = _settings;
   state->in_camera_metrics = _camera_metrics;
   state->in_ingame_info = _ingame_info;
@@ -33,14 +39,14 @@ bool ability_codex_initialize(const camera_metrics* _camera_metrics,const app_se
 }
 
 void upgrade_ability_codex(ability* abl) {
-  if (abl->type <= ABILITY_TYPE_UNDEFINED || abl->type >= ABILITY_TYPE_MAX) {
+  if (abl->id <= ABILITY_ID_UNDEFINED || abl->id >= ABILITY_ID_MAX) {
     TraceLog(LOG_WARNING, "ability::upgrade_ability()::Ability is not initialized");
     return;
   }
   ++abl->level;
 
-  for (int i=0; i<ABILITY_UPG_MAX; ++i) {
-    switch (abl->upgradables.at(i)) {
+  for (size_t itr_000 = 0; itr_000 < ABILITY_UPG_MAX; ++itr_000) {
+    switch (abl->upgradables.at(itr_000)) {
       case ABILITY_UPG_DAMAGE: {
         abl->base_damage += abl->level * 2;
         break;
@@ -56,12 +62,12 @@ void upgrade_ability_codex(ability* abl) {
   }
 }
 ability get_ability_codex() {
-  if (!state) {
+  if (not state or state == nullptr) {
     return ability();
   }
 
   std::array<ability_upgradables, ABILITY_UPG_MAX> codex_upgr = {ABILITY_UPG_DAMAGE, ABILITY_UPG_AMOUNT, ABILITY_UPG_UNDEFINED, ABILITY_UPG_UNDEFINED, ABILITY_UPG_UNDEFINED};
-  return ability("Arcane Codex", ABILITY_TYPE_CODEX,
+  return ability("Arcane Codex", ABILITY_ID_CODEX,
     codex_upgr,
     0.f, 0.8f, Vector2 {.8f, .8f}, 1, 3, 0.f, 11,
     Vector2{30.f, 30.f}, Rectangle{2560, 992, 32, 32}
@@ -73,22 +79,22 @@ ability get_ability_codex_next_level(ability abl) {
 }
 
 void update_ability_codex(ability* abl) {
-  if (abl == nullptr) {
+  if (not abl or abl == nullptr) {
     TraceLog(LOG_WARNING, "ability::update_codex()::Ability is not valid");
     return;
   }
-  if (abl->type != ABILITY_TYPE_CODEX) {
-    TraceLog(LOG_WARNING, "ability::update_codex()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_TYPE_CODEX, abl->type);
+  if (abl->id != ABILITY_ID_CODEX) {
+    TraceLog(LOG_WARNING, "ability::update_codex()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_ID_CODEX, abl->id);
     return;
   }
-  if (!abl->is_active || !abl->is_initialized) {
+  if (not abl->is_active or not abl->is_initialized) {
     TraceLog(LOG_WARNING, "ability::update_codex()::Ability is not active or not initialized");
     return;
   }
-  if (abl->p_owner == nullptr || state->in_ingame_info == nullptr || state->in_ingame_info->nearest_spawn == nullptr) {
+  if (abl->p_owner == nullptr or state->in_ingame_info == nullptr or state->in_ingame_info->nearest_spawn == nullptr) {
     return;
   }
-  u16 frame_counter_max = 1 * TARGET_FPS;
+  i32 frame_counter_max = 1 * TARGET_FPS;
   player_state* p_player = reinterpret_cast<player_state*>(abl->p_owner);
   Rectangle book_position = Rectangle { 
     p_player->collision.x - p_player->collision.width * .2f, 
@@ -136,21 +142,21 @@ void update_ability_codex(ability* abl) {
 }
 
 void render_ability_codex(ability* abl) {
-  if (abl == nullptr) {
+  if (not abl or abl == nullptr) {
     TraceLog(LOG_WARNING, "ability::render_codex()::Ability is not valid");
     return;
   }
-  if (abl->type != ABILITY_TYPE_CODEX) {
-    TraceLog(LOG_WARNING, "ability::render_codex()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_TYPE_CODEX, abl->type);
+  if (abl->id != ABILITY_ID_CODEX) {
+    TraceLog(LOG_WARNING, "ability::render_codex()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_ID_CODEX, abl->id);
     return;
   }
-  if (!abl->is_active || !abl->is_initialized) {
+  if (not abl->is_active or not abl->is_initialized) {
     TraceLog(LOG_WARNING, "ability::render_codex()::Ability is not active or not initialized");
     return;
   }
   for (size_t itr_000 = 0; itr_000 < abl->projectiles.size(); ++itr_000) {
     projectile& prj = abl->projectiles.at(itr_000);
-    if (!prj.is_active) { continue; }
+    if (not prj.is_active) { continue; }
     Vector2 dim = Vector2 {
       prj.animations.at(prj.active_sprite).current_frame_rect.width  * abl->proj_sprite_scale,
       prj.animations.at(prj.active_sprite).current_frame_rect.height * abl->proj_sprite_scale
@@ -166,7 +172,7 @@ void render_ability_codex(ability* abl) {
 }
 
 void refresh_ability_codex(ability* abl) { 
-  if (abl == nullptr) {
+  if (not abl or abl == nullptr) {
     TraceLog(LOG_WARNING, "ability::refresh_ability_codex()::Ability is null");
     return;
   }
@@ -174,8 +180,8 @@ void refresh_ability_codex(ability* abl) {
     TraceLog(LOG_WARNING, "ability::refresh_ability_codex()::Ability projectile count exceed");
     return;
   }
-  if (abl->type != ABILITY_TYPE_CODEX) {
-    TraceLog(LOG_WARNING, "ability::refresh_ability_codex()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_TYPE_CODEX, abl->type);
+  if (abl->id != ABILITY_ID_CODEX) {
+    TraceLog(LOG_WARNING, "ability::refresh_ability_codex()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_ID_CODEX, abl->id);
     return;
   }
 
@@ -184,7 +190,7 @@ void refresh_ability_codex(ability* abl) {
   abl->projectiles.reserve(abl->proj_count);
   abl->animation_ids.push_back(SHEET_ID_FLAME_ENERGY_ANIMATION);
 
-  for (size_t itr_000 = 0; itr_000 < abl->proj_count; ++itr_000) {
+  for (size_t itr_000 = 0; itr_000 < static_cast<size_t>(abl->proj_count); ++itr_000) {
     projectile prj = projectile();
     prj.collision = Rectangle {0.f, 0.f, abl->proj_dim.x * abl->proj_collision_scale.x, abl->proj_dim.y * abl->proj_collision_scale.y};
     prj.damage = abl->base_damage;

@@ -20,6 +20,7 @@ typedef enum checkbox_state {
 } checkbox_state;
 
 typedef struct panel {
+  i32 id;
   atlas_texture_id frame_tex_id;
   atlas_texture_id bg_tex_id;
   Color bg_tint;
@@ -36,30 +37,30 @@ typedef struct panel {
   bool is_scrolling_active;
   
   data128 buffer;
-  panel() {
-      this->frame_tex_id  = ATLAS_TEX_ID_DARK_FANTASY_PANEL;
-      this->bg_tex_id     = ATLAS_TEX_ID_DARK_FANTASY_PANEL_BG;
-      this->bg_tint       = Color { 30, 39, 46, 245};
-      this->bg_hover_tint = Color { 52, 64, 76, 245};
-      this->offsets       = Vector4 {6, 6, 6, 6};
-      this->zoom          = 1.f;
-      this->scroll        = 0;
-      this->current_state = BTN_STATE_UP;
-      this->signal_state  = BTN_STATE_UNDEFINED;
-      this->dest          = ZERORECT;
-      this->scroll_handle = ZERORECT;
-      this->draggable     = false;
-      this->is_dragging_scroll = false;
-      this->is_scrolling_active = false;
-      this->buffer = data128();
+  panel(void) {
+    this->frame_tex_id  = ATLAS_TEX_ID_DARK_FANTASY_PANEL;
+    this->bg_tex_id     = ATLAS_TEX_ID_DARK_FANTASY_PANEL_BG;
+    this->bg_tint       = Color { 30, 39, 46, 245};
+    this->bg_hover_tint = Color { 52, 64, 76, 245};
+    this->offsets       = Vector4 {6, 6, 6, 6};
+    this->zoom          = 1.f;
+    this->scroll        = 0;
+    this->current_state = BTN_STATE_UP;
+    this->signal_state  = BTN_STATE_UNDEFINED;
+    this->dest          = ZERORECT;
+    this->scroll_handle = ZERORECT;
+    this->draggable     = false;
+    this->is_dragging_scroll = false;
+    this->is_scrolling_active = false;
+    this->buffer = data128();
   };
   panel(button_state signal_state, atlas_texture_id bg_tex_id, atlas_texture_id frame_tex_id, Vector4 offsets, Color bg_tint, Color hover_tint = Color { 52, 64, 76, 245}) : panel() {
-      this->signal_state = signal_state;
-      this->bg_tex_id = bg_tex_id;
-      this->frame_tex_id = frame_tex_id;
-      this->bg_tint = bg_tint;
-      this->offsets = offsets;
-      this->bg_hover_tint = hover_tint;
+    this->signal_state = signal_state;
+    this->bg_tex_id = bg_tex_id;
+    this->frame_tex_id = frame_tex_id;
+    this->bg_tint = bg_tint;
+    this->offsets = offsets;
+    this->bg_hover_tint = hover_tint;
   }
 } panel;
   
