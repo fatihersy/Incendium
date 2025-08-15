@@ -24,10 +24,15 @@ typedef struct user_interface_system_state {
   std::array<slider_type, SDR_TYPE_MAX> slider_types;
   std::array<progress_bar, PRG_BAR_ID_MAX> prg_bars;
   std::array<progress_bar_type, PRG_BAR_TYPE_ID_MAX> prg_bar_types;
-  
+
   spritesheet ss_to_draw_bg;
   Vector2 mouse_pos_screen;
   std::vector<localization_package> localization_info;
+  std::vector<ui_error_display_control_system> errors_on_play;
+  Vector2 error_text_start_position;
+  f32 error_text_end_height;
+  f32 error_text_duration_stay_on_screen;
+  f32 error_text_duration_in_and_out;
 
   user_interface_system_state(void) {
     this->in_app_settings = nullptr;
@@ -44,7 +49,12 @@ typedef struct user_interface_system_state {
     
     this->ss_to_draw_bg = spritesheet();
     this->mouse_pos_screen = ZEROVEC2;
-    this->localization_info.clear();
+    this->localization_info = std::vector<localization_package>();
+    this->errors_on_play = std::vector<ui_error_display_control_system>();
+    this->error_text_start_position = ZEROVEC2;
+    this->error_text_end_height = 0.f;
+    this->error_text_duration_in_and_out = 0.f; // in seconds
+    this->error_text_duration_stay_on_screen = 0.f; // in seconds
   }
 } user_interface_system_state;
 
@@ -80,6 +90,11 @@ static user_interface_system_state * state = nullptr;
 #define SLIDER_FONT FONT_TYPE_ABRACADABRA
 #define DEFAULT_SLIDER_FONT_SIZE 1
 #define DEFAULT_PERCENT_SLIDER_CIRCLE_AMOUTH 10
+#define DEFAULT_ERROR_FONT_TYPE FONT_TYPE_ABRACADABRA
+#define DEFAULT_ERROR_FONT_SIZE 1
+
+#define ERROR_TEXT_DURATION_STAY_ON_SCREEN 2.1f
+#define ERROR_TEXT_DURATION_IN_AND_OUT .5f
 
 #define SDR_AT(ID) state->sliders.at(ID)
 #define SDR_CURR_OPT_VAL(ID) state->sliders.at(ID).options.at(state->sliders.at(ID).current_value)
@@ -104,6 +119,8 @@ bool user_interface_on_event(i32 code, event_context context);
 void update_buttons(void);
 void update_sliders(void);
 void update_checkboxes(void);
+void update_display_errors(void);
+void render_display_errors(void);
  
 void draw_slider_body(slider* sdr);
 void draw_atlas_texture_stretch(atlas_texture_id tex_id, Rectangle stretch_part, Rectangle dest, bool should_center, Color tint = WHITE);
@@ -112,6 +129,7 @@ void draw_atlas_texture_npatch(atlas_texture_id _id, Rectangle dest, Vector4 off
 void gui_draw_settings_screen(void);
 bool gui_button(const char* text, button_id _id, Font font, i32 font_size_scale, Vector2 pos, bool play_on_click_sound);
 void gui_checkbox(checkbox_id _id, Vector2 pos);
+void gui_display_error(ui_error_display_control_system err);
 
 void register_checkbox(checkbox_id _cb_id, checkbox_type_id _cb_type_id);
 void register_checkbox_type(checkbox_type_id _cb_type_id, spritesheet_id _ss_type, Vector2 frame_dim, f32 _scale, bool _should_center);
@@ -164,7 +182,8 @@ constexpr void draw_text_simple(const char* text, Vector2 pos, font_type in_font
   Font font = font_type_to_font(in_font_type);
   DrawTextEx(font, text, pos, font.baseSize * fontsize, UI_FONT_SPACING, color);
 }
-constexpr void draw_text(const char* text, Vector2 pos, font_type in_font_type, i32 fontsize, Color color, bool center_horizontal, bool center_vertical, bool use_grid_align, Vector2 grid_coord) {
+constexpr void draw_text(const char* text, Vector2 pos, font_type in_font_type, i32 fontsize, Color color, bool center_horizontal, bool center_vertical, 
+  bool use_grid_align = false, Vector2 grid_coord = ZEROVEC2) {
   Font font = font_type_to_font(in_font_type);
   Vector2 text_measure = MeasureTextEx(font, text, font.baseSize * fontsize, UI_FONT_SPACING);
   Vector2 text_position = pos;
@@ -205,7 +224,7 @@ inline void draw_text_outline(const char* text,
   DrawTextEx(font, text, text_position,  fontsize, UI_FONT_SPACING, color);
 }
 bool user_interface_system_initialize(void) {
-  if (state) {
+  if (state or state != nullptr) {
     TraceLog(LOG_WARNING, "user_interface::user_interface_system_initialize()::Initialize called twice");
     return true;
   }
@@ -217,6 +236,8 @@ bool user_interface_system_initialize(void) {
   *state = user_interface_system_state();
   
   state->in_app_settings = get_app_settings();
+  state->error_text_duration_in_and_out = ERROR_TEXT_DURATION_IN_AND_OUT;
+  state->error_text_duration_stay_on_screen = ERROR_TEXT_DURATION_STAY_ON_SCREEN;
 
   localized_languages langs = loc_parser_get_loc_langs();
   for (size_t iter = 0; iter < langs.lang.size(); ++iter) {
@@ -394,14 +415,21 @@ bool user_interface_system_initialize(void) {
   return true;
 }
 void update_user_interface(void) {
+  if (not state or state == nullptr) {
+    return;
+  }
   Vector2 mouse_pos_screen_unscaled = GetMousePosition();
   state->mouse_pos_screen.x = mouse_pos_screen_unscaled.x * state->in_app_settings->scale_ratio.at(0);
   state->mouse_pos_screen.y = mouse_pos_screen_unscaled.y * state->in_app_settings->scale_ratio.at(1);
+  state->error_text_start_position = Vector2 { 
+    state->in_app_settings->render_width * .5f, -state->in_app_settings->render_height * .025f
+  };
+  state->error_text_end_height = state->in_app_settings->render_height * .075f;
 
   update_buttons();
   update_sliders();
-
   update_checkboxes();
+  update_display_errors();
 }
  void update_buttons(void) {
   for (size_t itr_000 = 0; itr_000 < state->buttons.size(); ++itr_000) {
@@ -512,7 +540,72 @@ void update_checkboxes(void) {
     _checkbox.on_screen = false;
   }
 }
+void update_display_errors(void) {
+  for (size_t itr_000 = 0; itr_000 < state->errors_on_play.size(); ++itr_000) {
+    ui_error_display_control_system& err = state->errors_on_play.at(itr_000);
+
+    switch (err.display_state) {
+      case ERROR_DISPLAY_ANIMATION_STATE_MOVE_IN: {
+        err.location.y = EaseQuadIn(
+          err.accumulator, 
+          state->error_text_start_position.y, 
+          state->error_text_end_height, 
+          err.duration
+        );
+
+        err.accumulator += GetFrameTime();
+
+        if (err.accumulator > err.duration) {
+          err.display_state = ERROR_DISPLAY_ANIMATION_STATE_STAY;
+          err.duration = ERROR_TEXT_DURATION_STAY_ON_SCREEN;
+          err.accumulator = 0.f;
+        }
+        return;
+      }
+      case ERROR_DISPLAY_ANIMATION_STATE_STAY: {
+        err.accumulator += GetFrameTime();
+
+        if (err.accumulator > err.duration) {
+          err.display_state = ERROR_DISPLAY_ANIMATION_STATE_MOVE_OUT;
+          err.duration = ERROR_TEXT_DURATION_IN_AND_OUT;
+          err.accumulator = 0.f;
+        }
+        return;
+      }
+      case ERROR_DISPLAY_ANIMATION_STATE_MOVE_OUT: {
+        err.location.y = EaseQuadIn(
+          err.accumulator, 
+          state->error_text_start_position.y + state->error_text_end_height, 
+          -state->error_text_end_height, 
+          err.duration
+        );
+
+        err.accumulator += GetFrameTime();
+
+        if (err.accumulator > err.duration) {
+          state->errors_on_play.erase(state->errors_on_play.begin() + itr_000);
+        }
+        return;
+      }
+      default: {
+        TraceLog(LOG_WARNING, "user_interface::update_display_errors()::Unsupported state");
+        state->errors_on_play.erase(state->errors_on_play.begin() + itr_000);
+        return;
+      }
+    }
+  }
+}
 void render_user_interface(void) {
+  if (not state or state == nullptr) {
+    return;
+  }
+
+  render_display_errors();
+}
+void render_display_errors(void) {
+  for (ui_error_display_control_system& err : state->errors_on_play) {
+    gui_display_error(err);
+  }
 }
 bool gui_menu_button(const char* text, button_id _id, Vector2 grid, Vector2 grid_location, bool play_on_click_sound) {
   grid_location.x -= state->buttons.at(_id).btn_type.dest_frame_dim.x * .5f;
@@ -867,6 +960,14 @@ void gui_panel(panel pan, Rectangle dest, bool _should_center) {
   draw_atlas_texture_npatch(pan.frame_tex_id, dest, pan.offsets, _should_center);
 }
 bool gui_panel_active(panel* pan, Rectangle dest, bool _should_center) {
+  if (not state or state == nullptr) {
+    TraceLog(LOG_ERROR, "user_interface::gui_panel_active()::State is invalid");
+    return false;
+  }
+  if (not pan or pan == nullptr) {
+    TraceLog(LOG_ERROR, "user_interface::gui_panel_active()::Panel is invalid");
+    return false;
+  }
   if (pan->signal_state == BTN_STATE_UNDEFINED) {
     TraceLog(LOG_WARNING, "user_interface::gui_panel_active()::Panel was not meant to be active");
     return false;
@@ -893,9 +994,14 @@ bool gui_panel_active(panel* pan, Rectangle dest, bool _should_center) {
     }
   }
 
-  (pan->current_state == BTN_STATE_HOVER) 
-    ? DrawRectanglePro(dest, Vector2 {0, 0}, 0, pan->bg_hover_tint)  //draw_texture_regular(pan->bg_tex_id, dest, pan->bg_hover_tint, false)
-    : DrawRectanglePro(dest, Vector2 {0, 0}, 0, pan->bg_tint); //draw_texture_regular(pan->bg_tex_id, dest, pan->bg_tint, false);
+  if(pan->current_state == BTN_STATE_HOVER) {
+    draw_atlas_texture_regular(pan->bg_tex_id, dest, pan->bg_hover_tint, false);
+    //DrawRectanglePro(dest, Vector2 {0, 0}, 0, pan->bg_hover_tint)
+  }
+  else {
+    draw_atlas_texture_regular(pan->bg_tex_id, dest, pan->bg_tint, false);
+    //DrawRectanglePro(dest, Vector2 {0, 0}, 0, pan->bg_tint);
+  }
 
   draw_atlas_texture_npatch(pan->frame_tex_id, dest, pan->offsets, false);
 
@@ -1146,6 +1252,35 @@ void gui_draw_pause_screen(bool in_game_play_state) {
   if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_PAUSE_BUTTON_TEXT_EXIT_TO_DESKTOP), BTN_ID_PAUSEMENU_BUTTON_EXIT_TO_DESKTOP, Vector2 { 0.f, 15.f}, UI_BASE_RENDER_DIV2, true)) {
     event_fire(EVENT_CODE_APPLICATION_QUIT, event_context());
   }
+}
+void gui_fire_display_error(const char * text) {
+  if (not state or state == nullptr) {
+    TraceLog(LOG_ERROR, "user_interface::gui_error()::State is invalid");
+    return;
+  }
+  ui_error_display_control_system err = ui_error_display_control_system();
+
+  err.error_text = text;
+  err.bg_panel = panel( BTN_STATE_RELEASED, ATLAS_TEX_ID_CRIMSON_FANTASY_PANEL_BG, ATLAS_TEX_ID_CRIMSON_FANTASY_PANEL, 
+    Vector4 {6, 6, 6, 6}, Color { 30, 39, 46, 245}, Color { 52, 64, 76, 245}
+  );
+  err.duration = state->error_text_duration_in_and_out;
+  err.location = state->error_text_start_position;
+  err.display_state = ERROR_DISPLAY_ANIMATION_STATE_MOVE_IN;
+
+  state->errors_on_play.push_back(err);
+}
+void gui_display_error(ui_error_display_control_system err) {
+  Font font = font_type_to_font(DEFAULT_ERROR_FONT_TYPE);
+  Vector2 text_measure = MeasureTextEx(font, err.error_text.c_str(), font.baseSize * DEFAULT_ERROR_FONT_SIZE, UI_FONT_SPACING);
+  Vector2 text_position = err.location;
+  Rectangle panel_dest = Rectangle {text_position.x, text_position.y, text_measure.x * 1.25f, text_measure.y * 1.25f};
+
+  text_position.x -= (text_measure.x * .5f);
+  text_position.y -= (text_measure.y * .5f);
+
+  gui_panel(err.bg_panel, panel_dest, true);
+  draw_text_simple(err.error_text.c_str(), text_position, DEFAULT_ERROR_FONT_TYPE, DEFAULT_ERROR_FONT_SIZE, WHITE);
 }
 bool gui_slider_add_option(slider_id _id, data_pack content, u32 _localization_symbol, std::string _no_localized_text) {
   if (_id >= SDR_ID_MAX || _id <= SDR_ID_UNDEFINED || !state) {

@@ -38,6 +38,7 @@ typedef struct panel {
   
   data128 buffer;
   panel(void) {
+    this->id            = 0;
     this->frame_tex_id  = ATLAS_TEX_ID_DARK_FANTASY_PANEL;
     this->bg_tex_id     = ATLAS_TEX_ID_DARK_FANTASY_PANEL_BG;
     this->bg_tint       = Color { 30, 39, 46, 245};
@@ -55,6 +56,15 @@ typedef struct panel {
     this->buffer = data128();
   };
   panel(button_state signal_state, atlas_texture_id bg_tex_id, atlas_texture_id frame_tex_id, Vector4 offsets, Color bg_tint, Color hover_tint = Color { 52, 64, 76, 245}) : panel() {
+    this->signal_state = signal_state;
+    this->bg_tex_id = bg_tex_id;
+    this->frame_tex_id = frame_tex_id;
+    this->bg_tint = bg_tint;
+    this->offsets = offsets;
+    this->bg_hover_tint = hover_tint;
+  }
+  panel(i32 id, button_state signal_state, atlas_texture_id bg_tex_id, atlas_texture_id frame_tex_id, Vector4 offsets, Color bg_tint, Color hover_tint = Color { 52, 64, 76, 245}) : panel() {
+    this->id = id;
     this->signal_state = signal_state;
     this->bg_tex_id = bg_tex_id;
     this->frame_tex_id = frame_tex_id;
@@ -395,6 +405,31 @@ typedef struct ui_fade_control_system {
   }
 } ui_fade_control_system;
 
+typedef enum error_display_animation_state {
+  ERROR_DISPLAY_ANIMATION_STATE_UNDEFINED,
+  ERROR_DISPLAY_ANIMATION_STATE_MOVE_IN,
+  ERROR_DISPLAY_ANIMATION_STATE_STAY,
+  ERROR_DISPLAY_ANIMATION_STATE_MOVE_OUT,
+  ERROR_DISPLAY_ANIMATION_STATE_MAX,
+} error_display_animation_state;
+
+typedef struct ui_error_display_control_system {
+  error_display_animation_state display_state;
+  std::string error_text;
+  Vector2 location;
+  f32 duration;
+  f32 accumulator;
+  panel bg_panel;
+  ui_error_display_control_system(void) {
+    this->display_state = ERROR_DISPLAY_ANIMATION_STATE_UNDEFINED;
+    this->error_text = std::string("");
+    this->location = ZEROVEC2;
+    this->duration = 0.f; 
+    this->accumulator = 0.f;
+    this->bg_panel = panel();
+  }
+} ui_error_display_control_system;
+
 [[__nodiscard__]] bool user_interface_system_initialize(void);
 
 void update_user_interface(void);
@@ -448,6 +483,7 @@ void gui_draw_texture_id(const texture_id _id, const Rectangle dest, const Vecto
 void gui_draw_spritesheet_id(spritesheet_id _id, Color _tint, Vector2 pos, Vector2 scale, u16 frame); 
 void gui_draw_settings_screen(void);
 void gui_draw_pause_screen(bool in_game_play_state);
+void gui_fire_display_error(const char * text);
  
 // Exposed
 void ui_play_sprite_on_site(spritesheet *sheet, Color _tint, Rectangle dest);

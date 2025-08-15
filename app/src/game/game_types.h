@@ -843,7 +843,6 @@ typedef struct character_trait {
 typedef struct player_state {
   ability_play_system ability_system;
   std::array<character_stat, CHARACTER_STATS_MAX> stats;
-  ability_id starter_ability;
   
   Rectangle collision;
   Rectangle map_level_collision;
@@ -881,7 +880,6 @@ typedef struct player_state {
   player_state(void) {
     this->ability_system = ability_play_system();
     this->stats.fill(character_stat());
-    this->starter_ability = ABILITY_ID_UNDEFINED;
     this->collision = ZERORECT;
     this->map_level_collision = ZERORECT;
     this->move_right_sprite = spritesheet();
@@ -928,6 +926,7 @@ typedef struct ingame_info {
   f32 play_time;
   bool is_win;
   i32 stage_boss_id;
+  ability_id starter_ability;
 
   ingame_info(void) {
     this->in_spawns = nullptr;
@@ -942,6 +941,7 @@ typedef struct ingame_info {
     this->play_time = 0.f;
     this->is_win = false;
     this->stage_boss_id = -1;
+    this->starter_ability = ABILITY_ID_UNDEFINED;
   }
 } ingame_info;
 

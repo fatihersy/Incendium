@@ -308,7 +308,7 @@ bool gm_start_game(worldmap_stage stage) {
   }
   *state->game_info.player_state_dynamic = state->player_state_static;
   state->stage = stage;
-  _add_ability(state->game_info.player_state_dynamic->starter_ability);
+  _add_ability(state->game_info.starter_ability);
 
   std::array<character_stat, CHARACTER_STATS_MAX> * const _stat_array_ptr = __builtin_addressof(state->game_info.player_state_dynamic->stats);
 
@@ -479,22 +479,36 @@ i32 spawn_boss(void) {
 void currency_souls_add(i32 value) {
   state->game_progression_data->currency_souls_player_have += value;
 }
+void set_starter_ability(ability_id _id) {
+  if (not state or state == nullptr) {
+    TraceLog(LOG_ERROR, "game_manager::set_starter_ability()::State is invalid");
+    return;
+  }
+  if (_id <= ABILITY_ID_UNDEFINED or _id >= ABILITY_ID_MAX) {
+    TraceLog(LOG_ERROR, "game_manager::set_starter_ability()::Ability id is out of bound");
+    return;
+  }
+
+  state->game_info.starter_ability = _id;
+}
 void generate_in_game_info(void) {
-  if (!state || state == nullptr) {
+  if (not state or state == nullptr) {
     TraceLog(LOG_ERROR, "game_manager::generate_in_game_info()::State is not valid");
+    return;
+  }
+  if (not state->game_info.in_spawns or state->game_info.in_spawns == nullptr) {
+    TraceLog(LOG_ERROR, "game_manager::generate_in_game_info()::Spawn list is invalid");
     return;
   }
   Vector2 player_position = state->game_info.player_state_dynamic->position;
   const Character2D * spw_nearest = nullptr;
 
   f32 dist_cache = F32_MAX;
-  for (size_t itr_000 = 0; itr_000 < state->game_info.in_spawns->size(); ++itr_000) {
-    const Character2D* spw = __builtin_addressof(state->game_info.in_spawns->at(itr_000));
-    if (!spw) continue;
+  for (const Character2D& spw : (*state->game_info.in_spawns)) {
     
-    f32 dist = vec2_distance(player_position, spw->position);
+    f32 dist = vec2_distance(player_position, spw.position);
     if (dist < dist_cache) {
-      spw_nearest = spw;
+      spw_nearest = __builtin_addressof(spw);
       dist_cache = dist;
     }
   }

@@ -133,7 +133,6 @@ bool player_system_initialize(const camera_metrics* in_camera_metrics,const app_
   state->defualt_player.stats.at(CHARACTER_STATS_HEALTH).buffer.i32[0] = 0; // INFO: Will be Modified by player stats
   state->defualt_player.health_current = 0;
   state->defualt_player.health_perc = 0.f;
-  state->defualt_player.starter_ability = ABILITY_ID_UNDEFINED;
   state->defualt_player.is_initialized = true;
 
   event_register(EVENT_CODE_PLAYER_ADD_EXP, player_system_on_event);

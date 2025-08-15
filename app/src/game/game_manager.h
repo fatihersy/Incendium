@@ -27,6 +27,7 @@ void gm_damage_player_if_collide(data128 coll_data, i32 damage, collision_type c
 void game_manager_set_stat_value_by_level(character_stat* stat, i32 level);
 void set_static_player_state_stat(character_stat_id stat_id, i32 level);
 void currency_souls_add(i32 value);
+void set_starter_ability(ability_id _id);
 
 bool    _add_ability(ability_id _type);
 bool    _upgrade_ability(ability* abl);
