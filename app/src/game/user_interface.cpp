@@ -25,6 +25,7 @@ typedef struct user_interface_system_state {
   std::array<progress_bar, PRG_BAR_ID_MAX> prg_bars;
   std::array<progress_bar_type, PRG_BAR_TYPE_ID_MAX> prg_bar_types;
 
+  panel default_background_panel;
   spritesheet ss_to_draw_bg;
   Vector2 mouse_pos_screen;
   std::vector<localization_package> localization_info;
@@ -47,6 +48,7 @@ typedef struct user_interface_system_state {
     this->prg_bars.fill(progress_bar());
     this->prg_bar_types.fill(progress_bar_type());
     
+    this->default_background_panel = panel();
     this->ss_to_draw_bg = spritesheet();
     this->mouse_pos_screen = ZEROVEC2;
     this->localization_info = std::vector<localization_package>();
@@ -123,7 +125,6 @@ void update_display_errors(void);
 void render_display_errors(void);
  
 void draw_slider_body(slider* sdr);
-void draw_atlas_texture_stretch(atlas_texture_id tex_id, Rectangle stretch_part, Rectangle dest, bool should_center, Color tint = WHITE);
 void draw_atlas_texture_regular(atlas_texture_id _id, Rectangle dest, Color tint, bool should_center);
 void draw_atlas_texture_npatch(atlas_texture_id _id, Rectangle dest, Vector4 offsets, bool should_center);
 void gui_draw_settings_screen(void);
@@ -147,7 +148,6 @@ Font load_font(const char* file_name, i32 font_size, i32* _codepoints, i32 _code
 localization_package* load_localization(std::string language_name, u32 loc_index, std::string _codepoints, i32 font_size);
 localization_package* ui_get_localization_by_name(std::string language_name);
 localization_package* ui_get_localization_by_index(u32 _language_index);
-Vector2 ui_align_text(Rectangle in_dest, Vector2 in_text_measure, text_alignment align_to);
 
 bool ui_sound_slider_on_left_button_trigger(void);
 bool ui_sound_slider_on_right_button_trigger(void);
@@ -335,23 +335,25 @@ bool user_interface_system_initialize(void) {
 
   // IN GAME
   {
-    register_button(BTN_ID_IN_GAME_BUTTON_RETURN_MENU, BTN_TYPE_MENU_BUTTON);
+    register_button(BTN_ID_IN_GAME_BUTTON_RETURN_MENU, BTN_TYPE_FLAT_BUTTON);
   }
   // IN GAME
 
   // MAIN MENU
   {
-    register_button(BTN_ID_MAINMENU_BUTTON_PLAY,          BTN_TYPE_FLAT_BUTTON);
-    register_button(BTN_ID_MAINMENU_BUTTON_EDITOR,        BTN_TYPE_FLAT_BUTTON);
-    register_button(BTN_ID_MAINMENU_BUTTON_SETTINGS,      BTN_TYPE_FLAT_BUTTON);
-    register_button(BTN_ID_MAINMENU_BUTTON_UPGRADE,       BTN_TYPE_FLAT_BUTTON);
-    register_button(BTN_ID_MAINMENU_BUTTON_EXIT,          BTN_TYPE_FLAT_BUTTON);
-    register_button(BTN_ID_MAINMENU_SETTINGS_CANCEL,      BTN_TYPE_MENU_BUTTON);
-    register_button(BTN_ID_MAINMENU_UPGRADE_BACK,         BTN_TYPE_MENU_BUTTON);
-    register_button(BTN_ID_MAINMENU_UPGRADE_BUY_UPGRADE,  BTN_TYPE_MENU_BUTTON);
-    register_button(BTN_ID_MAINMENU_MAP_CHOICE_BACK,      BTN_TYPE_MENU_BUTTON);
-    register_button(BTN_ID_MAINMENU_TRAIT_CHOICE_BACK,    BTN_TYPE_MENU_BUTTON);
-    register_button(BTN_ID_MAINMENU_TRAIT_CHOICE_ACCEPT, BTN_TYPE_MENU_BUTTON);
+    register_button(BTN_ID_MAINMENU_BUTTON_PLAY,                        BTN_TYPE_FLAT_BUTTON);
+    register_button(BTN_ID_MAINMENU_BUTTON_EDITOR,                      BTN_TYPE_FLAT_BUTTON);
+    register_button(BTN_ID_MAINMENU_BUTTON_SETTINGS,                    BTN_TYPE_FLAT_BUTTON);
+    register_button(BTN_ID_MAINMENU_BUTTON_ENTER_STATE_CHARACTER,       BTN_TYPE_FLAT_BUTTON);
+    register_button(BTN_ID_MAINMENU_BUTTON_EXIT,                        BTN_TYPE_FLAT_BUTTON);
+    register_button(BTN_ID_MAINMENU_SETTINGS_CANCEL,                    BTN_TYPE_MENU_BUTTON);
+    register_button(BTN_ID_MAINMENU_STATE_CHARACTER_BACK,               BTN_TYPE_MENU_BUTTON);
+    register_button(BTN_ID_MAINMENU_STATE_CHARACTER_BUY_STAT_UPGRADE,   BTN_TYPE_MENU_BUTTON);
+    register_button(BTN_ID_MAINMENU_STATE_CHARACTER_ENTER_TAB_INVENTORY,BTN_TYPE_FLAT_BUTTON);
+    register_button(BTN_ID_MAINMENU_STATE_CHARACTER_ENTER_TAB_STATS,    BTN_TYPE_FLAT_BUTTON);
+    register_button(BTN_ID_MAINMENU_MAP_CHOICE_BACK,                    BTN_TYPE_MENU_BUTTON);
+    register_button(BTN_ID_MAINMENU_TRAIT_CHOICE_BACK,                  BTN_TYPE_MENU_BUTTON);
+    register_button(BTN_ID_MAINMENU_TRAIT_CHOICE_ACCEPT,                BTN_TYPE_MENU_BUTTON);
   }
   // MAIN MENU
 
@@ -405,6 +407,10 @@ bool user_interface_system_initialize(void) {
     SDR_ASSERT_SET_CURR_VAL_TO_LAST_ADDED(state->in_app_settings->window_state == FLAG_FULLSCREEN_MODE, SDR_ID_SETTINGS_WIN_MODE_SLIDER)
   }
   // SLIDER OPTIONS
+
+  state->default_background_panel = panel(BTN_STATE_UNDEFINED, ATLAS_TEX_ID_DARK_FANTASY_PANEL_BG, ATLAS_TEX_ID_DARK_FANTASY_PANEL_SELECTED, 
+    Vector4 {6, 6, 6, 6}, Color { 30, 39, 46, 128}
+  );
 
   ui_refresh_setting_sliders_to_default();
 
@@ -1117,7 +1123,10 @@ void gui_draw_settings_screen(void) { // TODO: Return to settings later
   DrawRectangleRec(header_loc, Color{0, 0, 0, 50});
   DrawRectangleRec(footer_loc, Color{0, 0, 0, 50});
 
-  gui_panel(panel(), settings_bg_pnl_dest, false);
+  gui_panel(panel(BTN_STATE_UNDEFINED, ATLAS_TEX_ID_DARK_FANTASY_PANEL_BG, ATLAS_TEX_ID_DARK_FANTASY_PANEL_SELECTED, Vector4 {6, 6, 6, 6}, Color { 30, 39, 46, 128}),
+    settings_bg_pnl_dest, 
+    false
+  );
 
   gui_slider(SDR_ID_SETTINGS_SOUND_SLIDER, UI_BASE_RENDER_DIV2, VECTOR2(0.f,-20.f));
 
@@ -1253,17 +1262,18 @@ void gui_draw_pause_screen(bool in_game_play_state) {
     event_fire(EVENT_CODE_APPLICATION_QUIT, event_context());
   }
 }
-void gui_fire_display_error(const char * text) {
+void gui_fire_display_error(int loc_text_id) {
   if (not state or state == nullptr) {
     TraceLog(LOG_ERROR, "user_interface::gui_error()::State is invalid");
     return;
   }
+  if (not state->errors_on_play.empty() and state->errors_on_play.back().error_text == lc_txt(loc_text_id)) {
+    return;
+  }
   ui_error_display_control_system err = ui_error_display_control_system();
 
-  err.error_text = text;
-  err.bg_panel = panel( BTN_STATE_RELEASED, ATLAS_TEX_ID_CRIMSON_FANTASY_PANEL_BG, ATLAS_TEX_ID_CRIMSON_FANTASY_PANEL, 
-    Vector4 {6, 6, 6, 6}, Color { 30, 39, 46, 245}, Color { 52, 64, 76, 245}
-  );
+  err.error_text = lc_txt(loc_text_id);
+  err.bg_tex_id = ATLAS_TEX_ID_HEADER;
   err.duration = state->error_text_duration_in_and_out;
   err.location = state->error_text_start_position;
   err.display_state = ERROR_DISPLAY_ANIMATION_STATE_MOVE_IN;
@@ -1274,13 +1284,26 @@ void gui_display_error(ui_error_display_control_system err) {
   Font font = font_type_to_font(DEFAULT_ERROR_FONT_TYPE);
   Vector2 text_measure = MeasureTextEx(font, err.error_text.c_str(), font.baseSize * DEFAULT_ERROR_FONT_SIZE, UI_FONT_SPACING);
   Vector2 text_position = err.location;
-  Rectangle panel_dest = Rectangle {text_position.x, text_position.y, text_measure.x * 1.25f, text_measure.y * 1.25f};
+  Rectangle bg_dest = Rectangle {text_position.x, text_position.y, text_measure.x * 1.25f, text_measure.y * 1.25f};
 
   text_position.x -= (text_measure.x * .5f);
   text_position.y -= (text_measure.y * .5f);
 
-  gui_panel(err.bg_panel, panel_dest, true);
+  // TODO: Make stretch part dynamic
+  draw_atlas_texture_stretch(err.bg_tex_id, Rectangle {64, 0, 32, 32}, bg_dest, true, WHITE);
   draw_text_simple(err.error_text.c_str(), text_position, DEFAULT_ERROR_FONT_TYPE, DEFAULT_ERROR_FONT_SIZE, WHITE);
+}
+Rectangle gui_draw_default_background_panel(void) {
+  Rectangle header_loc = {0, 0, static_cast<f32>(UI_BASE_RENDER_WIDTH), UI_BASE_RENDER_HEIGHT * .1f};
+  Rectangle footer_loc = {0, 
+    UI_BASE_RENDER_HEIGHT - UI_BASE_RENDER_HEIGHT *.1f, 
+    static_cast<f32>(UI_BASE_RENDER_WIDTH), UI_BASE_RENDER_HEIGHT * .1f};
+  DrawRectangleRec(header_loc, Color{0, 0, 0, 50});
+  DrawRectangleRec(footer_loc, Color{0, 0, 0, 50});
+
+  state->default_background_panel.dest = Rectangle{ UI_BASE_RENDER_WIDTH * .025f, UI_BASE_RENDER_HEIGHT * .075f, UI_BASE_RENDER_WIDTH * .95f, UI_BASE_RENDER_HEIGHT * .85f};
+  gui_panel(state->default_background_panel, state->default_background_panel.dest, false);
+  return state->default_background_panel.dest;
 }
 bool gui_slider_add_option(slider_id _id, data_pack content, u32 _localization_symbol, std::string _no_localized_text) {
   if (_id >= SDR_ID_MAX || _id <= SDR_ID_UNDEFINED || !state) {
@@ -2109,6 +2132,9 @@ void ui_play_sprite_on_site(spritesheet *sheet, Color _tint, Rectangle dest) {
 }
 void ui_set_sprite(spritesheet *sheet, bool _play_looped, bool _play_once) {
   set_sprite(sheet, _play_looped, _play_once);
+}
+const spritesheet * ui_get_spritesheet_by_id(spritesheet_id type) {
+  return ss_get_spritesheet_by_enum(type);
 }
 void ui_update_sprite(spritesheet *sheet) {
   update_sprite(sheet);

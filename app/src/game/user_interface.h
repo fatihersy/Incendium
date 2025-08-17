@@ -416,17 +416,17 @@ typedef enum error_display_animation_state {
 typedef struct ui_error_display_control_system {
   error_display_animation_state display_state;
   std::string error_text;
+  atlas_texture_id bg_tex_id;
   Vector2 location;
   f32 duration;
   f32 accumulator;
-  panel bg_panel;
   ui_error_display_control_system(void) {
     this->display_state = ERROR_DISPLAY_ANIMATION_STATE_UNDEFINED;
     this->error_text = std::string("");
+    this->bg_tex_id = ATLAS_TEX_ID_UNSPECIFIED;
     this->location = ZEROVEC2;
     this->duration = 0.f; 
     this->accumulator = 0.f;
-    this->bg_panel = panel();
   }
 } ui_error_display_control_system;
 
@@ -480,15 +480,19 @@ void gui_draw_atlas_texture_id_scale(atlas_texture_id _id, Vector2 position, f32
 void gui_draw_atlas_texture_id_pro_grid(atlas_texture_id _id, Rectangle src, Rectangle dest, bool relative);
 void gui_draw_texture_id_pro(texture_id _id, Rectangle src, Rectangle dest, Color tint = WHITE, Vector2 origin = ZEROVEC2);
 void gui_draw_texture_id(const texture_id _id, const Rectangle dest, const Vector2 origin);
-void gui_draw_spritesheet_id(spritesheet_id _id, Color _tint, Vector2 pos, Vector2 scale, u16 frame); 
+void gui_draw_spritesheet_id(spritesheet_id _id, Color _tint, Vector2 pos, Vector2 scale, u16 frame);
+void draw_atlas_texture_stretch(atlas_texture_id tex_id, Rectangle stretch_part, Rectangle dest, bool should_center, Color tint = WHITE);
 void gui_draw_settings_screen(void);
 void gui_draw_pause_screen(bool in_game_play_state);
-void gui_fire_display_error(const char * text);
+void gui_fire_display_error(int loc_text_id);
+Rectangle gui_draw_default_background_panel(void);
  
 // Exposed
 void ui_play_sprite_on_site(spritesheet *sheet, Color _tint, Rectangle dest);
 void ui_set_sprite(spritesheet *sheet, bool _play_looped, bool _play_once);
+const spritesheet * ui_get_spritesheet_by_id(spritesheet_id type);
 void ui_update_sprite(spritesheet *sheet);
+Vector2 ui_align_text(Rectangle in_dest, Vector2 in_text_measure, text_alignment align_to);
 
 #define gui_label_box_format(FONT, FONT_SIZE, RECT, COLOR, ALIGN, TEXT, ...) gui_label_box(TextFormat(TEXT, __VA_ARGS__), FONT, FONT_SIZE, RECT, COLOR, ALIGN)
 #define gui_label_format(FONT, FONT_SIZE, X,Y, COLOR, CENTER_H, CENTER_V, TEXT, ...) gui_label(TextFormat(TEXT, __VA_ARGS__), FONT, FONT_SIZE, Vector2{X,Y}, COLOR, CENTER_H, CENTER_V)

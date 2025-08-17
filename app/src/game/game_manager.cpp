@@ -103,6 +103,7 @@ bool game_manager_initialize(const camera_metrics * in_camera_metrics, const app
   event_register(EVENT_CODE_DAMAGE_PLAYER_IF_COLLIDE, game_manager_on_event);
   event_register(EVENT_CODE_DAMAGE_ANY_SPAWN_IF_COLLIDE, game_manager_on_event);
   event_register(EVENT_CODE_ADD_CURRENCY_SOULS, game_manager_on_event);
+  event_register(EVENT_CODE_KILL_ALL_SPAWNS, game_manager_on_event);
 
   // Traits
   {
@@ -565,8 +566,8 @@ void gm_update_player(void) {
 // OPS
 
 // GET / SET
-i32 get_currency_souls_total(void) {
-  return state->game_progression_data->currency_souls_player_have;
+const i32* get_currency_souls_total(void) {
+  return __builtin_addressof(state->game_progression_data->currency_souls_player_have);
 }
 bool get_b_player_have_upgrade_points(void) {
   return state->game_info.player_state_dynamic->is_player_have_ability_upgrade_points;
@@ -838,6 +839,13 @@ bool game_manager_on_event(i32 code, event_context context) {
         static_cast<i16>(context.data.i16[3])
       );
       gm_damage_spawn_if_collide(coll_data, static_cast<i32>(context.data.i16[4]), static_cast<collision_type>(context.data.i16[5]));
+      return true;
+    }
+    case EVENT_CODE_KILL_ALL_SPAWNS: {
+      std::vector<Character2D>::const_iterator spw_iter = state->game_info.in_spawns->begin();
+      for (; spw_iter != state->game_info.in_spawns->end(); spw_iter++) {
+        damage_spawn(spw_iter->character_id, spw_iter->health_max);
+      }
       return true;
     }
     case EVENT_CODE_ADD_CURRENCY_SOULS: {

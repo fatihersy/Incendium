@@ -24,38 +24,6 @@ extern "C" void __cdecl SteamAPIDebugTextHook( int nSeverity, const char *pchDeb
 	}
 }
 
-//-----------------------------------------------------------------------------
-// Purpose: Extracts some feature from the command line
-//-----------------------------------------------------------------------------
-bool ParseCommandLine( const char *pchCmdLine, const char **ppchServerAddress, const char **ppchLobbyID )
-{
-	// Look for the +connect ipaddress:port parameter in the command line,
-	// Steam will pass this when a user has used the Steam Server browser to find
-	// a server for our game and is trying to join it. 
-	const char *pchConnectParam = "+connect ";
-	const char *pchConnect = strstr( pchCmdLine, pchConnectParam );
-	*ppchServerAddress = NULL;
-	if ( pchConnect && strlen( pchCmdLine ) > (pchConnect - pchCmdLine) + strlen( pchConnectParam ) )
-	{
-		// Address should be right after the +connect
-		*ppchServerAddress = pchCmdLine + ( pchConnect - pchCmdLine ) + strlen( pchConnectParam );
-	}
-
-	// look for +connect_lobby lobbyid paramter on the command line
-	// Steam will pass this in if a user taken up an invite to a lobby
-	const char *pchConnectLobbyParam = "+connect_lobby ";
-	const char *pchConnectLobby = strstr( pchCmdLine, pchConnectLobbyParam );
-	*ppchLobbyID = NULL;
-	if ( pchConnectLobby && strlen( pchCmdLine ) > (pchConnectLobby - pchCmdLine) + strlen( pchConnectLobbyParam ) )
-	{
-		// lobby ID should be right after the +connect_lobby
-		*ppchLobbyID = pchCmdLine + ( pchConnectLobby - pchCmdLine ) + strlen( pchConnectLobbyParam );
-	}
-
-	return *ppchServerAddress || *ppchLobbyID;
-
-}
-
 int entry(void) 
 {
 	if ( SteamAPI_RestartAppIfNecessary( STEAM_APP_ID ) )
@@ -111,17 +79,17 @@ int entry(void)
 	// do a DRM self check
 	Steamworks_SelfCheck();
 
-    if(!app_initialize()) {
-			alert("main::entry()::App initialize return with 1. Please look at the logs for more details", "Oh no!");
-			return 1;
-		}
+  if(!app_initialize()) {
+		alert("main::entry()::App initialize return with 1. Please look at the logs for more details", "Oh no!");
+		return 1;
+	}
 
-    while (window_should_close())
-    {
-        app_update();
-
-        app_render();
-    }
+  while (window_should_close())
+  {
+    app_update();
+    
+    app_render();
+  }
 
     // TODO: Destr
 

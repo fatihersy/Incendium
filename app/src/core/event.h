@@ -79,6 +79,7 @@ typedef enum system_event_code {
    * @brief gm_damage_spawn_if_collide(coll_data, damage i16[4], collision_type i16[5]);
    */
   EVENT_CODE_DAMAGE_ANY_SPAWN_IF_COLLIDE,
+  EVENT_CODE_KILL_ALL_SPAWNS,
 
   // scene_manager
   EVENT_CODE_SCENE_IN_GAME,

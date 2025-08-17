@@ -1,5 +1,6 @@
 #include "ability_firetrail.h"
 #include <reasings.h>
+#include <loc_types.h>
 
 #include "core/event.h"
 #include "core/fmemory.h"
@@ -83,7 +84,7 @@ ability get_ability_firetrail(void) {
     return ability();
   }
   std::array<ability_upgradables, ABILITY_UPG_MAX> fire_trail_upgr = {ABILITY_UPG_DAMAGE, ABILITY_UPG_HITBOX, ABILITY_UPG_UNDEFINED, ABILITY_UPG_UNDEFINED, ABILITY_UPG_UNDEFINED};
-  return ability("Fire Trail", ABILITY_ID_FIRETRAIL,
+  return ability(static_cast<i32>(LOC_TEXT_PLAYER_ABILITY_NAME_FIRETRAIL), ABILITY_ID_FIRETRAIL,
     fire_trail_upgr,
     0.5f, 3.5f, Vector2 {.25f, .25f}, 0, 0, 3.f, 3,
     Vector2{128.f, 128.f}, Rectangle{2304.f, 736.f, 32.f, 32.f}

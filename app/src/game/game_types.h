@@ -308,6 +308,13 @@ typedef struct music_data {
 
   bool play_once;
   bool played;
+  music_data(void) {
+    this->id = MUSIC_ID_UNSPECIFIED;
+    this->handle = Music { AudioStream { nullptr, nullptr, 0u, 0u, 0u }, 0u, false, 0, nullptr };
+    this->file = file_data();
+    this->play_once = false;
+    this->played = false;
+  }
 }music_data;
 
 typedef struct sound_data {
@@ -318,6 +325,21 @@ typedef struct sound_data {
 
   bool play_once;
   bool played;
+  sound_data(void) {
+    this->id = SOUND_ID_UNSPECIFIED;
+    this->handle = Sound {
+      AudioStream {
+        nullptr, nullptr, 0u, 0u, 0u
+      },
+      0u
+    };
+    this->wav = Wave {
+      0u, 0u, 0u, 0u, nullptr
+    };
+    this->file = file_data();
+    this->play_once = false;
+    this->played = false;
+  }
 }sound_data;
 
 typedef struct atlas_texture {
@@ -375,7 +397,7 @@ typedef struct tilesheet {
 
 typedef struct worldmap_stage {
   i32 map_id;
-  std::string displayname;
+  i32 title_txt_id;
   std::string filename;
   std::array<Rectangle, MAX_SPAWN_COLLISIONS> spawning_areas;
   Vector2 screen_location;
@@ -384,10 +406,11 @@ typedef struct worldmap_stage {
   f32 spawn_scale;
   f32 boss_scale;
   bool is_centered;
-  bool is_active;
+  bool display_on_screen;
+  bool is_playable;
   worldmap_stage(void) {
     this->map_id = INVALID_IDI32;
-    this->displayname = std::string("");
+    this->title_txt_id = 0;
     this->filename = std::string("");
     this->spawning_areas.fill(ZERORECT);
     this->screen_location = ZEROVEC2;
@@ -396,15 +419,16 @@ typedef struct worldmap_stage {
     this->spawn_scale = 0.f;
     this->boss_scale = 0.f;
     this->is_centered = false;
-    this->is_active = false;
+    this->display_on_screen = false;
+    this->is_playable = false;
   }
   worldmap_stage(
-    i32 in_id,std::string in_display_name, std::string in_filename, i32 in_stage_level,
+    i32 in_id, i32 title_txt_id, std::string in_filename, i32 in_stage_level,
     i32 in_spw_count, f32 in_spw_scale, f32 in_boss_scale, 
-    Vector2 in_screen_loc, bool in_is_centered, bool in_is_active
-  ) : worldmap_stage() {
+    Vector2 in_screen_loc, bool in_is_centered, bool in_display_on_screen, bool in_is_active) : worldmap_stage() 
+  {
     this->map_id = in_id;
-    this->displayname = in_display_name;
+    this->title_txt_id = title_txt_id;
     this->filename = in_filename;
     this->screen_location = NORMALIZE_VEC2(in_screen_loc.x, in_screen_loc.y, 3840.f, 2160.f);
     this->total_spawn_count = in_spw_count;
@@ -412,7 +436,8 @@ typedef struct worldmap_stage {
     this->spawn_scale = in_spw_scale;
     this->boss_scale = in_boss_scale;
     this->is_centered = in_is_centered;
-    this->is_active = in_is_active;
+    this->display_on_screen = in_display_on_screen;
+    this->is_playable = in_is_active;
   }
 } worldmap_stage;
 
@@ -684,7 +709,7 @@ typedef struct projectile {
 
 typedef struct ability {
   ability_id id;
-  std::string display_name;
+  i32 display_name_loc_text_id;
   std::vector<projectile> projectiles;
   std::vector<spritesheet_id> animation_ids;
   void* p_owner;
@@ -692,11 +717,11 @@ typedef struct ability {
   
   Vector2 proj_dim;
   Vector2 position;
-  Vector2 proj_collision_scale;
-  f32 proj_sprite_scale;
-  f32 ability_play_time;
   f32 ability_cooldown_duration;
   f32 ability_cooldown_accumulator;
+  f32 ability_play_time;
+  f32 proj_sprite_scale;
+  Vector2 proj_collision_scale;
   f32 proj_duration;
   i32 proj_count;
   i32 proj_speed;
@@ -713,9 +738,9 @@ typedef struct ability {
 
   ability(void) {
     this->id = ABILITY_ID_UNDEFINED;
-    this->display_name.clear();
-    this->projectiles.clear();
-    this->animation_ids.clear();
+    this->display_name_loc_text_id = 0;
+    this->projectiles = std::vector<projectile>();
+    this->animation_ids = std::vector<spritesheet_id>();
     this->p_owner = nullptr;
     this->upgradables.fill(ABILITY_UPG_UNDEFINED);
 
@@ -741,12 +766,12 @@ typedef struct ability {
     this->vec_ex = data256();
   };
   ability(
-    std::string name, ability_id id, 
+    i32 loc_text_id, ability_id id, 
     std::array<ability_upgradables, ABILITY_UPG_MAX> upgrs, 
     f32 ability_cooldown, f32 proj_sprite_scale, Vector2 proj_collision_scale, i32 proj_count, i32 proj_speed, f32 proj_duration, i32 base_damage,
     Vector2 proj_dim, Rectangle icon_src) : ability()
   {
-    this->display_name = name;
+    this->display_name_loc_text_id = loc_text_id;
     this->id = id;
     this->upgradables = upgrs;
     this->ability_cooldown_duration = ability_cooldown;

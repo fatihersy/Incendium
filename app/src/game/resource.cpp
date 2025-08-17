@@ -77,13 +77,9 @@ bool resource_system_initialize(void) {
   load_texture_from_atlas(ATLAS_TEX_ID_PANEL_SCROLL,                         Rectangle{ 1504,  144,   16,   48 });
   load_texture_from_atlas(ATLAS_TEX_ID_PANEL_SCROLL_HANDLE,                  Rectangle{ 1520,  144,   16,   16 });
 
-  //load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_PLAYER_ANIMATION_IDLE_LEFT,         VECTOR2(1584,  288), 15,   22,  32, 1,  4);
   load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_PLAYER_ANIMATION_IDLE_RIGHT,        VECTOR2(1584,  224), 10,   22,  32, 1,  4);
-  //load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_PLAYER_ANIMATION_MOVE_LEFT,         VECTOR2(1584,  320), 10,   22,  32, 1,  6);
   load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_PLAYER_ANIMATION_MOVE_RIGHT,        VECTOR2(1584,  160), 10,   22,  32, 1,  6);
-  //load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_PLAYER_ANIMATION_TAKE_DAMAGE_LEFT,  VECTOR2(1584,  256), 13,   22,  32, 1,  3);
   load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_PLAYER_ANIMATION_TAKE_DAMAGE_RIGHT, VECTOR2(1584,  192), 13,   22,  32, 1,  3);
-  //load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_PLAYER_ANIMATION_WRECK_LEFT,        VECTOR2(1632,  128),  9,   90, 110, 1,  7);
   load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_PLAYER_ANIMATION_WRECK_RIGHT,       VECTOR2(1632,   96),  9,   90, 110, 1,  7);
   load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_PLAYER_ANIMATION_ATTACK_1,          VECTOR2(1568, 1632), 15,  144,  64, 1,  4);
   load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_PLAYER_ANIMATION_ATTACK_2,          VECTOR2(1568, 1696), 15,  144,  64, 1,  4);

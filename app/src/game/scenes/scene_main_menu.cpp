@@ -10,16 +10,22 @@
 #include "game/user_interface.h"
 #include "game/world.h"
 #include "game/camera.h"
-//#include "game/fshader.h"
 
 typedef enum main_menu_scene_type {
   MAIN_MENU_SCENE_DEFAULT,
   MAIN_MENU_SCENE_SETTINGS,
-  MAIN_MENU_SCENE_UPGRADE,
+  MAIN_MENU_SCENE_CHARACTER,
   MAIN_MENU_SCENE_EXTRAS,
   MAIN_MENU_SCENE_TO_PLAY_MAP_CHOICE,
   MAIN_MENU_SCENE_TO_PLAY_TRAIT_CHOICE,
 } main_menu_scene_type;
+
+typedef enum main_menu_scene_character_subscene_type {
+  MAIN_MENU_SCENE_CHARACTER_UNDEFINED,
+  MAIN_MENU_SCENE_CHARACTER_INVENTORY,
+  MAIN_MENU_SCENE_CHARACTER_STATS,
+  MAIN_MENU_SCENE_CHARACTER_MAX,
+} main_menu_scene_character_subscene_type;
 
 typedef struct play_scene_info {
   i32 hovered_stage;
@@ -29,8 +35,11 @@ typedef struct play_scene_info {
 }play_scene_info;
 
 typedef struct main_menu_scene_state {
-  panel upgrade_list_panel;
-  panel upgrade_details_panel;
+  panel main_menu_state_character_panel;
+  panel stat_list_panel;
+  panel stat_details_panel;
+  panel inventory_character_panel;
+  panel inventory_slots_panel;
   panel worldmap_selection_panel;
   panel panel_dark_fantasy_selected_default;
   panel panel_dark_fantasy_default;
@@ -43,6 +52,7 @@ typedef struct main_menu_scene_state {
   std::vector<character_trait> positive_traits;
   std::vector<character_trait> negative_traits;
   i32 available_trait_points;
+  spritesheet inventory_panel_hero_idle_anim;
 
   const character_stat * hovered_stat;
   const camera_metrics * in_camera_metrics;
@@ -52,8 +62,9 @@ typedef struct main_menu_scene_state {
   std::array<worldmap_stage, MAX_WORLDMAP_LOCATIONS> worldmap_locations;
   
   const Vector2* mouse_pos_screen;
-  u32 deny_notify_timer;
+  f32 deny_notify_timer;
   main_menu_scene_type mainmenu_state;
+  main_menu_scene_character_subscene_type mainmenu_scene_character_subscene;
   bool is_dragging_scroll;
   bool is_any_button_down;
 
@@ -65,29 +76,36 @@ typedef struct main_menu_scene_state {
   i32 next_local_panel_id;
 
   main_menu_scene_state(void) {
-    this->upgrade_list_panel = panel();
-    this->upgrade_details_panel = panel();
+    this->main_menu_state_character_panel = panel();
+    this->stat_list_panel = panel();
+    this->stat_details_panel = panel();
+    this->inventory_character_panel = panel();
+    this->inventory_slots_panel = panel();
     this->worldmap_selection_panel = panel();
     this->panel_dark_fantasy_selected_default = panel();
     this->panel_dark_fantasy_default = panel();
+    this->panel_active_dark_fantasy_default = panel();
     this->trait_selection_background_panel = panel();
     this->positive_traits_selection_panel = panel();
     this->negative_traits_selection_panel = panel();
     this->chosen_traits_selection_panel = panel();
     this->ability_selection_panel = panel();
-    this->positive_traits.clear();
-    this->negative_traits.clear();
+    this->positive_traits = std::vector<character_trait>();
+    this->negative_traits = std::vector<character_trait>();
     this->available_trait_points = 0;
+    this->inventory_panel_hero_idle_anim = spritesheet();
 
     this->hovered_stat = nullptr;
     this->in_camera_metrics = nullptr;
     this->in_app_settings = nullptr;
+    this->ingame_info = nullptr;
     this->abilities.fill(ability());
     this->worldmap_locations.fill(worldmap_stage());
 
     this->mouse_pos_screen = nullptr;
-    this->deny_notify_timer = 0u;
+    this->deny_notify_timer = 0.f;
     this->mainmenu_state = MAIN_MENU_SCENE_DEFAULT;
+    this->mainmenu_scene_character_subscene = MAIN_MENU_SCENE_CHARACTER_STATS;
     this->is_dragging_scroll = false;
     this->is_any_button_down = false;
 
@@ -102,7 +120,7 @@ typedef struct main_menu_scene_state {
 
 static main_menu_scene_state * state = nullptr;
 
-#define DENY_NOTIFY_TIME .8f * TARGET_FPS
+#define DENY_NOTIFY_TIME .8f
 
 #define MAIN_MENU_FADE_DURATION 1 * TARGET_FPS
 #define MAIN_MENU_UPGRADE_PANEL_COL 3
@@ -123,9 +141,13 @@ static main_menu_scene_state * state = nullptr;
 
 [[__nodiscard__]] bool begin_scene_main_menu(bool fade_in);
 
-void draw_main_menu_upgrade_panel(void);
-void draw_main_menu_upgrade_list_panel(void);
-void draw_main_menu_upgrade_details_panel(void);
+void draw_main_menu_character_panel(void);
+void draw_main_menu_character_subscene_inventory_panel(const Vector4 padding);
+void draw_main_menu_character_subscene_inventory_character_panel(const Vector4 padding);
+void draw_main_menu_character_subscene_inventory_slot_panel(const Vector4 padding);
+void draw_main_menu_character_subscene_stat_panel(const Vector4 padding);
+void draw_main_menu_character_subscene_stat_list_panel(const Vector4 padding);
+void draw_main_menu_character_subscene_stat_details_panel(const Vector4 padding);
 void draw_trait_selection_panel(void);
 void trait_selection_panel_list_traits(panel* const pnl, const Rectangle rect, std::vector<character_trait> * const traits, void (*trait_button_on_click_pfn)(size_t index));
 void trait_selection_panel_list_ability_selection_panel(panel* const pnl, const Rectangle rect, Vector2 border_gap);
@@ -192,6 +214,8 @@ void chosen_trait_button_on_click(size_t index);
     return false;
   }
   state->ingame_info = gm_get_ingame_info();
+  state->inventory_panel_hero_idle_anim.sheet_id = SHEET_ID_PLAYER_ANIMATION_IDLE_RIGHT;
+  ui_set_sprite(__builtin_addressof(state->inventory_panel_hero_idle_anim), true, false);
 
   set_worldmap_location(WORLDMAP_MAINMENU_MAP); // NOTE: Worldmap index 0 is mainmenu background now
 
@@ -214,8 +238,13 @@ void chosen_trait_button_on_click(size_t index);
   state->ability_selection_panel = state->panel_dark_fantasy_default;
 
   state->worldmap_selection_panel = state->panel_dark_fantasy_selected_default;
-  state->upgrade_list_panel = panel();
-  state->upgrade_details_panel = panel();
+  state->stat_list_panel = panel();
+  state->stat_details_panel = panel(BTN_STATE_UNDEFINED, ATLAS_TEX_ID_DARK_FANTASY_PANEL_BG, ATLAS_TEX_ID_DARK_FANTASY_PANEL, 
+    Vector4 {6, 6, 6, 6}, Color { 30, 39, 46, 196}
+  );
+  state->main_menu_state_character_panel = panel(BTN_STATE_UNDEFINED, ATLAS_TEX_ID_DARK_FANTASY_PANEL_BG, ATLAS_TEX_ID_DARK_FANTASY_PANEL_SELECTED, 
+    Vector4 {6, 6, 6, 6}, Color { 30, 39, 46, 128}
+  );
 
   gm_save_game();
 
@@ -269,7 +298,7 @@ void update_scene_main_menu(void) {
     case MAIN_MENU_SCENE_EXTRAS: {
       break;
     }
-    case MAIN_MENU_SCENE_UPGRADE: {
+    case MAIN_MENU_SCENE_CHARACTER: {
       break;
     }
     default: {
@@ -286,35 +315,6 @@ void render_scene_main_menu(void) {
       break;
     }
     case MAIN_MENU_SCENE_TO_PLAY_MAP_CHOICE: {
-      const f32 image_ratio = 3840.f / 2160.f; // INFO: ratio of map texture
-      const f32 image_height = static_cast<f32>(SMM_BASE_RENDER_HEIGHT * .85f);
-      const Vector2 image_dim = Vector2 { image_height * image_ratio, image_height};
-      Rectangle map_choice_image_dest = Rectangle { SMM_BASE_RENDER_DIV2.x, 0.f, image_dim.x, image_dim.y };
-      map_choice_image_dest.x -= image_dim.x * .5f;
-      const f32 map_pin_dim = map_choice_image_dest.height * .05f;
-
-      //BeginShaderMode(get_shader_by_enum(SHADER_ID_MAP_CHOICE_IMAGE)->handle);
-      {
-        gui_draw_texture_id(TEX_ID_WORLDMAP_WO_CLOUDS, map_choice_image_dest, ZEROVEC2);
-      }
-      //EndShaderMode();
-
-      for (i32 itr_000 = 0; itr_000 < MAX_WORLDMAP_LOCATIONS; ++itr_000) {
-        if (state->worldmap_locations.at(itr_000).is_active) {
-          const Vector2& normalized_pin_location = state->worldmap_locations.at(itr_000).screen_location;
-          const Rectangle pin_location = Rectangle {
-            map_choice_image_dest.x + normalized_pin_location.x * map_choice_image_dest.width - (map_pin_dim * .5f), 
-            map_choice_image_dest.y + normalized_pin_location.y * map_choice_image_dest.height - (map_pin_dim * .5f),
-            map_pin_dim, map_pin_dim,
-          };
-          if(state->ingame_scene_feed.hovered_stage == itr_000) {
-            gui_draw_texture_id_pro(TEX_ID_ASSET_ATLAS, SMM_MAP_PIN_SOURCE_LOCATION_HOVER, pin_location); // INFO: MAP PIN TEXTURES
-          }
-          else {
-            gui_draw_texture_id_pro(TEX_ID_ASSET_ATLAS, SMM_MAP_PIN_SOURCE_LOCATION_UP, pin_location);
-          }
-        }
-      }
       break;
     }
     case MAIN_MENU_SCENE_TO_PLAY_TRAIT_CHOICE: {
@@ -328,7 +328,7 @@ void render_scene_main_menu(void) {
     case MAIN_MENU_SCENE_EXTRAS: {
       break;
     }
-    case MAIN_MENU_SCENE_UPGRADE: {
+    case MAIN_MENU_SCENE_CHARACTER: {
       render_map();
       break;
     }
@@ -344,8 +344,8 @@ void render_interface_main_menu(void) {
     if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_PLAY), BTN_ID_MAINMENU_BUTTON_PLAY, VECTOR2(0.f, -21.f), SMM_BASE_RENDER_DIV2, true)) {
       begin_scene_change(MAIN_MENU_SCENE_TO_PLAY_MAP_CHOICE);
     }
-    if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_UPGRADE), BTN_ID_MAINMENU_BUTTON_UPGRADE, VECTOR2(0.f, -10.5f), SMM_BASE_RENDER_DIV2, true)) {
-      state->mainmenu_state = MAIN_MENU_SCENE_UPGRADE;
+    if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_CHARACTER), BTN_ID_MAINMENU_BUTTON_ENTER_STATE_CHARACTER, VECTOR2(0.f, -10.5f), SMM_BASE_RENDER_DIV2, true)) {
+      state->mainmenu_state = MAIN_MENU_SCENE_CHARACTER;
     }
     if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_SETTINGS), BTN_ID_MAINMENU_BUTTON_SETTINGS, VECTOR2(0.f, 0.f), SMM_BASE_RENDER_DIV2, true)) {
       ui_refresh_setting_sliders_to_default();
@@ -364,40 +364,86 @@ void render_interface_main_menu(void) {
         state->mainmenu_state = MAIN_MENU_SCENE_DEFAULT;
       }
   }
-  else if (state->mainmenu_state == MAIN_MENU_SCENE_UPGRADE) {
-      draw_main_menu_upgrade_panel();
-      if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_UPDATE_BUTTON_BACK), BTN_ID_MAINMENU_UPGRADE_BACK, VECTOR2(0.f, 66.5f), SMM_BASE_RENDER_DIV2, true)) {
+  else if (state->mainmenu_state == MAIN_MENU_SCENE_CHARACTER) {
+      draw_main_menu_character_panel();
+      if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_STATE_CHARACTER_BUTTON_BACK), BTN_ID_MAINMENU_STATE_CHARACTER_BACK, VECTOR2(0.f, 66.5f), SMM_BASE_RENDER_DIV2, true)) {
         state->mainmenu_state = MAIN_MENU_SCENE_DEFAULT;
       }
   }
   else if (state->mainmenu_state == MAIN_MENU_SCENE_TO_PLAY_MAP_CHOICE) {
-    for (int itr_000 = 0; itr_000 < MAX_WORLDMAP_LOCATIONS; ++itr_000) {
-      if (state->ingame_scene_feed.hovered_stage == itr_000) {
-        const f32 image_ratio = 3840.f / 2160.f; // INFO: ratio of map texture
-        const f32 image_height = static_cast<f32>(SMM_BASE_RENDER_HEIGHT * .85f);
-        const Vector2 image_dim = Vector2 { image_height * image_ratio, image_height};
-        Rectangle map_choice_image_dest = Rectangle { SMM_BASE_RENDER_DIV2.x, 0.f, image_dim.x, image_dim.y };
-        map_choice_image_dest.x -= image_dim.x * .5f;
-        const f32 map_pin_dim = map_choice_image_dest.height * .05f;
+    const f32 image_ratio = 3840.f / 2160.f; // INFO: ratio of map texture
+    const f32 image_height = static_cast<f32>(SMM_BASE_RENDER_HEIGHT * .85f);
+    const Vector2 image_dim = Vector2 { image_height * image_ratio, image_height};
+    Rectangle map_choice_image_dest = Rectangle { SMM_BASE_RENDER_DIV2.x, 0.f, image_dim.x, image_dim.y };
+    map_choice_image_dest.x -= image_dim.x * .5f;
+    const f32 map_pin_dim = map_choice_image_dest.height * .05f;
 
-        panel* pnl = __builtin_addressof(state->worldmap_selection_panel);
-        const Vector2& normalized_pin_location = state->worldmap_locations.at(itr_000).screen_location;
-        const Rectangle scrloc = Rectangle{
-          map_choice_image_dest.x + normalized_pin_location.x * map_choice_image_dest.width - (map_pin_dim * .5f), 
-          map_choice_image_dest.y + normalized_pin_location.y * map_choice_image_dest.height - (map_pin_dim * .5f),
-          map_pin_dim, map_pin_dim,
-        };
-        pnl->dest = Rectangle {scrloc.x + WORLDMAP_LOC_PIN_SIZE, scrloc.y + WORLDMAP_LOC_PIN_SIZE_DIV2, SMM_BASE_RENDER_WIDTH * .25f, SMM_BASE_RENDER_HEIGHT * .25f};
-        DrawCircleGradient(scrloc.x + WORLDMAP_LOC_PIN_SIZE_DIV2, scrloc.y + WORLDMAP_LOC_PIN_SIZE_DIV2, 100, Color{236,240,241,50}, Color{255, 255, 255, 0});
-        gui_panel((*pnl), pnl->dest, false);
-        BeginScissorMode(pnl->dest.x, pnl->dest.y, pnl->dest.width, pnl->dest.height);
-        {
-          gui_label(state->worldmap_locations.at(itr_000).displayname.c_str(), FONT_TYPE_ABRACADABRA, 1, Vector2 {
+    //BeginShaderMode(get_shader_by_enum(SHADER_ID_MAP_CHOICE_IMAGE)->handle);
+    {
+      gui_draw_texture_id(TEX_ID_WORLDMAP_WO_CLOUDS, map_choice_image_dest, ZEROVEC2);
+    }
+    //EndShaderMode();
+
+    for (i32 itr_000 = 0; itr_000 < MAX_WORLDMAP_LOCATIONS; ++itr_000) {
+      if (not state->worldmap_locations.at(itr_000).display_on_screen) {
+        continue;
+      }
+      const Vector2& normalized_pin_location = state->worldmap_locations.at(itr_000).screen_location;
+      const Rectangle pin_location = Rectangle {
+        map_choice_image_dest.x + normalized_pin_location.x * map_choice_image_dest.width - (map_pin_dim * .5f), 
+        map_choice_image_dest.y + normalized_pin_location.y * map_choice_image_dest.height - (map_pin_dim * .5f),
+        map_pin_dim, map_pin_dim,
+      };
+
+      gui_draw_texture_id_pro(TEX_ID_ASSET_ATLAS, SMM_MAP_PIN_SOURCE_LOCATION_UP, pin_location);
+    }
+
+    for (i32 itr_000 = 0; itr_000 < MAX_WORLDMAP_LOCATIONS; ++itr_000) {
+      if (not state->worldmap_locations.at(itr_000).display_on_screen) {
+        continue;
+      }
+      if(state->ingame_scene_feed.hovered_stage != itr_000) {
+        continue;
+      }
+      const worldmap_stage& worldmap_locations = state->worldmap_locations.at(itr_000);
+      const Vector2& normalized_pin_location = state->worldmap_locations.at(itr_000).screen_location;
+      const Rectangle pin_location = Rectangle {
+        map_choice_image_dest.x + normalized_pin_location.x * map_choice_image_dest.width - (map_pin_dim * .5f), 
+        map_choice_image_dest.y + normalized_pin_location.y * map_choice_image_dest.height - (map_pin_dim * .5f),
+        map_pin_dim, map_pin_dim,
+      };
+
+      gui_draw_texture_id_pro(TEX_ID_ASSET_ATLAS, SMM_MAP_PIN_SOURCE_LOCATION_HOVER, pin_location); // INFO: MAP PIN TEXTURES
+      const f32 image_ratio = 3840.f / 2160.f; // INFO: ratio of map texture
+      const f32 image_height = static_cast<f32>(SMM_BASE_RENDER_HEIGHT * .85f);
+      const Vector2 image_dim = Vector2 { image_height * image_ratio, image_height};
+      Rectangle map_choice_image_dest = Rectangle { SMM_BASE_RENDER_DIV2.x, 0.f, image_dim.x, image_dim.y };
+      map_choice_image_dest.x -= image_dim.x * .5f;
+      const f32 map_pin_dim = map_choice_image_dest.height * .05f;
+      panel* pnl = __builtin_addressof(state->worldmap_selection_panel);
+      const Rectangle scrloc = Rectangle{
+        map_choice_image_dest.x + normalized_pin_location.x * map_choice_image_dest.width - (map_pin_dim * .5f), 
+        map_choice_image_dest.y + normalized_pin_location.y * map_choice_image_dest.height - (map_pin_dim * .5f),
+        map_pin_dim, map_pin_dim,
+      };
+      pnl->dest = Rectangle {scrloc.x + WORLDMAP_LOC_PIN_SIZE, scrloc.y + WORLDMAP_LOC_PIN_SIZE_DIV2, SMM_BASE_RENDER_WIDTH * .25f, SMM_BASE_RENDER_HEIGHT * .25f};
+      DrawCircleGradient(scrloc.x + WORLDMAP_LOC_PIN_SIZE_DIV2, scrloc.y + WORLDMAP_LOC_PIN_SIZE_DIV2, 100, Color{236,240,241,50}, Color{255, 255, 255, 0});
+      
+      gui_panel((*pnl), pnl->dest, false);
+      BeginScissorMode(pnl->dest.x, pnl->dest.y, pnl->dest.width, pnl->dest.height);
+      {
+        if (worldmap_locations.is_playable) {
+          gui_label(lc_txt(state->worldmap_locations.at(itr_000).title_txt_id), FONT_TYPE_ABRACADABRA, 1, Vector2 {
             pnl->dest.x + pnl->dest.width *.5f, pnl->dest.y + pnl->dest.height*.5f
           }, WHITE, true, true);
         }
-        EndScissorMode();
+        else {
+          gui_label(lc_txt(LOC_TEXT_WORLD_STAGE_WORK_IN_PROGRESS), FONT_TYPE_ABRACADABRA, 1, Vector2 {
+            pnl->dest.x + pnl->dest.width *.5f, pnl->dest.y + pnl->dest.height*.5f
+          }, WHITE, true, true);
+        }
       }
+      EndScissorMode();
     }
 
     if(gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_MAP_CHOICE_BACK), BTN_ID_MAINMENU_MAP_CHOICE_BACK, VECTOR2(-35.f, 66.5f), SMM_BASE_RENDER_DIV2, true)) {
@@ -414,8 +460,7 @@ void render_interface_main_menu(void) {
     if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_TRAIT_CHOICE_BUTTON_ACCEPT), BTN_ID_MAINMENU_TRAIT_CHOICE_ACCEPT, VECTOR2(35.f, 66.5f), SMM_BASE_RENDER_DIV2, true)) {
       if (state->ingame_info->starter_ability <= ABILITY_ID_UNDEFINED or state->ingame_info->starter_ability >= ABILITY_ID_MAX) {
 
-        // TODO: Add localization
-        gui_fire_display_error("You didn't select a starter ability");
+        gui_fire_display_error(LOC_TEXT_DISPLAY_ERROR_TEXT_STARTER_ABILITY_NOT_SELECTED);
       }
       else {
         smm_begin_fadeout(data128(SCENE_TYPE_IN_GAME, true), fade_on_complete_change_scene); 
@@ -425,44 +470,121 @@ void render_interface_main_menu(void) {
   render_user_interface();
 }
 
-void draw_main_menu_upgrade_panel(void) {
+void draw_main_menu_character_panel(void) {
   Rectangle header_loc = {0, 0, static_cast<f32>(SMM_BASE_RENDER_WIDTH), SMM_BASE_RENDER_HEIGHT * .1f};
   Rectangle footer_loc = {0, 
     SMM_BASE_RENDER_HEIGHT - SMM_BASE_RENDER_HEIGHT *.1f, 
     static_cast<f32>(SMM_BASE_RENDER_WIDTH), SMM_BASE_RENDER_HEIGHT * .1f};
   DrawRectangleRec(header_loc, Color{0, 0, 0, 50});
   DrawRectangleRec(footer_loc, Color{0, 0, 0, 50});
+
+  state->main_menu_state_character_panel.dest = Rectangle{ SMM_BASE_RENDER_WIDTH * .025f, SMM_BASE_RENDER_HEIGHT * .075f, SMM_BASE_RENDER_WIDTH * .95f, SMM_BASE_RENDER_HEIGHT * .85f};
+  gui_panel(state->main_menu_state_character_panel, state->main_menu_state_character_panel.dest, false);
+
+  const Vector2 parent_panel_left_top_padding = Vector2 {
+    state->main_menu_state_character_panel.dest.height * .01f, 
+    state->main_menu_state_character_panel.dest.height * .05f,
+  };
+  const Vector2 parent_panel_right_bottom_padding = Vector2{
+    state->main_menu_state_character_panel.dest.height * .01f * -1.f, 
+    state->main_menu_state_character_panel.dest.height * .01f * -1.f
+  };
+  const Vector4 parent_panel_total_padding = Vector4{
+    parent_panel_left_top_padding.x,
+    parent_panel_left_top_padding.y,
+    parent_panel_right_bottom_padding.x - parent_panel_left_top_padding.x,
+    parent_panel_right_bottom_padding.y - parent_panel_left_top_padding.y
+  };
+
+  switch (state->mainmenu_scene_character_subscene) {
+    //case MAIN_MENU_SCENE_CHARACTER_INVENTORY: {
+    //  draw_main_menu_character_subscene_inventory_panel(parent_panel_total_padding);
+    //  break;
+    //}
+    case MAIN_MENU_SCENE_CHARACTER_STATS: {
+      draw_main_menu_character_subscene_stat_panel(parent_panel_total_padding);
+      break;
+    }
+    default: {
+      state->mainmenu_scene_character_subscene = MAIN_MENU_SCENE_CHARACTER_STATS;
+      break;
+    }
+  }
   
-  atlas_texture_id icon_tex_id = ATLAS_TEX_ID_CURRENCY_SOUL_ICON_5000;
-  f32 cost_icon_dim = header_loc.height;
-  Rectangle cost_icon_pos = Rectangle {
-    SMM_BASE_RENDER_WIDTH * .5f - cost_icon_dim * .3f, SMM_BASE_RENDER_HEIGHT * .05f,
-    cost_icon_dim, cost_icon_dim
-  };
-  Vector2 icon_tex_origin = Vector2 {
-    cost_icon_pos.width / 2.f,
-    cost_icon_pos.height / 2.f,
-  };
-  gui_draw_atlas_texture_id(icon_tex_id, cost_icon_pos, icon_tex_origin, 0.f);
-
-  Vector2 cost_label_pos = VECTOR2(SMM_BASE_RENDER_WIDTH *.5f + cost_icon_dim * .3f, SMM_BASE_RENDER_HEIGHT * .05f);
-  gui_label_format_v(FONT_TYPE_ABRACADABRA, 1, cost_label_pos, WHITE, true, true, "%d", get_currency_souls_total());
-
-  draw_main_menu_upgrade_list_panel();
-  draw_main_menu_upgrade_details_panel();
+  //Vector2 tab_btn_grid_loc = Vector2 {
+  //  state->main_menu_state_character_panel.dest.x + (state->main_menu_state_character_panel.dest.width * .5f),
+  //  state->main_menu_state_character_panel.dest.y + (state->main_menu_state_character_panel.dest.height * .025f)
+  //};
+  //if(gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_STATE_CHARACTER_BUTTON_ENTER_TAB_INVENTORY), BTN_ID_MAINMENU_STATE_CHARACTER_ENTER_TAB_INVENTORY, VECTOR2(-35, 0), tab_btn_grid_loc, true)) {
+  //  state->mainmenu_scene_character_subscene = MAIN_MENU_SCENE_CHARACTER_INVENTORY;
+  //}
+  //if(gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_STATE_CHARACTER_BUTTON_ENTER_TAB_STATS),  BTN_ID_MAINMENU_STATE_CHARACTER_ENTER_TAB_STATS, VECTOR2(35, 0), tab_btn_grid_loc, true)) {
+  //  state->mainmenu_scene_character_subscene = MAIN_MENU_SCENE_CHARACTER_STATS;
+  //}
 }
-void draw_main_menu_upgrade_list_panel(void) {
-  state->upgrade_list_panel.dest = Rectangle{ SMM_BASE_RENDER_WIDTH * .025f, SMM_BASE_RENDER_HEIGHT * .075f, SMM_BASE_RENDER_WIDTH * .65f, SMM_BASE_RENDER_HEIGHT * .85f};
-  gui_panel(state->upgrade_list_panel, state->upgrade_list_panel.dest, false);
-  f32 showcase_hover_scale = 1.1f;
-  f32 showcase_base_dim = SMM_BASE_RENDER_HEIGHT * .25f;
+void draw_main_menu_character_subscene_inventory_panel(const Vector4 padding) {
+  draw_main_menu_character_subscene_inventory_character_panel(padding);
+  draw_main_menu_character_subscene_inventory_slot_panel(padding);
+}
+void draw_main_menu_character_subscene_inventory_character_panel(const Vector4 padding) {
+  const Rectangle& parent_panel_dest = state->main_menu_state_character_panel.dest;
+  state->inventory_character_panel.dest = Rectangle{ 
+    parent_panel_dest.x + padding.x,
+    parent_panel_dest.y + padding.y,
+    (parent_panel_dest.width * .25f),
+    parent_panel_dest.height + padding.w
+  };
+  gui_panel(state->inventory_character_panel, state->inventory_character_panel.dest, false);
 
-  const f32 showcase_spacing = showcase_base_dim * 1.1f;
-  const f32 total_showcases_width = (MAIN_MENU_UPGRADE_PANEL_COL * showcase_base_dim) + ((MAIN_MENU_UPGRADE_PANEL_COL - 1) * (showcase_spacing - showcase_base_dim));
-  const f32 total_showcases_height = (MAIN_MENU_UPGRADE_PANEL_ROW * showcase_base_dim) + ((MAIN_MENU_UPGRADE_PANEL_ROW - 1) * (showcase_spacing - showcase_base_dim));
+  const f32 hero_anim_scale = 5.f;
+  const Vector2 hero_anim_dim = Vector2 {
+    state->inventory_panel_hero_idle_anim.current_frame_rect.width * hero_anim_scale,
+    state->inventory_panel_hero_idle_anim.current_frame_rect.height * hero_anim_scale
+  };
+  Rectangle character_pos = {
+    state->inventory_character_panel.dest.x + (state->inventory_character_panel.dest.width * .5f) - (hero_anim_dim.x * .5f),
+    state->inventory_character_panel.dest.y + (state->inventory_character_panel.dest.height * .35f) - (hero_anim_dim.y * .5f),
+    hero_anim_dim.x, hero_anim_dim.y
+  };
+  ui_play_sprite_on_site(__builtin_addressof(state->inventory_panel_hero_idle_anim), WHITE, character_pos);
+}
+void draw_main_menu_character_subscene_inventory_slot_panel(const Vector4 padding) {
+  const Rectangle& parent_panel_dest = state->main_menu_state_character_panel.dest;
+  const Rectangle& character_panel_dest = state->inventory_character_panel.dest;
+  state->inventory_slots_panel.dest = Rectangle{ 
+    character_panel_dest.x + character_panel_dest.width + padding.x,
+    character_panel_dest.y,
+    parent_panel_dest.width - character_panel_dest.width + padding.z - padding.x,
+    character_panel_dest.height
+  };
+
+  gui_panel(state->inventory_slots_panel, state->inventory_slots_panel.dest, false);
+}
+void draw_main_menu_character_subscene_stat_panel(const Vector4 padding) {
+  draw_main_menu_character_subscene_stat_list_panel(padding);
+  draw_main_menu_character_subscene_stat_details_panel(padding);
+}
+void draw_main_menu_character_subscene_stat_list_panel(const Vector4 padding) {
+  const Rectangle& parent_panel_dest = state->main_menu_state_character_panel.dest;
+  const font_type panel_font_type = FONT_TYPE_ABRACADABRA;
+  const i32 panel_font_size = 1;
+
+  state->stat_list_panel.dest = Rectangle{ 
+    parent_panel_dest.x + padding.x,
+    parent_panel_dest.y + padding.y,
+    (parent_panel_dest.width * .75f) + padding.z,
+    parent_panel_dest.height + padding.w
+  };
+  //gui_panel(state->stat_list_panel, state->stat_list_panel.dest, false);
+
+  f32 showcase_hover_scale = 1.1f;
+  f32 showcase_base_dim = SMM_BASE_RENDER_HEIGHT * .225f;
+  const f32 showcase_dim_with_spacing = showcase_base_dim * 1.1f;
+  const f32 total_showcases_width = (MAIN_MENU_UPGRADE_PANEL_COL * showcase_base_dim) + ((MAIN_MENU_UPGRADE_PANEL_COL - 1) * (showcase_dim_with_spacing - showcase_base_dim));
+  const f32 total_showcases_height = (MAIN_MENU_UPGRADE_PANEL_ROW * showcase_base_dim) + ((MAIN_MENU_UPGRADE_PANEL_ROW - 1) * (showcase_dim_with_spacing - showcase_base_dim));
   const Vector2 showcase_start_pos = VECTOR2(
-    state->upgrade_list_panel.dest.x + (state->upgrade_list_panel.dest.width / 2.f) - (total_showcases_width / 2.f),
-    state->upgrade_list_panel.dest.y + (state->upgrade_list_panel.dest.height / 2.f) - (total_showcases_height / 2.f)
+    state->stat_list_panel.dest.x + (state->stat_list_panel.dest.width / 2.f) - (total_showcases_width / 2.f),
+    state->stat_list_panel.dest.y + (state->stat_list_panel.dest.height / 2.f) - (total_showcases_height / 2.f)
   );
 
   for (i32 iter = 0; iter < MAIN_MENU_UPGRADE_PANEL_ROW; ++iter) {
@@ -471,9 +593,10 @@ void draw_main_menu_upgrade_list_panel(void) {
       if (not stat or stat == nullptr or stat->id >= CHARACTER_STATS_MAX or stat->id <= CHARACTER_STATS_UNDEFINED) {
         continue;
       }
-      bool hovered = false;
+      [[__maybe_unused__]] bool hovered = false;
+      const Vector2 text_measure = ui_measure_text(lc_txt(stat->passive_display_name_symbol), panel_font_type, panel_font_size);
 
-      Vector2 showcase_position = VECTOR2(showcase_start_pos.x + j * showcase_spacing, showcase_start_pos.y + iter * showcase_spacing);
+      Vector2 showcase_position = VECTOR2(showcase_start_pos.x + j * showcase_dim_with_spacing, showcase_start_pos.y + iter * showcase_dim_with_spacing);
       f32 showcase_new_dim = showcase_base_dim;
       if (CheckCollisionPointRec( *state->mouse_pos_screen, Rectangle {showcase_position.x, showcase_position.y, showcase_base_dim, showcase_base_dim})) {
         hovered = true;
@@ -486,20 +609,8 @@ void draw_main_menu_upgrade_list_panel(void) {
       }
       
       // TITLE
-      Rectangle header_tex_src_rect = ( * get_atlas_texture_source_rect(ATLAS_TEX_ID_LITTLE_SHOWCASE) );
-      header_tex_src_rect.width  *= 2.75f;
-      header_tex_src_rect.height *= 3.f;
-      Rectangle header_tex_pos = {
-        showcase_position.x + showcase_new_dim * .5f, showcase_position.y + (showcase_new_dim * .05f), 
-        header_tex_src_rect.width, header_tex_src_rect.height
-      };
-      if (hovered) {
-        header_tex_pos.width *= showcase_hover_scale;
-        header_tex_pos.height *= showcase_hover_scale;
-      }
-      Vector2 header_tex_origin = Vector2 {header_tex_pos.width * .5f, header_tex_pos.height * .5f * (-0.15f)};
-
-      Vector2 title_pos = VECTOR2(showcase_position.x + showcase_new_dim * .5f, header_tex_pos.y + header_tex_pos.height * 0.375f);
+      const Vector2 title_pos = VECTOR2(showcase_position.x + showcase_new_dim * .5f, showcase_position.y + showcase_new_dim * .125f);
+      const Rectangle header_tex_pos = { title_pos.x, title_pos.y, showcase_new_dim, text_measure.y * 1.25f};
       // TITLE
       
       // STARS
@@ -530,36 +641,67 @@ void draw_main_menu_upgrade_list_panel(void) {
       }
 
       gui_draw_texture_id_pro(TEX_ID_ASSET_ATLAS, stat->passive_icon_src, icon_pos);
-      gui_draw_atlas_texture_id(ATLAS_TEX_ID_LITTLE_SHOWCASE, header_tex_pos, header_tex_origin, 0.f);
-      gui_label(lc_txt(stat->passive_display_name_symbol), FONT_TYPE_ABRACADABRA, 1, title_pos, WHITE, true, true);
+      draw_atlas_texture_stretch(ATLAS_TEX_ID_HEADER, Rectangle {64, 0, 32, 32}, header_tex_pos, true, WHITE);
+      gui_label(lc_txt(stat->passive_display_name_symbol), panel_font_type, panel_font_size, title_pos, WHITE, true, true);
     }
   }
-}
-void draw_main_menu_upgrade_details_panel(void) {
-  state->upgrade_details_panel.dest = Rectangle{
-    state->upgrade_list_panel.dest.x + state->upgrade_list_panel.dest.width + SMM_BASE_RENDER_WIDTH * .005f,
-    SMM_BASE_RENDER_HEIGHT * .075f,
-    SMM_BASE_RENDER_WIDTH * .295f, SMM_BASE_RENDER_HEIGHT * .850f
+
+  atlas_texture_id icon_tex_id = ATLAS_TEX_ID_CURRENCY_SOUL_ICON_5000;
+  const char * total_stock_text = TextFormat("%d", (*get_currency_souls_total()));
+  const char * total_stock_desc_text = lc_txt(LOC_TEXT_MAINMENU_STATE_CHARACTER_TAB_STATS_CURRENCY_TEXT_TOTAL);
+  Vector2 total_stock_desc_text_measure = ui_measure_text(total_stock_desc_text, panel_font_type, panel_font_size);
+  const f32 total_stock_display_dest_dim = showcase_base_dim;
+  const f32 total_stock_icon_dim = total_stock_display_dest_dim * .25f;
+
+  Rectangle total_stock_dest = Rectangle {
+    showcase_start_pos.x + total_showcases_width + (showcase_base_dim * .1f), 
+    showcase_start_pos.y + total_showcases_height - showcase_base_dim,
+    total_stock_display_dest_dim, 
+    total_stock_display_dest_dim
+  };
+  Vector2 total_stock_desc_text_total_dest = Vector2 {
+    total_stock_dest.x + (total_stock_dest.width * .5f) - total_stock_desc_text_measure.x,
+    total_stock_dest.y + (total_stock_dest.height * .7f) - (total_stock_desc_text_measure.y * .5f)
+  };
+  Rectangle total_stock_icon_pos = Rectangle {
+    total_stock_desc_text_total_dest.x + total_stock_desc_text_measure.x,
+    total_stock_desc_text_total_dest.y + (total_stock_desc_text_measure.y * .5f),
+    total_stock_icon_dim, total_stock_icon_dim
   };
 
-  gui_panel(state->upgrade_details_panel, state->upgrade_details_panel.dest, false);
+  gui_draw_atlas_texture_id(icon_tex_id, total_stock_icon_pos, VECTOR2(0.f, total_stock_icon_pos.height * .5f), 0.f);
+  gui_label(total_stock_desc_text, panel_font_type, panel_font_size, total_stock_desc_text_total_dest, WHITE, false, false);
+  gui_label_box(total_stock_text, panel_font_type, panel_font_size, total_stock_dest, WHITE, TEXT_ALIGN_BOTTOM_CENTER);
+}
+void draw_main_menu_character_subscene_stat_details_panel(const Vector4 padding) {
+  const Rectangle& parent_panel_dest = state->main_menu_state_character_panel.dest;
+  const Rectangle& stat_list_panel_dest = state->stat_list_panel.dest;
+  
+  state->stat_details_panel.dest = Rectangle{
+    stat_list_panel_dest.x + stat_list_panel_dest.width + padding.x,
+    stat_list_panel_dest.y,
+    parent_panel_dest.width - stat_list_panel_dest.width + padding.z - padding.x,
+    stat_list_panel_dest.height
+  };
+
+  gui_panel(state->stat_details_panel, state->stat_details_panel.dest, false);
   if (!state->hovered_stat) {
     return;
   }
-  f32 detail_panel_element_spacing = state->upgrade_details_panel.dest.height * 0.05f;
+  f32 detail_panel_element_spacing = state->stat_details_panel.dest.height * 0.05f;
 
   Rectangle icon_pos = {
-    state->upgrade_details_panel.dest.x + state->upgrade_details_panel.dest.width * .5f - (state->upgrade_details_panel.dest.width * .175f),
-    state->upgrade_details_panel.dest.y + detail_panel_element_spacing,
-    state->upgrade_details_panel.dest.width * .35f,
-    state->upgrade_details_panel.dest.width * .35f
+    state->stat_details_panel.dest.x + state->stat_details_panel.dest.width * .5f - (state->stat_details_panel.dest.width * .175f),
+    state->stat_details_panel.dest.y + detail_panel_element_spacing,
+    state->stat_details_panel.dest.width * .35f,
+    state->stat_details_panel.dest.width * .35f
   };
   gui_draw_texture_id_pro(TEX_ID_ASSET_ATLAS, state->hovered_stat->passive_icon_src, icon_pos);
 
   const Rectangle * tier_symbol_src_rect = get_atlas_texture_source_rect(ATLAS_TEX_ID_PASSIVE_UPGRADE_TIER_STAR);
   f32 star_spacing = tier_symbol_src_rect->width * 1.25f;
   f32 tier_symbols_total_width = tier_symbol_src_rect->width + (MAX_PASSIVE_UPGRADE_TIER - 1.f) * star_spacing;
-  f32 tier_symbols_left_edge = state->upgrade_details_panel.dest.x + (state->upgrade_details_panel.dest.width - tier_symbols_total_width) / 2.f;
+  f32 tier_symbols_left_edge = state->stat_details_panel.dest.x + (state->stat_details_panel.dest.width - tier_symbols_total_width) / 2.f;
   f32 tier_symbols_vertical_position = icon_pos.y + icon_pos.height + detail_panel_element_spacing * .5f;
   for (i32 itr_000 = 0; itr_000 < MAX_PASSIVE_UPGRADE_TIER; ++itr_000) {
     Vector2 tier_pos = {tier_symbols_left_edge + itr_000 * star_spacing, tier_symbols_vertical_position};
@@ -571,22 +713,22 @@ void draw_main_menu_upgrade_details_panel(void) {
   }
 
   Vector2 title_pos = VECTOR2(
-    state->upgrade_details_panel.dest.x + state->upgrade_details_panel.dest.width * .5f,
+    state->stat_details_panel.dest.x + state->stat_details_panel.dest.width * .5f,
     tier_symbols_vertical_position + tier_symbol_src_rect->height + detail_panel_element_spacing * .5f
   );
   gui_label(lc_txt(state->hovered_stat->passive_display_name_symbol), FONT_TYPE_ABRACADABRA, 1, title_pos, WHITE, true, true);
 
   Rectangle description_pos = {
-    state->upgrade_details_panel.dest.x +state->upgrade_details_panel.dest.width * .05f, title_pos.y + detail_panel_element_spacing * .75f,
-    state->upgrade_details_panel.dest.width * .9f, state->upgrade_details_panel.dest.width * .35f
+    state->stat_details_panel.dest.x +state->stat_details_panel.dest.width * .05f, title_pos.y + detail_panel_element_spacing * .75f,
+    state->stat_details_panel.dest.width * .9f, state->stat_details_panel.dest.width * .35f
   };
   gui_label_wrap(lc_txt(state->hovered_stat->passive_desc_symbol), FONT_TYPE_ABRACADABRA, 1, description_pos, WHITE, false);
 
   character_stat pseudo_update = *state->hovered_stat;
   game_manager_set_stat_value_by_level(&pseudo_update, pseudo_update.current_level+1);
   Vector2 upg_stat_text_pos = {
-    state->upgrade_details_panel.dest.x + state->upgrade_details_panel.dest.width * .5f,
-    state->upgrade_details_panel.dest.y + state->upgrade_details_panel.dest.height * .5f,
+    state->stat_details_panel.dest.x + state->stat_details_panel.dest.width * .5f,
+    state->stat_details_panel.dest.y + state->stat_details_panel.dest.height * .5f,
   };
 
   switch (state->hovered_stat->id) {
@@ -618,17 +760,17 @@ void draw_main_menu_upgrade_details_panel(void) {
       DRAW_UPGRADE_LABEL(upg_stat_text_pos, "%d -> %d", state->hovered_stat->buffer.i32[1], pseudo_update.buffer.i32[1]) break;
     }
     default: {
-      TraceLog(LOG_ERROR, "scene_main_menu::draw_main_menu_upgrade_details_panel()::Unsuppported stat id");
+      TraceLog(LOG_ERROR, "scene_main_menu::draw_main_menu_character_subscene_upgrade_details_panel()::Unsuppported stat id");
       break;
     }
   }
 
   atlas_texture_id icon_tex_id = ATLAS_TEX_ID_CURRENCY_SOUL_ICON_5000;
   Rectangle cost_icon_dest = Rectangle(
-    state->upgrade_details_panel.dest.x + state->upgrade_details_panel.dest.width * .425f,
-    state->upgrade_details_panel.dest.y + state->upgrade_details_panel.dest.height * .85f,
-    state->upgrade_details_panel.dest.width * .25f,
-    state->upgrade_details_panel.dest.width * .25f
+    state->stat_details_panel.dest.x + state->stat_details_panel.dest.width * .425f,
+    state->stat_details_panel.dest.y + state->stat_details_panel.dest.height * .85f,
+    state->stat_details_panel.dest.width * .15f,
+    state->stat_details_panel.dest.width * .15f
   );
   Vector2 cost_icon_origin = Vector2(
     cost_icon_dest.width / 2.f,
@@ -640,25 +782,25 @@ void draw_main_menu_upgrade_details_panel(void) {
     state->deny_notify_timer = DENY_NOTIFY_TIME;
   }
   if (state->deny_notify_timer > 0 && state->deny_notify_timer <= DENY_NOTIFY_TIME) {
-    state->deny_notify_timer -= 1;
+    state->deny_notify_timer -= GetFrameTime();
   }
   Color cost_label_color = WHITE;
   cost_label_color.g = EaseSineIn(state->deny_notify_timer, 255, -255, DENY_NOTIFY_TIME);
   cost_label_color.b = EaseSineIn(state->deny_notify_timer, 255, -255, DENY_NOTIFY_TIME);
   Vector2 cost_label_pos = VECTOR2(
-    state->upgrade_details_panel.dest.x + state->upgrade_details_panel.dest.width * .575f,
-    state->upgrade_details_panel.dest.y + state->upgrade_details_panel.dest.height * .85f
+    state->stat_details_panel.dest.x + state->stat_details_panel.dest.width * .575f,
+    state->stat_details_panel.dest.y + state->stat_details_panel.dest.height * .85f
   );
   gui_label_format_v(FONT_TYPE_ABRACADABRA, 1, cost_label_pos, cost_label_color, true, true, "%d", state->hovered_stat->upgrade_cost);
 
   Vector2 button_location = Vector2 {
-    state->upgrade_details_panel.dest.x + state->upgrade_details_panel.dest.width * .5f, 
-    state->upgrade_details_panel.dest.y  + state->upgrade_details_panel.dest.height * .95f
+    state->stat_details_panel.dest.x + state->stat_details_panel.dest.width * .5f, 
+    state->stat_details_panel.dest.y  + state->stat_details_panel.dest.height * .95f
   };
-  if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_UPDATE_BUTTON_UPGRADE), BTN_ID_MAINMENU_UPGRADE_BUY_UPGRADE, ZEROVEC2, button_location, false)) {
+  if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_STATE_CHARACTER_TAB_STATS_BUTTON_UPGRADE), BTN_ID_MAINMENU_STATE_CHARACTER_BUY_STAT_UPGRADE, ZEROVEC2, button_location, false)) {
     const i32& cost = state->hovered_stat->upgrade_cost;
-    const i32& stock = get_currency_souls_total();
-    if (stock - cost >= 0 ) {
+    const i32* stock = get_currency_souls_total();
+    if ( (*stock) - cost >= 0 ) {
       currency_souls_add(-state->hovered_stat->upgrade_cost);
       i32 level = get_static_player_state_stat(state->hovered_stat->id)->current_level;
       set_static_player_state_stat(state->hovered_stat->id, level+1);
@@ -667,6 +809,7 @@ void draw_main_menu_upgrade_details_panel(void) {
     } else {
       event_fire(EVENT_CODE_PLAY_SOUND, event_context((i32)SOUND_ID_DENY));
       state->deny_notify_timer = DENY_NOTIFY_TIME;
+      gui_fire_display_error(LOC_TEXT_DISPLAY_ERROR_TEXT_INSUFFICIENT_FUNDS);
     }
   }
 }
@@ -924,7 +1067,7 @@ void trait_selection_panel_list_ability_selection_panel(panel* const pnl, const 
         continue;
       }
       panel * _lc_pnl = smm_get_local_panel(_abl.ui_use.i32[0]);
-      text_measure = ui_measure_text(_abl.display_name.c_str(), FONT_TYPE_ABRACADABRA, 1);
+      text_measure = ui_measure_text(lc_txt(_abl.display_name_loc_text_id), FONT_TYPE_ABRACADABRA, 1);
       Vector2 _lc_pnl_pos = VECTOR2(
         rect.x + (rect.width * .5f) - (_lc_pnl_dim.x * .5f), 
         rect.y + ability_list_height_buffer + (pnl->buffer.f32[0] * pnl->scroll)
@@ -953,7 +1096,8 @@ void trait_selection_panel_list_ability_selection_panel(panel* const pnl, const 
       const Rectangle ability_icon_dest = Rectangle { _lc_pnl_dest.x,  _lc_pnl_dest.y, ability_icon_width,  ability_icon_height};
       gui_draw_texture_id_pro(TEX_ID_ASSET_ATLAS, _abl.icon_src, ability_icon_dest);
 
-      gui_label(_abl.display_name.c_str(), FONT_TYPE_ABRACADABRA, 1, 
+      // � Return here
+      gui_label(lc_txt(_abl.display_name_loc_text_id), FONT_TYPE_ABRACADABRA, 1, 
         VECTOR2(_lc_pnl_dest.x + ((_lc_pnl_dest.width + ability_icon_width) * .5f), _lc_pnl_dest.y + _lc_pnl_dest.height * .5f), 
         WHITE, true, true
       );
@@ -1026,8 +1170,16 @@ void smm_update_mouse_bindings(void) {
       }
       
       if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON) && state->ingame_scene_feed.hovered_stage <= MAX_WORLDMAP_LOCATIONS) {
-        set_worldmap_location(state->ingame_scene_feed.hovered_stage);
-        begin_scene_change(MAIN_MENU_SCENE_TO_PLAY_TRAIT_CHOICE, event_context());
+        if (state->ingame_scene_feed.hovered_stage <= 0 or static_cast<size_t>(state->ingame_scene_feed.hovered_stage) >= state->worldmap_locations.size()) {
+        }
+        else if (not state->worldmap_locations.at(state->ingame_scene_feed.hovered_stage).is_playable) {
+          event_fire(EVENT_CODE_PLAY_SOUND, event_context((i32)SOUND_ID_DENY));
+          gui_fire_display_error(LOC_TEXT_DISPLAY_ERROR_TEXT_STAGE_IS_NOT_PLAYABLE);
+        }
+        else {
+          set_worldmap_location(state->ingame_scene_feed.hovered_stage);
+          begin_scene_change(MAIN_MENU_SCENE_TO_PLAY_TRAIT_CHOICE, event_context());
+        }
       }
       break;
     }
@@ -1131,7 +1283,7 @@ void smm_update_mouse_bindings(void) {
     case MAIN_MENU_SCENE_EXTRAS: {
       break;
     }
-    case MAIN_MENU_SCENE_UPGRADE: {
+    case MAIN_MENU_SCENE_CHARACTER: {
       break;
     }
     default: {
@@ -1157,7 +1309,7 @@ void smm_update_keyboard_bindings(void) {
     case MAIN_MENU_SCENE_EXTRAS: {
       break;
     }
-    case MAIN_MENU_SCENE_UPGRADE: {
+    case MAIN_MENU_SCENE_CHARACTER: {
       break;
     }
     default: {
@@ -1325,8 +1477,8 @@ void begin_scene_change(main_menu_scene_type mms, [[__maybe_unused__]] event_con
       state->mainmenu_state = MAIN_MENU_SCENE_SETTINGS;
       break;
     }
-    case MAIN_MENU_SCENE_UPGRADE: {
-      state->mainmenu_state = MAIN_MENU_SCENE_UPGRADE;
+    case MAIN_MENU_SCENE_CHARACTER: {
+      state->mainmenu_state = MAIN_MENU_SCENE_CHARACTER;
       break;
     }
     case MAIN_MENU_SCENE_EXTRAS: {

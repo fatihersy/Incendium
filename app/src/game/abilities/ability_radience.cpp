@@ -1,5 +1,6 @@
 #include "ability_radience.h"
 #include <reasings.h>
+#include <loc_types.h>
 
 #include "core/event.h"
 #include "core/fmemory.h"
@@ -69,7 +70,7 @@ ability get_ability_radience(void) {
     return ability();
   }
   std::array<ability_upgradables, ABILITY_UPG_MAX> radience_upgr = {ABILITY_UPG_DAMAGE, ABILITY_UPG_HITBOX, ABILITY_UPG_UNDEFINED, ABILITY_UPG_UNDEFINED, ABILITY_UPG_UNDEFINED};
-  return ability("Radience", ABILITY_ID_RADIANCE,
+  return ability(static_cast<i32>(LOC_TEXT_PLAYER_ABILITY_NAME_RADIENCE), ABILITY_ID_RADIANCE,
     radience_upgr,
     0.f, 2.2f, Vector2 {0.8f, 0.8f}, 1, 0, 0.f, 11,
     Vector2{128.f, 128.f}, Rectangle{2272, 1376, 32, 32}

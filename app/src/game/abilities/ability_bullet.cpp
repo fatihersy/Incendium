@@ -1,5 +1,6 @@
 #include "ability_bullet.h"
 #include <reasings.h>
+#include <loc_types.h>
 
 #include "core/event.h"
 #include "core/fmemory.h"
@@ -58,7 +59,7 @@ ability get_ability_bullet(void) {
     return ability();
   }
   std::array<ability_upgradables, ABILITY_UPG_MAX> bullet_upgr = {ABILITY_UPG_DAMAGE, ABILITY_UPG_HITBOX, ABILITY_UPG_AMOUNT, ABILITY_UPG_UNDEFINED, ABILITY_UPG_UNDEFINED};
-  return ability("Bullet", ABILITY_ID_BULLET,
+  return ability(static_cast<i32>(LOC_TEXT_PLAYER_ABILITY_NAME_BULLET), ABILITY_ID_BULLET,
     bullet_upgr,
     0.f, 1.f, Vector2 {1.f, 1.f}, 1, 3, 1.75f, 15,
     Vector2{30.f, 30.f}, Rectangle{2368, 736, 32, 32}

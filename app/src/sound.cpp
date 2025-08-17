@@ -13,12 +13,17 @@
 // TODO: Destroy sound system
 
 typedef struct sound_system_state {
-  sound_data sounds[SOUND_ID_MAX];
-  music_data musics[MUSIC_ID_MAX];
+  std::array<sound_data, SOUND_ID_MAX> sounds;
+  std::array<music_data, MUSIC_ID_MAX> musics;
   bool start_trace;
+  sound_system_state(void) {
+    this->sounds.fill(sound_data());
+    this->musics.fill(music_data());
+    this->start_trace = false;
+  }
 }sound_system_state;
 
-static sound_system_state * state;
+static sound_system_state * state = nullptr;
 
 void load_sound(const char* file_name, sound_id id);
 void load_music(const char* file_name, music_id id);
@@ -31,15 +36,16 @@ bool sound_system_on_event(i32 code, event_context context);
  * @brief Depends on pak_parser, init after that
  */
 bool sound_system_initialize(void) {
-  if (state) {
+  if (state and state != nullptr) {
     TraceLog(LOG_WARNING, "sound::sound_system_initialize()::Init called twice");
     return false;
   }
   state = (sound_system_state*)allocate_memory_linear(sizeof(sound_system_state), true);
-  if (!state) {
+  if (not state or state == nullptr) {
     TraceLog(LOG_WARNING, "sound::sound_system_initialize()::State allocation failed");
     return false;
   }
+  *state = sound_system_state();
 
   InitAudioDevice();
   
@@ -74,7 +80,7 @@ void update_sound_system(void) {
   }
 }
 
-void load_sound(const char* file_name, sound_id id) {
+void load_sound([[__maybe_unused__]] const char* file_name, [[__maybe_unused__]] sound_id id) {
   file_data file = {};
   Wave wav = {};
   sound_data data = {};
@@ -97,7 +103,7 @@ void load_sound(const char* file_name, sound_id id) {
   state->sounds[id] = data;
 }
 
-void load_music(const char* file_name, music_id id) {
+void load_music([[__maybe_unused__]] const char* file_name, [[__maybe_unused__]] music_id id) {
   file_data file = {};
   Music music = {};
 
@@ -119,7 +125,7 @@ void load_music(const char* file_name, music_id id) {
   state->musics[id] = data;
 }
 
-void play_sound(sound_id id) {
+void play_sound([[__maybe_unused__]] sound_id id) {
   if (!state) {
     TraceLog(LOG_ERROR, "sound::play_sound()::State is not valid");
     return;
@@ -132,7 +138,7 @@ void play_sound(sound_id id) {
   PlaySound(state->sounds[id].handle);
 }
 
-void play_music(music_id id) {
+void play_music([[__maybe_unused__]] music_id id) {
   if (!state) {
     TraceLog(LOG_ERROR, "sound::play_music()::State is not valid");
     return;
@@ -144,7 +150,7 @@ void play_music(music_id id) {
 
   PlayMusicStream(state->musics[id].handle);
 }
-void reset_music(music_id id) {
+void reset_music([[__maybe_unused__]] music_id id) {
   if (!state) {
     TraceLog(LOG_ERROR, "sound::reset_music()::State is not valid");
     return;
@@ -157,7 +163,7 @@ void reset_music(music_id id) {
   state->musics[id].played = false;
   StopMusicStream(state->musics[id].handle);
 }
-void reset_sound(sound_id id) {
+void reset_sound([[__maybe_unused__]] sound_id id) {
   if (!state) {
     TraceLog(LOG_ERROR, "sound::reset_sound()::State is not valid");
     return;
@@ -170,7 +176,7 @@ void reset_sound(sound_id id) {
   state->sounds[id].played = false;
 }
 
-bool sound_system_on_event(i32 code, event_context context) {
+bool sound_system_on_event(i32 code, [[__maybe_unused__]] event_context context) {
   switch (code)
   {
   case EVENT_CODE_PLAY_SOUND:{
@@ -230,4 +236,3 @@ bool sound_system_on_event(i32 code, event_context context) {
 
   return false;
 }
-

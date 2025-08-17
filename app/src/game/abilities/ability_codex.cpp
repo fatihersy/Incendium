@@ -1,5 +1,6 @@
 #include "ability_codex.h"
 #include <reasings.h>
+#include <loc_types.h>
 
 #include "core/event.h"
 #include "core/fmath.h"
@@ -67,7 +68,7 @@ ability get_ability_codex() {
   }
 
   std::array<ability_upgradables, ABILITY_UPG_MAX> codex_upgr = {ABILITY_UPG_DAMAGE, ABILITY_UPG_AMOUNT, ABILITY_UPG_UNDEFINED, ABILITY_UPG_UNDEFINED, ABILITY_UPG_UNDEFINED};
-  return ability("Arcane Codex", ABILITY_ID_CODEX,
+  return ability(static_cast<i32>(LOC_TEXT_PLAYER_ABILITY_NAME_ARCANE_CODEX), ABILITY_ID_CODEX,
     codex_upgr,
     0.f, 0.8f, Vector2 {.8f, .8f}, 1, 3, 0.f, 11,
     Vector2{30.f, 30.f}, Rectangle{2560, 992, 32, 32}

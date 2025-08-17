@@ -1,5 +1,6 @@
 #include "ability_comet.h"
 #include <reasings.h>
+#include <loc_types.h>
 
 #include "core/event.h"
 #include "core/fmath.h"
@@ -57,12 +58,12 @@ void upgrade_ability_comet(ability* abl) {
   }
 }
 ability get_ability_comet(void) {
-  if (!state) {
+  if (not state or state == nullptr) {
     return ability();
   }
 
   std::array<ability_upgradables, ABILITY_UPG_MAX> comet_upgr = {ABILITY_UPG_DAMAGE, ABILITY_UPG_HITBOX, ABILITY_UPG_AMOUNT, ABILITY_UPG_UNDEFINED, ABILITY_UPG_UNDEFINED};
-  return ability("Comet", ABILITY_ID_COMET,
+  return ability(static_cast<i32>(LOC_TEXT_PLAYER_ABILITY_NAME_ARCANE_CODEX), ABILITY_ID_COMET,
     comet_upgr,
     0.f, 1.2f, Vector2 {1.2f, 1.2f}, 1, 7, 0.f, 15,
     Vector2{30.f, 30.f}, Rectangle{2144, 736, 32, 32}
@@ -74,16 +75,20 @@ ability get_ability_comet_next_level(ability abl) {
 }
 
 void update_ability_comet(ability* abl) {
-  if (abl == nullptr) {
-    TraceLog(LOG_WARNING, "ability::update_comet()::Ability is not valid");
+  if (not abl or abl == nullptr) {
+    TraceLog(LOG_WARNING, "ability::update_ability_comet()::Ability is not valid");
     return;
   }
   if (abl->id != ABILITY_ID_COMET) {
-    TraceLog(LOG_WARNING, "ability::update_comet()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_ID_COMET, abl->id);
+    TraceLog(LOG_WARNING, "ability::update_ability_comet()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_ID_COMET, abl->id);
     return;
   }
-  if (!abl->is_active || !abl->is_initialized) {
-    TraceLog(LOG_WARNING, "ability::update_comet()::Ability is not active or not initialized");
+  if (not abl->is_active or not abl->is_initialized) {
+    TraceLog(LOG_WARNING, "ability::update_ability_comet()::Ability is not active or not initialized");
+    return;
+  }
+  if (not abl->p_owner) {
+    TraceLog(LOG_WARNING, "ability::update_ability_comet()::Player pointer is invalid");
     return;
   }
   player_state* p_player = reinterpret_cast<player_state*>(abl->p_owner);

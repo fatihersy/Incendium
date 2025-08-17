@@ -1,5 +1,6 @@
 #include "ability_fireball.h"
 #include <reasings.h>
+#include <loc_types.h>
 
 #include "core/event.h"
 #include "core/fmath.h"
@@ -14,10 +15,10 @@ typedef struct ability_fireball_state {
   const app_settings* in_settings;
   const ingame_info* in_ingame_info; 
 } ability_fireball_state;
-static ability_fireball_state * state;
+static ability_fireball_state * state = nullptr;
 
 bool ability_fireball_initialize(const camera_metrics* _camera_metrics,const app_settings* _settings,const ingame_info* _ingame_info) {
-  if (state) {
+  if (state and state != nullptr) {
     return false;
   }
   state = (ability_fireball_state*)allocate_memory_linear(sizeof(ability_fireball_state),true);
@@ -32,8 +33,12 @@ bool ability_fireball_initialize(const camera_metrics* _camera_metrics,const app
 }
 
 void upgrade_ability_fireball(ability* abl) {
+  if (not abl or abl == nullptr) {
+    TraceLog(LOG_WARNING, "ability::upgrade_ability_fireball()::Ability is invalid");
+    return;
+  }
   if (abl->id <= ABILITY_ID_UNDEFINED || abl->id >= ABILITY_ID_MAX) {
-    TraceLog(LOG_WARNING, "ability::upgrade_ability()::Ability is not initialized");
+    TraceLog(LOG_WARNING, "ability::upgrade_ability_fireball()::Ability is not initialized");
     return;
   }
   ++abl->level;
@@ -55,11 +60,11 @@ void upgrade_ability_fireball(ability* abl) {
   }
 }
 ability get_ability_fireball(void) {
-  if (!state) {
+  if (not state or state == nullptr) {
     return ability();
   }
   std::array<ability_upgradables, ABILITY_UPG_MAX> fireball_upgr = {ABILITY_UPG_DAMAGE, ABILITY_UPG_SPEED, ABILITY_UPG_AMOUNT, ABILITY_UPG_UNDEFINED, ABILITY_UPG_UNDEFINED};
-  return ability("Fireball", ABILITY_ID_FIREBALL,
+  return ability(static_cast<i32>(LOC_TEXT_PLAYER_ABILITY_NAME_FIREBALL), ABILITY_ID_FIREBALL,
     fireball_upgr,
     0.f, 1.f, Vector2 {1.f, 1.f}, 1, 1, 0.f, 15,
     Vector2{30.f, 30.f}, Rectangle{2176, 736, 32, 32}
@@ -71,7 +76,7 @@ ability get_ability_fireball_next_level(ability abl) {
 }
 
 void update_ability_fireball(ability* abl) {
-  if (abl == nullptr) {
+  if (not abl or abl == nullptr) {
     TraceLog(LOG_WARNING, "ability::update_fireball()::Ability is not valid");
     return;
   }
@@ -79,7 +84,7 @@ void update_ability_fireball(ability* abl) {
     TraceLog(LOG_WARNING, "ability::update_fireball()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_ID_FIREBALL, abl->id);
     return;
   }
-  if (!abl->is_active || !abl->is_initialized) {
+  if (not abl->is_active or not abl->is_initialized) {
     TraceLog(LOG_WARNING, "ability::update_fireball()::Ability is not active or not initialized");
     return;
   }
@@ -122,7 +127,7 @@ void update_ability_fireball(ability* abl) {
 }
 
 void render_ability_fireball(ability* abl){
-  if (abl == nullptr) {
+  if (not abl or abl == nullptr) {
     TraceLog(LOG_WARNING, "ability::render_fireball()::Ability is not valid");
     return;
   }

@@ -9,16 +9,19 @@
 
 #define LOC_TEXT_LANGUAGE_NAME 0
 
-typedef enum loc_text {
+typedef enum loc_text_id {
   LOC_TEXT_UNDEFINED,
 
   LOC_TEXT_MAINMENU_BUTTON_TEXT_PLAY,
-  LOC_TEXT_MAINMENU_BUTTON_TEXT_UPGRADE,
+  LOC_TEXT_MAINMENU_BUTTON_TEXT_CHARACTER,
   LOC_TEXT_MAINMENU_BUTTON_TEXT_SETTINGS,
   LOC_TEXT_MAINMENU_BUTTON_TEXT_EXIT,
   LOC_TEXT_MAINMENU_BUTTON_TEXT_EDITOR,
-  LOC_TEXT_MAINMENU_UPDATE_BUTTON_BACK,
-  LOC_TEXT_MAINMENU_UPDATE_BUTTON_UPGRADE,
+  LOC_TEXT_MAINMENU_STATE_CHARACTER_BUTTON_ENTER_TAB_INVENTORY,
+  LOC_TEXT_MAINMENU_STATE_CHARACTER_BUTTON_ENTER_TAB_STATS,
+  LOC_TEXT_MAINMENU_STATE_CHARACTER_BUTTON_BACK,
+  LOC_TEXT_MAINMENU_STATE_CHARACTER_TAB_STATS_BUTTON_UPGRADE,
+  LOC_TEXT_MAINMENU_STATE_CHARACTER_TAB_STATS_CURRENCY_TEXT_TOTAL,
   LOC_TEXT_MAINMENU_PAUSE_BUTTON_TEXT_RESUME,
   LOC_TEXT_MAINMENU_PAUSE_BUTTON_TEXT_EXIT_TO_MAINMENU,
   LOC_TEXT_MAINMENU_PAUSE_BUTTON_TEXT_EXIT_TO_DESKTOP,
@@ -80,12 +83,22 @@ typedef enum loc_text {
   LOC_TEXT_PLAYER_STAT_DESC_SEEING_EYES,
   LOC_TEXT_PLAYER_STAT_TOTAL_TRAIT_POINTS,
   LOC_TEXT_PLAYER_STAT_DESC_TOTAL_TRAIT_POINTS,
-  LOC_TEXT_PLAYER_ABILITY_NAME_FIREBALL,
   LOC_TEXT_PLAYER_ABILITY_NAME_BULLET,
+  LOC_TEXT_PLAYER_ABILITY_NAME_ARCANE_CODEX,
   LOC_TEXT_PLAYER_ABILITY_NAME_COMET,
+  LOC_TEXT_PLAYER_ABILITY_NAME_FIREBALL,
+  LOC_TEXT_PLAYER_ABILITY_NAME_FIRETRAIL,
+  LOC_TEXT_PLAYER_ABILITY_NAME_RADIENCE,
+
+  LOC_TEXT_WORLD_STAGE_WORK_IN_PROGRESS,
+  LOC_TEXT_WORLD_STAGE_1_TITLE,
+
+  LOC_TEXT_DISPLAY_ERROR_TEXT_STARTER_ABILITY_NOT_SELECTED,
+  LOC_TEXT_DISPLAY_ERROR_TEXT_INSUFFICIENT_FUNDS,
+  LOC_TEXT_DISPLAY_ERROR_TEXT_STAGE_IS_NOT_PLAYABLE,
 
   LOC_TEXT_MAX
-} loc_text;
+} loc_text_id;
 
 typedef struct loc_data {
   std::string language_name;
@@ -93,8 +106,8 @@ typedef struct loc_data {
   std::array<std::string, LOC_TEXT_MAX> content;
   int index;
   loc_data(void) {
-    this->language_name.clear();
-    this->codepoints.clear();
+    this->language_name = std::string("");
+    this->codepoints = std::string("");
     this->content.fill(std::string(""));
     this->index = 0;
   }
@@ -106,9 +119,15 @@ typedef struct loc_content {
 
 typedef struct localized_languages {
   std::vector<loc_data> lang;
+  localized_languages(void) {
+    this->lang = std::vector<loc_data>();
+  }
+  localized_languages(std::vector<loc_data> vec) {
+    this->lang = vec;
+  }
 } localized_languages;
 
-const char* lc_txt(int symbol);
+const char* lc_txt(int txt_id);
 
 bool loc_parser_parse_localization_data_from_file(const char* file_name);
 bool loc_parser_parse_localization_data(void);
@@ -116,5 +135,5 @@ bool loc_parser_parse_localization_data(void);
 localized_languages loc_parser_get_loc_langs(void);
 loc_data* loc_parser_get_active_language(void);
 bool loc_parser_set_active_language_by_name(std::string language_name);
-bool loc_parser_set_active_language_by_index(int index);
+bool loc_parser_set_active_language_by_index(int _index);
 #endif

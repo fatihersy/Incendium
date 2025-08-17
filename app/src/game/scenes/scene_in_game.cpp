@@ -164,8 +164,8 @@ void reset_game(void);
     TraceLog(LOG_ERROR, "scene_in_game::begin_scene_in_game()::State is not valid");
     return false;
   }
-  state->default_panel = panel( BTN_STATE_RELEASED, ATLAS_TEX_ID_CRIMSON_FANTASY_PANEL_BG, ATLAS_TEX_ID_CRIMSON_FANTASY_PANEL, 
-    Vector4 {6, 6, 6, 6}, Color { 30, 39, 46, 245}, Color { 52, 64, 76, 245}
+  state->default_panel = panel(BTN_STATE_UNDEFINED, ATLAS_TEX_ID_DARK_FANTASY_PANEL_BG, ATLAS_TEX_ID_DARK_FANTASY_PANEL_SELECTED, 
+    Vector4 {6, 6, 6, 6}, Color { 30, 39, 46, 128}
   );
   copy_memory(state->worldmap_locations.data(), get_worldmap_locations(), MAX_WORLDMAP_LOCATIONS * sizeof(worldmap_stage));
   _set_player_position(Vector2 {0.f, 0.f});
@@ -376,11 +376,6 @@ void render_interface_in_game(void) {
         }
         case INGAME_PHASE_RESULTS: {
           draw_end_game_panel();
-          if(gui_menu_button("Accept", BTN_ID_IN_GAME_BUTTON_RETURN_MENU, Vector2 {0, 5}, SIG_BASE_RENDER_DIV2, true)) {
-            gm_save_game();
-            end_scene_in_game();
-            event_fire(EVENT_CODE_SCENE_MAIN_MENU, event_context(static_cast<i32>(false)));
-          }
           render_user_interface();
           break;
         }
@@ -582,7 +577,7 @@ void in_game_update_keyboard_bindings(void) {
       }
       break; 
     }
-    case INGAME_STATE_PLAY: {  
+    case INGAME_STATE_PLAY: {
       switch ( (*state->in_ingame_info->ingame_phase) ) {
         case INGAME_PHASE_CLEAR_ZOMBIES: {
           if (IsKeyDown(KEY_LEFT_SHIFT) && IsKeyReleased(KEY_D)) {
@@ -590,6 +585,9 @@ void in_game_update_keyboard_bindings(void) {
           }
           if (IsKeyReleased(KEY_ESCAPE)) {
             sig_change_ingame_state(INGAME_STATE_PAUSE);
+          }
+          if (IsKeyDown(KEY_LEFT_ALT) and IsKeyReleased(KEY_K)) {
+            event_fire(EVENT_CODE_KILL_ALL_SPAWNS, event_context());
           }
           break;
         }
@@ -599,6 +597,9 @@ void in_game_update_keyboard_bindings(void) {
           }
           if (IsKeyReleased(KEY_ESCAPE)) {
             sig_change_ingame_state(INGAME_STATE_PAUSE);
+          }
+          if (IsKeyDown(KEY_LEFT_ALT) and IsKeyReleased(KEY_K)) {
+            event_fire(EVENT_CODE_KILL_ALL_SPAWNS, event_context());
           }
           break;
         }
@@ -661,9 +662,10 @@ void draw_in_game_upgrade_panel(u16 which_panel, Rectangle panel_dest) {
   const u16 upgr_font_size = 1; 
 
   gui_draw_texture_id_pro(TEX_ID_ASSET_ATLAS, upg->icon_src, icon_rect);
-  gui_label(upg->display_name.c_str(), FONT_TYPE_ABRACADABRA, title_font_size, ability_name_pos, WHITE, true, true);
+  gui_label(lc_txt(upg->display_name_loc_text_id), FONT_TYPE_ABRACADABRA, title_font_size, ability_name_pos, WHITE, true, true);
 
   if (upg->level == 1) {
+    // TODO: Localize
     gui_label("NEW!", FONT_TYPE_ABRACADABRA, level_ind_font_size, ability_level_ind, WHITE, true, true);
   } else if(upg->level>1 && upg->level <= MAX_ABILITY_LEVEL) {
     gui_label_format_v(FONT_TYPE_ABRACADABRA, level_ind_font_size, ability_level_ind, WHITE, true, true, "%d -> %d", abl->level, upg->level);
@@ -723,28 +725,41 @@ void draw_passive_selection_panel(const character_stat* stat, const Rectangle pa
 }
 void draw_end_game_panel(void) {
   STATE_ASSERT("draw_end_game_panel")
-  gui_panel(state->default_panel, Rectangle{ 
-      SIG_BASE_RENDER_WIDTH * .5f, SIG_BASE_RENDER_HEIGHT * .5f, 
-      SIG_BASE_RENDER_WIDTH * .75f, SIG_BASE_RENDER_HEIGHT * .75f
-    }, 
-    true
-  );
 
+	Rectangle bg_panel_dest = gui_draw_default_background_panel();
+
+	Rectangle result_title_header_dest = Rectangle {
+		bg_panel_dest.x,
+		bg_panel_dest.y + (bg_panel_dest.height * .05f),
+		bg_panel_dest.width,
+		bg_panel_dest.height * .1f
+	};
+  draw_atlas_texture_stretch(ATLAS_TEX_ID_HEADER, Rectangle {64, 0, 32, 32}, result_title_header_dest, false, WHITE);
+	
+	Vector2 result_title_text_dest = Vector2 {
+		result_title_header_dest.x + (result_title_header_dest.width * .5f),
+		result_title_header_dest.y + (result_title_header_dest.height * .5f)
+	};
   if (state->in_ingame_info->is_win) {
-    gui_label(lc_txt(LOC_TEXT_INGAME_STATE_RESULT_CLEARED), FONT_TYPE_ABRACADABRA, 1, SIG_BASE_RENDER_DIV2, WHITE, true, true);
+    gui_label(lc_txt(LOC_TEXT_INGAME_STATE_RESULT_CLEARED), FONT_TYPE_ABRACADABRA, 1, result_title_text_dest, WHITE, true, true);
   }
   else {
-    gui_label(lc_txt(LOC_TEXT_INGAME_STATE_RESULT_DEAD), FONT_TYPE_ABRACADABRA, 1, SIG_BASE_RENDER_DIV2, RED, true, true);
+    gui_label(lc_txt(LOC_TEXT_INGAME_STATE_RESULT_DEAD), FONT_TYPE_ABRACADABRA, 1, result_title_text_dest, RED, true, true);
   }
-  i32 min  = state->in_ingame_info->play_time / 60.f;
-  i32 secs = (i32)state->in_ingame_info->play_time % 60;
-  gui_label_format_v(FONT_TYPE_ABRACADABRA, 1, VECTOR2(static_cast<f32>(state->in_app_settings->render_width_div2), SIG_BASE_RENDER_HEIGHT * .55f), 
-    WHITE, true, true, "%d:%d", min, secs
-  );
 
   gui_label_format_v(FONT_TYPE_ABRACADABRA, 1, VECTOR2(static_cast<f32>(state->in_app_settings->render_width_div2), SIG_BASE_RENDER_HEIGHT * .75f), WHITE, true, true, 
     "%s%d", lc_txt(LOC_TEXT_INGAME_STATE_RESULT_COLLECTED_SOULS), state->in_ingame_info->collected_souls
   );
+
+	Vector2 accept_btn_dest = Vector2 {
+		bg_panel_dest.x + (bg_panel_dest.width * .5f),
+		bg_panel_dest.y + (bg_panel_dest.height * .9f)
+	};
+  if(gui_menu_button("Accept", BTN_ID_IN_GAME_BUTTON_RETURN_MENU, ZEROVEC2, accept_btn_dest, true)) {
+    gm_save_game();
+    end_scene_in_game();
+    event_fire(EVENT_CODE_SCENE_MAIN_MENU, event_context(static_cast<i32>(false)));
+  }
 }
 void draw_ingame_state_play_general(void) {
   f32 ingame_user_panel_dims = static_cast<f32>(state->in_app_settings->render_height) * .15f;
