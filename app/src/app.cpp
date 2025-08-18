@@ -60,7 +60,7 @@ bool app_initialize(void) {
 
   // Game
   #if USE_PAK_FORMAT 
-    pak_parser_system_initialize(PAK_FILE_LOCATION);
+    pak_parser_system_initialize();
     file_data loading_image_file = fetch_file_data("aaa_game_start_loading_screen.png");
     Image loading_image = LoadImageFromMemory(".png", loading_image_file.data, loading_image_file.size);
     Texture loading_tex = LoadTextureFromImage(loading_image);
@@ -121,7 +121,8 @@ bool app_initialize(void) {
 
   state->drawing_target = LoadRenderTexture(state->settings->render_width, state->settings->render_height);
 
-  SetTargetFPS(GetMonitorRefreshRate(0));
+  SetTargetFPS(GetMonitorRefreshRate(GetCurrentMonitor()));
+
   SetExitKey(KEY_END);
   if (state->settings->window_state == FLAG_BORDERLESS_WINDOWED_MODE) {
     toggle_borderless();

@@ -35,18 +35,6 @@
 #define MAX_UPDATE_ABILITY_PANEL_COUNT 3
 #define MAX_UPDATE_PASSIVE_PANEL_COUNT 3
 
-#define MAX_TILESHEET_UNIQUE_TILESLOTS_X 64
-#define MAX_TILESHEET_UNIQUE_TILESLOTS_Y 64
-#define MAX_TILESHEET_UNIQUE_TILESLOTS MAX_TILESHEET_UNIQUE_TILESLOTS_X * MAX_TILESHEET_UNIQUE_TILESLOTS_Y
-#define MAX_TILEMAP_LAYERS 5
-#define MAX_TILEMAP_TILESLOT_X 128
-#define MAX_TILEMAP_TILESLOT_Y MAX_TILEMAP_TILESLOT_X
-#define MAX_TILEMAP_TILESLOT MAX_TILEMAP_TILESLOT_X * MAX_TILEMAP_TILESLOT_Y
-#define TILEMAP_TILE_START_SYMBOL 0x21 // Refers to ASCII exclamation mark. First visible character on the chart. To debug.
-#define TILESHEET_TILE_SYMBOL_STR_LEN 2
-#define MAX_TILEMAP_SPRITES 50
-#define MAX_TILEMAP_FILENAME_LEN 20
-
 #define MAX_PLAYER_LEVEL 100
 #define MAX_SPAWN_COUNT 100
 #define MAX_SPAWN_HEALTH 100000
@@ -379,7 +367,7 @@ typedef struct tilesheet {
   bool is_initialized;
 
   tilesheet(void) {
-    zero_memory(this->tile_symbols, sizeof(tile_symbols) * MAX_TILESHEET_UNIQUE_TILESLOTS_X * MAX_TILESHEET_UNIQUE_TILESLOTS_Y);
+    zero_memory(this->tile_symbols, sizeof(tile_symbols));
     
     this->sheet_id = TILESHEET_TYPE_UNSPECIFIED;
     this->atlas_source = atlas_texture();

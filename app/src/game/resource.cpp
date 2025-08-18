@@ -25,24 +25,45 @@ typedef struct resource_system_state {
   std::vector<tilemap_prop_sprite> tilemap_props_sprite;
 
   i32 next_prop_id;
+  resource_system_state(void) {
+    this->textures.fill(Texture2D {0u, 0, 0, 0, 0});
+    this->atlas_textures.fill(atlas_texture());
+    this->sprites.fill(spritesheet());
+    this->images.fill(Image {nullptr, 0, 0, 0, 0});
+    this->tilesheets.fill(tilesheet());
+
+    this->tilemap_props_trees = std::vector<tilemap_prop_static>();
+    this->tilemap_props_tombstones = std::vector<tilemap_prop_static>();
+    this->tilemap_props_stones = std::vector<tilemap_prop_static>();
+    this->tilemap_props_spikes = std::vector<tilemap_prop_static>();
+    this->tilemap_props_skulls = std::vector<tilemap_prop_static>();
+    this->tilemap_props_pillars = std::vector<tilemap_prop_static>();
+    this->tilemap_props_lamps = std::vector<tilemap_prop_static>();
+    this->tilemap_props_fence = std::vector<tilemap_prop_static>();
+    this->tilemap_props_details = std::vector<tilemap_prop_static>();
+    this->tilemap_props_candles = std::vector<tilemap_prop_static>();
+    this->tilemap_props_buildings = std::vector<tilemap_prop_static>();
+    this->tilemap_props_sprite = std::vector<tilemap_prop_sprite>();
+    this->next_prop_id = 0;
+  }
 } resource_system_state;
 
 static resource_system_state * state = nullptr;
 
-unsigned int load_texture(const char* filename, bool resize, Vector2 new_size, texture_id _id);
+void load_texture(const char* filename, bool resize, Vector2 new_size, texture_id _id);
 void load_texture_from_atlas(atlas_texture_id _id, Rectangle texture_area);
 bool load_image(const char *filename, bool resize, Vector2 new_size, image_type type);
-void load_spritesheet(texture_id _source_tex, spritesheet_id handle_id, Vector2 offset, u16 _fps, u16 _frame_width, u16 _frame_height, u16 _total_row, u16 _total_col);
+void load_spritesheet(texture_id _source_tex, spritesheet_id handle_id, Vector2 offset, i32 _fps, i32 _frame_width, i32 _frame_height, i32 _total_row, i32 _total_col);
 void load_tilesheet(tilesheet_type _sheet_sheet_type, atlas_texture_id _atlas_tex_id, u16 _tile_count_x, u16 _tile_count_y, u16 _tile_size);
 
 bool resource_system_initialize(void) {
-  if (state) return false;
-
+  if (state and state != nullptr) return false;
   state = (resource_system_state*)allocate_memory_linear(sizeof(resource_system_state), true);
-  if (!state) {
+  if (not state or state == nullptr) {
     TraceLog(LOG_ERROR, "resource::allocate_memory_linear()::State allocation failed");
     return false;
   }
+  *state = resource_system_state();
 
   // NOTE: resource files inside the pak file
   load_texture("atlas.png", false, VECTOR2(0.f, 0.f), TEX_ID_ASSET_ATLAS);
@@ -633,10 +654,10 @@ const char *rs_path(const char *filename) {
 const char *map_layer_path(const char *filename) {
   return TextFormat("%s%s%s", RESOURCE_PATH, MAP_LAYER_PATH, filename);
 }
-unsigned int load_texture(const char *filename, bool resize, Vector2 new_size, texture_id _id) {
+void load_texture(const char *filename, bool resize, Vector2 new_size, texture_id _id) {
   if (_id >= TEX_ID_MAX || _id <= TEX_ID_UNSPECIFIED) { 
     TraceLog(LOG_ERROR, "resource::load_texture()::texture type out of bound");
-    return INVALID_IDU32;
+    return;
   }
   Texture2D tex;
 
@@ -663,7 +684,6 @@ unsigned int load_texture(const char *filename, bool resize, Vector2 new_size, t
   #endif
 
   state->textures.at(_id) = tex;
-  return state->textures.at(_id).id;
 }
 bool load_image(const char *filename, bool resize, Vector2 new_size, image_type type) {
   if (type >= IMAGE_TYPE_MAX || type <= IMAGE_TYPE_UNSPECIFIED) { 
@@ -693,7 +713,7 @@ bool load_image(const char *filename, bool resize, Vector2 new_size, image_type 
   state->images.at(type) = img;
   return true;
 }
-void load_spritesheet(texture_id _source_tex, spritesheet_id handle_id, Vector2 offset, u16 _fps, u16 _frame_width, u16 _frame_height, u16 _total_row, u16 _total_col) {
+void load_spritesheet(texture_id _source_tex, spritesheet_id handle_id, Vector2 offset, i32 _fps, i32 _frame_width, i32 _frame_height, i32 _total_row, i32 _total_col) {
   if ((handle_id >= SHEET_ID_SPRITESHEET_TYPE_MAX  ||  handle_id <= SHEET_ID_SPRITESHEET_UNSPECIFIED) ||
       (_source_tex >= TEX_ID_MAX  || _source_tex <= TEX_ID_UNSPECIFIED)) 
   {
@@ -740,11 +760,11 @@ void load_tilesheet(tilesheet_type sheet_id, atlas_texture_id _atlas_tex_id, u16
   _tilesheet->tile_count = _tilesheet->tile_count_x * _tilesheet->tile_count_y;
   _tilesheet->tile_size = _tile_size;
 
-  for (u16 i = 0; i < _tilesheet->tile_count; ++i) {
-    u8 x = i % _tilesheet->tile_count_x;
-    u8 y = i / _tilesheet->tile_count_x;
-    u8 x_symbol = TILEMAP_TILE_START_SYMBOL + x;
-    u8 y_symbol = TILEMAP_TILE_START_SYMBOL + y;
+  for (i32 i = 0; i < _tilesheet->tile_count; ++i) {
+    i32 x = i % _tilesheet->tile_count_x;
+    i32 y = i / _tilesheet->tile_count_x;
+    i32 x_symbol = TILEMAP_TILE_START_SYMBOL + x;
+    i32 y_symbol = TILEMAP_TILE_START_SYMBOL + y;
 
     _tilesheet->tile_symbols[x][y] = tile_symbol(x_symbol, y_symbol);
   }
@@ -995,4 +1015,6 @@ tilemap_prop_address resource_get_map_prop_by_prop_id(i32 id, tilemap_prop_types
   TraceLog(LOG_ERROR, "resource::get_map_prop_by_prop_id()::Function ended unexpectedly");
   return tilemap_prop_address();
 }
-
+file_data _get_asset_file_data([[__maybe_unused__]] i32 index) {
+  return file_data(); //get_asset_file_buffer(index);
+}

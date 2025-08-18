@@ -67,6 +67,23 @@
 #define MAX_FILENAME_LENGTH 64
 #define MAX_FILENAME_EXT_LENGTH 5
 
+#define MAX_TILESHEET_UNIQUE_TILESLOTS_X 64
+#define MAX_TILESHEET_UNIQUE_TILESLOTS_Y 64
+#define MAX_TILESHEET_UNIQUE_TILESLOTS MAX_TILESHEET_UNIQUE_TILESLOTS_X * MAX_TILESHEET_UNIQUE_TILESLOTS_Y
+#define MAX_TILEMAP_LAYERS 5
+#define MAX_TILEMAP_TILESLOT_X 128
+#define MAX_TILEMAP_TILESLOT_Y MAX_TILEMAP_TILESLOT_X
+#define MAX_TILEMAP_TILESLOT MAX_TILEMAP_TILESLOT_X * MAX_TILEMAP_TILESLOT_Y
+#define TILEMAP_TILE_START_SYMBOL 0x21 // Refers to ASCII exclamation mark. First visible character on the chart. To debug.
+#define TILESHEET_TILE_SYMBOL_STR_LEN 2
+#define MAX_TILEMAP_SPRITES 50
+#define MAX_TILEMAP_FILENAME_LEN 20
+
+#define MAX_WORLDMAP_LOCATIONS 22
+#define WORLDMAP_LOC_PIN_SIZE 32 // Also check the SHEET_ID_ICON_ATLAS frame sizes.
+#define WORLDMAP_LOC_PIN_SIZE_DIV2 WORLDMAP_LOC_PIN_SIZE * .5f // Needed?
+#define WORLDMAP_MAINMENU_MAP 0
+
 #define FCLAMP(value, min, max) ((value <= min) ? min : (value >= max) ? max : value)
 #define FMAX(v1, v2) (v1 >= v2) ? v1 : v2
 #define FMIN(v1, v2) (v1 <= v2) ? v1 : v2
@@ -531,6 +548,31 @@ typedef struct data_pack {
   };
 } data_pack;
 
+typedef enum pak_file_id {
+  PAK_FILE_UNDEFINED,
+  PAK_FILE_ASSET1,
+  PAK_FILE_ASSET2,
+  PAK_FILE_MAP,
+  PAK_FILE_MAX,
+}pak_file_id;
+
+typedef enum asset_file_id {
+  PAK_FILE_ASSET_UNDEFINED,
+  PAK_FILE_ASSET_THUMBNAIL,
+  PAK_FILE_ASSET_FONT_ABRACADABRA,
+  PAK_FILE_ASSET_FONT_MIOSEVKA,
+  PAK_FILE_ASSET_SOUND_BTN_CLICK_1,
+  PAK_FILE_ASSET_SOUND_BTN_CLICK_2,
+  PAK_FILE_ASSET_SOUND_BTN_CLICK_3,
+  PAK_FILE_ASSET_SOUND_DENY,
+  PAK_FILE_ASSET_MUSIC_MAIN_MENU_THEME,
+  PAK_FILE_ASSET_MUSIC_NIGHT_THEME,
+  PAK_FILE_ASSET_MUSIC_TRACK_5,
+  PAK_FILE_ASSET_WORLDMAP_IMAGE,
+  PAK_FILE_ASSET_ASSET_ATLAS,
+  PAK_FILE_ASSET_MAX,
+} asset_file_id;
+
 typedef enum shader_id {
   SHADER_ID_UNSPECIFIED,
   SHADER_ID_PROGRESS_BAR_MASK,
@@ -818,19 +860,70 @@ typedef struct app_settings {
 } app_settings;
 
 typedef struct file_data {
-  i8 file_name[MAX_FILENAME_LENGTH];
-  i8 file_extension[MAX_FILENAME_EXT_LENGTH];
-  u64 size;
+  std::string file_name;
+  std::string file_extension;
   size_t offset;
-  u8* data;
-  bool is_initialized;
+  i32 total_size;
+  bool is_success;
   file_data(void) {
+    this->file_name = std::string();
+    this->file_extension = std::string();
     this->offset = 0u;
-    this->size = 0u;
-    this->data = nullptr;
-    this->is_initialized = false;
+    this->total_size = 0;
+    this->is_success = false;
+  }
+  file_data(std::string file_name, std::string ext) : file_data() {
+    this->file_name = file_name;
+    this->file_extension = ext;
   }
 }file_data;
+
+typedef struct file_buffer {
+  file_data file_info;
+  std::string content;
+
+  file_buffer(void) {
+    this->file_info = file_data();
+    this->content = std::string();
+  }
+  file_buffer(std::string file_name, std::string ext) : file_buffer() {
+    this->file_info = file_data(file_name, ext);
+  }
+} file_buffer;
+
+typedef struct worldmap_stage_file {
+  i32 stage_index;
+  std::array<std::string, MAX_TILEMAP_LAYERS> file_data;
+  std::string file_collision;
+  std::string file_prop;
+  bool is_success;
+  worldmap_stage_file(void) {
+    this->stage_index = 0;
+    this->file_data.fill(std::string(""));
+    this->file_collision = std::string("");
+    this->file_prop = std::string("");
+    this->is_success = false;
+  }
+} worldmap_stage_file;
+
+typedef struct asset_pak_file {
+  std::string path_to_resource;
+  std::string pak_file_name;
+  std::string pak_data;
+  std::vector<file_buffer> file_buffers;
+  
+  asset_pak_file(void) {
+    this->file_buffers = std::vector<file_buffer>();
+    this->path_to_resource = std::string();
+    this->pak_file_name = std::string();
+    this->pak_data = std::string();
+  }
+  asset_pak_file(std::string pak_name, std::string path_to_res, std::vector<file_buffer> file_infos) : asset_pak_file() {
+    this->pak_file_name = pak_name;
+    this->path_to_resource = path_to_res;
+    this->file_buffers = file_infos;
+  }
+}asset_pak_file;
 
 #ifdef STEAM_CEG
 // Steam DRM header file

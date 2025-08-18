@@ -13,6 +13,7 @@ const Texture2D* get_texture_by_enum(texture_id _id);
 const Image* get_image_by_enum(image_type type);
 const spritesheet* get_spritesheet_by_enum(spritesheet_id type);
 const tilesheet* get_tilesheet_by_enum(tilesheet_type type);
+file_data _get_asset_file_data(i32 index);
 
 std::vector<tilemap_prop_static> * resource_get_tilemap_props_static(tilemap_prop_types type);
 std::vector<tilemap_prop_sprite> * resource_get_tilemap_props_sprite(void);
