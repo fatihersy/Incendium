@@ -86,7 +86,7 @@ bool create_tilemap(const tilesheet_type _type,const Vector2 _position,const i32
   out_tilemap->is_initialized = true;
   return true;
 }
-void create_tilesheet(tilesheet_type _type, u16 _dest_tile_size, f32 _offset, tilesheet* out_tilesheet) {
+void create_tilesheet(tilesheet_type _type, i32 _dest_tile_size, f32 _offset, tilesheet* out_tilesheet) {
 
   if (_type >= TILESHEET_TYPE_MAX || _type <= 0) {
     TraceLog(LOG_ERROR, "ERROR::tilemap::create_tilesheet()::Sheet type out of bound");
@@ -117,18 +117,18 @@ void render_tilemap(const tilemap* _tilemap, Rectangle camera_view) {
   }
   const tilesheet* sheet = get_tilesheet_by_enum(TILESHEET_TYPE_MAP);
 
-  int start_x = (int)((camera_view.x - _tilemap->position.x) / _tilemap->tile_size);
-  int start_y = (int)((camera_view.y - _tilemap->position.y) / _tilemap->tile_size);
-  int end_x = (int)((camera_view.x + camera_view.width - _tilemap->position.x) / _tilemap->tile_size) + 1;
-  int end_y = (int)((camera_view.y + camera_view.height - _tilemap->position.y) / _tilemap->tile_size) + 1;
+  i32 start_x = (i32)((camera_view.x - _tilemap->position.x) / _tilemap->tile_size);
+  i32 start_y = (i32)((camera_view.y - _tilemap->position.y) / _tilemap->tile_size);
+  i32 end_x = (i32)((camera_view.x + camera_view.width - _tilemap->position.x) / _tilemap->tile_size) + 1;
+  i32 end_y = (i32)((camera_view.y + camera_view.height - _tilemap->position.y) / _tilemap->tile_size) + 1;
   
   start_x = start_x < 0 ? 0 : (start_x >= _tilemap->map_dim ? _tilemap->map_dim - 1 : start_x);
   start_y = start_y < 0 ? 0 : (start_y >= _tilemap->map_dim ? _tilemap->map_dim - 1 : start_y);
   end_x = end_x < 0 ? 0 : (end_x > _tilemap->map_dim ? _tilemap->map_dim : end_x);
   end_y = end_y < 0 ? 0 : (end_y > _tilemap->map_dim ? _tilemap->map_dim : end_y);
 
-  for (u16 y = start_y; y < end_y; ++y) {
-    for (u16 x = start_x; x < end_x; ++x) {
+  for (i32 y = start_y; y < end_y; ++y) {
+    for (i32 x = start_x; x < end_x; ++x) {
       if (x >= MAX_TILEMAP_TILESLOT_X || y >= MAX_TILEMAP_TILESLOT_Y) {
         TraceLog(LOG_ERROR, "tilemap::render_tilemap()::Calculated tile's x or y out of bound");
         continue;
@@ -432,9 +432,9 @@ void render_tilesheet(const tilesheet* sheet, f32 zoom) {
     return;
   }
 
-  for (u16 i = 0; i < sheet->tile_count; ++i) {
-    u16 x        = i % sheet->tile_count_x;
-    u16 y        = i / sheet->tile_count_x;
+  for (i32 itr_000 = 0; itr_000 < sheet->tile_count; ++itr_000) {
+    i32 x        = itr_000 % sheet->tile_count_x;
+    i32 y        = itr_000 / sheet->tile_count_x;
     f32 dest_x   = x * sheet->offset * sheet->dest_tile_size * zoom;  
     f32 dest_y   = y * sheet->offset * sheet->dest_tile_size * zoom; 
     i16 x_pos    = sheet->offset     + sheet->position.x + dest_x; 
@@ -449,12 +449,12 @@ void render_tilesheet(const tilesheet* sheet, f32 zoom) {
  * @param tile Needed for x, y
  */
  void render_tile(const tile_symbol* symbol,const Rectangle dest, const tilesheet* sheet) {
-  u16 c0    = symbol->c[0];
-  u16 c1    = symbol->c[1];
-  u16 x     = c0 - TILEMAP_TILE_START_SYMBOL;
-  u16 y     = c1 - TILEMAP_TILE_START_SYMBOL;
-  u16 x_pos = x * sheet->tile_size;
-  u16 y_pos = y * sheet->tile_size;
+  i32 c0    = symbol->c[0];
+  i32 c1    = symbol->c[1];
+  i32 x     = c0 - TILEMAP_TILE_START_SYMBOL;
+  i32 y     = c1 - TILEMAP_TILE_START_SYMBOL;
+  i32 x_pos = x * sheet->tile_size;
+  i32 y_pos = y * sheet->tile_size;
 
   DrawTexturePro(*sheet->atlas_handle, Rectangle {(f32) x_pos, (f32) y_pos, (f32) sheet->tile_size, (f32) sheet->tile_size }, dest, ZEROVEC2, 0.f, WHITE);
 }
@@ -508,7 +508,7 @@ tile get_tile_from_sheet_by_mouse_pos(const tilesheet* sheet,const Vector2 mouse
 
   return _tile;
 }
-tile get_tile_from_map_by_mouse_pos (const tilemap* map,const Vector2 mouse_pos,const u16 layer) {
+tile get_tile_from_map_by_mouse_pos (const tilemap* map,const Vector2 mouse_pos,const i32 layer) {
   if (!map) {
     TraceLog(LOG_ERROR, "tilemap::get_tile_from_mouse_pos()::Map is not valid");
     return tile();
@@ -712,7 +712,10 @@ void str_to_map(tilemap* const map, tilemap_stringtify_package* const out_packag
       prop.scale     = TextToFloat(str_par_prop_member.buffer.at(4).c_str());
       prop.scale = prop.scale / 100.f;
       prop.zindex    = TextToInteger(str_par_prop_member.buffer.at(5).c_str());
-      prop.source = template_prop.data.prop_static->source;
+
+      if (template_prop.data.prop_static and template_prop.data.prop_static != nullptr) {
+        prop.source = template_prop.data.prop_static->source;
+      }
       
       prop.dest = Rectangle {
         TextToFloat(str_par_prop_member.buffer.at(6).c_str()), TextToFloat(str_par_prop_member.buffer.at(7).c_str()),

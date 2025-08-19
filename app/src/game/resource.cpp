@@ -50,11 +50,18 @@ typedef struct resource_system_state {
 
 static resource_system_state * state = nullptr;
 
-void load_texture(const char* filename, bool resize, Vector2 new_size, texture_id _id);
+#if USE_PAK_FORMAT
+void load_texture_pak(pak_file_id pak_id, i32 file_id, bool resize, Vector2 new_size, texture_id _id);
+bool load_image_pak(pak_file_id pak_id, i32 file_id, bool resize, Vector2 new_size, image_type type);
+#else
+void load_texture_disk(const char * _path, bool resize, Vector2 new_size, texture_id _id);
+bool load_image_disk(const char * _path, bool resize, Vector2 new_size, image_type type);
+#endif
+
+
 void load_texture_from_atlas(atlas_texture_id _id, Rectangle texture_area);
-bool load_image(const char *filename, bool resize, Vector2 new_size, image_type type);
 void load_spritesheet(texture_id _source_tex, spritesheet_id handle_id, Vector2 offset, i32 _fps, i32 _frame_width, i32 _frame_height, i32 _total_row, i32 _total_col);
-void load_tilesheet(tilesheet_type _sheet_sheet_type, atlas_texture_id _atlas_tex_id, u16 _tile_count_x, u16 _tile_count_y, u16 _tile_size);
+void load_tilesheet(tilesheet_type _sheet_sheet_type, atlas_texture_id _atlas_tex_id, i32 _tile_count_x, i32 _tile_count_y, i32 _tile_size);
 
 bool resource_system_initialize(void) {
   if (state and state != nullptr) return false;
@@ -66,8 +73,13 @@ bool resource_system_initialize(void) {
   *state = resource_system_state();
 
   // NOTE: resource files inside the pak file
-  load_texture("atlas.png", false, VECTOR2(0.f, 0.f), TEX_ID_ASSET_ATLAS);
-  load_texture("worldmap_wo_clouds.png",       false, VECTOR2(0.f, 0.f), TEX_ID_WORLDMAP_WO_CLOUDS);
+  #if USE_PAK_FORMAT
+  load_texture_pak(PAK_FILE_ASSET2, PAK_FILE_ASSET2_ATLAS, false, VECTOR2(0.f, 0.f), TEX_ID_ASSET_ATLAS);
+  load_texture_pak(PAK_FILE_ASSET1, PAK_FILE_ASSET1_WORLDMAP_IMAGE, false, VECTOR2(0.f, 0.f), TEX_ID_WORLDMAP_WO_CLOUDS);
+  #else
+  load_texture_disk("atlas.png", false, VECTOR2(0.f, 0.f), TEX_ID_ASSET_ATLAS);
+  load_texture_disk("worldmap_wo_clouds.png", false, VECTOR2(0.f, 0.f), TEX_ID_WORLDMAP_WO_CLOUDS);
+  #endif
 
   load_texture_from_atlas(ATLAS_TEX_ID_MAP_TILESET_TEXTURE,                  Rectangle{    0,    0, 1568, 2016 });
   load_texture_from_atlas(ATLAS_TEX_ID_INQUISITOR_PORTRAIT,                  Rectangle{ 1936,    0,   16,   16 });
@@ -654,65 +666,110 @@ const char *rs_path(const char *filename) {
 const char *map_layer_path(const char *filename) {
   return TextFormat("%s%s%s", RESOURCE_PATH, MAP_LAYER_PATH, filename);
 }
-void load_texture(const char *filename, bool resize, Vector2 new_size, texture_id _id) {
+void load_texture_pak(
+  [[__maybe_unused__]] pak_file_id pak_id, [[__maybe_unused__]] i32 file_id, [[__maybe_unused__]] bool resize, [[__maybe_unused__]] Vector2 new_size, [[__maybe_unused__]] texture_id _id
+) {
+  #if USE_PAK_FORMAT
   if (_id >= TEX_ID_MAX || _id <= TEX_ID_UNSPECIFIED) { 
-    TraceLog(LOG_ERROR, "resource::load_texture()::texture type out of bound");
+    TraceLog(LOG_ERROR, "resource::load_texture_pak()::texture type out of bound");
     return;
   }
-  Texture2D tex;
+  Texture2D tex = ZERO_TEXTURE;
 
-  #if USE_PAK_FORMAT
-    file_data file = get_file_data(filename);
-    if (!file.is_initialized) {
-      TraceLog(LOG_ERROR, "resource::load_texture()::File:'%s' does not exist", filename);
-      return INVALID_ID32;
-    }
-    Image img = LoadImageFromMemory((const char*)file.file_extension, file.data, file.size);
-    if (resize) {
-      ImageResize(&img, new_size.x, new_size.y);
-    }
-    tex = LoadTextureFromImage(img);
-  #else
-    const char *path = rs_path(filename);
-    if (resize) {
-      Image img = LoadImage(path);
-      ImageResize(&img, new_size.x, new_size.y);
-      tex = LoadTextureFromImage(img);
-    } else {
-      tex = LoadTexture(path);
-    }
-  #endif
-
+  const file_buffer * file = get_asset_file_buffer(pak_id, file_id);
+  if (not file or file == nullptr or not file->is_success) {
+    TraceLog(LOG_ERROR, "resource::load_texture_pak()::File id %d does not exist", file->file_id);
+    return;
+  }
+  Image img = LoadImageFromMemory(file->file_extension.c_str(), reinterpret_cast<const u8*>(file->content.data()), file->content.size());
+  if (resize) {
+    ImageResize(&img, new_size.x, new_size.y);
+  }
+  tex = LoadTextureFromImage(img);
+  
   state->textures.at(_id) = tex;
+  #endif
 }
-bool load_image(const char *filename, bool resize, Vector2 new_size, image_type type) {
+bool load_image_pak(
+  [[__maybe_unused__]] pak_file_id pak_id, [[__maybe_unused__]] i32 file_id, [[__maybe_unused__]] bool resize, [[__maybe_unused__]] Vector2 new_size, [[__maybe_unused__]] image_type type
+) {
+  #if USE_PAK_FORMAT
   if (type >= IMAGE_TYPE_MAX || type <= IMAGE_TYPE_UNSPECIFIED) { 
-    TraceLog(LOG_ERROR, "resource::load_image()::Image type out of bound");
+    TraceLog(LOG_ERROR, "resource::load_image_pak()::Image type out of bound");
     return false;
   }
   Image img = {};
 
-  #if USE_PAK_FORMAT
-    file_data file = get_file_data(filename);
-    if (!file.is_initialized) {
-      TraceLog(LOG_ERROR, "resource::load_image()::File:'%s' does not exist", filename);
-      return false;
-    }
-    img = LoadImageFromMemory((const char*)file.file_extension, file.data, file.size);
-    if (resize) {
-      ImageResize(&img, new_size.x, new_size.y);
-    }
+  const file_buffer * file = get_asset_file_buffer(pak_id, file_id);
+  if (not file or file == nullptr or not file->is_success) {
+    TraceLog(LOG_ERROR, "resource::load_image_pak()::File:%d does not exist", file->file_id);
+    return false;
+  }
+  img = LoadImageFromMemory(file->file_extension.c_str(), reinterpret_cast<const u8 *>(file->content.size()), file->content.size());
+  if (resize) {
+    ImageResize(&img, new_size.x, new_size.y);
+  }
+  
+  state->images.at(type) = img;
+  return true;
   #else
-    const char *path = rs_path(filename);
-    img = LoadImage(path);
-    if (resize) {
-      ImageResize(&img, new_size.x, new_size.y);
-    }
+    return false;
   #endif
+}
+void load_texture_disk(
+  [[__maybe_unused__]] const char * _path, [[__maybe_unused__]] bool resize, [[__maybe_unused__]] Vector2 new_size, [[__maybe_unused__]] texture_id _id
+) {
+  #if not USE_PAK_FORMAT
+  if (_id >= TEX_ID_MAX or _id <= TEX_ID_UNSPECIFIED) { 
+    TraceLog(LOG_ERROR, "resource::load_texture_disk()::texture type out of bound");
+    return;
+  }
+  Texture2D tex = ZERO_TEXTURE;
+
+  const char *path = rs_path(_path);
+  if (not path or path == nullptr) {
+    TraceLog(LOG_ERROR, "resource::load_texture_disk()::Path is invalid");
+    return;
+  }
+  if (resize) {
+    Image img = LoadImage(path);
+    ImageResize(&img, new_size.x, new_size.y);
+    tex = LoadTextureFromImage(img);
+  } else {
+    tex = LoadTexture(path);
+  }
+
+  state->textures.at(_id) = tex;
+  #endif
+}
+bool load_image_disk(
+  [[__maybe_unused__]] const char * _path, [[__maybe_unused__]] bool resize, [[__maybe_unused__]] Vector2 new_size, [[__maybe_unused__]] image_type type
+) {
+  #if not USE_PAK_FORMAT
+  if (type >= IMAGE_TYPE_MAX or type <= IMAGE_TYPE_UNSPECIFIED) { 
+    TraceLog(LOG_ERROR, "resource::load_image_disk()::Image type out of bound");
+    return false;
+  }
+  Image img = ZERO_IMAGE;
+
+  const char *path = rs_path(_path);
+  if (not path or path == nullptr) {
+    TraceLog(LOG_ERROR, "resource::load_image_disk()::Path is invalid");
+    return false;
+  }
+  img = LoadImage(path);
+  if (resize) {
+    ImageResize(&img, new_size.x, new_size.y);
+  }
 
   state->images.at(type) = img;
   return true;
+  #else
+  return false;
+  #endif
 }
+
+
 void load_spritesheet(texture_id _source_tex, spritesheet_id handle_id, Vector2 offset, i32 _fps, i32 _frame_width, i32 _frame_height, i32 _total_row, i32 _total_col) {
   if ((handle_id >= SHEET_ID_SPRITESHEET_TYPE_MAX  ||  handle_id <= SHEET_ID_SPRITESHEET_UNSPECIFIED) ||
       (_source_tex >= TEX_ID_MAX  || _source_tex <= TEX_ID_UNSPECIFIED)) 
@@ -742,7 +799,7 @@ void load_spritesheet(texture_id _source_tex, spritesheet_id handle_id, Vector2 
 
   state->sprites.at(handle_id) = _sheet;
 }
-void load_tilesheet(tilesheet_type sheet_id, atlas_texture_id _atlas_tex_id, u16 _tile_count_x, u16 _tile_count_y, u16 _tile_size) {
+void load_tilesheet(tilesheet_type sheet_id, atlas_texture_id _atlas_tex_id, i32 _tile_count_x, i32 _tile_count_y, i32 _tile_size) {
   if ((i32)sheet_id >= TILESHEET_TYPE_MAX || sheet_id <= TILESHEET_TYPE_UNSPECIFIED) {
     TraceLog(LOG_ERROR, "resource::load_tilesheet()::Sheet type out of bound");
     return;
@@ -760,9 +817,9 @@ void load_tilesheet(tilesheet_type sheet_id, atlas_texture_id _atlas_tex_id, u16
   _tilesheet->tile_count = _tilesheet->tile_count_x * _tilesheet->tile_count_y;
   _tilesheet->tile_size = _tile_size;
 
-  for (i32 i = 0; i < _tilesheet->tile_count; ++i) {
-    i32 x = i % _tilesheet->tile_count_x;
-    i32 y = i / _tilesheet->tile_count_x;
+  for (i32 itr_000 = 0; itr_000 < _tilesheet->tile_count; ++itr_000) {
+    i32 x = itr_000 % _tilesheet->tile_count_x;
+    i32 y = itr_000 / _tilesheet->tile_count_x;
     i32 x_symbol = TILEMAP_TILE_START_SYMBOL + x;
     i32 y_symbol = TILEMAP_TILE_START_SYMBOL + y;
 
@@ -822,7 +879,7 @@ constexpr void add_prop(texture_id source_tex, tilemap_prop_types type, Rectangl
     return;
   }
   const Texture2D* tex = get_texture_by_enum(source_tex);
-  if (!tex) {
+  if (not tex or tex == nullptr) {
     TraceLog(LOG_ERROR, "resource::add_prop()::Invalid texture");
     return;
   }
@@ -1015,6 +1072,9 @@ tilemap_prop_address resource_get_map_prop_by_prop_id(i32 id, tilemap_prop_types
   TraceLog(LOG_ERROR, "resource::get_map_prop_by_prop_id()::Function ended unexpectedly");
   return tilemap_prop_address();
 }
-file_data _get_asset_file_data([[__maybe_unused__]] i32 index) {
-  return file_data(); //get_asset_file_buffer(index);
+
+#if USE_PAK_FORMAT
+const file_buffer * _get_asset_file_data(pak_file_id pak_id, i32 file_id) {
+  return get_asset_file_buffer(pak_id, file_id);
 }
+#endif

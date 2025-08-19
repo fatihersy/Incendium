@@ -56,7 +56,7 @@
 #define TARGET_FPS 60
 
 #define DEBUG_COLLISIONS 0
-#define USE_PAK_FORMAT 0
+#define USE_PAK_FORMAT 1
 
 #define PAK_FILE_LOCATION "./resource.pak"
 #define CONFIG_FILE_LOCATION "./config.ini"
@@ -548,7 +548,7 @@ typedef struct data_pack {
   };
 } data_pack;
 
-typedef enum pak_file_id {
+typedef enum pak_id {
   PAK_FILE_UNDEFINED,
   PAK_FILE_ASSET1,
   PAK_FILE_ASSET2,
@@ -556,22 +556,32 @@ typedef enum pak_file_id {
   PAK_FILE_MAX,
 }pak_file_id;
 
-typedef enum asset_file_id {
-  PAK_FILE_ASSET_UNDEFINED,
-  PAK_FILE_ASSET_THUMBNAIL,
-  PAK_FILE_ASSET_FONT_ABRACADABRA,
-  PAK_FILE_ASSET_FONT_MIOSEVKA,
-  PAK_FILE_ASSET_SOUND_BTN_CLICK_1,
-  PAK_FILE_ASSET_SOUND_BTN_CLICK_2,
-  PAK_FILE_ASSET_SOUND_BTN_CLICK_3,
-  PAK_FILE_ASSET_SOUND_DENY,
-  PAK_FILE_ASSET_MUSIC_MAIN_MENU_THEME,
-  PAK_FILE_ASSET_MUSIC_NIGHT_THEME,
-  PAK_FILE_ASSET_MUSIC_TRACK_5,
-  PAK_FILE_ASSET_WORLDMAP_IMAGE,
-  PAK_FILE_ASSET_ASSET_ATLAS,
-  PAK_FILE_ASSET_MAX,
-} asset_file_id;
+typedef enum asset1_file_id {
+  PAK_FILE_ASSET1_UNDEFINED,
+  PAK_FILE_ASSET1_THUMBNAIL,
+  PAK_FILE_ASSET1_FONT_ABRACADABRA,
+  PAK_FILE_ASSET1_FONT_MIOSEVKA,
+  PAK_FILE_ASSET1_SOUND_BTN_CLICK_1,
+  PAK_FILE_ASSET1_SOUND_BTN_CLICK_2,
+  PAK_FILE_ASSET1_SOUND_BTN_CLICK_3,
+  PAK_FILE_ASSET1_SOUND_DENY,
+  PAK_FILE_ASSET1_MUSIC_MAIN_MENU_THEME,
+  PAK_FILE_ASSET1_MUSIC_NIGHT_THEME,
+  PAK_FILE_ASSET1_MUSIC_TRACK_5,
+  PAK_FILE_ASSET1_WORLDMAP_IMAGE,
+  PAK_FILE_ASSET1_MAX,
+} asset1_file_id;
+
+typedef enum asset2_file_id {
+  PAK_FILE_ASSET2_UNDEFINED,
+  PAK_FILE_ASSET2_FADE_TRANSITION,
+  PAK_FILE_ASSET2_FONT_OUTLINE,
+  PAK_FILE_ASSET2_MAP_CHOICE_IMAGE,
+  PAK_FILE_ASSET2_POST_PROCESS,
+  PAK_FILE_ASSET2_PRG_BAR_MASK,
+  PAK_FILE_ASSET2_ATLAS,
+  PAK_FILE_ASSET2_MAX,
+} asset2_file_id;
 
 typedef enum shader_id {
   SHADER_ID_UNSPECIFIED,
@@ -859,35 +869,24 @@ typedef struct app_settings {
   }
 } app_settings;
 
-typedef struct file_data {
-  std::string file_name;
-  std::string file_extension;
-  size_t offset;
-  i32 total_size;
-  bool is_success;
-  file_data(void) {
-    this->file_name = std::string();
-    this->file_extension = std::string();
-    this->offset = 0u;
-    this->total_size = 0;
-    this->is_success = false;
-  }
-  file_data(std::string file_name, std::string ext) : file_data() {
-    this->file_name = file_name;
-    this->file_extension = ext;
-  }
-}file_data;
-
 typedef struct file_buffer {
-  file_data file_info;
+  pak_file_id pak_id;
+  i32 file_id;
   std::string content;
+  std::string file_extension;
+  bool is_success;
 
   file_buffer(void) {
-    this->file_info = file_data();
+    this->pak_id = PAK_FILE_UNDEFINED;
+    this->file_id = PAK_FILE_UNDEFINED;
+    this->file_extension = std::string();
     this->content = std::string();
+    this->is_success = false;
   }
-  file_buffer(std::string file_name, std::string ext) : file_buffer() {
-    this->file_info = file_data(file_name, ext);
+  file_buffer(pak_file_id pak_id, i32 file_id, std::string ext) : file_buffer() {
+    this->pak_id = pak_id;
+    this->file_id = file_id;
+    this->file_extension = ext;
   }
 } file_buffer;
 
@@ -911,12 +910,14 @@ typedef struct asset_pak_file {
   std::string pak_file_name;
   std::string pak_data;
   std::vector<file_buffer> file_buffers;
+  bool is_initialized;
   
   asset_pak_file(void) {
     this->file_buffers = std::vector<file_buffer>();
     this->path_to_resource = std::string();
     this->pak_file_name = std::string();
     this->pak_data = std::string();
+    this->is_initialized = false;
   }
   asset_pak_file(std::string pak_name, std::string path_to_res, std::vector<file_buffer> file_infos) : asset_pak_file() {
     this->pak_file_name = pak_name;

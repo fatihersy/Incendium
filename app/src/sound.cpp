@@ -15,22 +15,26 @@
 typedef struct sound_system_state {
   std::array<sound_data, SOUND_ID_MAX> sounds;
   std::array<music_data, MUSIC_ID_MAX> musics;
-  bool start_trace;
+
+  #if not USE_PAK_FORMAT
+  std::array<file_buffer, SOUND_ID_MAX> sound_datas; 
+  std::array<file_buffer, MUSIC_ID_MAX> music_datas; 
+  #endif
+
   sound_system_state(void) {
     this->sounds.fill(sound_data());
     this->musics.fill(music_data());
-    this->start_trace = false;
   }
 }sound_system_state;
 
 static sound_system_state * state = nullptr;
 
-void load_sound(const char* file_name, sound_id id);
-void load_music(const char* file_name, music_id id);
+void load_sound_pak(pak_file_id pak_id, i32 file_id, sound_id id);
+void load_music_pak(pak_file_id pak_id, i32 file_id, music_id id);
+void load_sound_disk(const char * path, sound_id id);
+void load_music_disk(const char * path, music_id id);
 
 bool sound_system_on_event(i32 code, event_context context);
-
-#define MAX_SOUND_SLOT 20
 
 /**
  * @brief Depends on pak_parser, init after that
@@ -49,12 +53,21 @@ bool sound_system_initialize(void) {
 
   InitAudioDevice();
   
-  load_sound("button_click1.wav", SOUND_ID_BUTTON_ON_CLICK);
-  load_sound("deny.wav", SOUND_ID_DENY);
-  load_sound("fire_hit.wav", SOUND_ID_FIRE_ON_HIT);
-  load_music("main_menu_theme.wav", MUSIC_ID_MAIN_MENU_THEME);
-  load_music("night_theme_2.wav", MUSIC_ID_NIGHT_THEME2);
-  load_music("Track_#5.wav", MUSIC_ID_TRACK5);
+  #if USE_PAK_FORMAT
+  load_sound_pak(PAK_FILE_ASSET1, PAK_FILE_ASSET1_SOUND_BTN_CLICK_1, SOUND_ID_BUTTON_ON_CLICK);
+  load_sound_pak(PAK_FILE_ASSET1, PAK_FILE_ASSET1_SOUND_DENY, SOUND_ID_DENY);
+  //load_sound(PAK_FILE_ASSET1, "fire_hit.wav", SOUND_ID_FIRE_ON_HIT);
+  load_music_pak(PAK_FILE_ASSET1, PAK_FILE_ASSET1_MUSIC_MAIN_MENU_THEME, MUSIC_ID_MAIN_MENU_THEME);
+  load_music_pak(PAK_FILE_ASSET1, PAK_FILE_ASSET1_MUSIC_NIGHT_THEME, MUSIC_ID_NIGHT_THEME2);
+  load_music_pak(PAK_FILE_ASSET1, PAK_FILE_ASSET1_MUSIC_TRACK_5, MUSIC_ID_TRACK5);
+  #else
+  load_sound_disk("button_click1.wav", SOUND_ID_BUTTON_ON_CLICK);
+  load_sound_disk("deny.wav", SOUND_ID_DENY);
+  //load_sound("fire_hit.wav", SOUND_ID_FIRE_ON_HIT);
+  load_music_disk("main_menu_theme.wav", MUSIC_ID_MAIN_MENU_THEME);
+  load_music_disk("night_theme_2.wav", MUSIC_ID_NIGHT_THEME2);
+  load_music_disk("Track_#5.wav", MUSIC_ID_TRACK5);
+  #endif
 
   event_register(EVENT_CODE_PLAY_BUTTON_ON_CLICK, sound_system_on_event);
   event_register(EVENT_CODE_PLAY_FIRE_HIT, sound_system_on_event);
@@ -70,113 +83,139 @@ bool sound_system_initialize(void) {
 }
 
 void update_sound_system(void) {
-  if (!state) {
+  if (not state or state == nullptr) {
     TraceLog(LOG_ERROR, "sound::update_sound_system()::State is not valid");
     return;
   }
 
-  for (int i=0; i<MUSIC_ID_MAX; ++i) {
-    UpdateMusicStream(state->musics[i].handle);
+  for (size_t itr_000 = 0; itr_000 < MUSIC_ID_MAX; ++itr_000) {
+    UpdateMusicStream(state->musics.at(itr_000).handle);
   }
 }
 
-void load_sound([[__maybe_unused__]] const char* file_name, [[__maybe_unused__]] sound_id id) {
-  file_data file = {};
-  Wave wav = {};
-  sound_data data = {};
-
+void load_sound_pak([[__maybe_unused__]] pak_file_id pak_file, [[__maybe_unused__]] i32 file_id, [[__maybe_unused__]] sound_id id) {
   #if USE_PAK_FORMAT
-    file = get_file_data(file_name);
-    wav = LoadWaveFromMemory((const char*)file.file_extension, file.data, file.size);
-    if (!file.is_initialized) {
-      TraceLog(LOG_ERROR, "file:'%s' is not initialized", file.file_name);
-      return;
-    }
-  #else
-    wav = LoadWave(TextFormat("%s%s", RESOURCE_PATH, file_name));
+  const file_buffer * file = nullptr;
+  Wave wav;
+  sound_data data;
+
+  file = get_asset_file_buffer(pak_file, file_id);
+  wav = LoadWaveFromMemory(file->file_extension.c_str(), reinterpret_cast<const u8*>(file->content.data()), file->content.size());
+  if (not file->is_success) {
+    TraceLog(LOG_WARNING, "sound::load_sound()::File id %d cannot load successfully", file->file_id);
+    return;
+  }
+  
+  data.wav = wav;
+  data.file = file;
+  data.id = id;
+  data.handle = LoadSoundFromWave(wav);
+  state->sounds.at(id) = data;
   #endif
+}
+void load_sound_disk([[__maybe_unused__]] const char * path, [[__maybe_unused__]] sound_id id) {
+  #if not USE_PAK_FORMAT
+  const file_buffer * file = __builtin_addressof(state->sound_datas.at(id));
+  Wave wav;
+  sound_data data;
+
+  wav = LoadWave(TextFormat("%s%s", RESOURCE_PATH, path));
 
   data.wav = wav;
   data.file = file;
   data.id = id;
   data.handle = LoadSoundFromWave(wav);
-  state->sounds[id] = data;
+  state->sounds.at(id) = data;
+  #endif
 }
 
-void load_music([[__maybe_unused__]] const char* file_name, [[__maybe_unused__]] music_id id) {
-  file_data file = {};
-  Music music = {};
-
+void load_music_pak([[__maybe_unused__]] pak_file_id pak_file, [[__maybe_unused__]] i32 file_id, [[__maybe_unused__]] music_id id) {
   #if USE_PAK_FORMAT
-    file = get_file_data(file_name);
-    music = LoadMusicStreamFromMemory((const char*)file.file_extension, file.data, file.size);
-    if (!file.is_initialized) {
-      TraceLog(LOG_ERROR, "file:'%s' is not initialized", file.file_name);
-      return;
-    }
-  #else
-    music = LoadMusicStream(TextFormat("%s%s", RESOURCE_PATH, file_name));
-  #endif
+  const file_buffer * file = nullptr;
+  Music music;
 
-  music_data data = {};
+  file = get_asset_file_buffer(pak_file, file_id);
+  music = LoadMusicStreamFromMemory(file->file_extension.c_str(), reinterpret_cast<const u8*>(file->content.data()), file->content.size());
+  if (not file->is_success) {
+    TraceLog(LOG_WARNING, "sound::load_music()::File id %d cannot load successfully", file->file_id);
+    return;
+  }
+  
+  music_data data = music_data();
   data.file = file;
   data.id = id;
   data.handle = music;
-  state->musics[id] = data;
+  state->musics.at(id) = data;
+  #endif
 }
 
-void play_sound([[__maybe_unused__]] sound_id id) {
-  if (!state) {
+void load_music_disk([[__maybe_unused__]] const char * path, [[__maybe_unused__]] music_id id) {
+  #if not USE_PAK_FORMAT
+  const file_buffer * file = __builtin_addressof(state->sound_datas.at(id));
+  Music music;
+
+  music = LoadMusicStream(TextFormat("%s%s", RESOURCE_PATH, path));
+  
+  music_data data = music_data();
+  data.file = file;
+  data.id = id;
+  data.handle = music;
+  state->musics.at(id) = data;
+  #endif
+}
+
+void play_sound(sound_id id) {
+  if (not state or state == nullptr) {
     TraceLog(LOG_ERROR, "sound::play_sound()::State is not valid");
     return;
   }
-  if (id >= SOUND_ID_MAX || id <= SOUND_ID_UNSPECIFIED) {
+  if (id >= SOUND_ID_MAX or id <= SOUND_ID_UNSPECIFIED) {
     TraceLog(LOG_ERROR, "sound::play_sound()::Sound id is out of bound");
     return;
   }
 
-  PlaySound(state->sounds[id].handle);
+  PlaySound(state->sounds.at(id).handle);
 }
 
-void play_music([[__maybe_unused__]] music_id id) {
-  if (!state) {
+void play_music(music_id id) {
+  if (not state or state == nullptr) {
     TraceLog(LOG_ERROR, "sound::play_music()::State is not valid");
     return;
   }
-  if (id >= MUSIC_ID_MAX || id <= MUSIC_ID_UNSPECIFIED) {
+  if (id >= MUSIC_ID_MAX or id <= MUSIC_ID_UNSPECIFIED) {
     TraceLog(LOG_ERROR, "sound::play_music()::Music id is out of bound");
     return;
   }
 
-  PlayMusicStream(state->musics[id].handle);
+  PlayMusicStream(state->musics.at(id).handle);
 }
-void reset_music([[__maybe_unused__]] music_id id) {
-  if (!state) {
+void reset_music(music_id id) {
+  if (not state or state == nullptr) {
     TraceLog(LOG_ERROR, "sound::reset_music()::State is not valid");
     return;
   }
-  if (id >= MUSIC_ID_MAX || id <= MUSIC_ID_UNSPECIFIED) {
+  if (id >= MUSIC_ID_MAX or id <= MUSIC_ID_UNSPECIFIED) {
     TraceLog(LOG_ERROR, "sound::reset_music()::Music id is out of bound");
     return;
   }
-  state->musics[id].play_once = false;
-  state->musics[id].played = false;
-  StopMusicStream(state->musics[id].handle);
+  state->musics.at(id).play_once = false;
+  state->musics.at(id).played = false;
+  StopMusicStream(state->musics.at(id).handle);
 }
-void reset_sound([[__maybe_unused__]] sound_id id) {
-  if (!state) {
+void reset_sound(sound_id id) {
+  if (not state or state == nullptr) {
     TraceLog(LOG_ERROR, "sound::reset_sound()::State is not valid");
     return;
   }
-  if (id >= SOUND_ID_MAX || id <= SOUND_ID_UNSPECIFIED) {
+  if (id >= SOUND_ID_MAX or id <= SOUND_ID_UNSPECIFIED) {
     TraceLog(LOG_ERROR, "sound::reset_sound()::Sound id is out of bound");
     return;
   }
-  state->sounds[id].play_once = false;
-  state->sounds[id].played = false;
+  state->sounds.at(id).play_once = false;
+  state->sounds.at(id).played = false;
 }
 
-bool sound_system_on_event(i32 code, [[__maybe_unused__]] event_context context) {
+bool sound_system_on_event(i32 code, event_context context) {
   switch (code)
   {
   case EVENT_CODE_PLAY_SOUND:{
@@ -197,19 +236,18 @@ bool sound_system_on_event(i32 code, [[__maybe_unused__]] event_context context)
   }
   case EVENT_CODE_PLAY_BUTTON_ON_CLICK:{
     sound_id id = SOUND_ID_BUTTON_ON_CLICK;
-    sound_data* data = &state->sounds[id];
+    sound_data* data = __builtin_addressof(state->sounds.at(id));
     if (data->play_once && data->played) {
       return true;
     }
     data->play_once = context.data.u16[0];
     data->played = true;
-    state->start_trace = true;
     play_sound(id);
     break;
   }
   case EVENT_CODE_PLAY_FIRE_HIT: {
     sound_id id = SOUND_ID_FIRE_ON_HIT;
-    sound_data* data = &state->sounds[id];
+    sound_data* data = __builtin_addressof(state->sounds.at(id));
 
     if (data->play_once && data->played) {
       return true;

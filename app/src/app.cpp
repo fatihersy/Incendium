@@ -48,7 +48,7 @@ bool app_initialize(void) {
   
   // Platform    
   if(!settings_initialize()) {
-    TraceLog(LOG_ERROR, "app::app_initialize()::Settings state allocation has failed");
+    TraceLog(LOG_ERROR, "app::app_initialize()::Cannot initialize settings");
     return false; // TODO: Set default settings instead
   }
   app_settings * initializer = get_initializer_settings();
@@ -60,19 +60,33 @@ bool app_initialize(void) {
 
   // Game
   #if USE_PAK_FORMAT 
-    pak_parser_system_initialize();
-    file_data loading_image_file = fetch_file_data("aaa_game_start_loading_screen.png");
-    Image loading_image = LoadImageFromMemory(".png", loading_image_file.data, loading_image_file.size);
-    Texture loading_tex = LoadTextureFromImage(loading_image);
+		if (not pak_parser_system_initialize()) {
+    	TraceLog(LOG_ERROR, "app::app_initialize()::Cannot initialize par parser");
+    	return false;
+		}
+    const file_buffer * loading_thumbnail = fetch_asset_file_buffer(PAK_FILE_ASSET1, PAK_FILE_ASSET1_THUMBNAIL);
+    if (loading_thumbnail and loading_thumbnail != nullptr) {
+      Image loading_image = LoadImageFromMemory(".png",
+		  	reinterpret_cast<const u8 *>(loading_thumbnail->content.data()), 
+		  	loading_thumbnail->content.size()
+		  );
+      Texture loading_tex = LoadTextureFromImage(loading_image);
+      
+      BeginDrawing();
+      ClearBackground(CLEAR_BACKGROUND_COLOR); //TODO: Loading screen
+      DrawTexturePro(loading_tex, 
+        Rectangle {0.f, 0.f, static_cast<f32>(loading_image.width), static_cast<f32>(loading_image.height)}, 
+        Rectangle {0.f, 0.f, static_cast<f32>(GetScreenWidth()), static_cast<f32>(GetScreenHeight())}, ZEROVEC2, 0.f, WHITE
+		  );
+      EndDrawing();
+    }
 
-    BeginDrawing();
-    ClearBackground(CLEAR_BACKGROUND_COLOR); //TODO: Loading screen
-    DrawTexturePro(loading_tex, 
-      {0, 0, loading_image.width, loading_image.height}, 
-      {0, 0, GetScreenWidth(), GetScreenHeight()}, Vector2{0.f, 0.f}, 0, WHITE);
-    EndDrawing();
+		for (i32 itr_000 = 1; itr_000 < PAK_FILE_MAX; ++itr_000) {
+      if (not parse_pak(static_cast<pak_file_id>(itr_000))) {
+        return false;
+      }
+		}
 
-    parse_pak();
   #else
     Texture loading_tex = LoadTexture(RESOURCE_PATH "aaa_game_start_loading_screen.png");
 

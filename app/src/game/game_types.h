@@ -16,6 +16,12 @@
 #define CENTER_RECT(RECT) (Rectangle{RECT.x - RECT.width / 2.f, RECT.y - RECT.height, RECT.width, RECT.height});
 #define ZEROVEC2 (Vector2{0.f, 0.f})
 #define ZERORECT (Rectangle{0.f, 0.f, 0.f, 0.f})
+#define ZERO_AUDIO_STREAM (AudioStream {nullptr, nullptr, 0u, 0u, 0u})
+#define ZERO_SOUND (Sound {ZERO_AUDIO_STREAM, 0u})
+#define ZERO_MUSIC (Music {ZERO_AUDIO_STREAM, 0u, false, 0, nullptr })
+#define ZERO_WAV (Wave {0u, 0u, 0u, 0u, nullptr})
+#define ZERO_TEXTURE (Texture {0u, 0, 0, 0, 0})
+#define ZERO_IMAGE (Image {nullptr, 0, 0, 0, 0})
 
 #define ATLAS_TEXTURE_ID TEX_ID_ASSET_ATLAS
 
@@ -292,14 +298,14 @@ typedef struct spritesheet {
 typedef struct music_data {
   music_id id;
   Music handle;
-  file_data file;
+  const file_buffer * file;
 
   bool play_once;
   bool played;
   music_data(void) {
     this->id = MUSIC_ID_UNSPECIFIED;
-    this->handle = Music { AudioStream { nullptr, nullptr, 0u, 0u, 0u }, 0u, false, 0, nullptr };
-    this->file = file_data();
+    this->handle = ZERO_MUSIC;
+    this->file = nullptr;
     this->play_once = false;
     this->played = false;
   }
@@ -309,22 +315,15 @@ typedef struct sound_data {
   sound_id id;
   Sound handle;
   Wave wav;
-  file_data file;
+  const file_buffer * file;
 
   bool play_once;
   bool played;
   sound_data(void) {
     this->id = SOUND_ID_UNSPECIFIED;
-    this->handle = Sound {
-      AudioStream {
-        nullptr, nullptr, 0u, 0u, 0u
-      },
-      0u
-    };
-    this->wav = Wave {
-      0u, 0u, 0u, 0u, nullptr
-    };
-    this->file = file_data();
+    this->handle = ZERO_SOUND;
+    this->wav = ZERO_WAV;
+    this->file = nullptr;
     this->play_once = false;
     this->played = false;
   }
