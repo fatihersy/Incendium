@@ -732,7 +732,6 @@ void str_to_map(tilemap* const map, tilemap_stringtify_package* const out_packag
     }
   }
 
-  
   string_parse_result str_coll_par_buffer = parse_string(out_package->str_collisions.c_str(), COLL_PARSE_COLL_BUFFER_PARSE_SYMBOL_C, COLL_BUFFER_PARSE_TOP_LIMIT);
   for (size_t itr_000 = 0; itr_000 < str_coll_par_buffer.buffer.size(); ++itr_000) {
     string_parse_result str_coll_par_member = parse_string(str_coll_par_buffer.buffer.at(itr_000), COLL_PARSE_COLL_MEMBER_PARSE_SYMBOL, COLL_MEMBER_PARSE_TOP_LIMIT);

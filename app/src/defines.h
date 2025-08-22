@@ -874,13 +874,15 @@ typedef struct file_buffer {
   i32 file_id;
   std::string content;
   std::string file_extension;
+  size_t offset;
   bool is_success;
 
   file_buffer(void) {
     this->pak_id = PAK_FILE_UNDEFINED;
     this->file_id = PAK_FILE_UNDEFINED;
-    this->file_extension = std::string();
     this->content = std::string();
+    this->file_extension = std::string();
+    this->offset = 0u;
     this->is_success = false;
   }
   file_buffer(pak_file_id pak_id, i32 file_id, std::string ext) : file_buffer() {

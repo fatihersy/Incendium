@@ -619,23 +619,21 @@ bool resource_system_initialize(void) {
 }
 
 const atlas_texture* get_atlas_texture_by_enum(atlas_texture_id _id) {
-  if (_id >= ATLAS_TEX_ID_MAX || _id <= ATLAS_TEX_ID_UNSPECIFIED){
+  if (_id >= ATLAS_TEX_ID_MAX or _id <= ATLAS_TEX_ID_UNSPECIFIED){
     TraceLog(LOG_WARNING, "resource::get_atlas_texture_by_enum()::Texture type out of bound");
     return nullptr;
   }
-
   return __builtin_addressof(state->atlas_textures.at(_id));
 }
 const Texture2D* get_texture_by_enum(texture_id _id) {
-  if (_id >= TEX_ID_MAX || _id <= TEX_ID_UNSPECIFIED){
+  if (_id >= TEX_ID_MAX or _id <= TEX_ID_UNSPECIFIED){
     TraceLog(LOG_WARNING, "resource::get_texture_by_enum()::Texture type out of bound");
     return nullptr;
   }
-
   return __builtin_addressof(state->textures.at(_id));
 }
 const Image* get_image_by_enum(image_type type) {
-  if (type >= IMAGE_TYPE_MAX || type <= IMAGE_TYPE_UNSPECIFIED){
+  if (type >= IMAGE_TYPE_MAX or type <= IMAGE_TYPE_UNSPECIFIED){
     TraceLog(LOG_WARNING, "resource::get_image_by_enum()::Image type out of bound");
     return nullptr;
   }
@@ -643,14 +641,14 @@ const Image* get_image_by_enum(image_type type) {
   return __builtin_addressof(state->images.at(type));
 }
 const spritesheet* get_spritesheet_by_enum(spritesheet_id type) {
-  if (type >= SHEET_ID_SPRITESHEET_TYPE_MAX || type <= SHEET_ID_SPRITESHEET_UNSPECIFIED){
+  if (type >= SHEET_ID_SPRITESHEET_TYPE_MAX or type <= SHEET_ID_SPRITESHEET_UNSPECIFIED){
     TraceLog(LOG_WARNING, "resource::get_spritesheet_by_enum()::Spritesheet type out of bound");
     return nullptr;
   }
   return __builtin_addressof(state->sprites.at(type));
 }
 const tilesheet* get_tilesheet_by_enum(const tilesheet_type type) {
-  if (type >= TILESHEET_TYPE_MAX || type <= TILESHEET_TYPE_UNSPECIFIED){
+  if (type >= TILESHEET_TYPE_MAX or type <= TILESHEET_TYPE_UNSPECIFIED){
     TraceLog(LOG_WARNING, "resource::get_tilesheet_by_enum()::Tilesheet type out of bound");
     return nullptr;
   }
@@ -670,15 +668,15 @@ void load_texture_pak(
   [[__maybe_unused__]] pak_file_id pak_id, [[__maybe_unused__]] i32 file_id, [[__maybe_unused__]] bool resize, [[__maybe_unused__]] Vector2 new_size, [[__maybe_unused__]] texture_id _id
 ) {
   #if USE_PAK_FORMAT
-  if (_id >= TEX_ID_MAX || _id <= TEX_ID_UNSPECIFIED) { 
+  if (_id >= TEX_ID_MAX or _id <= TEX_ID_UNSPECIFIED) { 
     TraceLog(LOG_ERROR, "resource::load_texture_pak()::texture type out of bound");
     return;
   }
   Texture2D tex = ZERO_TEXTURE;
 
-  const file_buffer * file = get_asset_file_buffer(pak_id, file_id);
+  const file_buffer * const file = get_asset_file_buffer(pak_id, file_id);
   if (not file or file == nullptr or not file->is_success) {
-    TraceLog(LOG_ERROR, "resource::load_texture_pak()::File id %d does not exist", file->file_id);
+    TraceLog(LOG_ERROR, "resource::load_texture_pak()::File id %d does not exist", file_id);
     return;
   }
   Image img = LoadImageFromMemory(file->file_extension.c_str(), reinterpret_cast<const u8*>(file->content.data()), file->content.size());
@@ -694,15 +692,15 @@ bool load_image_pak(
   [[__maybe_unused__]] pak_file_id pak_id, [[__maybe_unused__]] i32 file_id, [[__maybe_unused__]] bool resize, [[__maybe_unused__]] Vector2 new_size, [[__maybe_unused__]] image_type type
 ) {
   #if USE_PAK_FORMAT
-  if (type >= IMAGE_TYPE_MAX || type <= IMAGE_TYPE_UNSPECIFIED) { 
+  if (type >= IMAGE_TYPE_MAX or type <= IMAGE_TYPE_UNSPECIFIED) { 
     TraceLog(LOG_ERROR, "resource::load_image_pak()::Image type out of bound");
     return false;
   }
-  Image img = {};
+  Image img = ZERO_IMAGE;
 
-  const file_buffer * file = get_asset_file_buffer(pak_id, file_id);
+  const file_buffer * const file = get_asset_file_buffer(pak_id, file_id);
   if (not file or file == nullptr or not file->is_success) {
-    TraceLog(LOG_ERROR, "resource::load_image_pak()::File:%d does not exist", file->file_id);
+    TraceLog(LOG_ERROR, "resource::load_image_pak()::File:%d does not exist", file_id);
     return false;
   }
   img = LoadImageFromMemory(file->file_extension.c_str(), reinterpret_cast<const u8 *>(file->content.size()), file->content.size());
@@ -771,9 +769,7 @@ bool load_image_disk(
 
 
 void load_spritesheet(texture_id _source_tex, spritesheet_id handle_id, Vector2 offset, i32 _fps, i32 _frame_width, i32 _frame_height, i32 _total_row, i32 _total_col) {
-  if ((handle_id >= SHEET_ID_SPRITESHEET_TYPE_MAX  ||  handle_id <= SHEET_ID_SPRITESHEET_UNSPECIFIED) ||
-      (_source_tex >= TEX_ID_MAX  || _source_tex <= TEX_ID_UNSPECIFIED)) 
-  {
+  if ((handle_id >= SHEET_ID_SPRITESHEET_TYPE_MAX or handle_id <= SHEET_ID_SPRITESHEET_UNSPECIFIED) or (_source_tex >= TEX_ID_MAX or _source_tex <= TEX_ID_UNSPECIFIED)) {
     TraceLog(LOG_ERROR, "resource::load_spritesheet()::Out of bound ID recieved");
     return;
   }
@@ -791,23 +787,21 @@ void load_spritesheet(texture_id _source_tex, spritesheet_id handle_id, Vector2 
   _sheet.current_col = 0;
   _sheet.current_row = 0;
   _sheet.current_frame = 0;
-  _sheet.current_frame_rect = {
-      .x = 0.f, .y = 0.f, .width = (f32)  _frame_width, .height = (f32) _frame_height};
-  _sheet.coord = {
-      .x = 0.f, .y = 0.f, .width = (f32)  _frame_width, .height = (f32) _frame_height};
+  _sheet.current_frame_rect = Rectangle { 0.f, 0.f, static_cast<f32>(_frame_width), static_cast<f32>(_frame_height) };
+  _sheet.coord = Rectangle { 0.f, 0.f, static_cast<f32>(_frame_width), static_cast<f32>(_frame_height)};
   _sheet.fps = _fps;
 
   state->sprites.at(handle_id) = _sheet;
 }
 void load_tilesheet(tilesheet_type sheet_id, atlas_texture_id _atlas_tex_id, i32 _tile_count_x, i32 _tile_count_y, i32 _tile_size) {
-  if ((i32)sheet_id >= TILESHEET_TYPE_MAX || sheet_id <= TILESHEET_TYPE_UNSPECIFIED) {
+  if (static_cast<i32>(sheet_id) >= TILESHEET_TYPE_MAX or sheet_id <= TILESHEET_TYPE_UNSPECIFIED) {
     TraceLog(LOG_ERROR, "resource::load_tilesheet()::Sheet type out of bound");
     return;
   }
-  if (_atlas_tex_id >= ATLAS_TEX_ID_MAX || _atlas_tex_id <= ATLAS_TEX_ID_UNSPECIFIED) {
+  if (_atlas_tex_id >= ATLAS_TEX_ID_MAX or _atlas_tex_id <= ATLAS_TEX_ID_UNSPECIFIED) {
     TraceLog(LOG_ERROR,"resource::load_tilesheet()::texture type out of bound");
   }
-  tilesheet* _tilesheet = __builtin_addressof(state->tilesheets.at(sheet_id));
+  tilesheet * const _tilesheet = __builtin_addressof(state->tilesheets.at(sheet_id));
 
   _tilesheet->atlas_source = state->atlas_textures.at(_atlas_tex_id);
   _tilesheet->sheet_id = sheet_id;
@@ -827,7 +821,7 @@ void load_tilesheet(tilesheet_type sheet_id, atlas_texture_id _atlas_tex_id, i32
   }
 }
 void load_texture_from_atlas(atlas_texture_id _id, Rectangle texture_area) {
-  if (_id >= ATLAS_TEX_ID_MAX || _id <= ATLAS_TEX_ID_UNSPECIFIED) { 
+  if (_id >= ATLAS_TEX_ID_MAX or _id <= ATLAS_TEX_ID_UNSPECIFIED) { 
     TraceLog(LOG_ERROR, "resource::load_texture()::texture type out of bound");
     return;
   }
@@ -839,7 +833,7 @@ void load_texture_from_atlas(atlas_texture_id _id, Rectangle texture_area) {
   return;
 }
 std::vector<tilemap_prop_static> * resource_get_tilemap_props_static(tilemap_prop_types type) {
-  if (!state || state == nullptr) { 
+  if (not state or state == nullptr) { 
     TraceLog(LOG_ERROR, "resource::get_tilemap_prop_static()::State is not valid");
     return nullptr;
   }
@@ -866,7 +860,7 @@ std::vector<tilemap_prop_static> * resource_get_tilemap_props_static(tilemap_pro
   return nullptr;
 }
 std::vector<tilemap_prop_sprite> * resource_get_tilemap_props_sprite(void) {
-  if (!state || state == nullptr) { 
+  if (not state or state == nullptr) { 
     TraceLog(LOG_ERROR, "resource::get_tilemap_prop_static()::State is not valid");
     return nullptr;
   }
@@ -874,16 +868,16 @@ std::vector<tilemap_prop_sprite> * resource_get_tilemap_props_sprite(void) {
   return __builtin_addressof(state->tilemap_props_sprite);
 }
 constexpr void add_prop(texture_id source_tex, tilemap_prop_types type, Rectangle source, f32 scale, Color tint) {
-  if (source_tex >= TEX_ID_MAX || source_tex <= TEX_ID_UNSPECIFIED) {
+  if (source_tex >= TEX_ID_MAX or source_tex <= TEX_ID_UNSPECIFIED) {
     TraceLog(LOG_ERROR, "resource::add_prop()::Provided texture id out of bound");
     return;
   }
-  const Texture2D* tex = get_texture_by_enum(source_tex);
+  const Texture2D * const tex = get_texture_by_enum(source_tex);
   if (not tex or tex == nullptr) {
     TraceLog(LOG_ERROR, "resource::add_prop()::Invalid texture");
     return;
   }
-  if (tex->width < source.x + source.width || tex->height < source.y + source.height) {
+  if (tex->width < source.x + source.width or tex->height < source.y + source.height) {
     TraceLog(LOG_ERROR, "resource::add_prop()::Provided prop dimentions out of bound");
     return;
   }
@@ -894,7 +888,7 @@ constexpr void add_prop(texture_id source_tex, tilemap_prop_types type, Rectangl
   prop.prop_type = type;
   
   prop.source = source;
-  prop.dest = Rectangle {0, 0, source.width * scale, source.height * scale};
+  prop.dest = Rectangle { 0.f, 0.f, source.width * scale, source.height * scale };
   prop.scale = scale;
   prop.tint = tint;
 
@@ -922,7 +916,7 @@ constexpr void add_prop(texture_id source_tex, tilemap_prop_types type, Rectangl
   return;
 }
 constexpr void add_prop(tilemap_prop_types type, spritesheet_id sprite_id, f32 scale, Color tint) {
-  if (sprite_id >= SHEET_ID_SPRITESHEET_TYPE_MAX || sprite_id <= SHEET_ID_SPRITESHEET_UNSPECIFIED) {
+  if (sprite_id >= SHEET_ID_SPRITESHEET_TYPE_MAX or sprite_id <= SHEET_ID_SPRITESHEET_UNSPECIFIED) {
     TraceLog(LOG_ERROR, "resource::add_prop()::Provided sprite id out of bound");
     return;
   }
@@ -950,7 +944,7 @@ constexpr void add_prop(tilemap_prop_types type, spritesheet_id sprite_id, f32 s
   return;
 }
 tilemap_prop_address resource_get_map_prop_by_prop_id(i32 id, tilemap_prop_types type) {
-  if (!state || state == nullptr) {
+  if (not state or state == nullptr) {
     TraceLog(LOG_ERROR, "resource::get_map_prop_by_prop_id()::State is not valid");
     return tilemap_prop_address();
   }

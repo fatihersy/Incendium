@@ -81,11 +81,8 @@ bool app_initialize(void) {
       EndDrawing();
     }
 
-		for (i32 itr_000 = 1; itr_000 < PAK_FILE_MAX; ++itr_000) {
-      if (not parse_pak(static_cast<pak_file_id>(itr_000))) {
-        return false;
-      }
-		}
+    parse_asset_pak(PAK_FILE_ASSET1);
+    parse_asset_pak(PAK_FILE_ASSET2);
 
   #else
     Texture loading_tex = LoadTexture(RESOURCE_PATH "aaa_game_start_loading_screen.png");

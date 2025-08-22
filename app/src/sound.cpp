@@ -100,9 +100,13 @@ void load_sound_pak([[__maybe_unused__]] pak_file_id pak_file, [[__maybe_unused_
   sound_data data;
 
   file = get_asset_file_buffer(pak_file, file_id);
+  if (not file or file == nullptr) {
+    TraceLog(LOG_WARNING, "sound::load_sound_pak()::File %d:%d is invalid", pak_file, file_id);
+    return;
+  }
   wav = LoadWaveFromMemory(file->file_extension.c_str(), reinterpret_cast<const u8*>(file->content.data()), file->content.size());
   if (not file->is_success) {
-    TraceLog(LOG_WARNING, "sound::load_sound()::File id %d cannot load successfully", file->file_id);
+    TraceLog(LOG_WARNING, "sound::load_sound_pak()::File id %d:%d cannot load successfully", pak_file, file_id);
     return;
   }
   
@@ -135,9 +139,13 @@ void load_music_pak([[__maybe_unused__]] pak_file_id pak_file, [[__maybe_unused_
   Music music;
 
   file = get_asset_file_buffer(pak_file, file_id);
+  if (not file or file == nullptr) {
+    TraceLog(LOG_WARNING, "sound::load_music_pak()::File %d:%d is invalid", pak_file, file_id);
+    return;
+  }
   music = LoadMusicStreamFromMemory(file->file_extension.c_str(), reinterpret_cast<const u8*>(file->content.data()), file->content.size());
   if (not file->is_success) {
-    TraceLog(LOG_WARNING, "sound::load_music()::File id %d cannot load successfully", file->file_id);
+    TraceLog(LOG_WARNING, "sound::load_music_pak()::File id %d cannot load successfully", file->file_id);
     return;
   }
   
