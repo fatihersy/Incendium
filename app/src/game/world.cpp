@@ -87,9 +87,9 @@ bool world_system_initialize(const app_settings* _in_app_settings) {
     for (i32 itr_111 = 0; itr_111 < MAX_TILEMAP_LAYERS; ++itr_111) {
       state->map.at(itr_000).filename.at(itr_111) = TextFormat("%s_layer%d.txt", state->worldmap_locations.at(itr_000).filename.c_str(), itr_111);
     }
+    state->map.at(itr_000).index = itr_000;
     state->map.at(itr_000).propfile = TextFormat("%s_prop.txt", state->worldmap_locations.at(itr_000).filename.c_str());
     state->map.at(itr_000).collisionfile = TextFormat("%s_collision.txt", state->worldmap_locations.at(itr_000).filename.c_str());
-
     if (!create_tilemap(TILESHEET_TYPE_MAP, ZEROVEC2, 100, 60, __builtin_addressof(state->map.at(itr_000)))) {
       TraceLog(LOG_WARNING, "world::world_system_initialize()::tilemap initialization failed");
       continue;

@@ -7,8 +7,6 @@
 #define LOC_TEXT_SYMBOL_SIZE 3
 #define LOC_TEXT_VARIABLE_SIZE 12
 
-#define LOC_TEXT_LANGUAGE_NAME 0
-
 typedef enum loc_text_id {
   LOC_TEXT_UNDEFINED,
 
@@ -129,7 +127,7 @@ typedef struct localized_languages {
 
 const char* lc_txt(int txt_id);
 
-bool loc_parser_parse_localization_data_from_file(const char* file_name);
+bool loc_parser_parse_localization_data_from_file(int pak_id, int index);
 bool loc_parser_parse_localization_data(void);
 
 localized_languages loc_parser_get_loc_langs(void);

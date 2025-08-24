@@ -2,50 +2,53 @@
 #include <raylib.h>
 #include <defines.h>
 
+#include "tools/pak_parser.h"
 #include "core/fmemory.h"
 
 typedef struct shader_system_state {
   std::array<fshader, SHADER_ID_MAX> shaders;
+  file_buffer null_file;
 
   shader_system_state(void) {
     this->shaders.fill(fshader());
+    this->null_file = file_buffer();
   }
 } shader_system_state;
 
 static shader_system_state *state = nullptr;
 
-bool load_shader(const char *_vs_path, const char *_fs_path, shader_id _id);
+bool load_shader(pak_file_id pak_id, i32 _vs_id, i32 _fs_id, shader_id _id);
 void shader_add_uniform(shader_id _id, const char *_name, ShaderUniformDataType _data_id);
 
 bool initialize_shader_system(void) {
-  if (state) {
+  if (state and state != nullptr) {
     return true;
   }
   state = (shader_system_state *)allocate_memory_linear(sizeof(shader_system_state), true);
-  if (!state || state == nullptr) {
+  if (not state or state == nullptr) {
     TraceLog(LOG_ERROR, "fshader::initialize_shader_system()::State allocation failed");
     return false;
   }
   *state = shader_system_state();
 
   // NOTE: _path = "%s%s", SHADER_PATH, _path
-  if (!load_shader(0, "prg_bar_mask.fs", SHADER_ID_PROGRESS_BAR_MASK)) {
+  if (not load_shader(PAK_FILE_ASSET2, PAK_FILE_ASSET2_UNDEFINED, PAK_FILE_ASSET2_PRG_BAR_MASK, SHADER_ID_PROGRESS_BAR_MASK)) {
     TraceLog(LOG_WARNING, "fshader::initialize_shader_system()::mask shader cannot loaded");
     return false;
   }
-  if (!load_shader(0, "fade_transition.fs", SHADER_ID_FADE_TRANSITION)) {
+  if (not load_shader(PAK_FILE_ASSET2, PAK_FILE_ASSET2_UNDEFINED, PAK_FILE_ASSET2_FADE_TRANSITION, SHADER_ID_FADE_TRANSITION)) {
     TraceLog(LOG_WARNING, "fshader::initialize_shader_system()::fade shader cannot loaded");
     return false;
   }
-  if(!load_shader(0, "font_outline.fs", SHADER_ID_FONT_OUTLINE)) {
+  if(not load_shader(PAK_FILE_ASSET2, PAK_FILE_ASSET2_UNDEFINED, PAK_FILE_ASSET2_FONT_OUTLINE, SHADER_ID_FONT_OUTLINE)) {
     TraceLog(LOG_WARNING, "fshader::initialize_shader_system()::outline shader cannot loaded");
     return false;
   }
-  if(!load_shader(0, "post_process.fs", SHADER_ID_POST_PROCESS)) {
+  if(not load_shader(PAK_FILE_ASSET2, PAK_FILE_ASSET2_UNDEFINED, PAK_FILE_ASSET2_POST_PROCESS, SHADER_ID_POST_PROCESS)) {
     TraceLog(LOG_WARNING, "fshader::initialize_shader_system()::post process shader cannot loaded");
     return false;
   }
-  if(!load_shader(0, "map_choice_image.fs", SHADER_ID_MAP_CHOICE_IMAGE)) {
+  if(not load_shader(PAK_FILE_ASSET2, PAK_FILE_ASSET2_UNDEFINED, PAK_FILE_ASSET2_MAP_CHOICE_IMAGE, SHADER_ID_MAP_CHOICE_IMAGE)) {
     TraceLog(LOG_WARNING, "fshader::initialize_shader_system()::map choice image shader cannot loaded");
     return false;
   }
@@ -146,25 +149,26 @@ void set_shader_uniform(shader_id _id, const char* uni_name, data128 _data_pack)
   }
 }
 
-bool load_shader(const char *_vs_path, const char *_fs_path, shader_id _id) {
-  const char *vs_path = shader_path(_vs_path);
-  if (!FileExists(vs_path) && vs_path) {
-    TraceLog(LOG_ERROR, "fshader::load_shader()::Vertex path does not exist");
-    return false;
-  }
-  const char *fs_path = shader_path(_fs_path);
-  if (!FileExists(fs_path) && fs_path) {
-    TraceLog(LOG_ERROR, "fshader::load_shader()::Fragment path does not exist");
-    return false;
-  }
-  if (_id >= SHADER_ID_MAX || _id <= SHADER_ID_UNSPECIFIED) {
+bool load_shader(pak_file_id pak_id, i32 _vs_id, i32 _fs_id, shader_id _id) {
+  if (_id >= SHADER_ID_MAX or _id <= SHADER_ID_UNSPECIFIED) {
     TraceLog(LOG_ERROR, "fshader::load_shader()::Shader type out of bound");
     return false;
   }
+  const file_buffer * vs_file = get_asset_file_buffer(pak_id, _vs_id);
+  const file_buffer * fs_file = get_asset_file_buffer(pak_id, _fs_id);
+  
+  if (not vs_file or vs_file == nullptr) {
+    state->shaders.at(_id).handle = LoadShaderFromMemory(0, fs_file->content.c_str());
+    state->shaders.at(_id).total_locations = 0;
+    return true;
+  }
+  else if (not fs_file or fs_file == nullptr) {
+    state->shaders.at(_id).handle = LoadShaderFromMemory(vs_file->content.c_str(), 0);
+    state->shaders.at(_id).total_locations = 0;
+    return true;
+  }
 
-  state->shaders.at(_id).handle = LoadShader(vs_path, fs_path);
-  state->shaders.at(_id).total_locations = 0;
-  return true;
+  return false;
 }
 
 void shader_add_uniform(shader_id _id, const char *_name, ShaderUniformDataType _data_id) {

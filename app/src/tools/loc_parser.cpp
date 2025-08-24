@@ -4,19 +4,7 @@
 
 #include "core/fmemory.h"
 #include "loc_types.h"
-
-const char * default_language = R"(
-{
-  display_text = "English",
-  codepoints = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ",
-  translates = {\
-    "Play"
-    "Upgrade"
-    "Settings"
-    "Exit"
-  }
-}
-)";
+#include "pak_parser.h"
 
 typedef struct loc_content_text {
   std::string str;
@@ -28,10 +16,8 @@ typedef struct loc_content_text {
 #define LOC_MAX_CODEPOINTS 128
 #define SYMBOL_DIGITS_START_SYMBOL 0x21
 #define LOC_FILE_TEXT_SYMBOL_LENGTH 3
-#define LOC_FILE_PATH_PREFIX "./loc/"
 #define LOC_FILE_EXTENSION "._loc_data"
-
-
+#define LOC_FILE_PAK_FILE PAK_FILE_ASSET2
 
 #define LOC_FILE_LANGUAGE_NAME_VARIABLE_NAME "display_text"
 #define LOC_FILE_CODEPOINTS_VARIABLE_NAME "codepoints"
@@ -43,13 +29,13 @@ typedef struct loc_content_text {
 #define LOC_FILE_SYMBOL_SCOPE_END '}'
 
 typedef struct loc_file_scope {
-  i32 scope_start_offset;
-  i32 scope_end_offset;
+  size_t scope_start_offset;
+  size_t scope_end_offset;
   loc_file_scope(void) {
-    this->scope_start_offset = 0;
-    this->scope_end_offset = 0;
+    this->scope_start_offset = 0u;
+    this->scope_end_offset = 0u;
   }
-  loc_file_scope(i32 start, i32 end) {
+  loc_file_scope(size_t start, size_t end) {
     this->scope_start_offset = start;
     this->scope_end_offset = end;
   }
@@ -64,33 +50,33 @@ typedef enum loc_reading_order {
 typedef struct loc_parser_system_state {
   std::vector<loc_data> lang_data;
   loc_data * active_loc;
+  std::string default_language;
   
   loc_data _buffer;
   std::vector<u8> file_buffer;
-  i32 file_size;
   loc_parser_system_state(void) {
+    this->default_language = std::string();
     this->lang_data = std::vector<loc_data>();
     this->active_loc = nullptr;
     this->_buffer = loc_data();
     this->file_buffer = std::vector<u8>();
-    this->file_size = 0;
   }
 }loc_parser_system_state;
 
 static loc_parser_system_state * state = nullptr;
 
-loc_content_text loc_parser_get_next_content_text(i32& offset);
-std::string loc_parser_read_symbol(i32& offset);
+loc_content_text loc_parser_get_next_content_text(size_t& offset);
+std::string loc_parser_read_symbol(size_t& offset);
 std::string loc_parser_read_language_name(void);
 std::string loc_parser_read_codepoints(void);
 std::array<std::string, LOC_TEXT_MAX> loc_parser_read_map(void);
 
-i32 loc_parser_go_to_variable(std::string variable_name);
-std::string loc_parser_get_text(i32& offset, std::string text);
-std::string loc_parser_get_next_text(i32& offset);
-i32 loc_parser_go_to_next_statement(i32 offset);
-loc_file_scope loc_parser_get_scope_range(i32 offset);
-i32 get_content_text_value(i32& offset);
+size_t loc_parser_go_to_variable(std::string variable_name);
+std::string loc_parser_get_text(size_t& offset, std::string text);
+std::string loc_parser_get_next_text(size_t& offset);
+size_t loc_parser_go_to_next_statement(size_t offset);
+loc_file_scope loc_parser_get_scope_range(size_t offset);
+i32 get_content_text_value(size_t& offset);
 bool is_symbol_allowed(u8& c);
 bool is_variable_allowed(u8& c);
 
@@ -106,43 +92,132 @@ bool loc_parser_system_initialize(void) {
   }
   *state = loc_parser_system_state();
 
+  /*
+  // Default Language English
+  {
+    state->default_language = std::string
+    (R"(
+      {
+        display_text = "English",
+        codepoints = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890-><'.:!,/",
+        translates = {
+          "::NULL",
+
+          "Play"                          Main Menu,
+          "Character",
+          "Settings",
+          "Exit",
+          "Editor",
+          "Inventory",
+          "Stats",
+          "Back",
+          "Upgrade",
+          "Total",
+          "Resume",
+          "Exit to Main Menu",
+          "Exit to Desktop",
+          "Back",
+          "Traits",
+          "Chosen Traits",
+          "Starter Ability",
+          "Back",
+          "Accept",
+          "Remaining Points",
+
+          "Windowed"                      Settings ,
+          "Borderless",
+          "Full Screen",
+          "Apply",
+          "Cancel",
+          "English",
+          "Turkish",
+
+          "TREE"                          Editor,
+          "TOMBSTONE",
+          "STONE",
+          "SPIKE",
+          "SKULL",
+          "PILLAR",
+          "LAMP",
+          "FENCE",
+          "DETAIL",
+          "CANDLE",
+          "BUILDING",
+          "SPRITE",
+
+          "Press Space To Start!"         In Game,
+          "NEW!",
+          "Damage:",
+          "Amouth:",
+          "Hitbox:",
+          "Speed:",
+          "Stage Cleared",
+          "Dead",
+          "Collected Souls:",
+          "Accept",
+
+          "Life Essence"                   Player,
+          "Essential",
+          "Bread",
+          "Keeps you fed",
+          "Cardinal Boots",
+          "Increases the speed",
+          "Blast Scroll",
+          "Increases the Hitbox",
+          "Heavy Cross",
+          "Increases Damage",
+          "Hourglass",
+          "Reduce cooldown",
+          "Second Hand",
+          "Increases projectile amouth",
+          "Seeing Eyes",
+          "Increases experience gain",
+          "Jack-Of-All-Traits",
+          "Increases your total trait points",
+          "Bullet",
+          "Arcane Codex",
+          "Comet",
+          "Fireball",
+          "Blazing Steps",
+          "Radience",
+
+          "Work in progress!",
+          "See the light",
+
+          "Please select a starter ability"           Display error,
+          "You need more souls!",
+          "This stage cannot playable right now",
+        }
+      }
+      )"
+    );
+  }
+  */
   return true;
 }
 
-bool _loc_parser_parse_localization_data_from_file(const char* file_name) {
-  return loc_parser_parse_localization_data_from_file(file_name);
+bool _loc_parser_parse_localization_data_from_file(i32 pak_id, i32 index) {
+  return loc_parser_parse_localization_data_from_file(pak_id, index);
 }
 bool _loc_parser_parse_localization_data(void) {
   return loc_parser_parse_localization_data();
 }
 
-bool loc_parser_parse_localization_data_from_file(const char* file_name) {
+bool loc_parser_parse_localization_data_from_file(i32 pak_id, i32 index) {
   if (not state or state == nullptr) {
     TraceLog(LOG_ERROR, "loc_parser::loc_parser_parse_localization_data_from_file()::Loc parser state is not valid");
     return false;
   }
-  u32 file_name_len = TextLength(file_name);
-
-  if (file_name_len <= 0 || file_name_len >= 64) {
-    TraceLog(LOG_ERROR, "loc_parser::loc_parser_parse_localization_data_from_file()::File name lenght out of bound");
-    return false;
-  }
-  const char* file_path = TextFormat("%s%s%s", LOC_FILE_PATH_PREFIX, file_name, LOC_FILE_EXTENSION);
   loc_data data = loc_data();
-  state->file_size = 0;
   state->file_buffer.clear();
   state->_buffer = loc_data();
-  {
-    int dataSize = 1;
-    u8* _str_tile = LoadFileData(file_path, __builtin_addressof(dataSize));
-    if (dataSize <= 0 || dataSize == I32_MAX) {
-      TraceLog(LOG_ERROR, "loc_parser::loc_parser_parse_localization_data_from_file()::Reading data returned null");
-      return false;
-    }
-    state->file_size = dataSize;
-    state->file_buffer.assign(_str_tile, _str_tile + dataSize);
-    UnloadFileData(_str_tile);
+
+  const file_buffer * file = get_asset_file_buffer(static_cast<pak_file_id>(pak_id), index);
+  if (not file or file == nullptr) {
+    TraceLog(LOG_ERROR, "loc_parser::loc_parser_parse_localization_data_from_file()::File %d:%d is invalid", pak_id, index);
+    return false;
   }
+  state->file_buffer.assign_range(file->content);
 
   data.language_name = loc_parser_read_language_name();
   data.codepoints = loc_parser_read_codepoints();
@@ -157,30 +232,19 @@ bool loc_parser_parse_localization_data(void) {
     TraceLog(LOG_ERROR, "loc_parser::loc_parser_parse_localization_data_from_file()::Loc parser state is not valid");
     return false;
   }
-  FilePathList file_names = LoadDirectoryFilesEx(LOC_FILE_PATH_PREFIX, LOC_FILE_EXTENSION, false);
+  std::vector<i32> file_ids = std::vector<i32>();
 
-  if (file_names.count <= 0 || file_names.count >= 10) { // TODO: Hardcoded upper language limit
-    TraceLog(LOG_ERROR, "loc_parser::loc_parser_parse_localization_data_from_file()::No localization file loaded or too much");
-    return false;
-  }
+  file_ids.push_back(PAK_FILE_ASSET2_LOC_FILE_ENGLISH);
+  file_ids.push_back(PAK_FILE_ASSET2_LOC_FILE_TURKISH);
 
   state->lang_data.clear();
-  state->file_size = 0;
   state->file_buffer.clear();
   state->_buffer = loc_data();
-  for (size_t iter = 0; iter < file_names.count; iter++) {
+  for (size_t itr_000 = 0u; itr_000 < file_ids.size(); itr_000++) {
     loc_data data = loc_data();
-    {
-      int dataSize = 1;
-      u8* _str_tile = LoadFileData(file_names.paths[iter], __builtin_addressof(dataSize));
-      if (dataSize <= 0 || dataSize == I32_MAX) {
-        TraceLog(LOG_ERROR, "loc_parser::loc_parser_parse_localization_data_from_file()::Reading data returned null");
-        return false;
-      }
-      state->file_size = dataSize;
-      state->file_buffer.assign(_str_tile, _str_tile + dataSize);
-      UnloadFileData(_str_tile);
-    }
+    const file_buffer * file = get_asset_file_buffer(LOC_FILE_PAK_FILE, file_ids.at(itr_000));
+    state->file_buffer.assign_range(file->content);
+    
     data.language_name = loc_parser_read_language_name();
     data.codepoints = loc_parser_read_codepoints();
     data.content = loc_parser_read_map();
@@ -189,10 +253,8 @@ bool loc_parser_parse_localization_data(void) {
     TraceLog(LOG_INFO, "loc_parser::loc_parser_parse_localization_data()::Language:%s installed ", data.language_name.c_str());
   }
   if (state->lang_data.empty()) {
-    size_t def_lang_len = TextLength(default_language);
     state->file_buffer.clear();
-    state->file_buffer.assign(default_language, default_language + def_lang_len);
-    state->file_size = def_lang_len;
+    state->file_buffer.assign_range(state->default_language);
 
     loc_data data = loc_data();
     data.language_name = loc_parser_read_language_name();
@@ -201,27 +263,26 @@ bool loc_parser_parse_localization_data(void) {
     data.index = state->lang_data.size();
     state->lang_data.push_back(data);
   }
-  UnloadDirectoryFiles(file_names);
   return true;
 }
 
-loc_content_text loc_parser_get_next_content_text(i32& offset) {
+loc_content_text loc_parser_get_next_content_text(size_t& offset) {
   loc_content_text _loc_con = loc_content_text();
 
-  i32 begin_quote = I32_MAX;
-  i32 end_quote = I32_MAX;
+  size_t begin_quote = U32_MAX;
+  size_t end_quote = U32_MAX;
   bool begin_quote_found = false;
   bool end_quote_found = false;
 
-  for (; offset < state->file_size; ++offset) {
-    if (!begin_quote_found) {
+  for (; offset < state->file_buffer.size(); ++offset) {
+    if (not begin_quote_found) {
       if (state->file_buffer.at(offset) == '"') {
         begin_quote = offset + 1;
         begin_quote_found = true;
       }
       continue;
     }
-    else if (!end_quote_found) {
+    else if (not end_quote_found) {
       if (state->file_buffer.at(offset) == '"') {
         end_quote = offset;
         end_quote_found = true;
@@ -233,17 +294,17 @@ loc_content_text loc_parser_get_next_content_text(i32& offset) {
     }
   }
 
-  if (begin_quote < state->file_size && end_quote < state->file_size) {
+  if (begin_quote < state->file_buffer.size() && end_quote < state->file_buffer.size()) {
     _loc_con.str.assign(state->file_buffer.begin() + begin_quote, state->file_buffer.begin() + end_quote);
   }
   return _loc_con;
 }
-i32 get_content_text_value(i32& offset) {
-  i32 loc_con_value = I32_MAX;
+i32 get_content_text_value(size_t& offset) {
+  i32 loc_con_value = 0;
   std::string value_str = std::string("");
   bool number_found = false;
 
-  for (; offset < state->file_size; ++offset) {
+  for (; offset < state->file_buffer.size(); ++offset) {
     u8 c = state->file_buffer.at(offset); 
 
     if (c >= '0' && c <= '9') {
@@ -257,12 +318,12 @@ i32 get_content_text_value(i32& offset) {
   return loc_con_value;
 }
 
-std::string loc_parser_get_text(i32& offset, std::string text) {
+std::string loc_parser_get_text(size_t& offset, std::string text) {
   std::string _text = std::string("");
 
   bool quote_found = false;
-  for (; offset<state->file_size; ++offset) {
-    if (!quote_found) {
+  for (; offset < state->file_buffer.size(); ++offset) {
+    if (not quote_found) {
       if (state->file_buffer.at(offset) == '"') {
         quote_found = true;
       }
@@ -280,12 +341,12 @@ std::string loc_parser_get_text(i32& offset, std::string text) {
   }
   else return "";
 }
-std::string loc_parser_get_next_text(i32& offset) {
+std::string loc_parser_get_next_text(size_t& offset) {
   std::string text = std::string("");
 
   bool quote_found = false;
-  for (; offset<state->file_size; ++offset) {
-    if (!quote_found) {
+  for (; offset < state->file_buffer.size(); ++offset) {
+    if (not quote_found) {
       if (state->file_buffer.at(offset) == '"') {
         quote_found = true;
       }
@@ -299,26 +360,26 @@ std::string loc_parser_get_next_text(i32& offset) {
   }
   return text;
 }
-i32 loc_parser_go_to_next_statement(i32 offset) {
+size_t loc_parser_go_to_next_statement(size_t offset) {
   
-  for (; offset < state->file_size; ++offset) {
+  for (; offset < state->file_buffer.size(); ++offset) {
     if(state->file_buffer.at(offset) == LOC_FILE_SYMBOL_STATEMENT_PARSER) {
       return offset;
     }
   }
 
-  return I32_MAX;
+  return U32_MAX;
 }
-loc_file_scope loc_parser_get_scope_range(i32 offset) {
-  loc_file_scope _scope = loc_file_scope(I32_MAX, I32_MAX);
+loc_file_scope loc_parser_get_scope_range(size_t offset) {
+  loc_file_scope _scope = loc_file_scope(U32_MAX, U32_MAX);
   bool scope_start_found = false;
   
-  for (; offset < state->file_size; ++offset) {
-    if(!scope_start_found && state->file_buffer.at(offset) == LOC_FILE_SYMBOL_SCOPE_START) {
+  for (; offset < state->file_buffer.size(); ++offset) {
+    if(not scope_start_found and state->file_buffer.at(offset) == LOC_FILE_SYMBOL_SCOPE_START) {
       scope_start_found = true;
       _scope.scope_start_offset = offset;
     }
-    else if (scope_start_found && state->file_buffer.at(offset) == LOC_FILE_SYMBOL_SCOPE_END) {
+    else if (scope_start_found and state->file_buffer.at(offset) == LOC_FILE_SYMBOL_SCOPE_END) {
       _scope.scope_end_offset = offset;
       return _scope;
     }
@@ -327,17 +388,17 @@ loc_file_scope loc_parser_get_scope_range(i32 offset) {
   return _scope;
 }
 
-i32 loc_parser_go_to_variable(std::string variable_name) {
+size_t loc_parser_go_to_variable(std::string variable_name) {
   std::string variable = std::string("");
   bool variable_found = false;
   bool in_variable_try = false;
-  i32 variable_search_offset = 0;
+  size_t variable_search_offset = 0u;
   do {
     variable.clear();
     in_variable_try = false;
-    for (; variable_search_offset < state->file_size; ++variable_search_offset) 
+    for (; variable_search_offset < state->file_buffer.size(); ++variable_search_offset) 
     {
-      if( !variable_found && is_variable_allowed(state->file_buffer.at(variable_search_offset))) {
+      if( not variable_found and is_variable_allowed(state->file_buffer.at(variable_search_offset))) {
         if (variable.size() < LOC_TEXT_VARIABLE_SIZE) {
           variable.push_back(state->file_buffer.at(variable_search_offset));
           in_variable_try = true;
@@ -353,23 +414,23 @@ i32 loc_parser_go_to_variable(std::string variable_name) {
           break;
         }
       }
-      else if(variable_found && state->file_buffer.at(variable_search_offset) == LOC_FILE_SYMBOL_VARIABLE_INITIALIZATION) {
+      else if(variable_found and state->file_buffer.at(variable_search_offset) == LOC_FILE_SYMBOL_VARIABLE_INITIALIZATION) {
         return variable_search_offset;
       }
     }
-  } while(variable_search_offset < state->file_size && !variable_found);
+  } while(variable_search_offset < state->file_buffer.size() and not variable_found);
 
   if (variable_found) {
     return variable_search_offset;
   }
-  else return I32_MAX;
+  else return U32_MAX;
 }
 
-std::string loc_parser_read_symbol(i32& offset) {
+std::string loc_parser_read_symbol(size_t& offset) {
   std::string symbol = std::string("");
   char parser = '=';
 
-  for (; offset<state->file_size; ++offset) {
+  for (; offset < state->file_buffer.size(); ++offset) {
     if(is_symbol_allowed(state->file_buffer.at(offset))) {
       if (symbol.size() < LOC_TEXT_SYMBOL_SIZE) {
         symbol.push_back(state->file_buffer.at(offset));
@@ -385,29 +446,29 @@ std::string loc_parser_read_symbol(i32& offset) {
   return symbol;
 }
 std::string loc_parser_read_language_name(void) {
-  i32 offset = loc_parser_go_to_variable(LOC_FILE_LANGUAGE_NAME_VARIABLE_NAME);
+  size_t offset = loc_parser_go_to_variable(LOC_FILE_LANGUAGE_NAME_VARIABLE_NAME);
 
-  if (offset < state->file_size) {
+  if (offset < state->file_buffer.size()) {
     return loc_parser_get_next_text(offset);
   }
   else return "";
 }
 std::string loc_parser_read_codepoints(void) {
-  i32 offset = loc_parser_go_to_variable(LOC_FILE_CODEPOINTS_VARIABLE_NAME);
+  size_t offset = loc_parser_go_to_variable(LOC_FILE_CODEPOINTS_VARIABLE_NAME);
 
-  if (offset < state->file_size) {
+  if (offset < state->file_buffer.size()) {
     return loc_parser_get_next_text(offset);
   }
   else return "";
 }
 std::array<std::string, LOC_TEXT_MAX> loc_parser_read_map(void) {
 
-  i32 offset = loc_parser_go_to_variable(LOC_FILE_MAP_VARIABLE_NAME);
+  size_t offset = loc_parser_go_to_variable(LOC_FILE_MAP_VARIABLE_NAME);
 
   loc_file_scope scope = loc_parser_get_scope_range(offset);
   offset = scope.scope_start_offset;
 
-  if (scope.scope_start_offset > state->file_size) {
+  if (scope.scope_start_offset > state->file_buffer.size()) {
     return std::array<std::string, LOC_TEXT_MAX>();
   }
 
@@ -415,9 +476,9 @@ std::array<std::string, LOC_TEXT_MAX> loc_parser_read_map(void) {
 
   loc_content_text text = loc_content_text();
   std::array<std::string, LOC_TEXT_MAX> content_map = std::array<std::string, LOC_TEXT_MAX>();
-  i32 next_index = 0;
+  size_t next_index = 0u;
 
-  for (i32 offset=scope.scope_start_offset; offset < scope.scope_end_offset;) {
+  for (size_t offset = scope.scope_start_offset; offset < scope.scope_end_offset;) {
     switch (reading_order) {
       case LOC_READING_ORDER_CONTENT: {
         text = loc_parser_get_next_content_text(offset);

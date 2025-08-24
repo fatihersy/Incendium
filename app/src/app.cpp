@@ -83,6 +83,7 @@ bool app_initialize(void) {
 
     parse_asset_pak(PAK_FILE_ASSET1);
     parse_asset_pak(PAK_FILE_ASSET2);
+    parse_map_pak();
 
   #else
     Texture loading_tex = LoadTexture(RESOURCE_PATH "aaa_game_start_loading_screen.png");

@@ -73,10 +73,6 @@ static user_interface_system_state * state = nullptr;
 
 #define UI_LIGHT_FONT state->display_language->light_font
 #define UI_LIGHT_FONT_SIZE state->display_language->light_font.baseSize
-#define UI_MEDIUM_FONT state->display_language->medium_font
-#define UI_MEDIUM_FONT_SIZE state->display_language->medium_font.baseSize
-#define UI_BOLD_FONT state->display_language->bold_font
-#define UI_BOLD_FONT_SIZE state->display_language->bold_font.baseSize
 #define UI_ITALIC_FONT state->display_language->italic_font
 #define UI_ITALIC_FONT_SIZE state->display_language->italic_font.baseSize
 #define UI_ABRACADABRA_FONT state->display_language->abracadabra
@@ -144,7 +140,7 @@ void draw_text_shader(const char *text, shader_id sdr_id, Vector2 position, Font
 void draw_text_ex(const char *text, Vector2 position, Font font, f32 _fontsize, Color tint, bool center_horizontal, bool center_vertical, bool use_grid_align, Vector2 grid_coord);
 void DrawTextBoxed(Font font, const char *text, Rectangle rec, float fontSize, float spacing, bool wordWrap, Color tint);
 const char* wrap_text(const char* text, Font font, i32 font_size, Rectangle bounds, bool center_x);
-Font load_font(const char* file_name, i32 font_size, i32* _codepoints, i32 _codepoint_count);
+Font load_font(pak_file_id pak_id, i32 asset_id, i32 font_size, i32* _codepoints, i32 _codepoint_count);
 localization_package* load_localization(std::string language_name, u32 loc_index, std::string _codepoints, i32 font_size);
 localization_package* ui_get_localization_by_name(std::string language_name);
 localization_package* ui_get_localization_by_index(u32 _language_index);
@@ -154,14 +150,6 @@ bool ui_sound_slider_on_right_button_trigger(void);
 
 constexpr Font font_type_to_font(font_type in_font_type) {
   switch (in_font_type) {
-    case FONT_TYPE_MEDIUM: {
-      return UI_MEDIUM_FONT;
-      break;
-    }
-    case FONT_TYPE_BOLD: {
-      return UI_BOLD_FONT;
-      break;
-    }
     case FONT_TYPE_LIGHT: {
       return UI_LIGHT_FONT;
       break;
@@ -182,8 +170,9 @@ constexpr void draw_text_simple(const char* text, Vector2 pos, font_type in_font
   Font font = font_type_to_font(in_font_type);
   DrawTextEx(font, text, pos, font.baseSize * fontsize, UI_FONT_SPACING, color);
 }
-constexpr void draw_text(const char* text, Vector2 pos, font_type in_font_type, i32 fontsize, Color color, bool center_horizontal, bool center_vertical, 
-  bool use_grid_align = false, Vector2 grid_coord = ZEROVEC2) {
+constexpr void draw_text(const char* text, Vector2 pos, font_type in_font_type, i32 fontsize, Color color, bool center_horizontal, bool center_vertical, bool use_grid_align = false, 
+  Vector2 grid_coord = ZEROVEC2
+) {
   Font font = font_type_to_font(in_font_type);
   Vector2 text_measure = MeasureTextEx(font, text, font.baseSize * fontsize, UI_FONT_SPACING);
   Vector2 text_position = pos;
@@ -229,7 +218,7 @@ bool user_interface_system_initialize(void) {
     return true;
   }
   state = (user_interface_system_state *)allocate_memory_linear(sizeof(user_interface_system_state), true);
-  if (!state) {
+  if (not state or state == nullptr) {
     TraceLog(LOG_ERROR, "user_interface::user_interface_system_initialize()::State allocation failed");
     return false;
   }
@@ -249,12 +238,13 @@ bool user_interface_system_initialize(void) {
     }
   }
   localization_package* settings_loc_lang = ui_get_localization_by_name(state->in_app_settings->language);
-  if (!settings_loc_lang || settings_loc_lang == nullptr) {
+  if (not settings_loc_lang or settings_loc_lang == nullptr) {
     TraceLog(LOG_ERROR, "user_interface::user_interface_system_initialize()::Settings language:%s cannot found", state->in_app_settings->language.c_str());
-    if(!loc_parser_set_active_language_by_index(0)) {
+    if(not loc_parser_set_active_language_by_index(0)) {
       TraceLog(LOG_FATAL, "user_interface::user_interface_system_initialize()::No language found");
       return false;
     }
+    settings_loc_lang = ui_get_localization_by_index(0);
   }
   if(loc_parser_set_active_language_by_index(settings_loc_lang->language_index)) {
     loc_data * _loc_data = loc_parser_get_active_language();
@@ -264,7 +254,7 @@ bool user_interface_system_initialize(void) {
     }
     state->display_language = ui_get_localization_by_name(_loc_data->language_name);
   }
-  if(!initialize_shader_system()) {
+  if(not initialize_shader_system()) {
     TraceLog(LOG_ERROR, "user_interface::user_interface_system_initialize()::Shader system failed to initialize!");
     return false;
   }
@@ -409,7 +399,7 @@ bool user_interface_system_initialize(void) {
   // SLIDER OPTIONS
 
   state->default_background_panel = panel(BTN_STATE_UNDEFINED, ATLAS_TEX_ID_DARK_FANTASY_PANEL_BG, ATLAS_TEX_ID_DARK_FANTASY_PANEL_SELECTED, 
-    Vector4 {6, 6, 6, 6}, Color { 30, 39, 46, 128}
+    Vector4 {6.f, 6.f, 6.f, 6.f}, Color { 30, 39, 46, 128}
   );
 
   ui_refresh_setting_sliders_to_default();
@@ -1024,14 +1014,6 @@ void gui_label(const char* text, font_type type, i32 font_size, Vector2 position
 }
 void gui_label_shader(const char* text, shader_id sdr_id, font_type type, i32 font_size, Vector2 position, Color tint, bool _center_h, bool _center_v) {
   switch (type) {
-    case FONT_TYPE_MEDIUM: {
-      draw_text_shader(text, sdr_id, position, UI_MEDIUM_FONT, font_size * UI_MEDIUM_FONT_SIZE, tint, _center_h, _center_v, false, VECTOR2(0.f, 0.f));
-      break;
-    }
-    case FONT_TYPE_BOLD: {
-      draw_text_shader(text, sdr_id, position, UI_BOLD_FONT, font_size * UI_BOLD_FONT_SIZE, tint, _center_h, _center_v, false, VECTOR2(0.f, 0.f));
-      break;
-    }
     case FONT_TYPE_LIGHT: {
       draw_text_shader(text, sdr_id, position, UI_LIGHT_FONT, font_size * UI_LIGHT_FONT_SIZE, tint, _center_h, _center_v, false, VECTOR2(0.f, 0.f));
       break;
@@ -1054,14 +1036,6 @@ void gui_label_wrap(const char* text, font_type type, i32 font_size, Rectangle p
     position.y -= (position.height / 2.f);
   }
   switch (type) {
-    case FONT_TYPE_MEDIUM: {
-      DrawTextBoxed(UI_MEDIUM_FONT, text, position, font_size * UI_MEDIUM_FONT_SIZE, UI_FONT_SPACING, true, tint);
-      break;
-    }
-    case FONT_TYPE_BOLD: {
-      DrawTextBoxed(UI_BOLD_FONT, text, position, font_size * UI_BOLD_FONT_SIZE, UI_FONT_SPACING, true, tint);
-      break;
-    }
     case FONT_TYPE_LIGHT: {
       DrawTextBoxed(UI_LIGHT_FONT, text, position, font_size * UI_LIGHT_FONT_SIZE, UI_FONT_SPACING, true, tint);
       break;
@@ -1091,14 +1065,6 @@ void gui_label_wrap_grid(const char* text, font_type type, i32 font_size, Rectan
     position.y -= (position.height / 2.f);
   }
   switch (type) {
-    case FONT_TYPE_MEDIUM: {
-      DrawTextBoxed(UI_MEDIUM_FONT, text, position, font_size * UI_MEDIUM_FONT_SIZE, UI_FONT_SPACING, true, tint);
-      break;
-    }
-    case FONT_TYPE_BOLD: {
-      DrawTextBoxed(UI_BOLD_FONT, text, position, font_size * UI_BOLD_FONT_SIZE, UI_FONT_SPACING, true, tint);
-      break;
-    }
     case FONT_TYPE_LIGHT: {
       DrawTextBoxed(UI_LIGHT_FONT, text, position, font_size * UI_LIGHT_FONT_SIZE, UI_FONT_SPACING, true, tint);
       break;
@@ -1896,11 +1862,9 @@ const Font* ui_get_font(font_type font) {
     return nullptr;
   }
   switch (font) {
-  case FONT_TYPE_MEDIUM:      return &UI_MEDIUM_FONT;
-  case FONT_TYPE_BOLD:        return &UI_BOLD_FONT;
-  case FONT_TYPE_LIGHT:       return &UI_LIGHT_FONT;
-  case FONT_TYPE_ITALIC:      return &UI_ITALIC_FONT;
-  case FONT_TYPE_ABRACADABRA: return &UI_ABRACADABRA_FONT;
+  case FONT_TYPE_LIGHT:       return __builtin_addressof(UI_LIGHT_FONT);
+  case FONT_TYPE_ITALIC:      return __builtin_addressof(UI_ITALIC_FONT);
+  case FONT_TYPE_ABRACADABRA: return __builtin_addressof(UI_ABRACADABRA_FONT);
   default: TraceLog(LOG_WARNING, "user_interface::ui_get_font()::Unknown font type");
   }
   return nullptr;
@@ -2014,25 +1978,33 @@ data_pack* get_slider_current_value(slider_id id) {
       .at(id).current_value).content
   );
 }
-Font load_font(const char* file_name, i32 font_size, i32* _codepoints, i32 _codepoint_count) {
-  if (!state) {
+Font load_font(pak_file_id pak_id, i32 asset_id, i32 font_size, i32* _codepoints, i32 _codepoint_count) {
+  if (not state or state == nullptr) {
     TraceLog(LOG_ERROR, "user_interface::load_font()::State is not valid");
-    return {};
+    return ZERO_FONT;
   }
+  Font font = ZERO_FONT;
 
-  Font font = {};
-
-  const char* path = TextFormat("%s%s", RESOURCE_PATH, file_name);
-  font = LoadFontEx(path, font_size, _codepoints, _codepoint_count);
-
-  if (font.baseSize == 0) { // If custom font load failed
+  const file_buffer * const file = get_asset_file_buffer(pak_id, asset_id);
+  if (not file or file == nullptr) {
     TraceLog(LOG_WARNING, "user_interface::load_font()::Font cannot loading, returning default");
     return GetFontDefault();
   }
+  else {
+    font = LoadFontFromMemory(
+      file->file_extension.c_str(), 
+      reinterpret_cast<const u8 *>(file->content.c_str()), 
+      static_cast<i32>(file->content.size()), 
+      font_size, 
+      _codepoints, 
+      _codepoint_count
+    ); 
+  }
+
   return font;
 }
 localization_package* load_localization(std::string language_name, u32 loc_index, std::string _codepoints, i32 font_size) {
-  if (!state) {
+  if (not state or state == nullptr) {
     TraceLog(LOG_ERROR, "user_interface::load_localization()::State is not valid");
     return nullptr;
   }
@@ -2044,26 +2016,20 @@ localization_package* load_localization(std::string language_name, u32 loc_index
   loc_pack.language_index = loc_index;
   loc_pack.language_name = language_name;
   loc_pack.codepoints = codepoints;
-  loc_pack.light_font  = load_font("miosevka_light.ttf",        font_size, codepoints, codepoint_count);
-  loc_pack.bold_font   = load_font("miosevka_bold.ttf",         font_size, codepoints, codepoint_count);
-  loc_pack.medium_font = load_font("miosevka_medium.ttf",       font_size, codepoints, codepoint_count);
-  loc_pack.italic_font = load_font("miosevka_medium_italic.ttf",font_size, codepoints, codepoint_count);
-  loc_pack.abracadabra = load_font("abracadabra.ttf",                  28, codepoints, codepoint_count);
+  loc_pack.light_font  = load_font(PAK_FILE_ASSET1, PAK_FILE_ASSET1_FONT_MIOSEVKA_LIGHT, font_size, codepoints, codepoint_count);
+  loc_pack.italic_font = load_font(PAK_FILE_ASSET1, PAK_FILE_ASSET1_FONT_MIOSEVKA_LIGHT_ITALIC, font_size, codepoints, codepoint_count);
+  loc_pack.abracadabra = load_font(PAK_FILE_ASSET1, PAK_FILE_ASSET1_FONT_ABRACADABRA, 28, codepoints, codepoint_count);
 
   SetTextureFilter(loc_pack.abracadabra.texture, TEXTURE_FILTER_POINT);
   SetTextureFilter(loc_pack.light_font .texture, TEXTURE_FILTER_ANISOTROPIC_16X);
-  SetTextureFilter(loc_pack.bold_font  .texture, TEXTURE_FILTER_ANISOTROPIC_16X);
-  SetTextureFilter(loc_pack.medium_font.texture, TEXTURE_FILTER_ANISOTROPIC_16X);
   SetTextureFilter(loc_pack.italic_font.texture, TEXTURE_FILTER_ANISOTROPIC_16X);
 
   state->localization_info.push_back(loc_pack);
 
-  return &state->localization_info.at(
-    state->localization_info.size()-1
-  );
+  return __builtin_addressof(state->localization_info.at(state->localization_info.size() - 1u));
 }
 localization_package* ui_get_localization_by_name(std::string language_name) {
-  if (!state) {
+  if (not state or state == nullptr) {
     TraceLog(LOG_ERROR, "user_interface::ui_get_localization_by_name()::State is not valid");
     return nullptr;
   }
@@ -2077,7 +2043,7 @@ localization_package* ui_get_localization_by_name(std::string language_name) {
   return nullptr;
 }
 localization_package* ui_get_localization_by_index(u32 _language_index) {
-  if (!state) {
+  if (not state or state == nullptr) {
     TraceLog(LOG_ERROR, "user_interface::ui_get_localization_by_index()::State is not valid");
     return nullptr;
   }

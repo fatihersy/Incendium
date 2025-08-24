@@ -58,7 +58,6 @@ void load_texture_disk(const char * _path, bool resize, Vector2 new_size, textur
 bool load_image_disk(const char * _path, bool resize, Vector2 new_size, image_type type);
 #endif
 
-
 void load_texture_from_atlas(atlas_texture_id _id, Rectangle texture_area);
 void load_spritesheet(texture_id _source_tex, spritesheet_id handle_id, Vector2 offset, i32 _fps, i32 _frame_width, i32 _frame_height, i32 _total_row, i32 _total_col);
 void load_tilesheet(tilesheet_type _sheet_sheet_type, atlas_texture_id _atlas_tex_id, i32 _tile_count_x, i32 _tile_count_y, i32 _tile_size);
@@ -615,6 +614,10 @@ bool resource_system_initialize(void) {
     // Sprites
   }
 
+  SetTextureFilter(state->textures.at(TEX_ID_ASSET_ATLAS), TEXTURE_FILTER_POINT);
+  SetTextureFilter(state->textures.at(TEX_ID_GAME_START_LOADING_SCREEN), TEXTURE_FILTER_ANISOTROPIC_16X);
+  SetTextureFilter(state->textures.at(TEX_ID_WORLDMAP_WO_CLOUDS), TEXTURE_FILTER_ANISOTROPIC_16X);
+
   return true;
 }
 
@@ -766,7 +769,6 @@ bool load_image_disk(
   return false;
   #endif
 }
-
 
 void load_spritesheet(texture_id _source_tex, spritesheet_id handle_id, Vector2 offset, i32 _fps, i32 _frame_width, i32 _frame_height, i32 _total_row, i32 _total_col) {
   if ((handle_id >= SHEET_ID_SPRITESHEET_TYPE_MAX or handle_id <= SHEET_ID_SPRITESHEET_UNSPECIFIED) or (_source_tex >= TEX_ID_MAX or _source_tex <= TEX_ID_UNSPECIFIED)) {

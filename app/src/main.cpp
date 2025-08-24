@@ -19,8 +19,6 @@ extern "C" void __cdecl SteamAPIDebugTextHook( int nSeverity, const char *pchDeb
 	if ( nSeverity >= 1 )
 	{
 		// place to set a breakpoint for catching API errors
-		int x = 3;
-		(void)x;
 	}
 }
 
@@ -41,7 +39,7 @@ int entry(void)
 	if ( !Steamworks_InitCEGLibrary() )
 	{
 		OutputDebugString( "Steamworks_InitCEGLibrary() failed\n" );
-		alert( "Fatal Error", "Steam must be running to play this game (InitDrmLibrary() failed).\n" );
+		alert( "Fatal Error", "Init Drm Library fail.\n" );
 		return EXIT_FAILURE;
 	}
 
@@ -59,7 +57,7 @@ int entry(void)
 		OutputDebugString( errMsg );
 		OutputDebugString( "\n" );
 
-		alert( "Fatal Error", "Steam must be running to play this game (SteamAPI_Init() failed).\n" );
+		alert( "Fatal Error", "Steam API Init fail.\n" );
 		return EXIT_FAILURE;
 	}
 
@@ -69,7 +67,7 @@ int entry(void)
 	// Ensure that the user has logged into Steam. This will always return true if the game is launched
 	// from Steam, but if Steam is at the login prompt when you run your game from the debugger, it
 	// will return false.
-	if ( !SteamUser()->BLoggedOn() )
+	if (not SteamUser()->BLoggedOn() )
 	{
 		OutputDebugString( "Steam user is not logged in\n" );
 		alert( "Steam user must be logged in to play this game", "Fatal Error");
@@ -79,9 +77,9 @@ int entry(void)
 	// do a DRM self check
 	Steamworks_SelfCheck();
 
-  if(!app_initialize()) {
-		alert("main::entry()::App initialize return with 1. Please look at the logs for more details", "Oh no!");
-		return 1;
+  if(not app_initialize()) {
+		alert("main::entry()::App initialize return with failure", "Oh no!");
+		return EXIT_FAILURE;
 	}
 
   while (window_should_close())

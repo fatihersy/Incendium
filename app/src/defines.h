@@ -560,7 +560,8 @@ typedef enum asset1_file_id {
   PAK_FILE_ASSET1_UNDEFINED,
   PAK_FILE_ASSET1_THUMBNAIL,
   PAK_FILE_ASSET1_FONT_ABRACADABRA,
-  PAK_FILE_ASSET1_FONT_MIOSEVKA,
+  PAK_FILE_ASSET1_FONT_MIOSEVKA_LIGHT,
+  PAK_FILE_ASSET1_FONT_MIOSEVKA_LIGHT_ITALIC,
   PAK_FILE_ASSET1_SOUND_BTN_CLICK_1,
   PAK_FILE_ASSET1_SOUND_BTN_CLICK_2,
   PAK_FILE_ASSET1_SOUND_BTN_CLICK_3,
@@ -579,6 +580,8 @@ typedef enum asset2_file_id {
   PAK_FILE_ASSET2_MAP_CHOICE_IMAGE,
   PAK_FILE_ASSET2_POST_PROCESS,
   PAK_FILE_ASSET2_PRG_BAR_MASK,
+  PAK_FILE_ASSET2_LOC_FILE_ENGLISH,
+  PAK_FILE_ASSET2_LOC_FILE_TURKISH,
   PAK_FILE_ASSET2_ATLAS,
   PAK_FILE_ASSET2_MAX,
 } asset2_file_id;
@@ -894,15 +897,17 @@ typedef struct file_buffer {
 
 typedef struct worldmap_stage_file {
   i32 stage_index;
-  std::array<std::string, MAX_TILEMAP_LAYERS> file_data;
+  std::array<std::string, MAX_TILEMAP_LAYERS> layer_data;
   std::string file_collision;
   std::string file_prop;
+  size_t pak_offset;
   bool is_success;
   worldmap_stage_file(void) {
     this->stage_index = 0;
-    this->file_data.fill(std::string(""));
+    this->layer_data.fill(std::string(""));
     this->file_collision = std::string("");
     this->file_prop = std::string("");
+    this->pak_offset = 0u;
     this->is_success = false;
   }
 } worldmap_stage_file;

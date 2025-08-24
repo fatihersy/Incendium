@@ -22,6 +22,14 @@
 #define ZERO_WAV (Wave {0u, 0u, 0u, 0u, nullptr})
 #define ZERO_TEXTURE (Texture {0u, 0, 0, 0, 0})
 #define ZERO_IMAGE (Image {nullptr, 0, 0, 0, 0})
+#define ZERO_FONT (Font {0, 0, 0, ZERO_TEXTURE, nullptr, nullptr})
+
+//   int baseSize;           // Base size (default chars height)
+//   int glyphCount;         // Number of glyph characters
+//   int glyphPadding;       // Padding around the glyph characters
+//   Texture2D texture;      // Texture atlas containing the glyphs
+//   Rectangle *recs;        // Rectangles in texture for the glyphs
+//   GlyphInfo *glyphs;      // Glyphs info data
 
 #define ATLAS_TEXTURE_ID TEX_ID_ASSET_ATLAS
 
@@ -135,8 +143,6 @@ typedef enum character_stat_id {
 typedef enum font_type {
   FONT_TYPE_UNDEFINED,
   FONT_TYPE_LIGHT,
-  FONT_TYPE_MEDIUM,
-  FONT_TYPE_BOLD,
   FONT_TYPE_ITALIC,
   FONT_TYPE_ABRACADABRA,
   FONT_TYPE_MAX
@@ -536,6 +542,7 @@ typedef struct map_collision {
 } map_collision;
 
 typedef struct tilemap {
+  i32 index;
   std::array<std::string, MAX_TILEMAP_LAYERS> filename;
   std::string propfile;
   std::string collisionfile;
@@ -554,7 +561,7 @@ typedef struct tilemap {
   bool is_initialized;
   tilemap(void) {
     zero_memory(tiles, sizeof(tile_symbol) * MAX_TILEMAP_LAYERS * MAX_TILEMAP_TILESLOT_X * MAX_TILEMAP_TILESLOT_Y);
-
+    this->index = 0;
     this->filename.fill(std::string(""));
     this->propfile = std::string("");
     this->collisionfile = std::string("");
@@ -578,14 +585,11 @@ typedef struct tilemap_stringtify_package {
   i32 size_tilemap_str[MAX_TILEMAP_LAYERS];
   std::string str_props;
   std::string str_collisions;
-  i32 size_props_str;
-  i32 size_collisions_str;
   bool is_success;
   tilemap_stringtify_package(void) {
     zero_memory(this->str_tilemap, sizeof(u8) * MAX_TILEMAP_LAYERS * MAX_TILEMAP_TILESLOT * TILESHEET_TILE_SYMBOL_STR_LEN);
     zero_memory(this->size_tilemap_str, sizeof(i32) * MAX_TILEMAP_LAYERS);
     this->str_props.clear();
-    this->size_props_str = 0;
     this->is_success = false;
   }
 }tilemap_stringtify_package;
@@ -973,19 +977,15 @@ typedef struct localization_package {
   u32 language_index;
   i32 * codepoints;
   Font light_font;
-  Font bold_font;
-  Font medium_font;
   Font italic_font;
   Font abracadabra;
   localization_package(void) {
     this->language_name.clear();
     this->language_index = INVALID_IDU32;
     this->codepoints = nullptr;
-    this->light_font = {};
-    this->bold_font = {};
-    this->medium_font = {};
-    this->italic_font = {};
-    this->abracadabra = {};
+    this->light_font = ZERO_FONT;
+    this->italic_font = ZERO_FONT;
+    this->abracadabra = ZERO_FONT;
   }
 } localization_package;
 
