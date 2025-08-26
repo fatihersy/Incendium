@@ -4,6 +4,7 @@
 #include "core/fmath.h"
 #include "core/fmemory.h"
 #include "core/event.h"
+#include "core/logger.h"
 
 typedef struct camera_system_state {
   camera_metrics cam_met;
@@ -33,13 +34,12 @@ bool camera_on_event(i32 code, event_context context);
 bool recreate_camera(i32 target_x, i32 target_y, i32 render_width, i32 render_height);
 
 bool create_camera(i32 target_x, i32 target_y, i32 render_width, i32 render_height) {
-  if (state) {
+  if (state and state != nullptr) {
     return recreate_camera(target_x, target_y, render_width, render_height);
   }
-
   state = (camera_system_state *)allocate_memory_linear(sizeof(camera_system_state), true);
-  if (!state) {
-    TraceLog(LOG_ERROR, "camera::create_camera()::State allocation failed");
+  if (not state or state == nullptr) {
+    IERROR("camera::create_camera()::State allocation failed");
     return false;
   }
   *state = camera_system_state();
@@ -55,7 +55,8 @@ bool create_camera(i32 target_x, i32 target_y, i32 render_width, i32 render_heig
 }
 
 bool recreate_camera(i32 width, i32 height, i32 render_width, i32 render_height) {
-  if (!state) {
+  if (not state or state == nullptr) {
+    IERROR("camera::recreate_camera()::State is invalid");
     return false;
   }
   state->cam_met.handle.target = Vector2 {static_cast<f32>(width), static_cast<f32>(height)};
@@ -74,7 +75,8 @@ bool recreate_camera(i32 width, i32 height, i32 render_width, i32 render_height)
 
 
 const camera_metrics* get_in_game_camera(void) {
-  if (!state || state == nullptr) {
+  if (not state or state == nullptr) {
+    IERROR("camera::get_in_game_camera()::State is invalid");
     return nullptr;
   }
   return __builtin_addressof(state->cam_met); 
@@ -148,12 +150,12 @@ bool camera_on_event(i32 code, event_context context) {
       return true;
     }
     default: {
-      TraceLog(LOG_WARNING, "camera::camera_on_event()::Unknown code");
+      IWARN("camera::camera_on_event()::Unsupported code");
       return false;
     }
   }
 
-  TraceLog(LOG_ERROR, "camera::camera_on_event()::Fire event ended unexpectedly");
+  IERROR("camera::camera_on_event()::Function ended unexpectedly");
   return false;
 }
 

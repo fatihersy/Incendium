@@ -40,15 +40,26 @@ typedef struct time_system_state {
   u16 rand_start_index;
   u16 rand_ind;
   i32 padding;
+  time_system_state(void) {
+    this->rand_start_index = 0u;
+    this->rand_ind = 0u;
+    this->padding = 0;
+  }
 } time_system_state;
 
-static time_system_state *state;
+static time_system_state * state = nullptr;
 
-void time_system_initialize(void) {
-  if (state) {
-    return;
+bool time_system_initialize(void) {
+  if (state and state != nullptr) {
+    return true;
   }
   state = (time_system_state *)allocate_memory_linear(sizeof(time_system_state), true);
+  if (not state or state == nullptr) {
+    return false;
+  }
+  *state = time_system_state();
+
+  return true;
 }
 void update_time(void) {
   if(state == nullptr) {

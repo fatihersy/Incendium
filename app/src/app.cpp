@@ -12,7 +12,7 @@
 #include "core/event.h"
 #include "core/ftime.h"
 #include "core/fmemory.h"
-//#include "core/logger.h"
+#include "core/logger.h"
 
 #include "game/resource.h"
 #include "game/scenes/scene_manager.h"
@@ -20,14 +20,21 @@
 #include "game/fshader.h"
 
 typedef struct app_system_state {
-  app_settings* settings;
   bool app_running;
+  app_settings* settings;
   RenderTexture2D drawing_target;
   Camera2D screen_space_camera;
-  fshader* post_process_shader;
+  const fshader* post_process_shader;
+  app_system_state(void) {
+    this->settings = nullptr;
+    this->app_running = false;
+    this->drawing_target = RenderTexture2D { 0u, ZERO_TEXTURE, ZERO_TEXTURE};
+    this->screen_space_camera = Camera2D {ZEROVEC2, ZEROVEC2, 0.f, 0.f};
+    this->post_process_shader = nullptr;
+  }
 } app_system_state;
 
-static app_system_state* state;
+static app_system_state* state = nullptr;
 
 bool application_on_event(i32 code, event_context context);
 
@@ -36,24 +43,38 @@ constexpr void toggle_fullscreen(void);
 constexpr void toggle_windowed(i32 width, i32 height);
 
 bool app_initialize(void) {
+
   // Subsystems
   memory_system_initialize();
-  event_system_initialize();
-  time_system_initialize();
-  state = (app_system_state*)allocate_memory_linear(sizeof(app_system_state), true);
-  if (!state) {
-    TraceLog(LOG_FATAL, "app::app_initialize()::App state allocation has failed");
+  if(not event_system_initialize()) {
+    alert("Event system init failed", "Fatal");
     return false;
   }
+  if (not time_system_initialize()) {
+    alert("Time system init failed", "Fatal");
+    return false;
+  }
+
+  state = (app_system_state*)allocate_memory_linear(sizeof(app_system_state), true);
+  if (not state or state == nullptr) {
+    alert("App state allocation failed", "Fatal");
+    return false;
+  }
+  *state = app_system_state();
   
   // Platform    
-  if(!settings_initialize()) {
-    TraceLog(LOG_ERROR, "app::app_initialize()::Cannot initialize settings");
+  if(not settings_initialize()) {
+    alert("Settings state init failed", "Fatal");
     return false; // TODO: Set default settings instead
   }
-  app_settings * initializer = get_initializer_settings();
+  const app_settings * initializer = get_initializer_settings();
   SetConfigFlags(FLAG_VSYNC_HINT | FLAG_WINDOW_HIGHDPI | FLAG_WINDOW_UNDECORATED);
   InitWindow(initializer->window_width ,initializer->window_height, GAME_TITLE);
+
+  if(not logging_system_initialize()) { // INFO: Requires Raylib to file system operations
+    alert("Logging system init failed", "Fatal");
+    return false;
+  }
 
   set_settings_from_ini_file(CONFIG_FILE_LOCATION);
   state->settings = get_app_settings();
@@ -61,7 +82,7 @@ bool app_initialize(void) {
   // Game
   #if USE_PAK_FORMAT 
 		if (not pak_parser_system_initialize()) {
-    	TraceLog(LOG_ERROR, "app::app_initialize()::Cannot initialize par parser");
+    	IFATAL("app::app_initialize()::Cannot initialize par parser");
     	return false;
 		}
     const file_buffer * loading_thumbnail = fetch_asset_file_buffer(PAK_FILE_ASSET1, PAK_FILE_ASSET1_THUMBNAIL);
@@ -96,31 +117,31 @@ bool app_initialize(void) {
     EndDrawing();
   #endif
 
-  if (!loc_parser_system_initialize()) {
-    TraceLog(LOG_WARNING, "app::app_initialize()::Localization system init failed");
+  if (not loc_parser_system_initialize()) {
+    IFATAL("app::app_initialize()::Localization system init failed");
     return false; // TODO: Set default language instead
   }
   _loc_parser_parse_localization_data();
 
-  if(!resource_system_initialize()) {
-    TraceLog(LOG_WARNING, "app::app_initialize()::Resource system init failed");
+  if(not resource_system_initialize()) {
+    IFATAL("app::app_initialize()::Resource system init failed");
     return false;
   }
-  if(!sound_system_initialize()) {
-    TraceLog(LOG_WARNING, "app::app_initialize()::Sound system init failed");
+  if(not sound_system_initialize()) {
+    IFATAL("app::app_initialize()::Sound system init failed");
     return false;
   }
 
-  if(!world_system_initialize(state->settings)) {
-    TraceLog(LOG_WARNING, "app::app_initialize()::World initialize failed");
+  if(not world_system_initialize(state->settings)) {
+    IFATAL("app::app_initialize()::World initialize failed");
     return false;
   }
-  if(!scene_manager_initialize(state->settings)) {
-    TraceLog(LOG_WARNING, "app::app_initialize()::Scene manager initialize failed");
+  if(not scene_manager_initialize(state->settings)) {
+    IFATAL("app::app_initialize()::Scene manager initialize failed");
     return false;
   }
-  if (!initialize_shader_system()) {
-    TraceLog(LOG_WARNING, "app::app_initialize()::Shader system initialization failed");
+  if (not initialize_shader_system()) {
+    IFATAL("app::app_initialize()::Shader system initialization failed");
     return false;
   }
   state->post_process_shader = get_shader_by_enum(SHADER_ID_POST_PROCESS);
@@ -158,15 +179,13 @@ bool window_should_close(void) {
 }
 
 bool app_update(void) {
-  if (!state) {
-    TraceLog(LOG_FATAL, "app::app_update()::App state is not valid!");
+  if (not state or state == nullptr) {
+    IFATAL("app::app_update()::State is invalid");
     return false;
   }
-  
   update_app_settings_state();
 
   if ((IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_W)) || (IsKeyDown(KEY_LEFT_ALT) && IsKeyPressed(KEY_F4))) {
-    // TODO: handle destruction ops
     state->app_running = false;
   }
   if (IsKeyDown(KEY_LEFT_ALT) && IsKeyPressed(KEY_ENTER)) {
@@ -216,12 +235,12 @@ bool app_render(void) {
   BeginDrawing();
     ClearBackground(CLEAR_BACKGROUND_COLOR);
     BeginMode2D(state->screen_space_camera);
-      Rectangle source = Rectangle {0, 0, (f32)state->drawing_target.texture.width, (f32)-state->drawing_target.texture.height};
-      Rectangle dest = Rectangle {0, 0, static_cast<f32>(state->settings->window_width), static_cast<f32>(-state->settings->window_height)
+      Rectangle source = Rectangle {0.f, 0.f, (f32)state->drawing_target.texture.width, (f32)-state->drawing_target.texture.height};
+      Rectangle dest = Rectangle {0.f, 0.f, static_cast<f32>(state->settings->window_width), static_cast<f32>(-state->settings->window_height)
       };
 
     BeginShaderMode(get_shader_by_enum(SHADER_ID_POST_PROCESS)->handle);
-      DrawTexturePro(state->drawing_target.texture, source, dest, ZEROVEC2, 0, WHITE);
+      DrawTexturePro(state->drawing_target.texture, source, dest, ZEROVEC2, 0.f, WHITE);
     EndShaderMode();
 
     EndMode2D();

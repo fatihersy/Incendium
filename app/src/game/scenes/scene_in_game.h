@@ -5,7 +5,7 @@
 
 #include <game/game_types.h>
 
-[[__nodiscard__]] bool initialize_scene_in_game(const app_settings * _in_app_settings, bool fade_in);
+[[__nodiscard__]] bool initialize_scene_in_game(const app_settings *const _in_app_settings, bool fade_in);
 void end_scene_in_game(void);
 
 void update_scene_in_game(void);

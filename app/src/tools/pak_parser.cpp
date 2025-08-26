@@ -1,7 +1,8 @@
 #include "pak_parser.h"
-#include "core/fmemory.h"
-
 #include "raylib.h"
+
+#include "core/fmemory.h"
+#include "core/logger.h"
 
 #define HEADER_SYMBOL_BEGIN "__BEGIN__"
 #define HEADER_SYMBOL_BEGIN_LENGTH 9
@@ -76,14 +77,14 @@ void assign_file_data_by_id(pak_file_id id, i32 index, size_t file_offset_in_pak
 
 i32 read_file(const char * path) {
   if (not FileExists(path)) {
-    TraceLog(LOG_INFO, "main::write_map_pak()::file '%s' doesn't exist", path);
+    IERROR("main::write_map_pak()::file '%s' doesn't exist", path);
     return 0;
   }
   state->read_buffer.clear();
   i32 loaded_data = 1;
   u8* data = LoadFileData(path, &loaded_data);
   if (loaded_data <= 1 ) {
-    TraceLog(LOG_INFO, "main::write_map_pak()::file '%s' doesn't exist", path);
+    IERROR("main::write_map_pak()::file '%s' doesn't exist", path);
     return 0;
   }
   state->read_buffer.assign(data, data + loaded_data);
@@ -96,12 +97,12 @@ i32 read_file(const char * path) {
 
 bool pak_parser_system_initialize(void) {
   if (state and state != nullptr) {
-    TraceLog(LOG_WARNING, "pak_parser::pak_parser_system_initialize()::Called twice");
+    IERROR("pak_parser::pak_parser_system_initialize()::Called twice");
     return true;
   }
   state = (pak_parser_system_state*)allocate_memory_linear(sizeof(pak_parser_system_state), true);
   if (not state or state == nullptr) {
-    TraceLog(LOG_WARNING, "pak_parser::pak_parser_system_initialize()::State allocation failed");
+    IERROR("pak_parser::pak_parser_system_initialize()::State allocation failed");
     return false;
   }
   *state = pak_parser_system_state();
@@ -139,13 +140,12 @@ bool pak_parser_system_initialize(void) {
       file_buffer(PAK_FILE_UNDEFINED, PAK_FILE_ASSET2_MAX, ""),
     })
   );
-
   return true;
 }
 
 bool parse_asset_pak(pak_file_id id) {
   if (not state or state == nullptr) {
-    TraceLog(LOG_ERROR, "pak_parser::parse_asset_pak()::State is invalid");
+    IERROR("pak_parser::parse_asset_pak()::State is invalid");
     return false;
   }
   switch (id) {
@@ -155,7 +155,7 @@ bool parse_asset_pak(pak_file_id id) {
   		  state->read_buffer.clear();
 
   		  if (not read_file(path.c_str())) {
-  		    TraceLog(LOG_ERROR, "pak_parser::parse_asset_pak()::File read failed");
+  		    IERROR("pak_parser::parse_asset_pak()::File read failed");
   		    return false;
   		  }
   		  assign_pak_data_by_id(id);
@@ -180,7 +180,7 @@ bool parse_asset_pak(pak_file_id id) {
   		  state->read_buffer.clear();
 
   		  if (not read_file(path.c_str())) {
-  		    TraceLog(LOG_ERROR, "pak_parser::parse_asset_pak()::File read failed");
+  		    IERROR("pak_parser::parse_asset_pak()::File read failed");
   		    return false;
   		  }
         //std::string read_buffer_end = state->read_buffer.substr(state->read_buffer.size() - 16u, 16u);
@@ -200,23 +200,23 @@ bool parse_asset_pak(pak_file_id id) {
 			return true;
 		}
   	default: {
-  	  TraceLog(LOG_ERROR, "pak_parser::parse_asset_pak()::Unsupported Id");
+  	  IWARN("pak_parser::parse_asset_pak()::Unsupported Id");
   	  return false;
 		}
   }
-  TraceLog(LOG_ERROR, "pak_parser::parse_asset_pak()::Function ended unexpectedly");
+  IERROR("pak_parser::parse_asset_pak()::Function ended unexpectedly");
   return false;
 }
 bool parse_map_pak(void) {
   if (not state or state == nullptr) {
-    TraceLog(LOG_ERROR, "pak_parser::parse_map_pak()::State is invalid");
+    IERROR("pak_parser::parse_map_pak()::State is invalid");
     return false;
   }
   if(state->map_pak_data.empty()) {
     const std::string path = pak_id_to_file_name(PAK_FILE_MAP);
     state->read_buffer.clear();
     if (not read_file(path.c_str())) {
-      TraceLog(LOG_ERROR, "pak_parser::parse_map_pak()::Pak file:'%s' read failed", path.c_str());
+      IERROR("pak_parser::parse_map_pak()::Pak file:'%s' read failed", path.c_str());
       return false;
     }
     assign_pak_data_by_id(PAK_FILE_MAP);
@@ -233,7 +233,6 @@ bool parse_map_pak(void) {
 			return true;
 		}
   }
-
 	return true;
 }
 
@@ -241,7 +240,7 @@ size_t read_pak_file_data(pak_file_id pak_id, size_t read_start_offset, size_t *
   state->read_buffer.clear();
   const std::string * pak_data = pak_id_to_pak_data_pointer(pak_id);
   if (not pak_data or pak_data == nullptr) {
-    TraceLog(LOG_ERROR, "pak_parser::read_pak_file_data()::Pak data is invalid");
+    IERROR("pak_parser::read_pak_file_data()::Pak data is invalid");
     return 0u;
   }
   size_t accumulator = read_start_offset;
@@ -268,7 +267,7 @@ size_t pak_parser_read_to_header_begin(pak_file_id pak_id, size_t offset, size_t
   state->read_buffer.clear();
   const std::string * pak_data = pak_id_to_pak_data_pointer(pak_id);
   if (not pak_data or pak_data == nullptr) {
-    TraceLog(LOG_ERROR, "pak_parser::read_pak_file_data()::Pak data is invalid");
+    IERROR("pak_parser::read_pak_file_data()::Pak data is invalid");
     return 0u;
   }
   size_t out_offset = offset;
@@ -293,7 +292,7 @@ size_t pak_parser_read_to_header_end(pak_file_id pak_id, size_t offset, size_t d
   state->read_buffer.clear();
   const std::string * pak_data = pak_id_to_pak_data_pointer(pak_id);
   if (not pak_data or pak_data == nullptr) {
-    TraceLog(LOG_ERROR, "pak_parser::read_pak_file_data()::Pak data is invalid");
+    IERROR("pak_parser::read_pak_file_data()::Pak data is invalid");
     return 0u;
   }
   size_t out_offset = offset;
@@ -342,7 +341,7 @@ size_t pak_parser_read_map_data(size_t offset, size_t *const out_pak_start_offse
 
 std::string pak_id_to_file_name(pak_file_id id) {
   if (id >= PAK_FILE_MAX or id <= PAK_FILE_UNDEFINED) {
-    TraceLog(LOG_ERROR, "pak_parser::pak_id_to_file_name()::File id is out of bound");
+    IWARN("pak_parser::pak_id_to_file_name()::File id is out of bound");
     return std::string("");
   }
   switch (id) {
@@ -350,38 +349,36 @@ std::string pak_id_to_file_name(pak_file_id id) {
     case PAK_FILE_ASSET2: return std::string("asset2.pak");
     case PAK_FILE_MAP: return std::string("map.pak");
     default:{
-      TraceLog(LOG_ERROR, "pak_parser::pak_id_to_file_name()::Unsupported pak id");
+      IWARN("pak_parser::pak_id_to_file_name()::Unsupported pak id");
       return std::string("");
     }
   }
-  
-  TraceLog(LOG_ERROR, "pak_parser::pak_id_to_file_name()::Function ended unexpectedly");
+  IERROR("pak_parser::pak_id_to_file_name()::Function ended unexpectedly");
   return std::string("");
 }
 const asset_pak_file * pak_id_to_pak_file(pak_file_id id) {
 	if (not state or state == nullptr) {
-    TraceLog(LOG_ERROR, "pak_parser::pak_id_to_pak_file()::State is invalid");
+    IERROR("pak_parser::pak_id_to_pak_file()::State is invalid");
     return nullptr;
 	}
   if (id >= PAK_FILE_MAX or id <= PAK_FILE_UNDEFINED) {
-    TraceLog(LOG_ERROR, "pak_parser::pak_id_to_pak_file()::File id is out of bound");
+    IWARN("pak_parser::pak_id_to_pak_file()::File id is out of bound");
     return nullptr;
   }
   switch (id) {
     case PAK_FILE_ASSET1: return __builtin_addressof(state->asset_pak_datas.at(id));
     case PAK_FILE_ASSET2: return __builtin_addressof(state->asset_pak_datas.at(id));
     default:{
-      TraceLog(LOG_ERROR, "pak_parser::pak_id_to_pak_file()::Unsupported pak id");
+      IWARN("pak_parser::pak_id_to_pak_file()::Unsupported pak id");
       return nullptr;
     }
   }
-  
-  TraceLog(LOG_ERROR, "pak_parser::pak_id_to_pak_file()::Function ended unexpectedly");
+  IERROR("pak_parser::pak_id_to_pak_file()::Function ended unexpectedly");
   return nullptr;
 }
 const std::string * pak_id_to_pak_data_pointer(pak_file_id id) {
   if (id >= PAK_FILE_MAX or id <= PAK_FILE_UNDEFINED) {
-    TraceLog(LOG_WARNING, "pak_parser::pak_id_to_pak_data_pointer()::File id is out of bound");
+    IWARN("pak_parser::pak_id_to_pak_data_pointer()::File id is out of bound");
     return nullptr;
   }
   switch (id) {
@@ -395,46 +392,44 @@ const std::string * pak_id_to_pak_data_pointer(pak_file_id id) {
 			return __builtin_addressof(state->map_pak_data);
 		}
     default:{
-      TraceLog(LOG_WARNING, "pak_parser::pak_id_to_pak_data_pointer()::Unsupported pak id");
+      IWARN("pak_parser::pak_id_to_pak_data_pointer()::Unsupported pak id");
       return nullptr;
     }
   }
-  
-  TraceLog(LOG_ERROR, "pak_parser::pak_id_to_pak_data_pointer()::Function ended unexpectedly");
+  IERROR("pak_parser::pak_id_to_pak_data_pointer()::Function ended unexpectedly");
   return nullptr;
 }
 const file_buffer * pak_id_to_file_data_pointer(pak_file_id id, i32 index) {
   if (id >= PAK_FILE_MAX or id <= PAK_FILE_UNDEFINED) {
-    TraceLog(LOG_ERROR, "pak_parser::pak_id_to_file_data_pointer()::File id is out of bound");
+    IERROR("pak_parser::pak_id_to_file_data_pointer()::File id is out of bound");
     return nullptr;
   }
   switch (id) {
     case PAK_FILE_ASSET1: {
 			if (static_cast<size_t>(index) >= state->asset_pak_datas.at(id).file_buffers.size()) {
-    		TraceLog(LOG_ERROR, "pak_parser::pak_id_to_file_data_pointer()::Index is out of bound");
+    		IWARN("pak_parser::pak_id_to_file_data_pointer()::Index is out of bound");
 				return nullptr;
 			}
 			return __builtin_addressof(state->asset_pak_datas.at(id).file_buffers.at(index));
 		}
     case PAK_FILE_ASSET2: {
 			if (static_cast<size_t>(index) >= state->asset_pak_datas.at(id).file_buffers.size()) {
-    		TraceLog(LOG_ERROR, "pak_parser::pak_id_to_file_data_pointer()::Index is out of bound");
+    		IWARN("pak_parser::pak_id_to_file_data_pointer()::Index is out of bound");
 				return nullptr;
 			}
 			return __builtin_addressof(state->asset_pak_datas.at(id).file_buffers.at(index));
 		}
     default:{
-      TraceLog(LOG_ERROR, "pak_parser::pak_id_to_file_data_pointer()::Unsupported pak id");
+      IWARN("pak_parser::pak_id_to_file_data_pointer()::Unsupported pak id");
       return nullptr;
     }
   }
-  
-  TraceLog(LOG_ERROR, "pak_parser::pak_id_to_file_data_pointer()::Function ended unexpectedly");
+  IERROR("pak_parser::pak_id_to_file_data_pointer()::Function ended unexpectedly");
   return nullptr;
 }
 void assign_pak_data_by_id(pak_file_id id) {
   if (id >= PAK_FILE_MAX or id <= PAK_FILE_UNDEFINED) {
-    TraceLog(LOG_ERROR, "pak_parser::assign_pak_data_by_id()::File id is out of bound");
+    IWARN("pak_parser::assign_pak_data_by_id()::File id is out of bound");
     return;
   }
   switch (id) {
@@ -457,22 +452,22 @@ void assign_pak_data_by_id(pak_file_id id) {
       return;
     }
     default:{
-      TraceLog(LOG_ERROR, "pak_parser::pak_id_to_file_name()::Unsupported pak id");
+      IWARN("pak_parser::pak_id_to_file_name()::Unsupported pak id");
       return;
     }
   }
-  TraceLog(LOG_ERROR, "pak_parser::pak_id_to_file_name()::Function ended unexpectedly");
+  IERROR("pak_parser::pak_id_to_file_name()::Function ended unexpectedly");
   return;
 }
 void assign_file_data_by_id(pak_file_id id, i32 index, size_t file_offset_in_pak_data) {
   if (id >= PAK_FILE_MAX or id <= PAK_FILE_UNDEFINED) {
-    TraceLog(LOG_ERROR, "pak_parser::assign_file_data_by_id()::File id is out of bound");
+    IWARN("pak_parser::assign_file_data_by_id()::File id is out of bound");
     return;
   }
   switch (id) {
     case PAK_FILE_ASSET1: {
 			if (static_cast<size_t>(index) >= state->asset_pak_datas.at(id).file_buffers.size()) {
-    		TraceLog(LOG_ERROR, "pak_parser::assign_file_data_by_id()::Index is out of bound");
+    		IERROR("pak_parser::assign_file_data_by_id()::Index is out of bound");
 				return;
 			}
       //std::string header_begin = state->read_buffer.substr(0, HEADER_SYMBOL_BEGIN_LENGTH);
@@ -486,7 +481,7 @@ void assign_file_data_by_id(pak_file_id id, i32 index, size_t file_offset_in_pak
     }
     case PAK_FILE_ASSET2: {
 			if (static_cast<size_t>(index) >= state->asset_pak_datas.at(id).file_buffers.size()) {
-    		TraceLog(LOG_ERROR, "pak_parser::assign_file_data_by_id()::Index is out of bound");
+    		IWARN("pak_parser::assign_file_data_by_id()::Index is out of bound");
 				return;
 			}
       state->asset_pak_datas.at(id).file_buffers.at(static_cast<size_t>(index)).content.clear();
@@ -497,35 +492,34 @@ void assign_file_data_by_id(pak_file_id id, i32 index, size_t file_offset_in_pak
     }
     case PAK_FILE_MAP: {
 			if (static_cast<size_t>(index) >= state->worldmap_location_file_datas.size()) {
-    		TraceLog(LOG_ERROR, "pak_parser::assign_file_data_by_id()::Index is out of bound");
+    		IWARN("pak_parser::assign_file_data_by_id()::Index is out of bound");
 				return;
 			}
       state->worldmap_location_file_datas.at(index) = state->read_wsf_buffer;
       return;
     }
     default:{
-      TraceLog(LOG_ERROR, "pak_parser::assign_file_data_by_id()::Unsupported pak id");
+      IWARN("pak_parser::assign_file_data_by_id()::Unsupported pak id");
       return;
     }
   }
-
-  TraceLog(LOG_ERROR, "pak_parser::assign_file_data_by_id()::Function ended unexpectedly");
+  IERROR("pak_parser::assign_file_data_by_id()::Function ended unexpectedly");
   return;
 }
 
 const file_buffer * get_asset_file_buffer(pak_file_id id, i32 index) {
   if (not state or state == nullptr) {
-    TraceLog(LOG_ERROR, "pak_parser::get_asset_file_buffer()::Pak parser system didn't initialized");
+    IERROR("pak_parser::get_asset_file_buffer()::Pak parser system didn't initialized");
     return nullptr;
   }
   if (id >= PAK_FILE_MAX or id <= PAK_FILE_UNDEFINED) {
-    TraceLog(LOG_ERROR, "pak_parser::get_asset_file_buffer()::File id is out of bound");
+    IWARN("pak_parser::get_asset_file_buffer()::File id is out of bound");
     return nullptr;
   }
   switch (id) {
     case PAK_FILE_ASSET1: {
   		if (static_cast<size_t>(index) >= state->asset_pak_datas.at(id).file_buffers.size()) {
-  		  TraceLog(LOG_ERROR, "pak_parser::get_asset_file_buffer()::Index is out of bound");
+  		  IWARN("pak_parser::get_asset_file_buffer()::Index is out of bound");
   		  return nullptr;
   		}
       file_buffer& file = state->asset_pak_datas.at(id).file_buffers.at(static_cast<size_t>(index));
@@ -538,7 +532,7 @@ const file_buffer * get_asset_file_buffer(pak_file_id id, i32 index) {
     }
     case PAK_FILE_ASSET2:{
   		if (static_cast<size_t>(index) >= state->asset_pak_datas.at(id).file_buffers.size()) {
-  		  TraceLog(LOG_ERROR, "pak_parser::get_asset_file_buffer()::Index is out of bound");
+  		  IWARN("pak_parser::get_asset_file_buffer()::Index is out of bound");
   		  return nullptr;
   		}
       file_buffer& file = state->asset_pak_datas.at(id).file_buffers.at(static_cast<size_t>(index));
@@ -550,23 +544,23 @@ const file_buffer * get_asset_file_buffer(pak_file_id id, i32 index) {
       }
     }
     default:{
-      TraceLog(LOG_ERROR, "pak_parser::get_asset_file_buffer()::Unsupported pak id");
+      IWARN("pak_parser::get_asset_file_buffer()::Unsupported pak id");
       return nullptr;
     }
   }
-  TraceLog(LOG_ERROR, "pak_parser::get_asset_file_buffer()::Function ended unexpectedly");
+  IERROR("pak_parser::get_asset_file_buffer()::Function ended unexpectedly");
   return nullptr;
 }
 const file_buffer * fetch_asset_file_buffer(pak_file_id id, i32 index) {
   if (id >= PAK_FILE_MAX or id <= PAK_FILE_UNDEFINED) {
-    TraceLog(LOG_WARNING, "pak_parser::fetch_asset_file_buffer()::Pak id is out of bound");
+    IWARN("pak_parser::fetch_asset_file_buffer()::Pak id is out of bound");
     return nullptr;
   }
   if (not state->asset_pak_datas.at(id).is_initialized) {
     const std::string path = pak_id_to_file_name(id);
     state->read_buffer.clear();
     if (not read_file(path.c_str())) {
-      TraceLog(LOG_WARNING, "pak_parser::fetch_asset_file_buffer()::File read failed");
+      IERROR("pak_parser::fetch_asset_file_buffer()::File read failed");
       return nullptr;
     }
     assign_pak_data_by_id(id);
@@ -579,25 +573,24 @@ const file_buffer * fetch_asset_file_buffer(pak_file_id id, i32 index) {
   }
   const file_buffer * const buffer = pak_id_to_file_data_pointer(id, index);
   if (not buffer or buffer == nullptr) {
-    TraceLog(LOG_WARNING, "pak_parser::fetch_asset_file_buffer()::File pointer is invalid");
+    IERROR("pak_parser::fetch_asset_file_buffer()::File pointer is invalid");
     return nullptr;
   }
   size_t file_start_offset_in_pak= 0u;
   for (i32 itr_000 = 0; itr_000 < index; ++itr_000) {
 	  read_pak_file_data(id, file_start_offset_in_pak, __builtin_addressof(file_start_offset_in_pak));
   }
-
 	assign_file_data_by_id(id, index, file_start_offset_in_pak);
   return buffer;
 }
 
 const worldmap_stage_file * get_map_file_buffer(i32 index) {
   if (not state or state == nullptr) {
-    TraceLog(LOG_ERROR, "pak_parser::get_asset_file_buffer()::Pak parser system didn't initialized");
+    IERROR("pak_parser::get_asset_file_buffer()::Pak parser system didn't initialized");
     return nullptr;
   }
   if (index >= MAX_WORLDMAP_LOCATIONS or index < 0) {
-    TraceLog(LOG_ERROR, "pak_parser::get_asset_file_buffer()::File id is out of bound");
+    IWARN("pak_parser::get_asset_file_buffer()::File id is out of bound");
     return nullptr;
   }
   worldmap_stage_file& file = state->worldmap_location_file_datas.at(index);
@@ -608,7 +601,7 @@ const worldmap_stage_file * fetch_map_file_buffer(i32 index) {
     const std::string path = pak_id_to_file_name(PAK_FILE_MAP);
     state->read_buffer.clear();
     if (not read_file(path.c_str())) {
-      TraceLog(LOG_WARNING, "pak_parser::fetch_asset_file_buffer()::File read failed");
+      IERROR("pak_parser::fetch_asset_file_buffer()::File read failed");
       return nullptr;
     }
     assign_pak_data_by_id(PAK_FILE_MAP);

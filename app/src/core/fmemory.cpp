@@ -3,8 +3,6 @@
 #include <stdlib.h> // Required for: malloc(), free()
 #include <string.h> // Required for: memset(), memcpy()
 
-#include "core/logger.h"
-
 typedef struct memory_system_state {
     u64 linear_memory_total_size;
     u64 linear_memory_allocated;
@@ -23,14 +21,14 @@ void memory_system_initialize(void) {
 }
 
 void* allocate_memory_linear(u64 size, bool will_zero_memory) {
-    if (memory_system->linear_memory_allocated + size > memory_system->linear_memory_total_size) {
-        alert("Allocate memory failed!", "Error");
+    #ifdef _DEBUG
+      if (memory_system->linear_memory_allocated + size > memory_system->linear_memory_total_size) {
         exit(EXIT_FAILURE);
-    }
-    if (size % sizeof(size_t) != 0) {
-        alert("Attemped to allocate nonaligned size", "Error");
+      }
+      if (size % sizeof(size_t) != 0) {
         exit(EXIT_FAILURE);
-    }
+      }
+    #endif
 
     void* block = ((u8*)memory_system->linear_memory) + memory_system->linear_memory_allocated;
     memory_system->linear_memory_allocated += size;

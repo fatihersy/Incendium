@@ -6,6 +6,7 @@
 #include "core/event.h"
 #include "core/fmemory.h"
 #include "core/fmath.h"
+#include "core/logger.h"
 
 #include "game/abilities/ability_manager.h"
 #include "game/player.h"
@@ -46,7 +47,7 @@ typedef struct game_manager_system_state {
 static game_manager_system_state * state = nullptr;
 
 // To avoid dublicate symbol errors. Implementation in defines.h
-extern const u32 level_curve[MAX_PLAYER_LEVEL+1];
+extern const i32 level_curve[MAX_PLAYER_LEVEL+1];
 
 #define SPAWN_TRYING_LIMIT 15
 #define GET_BOSS_LEVEL(STAGE_LEVEL, VAL) (STAGE_LEVEL + (STAGE_LEVEL * state->stage.boss_scale))
@@ -63,30 +64,42 @@ void reset_ingame_info(void);
 void gm_update_player(void);
 
 bool game_manager_initialize(const camera_metrics * in_camera_metrics, const app_settings * in_app_settings, tilemap ** const in_active_map_ptr) {
-  if (state) {
+  if (state and state != nullptr) {
     return game_manager_reinit(in_camera_metrics, in_app_settings, in_active_map_ptr);
+  }
+  if (not in_camera_metrics or in_camera_metrics == nullptr) {
+    IERROR("game_manager::game_manager_initialize()::Camera pointer is invalid");
+    return false;
+  }
+  if (not in_app_settings or in_app_settings == nullptr) {
+    IERROR("game_manager::game_manager_initialize()::Settings pointer is invalid");
+    return false;
+  }
+  if (not in_active_map_ptr or in_active_map_ptr == nullptr) {
+    IERROR("game_manager::game_manager_initialize()::Map pointer is invalid");
+    return false;
   }
   state = (game_manager_system_state *)allocate_memory_linear(sizeof(game_manager_system_state), true);
   if (not state or state == nullptr) {
-    TraceLog(LOG_ERROR, "game_manager::game_manager_initialize()::Gama manager state allocation failed");
+    IERROR("game_manager::game_manager_initialize()::State allocation failed");
     return false;
   }
   *state = game_manager_system_state();
 
   if (not save_system_initialize()) {
-    TraceLog(LOG_ERROR, "game_manager::game_manager_initialize()::Save system init returned false");
+    IERROR("game_manager::game_manager_initialize()::Save system init returned false");
     return false;
   }
   if (not ability_system_initialize(in_camera_metrics, get_app_settings(), __builtin_addressof(state->game_info))) {
-    TraceLog(LOG_ERROR, "game_manager::game_manager_initialize()::Ability system init returned false");
+    IERROR("game_manager::game_manager_initialize()::Ability system init returned false");
     return false;
   }
   if (not spawn_system_initialize(in_camera_metrics, __builtin_addressof(state->game_info))) {
-    TraceLog(LOG_ERROR, "game_manager::game_manager_initialize()::Spawn system init returned false");
+    IERROR("game_manager::game_manager_initialize()::Spawn system init returned false");
     return false;
   }
   if (not player_system_initialize(in_camera_metrics, get_app_settings(), __builtin_addressof(state->game_info))) {
-    TraceLog(LOG_ERROR, "game_manager::game_manager_reinit()::Returned false");
+    IERROR("game_manager::game_manager_initialize()::Player system init failed");
     return false;
   }
   state->player_state_static = (*get_default_player());
@@ -145,12 +158,16 @@ bool game_manager_initialize(const camera_metrics * in_camera_metrics, const app
   return game_manager_reinit(in_camera_metrics, in_app_settings, in_active_map_ptr);
 }
 bool game_manager_reinit(const camera_metrics * in_camera_metrics, const app_settings * in_app_settings, tilemap ** const in_active_map_ptr) {
+  if (not in_app_settings or in_app_settings == nullptr or not in_active_map_ptr or in_active_map_ptr == nullptr) {
+    IERROR("game_manager::game_manager_reinit()::Recieved pointer(s) is/are invalid");
+    return false;
+  }
   if (not player_system_initialize(in_camera_metrics, in_app_settings, __builtin_addressof(state->game_info))) {
-    TraceLog(LOG_ERROR, "game_manager::game_manager_reinit()::Player system initialization failed");
+    IERROR("game_manager::game_manager_reinit()::Player system initialization failed");
     return false;
   }
   if (not parse_or_create_save_data_from_file(SAVE_SLOT_CURRENT_SESSION, save_data(SAVE_SLOT_CURRENT_SESSION, (*get_default_player()), 0))) {
-    TraceLog(LOG_ERROR, "game_manager::game_manager_reinit()::Save system failed to creating/parsing serialization data");
+    IERROR("game_manager::game_manager_reinit()::Save system failed to creating/parsing serialization data");
     return false;
   }
   gm_load_game();
@@ -217,7 +234,7 @@ void update_game_manager(void) {
       break;
     }
     default: {
-      TraceLog(LOG_WARNING, "game_manager::update_game_manager()::Unknown in-game phase");
+      IWARN("game_manager::update_game_manager()::Unsupported in-game phase");
       gm_end_game(false);
       event_fire(EVENT_CODE_SCENE_MAIN_MENU, event_context());
     }
@@ -282,7 +299,7 @@ void render_game(void) {
       break;
     }
     default: {
-      TraceLog(LOG_WARNING, "game_manager::render_game()::Unknown in-game phase");
+      IWARN("game_manager::render_game()::Unsupported in-game phase");
       gm_end_game(false);
       event_fire(EVENT_CODE_SCENE_MAIN_MENU, event_context());
     }
@@ -296,13 +313,13 @@ void render_game(void) {
  */
 bool gm_start_game(worldmap_stage stage) {
   if (not state or state == nullptr) {
-    TraceLog(LOG_ERROR, "game_manager::gm_start_game()::State is invalid");
+    IERROR("game_manager::gm_start_game()::State is invalid");
     return false;
   }
   if (not state->game_info.player_state_dynamic or state->game_info.player_state_dynamic == nullptr) {
     player_state * const _player = get_player_state();
     if (not _player or _player == nullptr) {
-      TraceLog(LOG_ERROR, "game_manager::gm_start_game()::Player state is invalid");
+      IERROR("game_manager::gm_start_game()::Player state is invalid");
       return false;
     }
     state->game_info.player_state_dynamic = _player;
@@ -316,7 +333,7 @@ bool gm_start_game(worldmap_stage stage) {
   for (size_t itr_000 = 0; itr_000 < state->chosen_traits.size(); ++itr_000) {
     const character_trait * const _trait_ptr = __builtin_addressof(state->chosen_traits.at(itr_000));
     if (_trait_ptr->type < 0 && _trait_ptr->type >= CHARACTER_STATS_MAX) {
-      TraceLog(LOG_WARNING, "game_manager::gm_start_game()::Trait type is out of bound");
+      IWARN("game_manager::gm_start_game()::Trait type is out of bound");
       continue;
     }
     character_stat * const _stat_ptr = __builtin_addressof(_stat_array_ptr->at(_trait_ptr->type));
@@ -394,12 +411,12 @@ void gm_damage_spawn_if_collide(data128 coll_data, i32 damage, collision_type co
       return; 
     }
     default: {
-      TraceLog(LOG_WARNING, "game_manager::gm_damage_spawn_if_collide()::Unsupported collision check type");
+      IWARN("game_manager::gm_damage_spawn_if_collide()::Unsupported collision check type");
       return;
     }
   }
 
-  TraceLog(LOG_WARNING, "game_manager::gm_damage_spawn_if_collide()::Function terminated unexpectedly");
+  IERROR("game_manager::gm_damage_spawn_if_collide()::Function terminated unexpectedly");
 }
 void gm_damage_player_if_collide(data128 coll_data, i32 damage, collision_type coll_check) {
   switch (coll_check) {
@@ -422,19 +439,19 @@ void gm_damage_player_if_collide(data128 coll_data, i32 damage, collision_type c
       return; 
     }
 
-    default: TraceLog(LOG_WARNING, "game_manager::gm_damage_player_if_collide()::Unsupported collision check type"); return;
+    default: IWARN("game_manager::gm_damage_player_if_collide()::Unsupported collision check type"); return;
   }
 
-  TraceLog(LOG_WARNING, "game_manager::gm_damage_player_if_collide()::Function terminated unexpectedly");
+  IERROR("game_manager::gm_damage_player_if_collide()::Function terminated unexpectedly");
 }
 
 void populate_map_with_spawns(i32 min_count) {
   if (not state or state == nullptr) {
-    TraceLog(LOG_ERROR, "game_manager::populate_map_with_spawns()::State is not valid");
+    IERROR("game_manager::populate_map_with_spawns()::State is not valid");
     return;
   }
   if (not state->game_info.in_spawns or state->game_info.in_spawns == nullptr) {
-    TraceLog(LOG_ERROR, "game_manager::populate_map_with_spawns()::Spawns pointer is not valid");
+    IWARN("game_manager::populate_map_with_spawns()::Spawns pointer is not valid");
     return;
   }
   i32 spawn_trying_limit = SPAWN_TRYING_LIMIT;
@@ -454,7 +471,7 @@ void populate_map_with_spawns(i32 min_count) {
 
 i32 spawn_boss(void) {
   if (not state or state == nullptr) {
-    TraceLog(LOG_ERROR, "game_manager::spawn_boss()::State is invalid");
+    IERROR("game_manager::spawn_boss()::State is invalid");
     return -1;
   }
   for (i32 boss_spawning_attemts = 0; boss_spawning_attemts < SPAWN_TRYING_LIMIT; ++boss_spawning_attemts) 
@@ -482,11 +499,11 @@ void currency_souls_add(i32 value) {
 }
 void set_starter_ability(ability_id _id) {
   if (not state or state == nullptr) {
-    TraceLog(LOG_ERROR, "game_manager::set_starter_ability()::State is invalid");
+    IERROR("game_manager::set_starter_ability()::State is invalid");
     return;
   }
   if (_id <= ABILITY_ID_UNDEFINED or _id >= ABILITY_ID_MAX) {
-    TraceLog(LOG_ERROR, "game_manager::set_starter_ability()::Ability id is out of bound");
+    IWARN("game_manager::set_starter_ability()::Ability id is out of bound");
     return;
   }
 
@@ -494,11 +511,11 @@ void set_starter_ability(ability_id _id) {
 }
 void generate_in_game_info(void) {
   if (not state or state == nullptr) {
-    TraceLog(LOG_ERROR, "game_manager::generate_in_game_info()::State is not valid");
+    IERROR("game_manager::generate_in_game_info()::State is not valid");
     return;
   }
   if (not state->game_info.in_spawns or state->game_info.in_spawns == nullptr) {
-    TraceLog(LOG_ERROR, "game_manager::generate_in_game_info()::Spawn list is invalid");
+    IWARN("game_manager::generate_in_game_info()::Spawn list is invalid");
     return;
   }
   Vector2 player_position = state->game_info.player_state_dynamic->position;
@@ -517,8 +534,8 @@ void generate_in_game_info(void) {
   state->game_info.play_time += GetFrameTime();
 }
 void reset_ingame_info(void) {
-  if (!state || state == nullptr) {
-    TraceLog(LOG_INFO, "game_manager::reset_ingame_info()::State is invalid");
+  if (not state or state == nullptr) {
+    IERROR("game_manager::reset_ingame_info()::State is invalid");
     return;
   }
   state->game_info.collected_souls = 0;
@@ -526,7 +543,7 @@ void reset_ingame_info(void) {
   state->game_info.is_win = false;
 }
 void gm_update_player(void) {
-  if (state->game_info.player_state_dynamic && state->game_info.player_state_dynamic != nullptr && !state->game_info.player_state_dynamic->is_dead) {
+  if (state->game_info.player_state_dynamic and state->game_info.player_state_dynamic != nullptr and not state->game_info.player_state_dynamic->is_dead) {
     const player_update_results pur = update_player();
     if (pur.is_success) { // TODO: Player-Map collision detection system
       const Rectangle& pl_map_coll = state->game_info.player_state_dynamic->map_level_collision;
@@ -592,14 +609,14 @@ void set_static_player_state_stat(character_stat_id stat_id, i32 level) {
 }
 const ingame_info* gm_get_ingame_info(void){
   if (not state or state == nullptr) {
-    TraceLog(LOG_ERROR, "game_manager::gm_get_ingame_info()::State is not valid");
+    IERROR("game_manager::gm_get_ingame_info()::State is not valid");
     return nullptr;
   }
   return __builtin_addressof(state->game_info); 
 }
 const std::vector<character_trait>* gm_get_character_traits(void) {
   if (not state or state == nullptr) {
-    TraceLog(LOG_ERROR, "game_manager::gm_get_character_traits()::State is not valid");
+    IERROR("game_manager::gm_get_character_traits()::State is not valid");
     return nullptr;
   }
 
@@ -607,11 +624,11 @@ const std::vector<character_trait>* gm_get_character_traits(void) {
 }
 void game_manager_set_stat_value_by_level(character_stat* stat, i32 level) {
   if (not state or state == nullptr) {
-    TraceLog(LOG_ERROR, "game_manager::game_manager_set_stats()::State is not valid");
+    IERROR("game_manager::game_manager_set_stats()::State is not valid");
     return;
   }
   if (not stat or stat == nullptr) {
-    TraceLog(LOG_ERROR, "game_manager::game_manager_set_stats()::stat is not valid");
+    IWARN("game_manager::game_manager_set_stats()::stat is not valid");
     return;
   }
   if (stat->id >= CHARACTER_STATS_MAX || stat->id <= CHARACTER_STATS_UNDEFINED) {
@@ -686,20 +703,20 @@ void game_manager_set_stat_value_by_level(character_stat* stat, i32 level) {
       return;
     }
     default:{
-      TraceLog(LOG_ERROR, "game_manager::game_manager_set_stats()::Unsuppported stat id");
+      IWARN("game_manager::game_manager_set_stats()::Unsuppported stat id");
       return;
     }
   }
 
-  TraceLog(LOG_ERROR, "game_manager::game_manager_set_stats()::Function ended unexpectedly");
+  IERROR("game_manager::game_manager_set_stats()::Function ended unexpectedly");
 }
 void game_manager_set_stat_trait_value_by_level(character_stat* stat, data128 value) {
   if (not state or state == nullptr) {
-    TraceLog(LOG_ERROR, "game_manager::game_manager_sum_stat_value()::State is not valid");
+    IERROR("game_manager::game_manager_sum_stat_value()::State is not valid");
     return;
   }
   if (not stat or stat == nullptr) {
-    TraceLog(LOG_ERROR, "game_manager::game_manager_sum_stat_value()::stat is not valid");
+    IWARN("game_manager::game_manager_sum_stat_value()::stat is not valid");
     return;
   }
   switch (stat->id) {
@@ -749,7 +766,7 @@ void game_manager_set_stat_trait_value_by_level(character_stat* stat, data128 va
       break;
     }
     default:{
-      TraceLog(LOG_ERROR, "game_manager::game_manager_sum_stat_value()::Unsuppported stat id");
+      IWARN("game_manager::game_manager_sum_stat_value()::Unsuppported stat id");
       break;
     }
   }
@@ -759,7 +776,7 @@ void game_manager_set_stat_trait_value_by_level(character_stat* stat, data128 va
 // Exposed functions
 const ability * _get_ability(ability_id _id) {
   if (_id <= ABILITY_ID_UNDEFINED or _id >= ABILITY_ID_MAX) {
-    TraceLog(LOG_INFO, "game_manager::_get_ability()::Ability id is out of bound");
+    IWARN("game_manager::_get_ability()::Ability id is out of bound");
     return nullptr;
   }
   return get_ability(_id);
@@ -772,13 +789,13 @@ const Character2D * _get_spawn_by_id(i32 _id) {
 }
 bool _add_ability(ability_id _id) {
   if (_id <= ABILITY_ID_UNDEFINED or _id >= ABILITY_ID_MAX) {
-    TraceLog(LOG_INFO, "game_manager::_add_ability()::Ability id is out of bound");
+    IWARN("game_manager::_add_ability()::Ability id is out of bound");
     return false;
   }
   ability abl = (*get_ability(_id));
   ability_play_system* system = __builtin_addressof(state->game_info.player_state_dynamic->ability_system);
   if (not system or system == nullptr) {
-    TraceLog(LOG_WARNING, "game_manager::_add_ability()::Recieved system was NULL");
+    IWARN("game_manager::_add_ability()::Recieved system was NULL");
     return false;
   }
   abl.p_owner = state->game_info.player_state_dynamic;
@@ -792,7 +809,7 @@ bool _add_ability(ability_id _id) {
 }
 bool _upgrade_ability(ability* abl) {
   if (not abl or abl == nullptr or not abl->is_initialized) {
-    TraceLog(LOG_WARNING, "game_manager::_upgrade_ability::Recieved ability has not initialized yet");
+    IWARN("game_manager::_upgrade_ability::Recieved ability has not initialized yet");
     return false;
   }
   upgrade_ability(abl);
@@ -802,7 +819,7 @@ bool _upgrade_ability(ability* abl) {
 }
 ability _get_next_level(ability abl) {
   if (not abl.is_initialized or abl.id <= ABILITY_ID_UNDEFINED or abl.id >= ABILITY_ID_MAX) {
-    TraceLog(LOG_WARNING, "game_manager::_get_next_level()::Recieved ability has not initialized yet");
+    IWARN("game_manager::_get_next_level()::Recieved ability has not initialized yet");
     return ability();
   }
   return get_next_level(abl);
@@ -853,12 +870,12 @@ bool game_manager_on_event(i32 code, event_context context) {
       return true;
     }
     default: {
-      TraceLog(LOG_WARNING, "game_engine::game_manager_on_event()::Unsuppported code.");
+      IWARN("game_engine::game_manager_on_event()::Unsuppported code.");
       return false;
     }
   }
 
-  TraceLog(LOG_WARNING, "game_engine::game_manager_on_event()::Fire event ended unexpectedly");
+  IERROR("game_engine::game_manager_on_event()::Fire event ended unexpectedly");
   return false;
 }
 

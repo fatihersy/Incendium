@@ -1,5 +1,6 @@
 #include "tilemap.h"
 #include "core/fmemory.h"
+#include "core/logger.h"
 
 #include "tools/pak_parser.h"
 #include "tools/fstring.h"
@@ -25,24 +26,24 @@ void str_to_map(tilemap *const map, tilemap_stringtify_package *const out_packag
 
 bool create_tilemap(const tilesheet_type _type, const Vector2 _position, const i32 _grid_size, const i32 _tile_size, tilemap *const out_tilemap) {
   if (not out_tilemap or out_tilemap == nullptr) {
-    TraceLog(LOG_ERROR, "tilemap::create_tilemap()::tilemap is not valid");
+    IWARN("tilemap::create_tilemap()::tilemap is not valid");
     return false;
   }
   if (_grid_size * _grid_size > MAX_TILEMAP_TILESLOT && (_type >= TILESHEET_TYPE_MAX or _type <= TILESHEET_TYPE_UNSPECIFIED)) {
-    TraceLog(LOG_ERROR, "tilemap::create_tilemap()::grid_size out of bound");
+    IWARN("tilemap::create_tilemap()::grid_size out of bound");
     return false;
   }
 
   const tilesheet *const sheet = get_tilesheet_by_enum(_type);
   if (not sheet or sheet == nullptr) {
-    TraceLog(LOG_ERROR, "tilemap::create_tilemap()::Sheet is not valid");
+    IERROR("tilemap::create_tilemap()::Sheet is not valid");
     return false;
   }
   if (_grid_size > 256) {
-    TraceLog(LOG_WARNING, "tilemap::create_tilemap()::Grid size over 256: %d", _grid_size);
+    IWARN("tilemap::create_tilemap()::Grid size over 256: %d", _grid_size);
   }
   if (_grid_size < 26) {
-    TraceLog(LOG_WARNING, "tilemap::create_tilemap()::Grid size below the 26: %d", _grid_size);
+    IWARN("tilemap::create_tilemap()::Grid size below the 26: %d", _grid_size);
   }
 
   out_tilemap->position = _position;
@@ -88,9 +89,8 @@ bool create_tilemap(const tilesheet_type _type, const Vector2 _position, const i
   return true;
 }
 void create_tilesheet(tilesheet_type _type, i32 _dest_tile_size, f32 _offset, tilesheet *const out_tilesheet) {
-
   if (_type >= TILESHEET_TYPE_MAX or _type <= 0) {
-    TraceLog(LOG_ERROR, "ERROR::tilemap::create_tilesheet()::Sheet type out of bound");
+    IWARN("tilemap::create_tilesheet()::Sheet type out of bound");
     return;
   }
   *out_tilesheet = *get_tilesheet_by_enum(_type);;
@@ -101,7 +101,7 @@ void create_tilesheet(tilesheet_type _type, i32 _dest_tile_size, f32 _offset, ti
 }
 
 void update_tilemap(tilemap *const _tilemap) {
-  if (_tilemap) {
+  if (_tilemap and _tilemap != nullptr) {
     for (size_t itr_000 = 0u; itr_000 < _tilemap->sprite_props.size(); ++itr_000) {
       update_sprite(__builtin_addressof(_tilemap->sprite_props.at(itr_000).sprite));
     }
@@ -113,10 +113,14 @@ void update_tilemap(tilemap *const _tilemap) {
  */
 void render_tilemap(const tilemap *const _tilemap, Rectangle camera_view) {
   if (not _tilemap or _tilemap == nullptr) {
-    TraceLog(LOG_ERROR, "tilemap::render_tilemap()::Provided map was null");
+    IWARN("tilemap::render_tilemap()::Map is invalid");
     return;
   }
-  const tilesheet* sheet = get_tilesheet_by_enum(TILESHEET_TYPE_MAP);
+  const tilesheet *const sheet = get_tilesheet_by_enum(TILESHEET_TYPE_MAP);
+  if (not sheet or sheet == nullptr) {
+    IWARN("tilemap::render_tilemap()::Sheet resource is invalid");
+    return;
+  }
 
   i32 start_x = (i32)((camera_view.x - _tilemap->position.x) / _tilemap->tile_size);
   i32 start_y = (i32)((camera_view.y - _tilemap->position.y) / _tilemap->tile_size);
@@ -130,8 +134,8 @@ void render_tilemap(const tilemap *const _tilemap, Rectangle camera_view) {
 
   for (i32 y = start_y; y < end_y; ++y) {
     for (i32 x = start_x; x < end_x; ++x) {
-      if (x >= MAX_TILEMAP_TILESLOT_X || y >= MAX_TILEMAP_TILESLOT_Y) {
-        TraceLog(LOG_ERROR, "tilemap::render_tilemap()::Calculated tile's x or y out of bound");
+      if (x < 0 or x >= MAX_TILEMAP_TILESLOT_X or y < 0 or y >= MAX_TILEMAP_TILESLOT_Y) {
+        IERROR("tilemap::render_tilemap()::Calculated tile's x or y out of bound");
         continue;
       }
       i16 x_pos = _tilemap->position.x + x * _tilemap->tile_size;
@@ -146,7 +150,7 @@ void render_tilemap(const tilemap *const _tilemap, Rectangle camera_view) {
   for (size_t itr_000 = 0; itr_000 < _tilemap->render_z_index_queue.size(); ++itr_000) {
     for (size_t itr_111 = 0; itr_111 < _tilemap->render_z_index_queue.at(itr_000).size(); ++itr_111) 
     {
-      const tilemap_prop_address* _queue_prop_ptr = __builtin_addressof(_tilemap->render_z_index_queue.at(itr_000).at(itr_111));
+      const tilemap_prop_address *const _queue_prop_ptr = __builtin_addressof(_tilemap->render_z_index_queue.at(itr_000).at(itr_111));
       if (_queue_prop_ptr->type <= TILEMAP_PROP_TYPE_UNDEFINED or _queue_prop_ptr->type >= TILEMAP_PROP_TYPE_MAX) {
         continue;
       }
@@ -164,17 +168,20 @@ void render_tilemap(const tilemap *const _tilemap, Rectangle camera_view) {
       if (_queue_prop_ptr->type != TILEMAP_PROP_TYPE_SPRITE) {
         if (_queue_prop_ptr->data.prop_sprite == nullptr) continue;
         
-        const tilemap_prop_static * map_prop_ptr = _queue_prop_ptr->data.prop_static;
+        const tilemap_prop_static *const map_prop_ptr = _queue_prop_ptr->data.prop_static;
         if (not map_prop_ptr->is_initialized) continue;
         
         Rectangle prop_rect = map_prop_ptr->dest;
         prop_rect.width *= map_prop_ptr->scale;
         prop_rect.height *= map_prop_ptr->scale;
 
-        if (!CheckCollisionRecs(camera_view, prop_rect)) { continue; }
+        if (not CheckCollisionRecs(camera_view, prop_rect)) { continue; }
       
-        const Texture2D* tex = get_texture_by_enum(map_prop_ptr->tex_id); 
-        if (!tex) continue;
+        const Texture2D *const tex = get_texture_by_enum(map_prop_ptr->tex_id); 
+        if (not tex or tex == nullptr) {
+          IERROR("tilemap::render_tilemap()::Prop tex resource is invalid");
+          continue;
+        }
       
         const Vector2 origin = VECTOR2(prop_rect.width * .5f, prop_rect.height * .5f);
       
@@ -203,13 +210,13 @@ void render_tilemap(const tilemap *const _tilemap, Rectangle camera_view) {
 }
 void render_props_y_based_all(const tilemap *const _tilemap, Rectangle camera_view, i32 start_y, i32 end_y) {
   if (not _tilemap or _tilemap == nullptr) {
-    TraceLog(LOG_ERROR, "tilemap::render_tilemap()::Provided map was null");
+    IWARN("tilemap::render_props_y_based_all()::Provided map was null");
     return;
   }
   for (size_t itr_000 = 0; itr_000 < _tilemap->render_y_based_queue.size(); ++itr_000) {
     for (size_t itr_111 = 0; itr_111 < _tilemap->render_y_based_queue.at(itr_000).size(); ++itr_111) {
-      const tilemap_prop_address* _queue_prop_ptr = __builtin_addressof(_tilemap->render_y_based_queue.at(itr_000).at(itr_111));
-      if (_queue_prop_ptr->type <= TILEMAP_PROP_TYPE_UNDEFINED || _queue_prop_ptr->type >= TILEMAP_PROP_TYPE_MAX) {
+      const tilemap_prop_address *const _queue_prop_ptr = __builtin_addressof(_tilemap->render_y_based_queue.at(itr_000).at(itr_111));
+      if (_queue_prop_ptr->type <= TILEMAP_PROP_TYPE_UNDEFINED or _queue_prop_ptr->type >= TILEMAP_PROP_TYPE_MAX) {
         continue;
       }
       if (_queue_prop_ptr->type == TILEMAP_PROP_TYPE_SPRITE) 
@@ -233,15 +240,18 @@ void render_props_y_based_all(const tilemap *const _tilemap, Rectangle camera_vi
       {
         if (_queue_prop_ptr->data.prop_sprite == nullptr) continue;
 
-        const tilemap_prop_static * map_prop_ptr = _queue_prop_ptr->data.prop_static;
+        const tilemap_prop_static *const map_prop_ptr = _queue_prop_ptr->data.prop_static;
         if (not map_prop_ptr->is_initialized) continue;
 
         Rectangle prop_rect = map_prop_ptr->dest; 
 
         if (not CheckCollisionRecs(camera_view, prop_rect)) { continue; }
       
-        const Texture2D* tex = get_texture_by_enum(map_prop_ptr->tex_id); 
-        if (not tex or tex == nullptr) continue;
+        const Texture2D *const tex = get_texture_by_enum(map_prop_ptr->tex_id);
+        if (not tex or tex == nullptr) {
+          IERROR("tilemap::render_props_y_based_all()::Prop tex resource is invalid");
+          continue;
+        }
       
         const Vector2 origin = VECTOR2(prop_rect.width * .5f, prop_rect.height * .5f);
       
@@ -305,8 +315,11 @@ void render_props_y_based_by_zindex(const tilemap *const _tilemap, size_t index,
       prop_rect.height *= map_prop_ptr->scale;
       if (not CheckCollisionRecs(camera_view, prop_rect)) { continue; }
     
-      const Texture2D* tex = get_texture_by_enum(map_prop_ptr->tex_id); 
-      if (not tex or tex == nullptr) continue;
+      const Texture2D* tex = get_texture_by_enum(map_prop_ptr->tex_id);
+      if (not tex or tex == nullptr) {
+        IERROR("tilemap::render_props_y_based_by_zindex()::Prop tex resource is invalid");
+        continue;
+      }
     
       const Vector2 origin = VECTOR2(prop_rect.width * .5f, prop_rect.height * .5f);
     
@@ -316,7 +329,7 @@ void render_props_y_based_by_zindex(const tilemap *const _tilemap, size_t index,
       else if (map_prop_ptr->dest.y + (prop_rect.height * .5f) > end_y) {
         break;
       }
-      DrawTexturePro(*tex, map_prop_ptr->source, prop_rect, origin, map_prop_ptr->rotation, map_prop_ptr->tint);
+      DrawTexturePro( (*tex), map_prop_ptr->source, prop_rect, origin, map_prop_ptr->rotation, map_prop_ptr->tint);
       #if DEBUG_COLLISIONS
         Rectangle coll_dest = Rectangle {
           prop_rect.x - origin.x,
@@ -340,17 +353,20 @@ void render_props_y_based_by_zindex(const tilemap *const _tilemap, size_t index,
 // INFO: See also calc_mainmenu_prop_dest()
 void render_mainmenu(const tilemap *const _tilemap, Rectangle camera_view, const app_settings *const in_settings) {
   if (not _tilemap or _tilemap == nullptr) {
-    TraceLog(LOG_ERROR, "tilemap::render_tilemap()::Provided map was null");
+    IWARN("tilemap::render_tilemap()::Provided map was null");
     return;
   }
   const tilesheet *const sheet = get_tilesheet_by_enum(TILESHEET_TYPE_MAP);
+  if (not sheet or sheet == nullptr) {
+    IERROR("tilemap::render_mainmenu()::Map sheet resource is invalid");
+    return;
+  }
   const f32 dynamic_tile_size = static_cast<f32>(in_settings->render_height) / TOTAL_NUMBER_OF_TILES_TO_THE_HEIGHT; // Based off of certain amouth tiles along render height
 
   Vector2 map_position = Vector2 {
     ((_tilemap->map_dim * dynamic_tile_size) * -0.5f),
     ((_tilemap->map_dim * dynamic_tile_size) * -0.5f)
   };
-
   i32 start_x = static_cast<i32>((camera_view.x - map_position.x) / dynamic_tile_size);
   i32 start_y = static_cast<i32>((camera_view.y - map_position.y) / dynamic_tile_size);
   i32 end_x   = static_cast<i32>((camera_view.x + camera_view.width - map_position.x) / dynamic_tile_size) + 1;
@@ -363,8 +379,8 @@ void render_mainmenu(const tilemap *const _tilemap, Rectangle camera_view, const
 
   for (i32 y = start_y; y < end_y; ++y) {
     for (i32 x = start_x; x < end_x; ++x) {
-      if (x >= MAX_TILEMAP_TILESLOT_X or y >= MAX_TILEMAP_TILESLOT_Y) {
-        TraceLog(LOG_ERROR, "tilemap::render_tilemap()::Calculated tile's x or y out of bound");
+      if (x < 0 or x >= MAX_TILEMAP_TILESLOT_X or y < 0 or y >= MAX_TILEMAP_TILESLOT_Y) {
+        IERROR("tilemap::render_tilemap()::Calculated tile's x or y out of bound");
         continue;
       }
       const i32 x_pos = map_position.x + x * dynamic_tile_size;
@@ -390,7 +406,7 @@ void render_mainmenu(const tilemap *const _tilemap, Rectangle camera_view, const
       if (_queue_prop_ptr->type == TILEMAP_PROP_TYPE_SPRITE) {
         if (_queue_prop_ptr->data.prop_sprite == nullptr) continue;
         tilemap_prop_sprite *const map_prop_ptr = _queue_prop_ptr->data.prop_sprite;
-        if (!map_prop_ptr->is_initialized) continue;
+        if (not map_prop_ptr->is_initialized) continue;
         
         Rectangle coord = Rectangle { // Position can be usable as a dimention since it's a square and centered
           (map_prop_ptr->sprite.coord.x      / (-_tilemap->position.x)) * -map_position.x,
@@ -411,8 +427,11 @@ void render_mainmenu(const tilemap *const _tilemap, Rectangle camera_view, const
         const tilemap_prop_static *const map_prop_ptr = _queue_prop_ptr->data.prop_static;
         if (not map_prop_ptr->is_initialized) continue;
 
-        const Texture2D *const tex = get_texture_by_enum(map_prop_ptr->tex_id); 
-        if (not tex or tex == nullptr) continue;
+        const Texture2D *const tex = get_texture_by_enum(map_prop_ptr->tex_id);
+        if (not tex or tex == nullptr) {
+          IERROR("tilemap::render_mainmenu()::Prop tex resource is invalid");
+          continue;
+        }
         
         Rectangle prop_rect = Rectangle { // Position can be usable as a dimention since it's a square and centered
           (map_prop_ptr->dest.x      / (-_tilemap->position.x)) * -map_position.x,
@@ -433,7 +452,7 @@ void render_mainmenu(const tilemap *const _tilemap, Rectangle camera_view, const
 
 void render_tilesheet(const tilesheet *const sheet, f32 zoom) {
   if (not sheet or sheet == nullptr) {
-    TraceLog(LOG_ERROR, "tilemap::render_tilesheet()::Provided sheet was null");
+    IWARN("tilemap::render_tilesheet()::Sheet is invalid");
     return;
   }
 
@@ -477,7 +496,7 @@ void render_tilesheet(const tilesheet *const sheet, f32 zoom) {
 
 Vector2 get_tilesheet_dim(const tilesheet* sheet) {
   if (not sheet or sheet == nullptr) {
-    TraceLog(LOG_ERROR, "tilemap::get_tilesheet_dim()::Sheet is invalid");
+    IWARN("tilemap::get_tilesheet_dim()::Sheet is invalid");
     return ZEROVEC2;
   }
   return Vector2 {
@@ -487,6 +506,7 @@ Vector2 get_tilesheet_dim(const tilesheet* sheet) {
 }
 Rectangle calc_mainmenu_prop_dest(const tilemap *const _tilemap, Rectangle dest, f32 scale, const app_settings *const in_settings) {
   if (not _tilemap or _tilemap == nullptr or not in_settings or in_settings == nullptr) {
+    IWARN("tilemap::calc_mainmenu_prop_dest()::Pointer(s) is/are invalid");
     return ZERORECT;
   }
   const f32 dynamic_tile_size = static_cast<f32>(in_settings->render_height) / TOTAL_NUMBER_OF_TILES_TO_THE_HEIGHT; // Based off of certain amouth tiles along render height
@@ -504,39 +524,39 @@ Rectangle calc_mainmenu_prop_dest(const tilemap *const _tilemap, Rectangle dest,
 }
 tile get_tile_from_sheet_by_mouse_pos(const tilesheet *const sheet, const Vector2 mouse_pos, const f32 zoom) {
   if (not sheet or sheet == nullptr) {
-    TraceLog(LOG_ERROR, "tilemap::get_tile_from_mouse_pos()::Provided sheet was null");
+    IWARN("tilemap::get_tile_from_sheet_by_mouse_pos()::Provided sheet was null");
     return tile();
   }
   tile _tile = tile();
 
-  i16 x_pos    = (mouse_pos.x - sheet->offset - sheet->position.x) / zoom; 
-  i16 y_pos    = (mouse_pos.y - sheet->offset - sheet->position.y) / zoom; 
-  if (x_pos < 0 || y_pos < 0) {
+  i16 x_pos = (mouse_pos.x - sheet->offset - sheet->position.x) / zoom; 
+  i16 y_pos = (mouse_pos.y - sheet->offset - sheet->position.y) / zoom; 
+  if (x_pos < 0 or y_pos < 0) {
     return tile();
   }
-  i16 dest_x   = x_pos       / (sheet->dest_tile_size * sheet->offset);  
-  i16 dest_y   = y_pos       / (sheet->dest_tile_size * sheet->offset);  
+  i16 dest_x = x_pos / (sheet->dest_tile_size * sheet->offset);  
+  i16 dest_y = y_pos / (sheet->dest_tile_size * sheet->offset);  
 
-  if (dest_x < 0 || dest_x > sheet->tile_count_x || dest_y < 0 || dest_y > sheet->tile_count_y) {
+  if (dest_x < 0 or dest_x > sheet->tile_count_x or dest_y < 0 or dest_y > sheet->tile_count_y) {
     return tile();
   }
-  _tile.position.x           = dest_x  * sheet->tile_size;
-  _tile.position.y           = dest_y  * sheet->tile_size;
+  _tile.position.x = dest_x  * sheet->tile_size;
+  _tile.position.y = dest_y  * sheet->tile_size;
   _tile.symbol = sheet->tile_symbols[dest_x][dest_y];
   _tile.is_initialized = true;
 
   return _tile;
 }
-tile get_tile_from_map_by_mouse_pos (const tilemap* map,const Vector2 mouse_pos,const i32 layer) {
+tile get_tile_from_map_by_mouse_pos (const tilemap* map, const Vector2 mouse_pos, const i32 layer) {
   if (not map or map == nullptr) {
-    TraceLog(LOG_ERROR, "tilemap::get_tile_from_mouse_pos()::Map is not valid");
+    IWARN("tilemap::get_tile_from_mouse_pos()::Map is not valid");
     return tile();
   }
   tile _tile = tile();
   _tile.position.x = (mouse_pos.x - map->position.x) / map->tile_size;
   _tile.position.y = (mouse_pos.y - map->position.y) / map->tile_size;
 
-  if (_tile.position.x >= map->map_dim || _tile.position.y >= map->map_dim) { // NOTE: Assumes tilemap x and y are unsigned
+  if (_tile.position.x >= map->map_dim or _tile.position.y >= map->map_dim) { // NOTE: Assumes tilemap x and y are unsigned
     return tile();
   }
   _tile.symbol = map->tiles[layer][_tile.position.x][_tile.position.y];
@@ -547,7 +567,7 @@ tile get_tile_from_map_by_mouse_pos (const tilemap* map,const Vector2 mouse_pos,
 
 void map_to_str(tilemap *const map, tilemap_stringtify_package *const out_package) {
   if (not map or map == nullptr or not out_package or out_package == nullptr) {
-    TraceLog(LOG_ERROR, "Received a NULL pointer");
+    IWARN("tilemap::map_to_str()::Pointer(s) is/are invalid");
     return;
   }
   out_package->is_success = false;
@@ -558,7 +578,7 @@ void map_to_str(tilemap *const map, tilemap_stringtify_package *const out_packag
 
   const tilesheet *const sheet = get_tilesheet_by_enum(TILESHEET_TYPE_MAP);
   if (not sheet or sheet == nullptr) {
-    TraceLog(LOG_ERROR, "tilemap::map_to_str()::Map sheet is not valid");
+    IERROR("tilemap::map_to_str()::Map sheet is invalid");
     return;
   }
 
@@ -607,7 +627,7 @@ void map_to_str(tilemap *const map, tilemap_stringtify_package *const out_packag
 
 
   // SPRITE PROP SERIALIZE
-  for (size_t itr_000 = 0; itr_000 < map->sprite_props.size(); ++itr_000) {
+  for (size_t itr_000 = 0u; itr_000 < map->sprite_props.size(); ++itr_000) {
     if (not map->sprite_props.at(itr_000).is_initialized) continue;
     
     const tilemap_prop_sprite *const prop = __builtin_addressof(map->sprite_props.at(itr_000));
@@ -639,13 +659,14 @@ void map_to_str(tilemap *const map, tilemap_stringtify_package *const out_packag
 
 
   // MAP COLLISIONS SERIALIZE
-  for (size_t itr_000 = 0; itr_000 < map->collisions.size(); ++itr_000) {
+  for (size_t itr_000 = 0u; itr_000 < map->collisions.size(); ++itr_000) {
     const Rectangle& coll = map->collisions.at(itr_000).dest;
     const char* symbol = TextFormat("%.4d,%.4d,%.4d,%.4d," PROP_PARSE_PROP_BUFFER_PARSE_SYMBOL_STR, 
       static_cast<i32>(coll.x), 
       static_cast<i32>(coll.y), 
       static_cast<i32>(coll.width), 
-      static_cast<i32>(coll.height));
+      static_cast<i32>(coll.height)
+    );
     out_package->str_collisions.append(symbol);
   }
   // MAP COLLISIONS SERIALIZE
@@ -654,7 +675,7 @@ void map_to_str(tilemap *const map, tilemap_stringtify_package *const out_packag
 }
 void str_to_map(tilemap *const map, tilemap_stringtify_package *const out_package) {
   if (not map or map == nullptr or not out_package or out_package == nullptr ) {
-    TraceLog(LOG_ERROR, "tilemap::str_to_map()::Received a NULL pointer");
+    IWARN("tilemap::str_to_map()::Pointer(s) is/are invalid");
     return;
   }
   out_package->is_success = false;
@@ -664,23 +685,24 @@ void str_to_map(tilemap *const map, tilemap_stringtify_package *const out_packag
   
   const tilesheet *const sheet = get_tilesheet_by_enum(TILESHEET_TYPE_MAP);
   if (not sheet or sheet == nullptr) {
-    TraceLog(LOG_ERROR, "tilemap::str_to_map()::Failed to get tilesheet");
+    IERROR("tilemap::str_to_map()::Map sheet resource is invalid");
     return;
   }
-  for (size_t itr_000 = 0; itr_000 < MAX_TILEMAP_LAYERS; ++itr_000) {
-    for (size_t itr_111 = 0; itr_111 < MAX_TILEMAP_TILESLOT_X; ++itr_111) {
+  for (size_t itr_000 = 0u; itr_000 < MAX_TILEMAP_LAYERS; ++itr_000) {
+    for (size_t itr_111 = 0u; itr_111 < MAX_TILEMAP_TILESLOT_X; ++itr_111) {
       copy_memory(
         map->tiles[itr_000][itr_111], 
         out_package->str_tilemap[itr_000] + (sizeof(tile_symbol) * itr_111 * MAX_TILEMAP_TILESLOT_X), 
-        sizeof(tile_symbol) * MAX_TILEMAP_TILESLOT_X);
+        sizeof(tile_symbol) * MAX_TILEMAP_TILESLOT_X
+      );
     }
   }
   string_parse_result str_prop_parse_buffer = parse_string(out_package->str_props.c_str(), PROP_PARSE_PROP_BUFFER_PARSE_SYMBOL_C, PROP_BUFFER_PARSE_TOP_LIMIT);
 
-  for (size_t itr_000 = 0; itr_000 < str_prop_parse_buffer.buffer.size(); ++itr_000) {
+  for (size_t itr_000 = 0u; itr_000 < str_prop_parse_buffer.buffer.size(); ++itr_000) {
     string_parse_result str_par_prop_member = parse_string(str_prop_parse_buffer.buffer.at(itr_000), PROP_PARSE_PROP_MEMBER_PARSE_SYMBOL, PROP_MEMBER_PARSE_TOP_LIMIT);
     if (str_par_prop_member.buffer.size() < 17u) {
-      TraceLog(LOG_ERROR, "str_to_map: Failed to parse prop data, expected 17 values, got %zu", str_par_prop_member.buffer.size());
+      IERROR("tilemap::str_to_map()::Failed to parse prop data, expected 17 values, got %zu", str_par_prop_member.buffer.size());
       continue;
     }
     tilemap_prop_types type = static_cast<tilemap_prop_types>(TextToInteger(str_par_prop_member.buffer.at(2).c_str()));
@@ -748,10 +770,10 @@ void str_to_map(tilemap *const map, tilemap_stringtify_package *const out_packag
   }
 
   string_parse_result str_coll_par_buffer = parse_string(out_package->str_collisions.c_str(), COLL_PARSE_COLL_BUFFER_PARSE_SYMBOL_C, COLL_BUFFER_PARSE_TOP_LIMIT);
-  for (size_t itr_000 = 0; itr_000 < str_coll_par_buffer.buffer.size(); ++itr_000) {
+  for (size_t itr_000 = 0u; itr_000 < str_coll_par_buffer.buffer.size(); ++itr_000) {
     string_parse_result str_coll_par_member = parse_string(str_coll_par_buffer.buffer.at(itr_000), COLL_PARSE_COLL_MEMBER_PARSE_SYMBOL, COLL_MEMBER_PARSE_TOP_LIMIT);
     if (str_coll_par_member.buffer.size() < 4u) {
-      TraceLog(LOG_ERROR, "tilemap::str_to_map() Failed to parse collision data, expected 4 values, got %zu", str_coll_par_member.buffer.size());
+      IERROR("tilemap::str_to_map()::Failed to parse collision data, expected 4 values, got %zu", str_coll_par_member.buffer.size());
       continue;
     }
     map_collision collision = map_collision(map->next_collision_id++, Rectangle {
@@ -775,8 +797,8 @@ bool save_map_data([[__maybe_unused__]] tilemap *const map, [[__maybe_unused__]]
   // INFO: We don't support writing to pak currently
   #else
   map_to_str(map, out_package);
-  if (!out_package->is_success) {
-    TraceLog(LOG_ERROR, "tilemap::save_map_data()::Map data serialization failed");
+  if (not out_package->is_success) {
+    IERROR("tilemap::save_map_data()::Map data serialization failed");
     return false;
   }
   for (i32 itr_000 = 0; itr_000 < MAX_TILEMAP_LAYERS; ++itr_000) {
@@ -795,7 +817,7 @@ bool save_map_data([[__maybe_unused__]] tilemap *const map, [[__maybe_unused__]]
  */
 bool load_map_data(tilemap *const map, tilemap_stringtify_package *const out_package) {
   #if USE_PAK_FORMAT
-    const worldmap_stage_file * file = get_map_file_buffer(map->index);
+    const worldmap_stage_file *const file = get_map_file_buffer(map->index);
     if (not file or file == nullptr) {
       {
         out_package->str_collisions = file->file_collision;
@@ -809,17 +831,16 @@ bool load_map_data(tilemap *const map, tilemap_stringtify_package *const out_pac
       {
         out_package->str_props = file->file_prop;
       }
-
       str_to_map(map, out_package);
     }
     return out_package->is_success;
   #else
     {
-      for(int i=0; i<MAX_TILEMAP_LAYERS; ++i){
+      for(int i = 0;  i < MAX_TILEMAP_LAYERS; ++i){
         int dataSize = 1;
         u8* _str_tile = LoadFileData(map_layer_path(map->filename.at(i).c_str()), &dataSize);
         if (dataSize <= 0) {
-          TraceLog(LOG_ERROR, "tilemap::load_map_data()::Reading data returned null");
+          IERROR("tilemap::load_map_data()::Reading data returned null");
         }
         copy_memory(&out_package->str_tilemap[i], _str_tile, dataSize);
         UnloadFileData(_str_tile);
@@ -829,7 +850,7 @@ bool load_map_data(tilemap *const map, tilemap_stringtify_package *const out_pac
       int dataSize = 1;
       u8* _str_prop = LoadFileData(map_layer_path(map->propfile.c_str()), &dataSize);
       if (dataSize <= 0) {
-        TraceLog(LOG_ERROR, "tilemap::load_map_data()::Reading data returned null");
+        IERROR("tilemap::load_map_data()::Reading data returned null");
       }
       out_package->str_props.assign((char*)_str_prop, dataSize);
       UnloadFileData(_str_prop);
@@ -840,9 +861,9 @@ bool load_map_data(tilemap *const map, tilemap_stringtify_package *const out_pac
 }
 bool load_or_create_map_data(tilemap *const map, tilemap_stringtify_package *const out_package) {
   #if USE_PAK_FORMAT
-    const worldmap_stage_file * file = get_map_file_buffer(map->index);
+    const worldmap_stage_file *const file = get_map_file_buffer(map->index);
     if (not file or file == nullptr) {
-      TraceLog(LOG_WARNING, "tilemap::load_or_create_map_data()::Map:%d file is invalid", map->index);
+      IWARN("tilemap::load_or_create_map_data()::Map:%d file is invalid", map->index);
       return false;
     }
     //map_to_str(map, out_package);
@@ -878,11 +899,11 @@ bool load_or_create_map_data(tilemap *const map, tilemap_stringtify_package *con
         }
       }
       else {
-        if (!out_package->is_success) {
-          TraceLog(LOG_ERROR, "tilemap::load_or_create_map_data()::map cannot successfully converted to string to save as file");
+        if (not out_package->is_success) {
+          IERROR("tilemap::load_or_create_map_data()::map cannot successfully converted to string to save as file");
         }
-        if (!SaveFileData(map_layer_path(map->filename.at(i).c_str()), out_package->str_tilemap[i], out_package->size_tilemap_str[i])) {
-          TraceLog(LOG_ERROR, "tilemap::load_or_create_map_data()::Recieving package data returned with failure");
+        if (not SaveFileData(map_layer_path(map->filename.at(i).c_str()), out_package->str_tilemap[i], out_package->size_tilemap_str[i])) {
+          IERROR("tilemap::load_or_create_map_data()::Recieving package data returned with failure");
         }
       }
     }
@@ -900,11 +921,11 @@ bool load_or_create_map_data(tilemap *const map, tilemap_stringtify_package *con
       }
     }
     else {
-      if (!out_package->is_success) {
-        TraceLog(LOG_ERROR, "tilemap::load_or_create_map_data()::map cannot successfully converted to string to save as file");
+      if (not out_package->is_success) {
+        IERROR("tilemap::load_or_create_map_data()::map cannot successfully converted to string to save as file");
       }
-      if (!SaveFileData(map_layer_path(map->propfile.c_str()), out_package->str_props.data(), out_package->size_props_str)) {
-        TraceLog(LOG_ERROR, "tilemap::load_or_create_map_data()::Recieving package data returned with failure");
+      if (not SaveFileData(map_layer_path(map->propfile.c_str()), out_package->str_props.data(), out_package->size_props_str)) {
+        IERROR("tilemap::load_or_create_map_data()::Recieving package data returned with failure");
       }
     }
   }
@@ -921,11 +942,11 @@ bool load_or_create_map_data(tilemap *const map, tilemap_stringtify_package *con
       }
     }
     else {
-      if (!out_package->is_success) {
-        TraceLog(LOG_ERROR, "tilemap::load_or_create_map_data()::map cannot successfully converted to string to save as file");
+      if (not out_package->is_success) {
+        IERROR("tilemap::load_or_create_map_data()::map cannot successfully converted to string to save as file");
       }
-      if (!SaveFileData(map_layer_path(map->collisionfile.c_str()), out_package->str_collisions.data(), out_package->size_collisions_str)) {
-        TraceLog(LOG_ERROR, "tilemap::load_or_create_map_data()::Recieving package data returned with failure");
+      if (not SaveFileData(map_layer_path(map->collisionfile.c_str()), out_package->str_collisions.data(), out_package->size_collisions_str)) {
+        IERROR("tilemap::load_or_create_map_data()::Recieving package data returned with failure");
       }
     }
   }

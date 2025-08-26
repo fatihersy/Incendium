@@ -1,5 +1,6 @@
 #include "resource.h"
 #include <core/fmemory.h>
+#include <core/logger.h>
 
 #include <tools/pak_parser.h>
 #include <game/spritesheet.h>
@@ -66,7 +67,7 @@ bool resource_system_initialize(void) {
   if (state and state != nullptr) return false;
   state = (resource_system_state*)allocate_memory_linear(sizeof(resource_system_state), true);
   if (not state or state == nullptr) {
-    TraceLog(LOG_ERROR, "resource::allocate_memory_linear()::State allocation failed");
+    IERROR("resource::allocate_memory_linear()::State allocation failed");
     return false;
   }
   *state = resource_system_state();
@@ -623,21 +624,21 @@ bool resource_system_initialize(void) {
 
 const atlas_texture* get_atlas_texture_by_enum(atlas_texture_id _id) {
   if (_id >= ATLAS_TEX_ID_MAX or _id <= ATLAS_TEX_ID_UNSPECIFIED){
-    TraceLog(LOG_WARNING, "resource::get_atlas_texture_by_enum()::Texture type out of bound");
+    IWARN("resource::get_atlas_texture_by_enum()::Texture type out of bound");
     return nullptr;
   }
   return __builtin_addressof(state->atlas_textures.at(_id));
 }
 const Texture2D* get_texture_by_enum(texture_id _id) {
   if (_id >= TEX_ID_MAX or _id <= TEX_ID_UNSPECIFIED){
-    TraceLog(LOG_WARNING, "resource::get_texture_by_enum()::Texture type out of bound");
+    IWARN("resource::get_texture_by_enum()::Texture type out of bound");
     return nullptr;
   }
   return __builtin_addressof(state->textures.at(_id));
 }
 const Image* get_image_by_enum(image_type type) {
   if (type >= IMAGE_TYPE_MAX or type <= IMAGE_TYPE_UNSPECIFIED){
-    TraceLog(LOG_WARNING, "resource::get_image_by_enum()::Image type out of bound");
+    IWARN("resource::get_image_by_enum()::Image type out of bound");
     return nullptr;
   }
 
@@ -645,14 +646,14 @@ const Image* get_image_by_enum(image_type type) {
 }
 const spritesheet* get_spritesheet_by_enum(spritesheet_id type) {
   if (type >= SHEET_ID_SPRITESHEET_TYPE_MAX or type <= SHEET_ID_SPRITESHEET_UNSPECIFIED){
-    TraceLog(LOG_WARNING, "resource::get_spritesheet_by_enum()::Spritesheet type out of bound");
+    IWARN("resource::get_spritesheet_by_enum()::Spritesheet type out of bound");
     return nullptr;
   }
   return __builtin_addressof(state->sprites.at(type));
 }
 const tilesheet* get_tilesheet_by_enum(const tilesheet_type type) {
   if (type >= TILESHEET_TYPE_MAX or type <= TILESHEET_TYPE_UNSPECIFIED){
-    TraceLog(LOG_WARNING, "resource::get_tilesheet_by_enum()::Tilesheet type out of bound");
+    IWARN("resource::get_tilesheet_by_enum()::Tilesheet type out of bound");
     return nullptr;
   }
 
@@ -672,14 +673,14 @@ void load_texture_pak(
 ) {
   #if USE_PAK_FORMAT
   if (_id >= TEX_ID_MAX or _id <= TEX_ID_UNSPECIFIED) { 
-    TraceLog(LOG_ERROR, "resource::load_texture_pak()::texture type out of bound");
+    IWARN("resource::load_texture_pak()::texture type out of bound");
     return;
   }
   Texture2D tex = ZERO_TEXTURE;
 
   const file_buffer * const file = get_asset_file_buffer(pak_id, file_id);
   if (not file or file == nullptr or not file->is_success) {
-    TraceLog(LOG_ERROR, "resource::load_texture_pak()::File id %d does not exist", file_id);
+    IERROR("resource::load_texture_pak()::File id %d does not exist", file_id);
     return;
   }
   Image img = LoadImageFromMemory(file->file_extension.c_str(), reinterpret_cast<const u8*>(file->content.data()), file->content.size());
@@ -696,14 +697,14 @@ bool load_image_pak(
 ) {
   #if USE_PAK_FORMAT
   if (type >= IMAGE_TYPE_MAX or type <= IMAGE_TYPE_UNSPECIFIED) { 
-    TraceLog(LOG_ERROR, "resource::load_image_pak()::Image type out of bound");
+    IWARN("resource::load_image_pak()::Image type out of bound");
     return false;
   }
   Image img = ZERO_IMAGE;
 
   const file_buffer * const file = get_asset_file_buffer(pak_id, file_id);
   if (not file or file == nullptr or not file->is_success) {
-    TraceLog(LOG_ERROR, "resource::load_image_pak()::File:%d does not exist", file_id);
+    IERROR("resource::load_image_pak()::File:%d does not exist", file_id);
     return false;
   }
   img = LoadImageFromMemory(file->file_extension.c_str(), reinterpret_cast<const u8 *>(file->content.size()), file->content.size());
@@ -722,14 +723,14 @@ void load_texture_disk(
 ) {
   #if not USE_PAK_FORMAT
   if (_id >= TEX_ID_MAX or _id <= TEX_ID_UNSPECIFIED) { 
-    TraceLog(LOG_ERROR, "resource::load_texture_disk()::texture type out of bound");
+    IWARN("resource::load_texture_disk()::texture type out of bound");
     return;
   }
   Texture2D tex = ZERO_TEXTURE;
 
   const char *path = rs_path(_path);
   if (not path or path == nullptr) {
-    TraceLog(LOG_ERROR, "resource::load_texture_disk()::Path is invalid");
+    IERROR("resource::load_texture_disk()::Path is invalid");
     return;
   }
   if (resize) {
@@ -748,14 +749,14 @@ bool load_image_disk(
 ) {
   #if not USE_PAK_FORMAT
   if (type >= IMAGE_TYPE_MAX or type <= IMAGE_TYPE_UNSPECIFIED) { 
-    TraceLog(LOG_ERROR, "resource::load_image_disk()::Image type out of bound");
+    IWARN("resource::load_image_disk()::Image type out of bound");
     return false;
   }
   Image img = ZERO_IMAGE;
 
   const char *path = rs_path(_path);
   if (not path or path == nullptr) {
-    TraceLog(LOG_ERROR, "resource::load_image_disk()::Path is invalid");
+    IERROR("resource::load_image_disk()::Path is invalid");
     return false;
   }
   img = LoadImage(path);
@@ -772,7 +773,7 @@ bool load_image_disk(
 
 void load_spritesheet(texture_id _source_tex, spritesheet_id handle_id, Vector2 offset, i32 _fps, i32 _frame_width, i32 _frame_height, i32 _total_row, i32 _total_col) {
   if ((handle_id >= SHEET_ID_SPRITESHEET_TYPE_MAX or handle_id <= SHEET_ID_SPRITESHEET_UNSPECIFIED) or (_source_tex >= TEX_ID_MAX or _source_tex <= TEX_ID_UNSPECIFIED)) {
-    TraceLog(LOG_ERROR, "resource::load_spritesheet()::Out of bound ID recieved");
+    IWARN("resource::load_spritesheet()::Out of bound ID recieved");
     return;
   }
   spritesheet _sheet = spritesheet();
@@ -797,11 +798,11 @@ void load_spritesheet(texture_id _source_tex, spritesheet_id handle_id, Vector2 
 }
 void load_tilesheet(tilesheet_type sheet_id, atlas_texture_id _atlas_tex_id, i32 _tile_count_x, i32 _tile_count_y, i32 _tile_size) {
   if (static_cast<i32>(sheet_id) >= TILESHEET_TYPE_MAX or sheet_id <= TILESHEET_TYPE_UNSPECIFIED) {
-    TraceLog(LOG_ERROR, "resource::load_tilesheet()::Sheet type out of bound");
+    IWARN("resource::load_tilesheet()::Sheet type out of bound");
     return;
   }
   if (_atlas_tex_id >= ATLAS_TEX_ID_MAX or _atlas_tex_id <= ATLAS_TEX_ID_UNSPECIFIED) {
-    TraceLog(LOG_ERROR,"resource::load_tilesheet()::texture type out of bound");
+    IWARN("resource::load_tilesheet()::texture type out of bound");
   }
   tilesheet * const _tilesheet = __builtin_addressof(state->tilesheets.at(sheet_id));
 
@@ -824,7 +825,7 @@ void load_tilesheet(tilesheet_type sheet_id, atlas_texture_id _atlas_tex_id, i32
 }
 void load_texture_from_atlas(atlas_texture_id _id, Rectangle texture_area) {
   if (_id >= ATLAS_TEX_ID_MAX or _id <= ATLAS_TEX_ID_UNSPECIFIED) { 
-    TraceLog(LOG_ERROR, "resource::load_texture()::texture type out of bound");
+    IWARN("resource::load_texture()::texture type out of bound");
     return;
   }
   atlas_texture tex = atlas_texture();
@@ -836,7 +837,7 @@ void load_texture_from_atlas(atlas_texture_id _id, Rectangle texture_area) {
 }
 std::vector<tilemap_prop_static> * resource_get_tilemap_props_static(tilemap_prop_types type) {
   if (not state or state == nullptr) { 
-    TraceLog(LOG_ERROR, "resource::get_tilemap_prop_static()::State is not valid");
+    IERROR("resource::get_tilemap_prop_static()::State is not valid");
     return nullptr;
   }
 
@@ -853,17 +854,17 @@ std::vector<tilemap_prop_static> * resource_get_tilemap_props_static(tilemap_pro
     case TILEMAP_PROP_TYPE_CANDLE:    return __builtin_addressof(state->tilemap_props_candles);
     case TILEMAP_PROP_TYPE_BUILDING:  return __builtin_addressof(state->tilemap_props_buildings);
     default: {
-      TraceLog(LOG_WARNING, "resource::get_tilemap_prop_static()::Unsupported type");
+      IWARN("resource::get_tilemap_prop_static()::Unsupported type");
       return nullptr;
     }
   }
 
-  TraceLog(LOG_ERROR, "resource::get_tilemap_prop_static()::Function ended unexpectedly");
+  IERROR("resource::get_tilemap_prop_static()::Function ended unexpectedly");
   return nullptr;
 }
 std::vector<tilemap_prop_sprite> * resource_get_tilemap_props_sprite(void) {
   if (not state or state == nullptr) { 
-    TraceLog(LOG_ERROR, "resource::get_tilemap_prop_static()::State is not valid");
+    IERROR("resource::get_tilemap_prop_static()::State is not valid");
     return nullptr;
   }
 
@@ -871,16 +872,16 @@ std::vector<tilemap_prop_sprite> * resource_get_tilemap_props_sprite(void) {
 }
 constexpr void add_prop(texture_id source_tex, tilemap_prop_types type, Rectangle source, f32 scale, Color tint) {
   if (source_tex >= TEX_ID_MAX or source_tex <= TEX_ID_UNSPECIFIED) {
-    TraceLog(LOG_ERROR, "resource::add_prop()::Provided texture id out of bound");
+    IWARN("resource::add_prop()::Provided texture id out of bound");
     return;
   }
   const Texture2D * const tex = get_texture_by_enum(source_tex);
   if (not tex or tex == nullptr) {
-    TraceLog(LOG_ERROR, "resource::add_prop()::Invalid texture");
+    IERROR("resource::add_prop()::Invalid texture");
     return;
   }
   if (tex->width < source.x + source.width or tex->height < source.y + source.height) {
-    TraceLog(LOG_ERROR, "resource::add_prop()::Provided prop dimentions out of bound");
+    IWARN("resource::add_prop()::Provided prop dimentions out of bound");
     return;
   }
   tilemap_prop_static prop = tilemap_prop_static();
@@ -909,17 +910,16 @@ constexpr void add_prop(texture_id source_tex, tilemap_prop_types type, Rectangl
     case TILEMAP_PROP_TYPE_CANDLE:    { state->tilemap_props_candles   .push_back(prop); return; }
     case TILEMAP_PROP_TYPE_BUILDING:  { state->tilemap_props_buildings .push_back(prop); return; }
     default: { 
-      TraceLog(LOG_WARNING, "resource::add_prop()::Unsupported tilemap type");
+      IWARN("resource::add_prop()::Unsupported tilemap type");
       return;
     }
   }
-
-  TraceLog(LOG_ERROR, "resource::add_prop()::Function ended unexpectedly");
+  IERROR("resource::add_prop()::Function ended unexpectedly");
   return;
 }
 constexpr void add_prop(tilemap_prop_types type, spritesheet_id sprite_id, f32 scale, Color tint) {
   if (sprite_id >= SHEET_ID_SPRITESHEET_TYPE_MAX or sprite_id <= SHEET_ID_SPRITESHEET_UNSPECIFIED) {
-    TraceLog(LOG_ERROR, "resource::add_prop()::Provided sprite id out of bound");
+    IWARN("resource::add_prop()::Provided sprite id out of bound");
     return;
   }
   tilemap_prop_sprite prop = tilemap_prop_sprite();
@@ -937,17 +937,16 @@ constexpr void add_prop(tilemap_prop_types type, spritesheet_id sprite_id, f32 s
   switch (type) {
     case TILEMAP_PROP_TYPE_SPRITE: { state->tilemap_props_sprite.push_back(prop); return; }
     default: { 
-      TraceLog(LOG_WARNING, "resource::add_prop()::Unsupported tilemap sprite type");
+      IWARN("resource::add_prop()::Unsupported tilemap sprite type");
       return;
     }
   }
-
-  TraceLog(LOG_WARNING, "resource::add_prop()::Function ended unexpectedly");
+  IERROR("resource::add_prop()::Function ended unexpectedly");
   return;
 }
 tilemap_prop_address resource_get_map_prop_by_prop_id(i32 id, tilemap_prop_types type) {
   if (not state or state == nullptr) {
-    TraceLog(LOG_ERROR, "resource::get_map_prop_by_prop_id()::State is not valid");
+    IERROR("resource::get_map_prop_by_prop_id()::State is not valid");
     return tilemap_prop_address();
   }
 
@@ -1060,12 +1059,11 @@ tilemap_prop_address resource_get_map_prop_by_prop_id(i32 id, tilemap_prop_types
       return tilemap_prop_address();
     }
     default: { 
-      TraceLog(LOG_WARNING, "resource::get_map_prop_by_prop_id()::Unsupported tilemap type");
+      IWARN("resource::get_map_prop_by_prop_id()::Unsupported tilemap type");
       return tilemap_prop_address();
     }
   }
-
-  TraceLog(LOG_ERROR, "resource::get_map_prop_by_prop_id()::Function ended unexpectedly");
+  IERROR("resource::get_map_prop_by_prop_id()::Function ended unexpectedly");
   return tilemap_prop_address();
 }
 

@@ -5,6 +5,7 @@
 
 #include "core/fmemory.h"
 #include "core/event.h"
+#include "core/logger.h"
 
 #include "game/game_manager.h"
 #include "game/user_interface.h"
@@ -44,7 +45,6 @@ typedef struct main_menu_scene_state {
   panel panel_dark_fantasy_selected_default;
   panel panel_dark_fantasy_default;
   panel panel_active_dark_fantasy_default;
-  panel trait_selection_background_panel;
   panel positive_traits_selection_panel;
   panel negative_traits_selection_panel;
   panel chosen_traits_selection_panel;
@@ -85,7 +85,6 @@ typedef struct main_menu_scene_state {
     this->panel_dark_fantasy_selected_default = panel();
     this->panel_dark_fantasy_default = panel();
     this->panel_active_dark_fantasy_default = panel();
-    this->trait_selection_background_panel = panel();
     this->positive_traits_selection_panel = panel();
     this->negative_traits_selection_panel = panel();
     this->chosen_traits_selection_panel = panel();
@@ -142,12 +141,12 @@ static main_menu_scene_state * state = nullptr;
 [[__nodiscard__]] bool begin_scene_main_menu(bool fade_in);
 
 void draw_main_menu_character_panel(void);
-void draw_main_menu_character_subscene_inventory_panel(const Vector4 padding);
-void draw_main_menu_character_subscene_inventory_character_panel(const Vector4 padding);
-void draw_main_menu_character_subscene_inventory_slot_panel(const Vector4 padding);
-void draw_main_menu_character_subscene_stat_panel(const Vector4 padding);
-void draw_main_menu_character_subscene_stat_list_panel(const Vector4 padding);
-void draw_main_menu_character_subscene_stat_details_panel(const Vector4 padding);
+void draw_main_menu_character_subscene_inventory_panel(Rectangle panel_dest, const Vector4 padding);
+void draw_main_menu_character_subscene_inventory_character_panel(Rectangle panel_dest, const Vector4 padding);
+void draw_main_menu_character_subscene_inventory_slot_panel(Rectangle panel_dest, const Vector4 padding);
+void draw_main_menu_character_subscene_stat_panel(Rectangle panel_dest, const Vector4 padding);
+void draw_main_menu_character_subscene_stat_list_panel(Rectangle panel_dest, const Vector4 padding);
+void draw_main_menu_character_subscene_stat_details_panel(Rectangle panel_dest, const Vector4 padding);
 void draw_trait_selection_panel(void);
 void trait_selection_panel_list_traits(panel* const pnl, const Rectangle rect, std::vector<character_trait> * const traits, void (*trait_button_on_click_pfn)(size_t index));
 void trait_selection_panel_list_ability_selection_panel(panel* const pnl, const Rectangle rect, Vector2 border_gap);
@@ -177,47 +176,49 @@ void chosen_trait_button_on_click(size_t index);
   }
   state = (main_menu_scene_state *)allocate_memory_linear(sizeof(main_menu_scene_state), true);
   if (not state or state == nullptr) {
-    TraceLog(LOG_ERROR, "scene_main_menu::initialize_scene_main_menu()::State allocation failed");
+    IERROR("scene_main_menu::initialize_scene_main_menu()::State allocation failed");
     return false;
   }
   *state = main_menu_scene_state();
    
   if (not _in_app_settings or _in_app_settings == nullptr) {
-    TraceLog(LOG_ERROR, "scene_main_menu::initialize_scene_main_menu()::App setting pointer is invalid");
+    IERROR("scene_main_menu::initialize_scene_main_menu()::App setting pointer is invalid");
     return false;
   }
   state->in_app_settings = _in_app_settings;
 
   if(not create_camera(state->in_app_settings->render_width_div2, state->in_app_settings->render_height_div2,state->in_app_settings->render_width, state->in_app_settings->render_height)) {
-    TraceLog(LOG_ERROR, "scene_main_menu::initialize_scene_main_menu()::Creating camera failed");
+    IERROR("scene_main_menu::initialize_scene_main_menu()::Creating camera failed");
     return false;
   }
   state->in_camera_metrics = get_in_game_camera();
   if (not state->in_camera_metrics or state->in_camera_metrics == nullptr) {
-    TraceLog(LOG_ERROR, "scene_main_menu::initialize_scene_main_menu()::Camera pointer is invalid");
+    IERROR("scene_main_menu::initialize_scene_main_menu()::Camera pointer is invalid");
     return false;
   }
   if(not world_system_begin(state->in_camera_metrics)) {
-    TraceLog(LOG_ERROR, "scene_main_menu::initialize_scene_main_menu()::World system begin failed");
+    IERROR("scene_main_menu::initialize_scene_main_menu()::World system begin failed");
     return false;
   }
-
   return begin_scene_main_menu(fade_in);
 }
 [[__nodiscard__]] bool begin_scene_main_menu(bool fade_in) {
-  if (!user_interface_system_initialize()) {
-    TraceLog(LOG_ERROR, "scene_main_menu::begin_scene_main_menu()::User interface failed to initialize!");
+  if (not user_interface_system_initialize()) {
+    IERROR("scene_main_menu::begin_scene_main_menu()::User interface failed to initialize!");
     return false;
   }
-  if (!game_manager_initialize( state->in_camera_metrics, state->in_app_settings, get_active_map_ptr())) { // Inits player & spawns
-    TraceLog(LOG_ERROR, "scene_in_game::begin_scene_main_menu()::game_manager_initialize() failed");
+
+  // NOTE: Worldmap index 0 is mainmenu background now
+  // NOTE: Also game manager requires a valid active map pointer
+  set_worldmap_location(WORLDMAP_MAINMENU_MAP); 
+
+  if (not game_manager_initialize( state->in_camera_metrics, state->in_app_settings, get_active_map_ptr())) { // Inits player & spawns
+    IERROR("scene_in_game::begin_scene_main_menu()::game_manager_initialize() failed");
     return false;
   }
   state->ingame_info = gm_get_ingame_info();
   state->inventory_panel_hero_idle_anim.sheet_id = SHEET_ID_PLAYER_ANIMATION_IDLE_RIGHT;
   ui_set_sprite(__builtin_addressof(state->inventory_panel_hero_idle_anim), true, false);
-
-  set_worldmap_location(WORLDMAP_MAINMENU_MAP); // NOTE: Worldmap index 0 is mainmenu background now
 
   copy_memory(state->worldmap_locations.data(), get_worldmap_locations(), MAX_WORLDMAP_LOCATIONS * sizeof(worldmap_stage));
 
@@ -225,7 +226,6 @@ void chosen_trait_button_on_click(size_t index);
   state->panel_dark_fantasy_selected_default = panel( BTN_STATE_UNDEFINED, ATLAS_TEX_ID_DARK_FANTASY_PANEL_BG, ATLAS_TEX_ID_DARK_FANTASY_PANEL_SELECTED, 
     Vector4 {10, 10, 10, 10}, Color { 30, 39, 46, 245}, Color { 52, 64, 76, 245}
   );
-  state->trait_selection_background_panel = state->panel_dark_fantasy_selected_default;
   state->panel_dark_fantasy_default = panel( BTN_STATE_UNDEFINED, ATLAS_TEX_ID_DARK_FANTASY_PANEL_BG, ATLAS_TEX_ID_DARK_FANTASY_PANEL, 
     Vector4 {6, 6, 6, 6}, Color { 30, 39, 46, 245}, Color { 52, 64, 76, 245}
   );
@@ -267,7 +267,7 @@ void update_scene_main_menu(void) {
   if(state->smm_fade.fade_animation_playing){
     process_fade_effect(__builtin_addressof(state->smm_fade));
   }
-  else if (state->smm_fade.is_fade_animation_played && state->smm_fade.on_change_complete != nullptr) {
+  else if (state->smm_fade.is_fade_animation_played and state->smm_fade.on_change_complete != nullptr) {
     state->smm_fade.on_change_complete(state->smm_fade.data);
   }
   
@@ -471,24 +471,11 @@ void render_interface_main_menu(void) {
 }
 
 void draw_main_menu_character_panel(void) {
-  Rectangle header_loc = {0, 0, static_cast<f32>(SMM_BASE_RENDER_WIDTH), SMM_BASE_RENDER_HEIGHT * .1f};
-  Rectangle footer_loc = {0, 
-    SMM_BASE_RENDER_HEIGHT - SMM_BASE_RENDER_HEIGHT *.1f, 
-    static_cast<f32>(SMM_BASE_RENDER_WIDTH), SMM_BASE_RENDER_HEIGHT * .1f};
-  DrawRectangleRec(header_loc, Color{0, 0, 0, 50});
-  DrawRectangleRec(footer_loc, Color{0, 0, 0, 50});
+  Rectangle dest = gui_draw_default_background_panel();
 
-  state->main_menu_state_character_panel.dest = Rectangle{ SMM_BASE_RENDER_WIDTH * .025f, SMM_BASE_RENDER_HEIGHT * .075f, SMM_BASE_RENDER_WIDTH * .95f, SMM_BASE_RENDER_HEIGHT * .85f};
-  gui_panel(state->main_menu_state_character_panel, state->main_menu_state_character_panel.dest, false);
+  const Vector2 parent_panel_left_top_padding     = Vector2 { dest.height * .01f,  dest.height * .01f};
+  const Vector2 parent_panel_right_bottom_padding = Vector2{ dest.height * .01f * -1.f,  dest.height * .01f * -1.f };
 
-  const Vector2 parent_panel_left_top_padding = Vector2 {
-    state->main_menu_state_character_panel.dest.height * .01f, 
-    state->main_menu_state_character_panel.dest.height * .05f,
-  };
-  const Vector2 parent_panel_right_bottom_padding = Vector2{
-    state->main_menu_state_character_panel.dest.height * .01f * -1.f, 
-    state->main_menu_state_character_panel.dest.height * .01f * -1.f
-  };
   const Vector4 parent_panel_total_padding = Vector4{
     parent_panel_left_top_padding.x,
     parent_panel_left_top_padding.y,
@@ -502,7 +489,7 @@ void draw_main_menu_character_panel(void) {
     //  break;
     //}
     case MAIN_MENU_SCENE_CHARACTER_STATS: {
-      draw_main_menu_character_subscene_stat_panel(parent_panel_total_padding);
+      draw_main_menu_character_subscene_stat_panel(dest, parent_panel_total_padding);
       break;
     }
     default: {
@@ -522,12 +509,12 @@ void draw_main_menu_character_panel(void) {
   //  state->mainmenu_scene_character_subscene = MAIN_MENU_SCENE_CHARACTER_STATS;
   //}
 }
-void draw_main_menu_character_subscene_inventory_panel(const Vector4 padding) {
-  draw_main_menu_character_subscene_inventory_character_panel(padding);
-  draw_main_menu_character_subscene_inventory_slot_panel(padding);
+void draw_main_menu_character_subscene_inventory_panel(Rectangle panel_dest, const Vector4 padding) {
+  draw_main_menu_character_subscene_inventory_character_panel(panel_dest, padding);
+  draw_main_menu_character_subscene_inventory_slot_panel(panel_dest, padding);
 }
-void draw_main_menu_character_subscene_inventory_character_panel(const Vector4 padding) {
-  const Rectangle& parent_panel_dest = state->main_menu_state_character_panel.dest;
+void draw_main_menu_character_subscene_inventory_character_panel(Rectangle panel_dest, const Vector4 padding) {
+  const Rectangle& parent_panel_dest = panel_dest;
   state->inventory_character_panel.dest = Rectangle{ 
     parent_panel_dest.x + padding.x,
     parent_panel_dest.y + padding.y,
@@ -548,8 +535,8 @@ void draw_main_menu_character_subscene_inventory_character_panel(const Vector4 p
   };
   ui_play_sprite_on_site(__builtin_addressof(state->inventory_panel_hero_idle_anim), WHITE, character_pos);
 }
-void draw_main_menu_character_subscene_inventory_slot_panel(const Vector4 padding) {
-  const Rectangle& parent_panel_dest = state->main_menu_state_character_panel.dest;
+void draw_main_menu_character_subscene_inventory_slot_panel(Rectangle panel_dest, const Vector4 padding) {
+  const Rectangle& parent_panel_dest = panel_dest;
   const Rectangle& character_panel_dest = state->inventory_character_panel.dest;
   state->inventory_slots_panel.dest = Rectangle{ 
     character_panel_dest.x + character_panel_dest.width + padding.x,
@@ -560,16 +547,16 @@ void draw_main_menu_character_subscene_inventory_slot_panel(const Vector4 paddin
 
   gui_panel(state->inventory_slots_panel, state->inventory_slots_panel.dest, false);
 }
-void draw_main_menu_character_subscene_stat_panel(const Vector4 padding) {
-  draw_main_menu_character_subscene_stat_list_panel(padding);
-  draw_main_menu_character_subscene_stat_details_panel(padding);
+void draw_main_menu_character_subscene_stat_panel(Rectangle panel_dest, const Vector4 padding) {
+  draw_main_menu_character_subscene_stat_list_panel(panel_dest, padding);
+  draw_main_menu_character_subscene_stat_details_panel(panel_dest, padding);
 }
-void draw_main_menu_character_subscene_stat_list_panel(const Vector4 padding) {
-  const Rectangle& parent_panel_dest = state->main_menu_state_character_panel.dest;
+void draw_main_menu_character_subscene_stat_list_panel(Rectangle panel_dest, const Vector4 padding) {
+  const Rectangle& parent_panel_dest = panel_dest;
   const font_type panel_font_type = FONT_TYPE_ABRACADABRA;
   const i32 panel_font_size = 1;
 
-  state->stat_list_panel.dest = Rectangle{ 
+  state->stat_list_panel.dest = Rectangle { 
     parent_panel_dest.x + padding.x,
     parent_panel_dest.y + padding.y,
     (parent_panel_dest.width * .75f) + padding.z,
@@ -673,8 +660,8 @@ void draw_main_menu_character_subscene_stat_list_panel(const Vector4 padding) {
   gui_label(total_stock_desc_text, panel_font_type, panel_font_size, total_stock_desc_text_total_dest, WHITE, false, false);
   gui_label_box(total_stock_text, panel_font_type, panel_font_size, total_stock_dest, WHITE, TEXT_ALIGN_BOTTOM_CENTER);
 }
-void draw_main_menu_character_subscene_stat_details_panel(const Vector4 padding) {
-  const Rectangle& parent_panel_dest = state->main_menu_state_character_panel.dest;
+void draw_main_menu_character_subscene_stat_details_panel(Rectangle panel_dest, const Vector4 padding) {
+  const Rectangle& parent_panel_dest = panel_dest;
   const Rectangle& stat_list_panel_dest = state->stat_list_panel.dest;
   
   state->stat_details_panel.dest = Rectangle{
@@ -760,7 +747,7 @@ void draw_main_menu_character_subscene_stat_details_panel(const Vector4 padding)
       DRAW_UPGRADE_LABEL(upg_stat_text_pos, "%d -> %d", state->hovered_stat->buffer.i32[1], pseudo_update.buffer.i32[1]) break;
     }
     default: {
-      TraceLog(LOG_ERROR, "scene_main_menu::draw_main_menu_character_subscene_upgrade_details_panel()::Unsuppported stat id");
+      IWARN("scene_main_menu::draw_main_menu_character_subscene_upgrade_details_panel()::Unsuppported stat id");
       break;
     }
   }
@@ -814,10 +801,8 @@ void draw_main_menu_character_subscene_stat_details_panel(const Vector4 padding)
   }
 }
 void draw_trait_selection_panel(void) {
-  Rectangle bg_trait_sel_pan_dest = Rectangle {
-    static_cast<f32>(SMM_BASE_RENDER_WIDTH) * .1f, static_cast<f32>(SMM_BASE_RENDER_HEIGHT) * .1f, 
-    static_cast<f32>(SMM_BASE_RENDER_WIDTH) * .8f, static_cast<f32>(SMM_BASE_RENDER_HEIGHT) * .8f
-  };
+  Rectangle bg_trait_sel_pan_dest = gui_draw_default_background_panel(); 
+
   f32 trail_panel_height = bg_trait_sel_pan_dest.height * .4f;
   f32 trail_panel_width  = bg_trait_sel_pan_dest.width * .25f;
   f32 panel_height_gap = (bg_trait_sel_pan_dest.height - (trail_panel_height * 2.f)) * .3f;
@@ -859,9 +844,6 @@ void draw_trait_selection_panel(void) {
     ability_sel_pan_dest.x + ability_sel_pan_dest.width * .5f,
     bg_trait_sel_pan_dest.y + bg_trait_sel_pan_dest.height * .01f
   };
-
-  state->trait_selection_background_panel.dest = bg_trait_sel_pan_dest;
-  gui_panel(state->trait_selection_background_panel, bg_trait_sel_pan_dest, false);
 
   state->positive_traits_selection_panel.dest = positive_traits_sel_pan_dest;
   gui_panel(state->positive_traits_selection_panel, positive_traits_sel_pan_dest, false);
@@ -1022,7 +1004,7 @@ void trait_selection_panel_list_traits(panel* const pnl, const Rectangle rect, s
 }
 void trait_selection_panel_list_ability_selection_panel(panel* const pnl, const Rectangle rect, Vector2 border_gap) {
   if (not pnl or pnl == nullptr) {
-    TraceLog(LOG_ERROR, "scene_main_menu::trait_selection_panel_list_ability_selection_panel()::Panel is invalid");
+    IWARN("scene_main_menu::trait_selection_panel_list_ability_selection_panel()::Panel is invalid");
     return;
   }
   const f32 scroll_backgroud_src_width = 16.f;
@@ -1287,7 +1269,7 @@ void smm_update_mouse_bindings(void) {
       break;
     }
     default: {
-      TraceLog(LOG_WARNING, "scene_in_game::smm_update_mouse_bindings()::Unsupported stage");
+      IWARN("scene_in_game::smm_update_mouse_bindings()::Unsupported stage");
       break;
     }
   }
@@ -1313,7 +1295,7 @@ void smm_update_keyboard_bindings(void) {
       break;
     }
     default: {
-      TraceLog(LOG_WARNING, "scene_in_game::smm_update_keyboard_bindings()::Unsupported stage");
+      IWARN("scene_in_game::smm_update_keyboard_bindings()::Unsupported stage");
       break;
     }
   }
@@ -1346,8 +1328,8 @@ void smm_update_local_buttons(void) {
 }
 
 void smm_begin_fadeout(data128 data, void(*on_change_complete)(data128)) {
-  if (!state || state == nullptr ) {
-    TraceLog(LOG_ERROR, "scene_main_menu::smm_begin_fadeout()::State is not valid");
+  if (not state or state == nullptr ) {
+    IERROR("scene_main_menu::smm_begin_fadeout()::State is not valid");
     return;
   }
   state->smm_fade = ui_fade_control_system();
@@ -1361,8 +1343,8 @@ void smm_begin_fadeout(data128 data, void(*on_change_complete)(data128)) {
   state->smm_fade.on_change_complete = on_change_complete;
 }
 void smm_begin_fadein(data128 data, void(*on_change_complete)(data128)) {
-  if (!state || state == nullptr ) {
-    TraceLog(LOG_ERROR, "scene_main_menu::smm_begin_fadein()::State is not valid");
+  if (not state or state == nullptr ) {
+    IERROR("scene_main_menu::smm_begin_fadein()::State is not valid");
     return;
   }
   state->smm_fade.fade_animation_duration = MAIN_MENU_FADE_DURATION;
@@ -1375,16 +1357,16 @@ void smm_begin_fadein(data128 data, void(*on_change_complete)(data128)) {
 }
 local_button* smm_add_local_button(i32 _id, button_type_id _btn_type_id, button_state signal_state) {
   if (not state or state == nullptr) {
-    TraceLog(LOG_ERROR, "scene_main_menu::smm_add_local_button()::State is not valid");
+    IERROR("scene_main_menu::smm_add_local_button()::State is not valid");
     return nullptr;
   }
   if (_btn_type_id <= BTN_TYPE_UNDEFINED or _btn_type_id >= BTN_TYPE_MAX) {
-    TraceLog(LOG_ERROR, "scene_main_menu::smm_add_local_button()::Button type is out of bound");
+    IWARN("scene_main_menu::smm_add_local_button()::Button type is out of bound");
     return nullptr;
   }
   for (const auto& _btn : state->general_purpose_buttons) {
     if (_btn.id == _id) {
-      TraceLog(LOG_WARNING, "scene_main_menu::smm_add_local_button()::Button id collision");
+      IWARN("scene_main_menu::smm_add_local_button()::Button id collision");
       return nullptr;
     }
   }
@@ -1398,30 +1380,29 @@ local_button* smm_add_local_button(i32 _id, button_type_id _btn_type_id, button_
 }
 panel* smm_add_local_panel(i32 _id, panel in_pnl) {
   if (not state or state == nullptr) {
-    TraceLog(LOG_ERROR, "scene_main_menu::smm_add_local_panel()::State is not valid");
+    IERROR("scene_main_menu::smm_add_local_panel()::State is not valid");
     return nullptr;
   }
   if (in_pnl.frame_tex_id <= ATLAS_TEX_ID_UNSPECIFIED or in_pnl.frame_tex_id >= ATLAS_TEX_ID_MAX) {
-    TraceLog(LOG_ERROR, "scene_main_menu::smm_add_local_panel()::Frame tex is out of bound");
+    IERROR("scene_main_menu::smm_add_local_panel()::Frame tex is out of bound");
     return nullptr;
   }
   if (in_pnl.bg_tex_id <= ATLAS_TEX_ID_UNSPECIFIED or in_pnl.bg_tex_id >= ATLAS_TEX_ID_MAX) {
-    TraceLog(LOG_ERROR, "scene_main_menu::smm_add_local_panel()::Bg Tex is out of bound");
+    IERROR("scene_main_menu::smm_add_local_panel()::Bg Tex is out of bound");
     return nullptr;
   }
   for (const auto& itr_pnl : state->general_purpose_panels) {
     if (itr_pnl.id == _id) {
-      TraceLog(LOG_WARNING, "scene_main_menu::smm_add_local_panel()::Panel id collision");
+      IWARN("scene_main_menu::smm_add_local_panel()::Panel id collision");
       return nullptr;
     }
   }
-
   in_pnl.id = _id;
   return __builtin_addressof(state->general_purpose_panels.emplace_back(in_pnl));
 }
 local_button* smm_get_local_button(i32 _id) {
   if (not state or state == nullptr) {
-    TraceLog(LOG_ERROR, "scene_main_menu::smm_get_local_button()::State is not valid");
+    IERROR("scene_main_menu::smm_get_local_button()::State is not valid");
     return nullptr;
   }
   for (auto& itr_btn : state->general_purpose_buttons) {
@@ -1433,7 +1414,7 @@ local_button* smm_get_local_button(i32 _id) {
 }
 panel* smm_get_local_panel(i32 _id) {
   if (not state or state == nullptr) {
-    TraceLog(LOG_ERROR, "scene_main_menu::smm_get_local_panel()::State is not valid");
+    IERROR("scene_main_menu::smm_get_local_panel()::State is not valid");
     return nullptr;
   }
   for (auto& itr_pnl : state->general_purpose_panels) {
@@ -1444,8 +1425,8 @@ panel* smm_get_local_panel(i32 _id) {
   return nullptr;
 }
 void fade_on_complete_change_main_menu_type(data128 data) {
-  if (!state || state == nullptr ) {
-    TraceLog(LOG_INFO, "scene_main_menu::fade_on_complete_change_main_menu_type()::State is not valid");
+  if (not state or state == nullptr ) {
+    IERROR("scene_main_menu::fade_on_complete_change_main_menu_type()::State is not valid");
     return;
   }
   main_menu_scene_type scene = static_cast<main_menu_scene_type>(data.i32[0]);
@@ -1454,8 +1435,8 @@ void fade_on_complete_change_main_menu_type(data128 data) {
   smm_begin_fadein(data128(), nullptr);
 }
 void fade_on_complete_change_scene(data128 data) {
-  if (!state || state == nullptr ) {
-    TraceLog(LOG_ERROR, "scene_main_menu::fade_on_complete_change_scene()::State is not valid");
+  if (not state or state == nullptr ) {
+    IERROR("scene_main_menu::fade_on_complete_change_scene()::State is not valid");
     return;
   }
   scene_id scene = static_cast<scene_id>(data.i32[0]);
@@ -1526,15 +1507,15 @@ void begin_scene_change(main_menu_scene_type mms, [[__maybe_unused__]] event_con
       break;
     }
     default: {
-      TraceLog(LOG_WARNING, "scene_main_menu::begin_scene_change()::Unsupported main menu scene type");
+      IWARN("scene_main_menu::begin_scene_change()::Unsupported main menu scene type");
       state->mainmenu_state = MAIN_MENU_SCENE_DEFAULT;
       break;
     }
   }
 }
 void begin_scene_change(scene_id sid, event_context context) {
-  if (!state || state == nullptr ) {
-    TraceLog(LOG_ERROR, "scene_main_menu::begin_scene_change()::State is not valid");
+  if (not state or state == nullptr ) {
+    IERROR("scene_main_menu::begin_scene_change()::State is not valid");
     return;
   }
 
@@ -1552,13 +1533,12 @@ void begin_scene_change(scene_id sid, event_context context) {
       return; 
     }
     default: {
-      TraceLog(LOG_WARNING, "scene_main_menu::begin_scene_change()::Unsupported scene type");
+      IWARN("scene_main_menu::begin_scene_change()::Unsupported scene type");
       event_fire(EVENT_CODE_SCENE_MAIN_MENU, event_context(static_cast<i32>(true)));
       return;
     }
   }
-
-  TraceLog(LOG_ERROR, "scene_main_menu::begin_scene_change()::Function ended unexpectedly");
+  IERROR("scene_main_menu::begin_scene_change()::Function ended unexpectedly");
 }
 
 void positive_trait_button_on_click(size_t index) {

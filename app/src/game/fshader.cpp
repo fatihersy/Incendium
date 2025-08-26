@@ -2,8 +2,10 @@
 #include <raylib.h>
 #include <defines.h>
 
-#include "tools/pak_parser.h"
 #include "core/fmemory.h"
+#include "core/logger.h"
+
+#include "tools/pak_parser.h"
 
 typedef struct shader_system_state {
   std::array<fshader, SHADER_ID_MAX> shaders;
@@ -26,30 +28,30 @@ bool initialize_shader_system(void) {
   }
   state = (shader_system_state *)allocate_memory_linear(sizeof(shader_system_state), true);
   if (not state or state == nullptr) {
-    TraceLog(LOG_ERROR, "fshader::initialize_shader_system()::State allocation failed");
+    IERROR("fshader::initialize_shader_system()::State allocation failed");
     return false;
   }
   *state = shader_system_state();
 
   // NOTE: _path = "%s%s", SHADER_PATH, _path
   if (not load_shader(PAK_FILE_ASSET2, PAK_FILE_ASSET2_UNDEFINED, PAK_FILE_ASSET2_PRG_BAR_MASK, SHADER_ID_PROGRESS_BAR_MASK)) {
-    TraceLog(LOG_WARNING, "fshader::initialize_shader_system()::mask shader cannot loaded");
+    IWARN("fshader::initialize_shader_system()::mask shader cannot loaded");
     return false;
   }
   if (not load_shader(PAK_FILE_ASSET2, PAK_FILE_ASSET2_UNDEFINED, PAK_FILE_ASSET2_FADE_TRANSITION, SHADER_ID_FADE_TRANSITION)) {
-    TraceLog(LOG_WARNING, "fshader::initialize_shader_system()::fade shader cannot loaded");
+    IWARN("fshader::initialize_shader_system()::fade shader cannot loaded");
     return false;
   }
   if(not load_shader(PAK_FILE_ASSET2, PAK_FILE_ASSET2_UNDEFINED, PAK_FILE_ASSET2_FONT_OUTLINE, SHADER_ID_FONT_OUTLINE)) {
-    TraceLog(LOG_WARNING, "fshader::initialize_shader_system()::outline shader cannot loaded");
+    IWARN("fshader::initialize_shader_system()::outline shader cannot loaded");
     return false;
   }
   if(not load_shader(PAK_FILE_ASSET2, PAK_FILE_ASSET2_UNDEFINED, PAK_FILE_ASSET2_POST_PROCESS, SHADER_ID_POST_PROCESS)) {
-    TraceLog(LOG_WARNING, "fshader::initialize_shader_system()::post process shader cannot loaded");
+    IWARN("fshader::initialize_shader_system()::post process shader cannot loaded");
     return false;
   }
   if(not load_shader(PAK_FILE_ASSET2, PAK_FILE_ASSET2_UNDEFINED, PAK_FILE_ASSET2_MAP_CHOICE_IMAGE, SHADER_ID_MAP_CHOICE_IMAGE)) {
-    TraceLog(LOG_WARNING, "fshader::initialize_shader_system()::map choice image shader cannot loaded");
+    IWARN("fshader::initialize_shader_system()::map choice image shader cannot loaded");
     return false;
   }
 
@@ -66,9 +68,9 @@ const char *shader_path(const char *_path) {
   return (_path) ? TextFormat("%s%s", SHADER_PATH, _path) : 0;
 }
 
-fshader *get_shader_by_enum(shader_id _id) {
+const fshader *get_shader_by_enum(shader_id _id) {
   if (_id >= SHADER_ID_MAX || _id <= SHADER_ID_UNSPECIFIED) {
-    TraceLog(LOG_WARNING, "fshader::get_shader_by_enum()::Shader type out of bound");
+    IWARN("fshader::get_shader_by_enum()::Shader type out of bound");
     return nullptr;
   }
 
@@ -76,7 +78,11 @@ fshader *get_shader_by_enum(shader_id _id) {
 }
 i32 get_uniform_location(shader_id _id, const char * uni_name) {
   if (_id >= SHADER_ID_MAX || _id <= SHADER_ID_UNSPECIFIED) {
-    TraceLog(LOG_WARNING, "fshader::get_uniform_location()::Shader type out of bound");
+    IWARN("fshader::get_uniform_location()::Shader type out of bound");
+    return -1;
+  }
+  if (not uni_name or uni_name == nullptr) {
+    IWARN("fshader::get_uniform_location()::Uniform name is invalid");
     return -1;
   }
   return GetShaderLocation(state->shaders.at(_id).handle, uni_name);
@@ -84,14 +90,18 @@ i32 get_uniform_location(shader_id _id, const char * uni_name) {
 
 void set_shader_uniform(shader_id _id, const char* uni_name, data128 _data_pack) {
   if (_id >= SHADER_ID_MAX || _id <= SHADER_ID_UNSPECIFIED) {
-    TraceLog(LOG_ERROR, "fshader::set_shader_uniform()::Shader type out of bound");
+    IWARN("fshader::set_shader_uniform()::Shader type out of bound");
+    return;
+  }
+  if (not uni_name or uni_name == nullptr) {
+    IWARN("fshader::set_shader_uniform()::Uniform name is invalid");
     return;
   }
   fshader& _shader = state->shaders.at(_id);
   i32 uni_loc = GetShaderLocation(state->shaders.at(_id).handle, uni_name);
 
   if (uni_loc < 0) {
-    TraceLog(LOG_ERROR, "fshader::set_shader_uniform()::Shader index out of bound");
+    IWARN("fshader::set_shader_uniform()::Shader index out of bound");
     return;
   }
 
@@ -143,7 +153,7 @@ void set_shader_uniform(shader_id _id, const char* uni_name, data128 _data_pack)
     break;
   }
   default: {
-    TraceLog(LOG_ERROR,"fshader::set_shader_uniform()::Error while setting shader value");
+    IWARN("fshader::set_shader_uniform()::Error while setting shader value");
     return;
   }
   }
@@ -151,7 +161,7 @@ void set_shader_uniform(shader_id _id, const char* uni_name, data128 _data_pack)
 
 bool load_shader(pak_file_id pak_id, i32 _vs_id, i32 _fs_id, shader_id _id) {
   if (_id >= SHADER_ID_MAX or _id <= SHADER_ID_UNSPECIFIED) {
-    TraceLog(LOG_ERROR, "fshader::load_shader()::Shader type out of bound");
+    IWARN("fshader::load_shader()::Shader type out of bound");
     return false;
   }
   const file_buffer * vs_file = get_asset_file_buffer(pak_id, _vs_id);
@@ -173,15 +183,14 @@ bool load_shader(pak_file_id pak_id, i32 _vs_id, i32 _fs_id, shader_id _id) {
 
 void shader_add_uniform(shader_id _id, const char *_name, ShaderUniformDataType _data_id) {
   if (_id >= SHADER_ID_MAX || _id <= SHADER_ID_UNSPECIFIED) {
-    TraceLog(LOG_ERROR, "fshader::shader_add_uniform()::Shader type out of bound");
+    IWARN("fshader::shader_add_uniform()::Shader type out of bound");
     return;
   }
   const i32 uniform_loc = GetShaderLocation(state->shaders.at(_id).handle, _name);
   if (uniform_loc < 0) {
-    TraceLog(LOG_ERROR, "fshader::shader_add_uniform()::Shader uniform cannot found");
+    IWARN("fshader::shader_add_uniform()::Shader uniform cannot found");
     return;
   }
-
   state->shaders.at(_id).locations.at(uniform_loc).name = _name;
   state->shaders.at(_id).locations.at(uniform_loc).uni_data_type = _data_id;
 

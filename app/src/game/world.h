@@ -4,8 +4,8 @@
 
 #include "game_types.h"
 
-[[__nodiscard__]] bool world_system_initialize(const app_settings* _in_app_settings);
-[[__nodiscard__]] bool world_system_begin(const camera_metrics* _in_camera_metrics);
+[[__nodiscard__]] bool world_system_initialize(const app_settings *const _in_app_settings);
+[[__nodiscard__]] bool world_system_begin(const camera_metrics *const _in_camera_metrics);
 
 void set_worldmap_location(i32 id);
 const worldmap_stage* get_worldmap_locations(void);
@@ -26,7 +26,7 @@ tile _get_tile_from_sheet_by_mouse_pos(Vector2 _mouse_pos);
 tile _get_tile_from_map_by_mouse_pos(i32 from_layer, Vector2 _mouse_pos);
 void _render_props_y_based(i32 start_y, i32 end_y);
 void _sort_render_y_based_queue(void);
-Rectangle wld_calc_mainmenu_prop_dest(const tilemap * const _tilemap, Rectangle dest, f32 scale);
+Rectangle wld_calc_mainmenu_prop_dest(const tilemap *const _tilemap, Rectangle dest, f32 scale);
 
 bool add_prop_curr_map(tilemap_prop_static prop_static);
 bool add_prop_curr_map(tilemap_prop_sprite prop_sprite);
@@ -35,7 +35,7 @@ bool remove_prop_cur_map_by_id(i32 map_id, tilemap_prop_types type);
 bool remove_map_collision_by_id(i32 coll_id);
 void update_map(void);
 void drag_tilesheet(Vector2 vec);
-void _render_tile_on_pos(const tile* _tile, Vector2 pos,const tilesheet* sheet);
+void _render_tile_on_pos(const tile *const _tile, Vector2 pos, const tilesheet *const sheet);
 void render_map(void);
 void render_map_palette(f32 zoom);
 void refresh_render_queue(i32 id);

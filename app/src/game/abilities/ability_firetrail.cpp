@@ -4,18 +4,16 @@
 
 #include "core/event.h"
 #include "core/fmemory.h"
+#include "core/logger.h"
 
 #include "game/spritesheet.h"
 
 typedef struct ability_firetrail_state {
-  std::array<ability, ABILITY_ID_MAX> abilities;
-
   const camera_metrics* in_camera_metrics;
   const app_settings* in_settings;
   const ingame_info* in_ingame_info;
 
   ability_firetrail_state(void) {
-    this->abilities.fill(ability());
     this->in_camera_metrics = nullptr;
     this->in_settings = nullptr;
     this->in_ingame_info = nullptr;
@@ -24,46 +22,44 @@ typedef struct ability_firetrail_state {
 
 static ability_firetrail_state * state = nullptr;
 
-bool ability_firetrail_initialize(const camera_metrics* _camera_metrics,const app_settings* _settings,const ingame_info* _ingame_info) {
+bool ability_firetrail_initialize(const camera_metrics *const _camera_metrics, const app_settings *const _settings, const ingame_info *const _ingame_info) {
   if (state and state != nullptr) {
-    TraceLog(LOG_WARNING, "ability_firetrail::ability_firetrail_initialize()::Init called multiple times");
-    return false;
+    return true;
   }
   state = (ability_firetrail_state*)allocate_memory_linear(sizeof(ability_firetrail_state),true);
   if (not state or state == nullptr) {
-    TraceLog(LOG_ERROR, "ability_firetrail::ability_firetrail_initialize()::Failed to allocate memory");
+    IWARN("ability_firetrail::ability_firetrail_initialize()::Failed to allocate state");
     return false;
   }
   *state = ability_firetrail_state();
 
   if (not _camera_metrics or _camera_metrics == nullptr) {
-    TraceLog(LOG_ERROR, "ability_firetrail::ability_firetrail_initialize()::Camera metric pointer is invalid");
+    IERROR("ability_firetrail::ability_firetrail_initialize()::Camera metric pointer is invalid");
     return false;
   }
   if (not _settings or _settings == nullptr) {
-    TraceLog(LOG_ERROR, "ability_firetrail::ability_firetrail_initialize()::Settings pointer is invalid");
+    IERROR("ability_firetrail::ability_firetrail_initialize()::Settings pointer is invalid");
     return false;
   }
   if (not _ingame_info or _ingame_info == nullptr) {
-    TraceLog(LOG_ERROR, "ability_firetrail::ability_firetrail_initialize()::Game info pointer is invalid");
+    IERROR("ability_firetrail::ability_firetrail_initialize()::Game info pointer is invalid");
     return false;
   }
-
   state->in_settings = _settings;
   state->in_camera_metrics = _camera_metrics;
   state->in_ingame_info = _ingame_info;
   return true;
 }
 
-void upgrade_ability_firetrail(ability* abl) {
-  if (abl->id <= ABILITY_ID_UNDEFINED || abl->id >= ABILITY_ID_MAX) {
-    TraceLog(LOG_WARNING, "ability::upgrade_ability()::Ability is not initialized");
+void upgrade_ability_firetrail(ability *const abl) {
+  if (abl->id <= ABILITY_ID_UNDEFINED or abl->id >= ABILITY_ID_MAX) {
+    IWARN("ability::upgrade_ability()::Ability is not initialized");
     return;
   }
   ++abl->level;
 
-  for (int i=0; i<ABILITY_UPG_MAX; ++i) {
-    switch (abl->upgradables.at(i)) {
+  for (size_t itr_000 = 0; itr_000 < ABILITY_UPG_MAX; ++itr_000) {
+    switch (abl->upgradables.at(itr_000)) {
       case ABILITY_UPG_DAMAGE: {
         abl->base_damage += abl->level * 2;
         break;
@@ -91,28 +87,28 @@ ability get_ability_firetrail(void) {
   );
 }
 ability get_ability_firetrail_next_level(ability abl) {
-  upgrade_ability_firetrail(&abl);
+  upgrade_ability_firetrail(__builtin_addressof(abl));
   return abl;
 }
 
-void update_ability_firetrail(ability* abl) {
-  if (abl == nullptr) {
-    TraceLog(LOG_WARNING, "ability::update_ability_firetrail()::Ability is not valid");
+void update_ability_firetrail(ability *const abl) {
+  if (not abl or abl == nullptr) {
+    IWARN("ability::update_ability_firetrail()::Ability is not valid");
     return;
   }
   if (abl->id != ABILITY_ID_FIRETRAIL) {
-    TraceLog(LOG_WARNING, "ability::update_ability_firetrail()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_ID_FIRETRAIL, abl->id);
+    IWARN("ability::update_ability_firetrail()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_ID_FIRETRAIL, abl->id);
     return;
   }
-  if (!abl->is_active || !abl->is_initialized) {
-    TraceLog(LOG_WARNING, "ability::update_ability_firetrail()::Ability is not active or not initialized");
+  if (not abl->is_active or not abl->is_initialized) {
+    IWARN("ability::update_ability_firetrail()::Ability is not active or not initialized");
     return;
   }
-  if (abl->p_owner == nullptr || state->in_ingame_info == nullptr || state->in_ingame_info->nearest_spawn == nullptr) {
-    TraceLog(LOG_WARNING, "ability::update_ability_firetrail()::Ability pointer(s) not valid");
+  if (abl->p_owner == nullptr or state->in_ingame_info == nullptr or state->in_ingame_info->nearest_spawn == nullptr) {
+    IWARN("ability::update_ability_firetrail()::Ability pointer(s) not valid");
     return;
   }
-  player_state* p_player = reinterpret_cast<player_state*>(abl->p_owner);
+  const player_state *const p_player = reinterpret_cast<player_state*>(abl->p_owner);
   const f32& cd_stat = p_player->stats.at(CHARACTER_STATS_ABILITY_CD).buffer.f32[3];
 
   Vector2 ability_projectile_dimentions = Vector2 {abl->proj_dim.x * abl->proj_collision_scale.x, abl->proj_dim.y * abl->proj_collision_scale.y};
@@ -122,9 +118,9 @@ void update_ability_firetrail(ability* abl) {
   f32& cd_accumulator = abl->ability_cooldown_accumulator;
   const f32& cd_duration = abl->ability_cooldown_duration - (cd_stat * abl->ability_cooldown_duration);
 
-  for (size_t itr_000 = 0; itr_000 < abl->projectiles.size(); itr_000++) {
+  for (size_t itr_000 = 0u; itr_000 < abl->projectiles.size(); itr_000++) {
     projectile* prj = __builtin_addressof(abl->projectiles.at(itr_000));
-    if (prj->duration <= 0) {
+    if (prj->duration <= 0.f) {
       abl->projectiles.erase(abl->projectiles.begin() + itr_000);
       continue;
     }
@@ -150,7 +146,7 @@ void update_ability_firetrail(ability* abl) {
   };
 
   cd_accumulator += GetFrameTime();
-  if (!CheckCollisionRecs(last_placed_projectile_dest, player_collision) and cd_duration < cd_accumulator) {
+  if (not CheckCollisionRecs(last_placed_projectile_dest, player_collision) and cd_duration < cd_accumulator) {
     cd_accumulator = 0.f;
     projectile prj = projectile();
     prj.position = ability_position;
@@ -159,7 +155,6 @@ void update_ability_firetrail(ability* abl) {
       prj.position.x - (ability_projectile_dimentions.x * .5f), prj.position.y - ability_projectile_dimentions.y,
       ability_projectile_dimentions.x, ability_projectile_dimentions.y
     };
-
     abl->vec_ex.f32[0] = prj.collision.x;
     abl->vec_ex.f32[1] = prj.collision.y;
     abl->vec_ex.f32[2] = prj.collision.width;
@@ -169,8 +164,8 @@ void update_ability_firetrail(ability* abl) {
     prj.is_active = true;
     prj.duration = abl->proj_duration;
     prj.active_sprite = 0;
-    for (size_t itr_000 = 0; itr_000 < abl->animation_ids.size(); ++itr_000) {
-      if (abl->animation_ids.at(itr_000) <= SHEET_ID_SPRITESHEET_UNSPECIFIED || abl->animation_ids.at(itr_000) >= SHEET_ID_SPRITESHEET_TYPE_MAX) {
+    for (size_t itr_000 = 0u; itr_000 < abl->animation_ids.size(); ++itr_000) {
+      if (abl->animation_ids.at(itr_000) <= SHEET_ID_SPRITESHEET_UNSPECIFIED or abl->animation_ids.at(itr_000) >= SHEET_ID_SPRITESHEET_TYPE_MAX) {
         return;
       }
       spritesheet spr = spritesheet();
@@ -182,28 +177,27 @@ void update_ability_firetrail(ability* abl) {
 
       prj.animations.push_back(spr);
     }
-
     abl->projectiles.push_back(prj);
   }
 }
 
-void render_ability_firetrail(ability* abl) {
-  if (abl == nullptr) {
-    TraceLog(LOG_WARNING, "ability::render_firetrail()::Ability is not valid");
+void render_ability_firetrail(ability *const abl) {
+  if (not abl or abl == nullptr) {
+    IWARN("ability::render_firetrail()::Ability is not valid");
     return;
   }
   if (abl->id != ABILITY_ID_FIRETRAIL) {
-    TraceLog(LOG_WARNING, "ability::render_firetrail()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_ID_FIRETRAIL, abl->id);
+    IWARN("ability::render_firetrail()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_ID_FIRETRAIL, abl->id);
     return;
   }
-  if (!abl->is_active || !abl->is_initialized) {
-    TraceLog(LOG_WARNING, "ability::render_firetrail()::Ability is not active or not initialized");
+  if (not abl->is_active or not abl->is_initialized) {
+    IWARN("ability::render_firetrail()::Ability is not active or not initialized");
     return;
   }
-  //player_state* p_player = reinterpret_cast<player_state*>(abl->p_owner);
-  for (size_t itr_000 = 0; itr_000 < abl->projectiles.size(); ++itr_000) {
+
+  for (size_t itr_000 = 0u; itr_000 < abl->projectiles.size(); ++itr_000) {
     projectile& prj = abl->projectiles.at(itr_000);
-    if (!prj.is_active) { continue; }
+    if (not prj.is_active) { continue; }
     play_sprite_on_site(__builtin_addressof(prj.animations.at(prj.active_sprite)), WHITE, Rectangle { 
       prj.position.x, prj.position.y, prj.animations.at(prj.active_sprite).coord.width, 
       prj.animations.at(prj.active_sprite).coord.height
@@ -211,17 +205,17 @@ void render_ability_firetrail(ability* abl) {
   }
 }
 
-void refresh_ability_firetrail(ability* abl) { 
-  if (abl == nullptr) {
-    TraceLog(LOG_WARNING, "ability::refresh_ability_firetrail()::Ability is null");
+void refresh_ability_firetrail(ability *const abl) { 
+  if (not abl or abl == nullptr) {
+    IWARN("ability::refresh_ability_firetrail()::Ability is null");
     return;
   }
   if (abl->id != ABILITY_ID_FIRETRAIL) {
-    TraceLog(LOG_WARNING, "ability::refresh_ability_firetrail()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_ID_FIRETRAIL, abl->id);
+    IWARN("ability::refresh_ability_firetrail()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_ID_FIRETRAIL, abl->id);
     return;
   }
   if (abl->proj_count > MAX_ABILITY_PROJECTILE_COUNT) {
-    TraceLog(LOG_WARNING, "ability::refresh_ability_firetrail()::Ability projectile count exceed");
+    IWARN("ability::refresh_ability_firetrail()::Ability projectile count exceed");
     return;
   }
   abl->animation_ids.clear();

@@ -5,25 +5,30 @@
 #include "core/event.h"
 #include "core/fmath.h"
 #include "core/fmemory.h"
+#include "core/logger.h"
 
 #include "game/spritesheet.h"
 
 typedef struct ability_fireball_state {
-  std::array<ability, ABILITY_ID_MAX> abilities;
-
   const camera_metrics* in_camera_metrics;
   const app_settings* in_settings;
   const ingame_info* in_ingame_info; 
+  ability_fireball_state(void) {
+    this->in_camera_metrics = nullptr;
+    this->in_settings = nullptr;
+    this->in_ingame_info = nullptr; 
+  }
 } ability_fireball_state;
+
 static ability_fireball_state * state = nullptr;
 
-bool ability_fireball_initialize(const camera_metrics* _camera_metrics,const app_settings* _settings,const ingame_info* _ingame_info) {
+bool ability_fireball_initialize(const camera_metrics *const _camera_metrics, const app_settings *const _settings, const ingame_info *const _ingame_info) {
   if (state and state != nullptr) {
-    return false;
+    return true;
   }
   state = (ability_fireball_state*)allocate_memory_linear(sizeof(ability_fireball_state),true);
-  if (!state) {
-    TraceLog(LOG_ERROR, "ability::ability_system_initialize()::Failed to allocate memory");
+  if (not state or state == nullptr) {
+    IERROR("ability::ability_fireball_initialize()::Failed to allocate state");
     return false;
   }
   state->in_settings = _settings;
@@ -32,18 +37,18 @@ bool ability_fireball_initialize(const camera_metrics* _camera_metrics,const app
   return true;
 }
 
-void upgrade_ability_fireball(ability* abl) {
+void upgrade_ability_fireball(ability *const abl) {
   if (not abl or abl == nullptr) {
-    TraceLog(LOG_WARNING, "ability::upgrade_ability_fireball()::Ability is invalid");
+    IWARN("ability::upgrade_ability_fireball()::Ability is invalid");
     return;
   }
-  if (abl->id <= ABILITY_ID_UNDEFINED || abl->id >= ABILITY_ID_MAX) {
-    TraceLog(LOG_WARNING, "ability::upgrade_ability_fireball()::Ability is not initialized");
+  if (abl->id <= ABILITY_ID_UNDEFINED or abl->id >= ABILITY_ID_MAX) {
+    IWARN("ability::upgrade_ability_fireball()::Ability is not initialized");
     return;
   }
   ++abl->level;
 
-  for (size_t itr_000 = 0; itr_000 < ABILITY_UPG_MAX; ++itr_000) {
+  for (size_t itr_000 = 0u; itr_000 < ABILITY_UPG_MAX; ++itr_000) {
     switch (abl->upgradables.at(itr_000)) {
       case ABILITY_UPG_DAMAGE: {
         abl->base_damage += abl->level * 2;
@@ -71,38 +76,38 @@ ability get_ability_fireball(void) {
   );
 }
 ability get_ability_fireball_next_level(ability abl) {
-  upgrade_ability_fireball(&abl);
+  upgrade_ability_fireball(__builtin_addressof(abl));
   return abl;
 }
 
-void update_ability_fireball(ability* abl) {
+void update_ability_fireball(ability *const abl) {
   if (not abl or abl == nullptr) {
-    TraceLog(LOG_WARNING, "ability::update_fireball()::Ability is not valid");
+    IWARN("ability::update_ability_fireball()::Ability is not valid");
     return;
   }
   if (abl->id != ABILITY_ID_FIREBALL) {
-    TraceLog(LOG_WARNING, "ability::update_fireball()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_ID_FIREBALL, abl->id);
+    IWARN("ability::update_ability_fireball()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_ID_FIREBALL, abl->id);
     return;
   }
   if (not abl->is_active or not abl->is_initialized) {
-    TraceLog(LOG_WARNING, "ability::update_fireball()::Ability is not active or not initialized");
+    IWARN("ability::update_ability_fireball()::Ability is not active or not initialized");
     return;
   }
   if (abl->p_owner == nullptr) {
     return;
   }
-  player_state* player = reinterpret_cast<player_state*>(abl->p_owner);
+  const player_state *const player = reinterpret_cast<player_state*>(abl->p_owner);
   abl->position = player->position;
   abl->rotation += abl->proj_speed;
   const f32& aoe_scale = player->stats.at(CHARACTER_STATS_AOE).buffer.f32[3];
 
-  if (abl->rotation > 360) abl->rotation = 0;
+  if (abl->rotation > 360.f) abl->rotation = 0.f;
 
-  for (size_t iter = 0; iter < abl->projectiles.size(); iter++) {
-    projectile& prj = abl->projectiles.at(iter);
-    if (!prj.is_active) { continue; }
+  for (size_t itr_000 = 0u; itr_000 < abl->projectiles.size(); itr_000++) {
+    projectile& prj = abl->projectiles.at(itr_000);
+    if (not prj.is_active) { continue; }
 
-    i16 angle = (i32)(((360.f / abl->projectiles.size()) * iter) + abl->rotation) % 360;
+    i16 angle = (i32)(((360.f / abl->projectiles.size()) * itr_000) + abl->rotation) % 360;
 
     prj.position = get_a_point_of_a_circle( abl->position, (abl->level * 3.f) + player->collision.height + 15, angle);
     prj.collision.x = prj.position.x - (prj.collision.width * .5f);
@@ -118,32 +123,32 @@ void update_ability_fireball(ability* abl) {
     };
 
     event_fire(EVENT_CODE_DAMAGE_ANY_SPAWN_IF_COLLIDE, event_context(
-      static_cast<i16>(prj_collision.x),     static_cast<i16>(prj_collision.y), static_cast<i16>(prj_collision.width), static_cast<i16>(prj_collision.height),
+      static_cast<i16>(prj_collision.x), static_cast<i16>(prj_collision.y), static_cast<i16>(prj_collision.width), static_cast<i16>(prj_collision.height),
       static_cast<i16>(prj.damage + player->stats.at(CHARACTER_STATS_DAMAGE).buffer.i32[3]),
       static_cast<i16>(COLLISION_TYPE_RECTANGLE_RECTANGLE)
     ));
-    update_sprite(&prj.animations.at(0));
+    update_sprite(__builtin_addressof(prj.animations.at(0)));
   }
 }
 
-void render_ability_fireball(ability* abl){
+void render_ability_fireball(ability *const abl){
   if (not abl or abl == nullptr) {
-    TraceLog(LOG_WARNING, "ability::render_fireball()::Ability is not valid");
+    IWARN("ability::render_ability_fireball()::Ability is not valid");
     return;
   }
   if (abl->id != ABILITY_ID_FIREBALL) {
-    TraceLog(LOG_WARNING, "ability::render_fireball()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_ID_FIREBALL, abl->id);
+    IWARN("ability::render_ability_fireball()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_ID_FIREBALL, abl->id);
     return;
   }
-  if (!abl->is_active || !abl->is_initialized) {
-    TraceLog(LOG_WARNING, "ability::render_fireball()::Ability is not active or not initialized");
+  if (not abl->is_active or not abl->is_initialized) {
+    IWARN("ability::render_ability_fireball()::Ability is not active or not initialized");
     return;
   }
   const f32& aoe_scale = state->in_ingame_info->player_state_dynamic->stats.at(CHARACTER_STATS_AOE).buffer.f32[3];
 
-  for (size_t itr_000 = 0; itr_000 < abl->projectiles.size(); ++itr_000) {
+  for (size_t itr_000 = 0u; itr_000 < abl->projectiles.size(); ++itr_000) {
     projectile& prj = abl->projectiles.at(itr_000);
-    if (!prj.is_active) { continue; }
+    if (not prj.is_active) { continue; }
     Vector2 dim = Vector2 {
       prj.animations.at(prj.active_sprite).current_frame_rect.width  * abl->proj_sprite_scale,
       prj.animations.at(prj.active_sprite).current_frame_rect.height * abl->proj_sprite_scale
@@ -156,17 +161,17 @@ void render_ability_fireball(ability* abl){
   }
 }
 
-void refresh_ability_fireball(ability* abl) { 
-  if (abl == nullptr) {
-    TraceLog(LOG_WARNING, "ability::refresh_ability_fireball()::Ability is null");
+void refresh_ability_fireball(ability *const abl) { 
+  if (not abl or abl == nullptr) {
+    IWARN("ability::refresh_ability_fireball()::Ability is null");
     return;
   }
   if (abl->id != ABILITY_ID_FIREBALL) {
-    TraceLog(LOG_WARNING, "ability::refresh_ability_fireball()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_ID_FIREBALL, abl->id);
+    IWARN("ability::refresh_ability_fireball()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_ID_FIREBALL, abl->id);
     return;
   }
   if (abl->proj_count > MAX_ABILITY_PROJECTILE_COUNT) {
-    TraceLog(LOG_WARNING, "ability::refresh_ability_fireball()::Ability projectile count exceed");
+    IWARN("ability::refresh_ability_fireball()::Ability projectile count exceed");
     return;
   }
   abl->projectiles.clear();
@@ -180,9 +185,9 @@ void refresh_ability_fireball(ability* abl) {
     prj.damage = abl->base_damage;
     prj.is_active = true;
     prj.duration = abl->proj_duration;
-    for (size_t itr_111 = 0; itr_111 < abl->animation_ids.size(); ++itr_111) {
-      if (abl->animation_ids.at(itr_111) <= SHEET_ID_SPRITESHEET_UNSPECIFIED || abl->animation_ids.at(itr_111) >= SHEET_ID_SPRITESHEET_TYPE_MAX) {
-        TraceLog(LOG_WARNING, "ability::refresh_ability_fireball()::Ability sprite is not initialized or corrupted");
+    for (size_t itr_111 = 0u; itr_111 < abl->animation_ids.size(); ++itr_111) {
+      if (abl->animation_ids.at(itr_111) <= SHEET_ID_SPRITESHEET_UNSPECIFIED or abl->animation_ids.at(itr_111) >= SHEET_ID_SPRITESHEET_TYPE_MAX) {
+        IWARN("ability::refresh_ability_fireball()::Ability sprite is not initialized or corrupted");
         return;
       }
       spritesheet spr = spritesheet();

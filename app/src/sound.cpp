@@ -3,6 +3,7 @@
 
 #include "core/fmemory.h"
 #include "core/event.h"
+#include "core/logger.h"
 
 #if USE_PAK_FORMAT 
 #include "tools/pak_parser.h"
@@ -41,12 +42,11 @@ bool sound_system_on_event(i32 code, event_context context);
  */
 bool sound_system_initialize(void) {
   if (state and state != nullptr) {
-    TraceLog(LOG_WARNING, "sound::sound_system_initialize()::Init called twice");
-    return false;
+    return true;
   }
   state = (sound_system_state*)allocate_memory_linear(sizeof(sound_system_state), true);
   if (not state or state == nullptr) {
-    TraceLog(LOG_WARNING, "sound::sound_system_initialize()::State allocation failed");
+    IERROR("sound::sound_system_initialize()::State allocation failed");
     return false;
   }
   *state = sound_system_state();
@@ -84,7 +84,7 @@ bool sound_system_initialize(void) {
 
 void update_sound_system(void) {
   if (not state or state == nullptr) {
-    TraceLog(LOG_ERROR, "sound::update_sound_system()::State is not valid");
+    IERROR("sound::update_sound_system()::State is not valid");
     return;
   }
 
@@ -101,12 +101,12 @@ void load_sound_pak([[__maybe_unused__]] pak_file_id pak_file, [[__maybe_unused_
 
   file = get_asset_file_buffer(pak_file, file_id);
   if (not file or file == nullptr) {
-    TraceLog(LOG_WARNING, "sound::load_sound_pak()::File %d:%d is invalid", pak_file, file_id);
+    IWARN("sound::load_sound_pak()::File %d:%d is invalid", pak_file, file_id);
     return;
   }
   wav = LoadWaveFromMemory(file->file_extension.c_str(), reinterpret_cast<const u8*>(file->content.data()), file->content.size());
   if (not file->is_success) {
-    TraceLog(LOG_WARNING, "sound::load_sound_pak()::File id %d:%d cannot load successfully", pak_file, file_id);
+    IWARN("sound::load_sound_pak()::File id %d:%d cannot load successfully", pak_file, file_id);
     return;
   }
   
@@ -140,12 +140,12 @@ void load_music_pak([[__maybe_unused__]] pak_file_id pak_file, [[__maybe_unused_
 
   file = get_asset_file_buffer(pak_file, file_id);
   if (not file or file == nullptr) {
-    TraceLog(LOG_WARNING, "sound::load_music_pak()::File %d:%d is invalid", pak_file, file_id);
+    IWARN("sound::load_music_pak()::File %d:%d is invalid", pak_file, file_id);
     return;
   }
   music = LoadMusicStreamFromMemory(file->file_extension.c_str(), reinterpret_cast<const u8*>(file->content.data()), file->content.size());
   if (not file->is_success) {
-    TraceLog(LOG_WARNING, "sound::load_music_pak()::File id %d cannot load successfully", file->file_id);
+    IWARN("sound::load_music_pak()::File id %d cannot load successfully", file->file_id);
     return;
   }
   
@@ -174,11 +174,11 @@ void load_music_disk([[__maybe_unused__]] const char * path, [[__maybe_unused__]
 
 void play_sound(sound_id id) {
   if (not state or state == nullptr) {
-    TraceLog(LOG_ERROR, "sound::play_sound()::State is not valid");
+    IERROR("sound::play_sound()::State is not valid");
     return;
   }
   if (id >= SOUND_ID_MAX or id <= SOUND_ID_UNSPECIFIED) {
-    TraceLog(LOG_ERROR, "sound::play_sound()::Sound id is out of bound");
+    IWARN("sound::play_sound()::Sound id is out of bound");
     return;
   }
 
@@ -187,11 +187,11 @@ void play_sound(sound_id id) {
 
 void play_music(music_id id) {
   if (not state or state == nullptr) {
-    TraceLog(LOG_ERROR, "sound::play_music()::State is not valid");
+    IERROR("sound::play_music()::State is not valid");
     return;
   }
   if (id >= MUSIC_ID_MAX or id <= MUSIC_ID_UNSPECIFIED) {
-    TraceLog(LOG_ERROR, "sound::play_music()::Music id is out of bound");
+    IWARN("sound::play_music()::Music id is out of bound");
     return;
   }
 
@@ -199,11 +199,11 @@ void play_music(music_id id) {
 }
 void reset_music(music_id id) {
   if (not state or state == nullptr) {
-    TraceLog(LOG_ERROR, "sound::reset_music()::State is not valid");
+    IERROR("sound::reset_music()::State is not valid");
     return;
   }
   if (id >= MUSIC_ID_MAX or id <= MUSIC_ID_UNSPECIFIED) {
-    TraceLog(LOG_ERROR, "sound::reset_music()::Music id is out of bound");
+    IWARN("sound::reset_music()::Music id is out of bound");
     return;
   }
   state->musics.at(id).play_once = false;
@@ -212,11 +212,11 @@ void reset_music(music_id id) {
 }
 void reset_sound(sound_id id) {
   if (not state or state == nullptr) {
-    TraceLog(LOG_ERROR, "sound::reset_sound()::State is not valid");
+    IERROR("sound::reset_sound()::State is not valid");
     return;
   }
   if (id >= SOUND_ID_MAX or id <= SOUND_ID_UNSPECIFIED) {
-    TraceLog(LOG_ERROR, "sound::reset_sound()::Sound id is out of bound");
+    IWARN("sound::reset_sound()::Sound id is out of bound");
     return;
   }
   state->sounds.at(id).play_once = false;

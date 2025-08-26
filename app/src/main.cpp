@@ -3,9 +3,21 @@
 #include <eh.h>
 
 #include "defines.h"
-#include "core/logger.h"
 
 #include <steam/steam_api.h>
+
+#ifdef PLATFORM_WINDOWS
+  #include <windows.h>
+#endif
+
+int alert(const char* caption, const char* message) {
+  #ifndef PLATFORM_WINDOWS
+    fprintf( stderr, "Message: '%s', Detail: '%s'\n", caption, message );
+	  return 0;
+  #else
+    return ::MessageBox( NULL, caption, message, MB_OK );
+  #endif
+}
 
 //-----------------------------------------------------------------------------
 // Purpose: callback hook for debug text emitted from the Steam API
@@ -101,7 +113,6 @@ int entry(void)
 }
 
 #ifdef PLATFORM_WINDOWS
-#include <windows.h>
 
 //-----------------------------------------------------------------------------
 // Purpose: Wrapper around SteamAPI_WriteMiniDump which can be used directly 

@@ -220,14 +220,14 @@ typedef struct checkbox {
 
 typedef struct slider_option {
   std::string no_localized_text;
-  u32 localization_symbol;
+  i32 localization_symbol;
   data_pack content;
   slider_option(void) {
       this->no_localized_text = "::NULL";
       this->localization_symbol = 0;
       this->content = data_pack();
   }
-  slider_option(const char* _str, u32 symbol, data_pack content) : slider_option() {
+  slider_option(const char* _str, i32 symbol, data_pack content) : slider_option() {
       this->no_localized_text = _str;
       this->localization_symbol = symbol;
       this->content = content;
@@ -237,7 +237,7 @@ typedef struct slider_option {
       this->no_localized_text = _str;
       this->content = content;
   }
-  slider_option(u32 symbol, data_pack content) : slider_option() {
+  slider_option(i32 symbol, data_pack content) : slider_option() {
       this->no_localized_text = "::localized";
       this->localization_symbol = symbol;
       this->content = content;
@@ -250,16 +250,16 @@ typedef struct slider_type {
   Vector2 source_frame_dim;
   Vector2 dest_frame_dim;
   f32 scale;
-  u16 width_multiply;
-  u16 char_limit;
+  i32 width_multiply;
+  i32 char_limit;
   button_id left_btn_id;
   button_id right_btn_id;
   button_type_id left_btn_type_id;
   button_type_id right_btn_type_id;
-  u16 left_btn_width;
-  u16 right_btn_width;
-  u16 origin_body_width;
-  u16 body_width;
+  i32 left_btn_width;
+  i32 right_btn_width;
+  i32 origin_body_width;
+  i32 body_width;
   slider_type(void) {
     this->id = SDR_TYPE_UNDEFINED;
     this->ss_sdr_body = SHEET_ID_SPRITESHEET_UNSPECIFIED;
@@ -278,8 +278,8 @@ typedef struct slider_type {
     this->body_width = 0u;
   }
   slider_type(
-    slider_type_id id, spritesheet_id ss_sdr_body, Vector2 source_frame_dim, f32 scale, u16 width_multiply, u16 char_limit, 
-    button_type_id left_btn_type_id, button_type_id right_btn_type_id, u16 left_btn_width, u16 right_btn_width, u16 origin_body_width, u16 body_width) : slider_type() {
+    slider_type_id id, spritesheet_id ss_sdr_body, Vector2 source_frame_dim, f32 scale, i32 width_multiply, i32 char_limit, 
+    button_type_id left_btn_type_id, button_type_id right_btn_type_id, i32 left_btn_width, i32 right_btn_width, i32 origin_body_width, i32 body_width) : slider_type() {
     this->id = id;
     this->ss_sdr_body = ss_sdr_body;
     this->source_frame_dim = source_frame_dim;
@@ -448,12 +448,12 @@ Vector2 ui_measure_text(const char* in_str, font_type in_font_type, f32 in_font_
 bool is_ui_fade_anim_complete(void);
 void is_ui_fade_anim_reset(void);
 void ui_refresh_setting_sliders_to_default(void);
-void process_fade_effect(ui_fade_control_system* fade);
+void process_fade_effect(ui_fade_control_system *const fade);
 
-bool ui_set_slider_current_index(slider_id id, u16 index);
+bool ui_set_slider_current_index(slider_id id, i32 index);
 bool ui_set_slider_current_value(slider_id id, slider_option value);
 
-bool gui_slider_add_option(slider_id _id, data_pack content, u32 _localization_symbol, std::string _no_localized_text);
+bool gui_slider_add_option(slider_id _id, data_pack content, i32 _localization_symbol, std::string _no_localized_text);
 const Rectangle * get_atlas_texture_source_rect(atlas_texture_id _id);
 const std::array<button_type, BTN_TYPE_MAX>* get_button_types(void); 
 
@@ -467,7 +467,7 @@ void gui_draw_texture_to_background(texture_id _id);
 void gui_draw_spritesheet_to_background(spritesheet_id _id, Color _tint);
 void gui_progress_bar(progress_bar_id bar_id, Rectangle dest, bool _should_center, Color tint = BLANK, Color outside_tint = WHITE);
 void gui_panel(panel pan, Rectangle dest, bool _should_center);
-bool gui_panel_active(panel* panel, Rectangle dest, bool _should_center);
+bool gui_panel_active(panel *const panel, Rectangle dest, bool _should_center);
 void gui_label_box(const char* text, font_type type, i32 font_size, Rectangle dest, Color tint, text_alignment alignment);
 void gui_label(const char* text, font_type type, i32 font_size, Vector2 position, Color tint, bool _center_h, bool _center_v);
 void gui_label_shader(const char* text, shader_id sdr_id, font_type type, i32 font_size, Vector2 position, Color tint, bool _center_h, bool _center_v);

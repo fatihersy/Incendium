@@ -1,4 +1,7 @@
 #include "spritesheet.h"
+
+#include "core/logger.h"
+
 #include "game/resource.h"
 
 void update_sprite(spritesheet *const sheet);
@@ -7,11 +10,11 @@ constexpr void render_sprite_pro(const spritesheet * sheet, const Rectangle sour
  
 void update_sprite(spritesheet *const sheet) {
   if (not sheet or sheet == nullptr) {
-    TraceLog(LOG_ERROR, "spritesheet::update_sprite()::Sheet is invalid");
+    IWARN("spritesheet::update_sprite()::Sheet is invalid");
     return;
   }
   if (sheet->fps <= 0) {
-    TraceLog(LOG_ERROR, "spritesheet::update_sprite()::Sheet not meant to be playable");
+    IWARN("spritesheet::update_sprite()::Sheet not meant to be playable");
     return;
   }
   sheet->time_accumulator += GetFrameTime();
@@ -46,8 +49,8 @@ void update_sprite(spritesheet *const sheet) {
   sheet->current_frame_rect.y = sheet->current_row * std::abs(sheet->current_frame_rect.height);
 }
 constexpr void render_sprite(const spritesheet * sheet,const Color _tint,const Rectangle dest) {
-  if (!sheet || sheet == nullptr || !sheet->tex_handle) {
-    TraceLog(LOG_ERROR, "spritesheet::render_sprite()::Sheet is not valid");
+  if (not sheet or sheet == nullptr or not sheet->tex_handle) {
+    IWARN("spritesheet::render_sprite()::Sheet is not valid");
     return;
   }
   Rectangle source = Rectangle {
@@ -63,8 +66,8 @@ constexpr void render_sprite(const spritesheet * sheet,const Color _tint,const R
   #endif
 }
 constexpr void render_sprite_pro(const spritesheet * sheet, const Rectangle source, const Rectangle dest, const Vector2 origin, const f32 rotation, const Color _tint) {
-  if (!sheet || sheet == nullptr || !sheet->tex_handle) {
-    TraceLog(LOG_ERROR, "spritesheet::render_sprite()::Sheet is not valid");
+  if (not sheet or sheet == nullptr or not sheet->tex_handle) {
+    IWARN("spritesheet::render_sprite()::Sheet is not valid");
     return;
   }
 
@@ -76,13 +79,13 @@ constexpr void render_sprite_pro(const spritesheet * sheet, const Rectangle sour
   #endif
 }
 void set_sprite(spritesheet *const sheet, bool _play_looped, bool _play_once) {
-  if (!sheet || sheet == nullptr || sheet->sheet_id >= SHEET_ID_SPRITESHEET_TYPE_MAX || sheet->sheet_id <= SHEET_ID_SPRITESHEET_UNSPECIFIED) {
-    TraceLog(LOG_ERROR, "spritesheet::register_sprite()::Sheet is not valid");
+  if (not sheet or sheet == nullptr or sheet->sheet_id >= SHEET_ID_SPRITESHEET_TYPE_MAX or sheet->sheet_id <= SHEET_ID_SPRITESHEET_UNSPECIFIED) {
+    IWARN("spritesheet::register_sprite()::Sheet is not valid");
     return;
   }
   const spritesheet * const _sheet_ptr = get_spritesheet_by_enum(sheet->sheet_id);
-  if (!_sheet_ptr || _sheet_ptr == nullptr) {
-    TraceLog(LOG_ERROR, "spritesheet::register_sprite()::Sheet resourse pointer is not valid");
+  if (not _sheet_ptr or _sheet_ptr == nullptr) {
+    IERROR("spritesheet::register_sprite()::Sheet resourse pointer is not valid");
     return;
   }
   *sheet = (*_sheet_ptr);
@@ -92,11 +95,11 @@ void set_sprite(spritesheet *const sheet, bool _play_looped, bool _play_once) {
   sheet->is_started = false;
 }
 void play_sprite_on_site(spritesheet *const sheet, Color _tint, const Rectangle dest) {
-  if (!sheet || sheet == nullptr || sheet->sheet_id >= SHEET_ID_SPRITESHEET_TYPE_MAX || sheet->sheet_id <= SHEET_ID_SPRITESHEET_UNSPECIFIED) {
-    TraceLog(LOG_ERROR, "spritesheet::play_sprite_on_site()::Sheet is not valid");
+  if (not sheet or sheet == nullptr or sheet->sheet_id >= SHEET_ID_SPRITESHEET_TYPE_MAX or sheet->sheet_id <= SHEET_ID_SPRITESHEET_UNSPECIFIED) {
+    IWARN("spritesheet::play_sprite_on_site()::Sheet is not valid");
     return;
   }
-  if (sheet->play_once && sheet->is_played && !sheet->is_started) { return; }
+  if (sheet->play_once and sheet->is_played and not sheet->is_started) { return; }
 
   sheet->playmod = ON_SITE;
   sheet->is_started = true;
@@ -105,11 +108,11 @@ void play_sprite_on_site(spritesheet *const sheet, Color _tint, const Rectangle 
   render_sprite(sheet, _tint, dest);
 }
 void play_sprite_on_site_pro(spritesheet *const sheet, const Rectangle dest, const Vector2 origin, const f32 rotation, const Color _tint) {
-  if (!sheet || sheet == nullptr || sheet->sheet_id >= SHEET_ID_SPRITESHEET_TYPE_MAX || sheet->sheet_id <= SHEET_ID_SPRITESHEET_UNSPECIFIED) {
-    TraceLog(LOG_ERROR, "spritesheet::play_sprite_on_site_pro()::Sheet is not valid");
+  if (not sheet or sheet == nullptr or sheet->sheet_id >= SHEET_ID_SPRITESHEET_TYPE_MAX or sheet->sheet_id <= SHEET_ID_SPRITESHEET_UNSPECIFIED) {
+    IWARN("spritesheet::play_sprite_on_site_pro()::Sheet is not valid");
     return;
   }
-  if (sheet->play_once && sheet->is_played && !sheet->is_started) { return; }
+  if (sheet->play_once and sheet->is_played and not sheet->is_started) { return; }
 
   sheet->playmod = ON_SITE;
   sheet->is_started = true;
@@ -123,11 +126,11 @@ void play_sprite_on_site_pro(spritesheet *const sheet, const Rectangle dest, con
   render_sprite_pro(sheet, source, dest, origin, rotation, _tint);
 }
 void play_sprite_on_site_ex(spritesheet *const sheet, const Rectangle source, const Rectangle dest, const Vector2 origin, const f32 rotation, const Color _tint) {
-  if (!sheet || sheet == nullptr || sheet->sheet_id >= SHEET_ID_SPRITESHEET_TYPE_MAX || sheet->sheet_id <= SHEET_ID_SPRITESHEET_UNSPECIFIED) {
-    TraceLog(LOG_ERROR, "spritesheet::play_sprite_on_site_ex()::Sheet is not valid");
+  if (not sheet or sheet == nullptr or sheet->sheet_id >= SHEET_ID_SPRITESHEET_TYPE_MAX or sheet->sheet_id <= SHEET_ID_SPRITESHEET_UNSPECIFIED) {
+    IWARN("spritesheet::play_sprite_on_site_ex()::Sheet is not valid");
     return;
   }
-  if (sheet->play_once && sheet->is_played && !sheet->is_started) { return; }
+  if (sheet->play_once and sheet->is_played and not sheet->is_started) { return; }
 
   sheet->playmod = ON_SITE;
   sheet->is_started = true;
@@ -137,18 +140,18 @@ void play_sprite_on_site_ex(spritesheet *const sheet, const Rectangle source, co
 }
 
 void draw_sprite_on_site_by_id(spritesheet_id _id, Color _tint, Vector2 pos, Vector2 scale, i32 frame) {
-  if (_id > SHEET_ID_SPRITESHEET_TYPE_MAX || _id <= SHEET_ID_SPRITESHEET_UNSPECIFIED) {
-    TraceLog(LOG_ERROR, "spritesheet::draw_sprite_on_site_by_id()::invalid sprite type");
+  if (_id > SHEET_ID_SPRITESHEET_TYPE_MAX or _id <= SHEET_ID_SPRITESHEET_UNSPECIFIED) {
+    IWARN("spritesheet::draw_sprite_on_site_by_id()::invalid sprite type");
     return;
   }
   const spritesheet * const _sheet_ptr = get_spritesheet_by_enum(_id);
-  if (!_sheet_ptr || _sheet_ptr == nullptr ) {
-    TraceLog(LOG_ERROR, "spritesheet::draw_sprite_on_site_by_id()::Recieved sheet is invalid");
+  if (not _sheet_ptr or _sheet_ptr == nullptr ) {
+    IWARN("spritesheet::draw_sprite_on_site_by_id()::Recieved sheet is invalid");
     return;
   }
   spritesheet sheet = (*_sheet_ptr);
-  if (sheet.sheet_id >= SHEET_ID_SPRITESHEET_TYPE_MAX || sheet.sheet_id <= SHEET_ID_SPRITESHEET_UNSPECIFIED) {
-    TraceLog(LOG_ERROR, "spritesheet::draw_sprite_on_site_by_id()::Recieved spritesheet doesn't exist or invalid");
+  if (sheet.sheet_id >= SHEET_ID_SPRITESHEET_TYPE_MAX or sheet.sheet_id <= SHEET_ID_SPRITESHEET_UNSPECIFIED) {
+    IWARN("spritesheet::draw_sprite_on_site_by_id()::Recieved spritesheet doesn't exist or invalid");
     return;
   }
   i32 col = frame % sheet.col_total;
@@ -169,8 +172,8 @@ void draw_sprite_on_site_by_id(spritesheet_id _id, Color _tint, Vector2 pos, Vec
 }
 
 void draw_sprite_on_site(spritesheet *const sheet, Color _tint, Vector2 pos, Vector2 scale, i32 frame) {
-  if (!sheet || sheet == nullptr  || sheet->sheet_id > SHEET_ID_SPRITESHEET_TYPE_MAX || sheet->sheet_id <= SHEET_ID_SPRITESHEET_UNSPECIFIED) {
-    TraceLog(LOG_ERROR, "spritesheet::draw_sprite_on_site()::invalid sprite type");
+  if (not sheet or sheet == nullptr  or sheet->sheet_id > SHEET_ID_SPRITESHEET_TYPE_MAX or sheet->sheet_id <= SHEET_ID_SPRITESHEET_UNSPECIFIED) {
+    IWARN("spritesheet::draw_sprite_on_site()::invalid sprite type");
     return;
   }
   i32 col = frame % sheet->col_total;
@@ -191,8 +194,8 @@ void draw_sprite_on_site(spritesheet *const sheet, Color _tint, Vector2 pos, Vec
   #endif
 }
 void stop_sprite(spritesheet *const sheet, bool reset) {
-  if (!sheet || sheet == nullptr)  {
-    TraceLog(LOG_ERROR, "resource::stop_sprite()::Sheet is invalid");
+  if (not sheet or sheet == nullptr)  {
+    IWARN("resource::stop_sprite()::Sheet is invalid");
     return;
   }
   if (reset) {
@@ -206,8 +209,8 @@ void stop_sprite(spritesheet *const sheet, bool reset) {
   sheet->is_started = false;
 }
 void reset_sprite(spritesheet *const sheet, bool _retrospective) {
-  if (!sheet || sheet == nullptr)  {
-    TraceLog(LOG_ERROR, "resource::reset_sprite()::sheet is invalid");
+  if (not sheet or sheet == nullptr)  {
+    IWARN("resource::reset_sprite()::sheet is invalid");
     return;
   }
   sheet->time_accumulator = 0.f;

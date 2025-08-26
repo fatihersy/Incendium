@@ -3,6 +3,7 @@
 #include <cmath>
 
 #include "core/fmemory.h"
+#include "core/logger.h"
 
 #include "tools/lexer_ini.h"
 
@@ -23,9 +24,27 @@ typedef struct app_settings_system_state {
   std::vector<std::pair<i32, i32>> ratio_43_18_resolutions;
   std::vector<std::pair<i32, i32>> ratio_64_27_resolutions;
   std::vector<std::pair<i32, i32>> ratio_custom_resolutions;
+  app_settings_system_state(void) {
+    this->settings = app_settings();
+    this->initializer = app_settings();
+    this->offset = 0u;
+    this->ratio_3_2_resolutions = std::vector<std::pair<i32, i32>>();
+    this->ratio_4_3_resolutions = std::vector<std::pair<i32, i32>>();
+    this->ratio_5_3_resolutions = std::vector<std::pair<i32, i32>>();
+    this->ratio_5_4_resolutions = std::vector<std::pair<i32, i32>>();
+    this->ratio_8_5_resolutions = std::vector<std::pair<i32, i32>>();
+    this->ratio_16_9_resolutions = std::vector<std::pair<i32, i32>>();
+    this->ratio_16_10_resolutions = std::vector<std::pair<i32, i32>>();
+    this->ratio_21_9_resolutions = std::vector<std::pair<i32, i32>>();
+    this->ratio_32_9_resolutions = std::vector<std::pair<i32, i32>>();
+    this->ratio_37_27_resolutions = std::vector<std::pair<i32, i32>>();
+    this->ratio_43_18_resolutions = std::vector<std::pair<i32, i32>>();
+    this->ratio_64_27_resolutions = std::vector<std::pair<i32, i32>>();
+    this->ratio_custom_resolutions = std::vector<std::pair<i32, i32>>();
+  }
 } app_settings_system_state;
 
-static app_settings_system_state * state;
+static app_settings_system_state * state = nullptr;
 
 #define TEXT_WINDOWED "windowed"
 #define TEXT_BORDERLESS "borderless"
@@ -34,15 +53,13 @@ static app_settings_system_state * state;
 bool write_ini_file(app_settings _ini);
 bool create_ini_file(i32 width, i32  height, i32 master_volume, i32 window_mode, const char * language);
 
-
 bool settings_initialize(void) {
-  if (state) {
-    TraceLog(LOG_WARNING, "settings::settings_initialize()::Called twice");
-    return false;
+  if (state and state != nullptr) {
+    return true;
   }
   state = (app_settings_system_state *)allocate_memory_linear(sizeof(app_settings_system_state), true);
-  if (!state) {
-    TraceLog(LOG_ERROR, "settings::settings_initialize()::State allocation failed");
+  if (not state or state == nullptr) {
+    IFATAL("settings::settings_initialize()::State allocation failed");
     return false;
   }
   state->initializer = app_settings();
@@ -138,15 +155,16 @@ bool settings_initialize(void) {
  * @brief For now, we assume it is next to where .exe file
  */
 bool set_settings_from_ini_file(const char * file_name) {
-  if (!state) {
-    TraceLog(LOG_WARNING, "settings::set_settings_from_ini_file()::settings state didn't initialized yet");
+  if (not state or state == nullptr) {
+    IERROR("settings::set_settings_from_ini_file()::settings state didn't initialized yet");
     return false;
   }
-  if (!FileExists(file_name)) {
+  if (not FileExists(file_name)) {
     write_ini_file(get_default_ini_file());
   }
-  if (!parse_app_settings_ini(file_name, __builtin_addressof(state->settings))) {
-    TraceLog(LOG_WARNING, "settings::set_settings_from_ini_file()::parse_app returns false");
+  if (not parse_app_settings_ini(file_name, __builtin_addressof(state->settings))) {
+    IWARN("settings::set_settings_from_ini_file()::parse_app returns false");
+    write_ini_file(get_default_ini_file());
     return false;
   }
   state->settings.render_width  = state->settings.window_width;
@@ -157,23 +175,22 @@ bool set_settings_from_ini_file(const char * file_name) {
   state->settings.scale_ratio.push_back(static_cast<f32>(state->settings.render_width)  / static_cast<f32>(state->settings.window_width));
   state->settings.scale_ratio.push_back(static_cast<f32>(state->settings.render_height) / static_cast<f32>(state->settings.window_height));
   state->settings.display_ratio = get_aspect_ratio(state->settings.window_width, state->settings.window_height);
-  state->offset = 5;
+  state->offset = 5u;
   return true;
 }
 
 bool update_app_settings_state(void) {
-  if (!state) {
-    TraceLog(LOG_ERROR, "settings::update_app_settings_state()::State is not valid");
+  if (not state or state == nullptr) {
+    IERROR("settings::update_app_settings_state()::State is not valid");
     return false;
   }
-
   state->settings.master_sound_volume = FCLAMP(state->settings.master_sound_volume, 0, 100);
   return true;
 }
 
 void set_resolution(i32 width, i32 height) {
-  if (!state) {
-    TraceLog(LOG_WARNING, "settings::set_resolution()::settings state didn't initialized yet");
+  if (not state or state == nullptr) {
+    IERROR("settings::set_resolution()::settings state didn't initialized yet");
     return;
   }
   state->settings.render_width  = width;
@@ -182,8 +199,8 @@ void set_resolution(i32 width, i32 height) {
   state->settings.render_height_div2  = state->settings.render_height * .5f;
 }
 void set_window_size(i32 width, i32 height) {
-  if (!state) {
-    TraceLog(LOG_WARNING, "settings::set_resolution()::settings state didn't initialized yet");
+  if (not state or state == nullptr) {
+    IERROR("settings::set_resolution()::settings state didn't initialized yet");
     return;
   }
   state->settings.window_width  = width;
@@ -193,38 +210,42 @@ void set_window_size(i32 width, i32 height) {
 }
 
 void set_language(const char* lang) {
-  if (!state) {
-    TraceLog(LOG_ERROR, "settings::set_language()::State is not valid");
+  if (not state or state == nullptr) {
+    IERROR("settings::set_language()::State is invalid");
+    return;
+  }
+  if (not lang or lang == nullptr) {
+    IWARN("settings::set_language()::Language name is invalid");
     return;
   }
   state->settings.language = lang;
 }
 bool set_master_sound(i32 volume) {
-  if (!state) {
-    TraceLog(LOG_WARNING,"settings::set_master_sound()::settings state didn't initialized yet");
+  if (not state or state == nullptr) {
+    IERROR("settings::set_master_sound()::State is invalid");
     return false;
   }
   state->settings.master_sound_volume = volume;
   return true;
 }
 app_settings * get_app_settings(void) {
-  if (!state) {
-    TraceLog(LOG_WARNING, "settings::get_app_settings()::settings state didn't initialized yet");
+  if (not state or state == nullptr) {
+    IERROR("settings::get_app_settings()::State is invalid");
     return nullptr;
   }
   return __builtin_addressof(state->settings);
 }
 i32 get_window_state(void) {
-  if (!state) {
-    TraceLog(LOG_WARNING,"settings::get_window_state()::settings state didn't initialized yet");
+  if (not state or state == nullptr) {
+    IERROR("settings::get_window_state()::State is invalid");
     return 0;
   }
   return state->settings.window_state;
 }
 
 app_settings get_default_ini_file(void) {
-  if (!state || state == nullptr) {
-    TraceLog(LOG_ERROR, "settings::get_default_ini_file()::State is not valid");
+  if (not state or state == nullptr) {
+    IERROR("settings::get_default_ini_file()::State is not valid");
     return app_settings();
   }
   app_settings _defaults = app_settings();
@@ -246,6 +267,10 @@ app_settings get_default_ini_file(void) {
   return _defaults;
 }
 bool create_ini_file(i32 width, i32  height, i32 master_volume, i32 window_mode, const char * language) {
+  if (not language or language == nullptr) {
+    IWARN("settings::create_ini_file()::Language name is invalid");
+    return false;
+  }
   return write_ini_file(app_settings(window_mode, width, height, master_volume, std::string(language)));
 }
 bool save_ini_file(void) {
@@ -356,14 +381,14 @@ aspect_ratio get_aspect_ratio(i32 width, i32 height) {
     case 64: return ASPECT_RATIO_64_27;      
   }
   else {
-    TraceLog(LOG_WARNING, "settings::get_optimum_render_resolution()::Unknown resolution. Setting ratio to custom");
+    IWARN("settings::get_aspect_ratio()::Unknown resolution. Setting ratio to custom");
     return ASPECT_RATIO_CUSTOM;
   }
 
-  TraceLog(LOG_WARNING, "settings::get_optimum_render_resolution()::Function ended unexpectedly");
+  IERROR("settings::get_aspect_ratio()::Function ended unexpectedly");
   return ASPECT_RATIO_UNDEFINED;
 }
-app_settings * get_initializer_settings(void) {
+const app_settings * get_initializer_settings(void) {
   return __builtin_addressof(state->initializer);
 }
 std::pair<i32, i32> get_optimum_render_resolution(aspect_ratio ratio) {
@@ -387,16 +412,16 @@ std::pair<i32, i32> get_optimum_render_resolution(aspect_ratio ratio) {
       );
     }
     default: {
-      TraceLog(LOG_WARNING, "settings::get_optimum_render_resolution()::Unknown resolution. Setting to custom");
+      IWARN("settings::get_optimum_render_resolution()::Unknown resolution. Setting to custom");
       state->settings.display_ratio = ASPECT_RATIO_CUSTOM;
       return std::pair<i32, i32>(static_cast<f32>(GetMonitorWidth(GetCurrentMonitor())), static_cast<f32>(GetMonitorHeight(GetCurrentMonitor())));
     }
   }
   
-  TraceLog(LOG_ERROR, "settings::get_optimum_render_resolution()::Function ended unexpectedly");
+  IERROR("settings::get_optimum_render_resolution()::Function ended unexpectedly");
   return std::pair<i32, i32>(-1, -1);
 }
-std::vector<std::pair<i32, i32>> * get_supported_render_resolutions(void) {
+const std::vector<std::pair<i32, i32>> * get_supported_render_resolutions(void) {
 
   if (state->settings.display_ratio != ASPECT_RATIO_CUSTOM) {
     switch (state->settings.display_ratio) {
@@ -413,7 +438,7 @@ std::vector<std::pair<i32, i32>> * get_supported_render_resolutions(void) {
       case ASPECT_RATIO_43_18: return __builtin_addressof(state->ratio_43_18_resolutions);
       case ASPECT_RATIO_64_27: return __builtin_addressof(state->ratio_64_27_resolutions);
       default: {
-        TraceLog(LOG_WARNING, "settings::get_supported_render_resolutions()::Unsupported ratio");
+        IWARN("settings::get_supported_render_resolutions()::Unsupported ratio");
         return nullptr;
       }
     }
@@ -424,7 +449,7 @@ std::vector<std::pair<i32, i32>> * get_supported_render_resolutions(void) {
     return __builtin_addressof(state->ratio_custom_resolutions);
   }
 
-  TraceLog(LOG_WARNING, "settings::get_supported_render_resolutions()::Function ended unexpectedly");
+  IERROR("settings::get_supported_render_resolutions()::Function ended unexpectedly");
   return nullptr;
 }
 

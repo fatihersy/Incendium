@@ -49,7 +49,7 @@
 #define MAX_UPDATE_ABILITY_PANEL_COUNT 3
 #define MAX_UPDATE_PASSIVE_PANEL_COUNT 3
 
-#define MAX_PLAYER_LEVEL 100
+#define MAX_PLAYER_LEVEL 90
 #define MAX_SPAWN_COUNT 100
 #define MAX_SPAWN_HEALTH 100000
 #define MAX_SPAWN_COLLISIONS 1
@@ -60,7 +60,6 @@
 #define MAX_PASSIVE_UPGRADE_TIER 5
 #define MAX_ABILITY_PLAYER_CAN_HAVE_IN_THE_SAME_TIME 6
 
-#define MAX_WORLDMAP_LOCATIONS 22
 #define WORLDMAP_LOC_PIN_SIZE 32 // Also check the SHEET_ID_ICON_ATLAS frame sizes.
 #define WORLDMAP_LOC_PIN_SIZE_DIV2 WORLDMAP_LOC_PIN_SIZE * .5f // Needed?
 #define WORLDMAP_MAINMENU_MAP 0
@@ -974,14 +973,14 @@ typedef struct camera_metrics {
 
 typedef struct localization_package {
   std::string language_name;
-  u32 language_index;
+  i32 language_index;
   i32 * codepoints;
   Font light_font;
   Font italic_font;
   Font abracadabra;
   localization_package(void) {
     this->language_name.clear();
-    this->language_index = INVALID_IDU32;
+    this->language_index = INVALID_IDI32;
     this->codepoints = nullptr;
     this->light_font = ZERO_FONT;
     this->italic_font = ZERO_FONT;
@@ -995,7 +994,7 @@ typedef struct text_spec {
   Font* font;
   i32 font_size;
   Color color;
-  u32 language_index;
+  i32 language_index;
 
   text_spec(void) {
     this->text = "NULL";
@@ -1005,7 +1004,7 @@ typedef struct text_spec {
     this->color = Color{0,0,0,255};
     this->language_index = 0u;
   }
-  text_spec(std::string _display_text, Vector2 _text_pos, Font* _font, i32 _font_size, Color _color, u32 _language_index) : text_spec() {
+  text_spec(std::string _display_text, Vector2 _text_pos, Font* _font, i32 _font_size, Color _color, i32 _language_index) : text_spec() {
     this->text = _display_text;
     this->text_pos = _text_pos;
     this->font = _font;
@@ -1015,39 +1014,35 @@ typedef struct text_spec {
   }
 }text_spec;
 
-static const u32 level_curve[MAX_PLAYER_LEVEL + 1] = {
-    0, //	0
-    300,         800,        1500,       2500,       4300,
-    7200,        11000,      17000,      24000,
-    33000, //	10
-    43000,       58000,      76000,      100000,     130000,
-    169000,      219000,     283000,     365000,
-    472000, //	20
-    610000,      705000,     813000,     937000,     1077000,
-    1237000,     1418000,    1624000,    1857000,
-    2122000, //	30
-    2421000,     2761000,    3145000,    3580000,    4073000,
-    4632000,     5194000,    5717000,    6264000,
-    6837000, //	40
-    7600000,     8274000,    8990000,    9753000,    10560000,
-    11410000,    12320000,   13270000,   14280000,
-    15340000, //	50
-    16870000,    18960000,   19980000,   21420000,   22930000,
-    24530000,    26200000,   27960000,   29800000,
-    32780000, //	60
-    36060000,    39670000,   43640000,   48000000,   52800000,
-    58080000,    63890000,   70280000,   77310000,
-    85040000, //	70
-    93540000,    102900000,  113200000,  124500000,  137000000,
-    150700000,   165700000,  236990000,  260650000,
-    286780000, //	80
-    315380000,   346970000,  381680000,  419770000,  461760000,
-    508040000,   558740000,  614640000,  676130000,
-    743730000, //	90
-    1041222000,  1145344200, 1259878620, 1385866482, 1524453130,
-    1676898443,  1844588288, 2029047116,
-    2050000000,  //
-    2150000000u, //	100
+static const i32 level_curve[MAX_PLAYER_LEVEL + 1] = {
+  0, //	0
+  300,         800,        1500,       2500,       4300,
+  7200,        11000,      17000,      24000,
+  33000, //	10
+  43000,       58000,      76000,      100000,     130000,
+  169000,      219000,     283000,     365000,
+  472000, //	20
+  610000,      705000,     813000,     937000,     1077000,
+  1237000,     1418000,    1624000,    1857000,
+  2122000, //	30
+  2421000,     2761000,    3145000,    3580000,    4073000,
+  4632000,     5194000,    5717000,    6264000,
+  6837000, //	40
+  7600000,     8274000,    8990000,    9753000,    10560000,
+  11410000,    12320000,   13270000,   14280000,
+  15340000, //	50
+  16870000,    18960000,   19980000,   21420000,   22930000,
+  24530000,    26200000,   27960000,   29800000,
+  32780000, //	60
+  36060000,    39670000,   43640000,   48000000,   52800000,
+  58080000,    63890000,   70280000,   77310000,
+  85040000, //	70
+  93540000,    102900000,  113200000,  124500000,  137000000,
+  150700000,   165700000,  236990000,  260650000,
+  286780000, //	80
+  315380000,   346970000,  381680000,  419770000,  461760000,
+  508040000,   558740000,  614640000,  676130000,
+  743730000, //	90
 };
 
 #endif

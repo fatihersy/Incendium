@@ -1,5 +1,6 @@
 #include "save_game.h"
 #include "core/fmemory.h"
+#include "core/logger.h"
 
 #define TOTAL_SAVE_FILE_SIZE 2 * 1024 * 1024
 #define HEADER_SYMBOL_ENTRY "!!!"
@@ -75,7 +76,7 @@ bool save_system_initialize(void) {
 
   state = (save_game_system_state*)allocate_memory_linear(sizeof(save_game_system_state), true);
   if (not state or state == nullptr) {
-    TraceLog(LOG_ERROR, "save_game::save_system_initialize()::Save system state allocation failed");
+    IFATAL("save_game::save_system_initialize()::Save system state allocation failed");
     return false;
   }
   *state = save_game_system_state();
@@ -89,7 +90,7 @@ bool save_system_initialize(void) {
 
 bool parse_or_create_save_data_from_file(save_slot_id slot, save_data default_save) {
   if (not state or state == nullptr) {
-    TraceLog(LOG_WARNING, "save_game::parse_or_create_save_data_from_file()::Save game state is not valid");
+    IFATAL("save_game::parse_or_create_save_data_from_file()::Save game state is not valid");
     return false;
   }
   if (not FileExists(state->slot_filenames.at(slot).c_str())) {
@@ -109,11 +110,11 @@ bool parse_or_create_save_data_from_file(save_slot_id slot, save_data default_sa
 
 bool save_save_data(save_slot_id slot) { 
   if (not state or state == nullptr) {
-    TraceLog(LOG_WARNING, "save_game::save_save_data()::Save game state is not valid");
+    IERROR("save_game::save_save_data()::Save game state is not valid");
     return false;
   }
   if (slot < SAVE_SLOT_UNDEFINED or slot >= SAVE_SLOT_MAX) {
-    TraceLog(LOG_ERROR, "save_game::save_save_data()::Slot out of bound");
+    IWARN("save_game::save_save_data()::Slot out of bound");
     return false;
   }
 
@@ -146,11 +147,11 @@ bool save_save_data(save_slot_id slot) {
 }
 bool does_save_exist(save_slot_id slot) {
   if (not state or state == nullptr) {
-    TraceLog(LOG_ERROR, "save_game::does_save_exist()::State is not valid");
+    IERROR("save_game::does_save_exist()::State is not valid");
     return false;
   }
   if (slot < SAVE_SLOT_UNDEFINED or slot >= SAVE_SLOT_MAX) {
-    TraceLog(LOG_ERROR, "save_game::does_save_exist()::Slot out of bound");
+    IWARN("save_game::does_save_exist()::Slot out of bound");
     return false;
   }
 
@@ -159,11 +160,11 @@ bool does_save_exist(save_slot_id slot) {
 
 void parse_data(save_slot_id slot) {
   if (not state or state == nullptr) {
-    TraceLog(LOG_ERROR, "save_game::parse_data()::State is invalid");
+    IERROR("save_game::parse_data()::State is invalid");
     return;
   }
   if (slot < SAVE_SLOT_UNDEFINED or slot >= SAVE_SLOT_MAX) {
-    TraceLog(LOG_ERROR, "save_game::parse_data()::Slot out of bound");
+    IWARN("save_game::parse_data()::Slot out of bound");
     return;
   }
 
@@ -242,7 +243,7 @@ void parse_data(save_slot_id slot) {
       break; 
     }
     default: {
-      TraceLog(LOG_ERROR, "save_game::parse_data()::Unsupported reading order stage");
+      IERROR("save_game::parse_data()::Unsupported reading order stage");
       return;
     }
     }
@@ -256,11 +257,11 @@ void parse_data(save_slot_id slot) {
 
 save_data* get_save_data(save_slot_id slot) {
   if (not state or state == nullptr) {
-    TraceLog(LOG_ERROR, "save_game::get_save_data()::State is not valid");
+    IERROR("save_game::get_save_data()::State is not valid");
     return nullptr;
   }
   if (slot < SAVE_SLOT_UNDEFINED or slot >= SAVE_SLOT_MAX) {
-    TraceLog(LOG_ERROR, "save_game::get_save_data()::Slot out of bound");
+    IWARN("save_game::get_save_data()::Slot out of bound");
     return nullptr;
   }
 
@@ -268,7 +269,7 @@ save_data* get_save_data(save_slot_id slot) {
 }
 size_t save_game_get_entry(size_t offset) {
   if (not state or state == nullptr) {
-    TraceLog(LOG_ERROR, "save_game::save_game_get_entry()::State is not valid");
+    IERROR("save_game::save_game_get_entry()::State is not valid");
     return 0u;
   }
   size_t out_offset = 0;
@@ -289,15 +290,15 @@ size_t save_game_get_entry(size_t offset) {
 }
 void setup_save_data(save_data* data) {
   if (not state or state == nullptr) {
-    TraceLog(LOG_ERROR, "save_game::setup_save_data()::Slot out of bound");
+    IERROR("save_game::setup_save_data()::Slot out of bound");
     return;
   }
   if (not data or data == nullptr) {
-    TraceLog(LOG_ERROR, "save_game::setup_save_data()::Slot out of bound");
+    IWARN("save_game::setup_save_data()::Slot out of bound");
     return;
   }
   if (data->id < SAVE_SLOT_UNDEFINED or data->id >= SAVE_SLOT_MAX) {
-    TraceLog(LOG_ERROR, "save_game::setup_save_data()::Slot out of bound");
+    IWARN("save_game::setup_save_data()::Slot out of bound");
     return;
   }
 
@@ -305,7 +306,7 @@ void setup_save_data(save_data* data) {
 }
 std::string get_save_filename(save_slot_id slot) {
   if (slot < SAVE_SLOT_UNDEFINED or slot >= SAVE_SLOT_MAX) {
-    TraceLog(LOG_ERROR, "save_game::get_save_filename()::Slot out of bound");
+    IWARN("save_game::get_save_filename()::Slot out of bound");
     return std::string("");
   }
   if (slot == SAVE_SLOT_CURRENT_SESSION) {

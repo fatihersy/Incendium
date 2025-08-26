@@ -2,12 +2,14 @@
 
 #include "core/event.h"
 #include "core/fmemory.h"
+#include "core/logger.h"
+
 #include "loc_types.h"
 
 #include "game/spritesheet.h"
 
 // To avoid dublicate symbol errors. Implementation in defines.h
-extern const u32 level_curve[MAX_PLAYER_LEVEL+1];
+extern const i32 level_curve[MAX_PLAYER_LEVEL+1];
 #define PLAYER_SCALE 3
 #define PLAYER_DAMAGE_BREAK_TIME .5f
 
@@ -43,21 +45,21 @@ bool player_system_initialize(const camera_metrics* in_camera_metrics,const app_
   }
   state = (player_system_state*)allocate_memory_linear(sizeof(player_system_state), true);
   if (not state or state == nullptr) {
-    TraceLog(LOG_ERROR, "player::player_system_initialize()::Failed to allocate player system");
+    IERROR("player::player_system_initialize()::Failed to allocate player system");
     return false;
   }
   *state = player_system_state();
 
   if (not in_camera_metrics or in_camera_metrics == nullptr) {
-    TraceLog(LOG_ERROR, "player::player_system_initialize()::Camera metric pointer is invalid");
+    IERROR("player::player_system_initialize()::Camera metric pointer is invalid");
     return false;
   }
   if (not in_app_settings or in_app_settings == nullptr) {
-    TraceLog(LOG_ERROR, "player::player_system_initialize()::Settings pointer is invalid");
+    IERROR("player::player_system_initialize()::Settings pointer is invalid");
     return false;
   }
   if (not in_ingame_info or in_ingame_info == nullptr) {
-    TraceLog(LOG_ERROR, "player::player_system_initialize()::Game info pointer is invalid");
+    IERROR("player::player_system_initialize()::Game info pointer is invalid");
     return false;
   }
 
@@ -145,7 +147,7 @@ bool player_system_initialize(const camera_metrics* in_camera_metrics,const app_
 }
 void player_system_reinit(void) {
   if (not state or state == nullptr) {
-    TraceLog(LOG_ERROR, "player::player_system_reinit()::State is invalid");
+    IERROR("player::player_system_reinit()::State is invalid");
     return;
   }
   state->dynamic_player = state->defualt_player;
@@ -227,7 +229,7 @@ bool render_player(void) {
 
 void player_move_player(Vector2 new_pos) {
   if (not state or state == nullptr) {
-    TraceLog(LOG_ERROR, "player::player_move_player()::State is invalid");
+    IERROR("player::player_move_player()::State is invalid");
     return;
   }
   if (new_pos.x < 0.f) {

@@ -18,10 +18,10 @@ void set_language(const char* lang);
 
 app_settings * get_app_settings(void);
 app_settings get_default_ini_file(void);
-app_settings * get_initializer_settings(void);
+const app_settings * get_initializer_settings(void);
 i32 get_window_state(void);
 std::vector<f32> get_screen_offset(void);
-std::vector<std::pair<i32, i32>> * get_supported_render_resolutions(void);
+const std::vector<std::pair<i32, i32>> * get_supported_render_resolutions(void);
 std::pair<i32, i32> get_optimum_render_resolution(aspect_ratio ratio);
 aspect_ratio get_aspect_ratio(i32 width, i32 height);
 aspect_ratio get_window_aspect_ratio(void);

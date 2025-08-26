@@ -1,8 +1,9 @@
 #include "loc_parser.h"
-
 #include "raylib.h"
 
 #include "core/fmemory.h"
+#include "core/logger.h"
+
 #include "loc_types.h"
 #include "pak_parser.h"
 
@@ -11,7 +12,7 @@ typedef struct loc_content_text {
   loc_content_text(void) {
     this->str = std::string("");
   }
-}loc_content_text;
+} loc_content_text;
 
 #define LOC_MAX_CODEPOINTS 128
 #define SYMBOL_DIGITS_START_SYMBOL 0x21
@@ -82,17 +83,15 @@ bool is_variable_allowed(u8& c);
 
 bool loc_parser_system_initialize(void) {
   if (state and state != nullptr) {
-    TraceLog(LOG_WARNING, "loc_parser::loc_parser_system_initialize()::Init function called twice");
-    return false;
+    return true;
   }
   state = (loc_parser_system_state*)allocate_memory_linear(sizeof(loc_parser_system_state), true);
   if (not state or state == nullptr) {
-    TraceLog(LOG_WARNING, "loc_parser::loc_parser_system_initialize()::loc parser state allocation failed");
+    IERROR("loc_parser::loc_parser_system_initialize()::loc parser state allocation failed");
     return false;
   }
   *state = loc_parser_system_state();
 
-  /*
   // Default Language English
   {
     state->default_language = std::string
@@ -192,7 +191,7 @@ bool loc_parser_system_initialize(void) {
       )"
     );
   }
-  */
+
   return true;
 }
 
@@ -205,7 +204,7 @@ bool _loc_parser_parse_localization_data(void) {
 
 bool loc_parser_parse_localization_data_from_file(i32 pak_id, i32 index) {
   if (not state or state == nullptr) {
-    TraceLog(LOG_ERROR, "loc_parser::loc_parser_parse_localization_data_from_file()::Loc parser state is not valid");
+    IERROR("loc_parser::loc_parser_parse_localization_data_from_file()::Loc parser state is not valid");
     return false;
   }
   loc_data data = loc_data();
@@ -214,7 +213,7 @@ bool loc_parser_parse_localization_data_from_file(i32 pak_id, i32 index) {
 
   const file_buffer * file = get_asset_file_buffer(static_cast<pak_file_id>(pak_id), index);
   if (not file or file == nullptr) {
-    TraceLog(LOG_ERROR, "loc_parser::loc_parser_parse_localization_data_from_file()::File %d:%d is invalid", pak_id, index);
+    IERROR("loc_parser::loc_parser_parse_localization_data_from_file()::File %d:%d is invalid", pak_id, index);
     return false;
   }
   state->file_buffer.assign_range(file->content);
@@ -229,7 +228,7 @@ bool loc_parser_parse_localization_data_from_file(i32 pak_id, i32 index) {
 
 bool loc_parser_parse_localization_data(void) {
   if (not state or state == nullptr) {
-    TraceLog(LOG_ERROR, "loc_parser::loc_parser_parse_localization_data_from_file()::Loc parser state is not valid");
+    IERROR("loc_parser::loc_parser_parse_localization_data_from_file()::Loc parser state is not valid");
     return false;
   }
   std::vector<i32> file_ids = std::vector<i32>();
@@ -250,7 +249,7 @@ bool loc_parser_parse_localization_data(void) {
     data.content = loc_parser_read_map();
     data.index = state->lang_data.size();
     state->lang_data.push_back(data);
-    TraceLog(LOG_INFO, "loc_parser::loc_parser_parse_localization_data()::Language:%s installed ", data.language_name.c_str());
+    IINFO("loc_parser::loc_parser_parse_localization_data()::Language:%s installed ", data.language_name.c_str());
   }
   if (state->lang_data.empty()) {
     state->file_buffer.clear();
@@ -462,18 +461,14 @@ std::string loc_parser_read_codepoints(void) {
   else return "";
 }
 std::array<std::string, LOC_TEXT_MAX> loc_parser_read_map(void) {
-
   size_t offset = loc_parser_go_to_variable(LOC_FILE_MAP_VARIABLE_NAME);
-
   loc_file_scope scope = loc_parser_get_scope_range(offset);
   offset = scope.scope_start_offset;
 
   if (scope.scope_start_offset > state->file_buffer.size()) {
     return std::array<std::string, LOC_TEXT_MAX>();
   }
-
   loc_reading_order reading_order = static_cast<loc_reading_order>(LOC_READING_ORDER_UNDEFINED+1);
-
   loc_content_text text = loc_content_text();
   std::array<std::string, LOC_TEXT_MAX> content_map = std::array<std::string, LOC_TEXT_MAX>();
   size_t next_index = 0u;
@@ -484,7 +479,6 @@ std::array<std::string, LOC_TEXT_MAX> loc_parser_read_map(void) {
         text = loc_parser_get_next_content_text(offset);
         content_map.at(next_index) = text.str;
         next_index++;
-        
         if (static_cast<size_t>(next_index) < content_map.size()) {
           break;
         }
@@ -493,7 +487,7 @@ std::array<std::string, LOC_TEXT_MAX> loc_parser_read_map(void) {
         }
       }
       default: {
-        TraceLog(LOG_ERROR, "loc_parser::loc_parser_read_map()::Unsupported reading order stage");
+        IWARN("loc_parser::loc_parser_read_map()::Unsupported reading order stage");
         return content_map;
       }
     }
@@ -502,7 +496,6 @@ std::array<std::string, LOC_TEXT_MAX> loc_parser_read_map(void) {
       reading_order = static_cast<loc_reading_order>((reading_order % (loc_reading_order::LOC_READING_ORDER_MAX)) + 1);
     }
   }
-
   return content_map;
 }
 
@@ -512,10 +505,9 @@ localized_languages loc_parser_get_loc_langs(void) {
 
 bool loc_parser_set_active_language_by_name(std::string language_name) {
   if (not state or state == nullptr) {
-    TraceLog(LOG_ERROR, "loc_parser::loc_parser_set_active_language_by_name()::State is not valid");
+    IERROR("loc_parser::loc_parser_set_active_language_by_name()::State is not valid");
     return false;
   }
-
   for (size_t iter = 0; iter < state->lang_data.size(); iter++) {
     std::string _str = state->lang_data.at(iter).language_name;
     if(_str == language_name) {
@@ -523,40 +515,37 @@ bool loc_parser_set_active_language_by_name(std::string language_name) {
       return true;
     }
   }
-
   return false;
 }
 bool loc_parser_set_active_language_by_index(int _index) {  
   if (not state or state == nullptr) {
-    TraceLog(LOG_ERROR, "loc_parser::loc_parser_set_active_language_by_index()::State is not valid");
+    IERROR("loc_parser::loc_parser_set_active_language_by_index()::State is not valid");
     return false;
   }
   size_t index = static_cast<size_t>(_index);
 
   if ( index < 0 or index >= state->lang_data.size()) {
-    TraceLog(LOG_ERROR, "loc_parser::loc_parser_set_active_language_by_index()::Language index is out of bound");
+    IERROR("loc_parser::loc_parser_set_active_language_by_index()::Language index is out of bound");
     return false;
   }
-
   state->active_loc = __builtin_addressof(state->lang_data.at(index));
   return true;
 }
 loc_data* loc_parser_get_active_language(void) {
   if (not state or state == nullptr) {
-    TraceLog(LOG_ERROR, "loc_parser::loc_parser_get_active_language()::State is not valid");
+    IERROR("loc_parser::loc_parser_get_active_language()::State is not valid");
     return nullptr;
   }
-  
   return state->active_loc;
 }
 
 const char* lc_txt(i32 txt_id) {
   if (not state or state == nullptr) {
-    TraceLog(LOG_ERROR, "loc_parser::lc_txt()::State is not valid");
+    IERROR("loc_parser::lc_txt()::State is not valid");
     return "\0";
   }
   if (txt_id >= LOC_TEXT_MAX or txt_id < LOC_TEXT_UNDEFINED ) {
-    TraceLog(LOG_ERROR, "loc_parser::lc_txt()::Out of range");
+    IWARN("loc_parser::lc_txt()::Out of range");
     return "\0";
   }
   return state->active_loc->content.at(static_cast<size_t>(txt_id)).c_str();

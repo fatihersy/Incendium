@@ -3,6 +3,7 @@
 #include "core/event.h"
 #include "core/fmath.h"
 #include "core/fmemory.h"
+#include "core/logger.h"
 
 #include "spritesheet.h"
 
@@ -21,7 +22,7 @@ typedef struct spawn_system_state {
 } spawn_system_state;
 
 // To avoid dublicate symbol errors. Implementation in defines.h
-extern const u32 level_curve[MAX_PLAYER_LEVEL + 1];
+extern const i32 level_curve[MAX_PLAYER_LEVEL + 1];
 static spawn_system_state * state = nullptr;
 
 #define CHECK_pSPAWN_COLLISION(REC1, SPAWN, NEW_POS) \
@@ -49,13 +50,13 @@ void register_spawn_animation(Character2D* spawn, spawn_movement_animations move
 void update_spawn_animation(Character2D* spawn);
 
 bool spawn_system_initialize(const camera_metrics* _camera_metrics, const ingame_info* _ingame_info) {
-  if (state) {
+  if (state and state != nullptr) {
     clean_up_spawn_state();
     return true;
   }
   state = (spawn_system_state *)allocate_memory_linear(sizeof(spawn_system_state), true);
   if (not state or state == nullptr) {
-    TraceLog(LOG_ERROR, "spawn::spawn_system_initialize()::Spawn system init failed");
+    IERROR("spawn::spawn_system_initialize()::Spawn system init failed");
     return false;
   }
   *state = spawn_system_state();
@@ -74,8 +75,8 @@ i32 damage_spawn(i32 _id, i32 damage) {
       break;
     }
   }
-  if (!character || character == nullptr) return INVALID_IDI32;
-  if (!character->is_damagable) { return character->health_current; }
+  if (not character or character == nullptr) return INVALID_IDI32;
+  if (not character->is_damagable) { return character->health_current; }
 
   if(character->health_current - damage > 0 && character->health_current - damage < MAX_SPAWN_HEALTH) {
     character->is_damagable = false;
@@ -94,7 +95,7 @@ i32 damage_spawn(i32 _id, i32 damage) {
 }
 
 i32 spawn_character(Character2D _character) {
-  if (_character.buffer.i32[0] <= SPAWN_TYPE_UNDEFINED || _character.buffer.i32[0] >= SPAWN_TYPE_MAX) {
+  if (_character.buffer.i32[0] <= SPAWN_TYPE_UNDEFINED or _character.buffer.i32[0] >= SPAWN_TYPE_MAX) {
     return -1;
   }
   spawn_type spw_type = static_cast<spawn_type>(_character.buffer.i32[0]);
@@ -138,23 +139,23 @@ i32 spawn_character(Character2D _character) {
 
 bool update_spawns(Vector2 player_position) {
   if (not state or state == nullptr) { 
-    TraceLog(LOG_ERROR, "spawn::update_spawns()::State is not valid");
+    IERROR("spawn::update_spawns()::State is not valid");
     return false; 
   }
 
   for (size_t itr_000 = 0; itr_000 < state->spawns.size(); ++itr_000) {
-    Character2D *character = __builtin_addressof(state->spawns.at(itr_000));
-    if (!character->initialized) { 
+    Character2D * const character = __builtin_addressof(state->spawns.at(itr_000));
+    if (not character->initialized) { 
       remove_spawn(itr_000);
       continue; 
     }
-    if (!character->is_damagable) {
+    if (not character->is_damagable) {
       if (character->damage_break_time >= 0) {
         character->damage_break_time -= GetFrameTime();
       }
       else character->is_damagable = true;
     }
-    if ((character->health_current <= 0 && character->is_damagable) || character->health_current > MAX_SPAWN_HEALTH) {
+    if ((character->health_current <= 0 and character->is_damagable) or character->health_current > MAX_SPAWN_HEALTH) {
       remove_spawn(itr_000);
       continue;
     }
@@ -180,11 +181,11 @@ bool update_spawns(Vector2 player_position) {
         y0_collide = true;
       }
     }
-    if (!x0_collide) {
+    if (not x0_collide) {
       character->position.y = new_position.y;
       character->collision.y = character->position.y;
     }
-    if (!y0_collide) {
+    if (not y0_collide) {
       if (character->position.x - new_position.x > 0) {
         character->w_direction = WORLD_DIRECTION_LEFT;
       } else {
@@ -207,24 +208,24 @@ bool update_spawns(Vector2 player_position) {
 }
 bool render_spawns(void) {
   if (not state or state == nullptr) {
-    TraceLog(LOG_ERROR, "spawn::render_spawns()::State is not valid");
+    IERROR("spawn::render_spawns()::State is not valid");
     return false;
   }
   // Enemies
   for (size_t itr_000 = 0; itr_000 < state->spawns.size(); ++itr_000) {
     if (state->spawns.at(itr_000).initialized) {
-      if(!state->spawns.at(itr_000).is_dead) 
+      if(not state->spawns.at(itr_000).is_dead) 
       {
         if(state->spawns.at(itr_000).is_damagable)
         {
           switch (state->spawns.at(itr_000).w_direction) 
           {
-            case WORLD_DIRECTION_LEFT: spawn_play_anim(&state->spawns.at(itr_000), SPAWN_ZOMBIE_ANIMATION_MOVE_LEFT);
+            case WORLD_DIRECTION_LEFT: spawn_play_anim(__builtin_addressof(state->spawns.at(itr_000)), SPAWN_ZOMBIE_ANIMATION_MOVE_LEFT);
             break;
-            case WORLD_DIRECTION_RIGHT:spawn_play_anim(&state->spawns.at(itr_000), SPAWN_ZOMBIE_ANIMATION_MOVE_RIGHT);
+            case WORLD_DIRECTION_RIGHT:spawn_play_anim(__builtin_addressof(state->spawns.at(itr_000)), SPAWN_ZOMBIE_ANIMATION_MOVE_RIGHT);
             break;
             default: {
-              TraceLog(LOG_WARNING, "spawn::render_spawns()::Spawn has no directions");
+              IWARN("spawn::render_spawns()::Unsupported direction");
               break;
             }
           }
@@ -232,15 +233,15 @@ bool render_spawns(void) {
         else 
         {
           (state->spawns.at(itr_000).w_direction == WORLD_DIRECTION_LEFT) 
-            ? spawn_play_anim(&state->spawns.at(itr_000), SPAWN_ZOMBIE_ANIMATION_TAKE_DAMAGE_LEFT)
-            : spawn_play_anim(&state->spawns.at(itr_000), SPAWN_ZOMBIE_ANIMATION_TAKE_DAMAGE_RIGHT);
+            ? spawn_play_anim(__builtin_addressof(state->spawns.at(itr_000)), SPAWN_ZOMBIE_ANIMATION_TAKE_DAMAGE_LEFT)
+            : spawn_play_anim(__builtin_addressof(state->spawns.at(itr_000)), SPAWN_ZOMBIE_ANIMATION_TAKE_DAMAGE_RIGHT);
         }
       } 
       else 
       {
         (state->spawns.at(itr_000).w_direction == WORLD_DIRECTION_LEFT) 
-          ? spawn_play_anim(&state->spawns.at(itr_000), SPAWN_ZOMBIE_ANIMATION_TAKE_DAMAGE_LEFT)
-          : spawn_play_anim(&state->spawns.at(itr_000), SPAWN_ZOMBIE_ANIMATION_TAKE_DAMAGE_RIGHT);
+          ? spawn_play_anim(__builtin_addressof(state->spawns.at(itr_000)), SPAWN_ZOMBIE_ANIMATION_TAKE_DAMAGE_LEFT)
+          : spawn_play_anim(__builtin_addressof(state->spawns.at(itr_000)), SPAWN_ZOMBIE_ANIMATION_TAKE_DAMAGE_RIGHT);
       }
     }
   }
@@ -249,7 +250,7 @@ bool render_spawns(void) {
 
 std::vector<Character2D>* get_spawns(void) {
   if (not state or state == nullptr) {
-    TraceLog(LOG_ERROR, "spawn::get_spawns()::State was null");
+    IERROR("spawn::get_spawns()::State was null");
     return nullptr;
   }
 
@@ -257,7 +258,7 @@ std::vector<Character2D>* get_spawns(void) {
 }
 const Character2D * get_spawn_by_id(i32 _id) {
   if (not state or state == nullptr) {
-    TraceLog(LOG_ERROR, "spawn::get_spawn_by_id()::State is invalid");
+    IERROR("spawn::get_spawn_by_id()::State is invalid");
     return nullptr;
   }
   std::vector<Character2D>& spawns = state->spawns;
@@ -272,6 +273,9 @@ const Character2D * get_spawn_by_id(i32 _id) {
 }
 
 void clean_up_spawn_state(void) {
+  for (Character2D& spw : state->spawns) {
+    spw = Character2D();
+  }
   state->spawns.clear();
   state->spawns.shrink_to_fit();
 
@@ -279,6 +283,10 @@ void clean_up_spawn_state(void) {
 }
 
 void spawn_play_anim(Character2D* spawn, spawn_movement_animations movement) {
+  if (not spawn or spawn == nullptr) {
+    IWARN("spawn::spawn_play_anim()::Spawn is invalid");
+    return;
+  }
   Rectangle dest = spawn->collision;
 
   switch (movement) {
@@ -303,12 +311,16 @@ void spawn_play_anim(Character2D* spawn, spawn_movement_animations movement) {
       break;
     }
     default: {
-      TraceLog(LOG_ERROR, "spawn::spawn_play_anim()::Unsupported sheet id");
+      IWARN("spawn::spawn_play_anim()::Unsupported sheet id");
       break;
     }
   }
 }
 void update_spawn_animation(Character2D* spawn) {
+  if (not spawn or spawn == nullptr) {
+    IWARN("spawn::update_spawn_animation()::Spawn is invalid");
+    return;
+  }
   switch (spawn->last_played_animation) {
     case SPAWN_ZOMBIE_ANIMATION_MOVE_LEFT: {
       update_sprite(__builtin_addressof(spawn->move_left_animation));
@@ -327,19 +339,19 @@ void update_spawn_animation(Character2D* spawn) {
       break;
     }
     default: {
-      TraceLog(LOG_ERROR, "spawn::update_spawn_animation()::Unsupported sheet id");
+      IWARN("spawn::update_spawn_animation()::Unsupported sheet id");
       break;
     }
   }
 }
  
 void remove_spawn(i32 index) {
-  if (!state || state == nullptr) {
-    TraceLog(LOG_WARNING, "spawn::remove_spawn()::State is not valid"); 
+  if (not state or state == nullptr) {
+    IERROR("spawn::remove_spawn()::State is invalid"); 
     return; 
   }
-  if (static_cast<size_t>(index) >= state->spawns.size() || index < 0) {
-    TraceLog(LOG_WARNING, "spawn::remove_spawn()::Index is out of bounds"); 
+  if (static_cast<size_t>(index) >= state->spawns.size() or index < 0) {
+    IWARN("spawn::remove_spawn()::Index is out of bounds"); 
     return; 
   }
   state->spawns.erase(state->spawns.begin() + index);
@@ -347,11 +359,10 @@ void remove_spawn(i32 index) {
 }
 
 void register_spawn_animation(Character2D* spawn, spawn_movement_animations movement) {
-  if (!spawn) {
-    TraceLog(LOG_WARNING, "spawn::register_spawn_animation()::Spawn is not valid");
+  if (not spawn or spawn == nullptr) {
+    IWARN("spawn::register_spawn_animation()::Spawn is invalid");
     return;
   }
-
   switch (movement) {
     case SPAWN_ZOMBIE_ANIMATION_MOVE_LEFT: {
       switch (spawn->buffer.i32[0]) {
@@ -381,7 +392,7 @@ void register_spawn_animation(Character2D* spawn, spawn_movement_animations move
           return;
         }
         default: {
-          TraceLog(LOG_WARNING, "spawn::register_spawn_animation()::Unsupported spawn type");
+          IWARN("spawn::register_spawn_animation()::Unsupported spawn type");
           return;
         }
       }
@@ -415,7 +426,7 @@ void register_spawn_animation(Character2D* spawn, spawn_movement_animations move
           return;
         }
         default: {
-          TraceLog(LOG_WARNING, "spawn::register_spawn_animation()::Unsupported spawn type");
+          IWARN("spawn::register_spawn_animation()::Unsupported spawn type");
           return;
         }
       }
@@ -449,7 +460,7 @@ void register_spawn_animation(Character2D* spawn, spawn_movement_animations move
           return;
         }
         default: {
-          TraceLog(LOG_WARNING, "spawn::register_spawn_animation()::Unsupported spawn type");
+          IWARN("spawn::register_spawn_animation()::Unsupported spawn type");
           return;
         }
       }
@@ -483,17 +494,17 @@ void register_spawn_animation(Character2D* spawn, spawn_movement_animations move
           return;
         }
         default: {
-          TraceLog(LOG_WARNING, "spawn::register_spawn_animation()::Unsupported spawn type");
+          IWARN("spawn::register_spawn_animation()::Unsupported spawn type");
           return;
         }
       }
       break;
     }
     default: {
-      TraceLog(LOG_ERROR, "spawn::register_spawn_animation()::Unsupported sheet id");
+      IWARN("spawn::register_spawn_animation()::Unsupported sheet id");
       return;
     }
   }
 
-  TraceLog(LOG_WARNING, "spawn::register_spawn_animation()::Function has ended unexpectedly");
+  IERROR("spawn::register_spawn_animation()::Function has ended unexpectedly");
 }

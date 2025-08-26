@@ -4,6 +4,7 @@
 
 #include "core/event.h"
 #include "core/fmemory.h"
+#include "core/logger.h"
 
 #include "game/spritesheet.h"
 
@@ -24,14 +25,14 @@ typedef struct ability_radience_state {
 } ability_radience_state;
 static ability_radience_state * state = nullptr;
 
-bool ability_radience_initialize(const camera_metrics* _camera_metrics,const app_settings* _settings,const ingame_info* _ingame_info) {
-  if (state) {
-    TraceLog(LOG_WARNING, "ability::ability_system_initialize()::Init called multiple times");
+bool ability_radience_initialize(const camera_metrics *const _camera_metrics, const app_settings *const _settings, const ingame_info *const _ingame_info) {
+  if (state and state != nullptr) {
+    IWARN("ability::ability_system_initialize()::Init called multiple times");
     return false;
   }
   state = (ability_radience_state*)allocate_memory_linear(sizeof(ability_radience_state),true);
   if (not state or state == nullptr) {
-    TraceLog(LOG_ERROR, "ability::ability_system_initialize()::Failed to allocate memory");
+    IERROR("ability::ability_system_initialize()::Failed to allocate memory");
     return false;
   }
   *state = ability_radience_state();
@@ -42,14 +43,14 @@ bool ability_radience_initialize(const camera_metrics* _camera_metrics,const app
   return true;
 }
 
-void upgrade_ability_radience(ability* abl) {
+void upgrade_ability_radience(ability *const abl) {
   if (abl->id <= ABILITY_ID_UNDEFINED or abl->id >= ABILITY_ID_MAX) {
-    TraceLog(LOG_WARNING, "ability::upgrade_ability()::Ability is not initialized");
+    IWARN("ability::upgrade_ability()::Ability is not initialized");
     return;
   }
   ++abl->level;
 
-  for (size_t itr_000 = 0; itr_000 < ABILITY_UPG_MAX; ++itr_000) {
+  for (size_t itr_000 = 0u; itr_000 < ABILITY_UPG_MAX; ++itr_000) {
     switch (abl->upgradables.at(itr_000)) {
       case ABILITY_UPG_DAMAGE: {
         abl->base_damage += abl->level * 2;
@@ -77,30 +78,30 @@ ability get_ability_radience(void) {
   );
 }
 ability get_ability_radience_next_level(ability abl) {
-  upgrade_ability_radience(&abl);
+  upgrade_ability_radience(__builtin_addressof(abl));
   return abl;
 }
 
-void update_ability_radience(ability* abl) {
-  if (abl and abl == nullptr) {
-    TraceLog(LOG_WARNING, "ability::update_radience()::Ability is not valid");
+void update_ability_radience(ability *const abl) {
+  if (not abl and abl == nullptr) {
+    IWARN("ability::update_radience()::Ability is not valid");
     return;
   }
   if (abl->id != ABILITY_ID_RADIANCE) {
-    TraceLog(LOG_WARNING, "ability::update_radience()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_ID_RADIANCE, abl->id);
+    IWARN("ability::update_radience()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_ID_RADIANCE, abl->id);
     return;
   }
   if (not abl->is_active or not abl->is_initialized) {
-    TraceLog(LOG_WARNING, "ability::update_radience()::Ability is not active or not initialized");
+    IWARN("ability::update_radience()::Ability is not active or not initialized");
     return;
   }
   if (abl->p_owner == nullptr or state->in_ingame_info == nullptr or state->in_ingame_info->nearest_spawn == nullptr) {
     return;
   }
-  player_state* p_player = reinterpret_cast<player_state*>(abl->p_owner);
-  abl->position    = p_player->position;
+  const player_state *const p_player = reinterpret_cast<player_state*>(abl->p_owner);
+  abl->position = p_player->position;
 
-  projectile& prj  = abl->projectiles.at(0);
+  projectile& prj = abl->projectiles.at(0);
   if (not prj.is_active) { return; }
 
   prj.position    = abl->position;
@@ -122,7 +123,7 @@ void update_ability_radience(ability* abl) {
   frame_counter = FCLAMP(frame_counter, 0, frame_counter_max);
   if (frame_counter >= frame_counter_max) {
     frame_counter = 0;
-    prj.mm_ex.u16[5] = !is_increment;
+    prj.mm_ex.u16[5] = not is_increment;
     is_increment = prj.mm_ex.u16[5];
   }
 
@@ -144,21 +145,21 @@ void update_ability_radience(ability* abl) {
   update_sprite(__builtin_addressof(prj.animations.at(prj.active_sprite)));
 }
 
-void render_ability_radience(ability* abl){
-  if (abl and abl == nullptr) {
-    TraceLog(LOG_WARNING, "ability::render_radience()::Ability is not valid");
+void render_ability_radience(ability *const abl){
+  if (not abl and abl == nullptr) {
+    IWARN("ability::render_radience()::Ability is not valid");
     return;
   }
   if (abl->id != ABILITY_ID_RADIANCE) {
-    TraceLog(LOG_WARNING, "ability::render_radience()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_ID_RADIANCE, abl->id);
+    IWARN("ability::render_radience()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_ID_RADIANCE, abl->id);
     return;
   }
   if (not abl->is_active or not abl->is_initialized) {
-    TraceLog(LOG_WARNING, "ability::render_radience()::Ability is not active or not initialized");
+    IWARN("ability::render_radience()::Ability is not active or not initialized");
     return;
   }
   if (not abl->projectiles.at(0).is_active) { return; }
-  projectile * prj = __builtin_addressof(abl->projectiles.at(0));
+  projectile *const prj = __builtin_addressof(abl->projectiles.at(0));
   
   Vector2 dim = Vector2 {
     prj->animations.at(prj->active_sprite).current_frame_rect.width  * abl->proj_sprite_scale,
@@ -180,34 +181,32 @@ void render_ability_radience(ability* abl){
   DrawCircleGradient(prj->collision.x, prj->collision.y, circle_inner_radius_current, RADIENCE_COLOR_INNER_CIRCLE_BRIGHT_YARROW, RADIENCE_COLOR_TRANSPARENT);
 }
 
-void refresh_ability_radience(ability* abl) { 
-  if (abl and abl == nullptr) {
-    TraceLog(LOG_WARNING, "ability::refresh_ability_radience()::Ability is null");
+void refresh_ability_radience(ability *const abl) { 
+  if (not abl and abl == nullptr) {
+    IWARN("ability::refresh_ability_radience()::Ability is null");
     return;
   }
   if (abl->id != ABILITY_ID_RADIANCE) {
-    TraceLog(LOG_WARNING, "ability::refresh_ability_radience()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_ID_RADIANCE, abl->id);
+    IWARN("ability::refresh_ability_radience()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_ID_RADIANCE, abl->id);
     return;
   }
   if (abl->proj_count > MAX_ABILITY_PROJECTILE_COUNT) {
-    TraceLog(LOG_WARNING, "ability::refresh_ability_radience()::Ability projectile count exceed");
+    IWARN("ability::refresh_ability_radience()::Ability projectile count exceed");
     return;
   }
-
   abl->projectiles.clear();
   abl->animation_ids.clear();
   abl->projectiles.reserve(abl->proj_count);
   abl->animation_ids.push_back(SHEET_ID_GENERIC_LIGHT);
-
   {
     projectile prj = projectile();
     prj.collision = Rectangle {0.f, 0.f, abl->proj_dim.x * abl->proj_collision_scale.x, abl->proj_dim.y * abl->proj_collision_scale.y};
     prj.damage = abl->base_damage;
     prj.is_active = true;
     prj.duration = abl->proj_duration;
-    for (size_t itr_000 = 0; itr_000 < abl->animation_ids.size(); ++itr_000) {
-      if (abl->animation_ids.at(itr_000) <= SHEET_ID_SPRITESHEET_UNSPECIFIED || abl->animation_ids.at(itr_000) >= SHEET_ID_SPRITESHEET_TYPE_MAX) {
-        TraceLog(LOG_WARNING, "ability::refresh_ability_radience()::One of spritesheets is not initialized or ability corrupted");
+    for (size_t itr_000 = 0u; itr_000 < abl->animation_ids.size(); ++itr_000) {
+      if (abl->animation_ids.at(itr_000) <= SHEET_ID_SPRITESHEET_UNSPECIFIED or abl->animation_ids.at(itr_000) >= SHEET_ID_SPRITESHEET_TYPE_MAX) {
+        IWARN("ability::refresh_ability_radience()::One of spritesheets is not initialized or ability corrupted");
         return;
       }
       spritesheet spr = spritesheet();
@@ -219,7 +218,6 @@ void refresh_ability_radience(ability* abl) {
     }
     abl->projectiles.push_back(prj);
   }
-
   projectile& prj = abl->projectiles.at(0);
   prj.active_sprite = 0;
 

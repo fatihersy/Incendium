@@ -37,6 +37,8 @@
 #error "Unknown platform!"
 #endif
 
+int alert(const char* caption, const char* message);
+
 #define STEAM_APP_ID 3680620
 #define GAME_TITLE "Incendium"
 
