@@ -285,15 +285,18 @@ constexpr void toggle_windowed(i32 width, i32 height) {
   else if (IsWindowFullscreen()) {
     ToggleFullscreen();
   }
+  std::pair<i32, i32> new_res = get_optimum_render_resolution(width, height);
+
   state->settings->window_state = 0;
-  set_resolution(width, height);  
-  set_window_size(width, height);
+  set_resolution(new_res.first, new_res.second);  
+  set_window_size(new_res.first, new_res.second);
   event_fire(EVENT_CODE_CAMERA_SET_DRAWING_EXTENT, event_context(state->settings->render_width, state->settings->render_height));
   
   UnloadRenderTexture(state->drawing_target);
   state->drawing_target = LoadRenderTexture(state->settings->render_width, state->settings->render_height);
 
-  SetWindowSize(state->settings->window_width, state->settings->window_height);
+
+  SetWindowSize(new_res.first, new_res.second);
   SetWindowPosition(
     (GetMonitorWidth(GetCurrentMonitor())  / 2.f) - (GetScreenWidth()  / 2.f), 
     (GetMonitorHeight(GetCurrentMonitor()) / 2.f) - (GetScreenHeight() / 2.f)

@@ -69,7 +69,7 @@ ability get_ability_comet(void) {
   std::array<ability_upgradables, ABILITY_UPG_MAX> comet_upgr = {ABILITY_UPG_DAMAGE, ABILITY_UPG_HITBOX, ABILITY_UPG_AMOUNT, ABILITY_UPG_UNDEFINED, ABILITY_UPG_UNDEFINED};
   return ability(static_cast<i32>(LOC_TEXT_PLAYER_ABILITY_NAME_ARCANE_CODEX), ABILITY_ID_COMET,
     comet_upgr,
-    0.f, 1.2f, Vector2 {1.2f, 1.2f}, 1, 7, 0.f, 15,
+    0.f, 1.2f, Vector2 {1.2f, 1.2f}, 0, 7, 0.f, 15,
     Vector2{30.f, 30.f}, Rectangle{2144, 736, 32, 32}
   );
 }

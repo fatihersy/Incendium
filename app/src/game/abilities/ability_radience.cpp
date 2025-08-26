@@ -56,10 +56,7 @@ void upgrade_ability_radience(ability *const abl) {
         abl->base_damage += abl->level * 2;
         break;
       }
-      case ABILITY_UPG_AMOUNT: { 
-        abl->proj_count++;
-        break;
-      }
+      case ABILITY_UPG_AMOUNT: { break; }
       case ABILITY_UPG_HITBOX: { break; } // TODO: projectile hitbox upgrade
       case ABILITY_UPG_SPEED:  { break; } // TODO: projectile speed upgrade
       default: return;

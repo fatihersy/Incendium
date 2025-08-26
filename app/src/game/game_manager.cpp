@@ -218,8 +218,8 @@ void update_game_manager(void) {
           event_fire(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, event_context(static_cast<f32>(PRG_BAR_ID_BOSS_HEALTH), boss_health_perc));
           gm_update_player();
           update_spawns(state->game_info.player_state_dynamic->position);
-          update_abilities(__builtin_addressof(state->game_info.player_state_dynamic->ability_system));
           generate_in_game_info();
+          update_abilities(__builtin_addressof(state->game_info.player_state_dynamic->ability_system));
         } else {
           gm_end_game(true);
         }
@@ -326,8 +326,6 @@ bool gm_start_game(worldmap_stage stage) {
   }
   *state->game_info.player_state_dynamic = state->player_state_static;
   state->stage = stage;
-  _add_ability(state->game_info.starter_ability);
-
   std::array<character_stat, CHARACTER_STATS_MAX> * const _stat_array_ptr = __builtin_addressof(state->game_info.player_state_dynamic->stats);
 
   for (size_t itr_000 = 0; itr_000 < state->chosen_traits.size(); ++itr_000) {
@@ -340,6 +338,11 @@ bool gm_start_game(worldmap_stage stage) {
     
     game_manager_set_stat_trait_value_by_level(_stat_ptr, _trait_ptr->ingame_ops);
   }
+
+  _add_ability(state->game_info.starter_ability);
+  ability *const player_starter_ability = __builtin_addressof(state->game_info.player_state_dynamic->ability_system.abilities.at(state->game_info.starter_ability));
+  upgrade_ability(player_starter_ability);
+  refresh_ability(player_starter_ability);
   
   populate_map_with_spawns(stage.total_spawn_count);
   if (state->game_info.in_spawns->size() <= 0) {

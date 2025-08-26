@@ -245,13 +245,12 @@ void chosen_trait_button_on_click(size_t index);
   state->main_menu_state_character_panel = panel(BTN_STATE_UNDEFINED, ATLAS_TEX_ID_DARK_FANTASY_PANEL_BG, ATLAS_TEX_ID_DARK_FANTASY_PANEL_SELECTED, 
     Vector4 {6, 6, 6, 6}, Color { 30, 39, 46, 128}
   );
-
   gm_save_game();
 
   if (fade_in) {
     smm_begin_fadein(data128(), nullptr);
   }
-  //event_fire(EVENT_CODE_PLAY_MAIN_MENU_THEME, event_context{}); TODO: Uncomment later
+  event_fire(EVENT_CODE_PLAY_MAIN_MENU_THEME, event_context{});
   return true;
 }
 void end_scene_main_menu(void) {
@@ -603,7 +602,7 @@ void draw_main_menu_character_subscene_stat_list_panel(Rectangle panel_dest, con
       // STARS
       const Rectangle * tier_symbol_src_rect = get_atlas_texture_source_rect(ATLAS_TEX_ID_PASSIVE_UPGRADE_TIER_STAR);
       f32 star_spacing = tier_symbol_src_rect->width * 1.25f;
-      f32 tier_symbols_total_width = tier_symbol_src_rect->width + (MAX_PASSIVE_UPGRADE_TIER - 1.f) * star_spacing;
+      f32 tier_symbols_total_width = tier_symbol_src_rect->width + (MAX_STAT_UPGRADE_TIER - 1.f) * star_spacing;
       f32 tier_symbols_left_edge = showcase_position.x + (showcase_new_dim - tier_symbols_total_width) / 2.f;
       f32 tier_symbols_vertical_center = showcase_position.y + showcase_new_dim * .8f;
       // STARS
@@ -618,7 +617,7 @@ void draw_main_menu_character_subscene_stat_list_panel(Rectangle panel_dest, con
       gui_draw_atlas_texture_id(ATLAS_TEX_ID_DARK_FANTASY_PANEL_BG, Rectangle {showcase_position.x, showcase_position.y, showcase_new_dim, showcase_new_dim}, VECTOR2(0, 0), 0.f);
       gui_draw_atlas_texture_id(ATLAS_TEX_ID_DARK_FANTASY_PANEL,    Rectangle {showcase_position.x, showcase_position.y, showcase_new_dim, showcase_new_dim}, VECTOR2(0, 0), 0.f);
 
-      for (i32 itr_000 = 0; itr_000 < MAX_PASSIVE_UPGRADE_TIER; ++itr_000) {
+      for (i32 itr_000 = 0; itr_000 < MAX_STAT_UPGRADE_TIER; ++itr_000) {
         Vector2 tier_pos = {tier_symbols_left_edge + itr_000 * star_spacing, tier_symbols_vertical_center};
         if (itr_000 < stat->current_level - stat->base_level) {
           gui_draw_atlas_texture_id_scale(ATLAS_TEX_ID_PASSIVE_UPGRADE_TIER_STAR, tier_pos, 1.f, RED, false);
@@ -687,10 +686,10 @@ void draw_main_menu_character_subscene_stat_details_panel(Rectangle panel_dest, 
 
   const Rectangle * tier_symbol_src_rect = get_atlas_texture_source_rect(ATLAS_TEX_ID_PASSIVE_UPGRADE_TIER_STAR);
   f32 star_spacing = tier_symbol_src_rect->width * 1.25f;
-  f32 tier_symbols_total_width = tier_symbol_src_rect->width + (MAX_PASSIVE_UPGRADE_TIER - 1.f) * star_spacing;
+  f32 tier_symbols_total_width = tier_symbol_src_rect->width + (MAX_STAT_UPGRADE_TIER - 1.f) * star_spacing;
   f32 tier_symbols_left_edge = state->stat_details_panel.dest.x + (state->stat_details_panel.dest.width - tier_symbols_total_width) / 2.f;
   f32 tier_symbols_vertical_position = icon_pos.y + icon_pos.height + detail_panel_element_spacing * .5f;
-  for (i32 itr_000 = 0; itr_000 < MAX_PASSIVE_UPGRADE_TIER; ++itr_000) {
+  for (i32 itr_000 = 0; itr_000 < MAX_STAT_UPGRADE_TIER; ++itr_000) {
     Vector2 tier_pos = {tier_symbols_left_edge + itr_000 * star_spacing, tier_symbols_vertical_position};
     if (itr_000 < state->hovered_stat->current_level - state->hovered_stat->base_level) {
       gui_draw_atlas_texture_id_scale(ATLAS_TEX_ID_PASSIVE_UPGRADE_TIER_STAR, tier_pos, 1.f, RED, false);
@@ -787,16 +786,18 @@ void draw_main_menu_character_subscene_stat_details_panel(Rectangle panel_dest, 
   if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_STATE_CHARACTER_TAB_STATS_BUTTON_UPGRADE), BTN_ID_MAINMENU_STATE_CHARACTER_BUY_STAT_UPGRADE, ZEROVEC2, button_location, false)) {
     const i32& cost = state->hovered_stat->upgrade_cost;
     const i32* stock = get_currency_souls_total();
-    if ( (*stock) - cost >= 0 ) {
-      currency_souls_add(-state->hovered_stat->upgrade_cost);
-      i32 level = get_static_player_state_stat(state->hovered_stat->id)->current_level;
-      set_static_player_state_stat(state->hovered_stat->id, level+1);
-      gm_save_game();
-      event_fire(EVENT_CODE_PLAY_BUTTON_ON_CLICK, event_context((u16)true));
-    } else {
-      event_fire(EVENT_CODE_PLAY_SOUND, event_context((i32)SOUND_ID_DENY));
-      state->deny_notify_timer = DENY_NOTIFY_TIME;
-      gui_fire_display_error(LOC_TEXT_DISPLAY_ERROR_TEXT_INSUFFICIENT_FUNDS);
+    if ((state->hovered_stat->current_level - state->hovered_stat->base_level) < MAX_STAT_UPGRADE_TIER) {
+      if ( (*stock) - cost >= 0) {
+        currency_souls_add(-state->hovered_stat->upgrade_cost);
+        i32 level = get_static_player_state_stat(state->hovered_stat->id)->current_level;
+        set_static_player_state_stat(state->hovered_stat->id, level+1);
+        gm_save_game();
+        event_fire(EVENT_CODE_PLAY_BUTTON_ON_CLICK, event_context((u16)true));
+      } else {
+        event_fire(EVENT_CODE_PLAY_SOUND, event_context((i32)SOUND_ID_DENY));
+        state->deny_notify_timer = DENY_NOTIFY_TIME;
+        gui_fire_display_error(LOC_TEXT_DISPLAY_ERROR_TEXT_INSUFFICIENT_FUNDS);
+      }
     }
   }
 }

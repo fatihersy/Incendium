@@ -57,7 +57,7 @@
 #define MAX_ABILITY_LEVEL 7
 #define MAX_ABILITY_PROJECTILE_COUNT 32
 
-#define MAX_PASSIVE_UPGRADE_TIER 5
+#define MAX_STAT_UPGRADE_TIER 5
 #define MAX_ABILITY_PLAYER_CAN_HAVE_IN_THE_SAME_TIME 6
 
 #define WORLDMAP_LOC_PIN_SIZE 32 // Also check the SHEET_ID_ICON_ATLAS frame sizes.
@@ -773,7 +773,7 @@ typedef struct ability {
     this->base_damage = base_damage;
     this->proj_dim = proj_dim;
     this->icon_src = icon_src;
-    this->level = 1;
+    this->level = 0;
   }
 }ability;
 

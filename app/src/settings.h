@@ -23,6 +23,7 @@ i32 get_window_state(void);
 std::vector<f32> get_screen_offset(void);
 const std::vector<std::pair<i32, i32>> * get_supported_render_resolutions(void);
 std::pair<i32, i32> get_optimum_render_resolution(aspect_ratio ratio);
+std::pair<i32, i32> get_optimum_render_resolution(i32 width, i32 height);
 aspect_ratio get_aspect_ratio(i32 width, i32 height);
 aspect_ratio get_window_aspect_ratio(void);
 aspect_ratio get_monitor_aspect_ratio(void);

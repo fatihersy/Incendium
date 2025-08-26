@@ -91,7 +91,10 @@ void update_ability_codex(ability *const abl) {
     IWARN("ability::update_codex()::Ability is not active or not initialized");
     return;
   }
-  if (abl->p_owner == nullptr or state->in_ingame_info == nullptr or state->in_ingame_info->nearest_spawn == nullptr) {
+  if (not abl->p_owner or abl->p_owner == nullptr or not state->in_ingame_info or state->in_ingame_info == nullptr) {
+    return;
+  }
+  if (not state->in_ingame_info->nearest_spawn or state->in_ingame_info->nearest_spawn == nullptr ) {
     return;
   }
   i32 frame_counter_max = 1 * TARGET_FPS;
@@ -105,7 +108,7 @@ void update_ability_codex(ability *const abl) {
   abl->position.x = book_position.x;
   abl->position.y = book_position.y;
 
-  for (size_t itr_000 = 0u; itr_000 < 1; itr_000++) {
+  for (size_t itr_000 = 0u; itr_000 < static_cast<size_t>(abl->proj_count); itr_000++) {
     projectile& prj = abl->projectiles.at(itr_000);
     if (not prj.is_active) { continue; }
     prj.is_active = true;
@@ -185,6 +188,8 @@ void refresh_ability_codex(ability *const abl) {
     IWARN("ability::refresh_ability_codex()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_ID_CODEX, abl->id);
     return;
   }
+  // INFO: This ability has one projectile
+  abl->proj_count = 1;
 
   abl->projectiles.clear();
   abl->animation_ids.clear();

@@ -71,7 +71,7 @@ ability get_ability_fireball(void) {
   std::array<ability_upgradables, ABILITY_UPG_MAX> fireball_upgr = {ABILITY_UPG_DAMAGE, ABILITY_UPG_SPEED, ABILITY_UPG_AMOUNT, ABILITY_UPG_UNDEFINED, ABILITY_UPG_UNDEFINED};
   return ability(static_cast<i32>(LOC_TEXT_PLAYER_ABILITY_NAME_FIREBALL), ABILITY_ID_FIREBALL,
     fireball_upgr,
-    0.f, 1.f, Vector2 {1.f, 1.f}, 1, 1, 0.f, 15,
+    0.f, 1.f, Vector2 {1.f, 1.f}, 0, 1, 0.f, 15,
     Vector2{30.f, 30.f}, Rectangle{2176, 736, 32, 32}
   );
 }
@@ -161,9 +161,17 @@ void render_ability_fireball(ability *const abl){
   }
 }
 
-void refresh_ability_fireball(ability *const abl) { 
+void refresh_ability_fireball(ability *const abl) {
   if (not abl or abl == nullptr) {
-    IWARN("ability::refresh_ability_fireball()::Ability is null");
+    IWARN("ability::refresh_ability_fireball()::Ability is invalid");
+    return;
+  }
+  if (not state->in_ingame_info or state->in_ingame_info == nullptr) {
+    IWARN("ability::refresh_ability_fireball()::In-game info is invalid");
+    return;
+  }
+  if (not state->in_ingame_info->player_state_dynamic or state->in_ingame_info->player_state_dynamic == nullptr) {
+    IWARN("ability::refresh_ability_fireball()::Player is invalid");
     return;
   }
   if (abl->id != ABILITY_ID_FIREBALL) {

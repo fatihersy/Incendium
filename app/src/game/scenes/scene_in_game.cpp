@@ -167,7 +167,10 @@ void reset_game(void);
   _set_player_position(ZEROVEC2);
   
   for (size_t itr_000 = 0u; itr_000 < MAX_UPDATE_ABILITY_PANEL_COUNT; ++itr_000) {
-    state->ability_upg_panels.at(itr_000) = state->default_panel;
+    state->ability_upg_panels.at(itr_000) = panel(BTN_STATE_UNDEFINED, ATLAS_TEX_ID_CRIMSON_FANTASY_PANEL_BG, ATLAS_TEX_ID_DARK_FANTASY_PANEL_SELECTED, 
+      Vector4 {6.f, 6.f, 6.f, 6.f}, Color { 30, 39, 46, 200}
+    );
+    state->ability_upg_panels.at(itr_000).signal_state = BTN_STATE_RELEASED;
   }
   state->debug_info_panel = state->default_panel;
 
@@ -568,6 +571,13 @@ void in_game_update_keyboard_bindings(void) {
           if (IsKeyDown(KEY_LEFT_ALT) and IsKeyReleased(KEY_K)) {
             event_fire(EVENT_CODE_KILL_ALL_SPAWNS, event_context());
           }
+          if (IsKeyReleased(KEY_R)) {
+            if (get_b_player_have_upgrade_points()) {
+              if (state->is_upgrade_choices_ready) {
+                prepare_ability_upgrade_state();
+              }
+            }
+          }
           break;
         }
         case INGAME_PHASE_DEFEAT_BOSS: {
@@ -612,6 +622,9 @@ void in_game_update_bindings(void) {
 }
 
 void draw_in_game_upgrade_panel(u16 which_panel, Rectangle panel_dest) {
+  if (not state->in_ingame_info->player_state_dynamic or state->in_ingame_info->player_state_dynamic == nullptr) {
+    return;
+  }
   const ability *const upg = __builtin_addressof(state->ability_upgrade_choices.at(which_panel));
   if (upg->id < 0 and upg->id >= state->in_ingame_info->player_state_dynamic->ability_system.abilities.size()) {
     return;
@@ -621,7 +634,7 @@ void draw_in_game_upgrade_panel(u16 which_panel, Rectangle panel_dest) {
     IWARN("scene_in_game::draw_in_game_upgrade_panel()::Upgraded ability is out of bounds"); 
     return;
   }
-  if (upg->level <= 0 or upg->level >= MAX_ABILITY_LEVEL) {
+  if (upg->level < 0 or upg->level >= MAX_ABILITY_LEVEL) {
     IWARN("scene_in_game::draw_in_game_upgrade_panel()::Upgraded ability level is out of bounds"); 
     return;
   }
@@ -639,10 +652,10 @@ void draw_in_game_upgrade_panel(u16 which_panel, Rectangle panel_dest) {
   gui_draw_texture_id_pro(TEX_ID_ASSET_ATLAS, upg->icon_src, icon_rect);
   gui_label(lc_txt(upg->display_name_loc_text_id), FONT_TYPE_ABRACADABRA, title_font_size, ability_name_pos, WHITE, true, true);
 
-  if (upg->level == 1) {
+  if (upg->level == 0) {
     gui_label(lc_txt(LOC_TEXT_INGAME_UPGRADE_ABILITY_NEW), FONT_TYPE_ABRACADABRA, level_ind_font_size, ability_level_ind, WHITE, true, true);
   } 
-  else if(upg->level > 1 and upg->level <= MAX_ABILITY_LEVEL) {
+  else if(upg->level > 0 and upg->level <= MAX_ABILITY_LEVEL) {
     gui_label_format_v(FONT_TYPE_ABRACADABRA, level_ind_font_size, ability_level_ind, WHITE, true, true, "%d -> %d", abl->level, upg->level);
   } 
   else {
@@ -836,7 +849,7 @@ void prepare_ability_upgrade_state(void) {
 }
 void end_ability_upgrade_state(u16 which_panel_chosen) {
   const ability *const new_ability = __builtin_addressof(state->ability_upgrade_choices.at(which_panel_chosen));
-  if (new_ability->level >= MAX_ABILITY_LEVEL or new_ability->level <= 1) {
+  if (new_ability->level >= MAX_ABILITY_LEVEL or new_ability->level < 1) {
     _add_ability(new_ability->id);
   }
   else {

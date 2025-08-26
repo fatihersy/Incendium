@@ -11,6 +11,8 @@ typedef struct app_settings_system_state {
   app_settings settings;
   app_settings initializer;
   u16 offset;
+  std::vector<std::pair<i32, i32>> all_supported_resolutions;
+
   std::vector<std::pair<i32, i32>> ratio_3_2_resolutions;
   std::vector<std::pair<i32, i32>> ratio_4_3_resolutions;
   std::vector<std::pair<i32, i32>> ratio_5_3_resolutions;
@@ -24,10 +26,14 @@ typedef struct app_settings_system_state {
   std::vector<std::pair<i32, i32>> ratio_43_18_resolutions;
   std::vector<std::pair<i32, i32>> ratio_64_27_resolutions;
   std::vector<std::pair<i32, i32>> ratio_custom_resolutions;
+
+  std::pair<i32, i32> minimum_resolution;
+
   app_settings_system_state(void) {
     this->settings = app_settings();
     this->initializer = app_settings();
     this->offset = 0u;
+    this->all_supported_resolutions = std::vector<std::pair<i32, i32>>();
     this->ratio_3_2_resolutions = std::vector<std::pair<i32, i32>>();
     this->ratio_4_3_resolutions = std::vector<std::pair<i32, i32>>();
     this->ratio_5_3_resolutions = std::vector<std::pair<i32, i32>>();
@@ -41,6 +47,7 @@ typedef struct app_settings_system_state {
     this->ratio_43_18_resolutions = std::vector<std::pair<i32, i32>>();
     this->ratio_64_27_resolutions = std::vector<std::pair<i32, i32>>();
     this->ratio_custom_resolutions = std::vector<std::pair<i32, i32>>();
+    this->minimum_resolution = std::pair<i32, i32>(0, 0);
   }
 } app_settings_system_state;
 
@@ -146,6 +153,62 @@ bool settings_initialize(void) {
     state->ratio_64_27_resolutions.push_back(std::pair<i32, i32>(5420, 2160));
     state->ratio_64_27_resolutions.push_back(std::pair<i32, i32>(3840, 1600));
   }
+  // Supported resolutions
+
+  // All resolutions
+  {
+    state->all_supported_resolutions.push_back(std::pair<i32, i32>(640,   480));
+    state->all_supported_resolutions.push_back(std::pair<i32, i32>(720,   480));
+    state->all_supported_resolutions.push_back(std::pair<i32, i32>(800,   600));
+    state->all_supported_resolutions.push_back(std::pair<i32, i32>(900,   720));
+    state->all_supported_resolutions.push_back(std::pair<i32, i32>(960,   720));
+    state->all_supported_resolutions.push_back(std::pair<i32, i32>(1080,  720));
+    state->all_supported_resolutions.push_back(std::pair<i32, i32>(1200,  720));
+    state->all_supported_resolutions.push_back(std::pair<i32, i32>(1280,  720));
+    state->all_supported_resolutions.push_back(std::pair<i32, i32>(1680,  720));
+    state->all_supported_resolutions.push_back(std::pair<i32, i32>(1680,  720));
+    state->all_supported_resolutions.push_back(std::pair<i32, i32>(2560,  720));
+    state->all_supported_resolutions.push_back(std::pair<i32, i32>(1024,  768));
+    state->all_supported_resolutions.push_back(std::pair<i32, i32>(1280,  768));
+    state->all_supported_resolutions.push_back(std::pair<i32, i32>(1366,  768));
+    state->all_supported_resolutions.push_back(std::pair<i32, i32>(1280,  800));
+    state->all_supported_resolutions.push_back(std::pair<i32, i32>(1152,  864));
+    state->all_supported_resolutions.push_back(std::pair<i32, i32>(1440,  900));
+    state->all_supported_resolutions.push_back(std::pair<i32, i32>(1440,  960));
+    state->all_supported_resolutions.push_back(std::pair<i32, i32>(1680, 1050));
+    state->all_supported_resolutions.push_back(std::pair<i32, i32>(1350, 1080));
+    state->all_supported_resolutions.push_back(std::pair<i32, i32>(1440, 1080));
+    state->all_supported_resolutions.push_back(std::pair<i32, i32>(1800, 1080));
+    state->all_supported_resolutions.push_back(std::pair<i32, i32>(1920, 1080));
+    state->all_supported_resolutions.push_back(std::pair<i32, i32>(2560, 1080));
+    state->all_supported_resolutions.push_back(std::pair<i32, i32>(3840, 1080));
+    state->all_supported_resolutions.push_back(std::pair<i32, i32>(1440, 1152));
+    state->all_supported_resolutions.push_back(std::pair<i32, i32>(1536, 1152));
+    state->all_supported_resolutions.push_back(std::pair<i32, i32>(1920, 1152));
+    state->all_supported_resolutions.push_back(std::pair<i32, i32>(2048, 1152));
+    state->all_supported_resolutions.push_back(std::pair<i32, i32>(1920, 1200));
+    state->all_supported_resolutions.push_back(std::pair<i32, i32>(2048, 1229));
+    state->all_supported_resolutions.push_back(std::pair<i32, i32>(2160, 1440));
+    state->all_supported_resolutions.push_back(std::pair<i32, i32>(2560, 1440));
+    state->all_supported_resolutions.push_back(std::pair<i32, i32>(3440, 1440));
+    state->all_supported_resolutions.push_back(std::pair<i32, i32>(5120, 1440));
+    state->all_supported_resolutions.push_back(std::pair<i32, i32>(2048, 1536));
+    state->all_supported_resolutions.push_back(std::pair<i32, i32>(2560, 1600));
+    state->all_supported_resolutions.push_back(std::pair<i32, i32>(3840, 1600));
+    state->all_supported_resolutions.push_back(std::pair<i32, i32>(2024, 1620));
+    state->all_supported_resolutions.push_back(std::pair<i32, i32>(2160, 1728));
+    state->all_supported_resolutions.push_back(std::pair<i32, i32>(3200, 2048));
+    state->all_supported_resolutions.push_back(std::pair<i32, i32>(2700, 2160));
+    state->all_supported_resolutions.push_back(std::pair<i32, i32>(3840, 2160));
+    state->all_supported_resolutions.push_back(std::pair<i32, i32>(5420, 2160));
+    state->all_supported_resolutions.push_back(std::pair<i32, i32>(3840, 2304));
+    state->all_supported_resolutions.push_back(std::pair<i32, i32>(3200, 2400));
+    state->all_supported_resolutions.push_back(std::pair<i32, i32>(4096, 2458));
+    state->all_supported_resolutions.push_back(std::pair<i32, i32>(4096, 3072));
+  }
+  // All resolutions
+
+  state->minimum_resolution = std::pair<i32, i32>(640, 480);
 
   return true;
 }
@@ -420,6 +483,26 @@ std::pair<i32, i32> get_optimum_render_resolution(aspect_ratio ratio) {
   
   IERROR("settings::get_optimum_render_resolution()::Function ended unexpectedly");
   return std::pair<i32, i32>(-1, -1);
+}
+std::pair<i32, i32> get_optimum_render_resolution(i32 width, i32 height) {
+  const std::vector<std::pair<i32, i32>> *const resolutions = get_supported_render_resolutions();
+
+  i32 nearest_width = state->minimum_resolution.first;
+  i32 nearest_height = state->minimum_resolution.second;
+  for (const std::pair<i32, i32>& sup_res : (*resolutions)) {
+    if (sup_res.first <= width) {
+      if (sup_res.first > nearest_width and sup_res.first <= GetMonitorWidth(GetCurrentMonitor()) ) {
+        nearest_width = sup_res.first;
+      }
+    }
+    if (sup_res.second <= height and sup_res.second <= GetMonitorHeight(GetCurrentMonitor()) ) {
+      if (sup_res.second > nearest_height) {
+        nearest_height = sup_res.second;
+      }
+    }
+  }
+
+  return std::pair<i32, i32>(nearest_width, nearest_height);
 }
 const std::vector<std::pair<i32, i32>> * get_supported_render_resolutions(void) {
 
