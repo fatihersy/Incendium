@@ -3,8 +3,10 @@
 #include <eh.h>
 
 #include "defines.h"
+#include "core/logger.h"
 
 #include <steam/steam_api.h>
+
 
 #ifdef PLATFORM_WINDOWS
   #include <windows.h>
@@ -125,10 +127,16 @@ void MiniDumpFunction([[maybe_unused]] unsigned int nExceptionCode, [[maybe_unus
 	// You can build and set an arbitrary comment to embed in the minidump here,
 	// maybe you want to put what level the user was playing, how many players on the server,
 	// how much memory is free, etc...
-	//SteamAPI_SetMiniDumpComment( "Minidump comment: SteamworksExample.exe\n" );
 
-	// The 0 here is a build ID, we don't set it
-	//SteamAPI_WriteMiniDump( nExceptionCode, pException, 0 );
+	#ifdef _DEBUG
+		const char * last_log = get_last_log();
+		if (last_log and last_log != nullptr) {
+			SteamAPI_SetMiniDumpComment( last_log );
+		}
+
+		// The 0 here is a build ID, we don't set it
+		SteamAPI_WriteMiniDump( nExceptionCode, pException, SteamApps()->GetAppBuildId() );
+	#endif
 }
 
 

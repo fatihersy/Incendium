@@ -2,7 +2,10 @@
 #include "core/fmemory.h"
 #include "core/logger.h"
 
-#include "tools/pak_parser.h"
+#if USE_PAK_FORMAT
+  #include "tools/pak_parser.h"
+#endif
+
 #include "tools/fstring.h"
 #include "game/resource.h"
 #include "game/spritesheet.h"
@@ -243,7 +246,9 @@ void render_props_y_based_all(const tilemap *const _tilemap, Rectangle camera_vi
         const tilemap_prop_static *const map_prop_ptr = _queue_prop_ptr->data.prop_static;
         if (not map_prop_ptr->is_initialized) continue;
 
-        Rectangle prop_rect = map_prop_ptr->dest; 
+        Rectangle prop_rect = map_prop_ptr->dest;
+        prop_rect.width *= map_prop_ptr->scale;
+        prop_rect.height *= map_prop_ptr->scale;
 
         if (not CheckCollisionRecs(camera_view, prop_rect)) { continue; }
       
@@ -913,7 +918,6 @@ bool load_or_create_map_data(tilemap *const map, tilemap_stringtify_package *con
       int dataSize = 1;
       u8* _str_prop = LoadFileData(map_layer_path(map->propfile.c_str()), &dataSize);
       if (dataSize > 1 && dataSize < TOTAL_ALLOCATED_MEMORY) {
-        out_package->size_props_str = dataSize;
         out_package->str_props.assign(reinterpret_cast<char*>(_str_prop), dataSize);
       }
       if (_str_prop) {
@@ -924,7 +928,7 @@ bool load_or_create_map_data(tilemap *const map, tilemap_stringtify_package *con
       if (not out_package->is_success) {
         IERROR("tilemap::load_or_create_map_data()::map cannot successfully converted to string to save as file");
       }
-      if (not SaveFileData(map_layer_path(map->propfile.c_str()), out_package->str_props.data(), out_package->size_props_str)) {
+      if (not SaveFileData(map_layer_path(map->propfile.c_str()), out_package->str_props.data(), out_package->str_props.size())) {
         IERROR("tilemap::load_or_create_map_data()::Recieving package data returned with failure");
       }
     }
@@ -934,7 +938,6 @@ bool load_or_create_map_data(tilemap *const map, tilemap_stringtify_package *con
       int dataSize = 1;
       u8* _str_collision = LoadFileData(map_layer_path(map->collisionfile.c_str()), &dataSize);
       if (dataSize > 1 && dataSize < TOTAL_ALLOCATED_MEMORY) {
-        out_package->size_collisions_str = dataSize;
         out_package->str_collisions.assign(reinterpret_cast<char*>(_str_collision), dataSize);
       }
       if (_str_collision) {
@@ -945,7 +948,7 @@ bool load_or_create_map_data(tilemap *const map, tilemap_stringtify_package *con
       if (not out_package->is_success) {
         IERROR("tilemap::load_or_create_map_data()::map cannot successfully converted to string to save as file");
       }
-      if (not SaveFileData(map_layer_path(map->collisionfile.c_str()), out_package->str_collisions.data(), out_package->size_collisions_str)) {
+      if (not SaveFileData(map_layer_path(map->collisionfile.c_str()), out_package->str_collisions.data(), out_package->str_collisions.size())) {
         IERROR("tilemap::load_or_create_map_data()::Recieving package data returned with failure");
       }
     }

@@ -63,6 +63,7 @@ typedef struct main_menu_scene_state {
   
   const Vector2* mouse_pos_screen;
   f32 deny_notify_timer;
+  f32 bg_scroll;
   main_menu_scene_type mainmenu_state;
   main_menu_scene_character_subscene_type mainmenu_scene_character_subscene;
   bool is_dragging_scroll;
@@ -103,6 +104,7 @@ typedef struct main_menu_scene_state {
 
     this->mouse_pos_screen = nullptr;
     this->deny_notify_timer = 0.f;
+    this->bg_scroll = 0.f;
     this->mainmenu_state = MAIN_MENU_SCENE_DEFAULT;
     this->mainmenu_scene_character_subscene = MAIN_MENU_SCENE_CHARACTER_STATS;
     this->is_dragging_scroll = false;
@@ -338,24 +340,37 @@ void render_scene_main_menu(void) {
 }
 void render_interface_main_menu(void) {
   if (state->mainmenu_state == MAIN_MENU_SCENE_DEFAULT) {
+
+    Vector2 screen_location_acc = Vector2 {0.f, -21.f};
     
     gui_label_shader(GAME_TITLE, SHADER_ID_FONT_OUTLINE, FONT_TYPE_ABRACADABRA, 5, VECTOR2(SMM_BASE_RENDER_WIDTH * .5f, SMM_BASE_RENDER_HEIGHT * .25f), WHITE, true, true);
-    if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_PLAY), BTN_ID_MAINMENU_BUTTON_PLAY, VECTOR2(0.f, -21.f), SMM_BASE_RENDER_DIV2, true)) {
+    if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_PLAY), BTN_ID_MAINMENU_BUTTON_PLAY, screen_location_acc, SMM_BASE_RENDER_DIV2, true)) {
       begin_scene_change(MAIN_MENU_SCENE_TO_PLAY_MAP_CHOICE);
     }
-    if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_CHARACTER), BTN_ID_MAINMENU_BUTTON_ENTER_STATE_CHARACTER, VECTOR2(0.f, -10.5f), SMM_BASE_RENDER_DIV2, true)) {
+    screen_location_acc.y += 10.5f;
+
+    if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_CHARACTER), BTN_ID_MAINMENU_BUTTON_ENTER_STATE_CHARACTER, screen_location_acc, SMM_BASE_RENDER_DIV2, true)) {
       state->mainmenu_state = MAIN_MENU_SCENE_CHARACTER;
     }
-    if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_SETTINGS), BTN_ID_MAINMENU_BUTTON_SETTINGS, VECTOR2(0.f, 0.f), SMM_BASE_RENDER_DIV2, true)) {
+    screen_location_acc.y += 10.5f;
+
+    if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_SETTINGS), BTN_ID_MAINMENU_BUTTON_SETTINGS, screen_location_acc, SMM_BASE_RENDER_DIV2, true)) {
       ui_refresh_setting_sliders_to_default();
       state->mainmenu_state = MAIN_MENU_SCENE_SETTINGS;
     }
-    if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_EDITOR), BTN_ID_MAINMENU_BUTTON_EDITOR, VECTOR2(0.f, 10.5f), SMM_BASE_RENDER_DIV2, true)) {
-      smm_begin_fadeout(data128(SCENE_TYPE_EDITOR, true), fade_on_complete_change_scene);
-    }
-    if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_EXIT), BTN_ID_MAINMENU_BUTTON_EXIT, VECTOR2(0.f, 21.f), SMM_BASE_RENDER_DIV2, true)) {
+    screen_location_acc.y += 10.5f;
+
+    #ifdef _DEBUG
+      if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_EDITOR), BTN_ID_MAINMENU_BUTTON_EDITOR, screen_location_acc, SMM_BASE_RENDER_DIV2, true)) {
+        smm_begin_fadeout(data128(SCENE_TYPE_EDITOR, true), fade_on_complete_change_scene);
+      }
+      screen_location_acc.y += 10.5f;
+    #endif
+
+    if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_EXIT), BTN_ID_MAINMENU_BUTTON_EXIT, screen_location_acc, SMM_BASE_RENDER_DIV2, true)) {
       event_fire(EVENT_CODE_APPLICATION_QUIT, event_context());
     }
+    screen_location_acc.y += 10.5f;
   } 
   else if (state->mainmenu_state == MAIN_MENU_SCENE_SETTINGS) {
       gui_draw_settings_screen();
@@ -376,6 +391,21 @@ void render_interface_main_menu(void) {
     Rectangle map_choice_image_dest = Rectangle { SMM_BASE_RENDER_DIV2.x, 0.f, image_dim.x, image_dim.y };
     map_choice_image_dest.x -= image_dim.x * .5f;
     const f32 map_pin_dim = map_choice_image_dest.height * .05f;
+
+    state->bg_scroll += static_cast<f32>(GetFrameTime() * 25.f);
+
+    gui_draw_texture_id_pro(TEX_ID_BLACK_BACKGROUND_IMG1, 
+      Rectangle {
+        state->bg_scroll, state->bg_scroll, 
+        static_cast<f32>(state->in_app_settings->render_width), 
+        static_cast<f32>(state->in_app_settings->render_height)
+      }, 
+      Rectangle {0.f, 0.f, 
+        static_cast<f32>(state->in_app_settings->render_width), 
+        static_cast<f32>(state->in_app_settings->render_height)
+      }, 
+      WHITE, ZEROVEC2, TEXTURE_WRAP_REPEAT
+    );
 
     //BeginShaderMode(get_shader_by_enum(SHADER_ID_MAP_CHOICE_IMAGE)->handle);
     {

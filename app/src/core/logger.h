@@ -24,4 +24,6 @@ void inc_logging(logging_severity ls, const char* fmt, ...);
 [[__nodiscard__]] bool logging_system_initialize(void);
 void logging_system_shutdown(void);
 
+const char * get_last_log(void);
+
 #endif

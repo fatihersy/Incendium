@@ -1853,7 +1853,7 @@ void gui_draw_spritesheet_id(spritesheet_id _id, Color _tint, Vector2 pos, Vecto
   }
   draw_sprite_on_site_by_id(_id, _tint, pos, scale, frame);
 }
-void gui_draw_texture_id_pro(texture_id _id, Rectangle src, Rectangle dest, Color tint, Vector2 origin) {
+void gui_draw_texture_id_pro(texture_id _id, Rectangle src, Rectangle dest, Color tint, Vector2 origin, i32 texture_wrap) {
   if (_id >= TEX_ID_MAX or _id <= TEX_ID_UNSPECIFIED) {
     IWARN("user_interface::gui_draw_texture_id_pro()::Texture id is out of bound"); 
     return; 
@@ -1863,9 +1863,10 @@ void gui_draw_texture_id_pro(texture_id _id, Rectangle src, Rectangle dest, Colo
     IERROR("user_interface::gui_draw_texture_id_pro()::Texture resource is invalid");
     return; 
   }
+  SetTextureWrap( (*tex), texture_wrap);
   DrawTexturePro( (*tex), src, dest, origin, 0.f, tint);
 }
-void gui_draw_texture_id(const texture_id _id, const Rectangle dest, const Vector2 origin) {
+void gui_draw_texture_id(const texture_id _id, const Rectangle dest, const Vector2 origin, i32 texture_wrap) {
   if (_id >= TEX_ID_MAX or _id <= TEX_ID_UNSPECIFIED) {
     IWARN("user_interface::gui_draw_texture_id()::Texture id is out of bound"); 
     return; 
@@ -1875,6 +1876,7 @@ void gui_draw_texture_id(const texture_id _id, const Rectangle dest, const Vecto
     IERROR("user_interface::gui_draw_texture_id()::Texture resource is invalid");
     return; 
   }
+  SetTextureWrap( (*tex), texture_wrap);
   DrawTexturePro( (*tex), Rectangle{0.f, 0.f, (f32) tex->width, (f32) tex->height}, dest, origin, 0.f, WHITE);
 }
 void gui_draw_atlas_texture_id_scale(atlas_texture_id _id, Vector2 position, f32 scale, Color tint, bool should_center) {

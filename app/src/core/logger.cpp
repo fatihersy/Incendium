@@ -10,6 +10,8 @@
 
 typedef struct logging_system_state {
   std::vector<std::string> logs;
+
+  std::string dump_string;
 } logging_system_state;
 
 static logging_system_state * state = nullptr;
@@ -101,4 +103,18 @@ void inc_logging(logging_severity ls, const char* fmt, ...) {
       SaveFileText(path, TextFormat("%s", log.c_str()));
     }
 	}
+}
+
+
+const char * get_last_log(void) {
+  if (not state or state == nullptr) {
+    return nullptr;
+  }
+  state->dump_string = std::string();
+
+  if (not state->logs.empty()) {
+    state->dump_string = state->logs.back();
+  }
+
+  return state->dump_string.c_str();
 }

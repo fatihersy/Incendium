@@ -122,6 +122,8 @@ bool pak_parser_system_initialize(void) {
       file_buffer(PAK_FILE_ASSET1, PAK_FILE_ASSET1_MUSIC_NIGHT_THEME, ".wav"),
       file_buffer(PAK_FILE_ASSET1, PAK_FILE_ASSET1_MUSIC_TRACK_5, ".wav"),
       file_buffer(PAK_FILE_ASSET1, PAK_FILE_ASSET1_WORLDMAP_IMAGE, ".png"),
+      file_buffer(PAK_FILE_ASSET1, PAK_FILE_ASSET1_BLACK_BACKGROUND_IMAGE1, ".png"),
+      file_buffer(PAK_FILE_ASSET1, PAK_FILE_ASSET1_BLACK_BACKGROUND_IMAGE2, ".png"),
       file_buffer(PAK_FILE_UNDEFINED, PAK_FILE_ASSET1_MAX, ""),
     })
   );

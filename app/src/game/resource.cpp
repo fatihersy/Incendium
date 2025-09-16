@@ -76,9 +76,13 @@ bool resource_system_initialize(void) {
   #if USE_PAK_FORMAT
   load_texture_pak(PAK_FILE_ASSET2, PAK_FILE_ASSET2_ATLAS, false, VECTOR2(0.f, 0.f), TEX_ID_ASSET_ATLAS);
   load_texture_pak(PAK_FILE_ASSET1, PAK_FILE_ASSET1_WORLDMAP_IMAGE, false, VECTOR2(0.f, 0.f), TEX_ID_WORLDMAP_WO_CLOUDS);
+  load_texture_pak(PAK_FILE_ASSET1, PAK_FILE_ASSET1_BLACK_BACKGROUND_IMAGE1, false, VECTOR2(0.f, 0.f), TEX_ID_BLACK_BACKGROUND_IMG1);
+  load_texture_pak(PAK_FILE_ASSET1, PAK_FILE_ASSET1_BLACK_BACKGROUND_IMAGE2, false, VECTOR2(0.f, 0.f), TEX_ID_BLACK_BACKGROUND_IMG2);
   #else
-  load_texture_disk("atlas.png", false, VECTOR2(0.f, 0.f), TEX_ID_ASSET_ATLAS);
-  load_texture_disk("worldmap_wo_clouds.png", false, VECTOR2(0.f, 0.f), TEX_ID_WORLDMAP_WO_CLOUDS);
+    load_texture_disk("atlas.png", false, VECTOR2(0.f, 0.f), TEX_ID_ASSET_ATLAS);
+    load_texture_disk("worldmap_wo_clouds.png", false, VECTOR2(0.f, 0.f), TEX_ID_WORLDMAP_WO_CLOUDS);
+    load_texture_disk("black_background_1.png", false, VECTOR2(0.f, 0.f), TEX_ID_BLACK_BACKGROUND_IMG1);
+    load_texture_disk("black_background_2.png", false, VECTOR2(0.f, 0.f), TEX_ID_BLACK_BACKGROUND_IMG2);
   #endif
 
   load_texture_from_atlas(ATLAS_TEX_ID_MAP_TILESET_TEXTURE,                  Rectangle{    0,    0, 1568, 2016 });
@@ -668,8 +672,8 @@ const char *rs_path(const char *filename) {
 const char *map_layer_path(const char *filename) {
   return TextFormat("%s%s%s", RESOURCE_PATH, MAP_LAYER_PATH, filename);
 }
-void load_texture_pak(
-  [[__maybe_unused__]] pak_file_id pak_id, [[__maybe_unused__]] i32 file_id, [[__maybe_unused__]] bool resize, [[__maybe_unused__]] Vector2 new_size, [[__maybe_unused__]] texture_id _id
+void load_texture_pak([[__maybe_unused__]] pak_file_id pak_id, [[__maybe_unused__]] i32 file_id, [[__maybe_unused__]] bool resize, [[__maybe_unused__]] 
+  Vector2 new_size, [[__maybe_unused__]] texture_id _id
 ) {
   #if USE_PAK_FORMAT
   if (_id >= TEX_ID_MAX or _id <= TEX_ID_UNSPECIFIED) { 

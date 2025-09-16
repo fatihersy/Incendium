@@ -455,6 +455,7 @@ bool ui_set_slider_current_value(slider_id id, slider_option value);
 
 bool gui_slider_add_option(slider_id _id, data_pack content, i32 _localization_symbol, std::string _no_localized_text);
 const Rectangle * get_atlas_texture_source_rect(atlas_texture_id _id);
+const Rectangle * get_atlas_texture_source_rect(atlas_texture_id _id);
 const std::array<button_type, BTN_TYPE_MAX>* get_button_types(void); 
 
 bool gui_menu_button(const char* text, button_id _id, Vector2 grid, Vector2 grid_location, bool play_on_click_sound);
@@ -463,7 +464,6 @@ bool gui_draw_local_button(const char* text, local_button* btn, font_type _font_
 bool gui_slider_button(button_id _id, Vector2 pos);
 void gui_checkbox_grid(checkbox_id _id, Vector2 grid, Vector2 grid_location);
 void gui_slider(slider_id _id, Vector2 pos, Vector2 grid);
-void gui_draw_texture_to_background(texture_id _id);
 void gui_draw_spritesheet_to_background(spritesheet_id _id, Color _tint);
 void gui_progress_bar(progress_bar_id bar_id, Rectangle dest, bool _should_center, Color tint = BLANK, Color outside_tint = WHITE);
 void gui_panel(panel pan, Rectangle dest, bool _should_center);
@@ -478,8 +478,8 @@ void gui_draw_atlas_texture_id_pro(atlas_texture_id _id, Rectangle src, Rectangl
 void gui_draw_atlas_texture_id(atlas_texture_id _id, Rectangle dest, Vector2 origin, f32 rotation, Color tint = WHITE); 
 void gui_draw_atlas_texture_id_scale(atlas_texture_id _id, Vector2 position, f32 scale, Color tint, bool should_center); 
 void gui_draw_atlas_texture_id_pro_grid(atlas_texture_id _id, Rectangle src, Rectangle dest, bool relative);
-void gui_draw_texture_id_pro(texture_id _id, Rectangle src, Rectangle dest, Color tint = WHITE, Vector2 origin = ZEROVEC2);
-void gui_draw_texture_id(const texture_id _id, const Rectangle dest, const Vector2 origin);
+void gui_draw_texture_id_pro(texture_id _id, Rectangle src, Rectangle dest, Color tint = WHITE, Vector2 origin = ZEROVEC2, i32 texture_wrap = TEXTURE_WRAP_REPEAT);
+void gui_draw_texture_id(const texture_id _id, const Rectangle dest, const Vector2 origin, i32 texture_wrap = TEXTURE_WRAP_REPEAT);
 void gui_draw_spritesheet_id(spritesheet_id _id, Color _tint, Vector2 pos, Vector2 scale, u16 frame);
 void draw_atlas_texture_stretch(atlas_texture_id tex_id, Rectangle stretch_part, Rectangle dest, bool should_center, Color tint = WHITE);
 void gui_draw_settings_screen(void);

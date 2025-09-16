@@ -58,7 +58,12 @@ int alert(const char* caption, const char* message);
 #define TARGET_FPS 60
 
 #define DEBUG_COLLISIONS 0
-#define USE_PAK_FORMAT 1
+
+#ifdef _DEBUG
+  #define USE_PAK_FORMAT 0
+#else
+  #define USE_PAK_FORMAT 1
+#endif
 
 #define PAK_FILE_LOCATION "./resource.pak"
 #define CONFIG_FILE_LOCATION "./config.ini"
@@ -572,6 +577,8 @@ typedef enum asset1_file_id {
   PAK_FILE_ASSET1_MUSIC_NIGHT_THEME,
   PAK_FILE_ASSET1_MUSIC_TRACK_5,
   PAK_FILE_ASSET1_WORLDMAP_IMAGE,
+  PAK_FILE_ASSET1_BLACK_BACKGROUND_IMAGE1,
+  PAK_FILE_ASSET1_BLACK_BACKGROUND_IMAGE2,
   PAK_FILE_ASSET1_MAX,
 } asset1_file_id;
 
@@ -620,6 +627,8 @@ typedef enum texture_id {
   TEX_ID_WORLDMAP_WO_CLOUDS,
   TEX_ID_GAME_START_LOADING_SCREEN,
   TEX_ID_ASSET_ATLAS,
+  TEX_ID_BLACK_BACKGROUND_IMG1,
+  TEX_ID_BLACK_BACKGROUND_IMG2,
   TEX_ID_MAX,
 } texture_id;
 

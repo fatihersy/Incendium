@@ -5,9 +5,7 @@
 #include "sound.h"
 
 #include "tools/loc_parser.h"
-#if USE_PAK_FORMAT 
-  #include "tools/pak_parser.h"
-#endif
+#include "tools/pak_parser.h"
 
 #include "core/event.h"
 #include "core/ftime.h"
@@ -79,12 +77,17 @@ bool app_initialize(void) {
   set_settings_from_ini_file(CONFIG_FILE_LOCATION);
   state->settings = get_app_settings();
 
+	if (not pak_parser_system_initialize()) {
+  	IFATAL("app::app_initialize()::Cannot initialize par parser");
+  	return false;
+	}
+
+  parse_asset_pak(PAK_FILE_ASSET1);
+  parse_asset_pak(PAK_FILE_ASSET2);
+  parse_map_pak();
+
   // Game
   #if USE_PAK_FORMAT 
-		if (not pak_parser_system_initialize()) {
-    	IFATAL("app::app_initialize()::Cannot initialize par parser");
-    	return false;
-		}
     const file_buffer * loading_thumbnail = fetch_asset_file_buffer(PAK_FILE_ASSET1, PAK_FILE_ASSET1_THUMBNAIL);
     if (loading_thumbnail and loading_thumbnail != nullptr) {
       Image loading_image = LoadImageFromMemory(".png",
@@ -102,9 +105,6 @@ bool app_initialize(void) {
       EndDrawing();
     }
 
-    parse_asset_pak(PAK_FILE_ASSET1);
-    parse_asset_pak(PAK_FILE_ASSET2);
-    parse_map_pak();
 
   #else
     Texture loading_tex = LoadTexture(RESOURCE_PATH "aaa_game_start_loading_screen.png");
@@ -227,7 +227,7 @@ bool app_render(void) {
     render_scene_world();
     render_scene_interface();
     
-    DrawFPS(state->settings->render_width * .8f , state->settings->render_height - SCREEN_OFFSET.y * 5.f );
+    //DrawFPS(state->settings->render_width * .8f , state->settings->render_height - SCREEN_OFFSET.y * 5.f );
   EndTextureMode();
   
   state->screen_space_camera.target = Vector2 {0.f, 0.f};

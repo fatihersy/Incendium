@@ -215,16 +215,16 @@ ability get_next_level(ability abl) {
     return ability();
   }
   switch (abl.id) {
-    case ABILITY_ID_FIREBALL:  get_ability_fireball_next_level(abl); break;
-    case ABILITY_ID_BULLET:    get_ability_bullet_next_level(abl); break;
-    case ABILITY_ID_COMET:     get_ability_comet_next_level(abl); break;
-    case ABILITY_ID_CODEX:     get_ability_codex_next_level(abl); break;
-    case ABILITY_ID_RADIANCE:  get_ability_radience_next_level(abl); break;
-    case ABILITY_ID_FIRETRAIL: get_ability_firetrail_next_level(abl); break;
+    case ABILITY_ID_FIREBALL:  return get_ability_fireball_next_level(abl); break;
+    case ABILITY_ID_BULLET:    return get_ability_bullet_next_level(abl); break;
+    case ABILITY_ID_COMET:     return get_ability_comet_next_level(abl); break;
+    case ABILITY_ID_CODEX:     return get_ability_codex_next_level(abl); break;
+    case ABILITY_ID_RADIANCE:  return get_ability_radience_next_level(abl); break;
+    case ABILITY_ID_FIRETRAIL: return get_ability_firetrail_next_level(abl); break;
     default: {
       IWARN("ability_manager::get_next_level()::Unsuppported ability type");
       return ability();
     }
   }
-  return abl;
+  return ability();
 }

@@ -729,7 +729,8 @@ void render_interface_editor(void) {
         gui_slider(SDR_ID_EDITOR_PROP_ZINDEX_SLIDER, sdr_center, VECTOR2(0.f, 10.f));
 
         gui_label_grid("Y-Based", FONT_TYPE_ABRACADABRA, 1, label_center, WHITE, true, true, VECTOR2(0.f, 20.f));
-        gui_checkbox_grid(CHECKBOX_ID_IS_PROP_YBASED, sdr_center, VECTOR2(0.f, 20.f));
+        get_checkbox_by_id(CHECKBOX_ID_IS_PROP_YBASED)->state = (*p_prop)->use_y_based_zindex ? CHECKBOX_STATE_CHECKED : CHECKBOX_STATE_UNCHECKED;
+        gui_checkbox_grid(CHECKBOX_ID_IS_PROP_YBASED, VECTOR2(0.f, 20.f), sdr_center);
       }
       EndScissorMode();
 

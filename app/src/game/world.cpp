@@ -258,7 +258,7 @@ const map_collision* get_map_collision_by_id(i32 coll_id) {
 
 
 void save_current_map(void) {
-  #ifndef USE_PAK_FORMAT
+  #ifdef _DEBUG
     if(not save_map_data(state->active_map, &state->map_stringtify.at(state->active_map_stage.map_id))) {
       IWARN("world::save_current_map()::save_map_data returned false");
     }
