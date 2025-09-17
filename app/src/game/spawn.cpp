@@ -7,6 +7,8 @@
 
 #include "spritesheet.h"
 
+#include "fshader.h"
+
 typedef struct spawn_system_state {
   std::vector<Character2D> spawns; // NOTE: See also clean-up function
   const camera_metrics* in_camera_metrics;
@@ -211,9 +213,12 @@ bool render_spawns(void) {
     IERROR("spawn::render_spawns()::State is not valid");
     return false;
   }
-  // Enemies
+  
   for (size_t itr_000 = 0; itr_000 < state->spawns.size(); ++itr_000) {
     if (state->spawns.at(itr_000).initialized) {
+      BeginShaderMode(get_shader_by_enum(SHADER_ID_SPAWN)->handle);
+      set_shader_uniform(SHADER_ID_SPAWN, "spawn_id", data128(static_cast<f32>(state->spawns.at(itr_000).character_id)));
+
       if(not state->spawns.at(itr_000).is_dead) 
       {
         if(state->spawns.at(itr_000).is_damagable)
@@ -243,8 +248,10 @@ bool render_spawns(void) {
           ? spawn_play_anim(__builtin_addressof(state->spawns.at(itr_000)), SPAWN_ZOMBIE_ANIMATION_TAKE_DAMAGE_LEFT)
           : spawn_play_anim(__builtin_addressof(state->spawns.at(itr_000)), SPAWN_ZOMBIE_ANIMATION_TAKE_DAMAGE_RIGHT);
       }
+      EndShaderMode();
     }
   }
+
   return true;
 }
 

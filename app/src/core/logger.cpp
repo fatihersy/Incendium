@@ -11,7 +11,13 @@
 typedef struct logging_system_state {
   std::vector<std::string> logs;
 
+  std::string last_writed;
   std::string dump_string;
+  logging_system_state(void) {
+    this->logs = std::vector<std::string>();
+    this->last_writed = std::string();
+    this->dump_string = std::string();
+  }
 } logging_system_state;
 
 static logging_system_state * state = nullptr;
@@ -52,6 +58,11 @@ void inc_logging(logging_severity ls, const char* fmt, ...) {
   if(not state or state == nullptr) {
 		return;
   }
+  if (state->last_writed == fmt) {
+    return;
+  }
+  state->last_writed = fmt;
+  
   std::string out_log = std::string();
   char timeStr[64] = { 0 };
   time_t now = time(NULL);

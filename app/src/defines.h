@@ -52,7 +52,7 @@ int alert(const char* caption, const char* message);
 
 #define RESOURCE_PATH ".\\resources\\"
 #define MAP_LAYER_PATH "map_layers\\" // will look resources
-#define SHADER_PATH ".\\shaders\\"
+#define SHADER_PATH ".\\resources\\"
 
 #define TOTAL_ALLOCATED_MEMORY 512 * 1024 * 1024
 #define TARGET_FPS 60
@@ -602,6 +602,7 @@ typedef enum shader_id {
   SHADER_ID_FONT_OUTLINE,
   SHADER_ID_POST_PROCESS,
   SHADER_ID_MAP_CHOICE_IMAGE,
+  SHADER_ID_SPAWN,
   SHADER_ID_MAX,
 } shader_id;
 

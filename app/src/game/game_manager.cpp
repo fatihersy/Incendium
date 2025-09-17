@@ -428,6 +428,7 @@ void gm_damage_player_if_collide(data128 coll_data, i32 damage, collision_type c
 
       if (CheckCollisionRecs(state->game_info.player_state_dynamic->collision, rect)) {
         player_take_damage(damage);
+        event_fire(EVENT_CODE_BEGIN_CAMERA_SHAKE, event_context());
       }
       return; 
     }
@@ -438,6 +439,7 @@ void gm_damage_player_if_collide(data128 coll_data, i32 damage, collision_type c
 
       if (CheckCollisionCircleRec(circle_center, circle_radius, state->game_info.player_state_dynamic->collision)) {
         player_take_damage(damage);
+        event_fire(EVENT_CODE_BEGIN_CAMERA_SHAKE, event_context());
       }
       return; 
     }

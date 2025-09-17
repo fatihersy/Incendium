@@ -6,17 +6,56 @@
 #include "core/event.h"
 #include "core/logger.h"
 
+#define CAMERA_SHAKE_DIRECTION (Vector2 {.01f, 1.f})
+#define CAMERA_SHAKE_NOISE_SEED 555u
+#define CAMERA_SHAKE_NOISE_SPEED 2.f
+#define CAMERA_SHAKE_MAX_MAGNITUDE 4.f
+#define CAMERA_SHAKE_NOISE_MAGNITUDE 2.25f
+#define CAMERA_SHAKE_DURATION .085f
+
+#define PERLIN_NOISE_L 256
+
+typedef struct camera_shake_control_system {
+  Image perlin_noise_img;
+  Color* noise_data;
+
+  Vector2 direction;
+  u16 seed;
+  f32 speed;
+  f32 max_magnitude;
+  f32 noise_magnitude;
+  f32 duration;
+  f32 accumulator;
+  bool is_active;
+  camera_shake_control_system(void) {
+    this->perlin_noise_img = ZERO_IMAGE;
+    this->noise_data = nullptr;
+
+    this->direction = CAMERA_SHAKE_DIRECTION;
+    this->seed = CAMERA_SHAKE_NOISE_SEED;
+    this->speed = CAMERA_SHAKE_NOISE_SPEED;
+    this->max_magnitude = CAMERA_SHAKE_MAX_MAGNITUDE;
+    this->noise_magnitude = CAMERA_SHAKE_NOISE_MAGNITUDE;
+    this->duration = CAMERA_SHAKE_DURATION; 
+    this->accumulator = 0.f;
+    this->is_active = false;
+  }
+} camera_shake_control_system;
+
 typedef struct camera_system_state {
   camera_metrics cam_met;
 
   Vector2 offset;
-  Vector2 position;
   Vector2 drawing_extent;
+  Vector2 position;
 
-  float camera_min_speed;
-  float camera_min_effect_lenght;
-  float camera_fraction_speed;
-  float padding;
+  f32 camera_min_speed;
+  f32 camera_min_effect_lenght;
+  f32 camera_fraction_speed;
+  f32 camera_shake_time;
+  f32 camera_shake_accumulator;
+  camera_shake_control_system shake_ctrl;
+
   camera_system_state(void) {
     this->cam_met = camera_metrics();
     this->offset = ZEROVEC2;
@@ -25,6 +64,9 @@ typedef struct camera_system_state {
     this->camera_min_speed = 0.f;
     this->camera_min_effect_lenght = 0.f;
     this->camera_fraction_speed = 0.f;
+    this->camera_shake_time = 0.f;
+    this->camera_shake_accumulator = 0.f;
+    this->shake_ctrl = camera_shake_control_system();
   }
 } camera_system_state;
 
@@ -32,6 +74,8 @@ static camera_system_state * state = nullptr;
 
 bool camera_on_event(i32 code, event_context context);
 bool recreate_camera(i32 target_x, i32 target_y, i32 render_width, i32 render_height);
+Vector2 get_perlin_2d(u16 seed);
+Vector2 update_camera_shake(void);
 
 bool create_camera(i32 target_x, i32 target_y, i32 render_width, i32 render_height) {
   if (state and state != nullptr) {
@@ -50,6 +94,13 @@ bool create_camera(i32 target_x, i32 target_y, i32 render_width, i32 render_heig
   event_register(EVENT_CODE_CAMERA_SET_TARGET, camera_on_event);
   event_register(EVENT_CODE_CAMERA_SET_CAMERA_POSITION, camera_on_event);
   event_register(EVENT_CODE_CAMERA_SET_DRAWING_EXTENT, camera_on_event);
+  event_register(EVENT_CODE_BEGIN_CAMERA_SHAKE, camera_on_event);
+
+  state->shake_ctrl = camera_shake_control_system();
+  camera_shake_control_system& shake = state->shake_ctrl;
+
+  shake.perlin_noise_img = GenImagePerlinNoise(PERLIN_NOISE_L, PERLIN_NOISE_L, 0, 0, 5.f);
+  shake.noise_data = reinterpret_cast<Color*>(shake.perlin_noise_img.data);
 
   return recreate_camera(target_x, target_y, render_width, render_height);
 }
@@ -88,7 +139,14 @@ bool update_camera(void) {
 
   if (length > state->camera_min_effect_lenght) {
     float speed = FMAX(state->camera_fraction_speed * length, state->camera_min_speed);
+
     state->cam_met.handle.target = vec2_add(state->cam_met.handle.target, vec2_scale(diff, speed * GetFrameTime() / length));
+
+    if (state->shake_ctrl.is_active) {
+      Vector2 shake = update_camera_shake();
+      state->cam_met.handle.target.x += shake.x;
+      state->cam_met.handle.target.y += shake.y;
+    }
   }
 
   f32 view_width = state->drawing_extent.x / state->cam_met.handle.zoom;
@@ -102,6 +160,54 @@ bool update_camera(void) {
 
   state->cam_met.frustum = Rectangle { x, y, view_width, view_height };
   return true;
+}
+
+Vector2 update_camera_shake(void) {
+  if (not state or state == nullptr) {
+    IERROR("camera::update_camera_shake()::State is not valid");
+    return ZEROVEC2;
+  }
+  camera_shake_control_system& shake = state->shake_ctrl;
+
+  if (not shake.noise_data or shake.noise_data == nullptr) {
+    IWARN("camera::update_camera_shake()::Noise data is not valid");
+    return ZEROVEC2;
+  }
+  if (shake.accumulator >= shake.duration) {
+    shake.is_active = false;
+    return ZEROVEC2;
+  }
+  shake.accumulator += GetFrameTime();
+
+  f32 sin = static_cast<f32>(fast_sin(static_cast<f64>(shake.speed) * (static_cast<f64>(shake.seed) + GetTime())));
+  Vector2 noise = vec2_scale(get_perlin_2d(shake.seed), shake.noise_magnitude);
+  Vector2 dir = Vector2 {
+    shake.direction.x * noise.x,
+    shake.direction.y * noise.y,
+  };
+  Vector2 nd = vec2_normalize(dir);
+  
+  Vector2 mdl = vec2_scale(nd, sin);
+  Vector2 amp = vec2_scale(mdl, shake.max_magnitude);
+  Vector2 att = vec2_scale(amp, (shake.duration - shake.accumulator) / shake.duration);
+  return att;
+}
+
+Vector2 get_perlin_2d(u16 seed) {
+  if (not state or state == nullptr) {
+    IERROR("camera::get_perlin_2d()::State is not valid");
+    return ZEROVEC2;
+  }
+  camera_shake_control_system& shake = state->shake_ctrl;
+
+  if (not shake.noise_data or shake.noise_data == nullptr) {
+    IWARN("camera::get_perlin_2d()::Noise data is not valid");
+    return ZEROVEC2;
+  }
+
+  f32 val = static_cast<f32>(255.f / shake.noise_data[seed].r);
+
+  return Vector2 { val, val };
 }
 
 bool camera_on_event(i32 code, event_context context) {
@@ -147,6 +253,15 @@ bool camera_on_event(i32 code, event_context context) {
     case EVENT_CODE_CAMERA_SET_DRAWING_EXTENT: {
       state->drawing_extent.x = context.data.i32[0];
       state->drawing_extent.y = context.data.i32[1];
+      return true;
+    }
+    case EVENT_CODE_BEGIN_CAMERA_SHAKE: {
+      if (state->shake_ctrl.is_active) {
+        return true;
+      }
+
+      state->shake_ctrl.is_active = true;
+      state->shake_ctrl.accumulator = 0.f; 
       return true;
     }
     default: {

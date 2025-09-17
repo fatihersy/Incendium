@@ -107,6 +107,7 @@ typedef enum system_event_code {
   EVENT_CODE_CAMERA_SET_DRAWING_EXTENT,
   EVENT_CODE_CAMERA_SET_OFFSET,
   EVENT_CODE_CAMERA_SET_TARGET,
+  EVENT_CODE_BEGIN_CAMERA_SHAKE,
 
   /**
    * @brief state->cam_met.handle.target.x = context.data.f32[0];

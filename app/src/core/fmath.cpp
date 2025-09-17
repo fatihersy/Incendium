@@ -31,6 +31,9 @@ bool vec2_equals(Vector2 v1, Vector2 v2, f32 tolerans) {
  Vector2 vec2_scale(Vector2 v1, float f1) {
   return Vector2Scale(v1, f1);
 }
+Vector2 vec2_normalize(Vector2 v1) {
+  return Vector2Normalize(v1);
+}
 float vec2_distance(Vector2 v1, Vector2 v2) {
   return Vector2Distance(v1, v2);
 }
@@ -43,3 +46,31 @@ float get_movement_rotation(Vector2 from, Vector2 to) {
 }
 Vector2 vec2_zero(void) { return Vector2 { 0.f, 0.f }; }
 
+double fast_sin(double x) {
+int k;
+double y;
+double z;
+
+z = x;
+z *= 0.3183098861837907;
+z += 6755399441055744.0;
+k = *((int *) &z);
+z = k;
+z *= 3.1415926535897932;
+x -= z;
+y = x;
+y *= x;
+z = 0.0073524681968701;
+z *= y;
+z -= 0.1652891139701474;
+z *= y;
+z += 0.9996919862959676;
+x *= z;
+k &= 1;
+k += k;
+z = k;
+z *= x;
+x -= z;
+
+return x;
+}
