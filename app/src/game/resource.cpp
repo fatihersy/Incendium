@@ -143,15 +143,17 @@ bool resource_system_initialize(void) {
   load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_SPAWN_RED_ZOMBIE_ANIMATION_TAKE_DAMAGE_LEFT,     VECTOR2(1776, 296), 15,   32,  40, 1,  4);
   load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_SPAWN_RED_ZOMBIE_ANIMATION_TAKE_DAMAGE_RIGHT,    VECTOR2(1936, 296), 15,   32,  40, 1,  4);
 
+  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_SPAWN_EXPLOSION, VECTOR2(1808, 528), 5,  32,  32, 1,  4);
+
   load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_SLIDER_OPTION,                      VECTOR2(1632,  32),  0,  16,  10, 1,  2);
   load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_SLIDER_LEFT_BUTTON,                 VECTOR2(1600,  32),  0,  12,  12, 1,  2);
   load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_SLIDER_RIGHT_BUTTON,                VECTOR2(1600,  44),  0,  12,  12, 1,  2);
-  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_MENU_BUTTON,                        VECTOR2(1504,   0),  0,  88,  13, 1,  2);
+  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_MENU_BUTTON,                        VECTOR2(1505,   0),  0,  88,  13, 1,  2);
   load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_FLAT_BUTTON,                        VECTOR2(1504,  16),  0,  88,  13, 1,  2);
   load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_SLIDER_PERCENT,                     VECTOR2(1600,  64),  0,   9,   9, 1,  2);
   load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_FLAME_ENERGY_ANIMATION,             VECTOR2(1584, 352), 13,  48,  48, 1, 18);
   load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_FIREBALL_ANIMATION,                 VECTOR2(1584, 400), 10,  64,  64, 1,  6);
-  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_FIREBALL_EXPLOTION_ANIMATION,       VECTOR2(1584, 464),  6,  64,  64, 1,  7);
+  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_FIREBALL_EXPLOTION_ANIMATION,       VECTOR2(1584, 464), 12,  64,  64, 1,  7);
   load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_ABILITY_FIRETRAIL_START_ANIMATION,  VECTOR2(1584, 528), 15,  24,  32, 1,  4);
   load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_ABILITY_FIRETRAIL_LOOP_ANIMATION,   VECTOR2(1584, 560), 10,  24,  32, 1,  8);
   load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_ABILITY_FIRETRAIL_END_ANIMATION,    VECTOR2(1680, 528), 15,  24,  32, 1,  5);

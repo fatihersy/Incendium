@@ -40,6 +40,7 @@ void update_sprite(spritesheet *const sheet) {
       }
       else {
         stop_sprite(sheet, true);
+        sheet->is_played = true;
         return;
       }
     }
@@ -78,7 +79,7 @@ constexpr void render_sprite_pro(const spritesheet * sheet, const Rectangle sour
     DrawRectangleLines( static_cast<i32>(coll_dest.x),  static_cast<i32>(coll_dest.y),  static_cast<i32>(coll_dest.width),  static_cast<i32>(coll_dest.height), WHITE);
   #endif
 }
-void set_sprite(spritesheet *const sheet, bool _play_looped, bool _play_once) {
+void set_sprite(spritesheet *const sheet, bool _loop_animation, bool _lock_after_finish) {
   if (not sheet or sheet == nullptr or sheet->sheet_id >= SHEET_ID_SPRITESHEET_TYPE_MAX or sheet->sheet_id <= SHEET_ID_SPRITESHEET_UNSPECIFIED) {
     IWARN("spritesheet::register_sprite()::Sheet is not valid");
     return;
@@ -90,8 +91,8 @@ void set_sprite(spritesheet *const sheet, bool _play_looped, bool _play_once) {
   }
   *sheet = (*_sheet_ptr);
   
-  sheet->play_looped = _play_looped;
-  sheet->play_once = _play_once;
+  sheet->play_looped = _loop_animation;
+  sheet->play_once = _lock_after_finish;
   sheet->is_started = false;
 }
 void play_sprite_on_site(spritesheet *const sheet, Color _tint, const Rectangle dest) {
@@ -101,9 +102,7 @@ void play_sprite_on_site(spritesheet *const sheet, Color _tint, const Rectangle 
   }
   if (sheet->play_once and sheet->is_played and not sheet->is_started) { return; }
 
-  sheet->playmod = ON_SITE;
   sheet->is_started = true;
-  sheet->is_played = true;
   sheet->tint = _tint;
   render_sprite(sheet, _tint, dest);
 }
@@ -114,10 +113,8 @@ void play_sprite_on_site_pro(spritesheet *const sheet, const Rectangle dest, con
   }
   if (sheet->play_once and sheet->is_played and not sheet->is_started) { return; }
 
-  sheet->playmod = ON_SITE;
   sheet->is_started = true;
-  sheet->is_played = true;
-  
+
   Rectangle source = Rectangle {
     sheet->current_frame_rect.x + sheet->offset.x, sheet->current_frame_rect.y + sheet->offset.y,
     sheet->current_frame_rect.width, sheet->current_frame_rect.height,
@@ -132,9 +129,7 @@ void play_sprite_on_site_ex(spritesheet *const sheet, const Rectangle source, co
   }
   if (sheet->play_once and sheet->is_played and not sheet->is_started) { return; }
 
-  sheet->playmod = ON_SITE;
   sheet->is_started = true;
-  sheet->is_played = true;
 
   render_sprite_pro(sheet, source, dest, origin, rotation, _tint);
 }

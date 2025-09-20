@@ -153,12 +153,6 @@ typedef enum image_type {
   IMAGE_TYPE_MAX
 } image_type;
 
-typedef enum spritesheet_playmod {
-  SPRITESHEET_PLAYMOD_UNSPECIFIED,
-  ON_SITE,
-  ON_PLAYER
-} spritesheet_playmod;
-
 typedef enum world_direction {
   WORLD_DIRECTION_UNDEFINED,
   WORLD_DIRECTION_LEFT,
@@ -267,7 +261,6 @@ typedef struct spritesheet {
   i32 fps;
   f32 time_accumulator;
   world_direction w_direction;
-  spritesheet_playmod playmod;
   bool is_started;
   bool is_played;
   bool play_looped;
@@ -292,7 +285,6 @@ typedef struct spritesheet {
     this->fps = 0;
     this->time_accumulator = 0.f;
     this->w_direction = WORLD_DIRECTION_UNDEFINED;
-    this->playmod = SPRITESHEET_PLAYMOD_UNSPECIFIED;
     this->is_started = false;
     this->is_played = false;
     this->play_looped = false;
@@ -611,6 +603,7 @@ typedef struct Character2D {
   spritesheet move_left_animation;
   spritesheet take_damage_right_animation;
   spritesheet take_damage_left_animation;
+  spritesheet death_effect_animation;
   spawn_movement_animations last_played_animation;
   Vector2 position;
   f32 rotation;
@@ -619,6 +612,7 @@ typedef struct Character2D {
   bool is_dead;
   bool is_damagable;
   bool is_on_screen;
+  bool is_invisible;
   bool initialized;
 
   data128 buffer;
@@ -636,6 +630,7 @@ typedef struct Character2D {
     this->move_left_animation = spritesheet();
     this->take_damage_right_animation = spritesheet();
     this->take_damage_left_animation = spritesheet();
+    this->death_effect_animation = spritesheet();
     this->last_played_animation = SPAWN_ZOMBIE_ANIMATION_UNDEFINED;
     this->position = ZEROVEC2;
     this->rotation = 0.f;
@@ -644,6 +639,7 @@ typedef struct Character2D {
     this->is_dead = false;
     this->is_damagable = false;
     this->is_on_screen = false;
+    this->is_invisible = false;
     this->initialized = false;
     this->buffer = data128();
   }

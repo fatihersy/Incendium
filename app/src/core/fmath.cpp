@@ -40,6 +40,9 @@ float vec2_distance(Vector2 v1, Vector2 v2) {
  float vec2_lenght(Vector2 v1) { 
   return Vector2Length(v1); 
 }
+/**
+ * @brief still, you need to adjust sprite rotation
+ */
 float get_movement_rotation(Vector2 from, Vector2 to) {
   Vector2 direction = vec2_subtract(to, from);
   return atan2f(direction.y, direction.x) * RAD2DEG;

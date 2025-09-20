@@ -110,4 +110,11 @@
         "-std=c++23"
     ],
     "clangd.path": "clangd",
+    "gremlins.characters": {
+        "3008": {
+            "zeroWidth": true,
+            "description": "Continue from here",
+            "level": "info"
+        }
+    }
 }

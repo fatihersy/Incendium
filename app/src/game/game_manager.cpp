@@ -264,9 +264,9 @@ void render_game(void) {
   switch (state->ingame_phase) {
     case INGAME_PHASE_CLEAR_ZOMBIES: {
       if (not state->game_info.player_state_dynamic->is_dead) {
-        render_abilities(__builtin_addressof(state->game_info.player_state_dynamic->ability_system));
         render_player();
         render_spawns();
+        render_abilities(__builtin_addressof(state->game_info.player_state_dynamic->ability_system));
       
         //for (size_t itr_000 = 0; itr_000 < (*state->in_active_map)->collisions.size() ; ++itr_000) {
         //  DrawRectangleLinesEx((*state->in_active_map)->collisions.at(itr_000).dest, 2.f, BLUE);
@@ -280,9 +280,9 @@ void render_game(void) {
     }
     case INGAME_PHASE_DEFEAT_BOSS: { 
       if (not state->game_info.player_state_dynamic->is_dead) {
-        render_abilities(__builtin_addressof(state->game_info.player_state_dynamic->ability_system));
         render_player();
         render_spawns();
+        render_abilities(__builtin_addressof(state->game_info.player_state_dynamic->ability_system));
       
         //for (size_t itr_000 = 0; itr_000 < (*state->in_active_map)->collisions.size() ; ++itr_000) {
         //  DrawRectangleLinesEx((*state->in_active_map)->collisions.at(itr_000).dest, 2.f, BLUE);
@@ -466,11 +466,17 @@ void populate_map_with_spawns(i32 min_count) {
       static_cast<f32>(get_random((i32)state->stage.spawning_areas.at(0).x, (i32)state->stage.spawning_areas.at(0).x + state->stage.spawning_areas.at(0).width)),
       static_cast<f32>(get_random((i32)state->stage.spawning_areas.at(0).y, (i32)state->stage.spawning_areas.at(0).y + state->stage.spawning_areas.at(0).height))
     };
-    if (spawn_character(Character2D(static_cast<i32>(get_random(SPAWN_TYPE_UNDEFINED+1, SPAWN_TYPE_MAX-2) >= 0),
-      static_cast<i32>(state->game_info.player_state_dynamic->level),static_cast<i32>(get_random(0, 100)), position))
-    ) 
-    { ++itr_000; }
-    else { --spawn_trying_limit; }
+    if (spawn_character(Character2D(
+        static_cast<i32>(SPAWN_TYPE_BROWN), //static_cast<i32>(get_random(SPAWN_TYPE_UNDEFINED+1, SPAWN_TYPE_MAX-2) >= 0),
+        static_cast<i32>(state->game_info.player_state_dynamic->level), 
+        static_cast<i32>(get_random(0, 100)), 
+        position
+      ))) { 
+        ++itr_000; 
+    }
+    else { 
+      --spawn_trying_limit; 
+    }
   }
 }
 
