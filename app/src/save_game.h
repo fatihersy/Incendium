@@ -15,23 +15,23 @@ typedef enum save_slot_id {
 typedef struct save_data {
   save_slot_id id;
   std::string file_name;
-  i32 currency_souls_player_have;
+  i32 currency_coins_player_have;
   player_state player_data;
   bool is_success;
   save_data(void) {
     this->id = SAVE_SLOT_UNDEFINED;
     this->file_name = std::string("");
-    this->currency_souls_player_have = 0;
+    this->currency_coins_player_have = 0;
     this->player_data = player_state();
     this->is_success = false;
   }
   save_data(std::string filename) : save_data() {
     this->file_name = filename;
   }
-  save_data(save_slot_id id, player_state in_player_state, i32 currency_souls) : save_data() {
+  save_data(save_slot_id id, player_state in_player_state, i32 currency_coins) : save_data() {
     this->id = id;
     this->player_data = in_player_state;
-    this->currency_souls_player_have = currency_souls;
+    this->currency_coins_player_have = currency_coins;
   }
 } save_data;
 

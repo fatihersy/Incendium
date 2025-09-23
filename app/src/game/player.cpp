@@ -12,6 +12,7 @@
 extern const i32 level_curve[MAX_PLAYER_LEVEL+1];
 #define PLAYER_SCALE 3
 #define PLAYER_DAMAGE_BREAK_TIME .5f
+#define PLAYER_INTERACTION_RADIUS 50.f
 
 typedef struct player_system_state {
   const camera_metrics * in_camera_metrics;
@@ -135,6 +136,7 @@ bool player_system_initialize(const camera_metrics* in_camera_metrics,const app_
   state->defualt_player.stats.at(CHARACTER_STATS_HEALTH).buffer.i32[0] = 0; // INFO: Will be Modified by player stats
   state->defualt_player.health_current = 0;
   state->defualt_player.health_perc = 0.f;
+  state->defualt_player.interaction_radius = PLAYER_INTERACTION_RADIUS;
   state->defualt_player.is_initialized = true;
 
   event_register(EVENT_CODE_PLAYER_ADD_EXP, player_system_on_event);
@@ -379,6 +381,10 @@ bool player_system_on_event(i32 code, event_context context) {
         }
         case EVENT_CODE_PLAYER_TAKE_DAMAGE: {
           player_take_damage(context.data.i32[0]);
+          return true;
+        }
+        case EVENT_CODE_PLAYER_HEAL: {
+          player_heal_player(context.data.i32[0]);
           return true;
         }
         default: return false; // TODO: Warn

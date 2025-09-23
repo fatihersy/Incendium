@@ -177,8 +177,10 @@ void reset_game(void);
   state->hovered_spawn = I32_MAX;
   state->hovered_ability = ABILITY_ID_MAX;
   state->hovered_projectile = I32_MAX;
-  sig_change_ingame_state(INGAME_STATE_IDLE);
 
+  event_fire(EVENT_CODE_CAMERA_SET_ZOOM, event_context(static_cast<f32>(0.85f)));
+
+  sig_change_ingame_state(INGAME_STATE_IDLE);
   if (fade_in) {
     sig_begin_fade();
   }
@@ -212,9 +214,11 @@ void update_scene_in_game(void) {
   update_camera();
   in_game_update_bindings();
   update_user_interface();
+  
   if(state->sig_fade.fade_animation_playing){
     process_fade_effect(__builtin_addressof(state->sig_fade));
   }
+
   switch (state->ingame_state) {
     case INGAME_STATE_IDLE: { break; }
     case INGAME_STATE_PAUSE: { break; }
@@ -454,10 +458,10 @@ void render_interface_in_game(void) {
         "Remaining: %d", state->in_ingame_info->in_spawns->size()
       );
       gui_label_format(FONT_TYPE_ABRACADABRA, 1, SIG_BASE_RENDER_WIDTH * .75f, SCREEN_OFFSET.y * 5.f, WHITE, false, false, 
-        "Collected Souls: %d", state->in_ingame_info->collected_souls
+        "Collected Coins: %d", state->in_ingame_info->collected_coins
       );
       gui_label_format(FONT_TYPE_ABRACADABRA, 1, SIG_BASE_RENDER_WIDTH * .75f, SCREEN_OFFSET.y * 5.f, WHITE, false, false, 
-        "Total Souls: %d", state->in_ingame_info->collected_souls
+        "Total Coin: %d", state->in_ingame_info->collected_coins
       );
       gui_label_format(FONT_TYPE_ABRACADABRA, 1, 0, SIG_BASE_RENDER_HEIGHT * .35f, WHITE, false, false, 
         "Health: %d", state->in_ingame_info->player_state_dynamic->stats.at(CHARACTER_STATS_HEALTH).buffer.i32[3]
@@ -645,9 +649,9 @@ void draw_in_game_upgrade_panel(u16 which_panel, Rectangle panel_dest) {
   const Vector2 ability_name_pos  = {panel_dest.x, start_panel_height + ABILITY_UPG_PANEL_ICON_SIZE*.5f + elm_space_gap};
   const Vector2 ability_level_ind = {panel_dest.x, ability_name_pos.y + btw_space_gap};
 
-  const i32 title_font_size = 1; 
-  const i32 level_ind_font_size = 1; 
-  const i32 upgr_font_size = 1; 
+  const i32 title_font_size = 1;
+  const i32 level_ind_font_size = 1;
+  const i32 upgr_font_size = 1;
 
   gui_draw_texture_id_pro(TEX_ID_ASSET_ATLAS, upg->icon_src, icon_rect);
   gui_label(lc_txt(upg->display_name_loc_text_id), FONT_TYPE_ABRACADABRA, title_font_size, ability_name_pos, WHITE, true, true);
@@ -726,7 +730,7 @@ void draw_end_game_panel(void) {
     gui_label(lc_txt(LOC_TEXT_INGAME_STATE_RESULT_DEAD), FONT_TYPE_ABRACADABRA, 1, result_title_text_dest, RED, true, true);
   }
   gui_label_format_v(FONT_TYPE_ABRACADABRA, 1, VECTOR2(static_cast<f32>(state->in_app_settings->render_width_div2), SIG_BASE_RENDER_HEIGHT * .75f), WHITE, true, true, 
-    "%s%d", lc_txt(LOC_TEXT_INGAME_STATE_RESULT_COLLECTED_SOULS), state->in_ingame_info->collected_souls
+    "%s%d", lc_txt(LOC_TEXT_INGAME_STATE_RESULT_COLLECTED_COINS), state->in_ingame_info->collected_coins
   );
 	Vector2 accept_btn_dest = Vector2 { bg_panel_dest.x + (bg_panel_dest.width * .5f), bg_panel_dest.y + (bg_panel_dest.height * .9f)};
   if(gui_menu_button(lc_txt(LOC_TEXT_INGAME_STATE_RESULT_ACCEPT), BTN_ID_IN_GAME_BUTTON_RETURN_MENU, ZEROVEC2, accept_btn_dest, true)) {

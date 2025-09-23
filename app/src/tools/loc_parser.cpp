@@ -152,7 +152,7 @@ bool loc_parser_system_initialize(void) {
           "Speed:",
           "Stage Cleared",
           "Dead",
-          "Collected Souls:",
+          "Collected Coins:",
           "Accept",
 
           "Life Essence"                   Player,
@@ -184,7 +184,7 @@ bool loc_parser_system_initialize(void) {
           "See the light",
 
           "Please select a starter ability"           Display error,
-          "You need more souls!",
+          "You need more coin!",
           "This stage cannot playable right now",
         }
       }

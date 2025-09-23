@@ -82,10 +82,6 @@ bool app_initialize(void) {
   	return false;
 	}
 
-  parse_asset_pak(PAK_FILE_ASSET1);
-  parse_asset_pak(PAK_FILE_ASSET2);
-  parse_map_pak();
-
   // Game
   #if USE_PAK_FORMAT 
     const file_buffer * loading_thumbnail = fetch_asset_file_buffer(PAK_FILE_ASSET1, PAK_FILE_ASSET1_THUMBNAIL);
@@ -116,6 +112,10 @@ bool app_initialize(void) {
       {0, 0, (f32)GetScreenWidth(),  (f32)GetScreenHeight()}, Vector2{0.f, 0.f}, 0, WHITE);
     EndDrawing();
   #endif
+  
+  parse_asset_pak(PAK_FILE_ASSET1);
+  parse_asset_pak(PAK_FILE_ASSET2);
+  parse_map_pak();
 
   if (not loc_parser_system_initialize()) {
     IFATAL("app::app_initialize()::Localization system init failed");

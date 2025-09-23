@@ -265,12 +265,6 @@ void update_scene_main_menu(void) {
   smm_update_bindings();
   update_camera();
   update_map();
-  if(state->smm_fade.fade_animation_playing){
-    process_fade_effect(__builtin_addressof(state->smm_fade));
-  }
-  else if (state->smm_fade.is_fade_animation_played and state->smm_fade.on_change_complete != nullptr) {
-    state->smm_fade.on_change_complete(state->smm_fade.data);
-  }
   
   switch (state->mainmenu_state) {
     case MAIN_MENU_SCENE_DEFAULT: {
@@ -305,6 +299,13 @@ void update_scene_main_menu(void) {
     default: {
       break;
     }
+  }
+
+  if(state->smm_fade.fade_animation_playing){
+    process_fade_effect(__builtin_addressof(state->smm_fade));
+  }
+  else if (state->smm_fade.is_fade_animation_played and state->smm_fade.on_change_complete != nullptr) {
+    state->smm_fade.on_change_complete(state->smm_fade.data);
   }
 }
 void render_scene_main_menu(void) {
@@ -662,8 +663,8 @@ void draw_main_menu_character_subscene_stat_list_panel(Rectangle panel_dest, con
     }
   }
 
-  atlas_texture_id icon_tex_id = ATLAS_TEX_ID_CURRENCY_SOUL_ICON_5000;
-  const char * total_stock_text = TextFormat("%d", (*get_currency_souls_total()));
+  atlas_texture_id icon_tex_id = ATLAS_TEX_ID_CURRENCY_COIN_ICON_5000;
+  const char * total_stock_text = TextFormat("%d", (*get_currency_coins_total()));
   const char * total_stock_desc_text = lc_txt(LOC_TEXT_MAINMENU_STATE_CHARACTER_TAB_STATS_CURRENCY_TEXT_TOTAL);
   Vector2 total_stock_desc_text_measure = ui_measure_text(total_stock_desc_text, panel_font_type, panel_font_size);
   const f32 total_stock_display_dest_dim = showcase_base_dim;
@@ -781,7 +782,7 @@ void draw_main_menu_character_subscene_stat_details_panel(Rectangle panel_dest, 
     }
   }
 
-  atlas_texture_id icon_tex_id = ATLAS_TEX_ID_CURRENCY_SOUL_ICON_5000;
+  atlas_texture_id icon_tex_id = ATLAS_TEX_ID_CURRENCY_COIN_ICON_5000;
   Rectangle cost_icon_dest = Rectangle(
     state->stat_details_panel.dest.x + state->stat_details_panel.dest.width * .425f,
     state->stat_details_panel.dest.y + state->stat_details_panel.dest.height * .85f,
@@ -815,10 +816,10 @@ void draw_main_menu_character_subscene_stat_details_panel(Rectangle panel_dest, 
   };
   if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_STATE_CHARACTER_TAB_STATS_BUTTON_UPGRADE), BTN_ID_MAINMENU_STATE_CHARACTER_BUY_STAT_UPGRADE, ZEROVEC2, button_location, false)) {
     const i32& cost = state->hovered_stat->upgrade_cost;
-    const i32* stock = get_currency_souls_total();
+    const i32* stock = get_currency_coins_total();
     if ((state->hovered_stat->current_level - state->hovered_stat->base_level) < MAX_STAT_UPGRADE_TIER) {
       if ( (*stock) - cost >= 0) {
-        currency_souls_add(-state->hovered_stat->upgrade_cost);
+        currency_coins_add(-state->hovered_stat->upgrade_cost);
         i32 level = get_static_player_state_stat(state->hovered_stat->id)->current_level;
         set_static_player_state_stat(state->hovered_stat->id, level+1);
         gm_save_game();

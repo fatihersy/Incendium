@@ -30,7 +30,7 @@ typedef struct encode_string_result {
 
 typedef enum save_game_entry_order {
   SAVE_DATA_ORDER_START,
-  SAVE_DATA_ORDER_CURRENCY_SOULS_PLAYER_HAVE,
+  SAVE_DATA_ORDER_CURRENCY_COINS_PLAYER_HAVE,
   SAVE_DATA_STATS_HEALTH,
   SAVE_DATA_STATS_HP_REGEN,
   SAVE_DATA_STATS_MOVE_SPEED,
@@ -119,9 +119,9 @@ bool save_save_data(save_slot_id slot) {
   }
 
   save_data* slot_data = __builtin_addressof(state->save_slots.at(slot));
-  encode_integer_result result_souls = encode_integer(slot_data->currency_souls_player_have);
+  encode_integer_result result_coins = encode_integer(slot_data->currency_coins_player_have);
   const char* slot_data_text = TextFormat("%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s",
-    result_souls.str.c_str(),
+    result_coins.str.c_str(),
     HEADER_SYMBOL_ENTRY,
     encode_stat(CHARACTER_STATS_HEALTH).str.c_str(),
     HEADER_SYMBOL_ENTRY,
@@ -172,11 +172,11 @@ void parse_data(save_slot_id slot) {
   save_data* save_slot = __builtin_addressof(state->save_slots.at(slot));
   for (i32 itr_000 = 0; itr_000 < state->file_datasize; ++itr_000) {
     switch (entry_order) {
-    case SAVE_DATA_ORDER_CURRENCY_SOULS_PLAYER_HAVE: {
+    case SAVE_DATA_ORDER_CURRENCY_COINS_PLAYER_HAVE: {
       itr_000 = save_game_get_entry(itr_000);
       i32 val = decode_integer();
 
-      save_slot->currency_souls_player_have = val;
+      save_slot->currency_coins_player_have = val;
       break;
     }
     case SAVE_DATA_STATS_HEALTH: {
@@ -318,10 +318,10 @@ std::string get_save_filename(save_slot_id slot) {
 }
 encode_integer_result encode_integer(i32 val) {
   encode_integer_result result = encode_integer_result();
-  std::string souls_text = TextFormat("%d", val);
+  std::string coins_text = TextFormat("%d", val);
 
-  for (size_t itr_000 = 0; itr_000 < souls_text.size(); ++itr_000) {
-    result.str.push_back(souls_text.at(itr_000) + SAVE_GAME_VAR_NUM_START_SYMBOL);
+  for (size_t itr_000 = 0; itr_000 < coins_text.size(); ++itr_000) {
+    result.str.push_back(coins_text.at(itr_000) + SAVE_GAME_VAR_NUM_START_SYMBOL);
   }
   return result;
 }

@@ -4,6 +4,7 @@
 #include "core/fmath.h"
 #include "core/fmemory.h"
 #include "core/logger.h"
+#include "core/ftime.h"
 
 #include "spritesheet.h"
 
@@ -26,6 +27,8 @@ typedef struct spawn_system_state {
 // To avoid dublicate symbol errors. Implementation in defines.h
 extern const i32 level_curve[MAX_PLAYER_LEVEL + 1];
 static spawn_system_state * state = nullptr;
+
+#define DEATH_EFFECT_HEIGHT_SCALE 0.115f
 
 #define CHECK_pSPAWN_COLLISION(REC1, SPAWN, NEW_POS) \
 CheckCollisionRecs(REC1, \
@@ -91,8 +94,36 @@ i32 damage_spawn(i32 _id, i32 damage) {
   character->is_damagable = false;
   character->damage_break_time = character->take_damage_left_animation.fps / static_cast<f32>(TARGET_FPS);
 
-  event_fire(EVENT_CODE_ADD_CURRENCY_SOULS, event_context((i32)character->scale));
-  event_fire(EVENT_CODE_PLAYER_ADD_EXP, event_context(static_cast<i32>(32))); // TODO: Make exp gain dynamic 
+  bool loot_rnd = get_random(0, 100) > 24;
+
+  if (loot_rnd) {
+    event_fire(EVENT_CODE_SPAWN_ITEM, event_context(
+      static_cast<i16>(ITEM_TYPE_EXPERIENCE),
+      static_cast<i16>(character->collision.x + character->collision.width  * .5f), // INFO: Position x
+      static_cast<i16>(character->collision.y + character->collision.height * .5f), // INFO: Position y
+      static_cast<i16>(character->collision.y + character->collision.height * .5f), // INFO: Loot drop animation position y begin
+      static_cast<i16>(character->collision.height * .5f), // INFO: Loot drop animation position y change
+      static_cast<i16>(
+        level_curve[character->buffer.i32[1]] 
+          * (static_cast<f32>(character->buffer.i32[0]) / static_cast<f32>(SPAWN_TYPE_MAX)) 
+          * (character->scale / SPAWN_RND_SCALE_MAX)
+      )
+    ));
+  } else {
+    event_fire(EVENT_CODE_SPAWN_ITEM, event_context(
+      static_cast<i16>(ITEM_TYPE_COIN),
+      static_cast<i16>(character->collision.x + character->collision.width  * .5f), // INFO: Position x
+      static_cast<i16>(character->collision.y + character->collision.height * .5f), // INFO: Position y
+      static_cast<i16>(character->collision.y + character->collision.height * .5f), // INFO: Loot drop animation start
+      static_cast<i16>(character->collision.height * .5f), // INFO: Loot drop animation end
+      static_cast<i16>(
+        level_curve[character->buffer.i32[1]] 
+          * (static_cast<f32>(character->buffer.i32[0]) / static_cast<f32>(SPAWN_TYPE_MAX)) 
+          * (character->scale / SPAWN_RND_SCALE_MAX)
+      )
+    ));
+  }
+
   return 0;
 }
 
@@ -282,7 +313,7 @@ bool render_spawns(void) {
           EndShaderMode();
         }
 
-        const f32 death_effect_height = state->in_camera_metrics->frustum.height * .25f;
+        const f32 death_effect_height = state->in_camera_metrics->frustum.height * DEATH_EFFECT_HEIGHT_SCALE;
         const f32 death_effect_wh_ratio = _character->death_effect_animation.current_frame_rect.width / _character->death_effect_animation.current_frame_rect.height;
         const f32 death_effect_width = death_effect_height * death_effect_wh_ratio;
 

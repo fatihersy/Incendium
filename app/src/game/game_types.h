@@ -241,6 +241,21 @@ typedef enum player_animation_set {
   PLAYER_ANIMATION_MAX,
 } player_animation_set;
 
+typedef enum item_type {
+  ITEM_TYPE_UNDEFINED,
+  ITEM_TYPE_EXPERIENCE,
+  ITEM_TYPE_COIN,
+  ITEM_TYPE_HEALTH_FRAGMENT,
+  ITEM_TYPE_MAX
+} item_type;
+
+typedef enum loot_drop_animation {
+  LOOT_DROP_ANIMATION_UNDEFINED,
+  LOOT_DROP_ANIMATION_ELASTIC_OUT,
+  LOOT_DROP_ANIMATION_PLAYER_GRAB,
+  LOOT_DROP_ANIMATION_MAX,
+} loot_drop_animation;
+
 typedef struct spritesheet {
   spritesheet_id sheet_id;
   texture_id tex_id;
@@ -585,6 +600,67 @@ typedef struct tilemap_stringtify_package {
   }
 }tilemap_stringtify_package;
 
+typedef struct loot_drop_animation_control_system {
+  loot_drop_animation drop_anim_type;
+  f32 accumulator;
+  f32 animation_duration;
+
+  bool play_animation;
+
+  data128 buffer;
+
+  loot_drop_animation_control_system(void) {
+    this->drop_anim_type = LOOT_DROP_ANIMATION_UNDEFINED;
+    this->accumulator = 0.f;
+    this->animation_duration = 0.f;
+    this->play_animation = false;
+  }
+  loot_drop_animation_control_system(loot_drop_animation anim_type, f32 _animation_duration, f32 begin, f32 change) : loot_drop_animation_control_system() {
+    this->drop_anim_type = anim_type;
+    this->animation_duration = _animation_duration;
+    this->play_animation = true;
+    this->buffer.f32[0] = begin;
+    this->buffer.f32[1] = change;
+  }
+} loot_drop_animation_control_system;
+
+typedef struct loot_item {
+  item_type type;
+  i32 id;
+  spritesheet sheet;
+  Rectangle world_collision;
+  loot_drop_animation_control_system drop_control;
+  
+  bool is_on_screen;
+  bool is_active;
+  bool is_initialized;
+  bool is_player_grabbed;
+  
+  data128 mm_ex;
+  
+  bool (*pfn_loot_item_on_loot)(item_type type, i32 id, data128 context);
+  
+  loot_item(void) {
+    this->type = ITEM_TYPE_UNDEFINED;
+    this->id = -1;
+    this->sheet = spritesheet();
+    this->world_collision = ZERORECT;
+    this->drop_control = loot_drop_animation_control_system();
+    this->is_on_screen = false;
+    this->is_active = false;
+    this->is_initialized = false;
+    this->is_player_grabbed = false;
+  }
+  loot_item(item_type _type, i32 _item_id, spritesheet _sheet, loot_drop_animation_control_system _drop_control, bool _is_active = false) : loot_item() {
+    this->type = _type;
+    this->id = _item_id;
+    this->sheet = _sheet;
+    this->drop_control = _drop_control;
+    this->is_active = _is_active;
+    this->is_initialized = true;
+  }
+} loot_item;
+
 /**
  * @param buffer.i32[0] = SPAWN_TYPE
  * @param buffer.i32[1] = SPAWN_LEVEL
@@ -880,6 +956,7 @@ typedef struct player_state {
   f32 exp_perc;
   f32 health_perc;
   i32 health_current;
+  i32 interaction_radius;
 
   i32 level;
 
@@ -888,11 +965,14 @@ typedef struct player_state {
   bool is_moving;
   bool is_dead;
   bool is_damagable;
+
   player_state(void) {
     this->ability_system = ability_play_system();
     this->stats.fill(character_stat());
+
     this->collision = ZERORECT;
     this->map_level_collision = ZERORECT;
+
     this->move_right_sprite = spritesheet();
     this->idle_right_sprite = spritesheet();
     this->take_damage_right_sprite = spritesheet();
@@ -905,6 +985,7 @@ typedef struct player_state {
     this->roll_sprite = spritesheet();
     this->dash_sprite = spritesheet();
     this->current_anim_to_play = spritesheet();
+
     this->w_direction = WORLD_DIRECTION_UNDEFINED;
     this->position = ZEROVEC2;
     this->damage_break_time = 0.f;
@@ -913,8 +994,11 @@ typedef struct player_state {
     this->exp_current = 0.f;
     this->exp_perc = 0.f;
     this->health_perc = 0.f;
-    this->health_current = 0.f;;
+    this->health_current = 0.f;
+    this->interaction_radius = 0.f;
+
     this->level = 0;
+
     this->is_player_have_ability_upgrade_points = false;
     this->is_initialized = false;
     this->is_moving = false;
@@ -932,8 +1016,9 @@ typedef struct ingame_info {
   const Vector2* mouse_pos_screen;
   const ingame_phases* ingame_phase;
   std::vector<character_trait>* chosen_traits;
+  const std::vector<loot_item> * loots_on_the_map;
 
-  i32 collected_souls;
+  i32 collected_coins;
   f32 play_time;
   bool is_win;
   i32 stage_boss_id;
@@ -947,8 +1032,9 @@ typedef struct ingame_info {
     this->mouse_pos_screen = nullptr;
     this->ingame_phase = nullptr;
     this->chosen_traits = nullptr;
+    this->loots_on_the_map = nullptr;
     
-    this->collected_souls = 0;
+    this->collected_coins = 0;
     this->play_time = 0.f;
     this->is_win = false;
     this->stage_boss_id = -1;

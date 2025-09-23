@@ -9,14 +9,15 @@
 #include "core/logger.h"
 
 #include "game/abilities/ability_manager.h"
+#include "game/collectible_manager.h"
 #include "game/player.h"
 #include "game/spawn.h"
 
 typedef struct game_manager_system_state {
-  save_data* game_progression_data;
-  const camera_metrics* in_camera_metrics;
-  const app_settings* in_app_settings;
   tilemap ** in_active_map;
+  save_data * game_progression_data;
+  const camera_metrics * in_camera_metrics;
+  const app_settings * in_app_settings;
 
   worldmap_stage stage;
   ingame_phases ingame_phase;
@@ -33,6 +34,7 @@ typedef struct game_manager_system_state {
     this->in_camera_metrics = nullptr;
     this->in_app_settings = nullptr;
     this->in_active_map = nullptr;
+
     this->stage = worldmap_stage();
     this->ingame_phase = INGAME_PHASE_UNDEFINED;
     this->player_state_static = player_state();
@@ -40,13 +42,15 @@ typedef struct game_manager_system_state {
     this->mouse_pos_world = ZEROVEC2;
     this->mouse_pos_screen = ZEROVEC2;
     this->traits.clear();
+    this->chosen_traits = std::vector<character_trait>();
+
     this->game_manager_initialized = false;
   }
 } game_manager_system_state;
 
 static game_manager_system_state * state = nullptr;
 
-// To avoid dublicate symbol errors. Implementation in defines.h
+// INFO: To avoid dublicate symbol errors. Implementation in defines.h
 extern const i32 level_curve[MAX_PLAYER_LEVEL+1];
 
 #define SPAWN_TRYING_LIMIT 15
@@ -102,6 +106,11 @@ bool game_manager_initialize(const camera_metrics * in_camera_metrics, const app
     IERROR("game_manager::game_manager_initialize()::Player system init failed");
     return false;
   }
+  if (not collectible_manager_initialize(in_camera_metrics, get_app_settings(), const_cast<const tilemap ** const>(in_active_map_ptr), __builtin_addressof(state->game_info))) {
+    IERROR("game_manager::game_manager_initialize()::Collectibles system init failed");
+    return false;
+  }
+
   state->player_state_static = (*get_default_player());
   
   state->game_info.in_spawns            = get_spawns();
@@ -111,11 +120,12 @@ bool game_manager_initialize(const camera_metrics * in_camera_metrics, const app
   state->game_info.mouse_pos_screen     = __builtin_addressof(state->mouse_pos_screen);
   state->game_info.ingame_phase         = __builtin_addressof(state->ingame_phase);
   state->game_info.chosen_traits        = __builtin_addressof(state->chosen_traits);
+  state->game_info.loots_on_the_map     = get_loots_pointer();
 
   event_register(EVENT_CODE_END_GAME, game_manager_on_event);
   event_register(EVENT_CODE_DAMAGE_PLAYER_IF_COLLIDE, game_manager_on_event);
   event_register(EVENT_CODE_DAMAGE_ANY_SPAWN_IF_COLLIDE, game_manager_on_event);
-  event_register(EVENT_CODE_ADD_CURRENCY_SOULS, game_manager_on_event);
+  event_register(EVENT_CODE_ADD_CURRENCY_COINS, game_manager_on_event);
   event_register(EVENT_CODE_KILL_ALL_SPAWNS, game_manager_on_event);
 
   // Traits
@@ -191,6 +201,7 @@ void update_game_manager(void) {
     case INGAME_PHASE_CLEAR_ZOMBIES: {
       if (not state->game_info.player_state_dynamic->is_dead) {
         gm_update_player();
+        update_collectible_manager();
         
         if (state->game_info.in_spawns->size() == 0) {
           if ( (spawn_boss() >= 0) && state->ingame_phase != INGAME_PHASE_DEFEAT_BOSS) {
@@ -214,6 +225,8 @@ void update_game_manager(void) {
       if (not state->game_info.player_state_dynamic->is_dead) {
         const Character2D * const boss = get_spawn_by_id(state->game_info.stage_boss_id);
         if (boss) {
+          update_collectible_manager();
+
           f32 boss_health_perc = static_cast<f32>(boss->health_current) / static_cast<f32>(boss->health_max);
           event_fire(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, event_context(static_cast<f32>(PRG_BAR_ID_BOSS_HEALTH), boss_health_perc));
           gm_update_player();
@@ -265,6 +278,7 @@ void render_game(void) {
     case INGAME_PHASE_CLEAR_ZOMBIES: {
       if (not state->game_info.player_state_dynamic->is_dead) {
         render_player();
+        render_collectible_manager();
         render_spawns();
         render_abilities(__builtin_addressof(state->game_info.player_state_dynamic->ability_system));
       
@@ -281,6 +295,7 @@ void render_game(void) {
     case INGAME_PHASE_DEFEAT_BOSS: { 
       if (not state->game_info.player_state_dynamic->is_dead) {
         render_player();
+        render_collectible_manager();
         render_spawns();
         render_abilities(__builtin_addressof(state->game_info.player_state_dynamic->ability_system));
       
@@ -295,6 +310,7 @@ void render_game(void) {
       break;
     }
     case INGAME_PHASE_RESULTS: { 
+        render_collectible_manager();
       
       break;
     }
@@ -366,7 +382,7 @@ void gm_end_game(bool is_win) {
   state->ingame_phase = INGAME_PHASE_RESULTS;
 }
 void gm_save_game(void) {
-  state->game_progression_data->currency_souls_player_have += state->game_info.collected_souls;
+  state->game_progression_data->currency_coins_player_have += state->game_info.collected_coins;
   state->game_progression_data->player_data = state->player_state_static;
   save_save_data(SAVE_SLOT_CURRENT_SESSION);
 }
@@ -505,8 +521,8 @@ i32 spawn_boss(void) {
   return -1;
 }
 
-void currency_souls_add(i32 value) {
-  state->game_progression_data->currency_souls_player_have += value;
+void currency_coins_add(i32 value) {
+  state->game_progression_data->currency_coins_player_have += value;
 }
 void set_starter_ability(ability_id _id) {
   if (not state or state == nullptr) {
@@ -549,7 +565,7 @@ void reset_ingame_info(void) {
     IERROR("game_manager::reset_ingame_info()::State is invalid");
     return;
   }
-  state->game_info.collected_souls = 0;
+  state->game_info.collected_coins = 0;
   state->game_info.play_time = 0.f;
   state->game_info.is_win = false;
 }
@@ -591,11 +607,12 @@ void gm_update_player(void) {
     }
   }
 }
+
 // OPS
 
 // GET / SET
-const i32* get_currency_souls_total(void) {
-  return __builtin_addressof(state->game_progression_data->currency_souls_player_have);
+const i32* get_currency_coins_total(void) {
+  return __builtin_addressof(state->game_progression_data->currency_coins_player_have);
 }
 bool get_b_player_have_upgrade_points(void) {
   return state->game_info.player_state_dynamic->is_player_have_ability_upgrade_points;
@@ -876,17 +893,17 @@ bool game_manager_on_event(i32 code, event_context context) {
       }
       return true;
     }
-    case EVENT_CODE_ADD_CURRENCY_SOULS: {
-      state->game_info.collected_souls += context.data.i32[0];
+    case EVENT_CODE_ADD_CURRENCY_COINS: {
+      state->game_info.collected_coins += context.data.i32[0];
       return true;
     }
     default: {
-      IWARN("game_engine::game_manager_on_event()::Unsuppported code.");
+      IWARN("game_manager::game_manager_on_event()::Unsuppported code.");
       return false;
     }
   }
 
-  IERROR("game_engine::game_manager_on_event()::Fire event ended unexpectedly");
+  IERROR("game_manager::game_manager_on_event()::Fire event ended unexpectedly");
   return false;
 }
 

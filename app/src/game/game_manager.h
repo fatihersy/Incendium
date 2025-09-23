@@ -10,7 +10,7 @@
 void update_game_manager(void);
 void update_game_manager_debug(void);
 
-const i32* get_currency_souls_total(void);
+const i32* get_currency_coins_total(void);
 bool get_b_player_have_upgrade_points(void);
 void set_dynamic_player_have_ability_upgrade_points(bool _b);
 
@@ -26,7 +26,7 @@ void gm_damage_spawn_if_collide(data128 coll_data, i32 damage, collision_type co
 void gm_damage_player_if_collide(data128 coll_data, i32 damage, collision_type coll_check);
 void game_manager_set_stat_value_by_level(character_stat* stat, i32 level);
 void set_static_player_state_stat(character_stat_id stat_id, i32 level);
-void currency_souls_add(i32 value);
+void currency_coins_add(i32 value);
 void set_starter_ability(ability_id _id);
 
 bool    _add_ability(ability_id _type);
