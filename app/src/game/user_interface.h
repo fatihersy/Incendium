@@ -118,14 +118,18 @@ typedef struct button {
   button_type btn_type;
   button_state current_state;
   button_state signal_state;
+  button_state prev_state;
   Rectangle dest;
+
   bool on_screen;
   bool is_registered;
+
   button(void) {
     this->id = BTN_ID_UNDEFINED;
     this->btn_type = button_type();
     this->current_state = BTN_STATE_UNDEFINED;
     this->signal_state  = BTN_STATE_UNDEFINED;
+    this->prev_state = BTN_STATE_UNDEFINED;
     this->dest = ZERORECT;
     this->on_screen = false;
     this->is_registered = false;

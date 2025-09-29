@@ -1,12 +1,26 @@
 {
     "window.zoomLevel": 0,
     "files.autoSave": "onFocusChange",
-    "workbench.colorTheme": "Oro Theme",
+    "workbench.colorTheme": "Monokai",
     "workbench.editor.showTabs": "multiple",
     "workbench.statusBar.visible": true,
     "workbench.colorCustomizations": {
-        "editor.selectionHighlightBackground": "#c03a2bf1",
-        //"editor.selectionBackground": "#ecf0f144"
+        "[Monokai]": {
+            "editor.selectionHighlightBackground": "#c03a2bf1",
+            "editor.background": "#0e1316",
+            "editor.lineHighlightBackground": "#50404031",
+            "sideBar.background": "#161d22",
+            "sideBarSectionHeader.foreground": "#d2dae2",
+            "sideBar.foreground": "#d2dae2",
+            "tab.activeBackground": "#4d565e",
+            "tab.inactiveBackground": "#161d22",
+            "tab.activeForeground": "#d2dae2",
+            "tab.inactiveForeground": "#8f959b",
+            "titleBar.activeBackground": "#0e1316",
+            "sideBar.border": "#ff010100",
+            "sideBarSectionHeader.background" : "#0e1316",
+            "activityBar.background" : "#0e1316",
+        }
     },
     "editor.minimap.enabled": false,
     "editor.lineNumbers": "on",
@@ -34,7 +48,22 @@
         "strings": "on"
     },
     "editor.tokenColorCustomizations": {
-        "textMateRules": []
+        "[Monokai]": {
+            "textMateRules": [
+                //{
+                //    "scope": "entity.name.function",
+                //    "settings": {
+                //        "foreground": "#55488d"
+                //    }
+                //},
+                //{
+                //    "scope": "variable.other.enummember",
+                //    "settings": {
+                //        "foreground": "#d3caff"
+                //    }
+                //},
+            ]
+        }
     },
     "terminal.integrated.fontFamily": "miosevka medium",
     "terminal.integrated.defaultProfile.windows": "pwsh7",

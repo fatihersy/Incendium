@@ -1,7 +1,8 @@
 #include "scene_main_menu.h"
 #include <reasings.h>
 #include <steam/steam_api.h>
-#include "loc_types.h"
+#include <loc_types.h>
+#include <sound.h>
 
 #include "core/fmemory.h"
 #include "core/event.h"
@@ -53,6 +54,7 @@ typedef struct main_menu_scene_state {
   std::vector<character_trait> negative_traits;
   i32 available_trait_points;
   spritesheet inventory_panel_hero_idle_anim;
+  playlist_control_system_state playlist;
 
   const character_stat * hovered_stat;
   const camera_metrics * in_camera_metrics;
@@ -94,6 +96,7 @@ typedef struct main_menu_scene_state {
     this->negative_traits = std::vector<character_trait>();
     this->available_trait_points = 0;
     this->inventory_panel_hero_idle_anim = spritesheet();
+    this->playlist = playlist_control_system_state();
 
     this->hovered_stat = nullptr;
     this->in_camera_metrics = nullptr;
@@ -202,6 +205,12 @@ void chosen_trait_button_on_click(size_t index);
     IERROR("scene_main_menu::initialize_scene_main_menu()::World system begin failed");
     return false;
   }
+  if (not sound_system_initialize()) {
+    IERROR("scene_main_menu::initialize_scene_main_menu()::Sound system init failed");
+    return false;
+  }
+  state->playlist = create_playlist(PLAYLIST_PRESET_MAINMENU_LIST);
+
   return begin_scene_main_menu(fade_in);
 }
 [[__nodiscard__]] bool begin_scene_main_menu(bool fade_in) {
@@ -250,13 +259,13 @@ void chosen_trait_button_on_click(size_t index);
   gm_save_game();
 
   if (fade_in) {
-    smm_begin_fadein(data128(), nullptr);
+    smm_begin_fadein(data128(static_cast<i32>(MAIN_MENU_SCENE_DEFAULT)), fade_on_complete_change_main_menu_type);
   }
-  event_fire(EVENT_CODE_PLAY_MAIN_MENU_THEME, event_context{});
+
   return true;
 }
 void end_scene_main_menu(void) {
-  event_fire(EVENT_CODE_RESET_MUSIC, event_context((i32)MUSIC_ID_MAIN_MENU_THEME));
+  event_fire(EVENT_CODE_RESET_MUSIC, event_context((i32)MUSIC_ID_MAINMENU_THEME1));
 }
 
 void update_scene_main_menu(void) {
@@ -265,6 +274,7 @@ void update_scene_main_menu(void) {
   smm_update_bindings();
   update_camera();
   update_map();
+  update_sound_system();
   
   switch (state->mainmenu_state) {
     case MAIN_MENU_SCENE_DEFAULT: {
@@ -823,9 +833,9 @@ void draw_main_menu_character_subscene_stat_details_panel(Rectangle panel_dest, 
         i32 level = get_static_player_state_stat(state->hovered_stat->id)->current_level;
         set_static_player_state_stat(state->hovered_stat->id, level+1);
         gm_save_game();
-        event_fire(EVENT_CODE_PLAY_BUTTON_ON_CLICK, event_context((u16)true));
+        event_fire(EVENT_CODE_PLAY_SOUND_GROUP, event_context(static_cast<i32>(SOUNDGROUP_ID_BUTTON_ON_CLICK)));
       } else {
-        event_fire(EVENT_CODE_PLAY_SOUND, event_context((i32)SOUND_ID_DENY));
+        event_fire(EVENT_CODE_PLAY_SOUND, event_context((i32)SOUND_ID_DENY1));
         state->deny_notify_timer = DENY_NOTIFY_TIME;
         gui_fire_display_error(LOC_TEXT_DISPLAY_ERROR_TEXT_INSUFFICIENT_FUNDS);
       }
@@ -1187,7 +1197,7 @@ void smm_update_mouse_bindings(void) {
         if (state->ingame_scene_feed.hovered_stage <= 0 or static_cast<size_t>(state->ingame_scene_feed.hovered_stage) >= state->worldmap_locations.size()) {
         }
         else if (not state->worldmap_locations.at(state->ingame_scene_feed.hovered_stage).is_playable) {
-          event_fire(EVENT_CODE_PLAY_SOUND, event_context((i32)SOUND_ID_DENY));
+          event_fire(EVENT_CODE_PLAY_SOUND, event_context((i32)SOUND_ID_DENY1));
           gui_fire_display_error(LOC_TEXT_DISPLAY_ERROR_TEXT_STAGE_IS_NOT_PLAYABLE);
         }
         else {
@@ -1462,9 +1472,8 @@ void fade_on_complete_change_main_menu_type(data128 data) {
     return;
   }
   main_menu_scene_type scene = static_cast<main_menu_scene_type>(data.i32[0]);
+  state->smm_fade = ui_fade_control_system();
   begin_scene_change(scene, event_context(data.i32[1] ,data.i32[2] ,data.i32[3]));
-
-  smm_begin_fadein(data128(), nullptr);
 }
 void fade_on_complete_change_scene(data128 data) {
   if (not state or state == nullptr ) {
@@ -1484,6 +1493,7 @@ void begin_scene_change(main_menu_scene_type mms, [[__maybe_unused__]] event_con
     case MAIN_MENU_SCENE_DEFAULT: {
       set_worldmap_location(WORLDMAP_MAINMENU_MAP);
       state->mainmenu_state = MAIN_MENU_SCENE_DEFAULT;
+      state->playlist.media_play(__builtin_addressof(state->playlist));
       break;
     }
     case MAIN_MENU_SCENE_SETTINGS: {
@@ -1582,7 +1592,7 @@ void positive_trait_button_on_click(size_t index) {
     state->positive_traits.erase(state->positive_traits.begin() + index);
   }
   else {
-    event_fire(EVENT_CODE_PLAY_SOUND, event_context(SOUND_ID_DENY));
+    event_fire(EVENT_CODE_PLAY_SOUND, event_context(SOUND_ID_DENY1));
   }
 }
 void negative_trait_button_on_click(size_t index) {

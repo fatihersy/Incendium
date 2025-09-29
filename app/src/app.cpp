@@ -215,7 +215,6 @@ bool app_update(void) {
   }
 
   update_scene_scene();
-  update_sound_system();
   update_time();
   return true;
 }
@@ -330,7 +329,7 @@ bool application_on_event(i32 code, event_context context) {
     return true;
   }
   case EVENT_CODE_SET_POST_PROCESS_FADE_VALUE: {
-    set_shader_uniform(SHADER_ID_POST_PROCESS, "process", data128(static_cast<f32>(context.data.f32[0])));
+    set_shader_uniform(SHADER_ID_POST_PROCESS, "fade", data128(static_cast<f32>(context.data.f32[0])));
     return true;
   }
   default:

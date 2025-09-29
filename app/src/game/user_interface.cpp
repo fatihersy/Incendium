@@ -437,16 +437,20 @@ void update_user_interface(void) {
     button* btn = __builtin_addressof(state->buttons.at(itr_000));
     if (CheckCollisionPointRec(state->mouse_pos_screen, btn->dest)) {
       if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
+        btn->prev_state = btn->current_state;
         btn->current_state = BTN_STATE_PRESSED;
       } else {
-        if (btn->current_state == BTN_STATE_PRESSED) { 
+        if (btn->current_state == BTN_STATE_PRESSED) {
+          btn->prev_state = btn->current_state;
           btn->current_state = BTN_STATE_RELEASED;
         }
         else if (btn->current_state != BTN_STATE_HOVER) {
+          btn->prev_state = btn->current_state;
           btn->current_state = BTN_STATE_HOVER;
         }
       }
     } else {
+      btn->prev_state = btn->current_state;
       btn->current_state = BTN_STATE_UP;
     }
     btn->on_screen = false;
@@ -655,14 +659,14 @@ bool gui_button(const char* text, button_id _id, Font font, i32 font_size_scale,
     if (not TextIsEqual(text, "")) {
       draw_text_ex(text, text_pos, font, font_size_scale, _btn->btn_type.forground_color_btn_state_pressed, false, false, false, VECTOR2(0.f, 0.f));
     }
-    if (play_on_click_sound) event_fire(EVENT_CODE_PLAY_BUTTON_ON_CLICK, event_context((u16)true));
+    if (play_on_click_sound and _btn->prev_state == BTN_STATE_HOVER) event_fire(EVENT_CODE_PLAY_SOUND_GROUP, event_context(static_cast<i32>(SOUNDGROUP_ID_BUTTON_ON_CLICK)));
   }
   if (_btn->current_state == BTN_STATE_HOVER) {
     draw_sprite_on_site_by_id(_btn->btn_type.ss_type, WHITE, VECTOR2(_btn->dest.x,_btn->dest.y), draw_sprite_scale, 1);
     if (not TextIsEqual(text, "")) {
       draw_text_ex(text, text_pos, font, font_size_scale, _btn->btn_type.forground_color_btn_state_hover, false, false, false, VECTOR2(0.f, 0.f));
     }
-    event_fire(EVENT_CODE_RESET_SOUND, event_context((i32)SOUND_ID_BUTTON_ON_CLICK));
+    event_fire(EVENT_CODE_RESET_SOUND_GROUP, event_context(static_cast<i32>(SOUNDGROUP_ID_BUTTON_ON_CLICK)));
   }
   if (_btn->current_state == BTN_STATE_UP) {
     draw_sprite_on_site_by_id(_btn->btn_type.ss_type, WHITE, VECTOR2(_btn->dest.x,_btn->dest.y), draw_sprite_scale, 0);
@@ -700,14 +704,14 @@ bool gui_draw_local_button(const char* text, local_button* const btn, const font
     if (!TextIsEqual(text, "")) {
       draw_text_ex(text, text_pos, (*font), font_size_scale, btn->btn_type.forground_color_btn_state_pressed, false, false, false, VECTOR2(0.f, 0.f));
     }
-    if (play_on_click_sound) event_fire(EVENT_CODE_PLAY_BUTTON_ON_CLICK, event_context((u16)true));
+    if (play_on_click_sound) event_fire(EVENT_CODE_PLAY_SOUND_GROUP, event_context(static_cast<i32>(SOUNDGROUP_ID_BUTTON_ON_CLICK)));
   } 
   if (btn->current_state == BTN_STATE_HOVER) {
     draw_sprite_on_site_by_id(btn->btn_type.ss_type, WHITE, VECTOR2(btn->dest.x, btn->dest.y), draw_sprite_scale, 1);
     if (!TextIsEqual(text, "")) {
       draw_text_ex(text, text_pos, (*font), font_size_scale, btn->btn_type.forground_color_btn_state_hover, false, false, false, VECTOR2(0.f, 0.f));
     }
-    event_fire(EVENT_CODE_RESET_SOUND, event_context((i32)SOUND_ID_BUTTON_ON_CLICK));
+    event_fire(EVENT_CODE_RESET_SOUND_GROUP, event_context(static_cast<i32>(SOUNDGROUP_ID_BUTTON_ON_CLICK)));
   }
   if (btn->current_state == BTN_STATE_UP) {
     draw_sprite_on_site_by_id(btn->btn_type.ss_type, WHITE, VECTOR2(btn->dest.x, btn->dest.y), draw_sprite_scale, 0);

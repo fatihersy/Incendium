@@ -307,39 +307,7 @@ typedef struct spritesheet {
   }
 } spritesheet;
 
-typedef struct music_data {
-  music_id id;
-  Music handle;
-  const file_buffer * file;
 
-  bool play_once;
-  bool played;
-  music_data(void) {
-    this->id = MUSIC_ID_UNSPECIFIED;
-    this->handle = ZERO_MUSIC;
-    this->file = nullptr;
-    this->play_once = false;
-    this->played = false;
-  }
-}music_data;
-
-typedef struct sound_data {
-  sound_id id;
-  Sound handle;
-  Wave wav;
-  const file_buffer * file;
-
-  bool play_once;
-  bool played;
-  sound_data(void) {
-    this->id = SOUND_ID_UNSPECIFIED;
-    this->handle = ZERO_SOUND;
-    this->wav = ZERO_WAV;
-    this->file = nullptr;
-    this->play_once = false;
-    this->played = false;
-  }
-}sound_data;
 
 typedef struct atlas_texture {
   Texture2D* atlas_handle;

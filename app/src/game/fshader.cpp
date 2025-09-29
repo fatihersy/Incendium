@@ -90,7 +90,7 @@ bool initialize_shader_system(void) {
   shader_add_uniform(SHADER_ID_PROGRESS_BAR_MASK, "tint", SHADER_UNIFORM_VEC4);
   shader_add_uniform(SHADER_ID_FADE_TRANSITION, "process", SHADER_UNIFORM_FLOAT);
   //shader_add_uniform(SHADER_ID_FONT_OUTLINE, "texture_size", SHADER_UNIFORM_VEC2);
-  shader_add_uniform(SHADER_ID_POST_PROCESS, "process", SHADER_UNIFORM_FLOAT);
+  shader_add_uniform(SHADER_ID_POST_PROCESS, "fade", SHADER_UNIFORM_FLOAT);
   shader_add_uniform(SHADER_ID_SPAWN, "spawn_id", SHADER_UNIFORM_FLOAT);
 
   return true;
