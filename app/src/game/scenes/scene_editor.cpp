@@ -1060,13 +1060,6 @@ constexpr void editor_update_mouse_bindings(void) {
   if (state->mouse_focus == MOUSE_FOCUS_MAP) {
     event_fire(EVENT_CODE_CAMERA_ADD_ZOOM, event_context((GetMouseWheelMove() * 0.05f)));
 
-    if (state->in_camera_metrics->handle.zoom > 3.0f) {
-      event_fire(EVENT_CODE_CAMERA_SET_ZOOM, event_context(3.f));
-    }
-    else if (state->in_camera_metrics->handle.zoom < 0.1f) {
-      event_fire(EVENT_CODE_CAMERA_SET_ZOOM, event_context(0.1f));
-    }
-
     switch (state->selection_type) {
       case SLC_TYPE_DROP_COLLISION_POSITION: {
         state->map_collision_buffer_to_place.dest = Rectangle {state->mouse_pos_world.x, state->mouse_pos_world.y, 0.f, 0.f};

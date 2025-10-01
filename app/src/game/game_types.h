@@ -198,13 +198,13 @@ typedef enum tilemap_prop_types {
   TILEMAP_PROP_TYPE_MAX,
 }tilemap_prop_types;
 
-typedef enum ingame_phases {
-  INGAME_PHASE_UNDEFINED,
-  INGAME_PHASE_CLEAR_ZOMBIES,
-  INGAME_PHASE_DEFEAT_BOSS,
-  INGAME_PHASE_RESULTS,
-  INGAME_PHASE_MAX,
-}ingame_phases;
+typedef enum ingame_play_phases {
+  INGAME_PLAY_PHASE_UNDEFINED,
+  INGAME_PLAY_PHASE_CLEAR_ZOMBIES,
+  INGAME_PLAY_PHASE_DEFEAT_BOSS,
+  INGAME_PLAY_PHASE_RESULTS,
+  INGAME_PLAY_PHASE_MAX,
+}ingame_play_phases;
 
 typedef enum text_alignment {
   TEXT_ALIGN_UNDEFINED,
@@ -982,7 +982,7 @@ typedef struct ingame_info {
   const Character2D* nearest_spawn;
   const Vector2* mouse_pos_world;
   const Vector2* mouse_pos_screen;
-  const ingame_phases* ingame_phase;
+  const ingame_play_phases* ingame_phase;
   std::vector<character_trait>* chosen_traits;
   const std::vector<loot_item> * loots_on_the_map;
 

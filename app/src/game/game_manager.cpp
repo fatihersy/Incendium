@@ -21,7 +21,7 @@ typedef struct game_manager_system_state {
   const app_settings * in_app_settings;
 
   worldmap_stage stage;
-  ingame_phases ingame_phase;
+  ingame_play_phases ingame_phase;
   player_state player_state_static;
   ingame_info game_info;
   Vector2 mouse_pos_world;
@@ -38,7 +38,7 @@ typedef struct game_manager_system_state {
     this->in_active_map = nullptr;
 
     this->stage = worldmap_stage();
-    this->ingame_phase = INGAME_PHASE_UNDEFINED;
+    this->ingame_phase = INGAME_PLAY_PHASE_UNDEFINED;
     this->player_state_static = player_state();
     this->game_info = ingame_info();
     this->mouse_pos_world = ZEROVEC2;
@@ -60,6 +60,7 @@ extern const i32 level_curve[MAX_PLAYER_LEVEL+1];
 #define GET_BOSS_LEVEL(STAGE_LEVEL, VAL) (STAGE_LEVEL + (STAGE_LEVEL * state->stage.boss_scale))
 #define GET_BOSS_SCALE(VAL) (100 + (100 * VAL))
 #define GET_BOSS_SPEED(VAL) (1.1f * VAL)
+#define ZOOM_CAMERA_GAME_RESULTS 1.5f
 
 bool game_manager_on_event(i32 code, event_context context);
 bool game_manager_reinit(const camera_metrics * in_camera_metrics, const app_settings * in_app_settings,tilemap ** const in_active_map_ptr);
@@ -205,16 +206,17 @@ void update_game_manager(void) {
   }
   state->mouse_pos_screen = Vector2 { GetMousePosition().x * get_app_settings()->scale_ratio.at(0), GetMousePosition().y * get_app_settings()->scale_ratio.at(1)};
   state->mouse_pos_world = GetScreenToWorld2D(Vector2 {state->mouse_pos_screen.x,state->mouse_pos_screen.y}, state->in_camera_metrics->handle);
+  update_sound_system();
 
   switch (state->ingame_phase) {
-    case INGAME_PHASE_CLEAR_ZOMBIES: {
+    case INGAME_PLAY_PHASE_CLEAR_ZOMBIES: {
       if (not state->game_info.player_state_dynamic->is_dead) {
         gm_update_player();
         update_collectible_manager();
         
         if (state->game_info.in_spawns->size() == 0) {
-          if ( (spawn_boss() >= 0) && state->ingame_phase != INGAME_PHASE_DEFEAT_BOSS) {
-            state->ingame_phase = INGAME_PHASE_DEFEAT_BOSS;
+          if ( (spawn_boss() >= 0) && state->ingame_phase != INGAME_PLAY_PHASE_DEFEAT_BOSS) {
+            state->ingame_phase = INGAME_PLAY_PHASE_DEFEAT_BOSS;
           }
           else {
             gm_end_game(true);
@@ -230,7 +232,7 @@ void update_game_manager(void) {
       }
       break;
     }
-    case INGAME_PHASE_DEFEAT_BOSS: {
+    case INGAME_PLAY_PHASE_DEFEAT_BOSS: {
       if (not state->game_info.player_state_dynamic->is_dead) {
         const Character2D * const boss = get_spawn_by_id(state->game_info.stage_boss_id);
         if (boss) {
@@ -251,7 +253,7 @@ void update_game_manager(void) {
       }
       break;
     }
-    case INGAME_PHASE_RESULTS: { 
+    case INGAME_PLAY_PHASE_RESULTS: { 
       
       break;
     }
@@ -284,7 +286,7 @@ void render_game(void) {
     return;
   }
   switch (state->ingame_phase) {
-    case INGAME_PHASE_CLEAR_ZOMBIES: {
+    case INGAME_PLAY_PHASE_CLEAR_ZOMBIES: {
       if (not state->game_info.player_state_dynamic->is_dead) {
         render_player();
         render_collectible_manager();
@@ -301,7 +303,7 @@ void render_game(void) {
       }
       break;
     }
-    case INGAME_PHASE_DEFEAT_BOSS: { 
+    case INGAME_PLAY_PHASE_DEFEAT_BOSS: { 
       if (not state->game_info.player_state_dynamic->is_dead) {
         render_player();
         render_collectible_manager();
@@ -318,9 +320,8 @@ void render_game(void) {
       }
       break;
     }
-    case INGAME_PHASE_RESULTS: { 
+    case INGAME_PLAY_PHASE_RESULTS: { 
         render_collectible_manager();
-      
       break;
     }
     default: {
@@ -379,7 +380,7 @@ bool gm_start_game(worldmap_stage stage) {
   event_fire(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, event_context((f32)PRG_BAR_ID_PLAYER_EXPERIANCE, (f32)state->game_info.player_state_dynamic->exp_perc));
   event_fire(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, event_context((f32)PRG_BAR_ID_PLAYER_HEALTH, (f32)state->game_info.player_state_dynamic->health_perc));
 
-  state->ingame_phase = INGAME_PHASE_CLEAR_ZOMBIES;
+  state->ingame_phase = INGAME_PLAY_PHASE_CLEAR_ZOMBIES;
   reset_ingame_info();
 
   state->playlist.media_play(__builtin_addressof(state->playlist));
@@ -390,10 +391,11 @@ void gm_end_game(bool is_win) {
 
   *state->game_info.player_state_dynamic = player_state();
   state->game_info.is_win = is_win;
-  state->ingame_phase = INGAME_PHASE_RESULTS;
+  state->ingame_phase = INGAME_PLAY_PHASE_RESULTS;
 
   state->playlist.media_stop(__builtin_addressof(state->playlist));
   event_fire(EVENT_CODE_PLAY_SOUND, event_context()); // TODO: play win or lose sound
+  event_fire(EVENT_CODE_CAMERA_SET_ZOOM_TARGET, event_context(static_cast<f32>(ZOOM_CAMERA_GAME_RESULTS)));
 }
 void gm_save_game(void) {
   state->game_progression_data->currency_coins_player_have += state->game_info.collected_coins;

@@ -92,6 +92,7 @@ if (UPG->level == 1) {\
   upgradables_height_buffer += btw_space_gap;\
 }}
 #define HEALTH_BAR_WIDTH static_cast<f32>(state->in_app_settings->render_width) * .15f
+#define PLAY_RESULTS_CAMERA_ZOOM 1.5f
 
 [[__nodiscard__]] bool begin_scene_in_game(bool fade_in);
 
@@ -225,7 +226,7 @@ void update_scene_in_game(void) {
     case INGAME_STATE_PAUSE: { break; }
     case INGAME_STATE_PLAY: {
       switch ( (*state->in_ingame_info->ingame_phase) ) {
-        case INGAME_PHASE_CLEAR_ZOMBIES: {
+        case INGAME_PLAY_PHASE_CLEAR_ZOMBIES: {
           if (not state->in_ingame_info->player_state_dynamic->is_player_have_ability_upgrade_points) {
             event_fire(EVENT_CODE_CAMERA_SET_TARGET, event_context(state->in_ingame_info->player_state_dynamic->position.x,state->in_ingame_info->player_state_dynamic->position.y));
             update_map();
@@ -233,13 +234,13 @@ void update_scene_in_game(void) {
           }
           break;
         }
-        case INGAME_PHASE_DEFEAT_BOSS: {
+        case INGAME_PLAY_PHASE_DEFEAT_BOSS: {
           event_fire(EVENT_CODE_CAMERA_SET_TARGET, event_context(state->in_ingame_info->player_state_dynamic->position.x,state->in_ingame_info->player_state_dynamic->position.y));
           update_map();
           update_game_manager();
           break;
         }
-        case INGAME_PHASE_RESULTS: {
+        case INGAME_PLAY_PHASE_RESULTS: {
           break; 
         }
         default: {
@@ -281,19 +282,18 @@ void render_scene_in_game(void) {
     }
     case INGAME_STATE_PLAY: {
       render_map();
-      const ingame_info *const iginf = gm_get_ingame_info();
       i32 bottom_of_the_screen = state->in_camera_metrics->frustum.y + state->in_camera_metrics->frustum.height;
       i32 top_of_the_screen = state->in_camera_metrics->frustum.y;
-      i32 player_texture_begin = iginf->player_state_dynamic->collision.y + iginf->player_state_dynamic->collision.height;
+      i32 player_texture_begin = state->in_ingame_info->player_state_dynamic->collision.y + state->in_ingame_info->player_state_dynamic->collision.height;
       
       _render_props_y_based(top_of_the_screen, player_texture_begin);
       render_game();
       _render_props_y_based(player_texture_begin, bottom_of_the_screen);
 
       switch ( (*state->in_ingame_info->ingame_phase) ) {
-        case INGAME_PHASE_CLEAR_ZOMBIES: { break; }
-        case INGAME_PHASE_DEFEAT_BOSS: { break; }
-        case INGAME_PHASE_RESULTS: { break; }
+        case INGAME_PLAY_PHASE_CLEAR_ZOMBIES: { break; }
+        case INGAME_PLAY_PHASE_DEFEAT_BOSS: { break; }
+        case INGAME_PLAY_PHASE_RESULTS: { break; }
         default: {
           IWARN("scene_in_game::render_scene_in_game()::INGAME_STATE_PLAY::Unknown in-game phase");
           gm_end_game(false);
@@ -332,7 +332,7 @@ void render_interface_in_game(void) {
     }
     case INGAME_STATE_PLAY: {
       switch ( (*state->in_ingame_info->ingame_phase) ) {
-        case INGAME_PHASE_CLEAR_ZOMBIES: {
+        case INGAME_PLAY_PHASE_CLEAR_ZOMBIES: {
           if (get_b_player_have_upgrade_points()) {
             if (state->is_upgrade_choices_ready) {
               Rectangle dest = Rectangle {SIG_BASE_RENDER_WIDTH * .25f, SIG_BASE_RENDER_HEIGHT * .5f, SIG_BASE_RENDER_WIDTH * .25f, SIG_BASE_RENDER_HEIGHT * .5f };
@@ -357,15 +357,17 @@ void render_interface_in_game(void) {
           render_user_interface();
           break;
         }
-        case INGAME_PHASE_DEFEAT_BOSS: {
+        case INGAME_PLAY_PHASE_DEFEAT_BOSS: {
           draw_ingame_state_play_general();
           draw_ingame_state_play_ui_defeat_boss();
           render_user_interface();
           break;
         }
-        case INGAME_PHASE_RESULTS: {
-          draw_end_game_panel();
-          render_user_interface();
+        case INGAME_PLAY_PHASE_RESULTS: {
+          if (state->in_camera_metrics->handle.zoom == PLAY_RESULTS_CAMERA_ZOOM) {
+            draw_end_game_panel();
+            render_user_interface();
+          }
           break;
         }
         default: {
@@ -491,13 +493,13 @@ void in_game_update_mouse_bindings(void) {
     case INGAME_STATE_PAUSE: { break; }
     case INGAME_STATE_PLAY: {
       switch ( (*state->in_ingame_info->ingame_phase) ) {
-        case INGAME_PHASE_CLEAR_ZOMBIES: {
+        case INGAME_PLAY_PHASE_CLEAR_ZOMBIES: {
           break;
         }
-        case INGAME_PHASE_DEFEAT_BOSS: {
+        case INGAME_PLAY_PHASE_DEFEAT_BOSS: {
           break;
         }
-        case INGAME_PHASE_RESULTS: {
+        case INGAME_PLAY_PHASE_RESULTS: {
           break;
         }
         default: {
@@ -566,7 +568,7 @@ void in_game_update_keyboard_bindings(void) {
     }
     case INGAME_STATE_PLAY: {
       switch ( (*state->in_ingame_info->ingame_phase) ) {
-        case INGAME_PHASE_CLEAR_ZOMBIES: {
+        case INGAME_PLAY_PHASE_CLEAR_ZOMBIES: {
           if (IsKeyDown(KEY_LEFT_SHIFT) and IsKeyReleased(KEY_D)) {
             sig_change_ingame_state(INGAME_STATE_PLAY_DEBUG);
           }
@@ -585,7 +587,7 @@ void in_game_update_keyboard_bindings(void) {
           }
           break;
         }
-        case INGAME_PHASE_DEFEAT_BOSS: {
+        case INGAME_PLAY_PHASE_DEFEAT_BOSS: {
           if (IsKeyDown(KEY_LEFT_SHIFT) and IsKeyReleased(KEY_D)) {
             sig_change_ingame_state(INGAME_STATE_PLAY_DEBUG);
           }
@@ -597,7 +599,7 @@ void in_game_update_keyboard_bindings(void) {
           }
           break;
         }
-        case INGAME_PHASE_RESULTS: {
+        case INGAME_PLAY_PHASE_RESULTS: {
           break;
         }
         default: {

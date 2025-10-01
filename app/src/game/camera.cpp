@@ -1,5 +1,6 @@
 #include "camera.h"
 #include <settings.h>
+#include <reasings.h>
 
 #include "core/fmath.h"
 #include "core/fmemory.h"
@@ -14,6 +15,22 @@
 #define CAMERA_SHAKE_DURATION .085f
 
 #define PERLIN_NOISE_L 256
+
+#define ZOOM_CAMERA_DURATION 0.8f
+
+#ifdef _DEBUG
+  #define ZOOM_CAMERA_MIN 0.01f
+#else
+  #define ZOOM_CAMERA_MIN 0.85f
+#endif
+
+#ifdef _DEBUG
+  #define ZOOM_CAMERA_MAX 2.0f
+#else
+  #define ZOOM_CAMERA_MAX 1.5f
+#endif
+
+#define ZOOM_CAMERA_DEFAULT 1.f
 
 typedef struct camera_shake_control_system {
   Image perlin_noise_img;
@@ -42,31 +59,48 @@ typedef struct camera_shake_control_system {
   }
 } camera_shake_control_system;
 
+typedef struct camera_zoom_control_system {
+  f32 accumulator;
+  f32 camera_old_zoom;
+  f32 camera_target_zoom;
+  bool is_active;
+
+  camera_zoom_control_system(void) {
+    this->accumulator = 0.f;
+    this->camera_target_zoom = 0.f;
+    this->camera_old_zoom = 0.f;
+    this->is_active = false;
+  }
+  camera_zoom_control_system(f32 old_zoom, f32 new_zoom) {
+    this->camera_target_zoom = new_zoom;
+    this->camera_old_zoom = old_zoom;
+    this->is_active = true;
+  }
+} camera_zoom_control_system;
+
 typedef struct camera_system_state {
   camera_metrics cam_met;
 
   Vector2 offset;
   Vector2 drawing_extent;
   Vector2 position;
-
+  
   f32 camera_min_speed;
   f32 camera_min_effect_lenght;
   f32 camera_fraction_speed;
-  f32 camera_shake_time;
-  f32 camera_shake_accumulator;
   camera_shake_control_system shake_ctrl;
+  camera_zoom_control_system zoom_ctrl;
 
   camera_system_state(void) {
     this->cam_met = camera_metrics();
     this->offset = ZEROVEC2;
-    this->position = ZEROVEC2;
     this->drawing_extent = ZEROVEC2;
+    this->position = ZEROVEC2;
     this->camera_min_speed = 0.f;
     this->camera_min_effect_lenght = 0.f;
     this->camera_fraction_speed = 0.f;
-    this->camera_shake_time = 0.f;
-    this->camera_shake_accumulator = 0.f;
     this->shake_ctrl = camera_shake_control_system();
+    this->zoom_ctrl = camera_zoom_control_system();
   }
 } camera_system_state;
 
@@ -76,6 +110,7 @@ bool camera_on_event(i32 code, event_context context);
 bool recreate_camera(i32 target_x, i32 target_y, i32 render_width, i32 render_height);
 Vector2 get_perlin_2d(u16 seed);
 Vector2 update_camera_shake(void);
+void set_camera_zoom(f32 value);
 
 bool create_camera(i32 target_x, i32 target_y, i32 render_width, i32 render_height) {
   if (state and state != nullptr) {
@@ -90,6 +125,7 @@ bool create_camera(i32 target_x, i32 target_y, i32 render_width, i32 render_heig
   event_register(EVENT_CODE_CAMERA_SET_FRUSTUM, camera_on_event);
   event_register(EVENT_CODE_CAMERA_SET_OFFSET, camera_on_event);
   event_register(EVENT_CODE_CAMERA_SET_ZOOM, camera_on_event);
+  event_register(EVENT_CODE_CAMERA_SET_ZOOM_TARGET, camera_on_event);
   event_register(EVENT_CODE_CAMERA_ADD_ZOOM, camera_on_event);
   event_register(EVENT_CODE_CAMERA_SET_TARGET, camera_on_event);
   event_register(EVENT_CODE_CAMERA_SET_CAMERA_POSITION, camera_on_event);
@@ -113,6 +149,7 @@ bool recreate_camera(i32 width, i32 height, i32 render_width, i32 render_height)
   state->cam_met.handle.target = Vector2 {static_cast<f32>(width), static_cast<f32>(height)};
   state->cam_met.handle.rotation = 0;
   state->cam_met.handle.zoom = 1.0f;
+  state->zoom_ctrl.camera_target_zoom = 1.f;
   state->camera_min_speed = 30;
   state->camera_min_effect_lenght = 10;
   state->camera_fraction_speed = 5.f;
@@ -124,18 +161,31 @@ bool recreate_camera(i32 width, i32 height, i32 render_width, i32 render_height)
   return true;
 }
 
-
 const camera_metrics* get_in_game_camera(void) {
   if (not state or state == nullptr) {
     IERROR("camera::get_in_game_camera()::State is invalid");
     return nullptr;
   }
-  return __builtin_addressof(state->cam_met); 
+  return __builtin_addressof(state->cam_met);
 }
 
 bool update_camera(void) {
   Vector2 diff = vec2_subtract(state->position, state->cam_met.handle.target);
   float length = vec2_lenght(diff);
+
+  if (state->zoom_ctrl.is_active) {
+    camera_zoom_control_system& zoom_ctrl = state->zoom_ctrl;
+
+    set_camera_zoom(EaseCircOut(zoom_ctrl.accumulator, zoom_ctrl.camera_old_zoom, zoom_ctrl.camera_target_zoom - zoom_ctrl.camera_old_zoom, ZOOM_CAMERA_DURATION));
+
+    if (zoom_ctrl.accumulator >= ZOOM_CAMERA_DURATION) {
+      set_camera_zoom(zoom_ctrl.camera_target_zoom);
+      zoom_ctrl = camera_zoom_control_system();
+    }
+    else {
+      zoom_ctrl.accumulator += GetFrameTime();
+    }
+  }
 
   if (length > state->camera_min_effect_lenght) {
     float speed = FMAX(state->camera_fraction_speed * length, state->camera_min_speed);
@@ -210,6 +260,15 @@ Vector2 get_perlin_2d(u16 seed) {
   return Vector2 { val, val };
 }
 
+void set_camera_zoom(f32 value) {
+  if (not state or state == nullptr) {
+    IERROR("camera::set_camera_zoom()::State is invalid");
+    return;
+  }
+  state->cam_met.handle.zoom = value;
+  state->cam_met.handle.zoom = FCLAMP(state->cam_met.handle.zoom, ZOOM_CAMERA_MIN, ZOOM_CAMERA_MAX);
+}
+
 bool camera_on_event(i32 code, event_context context) {
   switch (code) {
     case EVENT_CODE_CAMERA_SET_FRUSTUM: {
@@ -229,11 +288,16 @@ bool camera_on_event(i32 code, event_context context) {
       return true;
     }
     case EVENT_CODE_CAMERA_SET_ZOOM: {
-      state->cam_met.handle.zoom = context.data.f32[0];
+      set_camera_zoom(context.data.f32[0]);
+      return true;
+    }
+    case EVENT_CODE_CAMERA_SET_ZOOM_TARGET: {
+      f32 new_zoom = FCLAMP(context.data.f32[0], ZOOM_CAMERA_MIN, ZOOM_CAMERA_MAX);
+      state->zoom_ctrl = camera_zoom_control_system(state->cam_met.handle.zoom, new_zoom);
       return true;
     }
     case EVENT_CODE_CAMERA_ADD_ZOOM: {
-      state->cam_met.handle.zoom += context.data.f32[0];
+      set_camera_zoom(state->cam_met.handle.zoom + context.data.f32[0]);
       return true;
     }
     case EVENT_CODE_CAMERA_SET_TARGET: {
