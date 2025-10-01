@@ -80,8 +80,8 @@ static sound_system_state * state = nullptr;
 
 void load_sound_pak(pak_file_id pak_id, i32 file_id, sound_id id);
 void load_music_pak(pak_file_id pak_id, i32 file_id, music_id id);
-void load_sound_disk(const char * path, sound_id id);
-void load_music_disk(const char * path, music_id id);
+void load_sound_disk(const char * filename, sound_id id);
+void load_music_disk(const char * filename, music_id id);
 bool media_prev(playlist_control_system_state * playlist_ptr, bool play_now);
 bool media_next(playlist_control_system_state * playlist_ptr, bool play_now);
 void media_play(playlist_control_system_state * playlist_ptr);
@@ -119,12 +119,12 @@ bool sound_system_initialize(void) {
   load_sound_disk("button_click1.wav", SOUND_ID_BUTTON_ON_CLICK1);
   load_sound_disk("button_click2.wav", SOUND_ID_BUTTON_ON_CLICK2);
   load_sound_disk("button_click3.wav", SOUND_ID_BUTTON_ON_CLICK3);
-  load_sound_disk("coin_pickup.wav", SOUND_ID_COIN_PICKUP);
+  load_sound_disk("coin_pickup.mp3", SOUND_ID_COIN_PICKUP);
   load_sound_disk("deny1.wav", SOUND_ID_DENY1);
   load_sound_disk("deny2.wav", SOUND_ID_DENY2);
   load_sound_disk("exp_pickup.wav", SOUND_ID_EXP_PICKUP);
-  load_sound_disk("health_pickup.wav", SOUND_ID_HEALTH_PICKUP);
-  load_sound_disk("level_up.wav", SOUND_ID_LEVEL_UP);
+  load_sound_disk("health_pickup.mp3", SOUND_ID_HEALTH_PICKUP);
+  load_sound_disk("level_up.mp3", SOUND_ID_LEVEL_UP);
   load_sound_disk("zap1.wav", SOUND_ID_ZAP1);
   load_sound_disk("zap2.wav", SOUND_ID_ZAP2);
   load_sound_disk("zap3.wav", SOUND_ID_ZAP3);
@@ -149,10 +149,10 @@ bool sound_system_initialize(void) {
   event_register(EVENT_CODE_RESET_SOUND, sound_system_on_event);
   event_register(EVENT_CODE_RESET_MUSIC, sound_system_on_event);
 
-  CREATE_SOUND_GROUP(SOUNDGROUP_ID_BUTTON_ON_CLICK, false, false, false, false, SOUND_ID_BUTTON_ON_CLICK1, SOUND_ID_BUTTON_ON_CLICK2, SOUND_ID_BUTTON_ON_CLICK3);
-  CREATE_SOUND_GROUP(SOUNDGROUP_ID_DENY, false, false, false, false, SOUND_ID_DENY1, SOUND_ID_DENY2);
+  CREATE_SOUND_GROUP(SOUNDGROUP_ID_BUTTON_ON_CLICK, false, true, false, false, SOUND_ID_BUTTON_ON_CLICK1, SOUND_ID_BUTTON_ON_CLICK2, SOUND_ID_BUTTON_ON_CLICK3);
+  CREATE_SOUND_GROUP(SOUNDGROUP_ID_DENY, false, true, false, false, SOUND_ID_DENY1, SOUND_ID_DENY2);
   CREATE_SOUND_GROUP(SOUNDGROUP_ID_ZAP, false, true, false, false, SOUND_ID_ZAP1, SOUND_ID_ZAP2, SOUND_ID_ZAP3, SOUND_ID_ZAP4);
-  CREATE_SOUND_GROUP(SOUNDGROUP_ID_ZOMBIE_DIE, false, false, false, false, SOUND_ID_ZOMBIE_DIE1, SOUND_ID_ZOMBIE_DIE2, SOUND_ID_ZOMBIE_DIE3);
+  CREATE_SOUND_GROUP(SOUNDGROUP_ID_ZOMBIE_DIE, false, true, false, false, SOUND_ID_ZOMBIE_DIE1, SOUND_ID_ZOMBIE_DIE2, SOUND_ID_ZOMBIE_DIE3);
 
   return true;
 }
@@ -191,13 +191,18 @@ void load_sound_pak([[__maybe_unused__]] pak_file_id pak_file, [[__maybe_unused_
   state->sounds.at(id) = data;
   #endif
 }
-void load_sound_disk([[__maybe_unused__]] const char * path, [[__maybe_unused__]] sound_id id) {
+void load_sound_disk([[__maybe_unused__]] const char * filename, [[__maybe_unused__]] sound_id id) {
   #if not USE_PAK_FORMAT
   const file_buffer * file = __builtin_addressof(state->sound_datas.at(id));
   Wave wav;
   sound_data data;
 
-  wav = LoadWave(TextFormat("%s%s", RESOURCE_PATH, path));
+  const char * path = TextFormat("%s%s", RESOURCE_PATH, filename);
+  if (not FileExists(path)) {
+    IWARN("sound::load_sound_disk()::File %s not found", filename);
+    return;
+  }
+  wav = LoadWave(path);
 
   data.wav = wav;
   data.file = file;
@@ -231,12 +236,17 @@ void load_music_pak([[__maybe_unused__]] pak_file_id pak_file, [[__maybe_unused_
   #endif
 }
 
-void load_music_disk([[__maybe_unused__]] const char * path, [[__maybe_unused__]] music_id id) {
+void load_music_disk([[__maybe_unused__]] const char * filename, [[__maybe_unused__]] music_id id) {
   #if not USE_PAK_FORMAT
   const file_buffer * file = __builtin_addressof(state->sound_datas.at(id));
   Music music;
 
-  music = LoadMusicStream(TextFormat("%s%s", RESOURCE_PATH, path));
+  const char * path = TextFormat("%s%s", RESOURCE_PATH, filename);
+  if (not FileExists(path)) {
+    IWARN("sound::load_music_disk()::File %s not found", filename);
+    return;
+  }
+  music = LoadMusicStream(path);
   
   music_data data = music_data();
   data.file = file;
@@ -423,7 +433,7 @@ void update_playlist(playlist_control_system_state * playlist_ptr) {
     UpdateMusicStream(music);
     return;
   }
-
+  
   if (state->current_playlist->loop_one) {
     StopMusicStream(music);
     PlayMusicStream(music);

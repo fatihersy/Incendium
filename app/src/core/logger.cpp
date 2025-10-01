@@ -30,6 +30,7 @@ bool logging_system_initialize(void) {
   if (not state or state == nullptr) {
     return false;
   }
+  *state = logging_system_state();
 
   const char * path = TextFormat("%s%s",LOG_FILE_LOCATION, LOG_FILE_NAME);
   if (FileExists(path)) {
@@ -58,11 +59,6 @@ void inc_logging(logging_severity ls, const char* fmt, ...) {
   if(not state or state == nullptr) {
 		return;
   }
-  if (state->last_writed == fmt) {
-    return;
-  }
-  state->last_writed = fmt;
-  
   std::string out_log = std::string();
   char timeStr[64] = { 0 };
   time_t now = time(NULL);
@@ -103,11 +99,20 @@ void inc_logging(logging_severity ls, const char* fmt, ...) {
   out_log.append(std::string(zc.data(), zc.size()-1)).append("\n");
 	std::string& log = state->logs.emplace_back(out_log);
 
+  if (log == state->last_writed) {
+    return;
+  }
+
 	if (ls >= LOGGING_SEVERITY) {
 		const char * path = TextFormat("%s%s",LOG_FILE_LOCATION, LOG_FILE_NAME);
     if (FileExists(path)) {
       char * logged_text = LoadFileText(path);
-      SaveFileText(path, TextFormat("%s%s", logged_text, log.c_str()));
+      if (TextLength(logged_text) <= 1) {
+        SaveFileText(path, log.c_str());
+      }
+      else {
+        SaveFileText(path, TextFormat("%s%s", logged_text, log.c_str()));
+      }
       UnloadFileText(logged_text);
     }
     else {

@@ -47,7 +47,7 @@ int alert(const char* caption, const char* message);
 #define DEFAULT_SETTINGS_RATIO "16:9"
 #define DEFAULT_SETTINGS_WINDOW_MODE "windowed"
 #define DEFAULT_SETTINGS_MASTER_VOLUME_C "50"
-#define DEFAULT_SETTINGS_MASTER_VOLUME 50
+#define DEFAULT_SETTINGS_MASTER_VOLUME 5
 #define DEFAULT_SETTINGS_LANGUAGE "English"
 
 #define RESOURCE_PATH ".\\resources\\"
@@ -892,8 +892,8 @@ typedef struct app_settings {
   i32 render_height_div2;
   std::string language;
   app_settings(void) {
-    this->scale_ratio.clear();
-    this->language.clear();
+    this->scale_ratio = std::vector<f32>();
+    this->language = std::string();
     this->master_sound_volume = 0;
     this->window_state = 0;
     this->window_width = 0;

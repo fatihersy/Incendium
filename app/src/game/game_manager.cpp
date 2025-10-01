@@ -1,6 +1,7 @@
 #include "game_manager.h"
 #include <settings.h>
 #include "save_game.h"
+#include <sound.h>
 
 #include "core/ftime.h"
 #include "core/event.h"
@@ -27,6 +28,7 @@ typedef struct game_manager_system_state {
   Vector2 mouse_pos_screen;
   std::vector<character_trait> traits;
   std::vector<character_trait> chosen_traits;
+  playlist_control_system_state playlist;
 
   bool game_manager_initialized;
   game_manager_system_state(void) {
@@ -43,6 +45,7 @@ typedef struct game_manager_system_state {
     this->mouse_pos_screen = ZEROVEC2;
     this->traits.clear();
     this->chosen_traits = std::vector<character_trait>();
+    this->playlist = playlist_control_system_state();
 
     this->game_manager_initialized = false;
   }
@@ -110,6 +113,10 @@ bool game_manager_initialize(const camera_metrics * in_camera_metrics, const app
     IERROR("game_manager::game_manager_initialize()::Collectibles system init failed");
     return false;
   }
+  if (not sound_system_initialize()) {
+    IERROR("game_manager::game_manager_initialize()::Sound system init failed");
+    return false;
+  }
 
   state->player_state_static = (*get_default_player());
   
@@ -164,6 +171,8 @@ bool game_manager_initialize(const camera_metrics * in_camera_metrics, const app
     state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE, "Trait 21", "Trait 21 description", 2, data128(static_cast<i32>(8))));
   }
   // Traits
+
+  state->playlist = create_playlist(PLAYLIST_PRESET_INGAME_PLAY_LIST);
 
   return game_manager_reinit(in_camera_metrics, in_app_settings, in_active_map_ptr);
 }
@@ -372,6 +381,8 @@ bool gm_start_game(worldmap_stage stage) {
 
   state->ingame_phase = INGAME_PHASE_CLEAR_ZOMBIES;
   reset_ingame_info();
+
+  state->playlist.media_play(__builtin_addressof(state->playlist));
   return true;
 }
 void gm_end_game(bool is_win) {
@@ -380,6 +391,9 @@ void gm_end_game(bool is_win) {
   *state->game_info.player_state_dynamic = player_state();
   state->game_info.is_win = is_win;
   state->ingame_phase = INGAME_PHASE_RESULTS;
+
+  state->playlist.media_stop(__builtin_addressof(state->playlist));
+  event_fire(EVENT_CODE_PLAY_SOUND, event_context()); // TODO: play win or lose sound
 }
 void gm_save_game(void) {
   state->game_progression_data->currency_coins_player_have += state->game_info.collected_coins;

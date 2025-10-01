@@ -1,6 +1,7 @@
 
 #include "collectible_manager.h"
-#include "reasings.h"
+#include <reasings.h>
+#include <sound.h>
 
 #include "core/logger.h"
 #include "core/event.h"
@@ -309,14 +310,20 @@ bool loot_item_on_loot(item_type type, i32 id, data128 context) {
 
 	switch (type) {
     case ITEM_TYPE_EXPERIENCE: {
+      event_fire(EVENT_CODE_PLAY_SOUND, event_context(static_cast<i32>(SOUND_ID_EXP_PICKUP)));
+
       state->loots_on_the_map.erase(state->loots_on_the_map.begin() + item_index);
 			return event_fire(EVENT_CODE_PLAYER_ADD_EXP, event_context(static_cast<i32>(context.i16[0])));
 		}
     case ITEM_TYPE_COIN: {
+      event_fire(EVENT_CODE_PLAY_SOUND, event_context(static_cast<i32>(SOUND_ID_COIN_PICKUP)));
+
       state->loots_on_the_map.erase(state->loots_on_the_map.begin() + item_index);
 			return event_fire(EVENT_CODE_ADD_CURRENCY_COINS, event_context(static_cast<i32>(context.i16[0])));
 		}
     case ITEM_TYPE_HEALTH_FRAGMENT: {
+      event_fire(EVENT_CODE_PLAY_SOUND, event_context(static_cast<i32>(SOUND_ID_HEALTH_PICKUP)));
+
       state->loots_on_the_map.erase(state->loots_on_the_map.begin() + item_index);
 			return event_fire(EVENT_CODE_PLAYER_HEAL, event_context(static_cast<i32>(context.i16[0])));
 		}

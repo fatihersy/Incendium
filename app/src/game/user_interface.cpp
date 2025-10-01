@@ -31,7 +31,7 @@ typedef struct user_interface_system_state {
   Vector2 mouse_pos_screen;
   std::vector<localization_package> localization_info;
   std::vector<ui_error_display_control_system> errors_on_play;
-  Vector2 error_text_start_position;
+  Vector2 error_text_start_position; // TODO: Put the error location and timer variables inside the error display system
   f32 error_text_end_height;
   f32 error_text_duration_stay_on_screen;
   f32 error_text_duration_in_and_out;
@@ -704,7 +704,7 @@ bool gui_draw_local_button(const char* text, local_button* const btn, const font
     if (!TextIsEqual(text, "")) {
       draw_text_ex(text, text_pos, (*font), font_size_scale, btn->btn_type.forground_color_btn_state_pressed, false, false, false, VECTOR2(0.f, 0.f));
     }
-    if (play_on_click_sound) event_fire(EVENT_CODE_PLAY_SOUND_GROUP, event_context(static_cast<i32>(SOUNDGROUP_ID_BUTTON_ON_CLICK)));
+    if (play_on_click_sound and btn->prev_state == BTN_STATE_HOVER) event_fire(EVENT_CODE_PLAY_SOUND_GROUP, event_context(static_cast<i32>(SOUNDGROUP_ID_BUTTON_ON_CLICK)));
   } 
   if (btn->current_state == BTN_STATE_HOVER) {
     draw_sprite_on_site_by_id(btn->btn_type.ss_type, WHITE, VECTOR2(btn->dest.x, btn->dest.y), draw_sprite_scale, 1);
@@ -1121,16 +1121,7 @@ void gui_label_wrap_grid(const char* text, font_type type, i32 font_size, Rectan
 
 }
 void gui_draw_settings_screen(void) { // TODO: Return to settings later
-  Rectangle settings_bg_pnl_dest = Rectangle{UI_BASE_RENDER_WIDTH *.025f, UI_BASE_RENDER_HEIGHT *.075f, UI_BASE_RENDER_WIDTH * .950f, UI_BASE_RENDER_HEIGHT * .850f};
-  Rectangle header_loc = {0.f, 0.f, static_cast<f32>( UI_BASE_RENDER_WIDTH), UI_BASE_RENDER_HEIGHT * .1f};
-  Rectangle footer_loc = {0.f, UI_BASE_RENDER_HEIGHT - UI_BASE_RENDER_HEIGHT * .1f, static_cast<f32>(UI_BASE_RENDER_WIDTH), UI_BASE_RENDER_HEIGHT * .1f};
-  DrawRectangleRec(header_loc, Color{0, 0, 0, 50});
-  DrawRectangleRec(footer_loc, Color{0, 0, 0, 50});
-
-  gui_panel(panel(BTN_STATE_UNDEFINED, ATLAS_TEX_ID_DARK_FANTASY_PANEL_BG, ATLAS_TEX_ID_DARK_FANTASY_PANEL_SELECTED, Vector4 {6, 6, 6, 6}, Color { 30, 39, 46, 128}),
-    settings_bg_pnl_dest, 
-    false
-  );
+  gui_draw_default_background_panel();
 
   gui_slider(SDR_ID_SETTINGS_SOUND_SLIDER, UI_BASE_RENDER_DIV2, VECTOR2(0.f,-20.f));
 
@@ -1141,8 +1132,8 @@ void gui_draw_settings_screen(void) { // TODO: Return to settings later
   gui_slider(SDR_ID_SETTINGS_LANGUAGE, UI_BASE_RENDER_DIV2, VECTOR2(0.f, 10.f));
 
   if(gui_menu_button(lc_txt(LOC_TEXT_SETTINGS_BUTTON_APPLY), BTN_ID_SETTINGS_APPLY_SETTINGS_BUTTON, VECTOR2(35.f, 66.5f), UI_BASE_RENDER_DIV2, true)) {
-    slider sdr_win_mode = state->sliders.at(SDR_ID_SETTINGS_WIN_MODE_SLIDER);
-    i32 window_mod = sdr_win_mode.options.at(sdr_win_mode.current_value).content.data.i32[0];
+
+    i32 window_mod = SDR_CURR_OPT_VAL(SDR_ID_SETTINGS_WIN_MODE_SLIDER).content.data.i32[0];
     Vector2 new_res = pVECTOR2(SDR_CURR_OPT_VAL(SDR_ID_SETTINGS_RES_SLIDER).content.data.i32);
 
     if (window_mod == FLAG_BORDERLESS_WINDOWED_MODE && !IsWindowState(FLAG_BORDERLESS_WINDOWED_MODE)) {
@@ -1227,10 +1218,13 @@ void ui_refresh_setting_sliders_to_default(void) {
   }
 	/////////////////////// RESOLUTION SLIDER
 
-	SDR_AT(SDR_ID_SETTINGS_SOUND_SLIDER).current_value = static_cast<u16>(state->in_app_settings->master_sound_volume * .1f);
+  set_master_sound(state->in_app_settings->master_sound_volume, true);
+	SDR_AT(SDR_ID_SETTINGS_SOUND_SLIDER).current_value = state->in_app_settings->master_sound_volume;
 
-	for (size_t itr_000 = 0u; itr_000 < state->sliders.at(SDR_ID_SETTINGS_WIN_MODE_SLIDER).options.size(); ++itr_000) {
-		if (state->sliders.at(SDR_ID_SETTINGS_WIN_MODE_SLIDER).options.at(itr_000).content.data.i32[0] == state->in_app_settings->window_state && itr_000 != 0) {
+	for (size_t itr_000 = 0u; itr_000 < SDR_AT(SDR_ID_SETTINGS_WIN_MODE_SLIDER).options.size(); ++itr_000) {
+    i32 window_mode_slider_val = SDR_AT(SDR_ID_SETTINGS_WIN_MODE_SLIDER).options.at(itr_000).content.data.i32[0];
+
+		if (window_mode_slider_val == state->in_app_settings->window_state) {
 			state->sliders.at(SDR_ID_SETTINGS_WIN_MODE_SLIDER).current_value = itr_000;
 			break;
 		}
@@ -1986,7 +1980,7 @@ bool ui_sound_slider_on_left_button_trigger(void) {
   if (SDR_AT(SDR_ID_SETTINGS_SOUND_SLIDER).current_value < 0) {
     SDR_AT(SDR_ID_SETTINGS_SOUND_SLIDER).current_value = 0;
   }
-  set_master_sound(SDR_AT(SDR_ID_SETTINGS_SOUND_SLIDER).current_value * 10);
+  set_master_sound(SDR_AT(SDR_ID_SETTINGS_SOUND_SLIDER).current_value, true);
   return true;
 }
 bool ui_sound_slider_on_right_button_trigger(void) {  
@@ -1998,7 +1992,7 @@ bool ui_sound_slider_on_right_button_trigger(void) {
   if (SDR_AT(SDR_ID_SETTINGS_SOUND_SLIDER).current_value > 10) {
     SDR_AT(SDR_ID_SETTINGS_SOUND_SLIDER).current_value = 10;
   }
-  set_master_sound(SDR_AT(SDR_ID_SETTINGS_SOUND_SLIDER).current_value * 10);
+  set_master_sound(SDR_AT(SDR_ID_SETTINGS_SOUND_SLIDER).current_value, true);
   return true;
 }
 data_pack* get_slider_current_value(slider_id id) {

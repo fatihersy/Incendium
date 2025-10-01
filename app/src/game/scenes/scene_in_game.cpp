@@ -2,7 +2,6 @@
 #include <reasings.h>
 #include <settings.h>
 #include <loc_types.h>
-#include <sound.h>
 
 #include "core/fmath.h"
 #include "core/event.h"
@@ -30,7 +29,6 @@ typedef struct scene_in_game_state {
   std::array<ability, MAX_UPDATE_ABILITY_PANEL_COUNT> ability_upgrade_choices;
   panel default_panel;
   panel debug_info_panel;
-  playlist_control_system_state playlist;
   
   const camera_metrics* in_camera_metrics;
   const app_settings* in_app_settings;
@@ -50,7 +48,6 @@ typedef struct scene_in_game_state {
     this->ability_upgrade_choices.fill(ability());
     this->default_panel = panel();
     this->debug_info_panel = panel();
-    this->playlist = playlist_control_system_state();
     this->in_camera_metrics = nullptr;
     this->in_app_settings = nullptr;
     this->in_ingame_info = nullptr;
@@ -158,12 +155,6 @@ void reset_game(void);
   event_register(EVENT_CODE_RESUME_GAME, scene_in_game_on_event);
   event_register(EVENT_CODE_TOGGLE_GAME_PAUSE, scene_in_game_on_event);
 
-  if (not sound_system_initialize()) {
-    IERROR("scene_in_game::initialize_scene_in_game()::Sound system init failed");
-    return false;
-  }
-  state->playlist = create_playlist(PLAYLIST_PRESET_INGAME_PLAY_LIST);
-
   return begin_scene_in_game(fade_in);
 }
 
@@ -206,7 +197,6 @@ bool start_game(void) {
   }
   _set_player_position(ZEROVEC2);
   sig_change_ingame_state(INGAME_STATE_PLAY);
-  state->playlist.media_play(__builtin_addressof(state->playlist));
   return true;
 }
 void end_scene_in_game(void) {
@@ -236,7 +226,6 @@ void update_scene_in_game(void) {
     case INGAME_STATE_PLAY: {
       switch ( (*state->in_ingame_info->ingame_phase) ) {
         case INGAME_PHASE_CLEAR_ZOMBIES: {
-          update_sound_system();
           if (not state->in_ingame_info->player_state_dynamic->is_player_have_ability_upgrade_points) {
             event_fire(EVENT_CODE_CAMERA_SET_TARGET, event_context(state->in_ingame_info->player_state_dynamic->position.x,state->in_ingame_info->player_state_dynamic->position.y));
             update_map();
@@ -245,7 +234,6 @@ void update_scene_in_game(void) {
           break;
         }
         case INGAME_PHASE_DEFEAT_BOSS: {
-          update_sound_system();
           event_fire(EVENT_CODE_CAMERA_SET_TARGET, event_context(state->in_ingame_info->player_state_dynamic->position.x,state->in_ingame_info->player_state_dynamic->position.y));
           update_map();
           update_game_manager();

@@ -148,6 +148,7 @@ typedef struct local_button {
   button_type btn_type;
   button_state current_state;
   button_state signal_state;
+  button_state prev_state;
   Rectangle dest;
   bool on_screen;
   bool is_active;

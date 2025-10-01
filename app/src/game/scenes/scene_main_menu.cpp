@@ -386,6 +386,7 @@ void render_interface_main_menu(void) {
   else if (state->mainmenu_state == MAIN_MENU_SCENE_SETTINGS) {
       gui_draw_settings_screen();
       if (gui_menu_button(lc_txt(LOC_TEXT_SETTINGS_BUTTON_CANCEL), BTN_ID_MAINMENU_SETTINGS_CANCEL, VECTOR2(-35.f, 66.5f), SMM_BASE_RENDER_DIV2, true)) {
+        ui_refresh_setting_sliders_to_default();
         state->mainmenu_state = MAIN_MENU_SCENE_DEFAULT;
       }
   }
@@ -1353,16 +1354,20 @@ void smm_update_local_buttons(void) {
 
     if (CheckCollisionPointRec(*state->mouse_pos_screen, _btn->dest)) {
       if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
+        _btn->prev_state = _btn->current_state;
         _btn->current_state = BTN_STATE_PRESSED;
       } else {
         if (_btn->current_state == BTN_STATE_PRESSED) { 
+          _btn->prev_state = _btn->current_state;
           _btn->current_state = BTN_STATE_RELEASED;
         }
         else if (_btn->current_state != BTN_STATE_HOVER) {
+          _btn->prev_state = _btn->current_state;
           _btn->current_state = BTN_STATE_HOVER;
         }
       }
     } else {
+      _btn->prev_state = _btn->current_state;
       _btn->current_state = BTN_STATE_UP;
     }
     _btn->on_screen = false;

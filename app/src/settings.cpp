@@ -69,6 +69,8 @@ bool settings_initialize(void) {
     IFATAL("settings::settings_initialize()::State allocation failed");
     return false;
   }
+  *state = app_settings_system_state();
+
   state->initializer = app_settings();
   state->initializer.master_sound_volume = 0;
   state->initializer.window_state  = 0;
@@ -239,6 +241,7 @@ bool set_settings_from_ini_file(const char * file_name) {
   state->settings.scale_ratio.push_back(static_cast<f32>(state->settings.render_height) / static_cast<f32>(state->settings.window_height));
   state->settings.display_ratio = get_aspect_ratio(state->settings.window_width, state->settings.window_height);
   state->offset = 5u;
+  set_master_sound(state->settings.master_sound_volume);
   return true;
 }
 
@@ -247,7 +250,7 @@ bool update_app_settings_state(void) {
     IERROR("settings::update_app_settings_state()::State is not valid");
     return false;
   }
-  state->settings.master_sound_volume = FCLAMP(state->settings.master_sound_volume, 0, 100);
+
   return true;
 }
 
@@ -283,12 +286,17 @@ void set_language(const char* lang) {
   }
   state->settings.language = lang;
 }
-bool set_master_sound(i32 volume) {
+bool set_master_sound(i32 volume, bool save) {
   if (not state or state == nullptr) {
     IERROR("settings::set_master_sound()::State is invalid");
     return false;
   }
-  state->settings.master_sound_volume = volume;
+  volume = FCLAMP(volume, 0, 10);
+  
+  if (save) {
+    state->settings.master_sound_volume = volume;
+  }
+  SetMasterVolume(volume * .1f); // INFO: volume 10 is max, should be normalize
   return true;
 }
 app_settings * get_app_settings(void) {
@@ -339,7 +347,7 @@ bool create_ini_file(i32 width, i32  height, i32 master_volume, i32 window_mode,
 bool save_ini_file(void) {
   return create_ini_file(
     state->settings.window_width, state->settings.window_height, 
-    0, 
+    state->settings.master_sound_volume, 
     state->settings.window_state, 
     state->settings.language.c_str()
   );
