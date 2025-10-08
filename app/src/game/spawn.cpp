@@ -93,7 +93,7 @@ i32 damage_spawn(i32 _id, i32 damage) {
   character->is_dead = true;
   character->is_damagable = false;
   character->damage_break_time = character->take_damage_left_animation.fps / static_cast<f32>(TARGET_FPS);
-  event_fire(EVENT_CODE_PLAY_SOUND_GROUP, event_context(SOUNDGROUP_ID_ZOMBIE_DIE));
+  event_fire(EVENT_CODE_PLAY_SOUND_GROUP, event_context(SOUNDGROUP_ID_ZOMBIE_DIE, static_cast<i32>(true)));
 
   bool loot_rnd = get_random(0, 100) > 24;
 

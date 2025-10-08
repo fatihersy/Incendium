@@ -83,6 +83,7 @@ bool resource_system_initialize(void) {
     load_texture_disk("worldmap_wo_clouds.png", false, VECTOR2(0.f, 0.f), TEX_ID_WORLDMAP_WO_CLOUDS);
     load_texture_disk("black_background_1.png", false, VECTOR2(0.f, 0.f), TEX_ID_BLACK_BACKGROUND_IMG1);
     load_texture_disk("black_background_2.png", false, VECTOR2(0.f, 0.f), TEX_ID_BLACK_BACKGROUND_IMG2);
+    load_texture_disk("zap.png", false, VECTOR2(0.f, 0.f), TEX_ID_ZAP);
   #endif
 
   load_texture_from_atlas(ATLAS_TEX_ID_MAP_TILESET_TEXTURE,                  Rectangle{    0,    0, 1568, 2016 });
@@ -145,18 +146,19 @@ bool resource_system_initialize(void) {
 
   load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_SPAWN_EXPLOSION, VECTOR2(1808, 528), 5,  32,  32, 1,  4);
 
-  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_SLIDER_OPTION,                      VECTOR2(1632,  32),  0,  16,  10, 1,  2);
-  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_SLIDER_LEFT_BUTTON,                 VECTOR2(1600,  32),  0,  12,  12, 1,  2);
-  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_SLIDER_RIGHT_BUTTON,                VECTOR2(1600,  44),  0,  12,  12, 1,  2);
-  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_MENU_BUTTON,                        VECTOR2(1505,   0),  0,  88,  13, 1,  2);
-  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_FLAT_BUTTON,                        VECTOR2(1504,  16),  0,  88,  13, 1,  2);
-  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_SLIDER_PERCENT,                     VECTOR2(1600,  64),  0,   9,   9, 1,  2);
-  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_FLAME_ENERGY_ANIMATION,             VECTOR2(1584, 352), 13,  48,  48, 1, 18);
-  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_FIREBALL_ANIMATION,                 VECTOR2(1584, 400), 10,  64,  64, 1,  6);
-  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_FIREBALL_EXPLOTION_ANIMATION,       VECTOR2(1584, 464), 12,  64,  64, 1,  7);
-  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_ABILITY_FIRETRAIL_START_ANIMATION,  VECTOR2(1584, 528), 15,  24,  32, 1,  4);
-  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_ABILITY_FIRETRAIL_LOOP_ANIMATION,   VECTOR2(1584, 560), 10,  24,  32, 1,  8);
-  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_ABILITY_FIRETRAIL_END_ANIMATION,    VECTOR2(1680, 528), 15,  24,  32, 1,  5);
+  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_SLIDER_OPTION,                      VECTOR2(1632.f,  32.f),  0,  16,  10, 1,  2);
+  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_SLIDER_LEFT_BUTTON,                 VECTOR2(1600.f,  32.f),  0,  12,  12, 1,  2);
+  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_SLIDER_RIGHT_BUTTON,                VECTOR2(1600.f,  44.f),  0,  12,  12, 1,  2);
+  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_MENU_BUTTON,                        VECTOR2(1505.f,   0.f),  0,  88,  13, 1,  2);
+  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_FLAT_BUTTON,                        VECTOR2(1504.f,  16.f),  0,  88,  13, 1,  2);
+  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_SLIDER_PERCENT,                     VECTOR2(1600.f,  64.f),  0,   9,   9, 1,  2);
+  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_FLAME_ENERGY_ANIMATION,             VECTOR2(1584.f, 352.f), 13,  48,  48, 1, 18);
+  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_FIREBALL_ANIMATION,                 VECTOR2(1584.f, 400.f), 10,  64,  64, 1,  6);
+  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_FIREBALL_EXPLOTION_ANIMATION,       VECTOR2(1584.f, 464.f), 12,  64,  64, 1,  7);
+  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_ABILITY_FIRETRAIL_START_ANIMATION,  VECTOR2(1584.f, 528.f), 15,  24,  32, 1,  4);
+  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_ABILITY_FIRETRAIL_LOOP_ANIMATION,   VECTOR2(1584.f, 560.f), 10,  24,  32, 1,  8);
+  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_ABILITY_FIRETRAIL_END_ANIMATION,    VECTOR2(1680.f, 528.f), 15,  24,  32, 1,  5);
+  load_spritesheet(TEX_ID_ZAP,         SHEET_ID_ABILITY_CODEX,                      VECTOR2(   0.f,   0.f),240, 517, 517, 1, 60);
 
   load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_LOOT_ITEM_HEALTH,     VECTOR2(1888, 768), 12,  16,  16, 1,  6);
   load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_LOOT_ITEM_COIN,       VECTOR2(1888, 784), 12,  16,  16, 1,  7);

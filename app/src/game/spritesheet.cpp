@@ -172,7 +172,7 @@ void draw_sprite_on_site(spritesheet *const sheet, Color _tint, Vector2 pos, Vec
     return;
   }
   i32 col = frame % sheet->col_total;
-  i32 row = frame / sheet->row_total;
+  i32 row = frame / sheet->col_total;
 
   Rectangle source = Rectangle{
     sheet->offset.x + sheet->current_frame_rect.width * col,

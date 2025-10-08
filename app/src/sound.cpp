@@ -71,16 +71,15 @@ static sound_system_state * state = nullptr;
 #define ASSERT_NOT_STATE(FUNCTION, RETURN) do { if (not state or state == nullptr) { \
     IERROR("sound::" FUNCTION "::State is not valid");\
     RETURN \
-} } while(0) \
+} } while(0)
 
 #define CREATE_SOUND_GROUP(GROUP_ID, LOCK, MIX_LIST, LOOP_LIST, LOOP_ONE, ...)\
   do { state->sound_groups.at(GROUP_ID) = soundgroup(std::vector<sound_id>({__VA_ARGS__}), LOCK, MIX_LIST, LOOP_LIST, LOOP_ONE); } while(0)
 
 
-
-void load_sound_pak(pak_file_id pak_id, i32 file_id, sound_id id);
+void load_sound_pak(pak_file_id pak_id, i32 file_id, sound_id id, std::array<f32, 2> pitch_range = {1.f, 1.f});
 void load_music_pak(pak_file_id pak_id, i32 file_id, music_id id);
-void load_sound_disk(const char * filename, sound_id id);
+void load_sound_disk(const char * filename, sound_id id, std::array<f32, 2> pitch_range = {1.f, 1.f});
 void load_music_disk(const char * filename, music_id id);
 bool media_prev(playlist_control_system_state * playlist_ptr, bool play_now);
 bool media_next(playlist_control_system_state * playlist_ptr, bool play_now);
@@ -88,7 +87,7 @@ void media_play(playlist_control_system_state * playlist_ptr);
 void media_pause(playlist_control_system_state * playlist_ptr);
 void media_stop(playlist_control_system_state * playlist_ptr);
 void update_playlist(playlist_control_system_state * playlist_ptr);
-void play_soundgroup_sound(const soundgroup * group);
+void play_soundgroup_sound(const soundgroup * group, bool random_pitch);
 
 bool sound_system_on_event(i32 code, event_context context);
 
@@ -125,10 +124,10 @@ bool sound_system_initialize(void) {
   load_sound_disk("exp_pickup.wav", SOUND_ID_EXP_PICKUP);
   load_sound_disk("health_pickup.mp3", SOUND_ID_HEALTH_PICKUP);
   load_sound_disk("level_up.mp3", SOUND_ID_LEVEL_UP);
-  load_sound_disk("zap1.wav", SOUND_ID_ZAP1);
-  load_sound_disk("zap2.wav", SOUND_ID_ZAP2);
-  load_sound_disk("zap3.wav", SOUND_ID_ZAP3);
-  load_sound_disk("zap4.wav", SOUND_ID_ZAP4);
+  load_sound_disk("zap1.wav", SOUND_ID_ZAP1, {1.f, 1.5f});
+  load_sound_disk("zap2.wav", SOUND_ID_ZAP2, {1.f, 1.5f});
+  load_sound_disk("zap3.wav", SOUND_ID_ZAP3, {1.f, 1.5f});
+  load_sound_disk("zap4.wav", SOUND_ID_ZAP4, {1.f, 1.5f});
   load_sound_disk("zombie_die1.wav", SOUND_ID_ZOMBIE_DIE1);
   load_sound_disk("zombie_die2.wav", SOUND_ID_ZOMBIE_DIE2);
   load_sound_disk("zombie_die3.wav", SOUND_ID_ZOMBIE_DIE3);
@@ -167,7 +166,7 @@ void update_sound_system(void) {
   }
 }
 
-void load_sound_pak([[__maybe_unused__]] pak_file_id pak_file, [[__maybe_unused__]] i32 file_id, [[__maybe_unused__]] sound_id id) {
+void load_sound_pak([[__maybe_unused__]] pak_file_id pak_file, [[__maybe_unused__]] i32 file_id, [[__maybe_unused__]] sound_id id, [[__maybe_unused__]] std::array<f32, 2> pitch_range) {
   #if USE_PAK_FORMAT
   const file_buffer * file = nullptr;
   Wave wav;
@@ -188,10 +187,12 @@ void load_sound_pak([[__maybe_unused__]] pak_file_id pak_file, [[__maybe_unused_
   data.file = file;
   data.id = id;
   data.handle = LoadSoundFromWave(wav);
+  data.pitch_range = pitch_range;
+
   state->sounds.at(id) = data;
   #endif
 }
-void load_sound_disk([[__maybe_unused__]] const char * filename, [[__maybe_unused__]] sound_id id) {
+void load_sound_disk([[__maybe_unused__]] const char * filename, [[__maybe_unused__]] sound_id id, [[__maybe_unused__]] std::array<f32, 2> pitch_range) {
   #if not USE_PAK_FORMAT
   const file_buffer * file = __builtin_addressof(state->sound_datas.at(id));
   Wave wav;
@@ -208,6 +209,8 @@ void load_sound_disk([[__maybe_unused__]] const char * filename, [[__maybe_unuse
   data.file = file;
   data.id = id;
   data.handle = LoadSoundFromWave(wav);
+  data.pitch_range = pitch_range;
+
   state->sounds.at(id) = data;
   #endif
 }
@@ -256,14 +259,26 @@ void load_music_disk([[__maybe_unused__]] const char * filename, [[__maybe_unuse
   #endif
 }
 
-void play_sound(sound_id id) {
+void play_sound(sound_id id, bool random_pitch) {
   ASSERT_NOT_STATE("play_sound()", { return; });
 
   if (id >= SOUND_ID_MAX or id <= SOUND_ID_UNSPECIFIED) {
     IWARN("sound::play_sound()::Sound id is out of bound");
     return;
   }
-  PlaySound(state->sounds.at(id).handle);
+  sound_data& sound = state->sounds.at(id);
+
+  f32 pitch = 1.f;
+  if (random_pitch) {
+    const i32 low = sound.pitch_range.at(0) * 10.f;
+    const i32 high = sound.pitch_range.at(1) * 10.f;
+  
+    pitch = get_random(low, high) * .1f;
+  }
+
+  SetSoundPitch(sound.handle, pitch);
+
+  PlaySound(sound.handle);
 }
 
 void play_music(music_id id) {
@@ -443,7 +458,7 @@ void update_playlist(playlist_control_system_state * playlist_ptr) {
   }
 }
 
-void play_soundgroup_sound(soundgroup * group) {
+void play_soundgroup_sound(soundgroup * group, bool random_pitch) {
   ASSERT_NOT_STATE("play_soundgroup_sound()", { return; });
   if (not group and group == nullptr) {
     return;
@@ -472,7 +487,8 @@ void play_soundgroup_sound(soundgroup * group) {
   if (group->lock_after_play) {
     group->locked = true;
   }
-  play_sound(group->queue.at(group->current_index));
+  
+  play_sound(group->queue.at(group->current_index), random_pitch);
 }
 
 bool sound_system_on_event(i32 code, event_context context) {
@@ -481,12 +497,12 @@ bool sound_system_on_event(i32 code, event_context context) {
   switch (code)
   {
     case EVENT_CODE_PLAY_SOUND:{
-      play_sound(static_cast<sound_id>(context.data.i32[0]));
+      play_sound(static_cast<sound_id>(context.data.i32[0]), static_cast<bool>(context.data.i32[1]));
       return true;
     }
     case EVENT_CODE_PLAY_SOUND_GROUP:{
       soundgroup * group = __builtin_addressof(state->sound_groups.at(static_cast<soundgroup_id>(context.data.i32[0])));
-      play_soundgroup_sound(group);
+      play_soundgroup_sound(group, static_cast<bool>(context.data.i32[1]));
       return true;
     }
     case EVENT_CODE_PLAY_MUSIC:{

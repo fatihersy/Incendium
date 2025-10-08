@@ -3,9 +3,9 @@
 #include <loc_types.h>
 
 #include "core/event.h"
-#include "core/fmath.h"
 #include "core/fmemory.h"
 #include "core/logger.h"
+#include "core/fmath.h"
 
 #include "game/spritesheet.h"
 
@@ -21,6 +21,17 @@ typedef struct ability_codex_state {
   }
 } ability_codex_state;
 static ability_codex_state * state = nullptr;
+
+#define CODEX_BOOK_DIM_SOURCE 32.f
+#define CODEX_BOOK_DIM_DEST 32.f
+
+#define PROJECTILE_COOLDOWN 0.65f
+
+#define PROJ_F32_ACCUMULATOR_F32 mm_ex.f32[0]
+#define PROJ_F32_COOLDOWN_F32 mm_ex.f32[1]
+
+#define PROJ_TARGET_X vec_ex.f32[0]
+#define PROJ_TARGET_Y vec_ex.f32[1]
 
 bool ability_codex_initialize(const camera_metrics *const _camera_metrics, const app_settings *const _settings, const ingame_info *const _ingame_info) {
   if (state and state != nullptr) {
@@ -69,8 +80,8 @@ ability get_ability_codex() {
   std::array<ability_upgradables, ABILITY_UPG_MAX> codex_upgr = {ABILITY_UPG_DAMAGE, ABILITY_UPG_AMOUNT, ABILITY_UPG_UNDEFINED, ABILITY_UPG_UNDEFINED, ABILITY_UPG_UNDEFINED};
   return ability(static_cast<i32>(LOC_TEXT_PLAYER_ABILITY_NAME_ARCANE_CODEX), ABILITY_ID_CODEX,
     codex_upgr,
-    0.f, 0.8f, Vector2 {.8f, .8f}, 1, 3, 0.f, 11,
-    Vector2{30.f, 30.f}, Rectangle{2560, 992, 32, 32}
+    0.f, 0.2f, Vector2 {.8f, .8f}, 1, 3, 0.f, 11,
+    Vector2{30.f, 30.f}, Rectangle{1920, 608, 32, 32}
   );
 }
 ability get_ability_codex_next_level(ability abl) {
@@ -97,51 +108,40 @@ void update_ability_codex(ability *const abl) {
   if (not state->in_ingame_info->nearest_spawn or state->in_ingame_info->nearest_spawn == nullptr ) {
     return;
   }
-  i32 frame_counter_max = 1 * TARGET_FPS;
   const player_state *const p_player = reinterpret_cast<player_state*>(abl->p_owner);
 
   Rectangle book_position = Rectangle { 
     p_player->collision.x - p_player->collision.width * .2f, 
     p_player->collision.y - p_player->collision.height * .2f, 
-    32.f, 32.f 
+    CODEX_BOOK_DIM_DEST, CODEX_BOOK_DIM_DEST 
   };
   abl->position.x = book_position.x;
   abl->position.y = book_position.y;
 
   for (size_t itr_000 = 0u; itr_000 < static_cast<size_t>(abl->proj_count); itr_000++) {
     projectile& prj = abl->projectiles.at(itr_000);
+    spritesheet& sheet = prj.animations.at(prj.active_sprite);
     if (not prj.is_active) { continue; }
-    prj.is_active = true;
 
-    u16& frame_counter = prj.mm_ex.u16[0];
-    if ((frame_counter >= frame_counter_max or frame_counter < 0) and not state->in_ingame_info->nearest_spawn->is_dead ) {
-      prj.position = abl->position;
-      
-      prj.vec_ex.f32[0]  = state->in_ingame_info->nearest_spawn->collision.x + state->in_ingame_info->nearest_spawn->collision.width  * .5f;
-      prj.vec_ex.f32[1]  = state->in_ingame_info->nearest_spawn->collision.y + state->in_ingame_info->nearest_spawn->collision.height * .5f;
-      prj.vec_ex.f32[2]  = prj.position.x;
-      prj.vec_ex.f32[3]  = prj.position.y;
-
-      prj.mm_ex.u16[0] = 0;
-      prj.mm_ex.u16[1] = state->in_ingame_info->nearest_spawn->character_id;
+    if (not sheet.is_played) {
+      update_sprite(__builtin_addressof(sheet));
+      continue;
     }
-    else {
-      Vector2 distance = vec2_subtract(pVECTOR2(prj.vec_ex.f32), Vector2 {prj.vec_ex.f32[2], prj.vec_ex.f32[3]});
-      prj.position.x = EaseQuadIn(frame_counter, prj.vec_ex.f32[2],  distance.x, frame_counter_max);
-      prj.position.y = EaseQuadIn(frame_counter, prj.vec_ex.f32[3],  distance.y, frame_counter_max);
-
-      prj.collision.x = prj.position.x;
-      prj.collision.y = prj.position.y;
-
-      if (frame_counter < frame_counter_max) frame_counter++;
-      frame_counter = FCLAMP(frame_counter, 0, frame_counter_max);
+    if (prj.PROJ_F32_ACCUMULATOR_F32 > 0.f) {
+      prj.PROJ_F32_ACCUMULATOR_F32 -= GetFrameTime();
+      continue;
     }
+    reset_sprite(__builtin_addressof(sheet), true);
+    prj.PROJ_F32_ACCUMULATOR_F32 = prj.PROJ_F32_COOLDOWN_F32;
+
+    prj.PROJ_TARGET_X = state->in_ingame_info->nearest_spawn->collision.x + state->in_ingame_info->nearest_spawn->collision.width  * .5f;
+    prj.PROJ_TARGET_Y = state->in_ingame_info->nearest_spawn->collision.y + state->in_ingame_info->nearest_spawn->collision.height * .5f;
+
     event_fire(EVENT_CODE_DAMAGE_ANY_SPAWN_IF_COLLIDE, event_context(
-      static_cast<i16>(prj.collision.x), static_cast<i16>(prj.collision.y), static_cast<i16>(prj.collision.width), static_cast<i16>(prj.collision.height),
+      static_cast<i16>(prj.PROJ_TARGET_X), static_cast<i16>(prj.PROJ_TARGET_Y), static_cast<i16>(prj.collision.width), static_cast<i16>(prj.collision.height),
       static_cast<i16>(prj.damage + p_player->stats.at(CHARACTER_STATS_DAMAGE).buffer.i32[3]),
       static_cast<i16>(COLLISION_TYPE_RECTANGLE_RECTANGLE)
     ));
-    update_sprite(__builtin_addressof(prj.animations.at(0)));
   }
 }
 
@@ -160,22 +160,41 @@ void render_ability_codex(ability *const abl) {
   }
   for (size_t itr_000 = 0u; itr_000 < abl->projectiles.size(); ++itr_000) {
     projectile& prj = abl->projectiles.at(itr_000);
-    if (not prj.is_active) { continue; }
-    Vector2 dim = Vector2 {
-      prj.animations.at(prj.active_sprite).current_frame_rect.width  * abl->proj_sprite_scale,
-      prj.animations.at(prj.active_sprite).current_frame_rect.height * abl->proj_sprite_scale
+    spritesheet& sheet = prj.animations.at(prj.active_sprite);
+    if (not prj.is_active or sheet.is_played) { continue; }
+    Vector2 dim = Vector2 {sheet.current_frame_rect.width * abl->proj_sprite_scale, sheet.current_frame_rect.height * abl->proj_sprite_scale};
+
+    const i32 col = sheet.current_frame % sheet.col_total;
+    const i32 row = sheet.current_frame / sheet.col_total;
+
+    const Vector2 origin = Vector2 {dim.x * .5f, 0.f};
+    const Vector2 target = Vector2 {prj.PROJ_TARGET_X, prj.PROJ_TARGET_Y};
+    const f32 rotation = get_movement_rotation(abl->position, target) + 270.f;
+    const f32 distance = vec2_distance(abl->position, target);
+
+    const Rectangle source = Rectangle {
+      sheet.offset.x + sheet.current_frame_rect.width * col, 
+      sheet.offset.y + sheet.current_frame_rect.height * row, 
+      sheet.current_frame_rect.width, 
+      sheet.current_frame_rect.height
     };
-    prj.animations.at(prj.active_sprite).origin.x = dim.x / 2.f;
-    prj.animations.at(prj.active_sprite).origin.y = dim.y / 2.f;
-    play_sprite_on_site(__builtin_addressof(prj.animations.at(prj.active_sprite)), WHITE, Rectangle { prj.position.x, prj.position.y, dim.x, dim.y });
+    const Rectangle dest = Rectangle {
+      abl->position.x + CODEX_BOOK_DIM_DEST * .5f, 
+      abl->position.y + CODEX_BOOK_DIM_DEST * .5f, 
+      dim.x, 
+      distance
+    };
+
+    play_sprite_on_site_ex(__builtin_addressof(sheet), source, dest, origin, rotation, WHITE);
+    event_fire(EVENT_CODE_PLAY_SOUND_GROUP, event_context(SOUNDGROUP_ID_ZAP, static_cast<i32>(true)));
   }
   const Texture2D *const icon_tex = ss_get_texture_by_enum(TEX_ID_ASSET_ATLAS);
-  Rectangle codex_book_dest = Rectangle { abl->position.x, abl->position.y, 32.f, 32.f };
+  Rectangle codex_book_dest = Rectangle { abl->position.x, abl->position.y, CODEX_BOOK_DIM_DEST, CODEX_BOOK_DIM_DEST };
 
   DrawTexturePro( (*icon_tex), abl->icon_src, codex_book_dest, VECTOR2(0.f, 0.f), 0.f, WHITE);
 }
 
-void refresh_ability_codex(ability *const abl) { 
+void refresh_ability_codex(ability *const abl) {
   if (not abl or abl == nullptr) {
     IWARN("ability::refresh_ability_codex()::Ability is null");
     return;
@@ -194,11 +213,13 @@ void refresh_ability_codex(ability *const abl) {
   abl->projectiles.clear();
   abl->animation_ids.clear();
   abl->projectiles.reserve(abl->proj_count);
-  abl->animation_ids.push_back(SHEET_ID_FLAME_ENERGY_ANIMATION);
+  abl->animation_ids.push_back(SHEET_ID_ABILITY_CODEX);
 
   for (size_t itr_000 = 0u; itr_000 < static_cast<size_t>(abl->proj_count); ++itr_000) {
     projectile prj = projectile();
     prj.collision = Rectangle {0.f, 0.f, abl->proj_dim.x * abl->proj_collision_scale.x, abl->proj_dim.y * abl->proj_collision_scale.y};
+    prj.PROJ_F32_COOLDOWN_F32 = PROJECTILE_COOLDOWN;
+    prj.PROJ_F32_ACCUMULATOR_F32 = prj.PROJ_F32_COOLDOWN_F32;
     prj.damage = abl->base_damage;
     prj.is_active = true;
     prj.duration = abl->proj_duration;
@@ -209,7 +230,7 @@ void refresh_ability_codex(ability *const abl) {
       }
       spritesheet spr = spritesheet();
       spr.sheet_id = abl->animation_ids.at(itr_111);
-      set_sprite(__builtin_addressof(spr), true, false);
+      set_sprite(__builtin_addressof(spr), false, false);
       spr.origin = VECTOR2( spr.coord.width * .5f,  spr.coord.height * .5f );
 
       prj.animations.push_back(spr);
@@ -218,4 +239,3 @@ void refresh_ability_codex(ability *const abl) {
     abl->projectiles.push_back(prj);
   }
 }
-

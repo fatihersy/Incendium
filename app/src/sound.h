@@ -50,6 +50,7 @@ typedef struct sound_data {
   Sound handle;
   Wave wav;
   const file_buffer * file;
+  std::array<f32, 2> pitch_range;
 
   bool play_once;
   bool played;
@@ -58,6 +59,7 @@ typedef struct sound_data {
     this->handle = ZERO_SOUND;
     this->wav = ZERO_WAV;
     this->file = nullptr;
+	this->pitch_range = std::array<f32, 2>({0.f, 0.f});
     this->play_once = false;
     this->played = false;
   }
@@ -123,7 +125,7 @@ bool sound_system_initialize(void);
 
 void update_sound_system(void);
 
-void play_sound(sound_id id);
+void play_sound(sound_id id, bool random_pitch = false);
 void play_music(music_id id);
 void reset_music(music_id id);
 void reset_sound(sound_id id);

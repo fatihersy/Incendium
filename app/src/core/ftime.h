@@ -10,6 +10,6 @@ bool time_system_initialize(void);
 
 void update_time(void);
 
-i32 get_random(i32 min, i32 max);
+[[__nodiscard__]] i32 get_random(i32 min, i32 max);
 
 #endif

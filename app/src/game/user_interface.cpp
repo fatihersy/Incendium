@@ -29,7 +29,7 @@ typedef struct user_interface_system_state {
   panel default_background_panel;
   spritesheet ss_to_draw_bg;
   Vector2 mouse_pos_screen;
-  std::vector<localization_package> localization_info;
+  std::array<localization_package, LANGUAGE_INDEX_MAX> localization_info;
   std::vector<ui_error_display_control_system> errors_on_play;
   Vector2 error_text_start_position; // TODO: Put the error location and timer variables inside the error display system
   f32 error_text_end_height;
@@ -52,7 +52,7 @@ typedef struct user_interface_system_state {
     this->default_background_panel = panel();
     this->ss_to_draw_bg = spritesheet();
     this->mouse_pos_screen = ZEROVEC2;
-    this->localization_info = std::vector<localization_package>();
+    this->localization_info.fill(localization_package());
     this->errors_on_play = std::vector<ui_error_display_control_system>();
     this->error_text_start_position = ZEROVEC2;
     this->error_text_end_height = 0.f;
@@ -142,14 +142,17 @@ void draw_text_ex(const char *text, Vector2 position, Font font, f32 _fontsize, 
 void DrawTextBoxed(Font font, const char *text, Rectangle rec, float fontSize, float spacing, bool wordWrap, Color tint);
 const char* wrap_text(const char* text, Font font, i32 font_size, Rectangle bounds, bool center_x);
 Font load_font(pak_file_id pak_id, i32 asset_id, i32 font_size, i32* _codepoints, i32 _codepoint_count);
-localization_package* load_localization(std::string language_name, i32 loc_index, std::string _codepoints, i32 font_size);
-localization_package* ui_get_localization_by_name(std::string language_name);
-localization_package* ui_get_localization_by_index(i32 _language_index);
+localization_package* load_localization(std::string language_name, i32 lang_index, std::string _codepoints, i32 font_size);
+localization_package* ui_get_localization_by_name(const char * language_name);
+localization_package* ui_get_localization_by_index(language_index index);
 
 bool ui_sound_slider_on_left_button_trigger(void);
 bool ui_sound_slider_on_right_button_trigger(void);
 
 constexpr Font font_type_to_font(font_type in_font_type) {
+  if (not state->display_language or state->display_language == nullptr) {
+    return GetFontDefault();
+  }
   switch (in_font_type) {
     case FONT_TYPE_LIGHT: {
       return UI_LIGHT_FONT;
@@ -168,12 +171,18 @@ constexpr Font font_type_to_font(font_type in_font_type) {
   return GetFontDefault();
 }
 constexpr void draw_text_simple(const char* text, Vector2 pos, font_type in_font_type, i32 fontsize, Color color) {
+  if (not text or text == nullptr) {
+    return;
+  }
   Font font = font_type_to_font(in_font_type);
   DrawTextEx(font, text, pos, font.baseSize * fontsize, UI_FONT_SPACING, color);
 }
 constexpr void draw_text(const char* text, Vector2 pos, font_type in_font_type, i32 fontsize, Color color, bool center_horizontal, bool center_vertical, bool use_grid_align = false, 
   Vector2 grid_coord = ZEROVEC2
 ) {
+  if (not text or text == nullptr) {
+    return;
+  }
   Font font = font_type_to_font(in_font_type);
   Vector2 text_measure = MeasureTextEx(font, text, font.baseSize * fontsize, UI_FONT_SPACING);
   Vector2 text_position = pos;
@@ -194,6 +203,9 @@ inline void draw_text_outline(const char* text,
   bool center_horizontal, bool center_vertical, 
   bool use_grid_align, Vector2 grid_coord
 ) {
+  if (not text or text == nullptr) {
+    return;
+  }
   Vector2 text_measure = MeasureTextEx(font, text, fontsize, UI_FONT_SPACING);
   Vector2 text_position = pos;
   if (use_grid_align) {
@@ -228,31 +240,41 @@ bool user_interface_system_initialize(void) {
   state->error_text_duration_in_and_out = ERROR_TEXT_DURATION_IN_AND_OUT;
   state->error_text_duration_stay_on_screen = ERROR_TEXT_DURATION_STAY_ON_SCREEN;
 
-  localized_languages langs = loc_parser_get_loc_langs();
-  for (size_t iter = 0u; iter < langs.lang.size(); ++iter) {
-    loc_data& data = langs.lang.at(iter);
-    localization_package* _loc_data = load_localization(data.language_name, data.index, data.codepoints, 34);
+  const std::array<loc_data, LANGUAGE_INDEX_MAX> *const langs = loc_parser_get_loc_langs();
+  if (not langs or langs == nullptr) {
+    IERROR("user_interface::user_interface_system_initialize()::Localization parse failed");
+    return false;
+  }
+  for (size_t itr_000 = 0u; itr_000 < langs->size(); ++itr_000) {
+    const loc_data *const data = __builtin_addressof(langs->at(itr_000));
+    if (data->index <= LANGUAGE_INDEX_UNDEFINED or data->index >= LANGUAGE_INDEX_MAX) {
+      continue;
+    }
+    const localization_package *const _loc_data = load_localization(data->language_name, data->index, data->codepoints, 34);
     if (not _loc_data or _loc_data == nullptr) {
-      IERROR("user_interface::user_interface_system_initialize()::Loading localization:%s is failed", _loc_data->language_name.c_str());
+      IERROR("user_interface::user_interface_system_initialize()::Loading localization:%s is failed", data->language_name.c_str());
       continue;
     }
   }
-  localization_package* settings_loc_lang = ui_get_localization_by_name(state->in_app_settings->language);
+  const localization_package* settings_loc_lang = ui_get_localization_by_name(state->in_app_settings->language.c_str());
   if (not settings_loc_lang or settings_loc_lang == nullptr) {
-    IERROR("user_interface::user_interface_system_initialize()::Settings language:%s cannot found", state->in_app_settings->language.c_str());
-    if(not loc_parser_set_active_language_by_index(0)) {
-      IFATAL("user_interface::user_interface_system_initialize()::No language found");
-      return false;
-    }
-    settings_loc_lang = ui_get_localization_by_index(0);
+    IERROR("user_interface::user_interface_system_initialize()::User interface state is corrupted or file parsing failed");
+    return false;
   }
-  if(loc_parser_set_active_language_by_index(settings_loc_lang->language_index)) {
-    loc_data * _loc_data = loc_parser_get_active_language();
-    if (_loc_data == nullptr) {
-      IERROR("user_interface::user_interface_system_initialize()::Cannot get active language");
+  if (settings_loc_lang->index <= LANGUAGE_INDEX_UNDEFINED or settings_loc_lang->index >= LANGUAGE_INDEX_MAX) {
+    IWARN("user_interface::user_interface_system_initialize()::The language requested by config (%s) cannot loaded. Setting to builtin", state->in_app_settings->language.c_str());
+    if(not loc_parser_set_active_language_builtin()) {
       return false;
     }
-    state->display_language = ui_get_localization_by_name(_loc_data->language_name);
+    settings_loc_lang = ui_get_localization_by_index(LANGUAGE_INDEX_BUILTIN);
+  }
+  if(loc_parser_set_active_language_by_index(settings_loc_lang->index)) {
+    loc_data * _loc_data = loc_parser_get_active_language();
+    if (not _loc_data or _loc_data == nullptr) {
+      IERROR("user_interface::user_interface_system_initialize()::Language init failed");
+      return false;
+    }
+    state->display_language = ui_get_localization_by_index(_loc_data->index);
   }
   if(not initialize_shader_system()) {
     IERROR("user_interface::user_interface_system_initialize()::Shader system failed to initialize!");
@@ -383,17 +405,26 @@ bool user_interface_system_initialize(void) {
 
     // SLIDER OPTIONS
   {
-    localized_languages langs = loc_parser_get_loc_langs();
-    for (size_t itr_000 = 0u; itr_000 < langs.lang.size(); itr_000++) {
-      gui_slider_add_option(SDR_ID_SETTINGS_LANGUAGE, data_pack(DATA_TYPE_I32, data128(static_cast<i32>(itr_000), 1), 1), LOC_TEXT_SETTINGS_BUTTON_ENGLISH+itr_000, "");
-      SDR_ASSERT_SET_CURR_VAL_TO_LAST_ADDED(static_cast<size_t>(state->display_language->language_index) == itr_000, SDR_ID_SETTINGS_LANGUAGE)
+    if (ui_get_localization_by_name(loc_parser_lang_index_to_name(LANGUAGE_INDEX_ENGLISH))) {
+      gui_slider_add_option(SDR_ID_SETTINGS_LANGUAGE, data_pack(DATA_TYPE_I32, data128(LANGUAGE_INDEX_ENGLISH), 1), LOC_TEXT_SETTINGS_BUTTON_ENGLISH, "");
+      SDR_ASSERT_SET_CURR_VAL_TO_LAST_ADDED(state->display_language->index == LANGUAGE_INDEX_ENGLISH, SDR_ID_SETTINGS_LANGUAGE);
     }
 
-    gui_slider_add_option(SDR_ID_SETTINGS_WIN_MODE_SLIDER, data_pack(DATA_TYPE_I32, data128((i32)0), 1                            ),  LOC_TEXT_SETTINGS_SDR_WINDOW_MODE_WINDOWED,   "");
+    if (ui_get_localization_by_name(loc_parser_lang_index_to_name(LANGUAGE_INDEX_TURKISH))) {
+      gui_slider_add_option(SDR_ID_SETTINGS_LANGUAGE, data_pack(DATA_TYPE_I32, data128(LANGUAGE_INDEX_TURKISH), 1), LOC_TEXT_SETTINGS_BUTTON_TURKISH, "");
+      SDR_ASSERT_SET_CURR_VAL_TO_LAST_ADDED(state->display_language->index == LANGUAGE_INDEX_TURKISH, SDR_ID_SETTINGS_LANGUAGE);
+    }
+
+    if (state->sliders.at(SDR_ID_SETTINGS_LANGUAGE).options.empty()) {
+      gui_slider_add_option(SDR_ID_SETTINGS_LANGUAGE, data_pack(DATA_TYPE_I32, data128(LANGUAGE_INDEX_BUILTIN), 1), LOC_TEXT_SETTINGS_BUTTON_ENGLISH, "");
+      SDR_ASSERT_SET_CURR_VAL_TO_LAST_ADDED(state->display_language->index == LANGUAGE_INDEX_BUILTIN, SDR_ID_SETTINGS_LANGUAGE);
+    }
+
+    gui_slider_add_option(SDR_ID_SETTINGS_WIN_MODE_SLIDER, data_pack(DATA_TYPE_I32, data128(0), 1), LOC_TEXT_SETTINGS_SDR_WINDOW_MODE_WINDOWED,   "");
     SDR_ASSERT_SET_CURR_VAL_TO_LAST_ADDED(state->in_app_settings->window_state == 0, SDR_ID_SETTINGS_WIN_MODE_SLIDER)
-    gui_slider_add_option(SDR_ID_SETTINGS_WIN_MODE_SLIDER, data_pack(DATA_TYPE_I32, data128((i32)FLAG_BORDERLESS_WINDOWED_MODE), 1),  LOC_TEXT_SETTINGS_SDR_WINDOW_MODE_BORDERLESS, "");
+    gui_slider_add_option(SDR_ID_SETTINGS_WIN_MODE_SLIDER, data_pack(DATA_TYPE_I32, data128(FLAG_BORDERLESS_WINDOWED_MODE), 1), LOC_TEXT_SETTINGS_SDR_WINDOW_MODE_BORDERLESS, "");
     SDR_ASSERT_SET_CURR_VAL_TO_LAST_ADDED(state->in_app_settings->window_state == FLAG_BORDERLESS_WINDOWED_MODE, SDR_ID_SETTINGS_WIN_MODE_SLIDER)
-    gui_slider_add_option(SDR_ID_SETTINGS_WIN_MODE_SLIDER, data_pack(DATA_TYPE_I32, data128((i32)FLAG_FULLSCREEN_MODE), 1         ),  LOC_TEXT_SETTINGS_SDR_WINDOW_MODE_FULLSCREEN, "");
+    gui_slider_add_option(SDR_ID_SETTINGS_WIN_MODE_SLIDER, data_pack(DATA_TYPE_I32, data128(FLAG_FULLSCREEN_MODE), 1), LOC_TEXT_SETTINGS_SDR_WINDOW_MODE_FULLSCREEN, "");
     SDR_ASSERT_SET_CURR_VAL_TO_LAST_ADDED(state->in_app_settings->window_state == FLAG_FULLSCREEN_MODE, SDR_ID_SETTINGS_WIN_MODE_SLIDER)
   }
   // SLIDER OPTIONS
@@ -608,6 +639,12 @@ void render_display_errors(void) {
   }
 }
 bool gui_menu_button(const char* text, button_id _id, Vector2 grid, Vector2 grid_location, bool play_on_click_sound) {
+  if (not text or text == nullptr) {
+    return false;
+  }
+  if (not state->display_language or state->display_language == nullptr) {
+    return false;
+  }
   grid_location.x -= state->buttons.at(_id).btn_type.dest_frame_dim.x * .5f;
   grid_location.y -= state->buttons.at(_id).btn_type.dest_frame_dim.y * .5f;
   return gui_button(text, _id, MENU_BUTTON_FONT, MENU_BUTTON_FONT_SIZE_SCALE, position_element_by_grid(grid_location, grid, Vector2 {
@@ -615,6 +652,12 @@ bool gui_menu_button(const char* text, button_id _id, Vector2 grid, Vector2 grid
   }), play_on_click_sound);
 }
 bool gui_mini_button(const char* text, button_id _id, Vector2 grid, bool play_on_click_sound) {
+  if (not text or text == nullptr) {
+    return false;
+  }
+  if (not state->display_language or state->display_language == nullptr) {
+    return false;
+  }
   return gui_button(text, _id, 
     MINI_BUTTON_FONT, MINI_BUTTON_FONT_SIZE_SCALE, 
     position_element_by_grid(UI_BASE_RENDER_DIV2, 
@@ -627,6 +670,9 @@ bool gui_slider_button(button_id _id, Vector2 pos) {
   return gui_button("", _id, Font {}, 0, pos, true);
 }
 bool gui_button(const char* text, button_id _id, Font font, i32 font_size_scale, Vector2 pos, bool play_on_click_sound) {
+  if (not text or text == nullptr) {
+    return false;
+  }
   if (_id >= BTN_ID_MAX or _id <= BTN_ID_UNDEFINED) {
     IWARN("user_interface::gui_button()::Recieved button type out of bound");
     return false;
@@ -659,7 +705,7 @@ bool gui_button(const char* text, button_id _id, Font font, i32 font_size_scale,
     if (not TextIsEqual(text, "")) {
       draw_text_ex(text, text_pos, font, font_size_scale, _btn->btn_type.forground_color_btn_state_pressed, false, false, false, VECTOR2(0.f, 0.f));
     }
-    if (play_on_click_sound and _btn->prev_state == BTN_STATE_HOVER) event_fire(EVENT_CODE_PLAY_SOUND_GROUP, event_context(static_cast<i32>(SOUNDGROUP_ID_BUTTON_ON_CLICK)));
+    if (play_on_click_sound and _btn->prev_state == BTN_STATE_HOVER) event_fire(EVENT_CODE_PLAY_SOUND_GROUP, event_context(SOUNDGROUP_ID_BUTTON_ON_CLICK, static_cast<i32>(true)));
   }
   if (_btn->current_state == BTN_STATE_HOVER) {
     draw_sprite_on_site_by_id(_btn->btn_type.ss_type, WHITE, VECTOR2(_btn->dest.x,_btn->dest.y), draw_sprite_scale, 1);
@@ -678,6 +724,10 @@ bool gui_button(const char* text, button_id _id, Font font, i32 font_size_scale,
   return _btn->current_state == _btn->signal_state;
 }
 bool gui_draw_local_button(const char* text, local_button* const btn, const font_type _font_type, const i32 font_size_scale, const Vector2 pos, text_alignment align_to, const bool play_on_click_sound) {
+  if (not text or text == nullptr or not btn or btn == nullptr) {
+    return false;
+  }
+
   if (!btn->is_active) {
     return false;
   } 
@@ -687,36 +737,33 @@ bool gui_draw_local_button(const char* text, local_button* const btn, const font
 
   Vector2 text_measure = ZEROVEC2;
   Vector2 text_pos = ZEROVEC2;
-  const Font* const font = ui_get_font(_font_type);
-  if (font == nullptr) {
-    return false;
-  }
-
+  Font _font = ui_get_font(_font_type);
   if (!TextIsEqual(text, "")) {
-    text_measure = MeasureTextEx( (*font), text, font->baseSize * font_size_scale, UI_FONT_SPACING);
+    text_measure = MeasureTextEx(_font, text, _font.baseSize * font_size_scale, UI_FONT_SPACING);
     text_pos = ui_align_text(btn->dest, text_measure, align_to);
   }
+
 
   Vector2 draw_sprite_scale = Vector2 {btn->btn_type.scale, btn->btn_type.scale};
 
   if (btn->current_state == BTN_STATE_PRESSED) {
     draw_sprite_on_site_by_id(btn->btn_type.ss_type, WHITE, VECTOR2(btn->dest.x, btn->dest.y), draw_sprite_scale, 1);
     if (!TextIsEqual(text, "")) {
-      draw_text_ex(text, text_pos, (*font), font_size_scale, btn->btn_type.forground_color_btn_state_pressed, false, false, false, VECTOR2(0.f, 0.f));
+      draw_text_ex(text, text_pos, _font, font_size_scale, btn->btn_type.forground_color_btn_state_pressed, false, false, false, VECTOR2(0.f, 0.f));
     }
-    if (play_on_click_sound and btn->prev_state == BTN_STATE_HOVER) event_fire(EVENT_CODE_PLAY_SOUND_GROUP, event_context(static_cast<i32>(SOUNDGROUP_ID_BUTTON_ON_CLICK)));
+    if (play_on_click_sound and btn->prev_state == BTN_STATE_HOVER) event_fire(EVENT_CODE_PLAY_SOUND_GROUP, event_context(SOUNDGROUP_ID_BUTTON_ON_CLICK, static_cast<i32>(true)));
   } 
   if (btn->current_state == BTN_STATE_HOVER) {
     draw_sprite_on_site_by_id(btn->btn_type.ss_type, WHITE, VECTOR2(btn->dest.x, btn->dest.y), draw_sprite_scale, 1);
     if (!TextIsEqual(text, "")) {
-      draw_text_ex(text, text_pos, (*font), font_size_scale, btn->btn_type.forground_color_btn_state_hover, false, false, false, VECTOR2(0.f, 0.f));
+      draw_text_ex(text, text_pos, _font, font_size_scale, btn->btn_type.forground_color_btn_state_hover, false, false, false, VECTOR2(0.f, 0.f));
     }
     event_fire(EVENT_CODE_RESET_SOUND_GROUP, event_context(static_cast<i32>(SOUNDGROUP_ID_BUTTON_ON_CLICK)));
   }
   if (btn->current_state == BTN_STATE_UP) {
     draw_sprite_on_site_by_id(btn->btn_type.ss_type, WHITE, VECTOR2(btn->dest.x, btn->dest.y), draw_sprite_scale, 0);
     if (btn->current_state != BTN_STATE_HOVER) {
-      draw_text_ex(text, text_pos, (*font), font_size_scale, btn->btn_type.forground_color_btn_state_up, false, false, false, VECTOR2(0.f, 0.f));
+      draw_text_ex(text, text_pos, _font, font_size_scale, btn->btn_type.forground_color_btn_state_up, false, false, false, VECTOR2(0.f, 0.f));
     }
   }
   
@@ -1030,17 +1077,26 @@ bool gui_panel_active(panel *const pan, Rectangle dest, bool _should_center) {
   return pan->current_state == pan->signal_state;
 }
 void gui_label_box(const char* text, font_type type, i32 font_size, Rectangle dest, Color tint, text_alignment alignment) {
+  if (not text or text == nullptr) {
+    return;
+  }
   Font font = font_type_to_font(type);
   Vector2 text_measure = MeasureTextEx(font, text, font.baseSize * font_size, UI_FONT_SPACING);
   Vector2 position = ui_align_text(dest, text_measure, alignment);
   draw_text_simple(text, position, type, font_size, tint);
 }
 void gui_label(const char* text, font_type type, i32 font_size, Vector2 position, Color tint, bool _center_h, bool _center_v) {
+  if (not text or text == nullptr) {
+    return;
+  }
   draw_text(text, position, type, font_size, tint, _center_h, _center_v, false, VECTOR2(0.f, 0.f));
 }
 void gui_label_shader(const char* text, shader_id sdr_id, font_type type, i32 font_size, Vector2 position, Color tint, bool _center_h, bool _center_v) {
   if (not text or text == nullptr) {
-    IWARN("user_interface::gui_label_shader()::Text is invalid");
+    return;
+  }
+  if (not state->display_language or state->display_language == nullptr) {
+    draw_text_shader(text, sdr_id, position, GetFontDefault(), font_size * GetFontDefault().baseSize, tint, _center_h, _center_v, false, VECTOR2(0.f, 0.f));
     return;
   }
   switch (type) {
@@ -1062,12 +1118,15 @@ void gui_label_shader(const char* text, shader_id sdr_id, font_type type, i32 fo
 }
 void gui_label_wrap(const char* text, font_type type, i32 font_size, Rectangle position, Color tint, bool _should_center) {
   if (not text or text == nullptr) {
-    IWARN("user_interface::gui_label_wrap()::Text is invalid");
     return;
   }
   if (_should_center) {
     position.x -= (position.width / 2.f);
     position.y -= (position.height / 2.f);
+  }
+  if (not state->display_language or state->display_language == nullptr) {
+    DrawTextBoxed(GetFontDefault(), text, position, font_size * GetFontDefault().baseSize, UI_FONT_SPACING, true, tint);
+    return;
   }
   switch (type) {
     case FONT_TYPE_LIGHT: {
@@ -1087,11 +1146,13 @@ void gui_label_wrap(const char* text, font_type type, i32 font_size, Rectangle p
   }
 }
 void gui_label_grid(const char* text, font_type type, i32 font_size, Vector2 position, Color tint, bool _center_h, bool _center_v, Vector2 grid_coord) {
+  if (not text or text == nullptr) {
+    return;
+  }
   draw_text(text, position, type, font_size, tint, _center_h, _center_v, true, grid_coord);
 }
 void gui_label_wrap_grid(const char* text, font_type type, i32 font_size, Rectangle position, Color tint, bool _should_center, Vector2 grid_pos) {
   if (not text or text == nullptr) {
-    IWARN("user_interface::gui_label_wrap_grid()::Text is invalid");
     return;
   }
   Vector2 _position = position_element_by_grid(grid_pos, VECTOR2(position.x, position.y), SCREEN_OFFSET);
@@ -1101,6 +1162,10 @@ void gui_label_wrap_grid(const char* text, font_type type, i32 font_size, Rectan
   if (_should_center) {
     position.x -= (position.width / 2.f);
     position.y -= (position.height / 2.f);
+  }
+  if (not state->display_language or state->display_language == nullptr) {
+    DrawTextBoxed(GetFontDefault(), text, position, font_size * GetFontDefault().baseSize, UI_FONT_SPACING, true, tint);
+    return;
   }
   switch (type) {
     case FONT_TYPE_LIGHT: {
@@ -1118,7 +1183,6 @@ void gui_label_wrap_grid(const char* text, font_type type, i32 font_size, Rectan
     default: IWARN("user_interface::gui_label_wrap_grid()::Unsupported font type");
     break;
   }
-
 }
 void gui_draw_settings_screen(void) { // TODO: Return to settings later
   gui_draw_default_background_panel();
@@ -1146,22 +1210,20 @@ void gui_draw_settings_screen(void) { // TODO: Return to settings later
       event_fire(EVENT_CODE_TOGGLE_WINDOWED, event_context(static_cast<i32>(new_res.x), static_cast<i32>(new_res.y)));
     }
     
-    i32 language_index = SDR_CURR_OPT_VAL(SDR_ID_SETTINGS_LANGUAGE).content.data.i32[0];
-    if (state->display_language->language_index != language_index) {
-      if(loc_parser_set_active_language_by_index(language_index)) {
+    language_index index = static_cast<language_index>(SDR_CURR_OPT_VAL(SDR_ID_SETTINGS_LANGUAGE).content.data.i32[0]);
+    if (state->display_language->index != index) {
+      if (loc_parser_set_active_language_by_index(index)) {
         loc_data* loc = loc_parser_get_active_language();
         if (not loc or loc == nullptr) {
-          IERROR("user_interface::gui_draw_settings_screen()::Cannot get active language");
+          IERROR("user_interface::gui_draw_settings_screen()::Failed to get active language");
         }
         else {
           state->display_language = ui_get_localization_by_index(loc->index);
           set_language(loc->language_name.c_str());
         }
       }
-      else {
-        IERROR("user_interface::gui_draw_settings_screen()::Language changing failed");
-      }
     }
+    
 
     ui_refresh_setting_sliders_to_default();
     save_ini_file();
@@ -1576,8 +1638,13 @@ Vector2 position_element_by_grid(Vector2 grid_location, Vector2 grid, Vector2 gr
 }
 
 void draw_text_shader(const char *text, shader_id sdr_id, Vector2 position, Font font, float fontsize, Color tint, bool center_horizontal, bool center_vertical, bool use_grid_align, Vector2 grid_coord) {
+  if (not text or text == nullptr or not font.glyphs or font.glyphs == nullptr or font.baseSize == 0) {
+    IWARN("user_interface::draw_text_shader()::Text or Font is invalid");
+    return;
+  }
   Vector2 text_measure = MeasureTextEx(font, text, fontsize, UI_FONT_SPACING);
   Vector2 text_position = Vector2 { position.x, position.y };
+
   if (use_grid_align) {
     text_position = position_element_by_grid(text_position, grid_coord, SCREEN_OFFSET);
   }
@@ -1893,18 +1960,21 @@ void gui_draw_atlas_texture_id_scale(atlas_texture_id _id, Vector2 position, f32
   }
   DrawTexturePro( (*tex->atlas_handle), tex->source, Rectangle {position.x, position.y, tex->source.width * scale, tex->source.height * scale}, ZEROVEC2, 0.f, tint);
 }
-const Font* ui_get_font(font_type font) {
+Font ui_get_font(font_type font) {
   if (not state or state == nullptr) {
     IERROR("user_interface::ui_get_font()::State is not valid");
-    return nullptr;
+    return GetFontDefault();
+  }
+  if (not state->display_language or state->display_language == nullptr) {
+    return GetFontDefault();
   }
   switch (font) {
-  case FONT_TYPE_LIGHT:       return __builtin_addressof(UI_LIGHT_FONT);
-  case FONT_TYPE_ITALIC:      return __builtin_addressof(UI_ITALIC_FONT);
-  case FONT_TYPE_ABRACADABRA: return __builtin_addressof(UI_ABRACADABRA_FONT);
+  case FONT_TYPE_LIGHT:       return UI_LIGHT_FONT;
+  case FONT_TYPE_ITALIC:      return UI_ITALIC_FONT;
+  case FONT_TYPE_ABRACADABRA: return UI_ABRACADABRA_FONT;
   default: IWARN("user_interface::ui_get_font()::Unsupported font type");
   }
-  return nullptr;
+  return GetFontDefault();
 }
 const Vector2* ui_get_mouse_pos_screen(void) {
   if (not state or state == nullptr) {
@@ -1940,10 +2010,12 @@ Vector2 ui_measure_text(const char* in_str, font_type in_font_type, f32 in_font_
     IERROR("user_interface::ui_measure_text()::State is not valid");
     return ZEROVEC2;
   }
-  const Font *const _font = ui_get_font(in_font_type);
-  if (not _font or _font == nullptr) return ZEROVEC2;
+  if (not in_str or in_str == nullptr) {
+    return ZEROVEC2;
+  }
+  Font _font = ui_get_font(in_font_type);
   
-  return MeasureTextEx( (*_font), in_str, in_font_size * _font->baseSize, UI_FONT_SPACING);
+  return MeasureTextEx(_font, in_str, in_font_size * _font.baseSize, UI_FONT_SPACING);
 }
 bool ui_set_slider_current_index(slider_id id, i32 index) {
   if (not state or state == nullptr) {
@@ -2023,7 +2095,7 @@ Font load_font(pak_file_id pak_id, i32 asset_id, i32 font_size, i32* _codepoints
   }
   return font;
 }
-localization_package* load_localization(std::string language_name, i32 loc_index, std::string _codepoints, i32 font_size) {
+localization_package* load_localization(std::string language_name, i32 lang_index, std::string _codepoints, i32 font_size) {
   if (not state or state == nullptr) {
     IERROR("user_interface::load_localization()::State is not valid");
     return nullptr;
@@ -2036,8 +2108,7 @@ localization_package* load_localization(std::string language_name, i32 loc_index
     IERROR("user_interface::load_localization()::Failed to load codepoints");
     return nullptr;
   }
-  
-  loc_pack.language_index = loc_index;
+  loc_pack.index = static_cast<language_index>(lang_index);
   loc_pack.language_name = language_name;
   loc_pack.codepoints = codepoints;
   loc_pack.light_font  = load_font(PAK_FILE_ASSET1, PAK_FILE_ASSET1_FONT_MIOSEVKA_LIGHT, font_size, codepoints, codepoint_count);
@@ -2048,33 +2119,34 @@ localization_package* load_localization(std::string language_name, i32 loc_index
   SetTextureFilter(loc_pack.light_font .texture, TEXTURE_FILTER_ANISOTROPIC_16X);
   SetTextureFilter(loc_pack.italic_font.texture, TEXTURE_FILTER_ANISOTROPIC_16X);
 
-  state->localization_info.push_back(loc_pack);
+  state->localization_info.at(lang_index) = loc_pack;
 
-  return __builtin_addressof(state->localization_info.at(state->localization_info.size() - 1u));
+  return __builtin_addressof(state->localization_info.at(lang_index));
 }
-localization_package* ui_get_localization_by_name(std::string language_name) {
+localization_package* ui_get_localization_by_name(const char * language_name) {
   if (not state or state == nullptr) {
     IERROR("user_interface::ui_get_localization_by_name()::State is not valid");
     return nullptr;
   }
+  language_index index = loc_parser_lang_name_to_index(language_name);
   for (size_t iter = 0u; iter < state->localization_info.size(); iter++) {
-    if (state->localization_info.at(iter).language_name == language_name) {
+    if (state->localization_info.at(iter).index == index) {
       return __builtin_addressof(state->localization_info.at(iter));
     }
   }
   return nullptr;
 }
-localization_package* ui_get_localization_by_index(i32 _language_index) {
+localization_package * ui_get_localization_by_index(language_index index) {
   if (not state or state == nullptr) {
     IERROR("user_interface::ui_get_localization_by_index()::State is not valid");
     return nullptr;
   }
-  for (size_t iter = 0u; iter < state->localization_info.size(); iter++) {
-    if (state->localization_info.at(iter).language_index == _language_index) {
-      return __builtin_addressof(state->localization_info.at(iter));
-    }
+  if (index <= LANGUAGE_INDEX_UNDEFINED or index >= LANGUAGE_INDEX_MAX) {
+    IERROR("user_interface::ui_get_localization_by_index()::Index is out of bound");
+    return __builtin_addressof(state->localization_info.at(LANGUAGE_INDEX_BUILTIN));
   }
-  return nullptr;
+
+  return __builtin_addressof(state->localization_info.at(index));
 }
 Vector2 ui_align_text(Rectangle in_dest, Vector2 in_text_measure, text_alignment align_to) {
     switch (align_to) {

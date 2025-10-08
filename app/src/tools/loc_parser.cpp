@@ -49,17 +49,15 @@ typedef enum loc_reading_order {
 } loc_reading_order;
 
 typedef struct loc_parser_system_state {
-  std::vector<loc_data> lang_data;
+  std::array<loc_data, LANGUAGE_INDEX_MAX> lang_data;
   loc_data * active_loc;
   std::string default_language;
   
-  loc_data _buffer;
   std::vector<u8> file_buffer;
   loc_parser_system_state(void) {
     this->default_language = std::string();
-    this->lang_data = std::vector<loc_data>();
+    this->lang_data.fill(loc_data());
     this->active_loc = nullptr;
-    this->_buffer = loc_data();
     this->file_buffer = std::vector<u8>();
   }
 }loc_parser_system_state;
@@ -97,7 +95,7 @@ bool loc_parser_system_initialize(void) {
     state->default_language = std::string
     (R"(
       {
-        display_text = "English",
+        display_text = "Builtin",
         codepoints = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890-><'.:!,/",
         translates = {
           "::NULL",
@@ -195,73 +193,81 @@ bool loc_parser_system_initialize(void) {
   return true;
 }
 
-bool _loc_parser_parse_localization_data_from_file(i32 pak_id, i32 index) {
-  return loc_parser_parse_localization_data_from_file(pak_id, index);
+bool _loc_parser_parse_localization_data_from_file(int pak_id, int file_index, int lang_index) {
+  return loc_parser_parse_localization_data_from_file(pak_id, file_index, static_cast<language_index>(lang_index));
 }
 bool _loc_parser_parse_localization_data(void) {
   return loc_parser_parse_localization_data();
 }
 
-bool loc_parser_parse_localization_data_from_file(i32 pak_id, i32 index) {
+bool loc_parser_parse_localization_data_from_file(int pak_id, int file_index, language_index lang_index) {
   if (not state or state == nullptr) {
     IERROR("loc_parser::loc_parser_parse_localization_data_from_file()::Loc parser state is not valid");
     return false;
   }
   loc_data data = loc_data();
   state->file_buffer.clear();
-  state->_buffer = loc_data();
 
-  const file_buffer * file = get_asset_file_buffer(static_cast<pak_file_id>(pak_id), index);
+  const file_buffer * file = get_asset_file_buffer(static_cast<pak_file_id>(pak_id), file_index);
   if (not file or file == nullptr) {
-    IERROR("loc_parser::loc_parser_parse_localization_data_from_file()::File %d:%d is invalid", pak_id, index);
+    IERROR("loc_parser::loc_parser_parse_localization_data_from_file()::File %d:%d is invalid", pak_id, file_index);
     return false;
   }
   state->file_buffer.assign_range(file->content);
 
   data.language_name = loc_parser_read_language_name();
   data.codepoints = loc_parser_read_codepoints();
+  if (data.language_name.empty() or data.codepoints.empty()) {
+    IERROR("loc_parser::loc_parser_parse_localization_data_from_file()::File parse is failed");
+    return false;
+  }
   data.content = loc_parser_read_map();
+  data.index = lang_index;
 
-  state->lang_data.push_back(data);
+  state->lang_data.at(lang_index) = data;
   return true;
 }
 
 bool loc_parser_parse_localization_data(void) {
   if (not state or state == nullptr) {
+    IERROR("loc_parser::loc_parser_parse_localization_data()::State is invalid");
+    return false;
+  }
+  
+  if (not loc_parser_parse_localization_data_from_file(LOC_FILE_PAK_FILE, PAK_FILE_ASSET2_LOC_FILE_ENGLISH, LANGUAGE_INDEX_ENGLISH)) {
+    IWARN("loc_parser::loc_parser_parse_localization_data()::Parsing English file is failed");
+    return false;
+  }
+
+  if (not loc_parser_parse_localization_data_from_file(LOC_FILE_PAK_FILE, PAK_FILE_ASSET2_LOC_FILE_TURKISH, LANGUAGE_INDEX_TURKISH)) {
+    IWARN("loc_parser::loc_parser_parse_localization_data()::Parsing Turkish file is failed");
+    return false;
+  }
+
+  if (not loc_parser_parse_builtin_localization_data()) {
+    IWARN("loc_parser::loc_parser_parse_localization_data()::Parsing builtin language is failed");
+    return false;
+  }
+
+  return true;
+}
+bool loc_parser_parse_builtin_localization_data(void) {
+  if (not state or state == nullptr) {
     IERROR("loc_parser::loc_parser_parse_localization_data_from_file()::Loc parser state is not valid");
     return false;
   }
-  std::vector<i32> file_ids = std::vector<i32>();
-
-  file_ids.push_back(PAK_FILE_ASSET2_LOC_FILE_ENGLISH);
-  file_ids.push_back(PAK_FILE_ASSET2_LOC_FILE_TURKISH);
-
-  state->lang_data.clear();
   state->file_buffer.clear();
-  state->_buffer = loc_data();
-  for (size_t itr_000 = 0u; itr_000 < file_ids.size(); itr_000++) {
-    loc_data data = loc_data();
-    const file_buffer * file = get_asset_file_buffer(LOC_FILE_PAK_FILE, file_ids.at(itr_000));
-    state->file_buffer.assign_range(file->content);
-    
-    data.language_name = loc_parser_read_language_name();
-    data.codepoints = loc_parser_read_codepoints();
-    data.content = loc_parser_read_map();
-    data.index = state->lang_data.size();
-    state->lang_data.push_back(data);
-    IINFO("loc_parser::loc_parser_parse_localization_data()::Language:%s installed ", data.language_name.c_str());
-  }
-  if (state->lang_data.empty()) {
-    state->file_buffer.clear();
-    state->file_buffer.assign_range(state->default_language);
 
-    loc_data data = loc_data();
-    data.language_name = loc_parser_read_language_name();
-    data.codepoints = loc_parser_read_codepoints();
-    data.content = loc_parser_read_map();
-    data.index = state->lang_data.size();
-    state->lang_data.push_back(data);
-  }
+  loc_data data = loc_data();
+  state->file_buffer.assign_range(state->default_language);
+  
+  data.language_name = loc_parser_read_language_name();
+  data.codepoints = loc_parser_read_codepoints();
+  data.content = loc_parser_read_map();
+  data.index = LANGUAGE_INDEX_BUILTIN;
+
+  state->lang_data.at(LANGUAGE_INDEX_BUILTIN) = data;
+
   return true;
 }
 
@@ -498,9 +504,57 @@ std::array<std::string, LOC_TEXT_MAX> loc_parser_read_map(void) {
   }
   return content_map;
 }
+language_index loc_parser_lang_name_to_index(const char * name) {
+  if (not state or state == nullptr) {
+    IERROR("loc_parser::loc_parser_lang_name_to_index()::State is not valid");
+    return LANGUAGE_INDEX_UNDEFINED;
+  }
+  if (not name or name == nullptr) {
+    IERROR("loc_parser::loc_parser_lang_name_to_index()::Name is not valid");
+    return LANGUAGE_INDEX_UNDEFINED;
+  }
 
-localized_languages loc_parser_get_loc_langs(void) {
-  return localized_languages(state->lang_data);
+  if(TextIsEqual(name, "Builtin")) {
+    return LANGUAGE_INDEX_BUILTIN;
+  }
+  else if(TextIsEqual(name, "English")) {
+    return LANGUAGE_INDEX_ENGLISH;
+  }
+  else if(TextIsEqual(name, "Turkish")) {
+    return LANGUAGE_INDEX_TURKISH;
+  }
+  else {
+    IWARN("loc_parser::loc_parser_lang_name_to_index()::Unsupported name");
+    return LANGUAGE_INDEX_UNDEFINED;
+  }
+}
+const char * loc_parser_lang_index_to_name(language_index index) {
+  if (not state or state == nullptr) {
+    IERROR("loc_parser::loc_parser_lang_name_to_index()::State is not valid");
+    return nullptr;
+  }
+  if (index <= LANGUAGE_INDEX_UNDEFINED or index >= LANGUAGE_INDEX_MAX) {
+    IERROR("loc_parser::loc_parser_lang_name_to_index()::Index is out of bound");
+    return nullptr;
+  }
+
+  if(index == LANGUAGE_INDEX_BUILTIN) {
+    return "Builtin";
+  }
+  else if(index == LANGUAGE_INDEX_ENGLISH) {
+    return "English";
+  }
+  else if(index == LANGUAGE_INDEX_TURKISH) {
+    return "Turkish";
+  }
+  else {
+    IWARN("loc_parser::loc_parser_lang_name_to_index()::Unsupported name");
+    return nullptr;
+  }
+}
+
+const std::array<loc_data, LANGUAGE_INDEX_MAX> * loc_parser_get_loc_langs(void) {
+  return __builtin_addressof(state->lang_data);
 }
 
 bool loc_parser_set_active_language_by_name(std::string language_name) {
@@ -517,19 +571,32 @@ bool loc_parser_set_active_language_by_name(std::string language_name) {
   }
   return false;
 }
-bool loc_parser_set_active_language_by_index(int _index) {  
+bool loc_parser_set_active_language_by_index(language_index _index) {
   if (not state or state == nullptr) {
     IERROR("loc_parser::loc_parser_set_active_language_by_index()::State is not valid");
     return false;
   }
-  size_t index = static_cast<size_t>(_index);
-
-  if ( index < 0 or index >= state->lang_data.size()) {
+  if (_index < LANGUAGE_INDEX_UNDEFINED or _index > LANGUAGE_INDEX_MAX) {
     IERROR("loc_parser::loc_parser_set_active_language_by_index()::Language index is out of bound");
     return false;
   }
-  state->active_loc = __builtin_addressof(state->lang_data.at(index));
-  return true;
+  loc_data& loc = state->lang_data.at(_index);
+  if (loc.index > LANGUAGE_INDEX_UNDEFINED and loc.index < LANGUAGE_INDEX_MAX) {
+    state->active_loc = __builtin_addressof(loc);
+    return true;
+  }
+  return false;
+}
+bool loc_parser_set_active_language_builtin(void) {
+  if (not state or state == nullptr) {
+    IERROR("loc_parser::loc_parser_set_active_language_by_index()::State is not valid");
+    return false;
+  }
+  if (loc_parser_set_active_language_by_index(LANGUAGE_INDEX_BUILTIN)) {
+    state->active_loc = loc_parser_get_active_language();
+    return true;
+  }
+  return false;
 }
 loc_data* loc_parser_get_active_language(void) {
   if (not state or state == nullptr) {
@@ -537,6 +604,35 @@ loc_data* loc_parser_get_active_language(void) {
     return nullptr;
   }
   return state->active_loc;
+}
+const loc_data * loc_parser_get_language_by_index(language_index index) {
+  if (not state or state == nullptr) {
+    IERROR("loc_parser::loc_parser_get_language_by_index()::State is not valid");
+    return nullptr;
+  }
+  if (index < LANGUAGE_INDEX_UNDEFINED or index > LANGUAGE_INDEX_MAX) {
+    IERROR("loc_parser::loc_parser_get_language_by_index()::Language index is out of bound");
+    return __builtin_addressof(state->lang_data.at(LANGUAGE_INDEX_BUILTIN));
+  }
+  
+  return __builtin_addressof(state->lang_data.at(index));
+}
+const loc_data*  loc_parser_get_language_by_name(const char * name) {
+  if (not state or state == nullptr) {
+    IERROR("loc_parser::loc_parser_get_language_by_name()::State is not valid");
+    return nullptr;
+  }
+  if (not name or name == nullptr) {
+    IERROR("loc_parser::loc_parser_get_language_by_name()::Name is invalid");
+    return __builtin_addressof(state->lang_data.at(LANGUAGE_INDEX_BUILTIN));
+  }
+  
+  for (const loc_data& loc : state->lang_data) {
+    if (loc.language_name == name) {
+    return __builtin_addressof(loc);
+    }
+  }
+  return nullptr;
 }
 
 const char* lc_txt(i32 txt_id) {

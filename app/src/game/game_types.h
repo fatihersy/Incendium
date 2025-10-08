@@ -716,7 +716,7 @@ typedef struct projectile {
 
   // 128 byte buffer
   data256 vec_ex;
-  data128 mm_ex;
+  data256 mm_ex;
 
   i32 damage;
   f32 duration;
@@ -730,7 +730,7 @@ typedef struct projectile {
     this->collision = ZERORECT;
     this->direction = WORLD_DIRECTION_UNDEFINED;
     this->vec_ex = data256();
-    this->mm_ex = data128();
+    this->mm_ex = data256();
     this->damage = 0;
     this->duration = 0.f;
     this->is_active = false;
@@ -1023,14 +1023,14 @@ typedef struct camera_metrics {
 
 typedef struct localization_package {
   std::string language_name;
-  i32 language_index;
+  language_index index;
   i32 * codepoints;
   Font light_font;
   Font italic_font;
   Font abracadabra;
   localization_package(void) {
     this->language_name.clear();
-    this->language_index = INVALID_IDI32;
+    this->index = LANGUAGE_INDEX_UNDEFINED;
     this->codepoints = nullptr;
     this->light_font = ZERO_FONT;
     this->italic_font = ZERO_FONT;

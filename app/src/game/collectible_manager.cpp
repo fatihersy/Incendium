@@ -310,7 +310,7 @@ bool loot_item_on_loot(item_type type, i32 id, data128 context) {
 
 	switch (type) {
     case ITEM_TYPE_EXPERIENCE: {
-      event_fire(EVENT_CODE_PLAY_SOUND, event_context(static_cast<i32>(SOUND_ID_EXP_PICKUP)));
+      event_fire(EVENT_CODE_PLAY_SOUND, event_context(static_cast<i32>(SOUND_ID_EXP_PICKUP), static_cast<i32>(true)));
 
       state->loots_on_the_map.erase(state->loots_on_the_map.begin() + item_index);
 			return event_fire(EVENT_CODE_PLAYER_ADD_EXP, event_context(static_cast<i32>(context.i16[0])));

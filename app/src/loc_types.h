@@ -2,7 +2,8 @@
 #define LOC_TYPES_H
 
 #include <string>
-#include <vector>
+#include <array>
+#include "defines.h"
 
 #define LOC_TEXT_SYMBOL_SIZE 3
 #define LOC_TEXT_VARIABLE_SIZE 12
@@ -102,12 +103,12 @@ typedef struct loc_data {
   std::string language_name;
   std::string codepoints;
   std::array<std::string, LOC_TEXT_MAX> content;
-  int index;
+  language_index index;
   loc_data(void) {
     this->language_name = std::string("");
     this->codepoints = std::string("");
     this->content.fill(std::string(""));
-    this->index = 0;
+    this->index = LANGUAGE_INDEX_UNDEFINED;
   }
 } loc_data;
 
@@ -115,23 +116,21 @@ typedef struct loc_content {
  const char* text;
 }loc_content;
 
-typedef struct localized_languages {
-  std::vector<loc_data> lang;
-  localized_languages(void) {
-    this->lang = std::vector<loc_data>();
-  }
-  localized_languages(std::vector<loc_data> vec) {
-    this->lang = vec;
-  }
-} localized_languages;
+const char* lc_txt(i32 txt_id);
 
-const char* lc_txt(int txt_id);
-
-bool loc_parser_parse_localization_data_from_file(int pak_id, int index);
+bool loc_parser_parse_localization_data_from_file(i32 pak_id, i32 file_index, language_index lang_index);
 bool loc_parser_parse_localization_data(void);
+bool loc_parser_parse_builtin_localization_data(void);
 
-localized_languages loc_parser_get_loc_langs(void);
-loc_data* loc_parser_get_active_language(void);
 bool loc_parser_set_active_language_by_name(std::string language_name);
-bool loc_parser_set_active_language_by_index(int _index);
+bool loc_parser_set_active_language_by_index(language_index _index);
+bool loc_parser_set_active_language_builtin(void);
+
+const std::array<loc_data, LANGUAGE_INDEX_MAX> * loc_parser_get_loc_langs(void);
+loc_data* loc_parser_get_active_language(void);
+const loc_data* loc_parser_get_language_by_index(language_index index);
+const loc_data* loc_parser_get_language_by_name(const char * name);
+language_index loc_parser_lang_name_to_index(const char * name);
+const char * loc_parser_lang_index_to_name(language_index index);
+
 #endif

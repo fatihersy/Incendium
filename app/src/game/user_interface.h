@@ -446,7 +446,7 @@ void register_slider(slider_id _sdr_id, slider_type_id _sdr_type_id, button_id _
 
 data_pack* get_slider_current_value(slider_id id);
 const Vector2* ui_get_mouse_pos_screen(void);
-const Font* ui_get_font(font_type font);
+Font ui_get_font(font_type font);
 slider* get_slider_by_id(slider_id sdr_id);
 checkbox* get_checkbox_by_id(checkbox_id cb_id);
 Vector2 ui_measure_text(const char* in_str, font_type in_font_type, f32 in_font_size);

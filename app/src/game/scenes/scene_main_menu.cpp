@@ -834,9 +834,9 @@ void draw_main_menu_character_subscene_stat_details_panel(Rectangle panel_dest, 
         i32 level = get_static_player_state_stat(state->hovered_stat->id)->current_level;
         set_static_player_state_stat(state->hovered_stat->id, level+1);
         gm_save_game();
-        event_fire(EVENT_CODE_PLAY_SOUND_GROUP, event_context(static_cast<i32>(SOUNDGROUP_ID_BUTTON_ON_CLICK)));
+        event_fire(EVENT_CODE_PLAY_SOUND_GROUP, event_context(SOUNDGROUP_ID_BUTTON_ON_CLICK, static_cast<i32>(true)));
       } else {
-        event_fire(EVENT_CODE_PLAY_SOUND, event_context((i32)SOUND_ID_DENY1));
+        event_fire(EVENT_CODE_PLAY_SOUND, event_context(SOUND_ID_DENY1, static_cast<i32>(false)));
         state->deny_notify_timer = DENY_NOTIFY_TIME;
         gui_fire_display_error(LOC_TEXT_DISPLAY_ERROR_TEXT_INSUFFICIENT_FUNDS);
       }
@@ -1198,7 +1198,7 @@ void smm_update_mouse_bindings(void) {
         if (state->ingame_scene_feed.hovered_stage <= 0 or static_cast<size_t>(state->ingame_scene_feed.hovered_stage) >= state->worldmap_locations.size()) {
         }
         else if (not state->worldmap_locations.at(state->ingame_scene_feed.hovered_stage).is_playable) {
-          event_fire(EVENT_CODE_PLAY_SOUND, event_context((i32)SOUND_ID_DENY1));
+          event_fire(EVENT_CODE_PLAY_SOUND, event_context(SOUND_ID_DENY1, static_cast<i32>(false)));
           gui_fire_display_error(LOC_TEXT_DISPLAY_ERROR_TEXT_STAGE_IS_NOT_PLAYABLE);
         }
         else {
@@ -1597,7 +1597,7 @@ void positive_trait_button_on_click(size_t index) {
     state->positive_traits.erase(state->positive_traits.begin() + index);
   }
   else {
-    event_fire(EVENT_CODE_PLAY_SOUND, event_context(SOUND_ID_DENY1));
+    event_fire(EVENT_CODE_PLAY_SOUND, event_context(SOUND_ID_DENY1, static_cast<i32>(false)));
   }
 }
 void negative_trait_button_on_click(size_t index) {

@@ -290,8 +290,8 @@ void render_game(void) {
       if (not state->game_info.player_state_dynamic->is_dead) {
         render_player();
         render_collectible_manager();
-        render_spawns();
         render_abilities(__builtin_addressof(state->game_info.player_state_dynamic->ability_system));
+        render_spawns();
       
         //for (size_t itr_000 = 0; itr_000 < (*state->in_active_map)->collisions.size() ; ++itr_000) {
         //  DrawRectangleLinesEx((*state->in_active_map)->collisions.at(itr_000).dest, 2.f, BLUE);
@@ -307,8 +307,8 @@ void render_game(void) {
       if (not state->game_info.player_state_dynamic->is_dead) {
         render_player();
         render_collectible_manager();
-        render_spawns();
         render_abilities(__builtin_addressof(state->game_info.player_state_dynamic->ability_system));
+        render_spawns();
       
         //for (size_t itr_000 = 0; itr_000 < (*state->in_active_map)->collisions.size() ; ++itr_000) {
         //  DrawRectangleLinesEx((*state->in_active_map)->collisions.at(itr_000).dest, 2.f, BLUE);
@@ -394,7 +394,7 @@ void gm_end_game(bool is_win) {
   state->ingame_phase = INGAME_PLAY_PHASE_RESULTS;
 
   state->playlist.media_stop(__builtin_addressof(state->playlist));
-  event_fire(EVENT_CODE_PLAY_SOUND, event_context()); // TODO: play win or lose sound
+  //event_fire(EVENT_CODE_PLAY_SOUND, event_context()); // TODO: play win or lose sound
   event_fire(EVENT_CODE_CAMERA_SET_ZOOM_TARGET, event_context(static_cast<f32>(ZOOM_CAMERA_GAME_RESULTS)));
 }
 void gm_save_game(void) {
