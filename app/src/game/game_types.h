@@ -675,8 +675,10 @@ typedef struct combat_feedback_floating_text {
   Vector2 tex_origin;
   f32 accumulator;
   f32 duration;
-  f32 font_size;
-  Color tint;
+  f32 initial_font_size;
+  f32 interpolated_font_size;
+  Color background_tint;
+  Color font_tint;
 
   combat_feedback_floating_text(void) {
     this->id = 0;
@@ -692,12 +694,14 @@ typedef struct combat_feedback_floating_text {
     this->tex_origin = ZEROVEC2;
     this->accumulator = 0.f;
     this->duration = 0.f;
-    this->font_size = 0.f;
-    this->tint = WHITE;
+    this->initial_font_size = 0.f;
+    this->interpolated_font_size = 0.f;
+    this->background_tint = WHITE;
+    this->font_tint = WHITE;
   }
   combat_feedback_floating_text(
     i32 _id, const char* _text, ::font_type _font_type, f32 _font_size, Vector2 _start_pos, Vector2 _end_pos, 
-    combat_feedback_floating_text_type _type, f32 _duration, atlas_texture_id bg_tex_id, f32 bg_tex_scale = 1.f, Color _tint = WHITE
+    combat_feedback_floating_text_type _type, f32 _duration, atlas_texture_id bg_tex_id, f32 bg_tex_scale = 1.f, Color _bg_tint = WHITE, Color _font_tint = WHITE
   ) : combat_feedback_floating_text() {
     this->id = _id;
     this->type = _type;
@@ -708,8 +712,9 @@ typedef struct combat_feedback_floating_text {
     this->initial = _start_pos;
     this->target = _end_pos;
     this->duration = _duration;
-    this->font_size = _font_size;
-    this->tint = _tint;
+    this->initial_font_size = _font_size;
+    this->background_tint = _bg_tint;
+    this->font_tint = _font_tint;
   }
 } combat_feedback_floating_text;
 

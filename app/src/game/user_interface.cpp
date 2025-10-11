@@ -1394,8 +1394,8 @@ void combat_feedback_spawn_floating_text(const char* _text, combat_feedback_floa
   const Font cfft_font = ui_get_font(FONT_TYPE_ITALIC);
   const Vector2 text_measure = MeasureTextEx(cfft_font, _text, cfft_font.baseSize * _font_nonpixel_size_nat, UI_FONT_SPACING);
   Vector2 _end_pos = Vector2 {
-    start_position.x + (       text_measure.x * 2.f), // RIGHT
-    start_position.y + (-1.f * text_measure.y * 2.f), // UP
+    start_position.x - (text_measure.x * 2.f),
+    start_position.y + (text_measure.y * 1.5f),
   };
   state->cfft_display_state.queue.push_back(combat_feedback_floating_text(
     state->cfft_display_state.next_cfft_id++,
@@ -1408,7 +1408,8 @@ void combat_feedback_spawn_floating_text(const char* _text, combat_feedback_floa
     text_duration,
     bg_tex_id,
     bg_tex_scale,
-    WHITE
+    Color { 223, 249, 251, 95},
+    Color { 223, 249, 251, 255}
   ));
 }
 void combat_feedback_update_floating_texts(void) {
@@ -1421,22 +1422,39 @@ void combat_feedback_update_floating_texts(void) {
     iterator->accumulator = FCLAMP(iterator->accumulator, 0, iterator->duration);
 
     Vector2& interpolate = iterator->interpolate;
+    const Font font = ui_get_font(iterator->font_type);
     
     f32 change_x = iterator->initial.x - iterator->target.x;
     f32 change_y = iterator->initial.y - iterator->target.y;
 
-    interpolate.x = EaseBounceOut(iterator->accumulator, iterator->initial.x, change_x, iterator->duration);
-    interpolate.y = EaseBounceOut(iterator->accumulator, iterator->initial.y, change_y, iterator->duration);
+    interpolate.x = EaseQuadIn(iterator->accumulator, iterator->initial.x, change_x, iterator->duration);
+    interpolate.y = EaseCubicOut(iterator->accumulator, iterator->initial.y, change_y, iterator->duration);
 
-    TraceLog(LOG_INFO, "interpolate: { %.1f, %.1f}", interpolate.x,  interpolate.y);
+    interpolate = GetWorldToScreen2D(iterator->interpolate, state->in_camera_metrics->handle);
 
-    const Font font = ui_get_font(iterator->font_type);
-    Vector2 text_measure = MeasureTextEx(font, iterator->text.c_str(), iterator->font_size, UI_FONT_SPACING);
-    const Vector2 pos = Vector2 { iterator->interpolate.x + text_measure.x * .5f, iterator->interpolate.y + text_measure.y * .5f};
-
-    const Rectangle *const rect = get_atlas_texture_source_rect(iterator->background_tex_id); 
-    iterator->tex_dest = Rectangle {pos.x, pos.y, rect->width, rect->height};
-    iterator->tex_origin = Vector2 {rect->width * .5f, rect->height * .5f};
+    iterator->interpolated_font_size = EaseBounceInOut(
+      iterator->accumulator, 
+      iterator->initial_font_size * font.baseSize, 
+      -iterator->initial_font_size * font.baseSize, 
+      iterator->duration
+    );
+    const f32 bg_tex_font_ratio = 1.5f;
+    const Vector2 text_measure = MeasureTextEx(font, iterator->text.c_str(), iterator->interpolated_font_size, UI_FONT_SPACING);
+    const Vector2 texture_size = Vector2 {text_measure.x * bg_tex_font_ratio, text_measure.y * bg_tex_font_ratio};
+    Vector2 texture_position = Vector2 { 
+      iterator->interpolate.x + text_measure.x * .5f, 
+      iterator->interpolate.y + text_measure.y * .5f
+    };
+    iterator->tex_dest = Rectangle {
+      texture_position.x, 
+      texture_position.y,
+      texture_size.x,
+      texture_size.y
+    };
+    iterator->tex_origin = Vector2 {
+      iterator->tex_dest.width * .5f, 
+      iterator->tex_dest.height * .5f
+    };
 
     if (iterator->accumulator >= iterator->duration) {
       iterator = system.queue.erase(iterator);
@@ -1451,11 +1469,8 @@ void combat_feedback_render_floating_texts(void) {
   floating_text_display_system_state& system = state->cfft_display_state;
 
   for (auto iterator = system.queue.begin(); iterator != system.queue.end(); iterator++) {
-
-    gui_draw_atlas_texture_id(iterator->background_tex_id, iterator->tex_dest, iterator->tex_origin, 0.f, WHITE);
-    const Vector2 screen_location = GetWorldToScreen2D(iterator->interpolate, state->in_camera_metrics->handle);
-    const Font font = ui_get_font(iterator->font_type);
-    draw_text_ex(iterator->text.c_str(), screen_location, iterator->font_type, iterator->font_size * font.baseSize, iterator->tint);
+    gui_draw_atlas_texture_id(iterator->background_tex_id, iterator->tex_dest, iterator->tex_origin, 0.f, iterator->background_tint);
+    draw_text_ex(iterator->text.c_str(), iterator->interpolate, iterator->font_type, iterator->interpolated_font_size, iterator->font_tint);
   }
 }
 
