@@ -13,6 +13,7 @@
 #include "game/collectible_manager.h"
 #include "game/player.h"
 #include "game/spawn.h"
+#include "game/user_interface.h"
 
 typedef struct game_manager_system_state {
   tilemap ** in_active_map;
@@ -426,7 +427,14 @@ void gm_damage_spawn_if_collide(data128 coll_data, i32 damage, collision_type co
       for (size_t itr_000 = 0; itr_000 < state->game_info.in_spawns->size(); ++itr_000) {
         if (!state->game_info.in_spawns->at(itr_000).is_dead){
           if (CheckCollisionRecs(state->game_info.in_spawns->at(itr_000).collision, rect)) {
-            damage_spawn(state->game_info.in_spawns->at(itr_000).character_id, damage);
+            const Character2D *const spw = __builtin_addressof(state->game_info.in_spawns->at(itr_000));
+            damage_deal_result result = damage_spawn(spw->character_id, damage);
+            if (result.type == DAMAGE_DEAL_RESULT_SUCCESS) {
+              combat_feedback_spawn_floating_text(TextFormat("%d", damage), COMBAT_FEEDBACK_FLOATING_TEXT_TYPE_DAMAGE, Vector2 {
+                spw->collision.x + spw->collision.width * .5f,
+                spw->collision.y - spw->collision.height * .15f
+              });
+            }
           }
         }
       }

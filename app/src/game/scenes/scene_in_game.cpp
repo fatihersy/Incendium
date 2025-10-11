@@ -63,10 +63,11 @@ typedef struct scene_in_game_state {
 
 static scene_in_game_state * state = nullptr;
 
-#define STATE_ASSERT(FUNCTION) if (not state or state == nullptr) {\
+#define STATE_ASSERT(FUNCTION, RETURN) do { if (not state or state == nullptr) {\
   IERROR("scene_in_game::" FUNCTION "::In game state was not initialized");\
-  return;\
-}
+  RETURN\
+} } while(0);
+
 #define SIG_BASE_RENDER_SCALE(SCALE) VECTOR2(\
   static_cast<f32>(state->in_app_settings->render_width * SCALE),\
   static_cast<f32>(state->in_app_settings->render_height * SCALE))
@@ -211,7 +212,9 @@ void end_scene_in_game(void) {
 }
 
 void update_scene_in_game(void) {
-  STATE_ASSERT("update_scene_in_game")
+  STATE_ASSERT("update_scene_in_game", {
+    return;
+  });
 
   update_camera();
   in_game_update_bindings();
@@ -266,7 +269,10 @@ void update_scene_in_game(void) {
   }
 }
 void render_scene_in_game(void) {
-  STATE_ASSERT("render_scene_in_game")
+  STATE_ASSERT("render_scene_in_game", {
+    return;
+  });
+
   BeginMode2D(get_in_game_camera()->handle);
 
   switch (state->ingame_state) {
@@ -317,7 +323,9 @@ void render_scene_in_game(void) {
   EndMode2D();
 }
 void render_interface_in_game(void) {
-  STATE_ASSERT("render_interface_in_game")
+  STATE_ASSERT("update_scene_in_game", {
+    return;
+  });
   
   switch (state->ingame_state) {
     case INGAME_STATE_IDLE: { 
@@ -719,7 +727,10 @@ void draw_passive_selection_panel(const character_stat *const stat, const Rectan
   gui_label_wrap(lc_txt(stat->passive_desc_symbol), FONT_TYPE_ABRACADABRA, desc_font_size, desc_box, WHITE, false);
 }
 void draw_end_game_panel(void) {
-  STATE_ASSERT("draw_end_game_panel")
+  STATE_ASSERT("draw_end_game_panel", {
+    return;
+  });
+
 	Rectangle bg_panel_dest = gui_draw_default_background_panel();
 
 	Rectangle result_title_header_dest = Rectangle { bg_panel_dest.x, bg_panel_dest.y + (bg_panel_dest.height * .05f), bg_panel_dest.width, bg_panel_dest.height * .1f};

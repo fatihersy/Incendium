@@ -213,7 +213,7 @@ void se_begin_fadein(data128 data, void(*on_change_complete)(data128));
   }
   state->active_map_ptr = get_active_map_ptr();
 
-  if(not user_interface_system_initialize()) {
+  if(not user_interface_system_initialize(get_in_game_camera())) {
     IERROR("scene_editor::initialize_scene_editor()::User interface failed to initialize!");
     return false;
   }

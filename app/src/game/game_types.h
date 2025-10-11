@@ -256,6 +256,38 @@ typedef enum loot_drop_animation {
   LOOT_DROP_ANIMATION_MAX,
 } loot_drop_animation;
 
+typedef enum combat_feedback_floating_text_type {
+  COMBAT_FEEDBACK_FLOATING_TEXT_TYPE_UNDEFINED,
+  COMBAT_FEEDBACK_FLOATING_TEXT_TYPE_DAMAGE,
+  COMBAT_FEEDBACK_FLOATING_TEXT_TYPE_HEAL,
+  COMBAT_FEEDBACK_FLOATING_TEXT_TYPE_CONDITION,
+  COMBAT_FEEDBACK_FLOATING_TEXT_TYPE_MAX,
+} combat_feedback_floating_text_type;
+
+typedef enum damage_deal_result_type {
+  DAMAGE_DEAL_RESULT_UNDEFINED,
+  DAMAGE_DEAL_RESULT_SUCCESS,
+  DAMAGE_DEAL_RESULT_ERROR,
+  DAMAGE_DEAL_RESULT_IN_DAMAGE_BREAKE,
+  DAMAGE_DEAL_RESULT_MAX,
+} damage_deal_result_type;
+
+typedef struct damage_deal_result {
+  damage_deal_result_type type;
+  i32 inflicted_damage;
+  i32 remaining_health;
+  damage_deal_result(void) {
+    this->type = DAMAGE_DEAL_RESULT_UNDEFINED;
+    this->inflicted_damage = 0;
+    this->remaining_health = 0;
+  }
+  damage_deal_result(damage_deal_result_type type, i32 inflicted, i32 remaining) : damage_deal_result() {
+    this->type = type;
+    this->inflicted_damage = inflicted;
+    this->remaining_health = remaining;
+  }
+} damage_deal_result;
+
 typedef struct spritesheet {
   spritesheet_id sheet_id;
   texture_id tex_id;
@@ -628,6 +660,82 @@ typedef struct loot_item {
     this->is_initialized = true;
   }
 } loot_item;
+
+typedef struct combat_feedback_floating_text {
+  i32 id;
+  combat_feedback_floating_text_type type;
+  atlas_texture_id background_tex_id;
+  f32 bg_tex_scale;
+  ::font_type font_type; 
+  std::string text;
+  Vector2 initial;
+  Vector2 target;
+  Vector2 interpolate;
+  Rectangle tex_dest;
+  Vector2 tex_origin;
+  f32 accumulator;
+  f32 duration;
+  f32 font_size;
+  Color tint;
+
+  combat_feedback_floating_text(void) {
+    this->id = 0;
+    this->type = COMBAT_FEEDBACK_FLOATING_TEXT_TYPE_UNDEFINED;
+    this->background_tex_id = ATLAS_TEX_ID_UNSPECIFIED;
+    this->bg_tex_scale = 0.f;
+    this->font_type = FONT_TYPE_UNDEFINED;
+    this->text = std::string();
+    this->initial = ZEROVEC2;
+    this->target = ZEROVEC2;
+    this->interpolate = ZEROVEC2;
+    this->tex_dest = ZERORECT;
+    this->tex_origin = ZEROVEC2;
+    this->accumulator = 0.f;
+    this->duration = 0.f;
+    this->font_size = 0.f;
+    this->tint = WHITE;
+  }
+  combat_feedback_floating_text(
+    i32 _id, const char* _text, ::font_type _font_type, f32 _font_size, Vector2 _start_pos, Vector2 _end_pos, 
+    combat_feedback_floating_text_type _type, f32 _duration, atlas_texture_id bg_tex_id, f32 bg_tex_scale = 1.f, Color _tint = WHITE
+  ) : combat_feedback_floating_text() {
+    this->id = _id;
+    this->type = _type;
+    this->background_tex_id = bg_tex_id;
+    this->bg_tex_scale = bg_tex_scale;
+    this->font_type = _font_type;
+    this->text = _text;
+    this->initial = _start_pos;
+    this->target = _end_pos;
+    this->duration = _duration;
+    this->font_size = _font_size;
+    this->tint = _tint;
+  }
+} combat_feedback_floating_text;
+
+typedef struct floating_text_display_system_state {
+  std::vector<combat_feedback_floating_text> queue;
+  i32 next_cfft_id;
+  f32 duration_min;
+  f32 duration_max;
+  f32 scale_min;
+  f32 scale_max;
+
+  floating_text_display_system_state(void) {
+    this->queue = std::vector<combat_feedback_floating_text>();
+    this->next_cfft_id = 0;
+    this->duration_min = 0.f;
+    this->duration_max = 0.f;
+    this->scale_min = 0.f;
+    this->scale_max = 0.f;
+  }
+  floating_text_display_system_state(f32 _duration_min, f32 _duration_max, f32 _scale_min, f32 _scale_max) : floating_text_display_system_state() {
+    this->duration_min = _duration_min;
+    this->duration_max = _duration_max;
+    this->scale_min = _scale_min;
+    this->scale_max = _scale_max;
+  }
+} floating_text_display_system_state;
 
 /**
  * @param buffer.i32[0] = SPAWN_TYPE

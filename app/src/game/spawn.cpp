@@ -70,7 +70,7 @@ bool spawn_system_initialize(const camera_metrics* _camera_metrics, const ingame
   return true;
 }
 
-i32 damage_spawn(i32 _id, i32 damage) {
+damage_deal_result damage_spawn(i32 _id, i32 damage) {
   Character2D* character = nullptr;
   std::vector<Character2D>& spawns = state->spawns;
 
@@ -80,15 +80,16 @@ i32 damage_spawn(i32 _id, i32 damage) {
       break;
     }
   }
-  if (not character or character == nullptr) return INVALID_IDI32;
-  if (not character->is_damagable) { return character->health_current; }
+  if (not character or character == nullptr) return damage_deal_result(DAMAGE_DEAL_RESULT_ERROR, 0, 0);
+  if (not character->is_damagable) { return damage_deal_result(DAMAGE_DEAL_RESULT_IN_DAMAGE_BREAKE, 0, character->health_current); }
 
   if(character->health_current - damage > 0 && character->health_current - damage < MAX_SPAWN_HEALTH) {
     character->is_damagable = false;
     character->damage_break_time = character->take_damage_left_animation.fps / static_cast<f32>(TARGET_FPS);
     character->health_current -= damage;
-    return character->health_current;
+    return damage_deal_result(DAMAGE_DEAL_RESULT_SUCCESS, damage, character->health_current);
   }
+  const i32 remaining_health = character->health_current;
   character->health_current = 0;
   character->is_dead = true;
   character->is_damagable = false;
@@ -125,7 +126,7 @@ i32 damage_spawn(i32 _id, i32 damage) {
     ));
   }
 
-  return 0;
+  return damage_deal_result(DAMAGE_DEAL_RESULT_SUCCESS, remaining_health, 0);
 }
 
 i32 spawn_character(Character2D _character) {

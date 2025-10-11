@@ -214,7 +214,7 @@ void chosen_trait_button_on_click(size_t index);
   return begin_scene_main_menu(fade_in);
 }
 [[__nodiscard__]] bool begin_scene_main_menu(bool fade_in) {
-  if (not user_interface_system_initialize()) {
+  if (not user_interface_system_initialize(get_in_game_camera())) {
     IERROR("scene_main_menu::begin_scene_main_menu()::User interface failed to initialize!");
     return false;
   }

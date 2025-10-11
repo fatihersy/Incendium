@@ -435,7 +435,7 @@ typedef struct ui_error_display_control_system {
   }
 } ui_error_display_control_system;
 
-[[__nodiscard__]] bool user_interface_system_initialize(void);
+[[__nodiscard__]] bool user_interface_system_initialize(const camera_metrics * in_camera_metrics);
 
 void update_user_interface(void);
 void render_user_interface(void);
@@ -454,6 +454,7 @@ bool is_ui_fade_anim_complete(void);
 void is_ui_fade_anim_reset(void);
 void ui_refresh_setting_sliders_to_default(void);
 void process_fade_effect(ui_fade_control_system *const fade);
+void draw_text_ex(const char* text, Vector2 pos, ::font_type font_type, f32 fontsize, Color tint);
 
 bool ui_set_slider_current_index(slider_id id, i32 index);
 bool ui_set_slider_current_value(slider_id id, slider_option value);
@@ -491,6 +492,8 @@ void gui_draw_settings_screen(void);
 void gui_draw_pause_screen(bool in_game_play_state);
 void gui_fire_display_error(int loc_text_id);
 Rectangle gui_draw_default_background_panel(void);
+
+void combat_feedback_spawn_floating_text(const char* _text, combat_feedback_floating_text_type type, Vector2 start_position);
  
 // Exposed
 void ui_play_sprite_on_site(spritesheet *sheet, Color _tint, Rectangle dest);
