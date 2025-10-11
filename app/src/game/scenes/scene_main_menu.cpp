@@ -142,6 +142,7 @@ static main_menu_scene_state * state = nullptr;
 #define SMM_MAP_PIN_SOURCE_LOCATION_UP (Rectangle{1600, 928, 32, 32})
 #define SMM_MAP_PIN_SOURCE_LOCATION_HOVER (Rectangle{1632, 928, 32, 32})
 #define SMM_SCROLL_HANDLE_HEIGHT state->in_app_settings->render_height * .05f
+#define ZOOM_CAMERA_MAP_ENTRY 2.0f
 
 [[__nodiscard__]] bool begin_scene_main_menu(bool fade_in);
 
@@ -284,16 +285,10 @@ void update_scene_main_menu(void) {
       break;
     }
     case MAIN_MENU_SCENE_TO_PLAY_MAP_CHOICE: {
-      event_fire(EVENT_CODE_CAMERA_SET_ZOOM, event_context(1.f));
-      event_fire(EVENT_CODE_CAMERA_SET_CAMERA_POSITION, event_context(0.f, 0.f));
-      event_fire(EVENT_CODE_CAMERA_SET_OFFSET, event_context(0.f, 0.f));
+      event_fire(EVENT_CODE_CAMERA_SET_OFFSET, event_context(state->in_app_settings->render_width * .5f,state->in_app_settings->render_height * .5f));
       break;
     }
     case MAIN_MENU_SCENE_TO_PLAY_TRAIT_CHOICE: {
-      event_fire(EVENT_CODE_CAMERA_SET_ZOOM, event_context(1.f));
-      event_fire(EVENT_CODE_CAMERA_SET_CAMERA_POSITION, event_context(0.f, 0.f));
-      event_fire(EVENT_CODE_CAMERA_SET_OFFSET, event_context(state->in_app_settings->render_width * .5f,state->in_app_settings->render_height * .5f));
-
       smm_update_local_buttons();
       break;
     }
@@ -327,6 +322,99 @@ void render_scene_main_menu(void) {
       break;
     }
     case MAIN_MENU_SCENE_TO_PLAY_MAP_CHOICE: {
+      const f32 image_ratio = 3840.f / 2160.f; // INFO: ratio of map texture
+      const f32 image_height = static_cast<f32>(SMM_BASE_RENDER_HEIGHT * .85f);
+      const Vector2 image_dim = Vector2 { image_height * image_ratio, image_height};
+      Rectangle map_choice_image_dest = Rectangle { SMM_BASE_RENDER_DIV2.x, 0.f, image_dim.x, image_dim.y };
+      map_choice_image_dest.x -= image_dim.x * .5f;
+      const f32 map_pin_dim = map_choice_image_dest.height * .05f;
+
+      state->bg_scroll += static_cast<f32>(GetFrameTime() * 25.f);
+
+      gui_draw_texture_id_pro(TEX_ID_BLACK_BACKGROUND_IMG1, 
+        Rectangle {
+          state->bg_scroll, state->bg_scroll, 
+          static_cast<f32>(state->in_app_settings->render_width), 
+          static_cast<f32>(state->in_app_settings->render_height)
+        }, 
+        Rectangle {0.f, 0.f, 
+          static_cast<f32>(state->in_app_settings->render_width), 
+          static_cast<f32>(state->in_app_settings->render_height)
+        }, 
+        WHITE, ZEROVEC2, TEXTURE_WRAP_REPEAT
+      );
+
+      //BeginShaderMode(get_shader_by_enum(SHADER_ID_MAP_CHOICE_IMAGE)->handle);
+      {
+        gui_draw_texture_id(TEX_ID_WORLDMAP_WO_CLOUDS, map_choice_image_dest, ZEROVEC2);
+      }
+      //EndShaderMode();
+
+      for (i32 itr_000 = 0; itr_000 < MAX_WORLDMAP_LOCATIONS; ++itr_000) {
+        if (not state->worldmap_locations.at(itr_000).display_on_screen) {
+          continue;
+        }
+        const Vector2& normalized_pin_location = state->worldmap_locations.at(itr_000).screen_location;
+        const Rectangle pin_location = Rectangle {
+          map_choice_image_dest.x + normalized_pin_location.x * map_choice_image_dest.width - (map_pin_dim * .5f), 
+          map_choice_image_dest.y + normalized_pin_location.y * map_choice_image_dest.height - (map_pin_dim * .5f),
+          map_pin_dim, map_pin_dim,
+        };
+
+        gui_draw_texture_id_pro(TEX_ID_ASSET_ATLAS, SMM_MAP_PIN_SOURCE_LOCATION_UP, pin_location);
+      }
+
+      for (i32 itr_000 = 0; itr_000 < MAX_WORLDMAP_LOCATIONS; ++itr_000) {
+        if (not state->worldmap_locations.at(itr_000).display_on_screen) {
+          continue;
+        }
+        if(state->ingame_scene_feed.hovered_stage != itr_000) {
+          continue;
+        }
+        const worldmap_stage& worldmap_locations = state->worldmap_locations.at(itr_000);
+        const Vector2& normalized_pin_location = state->worldmap_locations.at(itr_000).screen_location;
+        const Rectangle pin_location = Rectangle {
+          map_choice_image_dest.x + normalized_pin_location.x * map_choice_image_dest.width - (map_pin_dim * .5f), 
+          map_choice_image_dest.y + normalized_pin_location.y * map_choice_image_dest.height - (map_pin_dim * .5f),
+          map_pin_dim, map_pin_dim,
+        };
+
+        gui_draw_texture_id_pro(TEX_ID_ASSET_ATLAS, SMM_MAP_PIN_SOURCE_LOCATION_HOVER, pin_location); // INFO: MAP PIN TEXTURES
+        const f32 image_ratio = 3840.f / 2160.f; // INFO: ratio of map texture
+        const f32 image_height = static_cast<f32>(SMM_BASE_RENDER_HEIGHT * .85f);
+        const Vector2 image_dim = Vector2 { image_height * image_ratio, image_height};
+        Rectangle map_choice_image_dest = Rectangle { SMM_BASE_RENDER_DIV2.x, 0.f, image_dim.x, image_dim.y };
+        map_choice_image_dest.x -= image_dim.x * .5f;
+        const f32 map_pin_dim = map_choice_image_dest.height * .05f;
+        panel* pnl = __builtin_addressof(state->worldmap_selection_panel);
+        const Rectangle scrloc = Rectangle{
+          map_choice_image_dest.x + normalized_pin_location.x * map_choice_image_dest.width - (map_pin_dim * .5f), 
+          map_choice_image_dest.y + normalized_pin_location.y * map_choice_image_dest.height - (map_pin_dim * .5f),
+          map_pin_dim, map_pin_dim,
+        };
+        pnl->dest = Rectangle {scrloc.x + WORLDMAP_LOC_PIN_SIZE, scrloc.y + WORLDMAP_LOC_PIN_SIZE_DIV2, SMM_BASE_RENDER_WIDTH * .25f, SMM_BASE_RENDER_HEIGHT * .25f};
+        DrawCircleGradient(scrloc.x + WORLDMAP_LOC_PIN_SIZE_DIV2, scrloc.y + WORLDMAP_LOC_PIN_SIZE_DIV2, 100, Color{236,240,241,50}, Color{255, 255, 255, 0});
+
+        gui_panel((*pnl), pnl->dest, false);
+        BeginScissorMode(pnl->dest.x, pnl->dest.y, pnl->dest.width, pnl->dest.height);
+        {
+          if (worldmap_locations.is_playable) {
+            gui_label(lc_txt(state->worldmap_locations.at(itr_000).title_txt_id), FONT_TYPE_ABRACADABRA, 1, Vector2 {
+              pnl->dest.x + pnl->dest.width *.5f, pnl->dest.y + pnl->dest.height*.5f
+            }, WHITE, true, true);
+          }
+          else {
+            gui_label(lc_txt(LOC_TEXT_WORLD_STAGE_WORK_IN_PROGRESS), FONT_TYPE_ABRACADABRA, 1, Vector2 {
+              pnl->dest.x + pnl->dest.width *.5f, pnl->dest.y + pnl->dest.height*.5f
+            }, WHITE, true, true);
+          }
+        }
+        EndScissorMode();
+      }
+
+      if(gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_MAP_CHOICE_BACK), BTN_ID_MAINMENU_MAP_CHOICE_BACK, VECTOR2(-35.f, 66.5f), SMM_BASE_RENDER_DIV2, true)) {
+        state->mainmenu_state = MAIN_MENU_SCENE_DEFAULT;
+      }
       break;
     }
     case MAIN_MENU_SCENE_TO_PLAY_TRAIT_CHOICE: {
@@ -356,7 +444,7 @@ void render_interface_main_menu(void) {
     
     gui_label_shader(GAME_TITLE, SHADER_ID_FONT_OUTLINE, FONT_TYPE_ABRACADABRA, 5, VECTOR2(SMM_BASE_RENDER_WIDTH * .5f, SMM_BASE_RENDER_HEIGHT * .25f), WHITE, true, true);
     if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_PLAY), BTN_ID_MAINMENU_BUTTON_PLAY, screen_location_acc, SMM_BASE_RENDER_DIV2, true)) {
-      begin_scene_change(MAIN_MENU_SCENE_TO_PLAY_MAP_CHOICE);
+      begin_scene_change(MAIN_MENU_SCENE_TO_PLAY_TRAIT_CHOICE);
     }
     screen_location_acc.y += 10.5f;
 
@@ -397,99 +485,6 @@ void render_interface_main_menu(void) {
       }
   }
   else if (state->mainmenu_state == MAIN_MENU_SCENE_TO_PLAY_MAP_CHOICE) {
-    const f32 image_ratio = 3840.f / 2160.f; // INFO: ratio of map texture
-    const f32 image_height = static_cast<f32>(SMM_BASE_RENDER_HEIGHT * .85f);
-    const Vector2 image_dim = Vector2 { image_height * image_ratio, image_height};
-    Rectangle map_choice_image_dest = Rectangle { SMM_BASE_RENDER_DIV2.x, 0.f, image_dim.x, image_dim.y };
-    map_choice_image_dest.x -= image_dim.x * .5f;
-    const f32 map_pin_dim = map_choice_image_dest.height * .05f;
-
-    state->bg_scroll += static_cast<f32>(GetFrameTime() * 25.f);
-
-    gui_draw_texture_id_pro(TEX_ID_BLACK_BACKGROUND_IMG1, 
-      Rectangle {
-        state->bg_scroll, state->bg_scroll, 
-        static_cast<f32>(state->in_app_settings->render_width), 
-        static_cast<f32>(state->in_app_settings->render_height)
-      }, 
-      Rectangle {0.f, 0.f, 
-        static_cast<f32>(state->in_app_settings->render_width), 
-        static_cast<f32>(state->in_app_settings->render_height)
-      }, 
-      WHITE, ZEROVEC2, TEXTURE_WRAP_REPEAT
-    );
-
-    //BeginShaderMode(get_shader_by_enum(SHADER_ID_MAP_CHOICE_IMAGE)->handle);
-    {
-      gui_draw_texture_id(TEX_ID_WORLDMAP_WO_CLOUDS, map_choice_image_dest, ZEROVEC2);
-    }
-    //EndShaderMode();
-
-    for (i32 itr_000 = 0; itr_000 < MAX_WORLDMAP_LOCATIONS; ++itr_000) {
-      if (not state->worldmap_locations.at(itr_000).display_on_screen) {
-        continue;
-      }
-      const Vector2& normalized_pin_location = state->worldmap_locations.at(itr_000).screen_location;
-      const Rectangle pin_location = Rectangle {
-        map_choice_image_dest.x + normalized_pin_location.x * map_choice_image_dest.width - (map_pin_dim * .5f), 
-        map_choice_image_dest.y + normalized_pin_location.y * map_choice_image_dest.height - (map_pin_dim * .5f),
-        map_pin_dim, map_pin_dim,
-      };
-
-      gui_draw_texture_id_pro(TEX_ID_ASSET_ATLAS, SMM_MAP_PIN_SOURCE_LOCATION_UP, pin_location);
-    }
-
-    for (i32 itr_000 = 0; itr_000 < MAX_WORLDMAP_LOCATIONS; ++itr_000) {
-      if (not state->worldmap_locations.at(itr_000).display_on_screen) {
-        continue;
-      }
-      if(state->ingame_scene_feed.hovered_stage != itr_000) {
-        continue;
-      }
-      const worldmap_stage& worldmap_locations = state->worldmap_locations.at(itr_000);
-      const Vector2& normalized_pin_location = state->worldmap_locations.at(itr_000).screen_location;
-      const Rectangle pin_location = Rectangle {
-        map_choice_image_dest.x + normalized_pin_location.x * map_choice_image_dest.width - (map_pin_dim * .5f), 
-        map_choice_image_dest.y + normalized_pin_location.y * map_choice_image_dest.height - (map_pin_dim * .5f),
-        map_pin_dim, map_pin_dim,
-      };
-
-      gui_draw_texture_id_pro(TEX_ID_ASSET_ATLAS, SMM_MAP_PIN_SOURCE_LOCATION_HOVER, pin_location); // INFO: MAP PIN TEXTURES
-      const f32 image_ratio = 3840.f / 2160.f; // INFO: ratio of map texture
-      const f32 image_height = static_cast<f32>(SMM_BASE_RENDER_HEIGHT * .85f);
-      const Vector2 image_dim = Vector2 { image_height * image_ratio, image_height};
-      Rectangle map_choice_image_dest = Rectangle { SMM_BASE_RENDER_DIV2.x, 0.f, image_dim.x, image_dim.y };
-      map_choice_image_dest.x -= image_dim.x * .5f;
-      const f32 map_pin_dim = map_choice_image_dest.height * .05f;
-      panel* pnl = __builtin_addressof(state->worldmap_selection_panel);
-      const Rectangle scrloc = Rectangle{
-        map_choice_image_dest.x + normalized_pin_location.x * map_choice_image_dest.width - (map_pin_dim * .5f), 
-        map_choice_image_dest.y + normalized_pin_location.y * map_choice_image_dest.height - (map_pin_dim * .5f),
-        map_pin_dim, map_pin_dim,
-      };
-      pnl->dest = Rectangle {scrloc.x + WORLDMAP_LOC_PIN_SIZE, scrloc.y + WORLDMAP_LOC_PIN_SIZE_DIV2, SMM_BASE_RENDER_WIDTH * .25f, SMM_BASE_RENDER_HEIGHT * .25f};
-      DrawCircleGradient(scrloc.x + WORLDMAP_LOC_PIN_SIZE_DIV2, scrloc.y + WORLDMAP_LOC_PIN_SIZE_DIV2, 100, Color{236,240,241,50}, Color{255, 255, 255, 0});
-      
-      gui_panel((*pnl), pnl->dest, false);
-      BeginScissorMode(pnl->dest.x, pnl->dest.y, pnl->dest.width, pnl->dest.height);
-      {
-        if (worldmap_locations.is_playable) {
-          gui_label(lc_txt(state->worldmap_locations.at(itr_000).title_txt_id), FONT_TYPE_ABRACADABRA, 1, Vector2 {
-            pnl->dest.x + pnl->dest.width *.5f, pnl->dest.y + pnl->dest.height*.5f
-          }, WHITE, true, true);
-        }
-        else {
-          gui_label(lc_txt(LOC_TEXT_WORLD_STAGE_WORK_IN_PROGRESS), FONT_TYPE_ABRACADABRA, 1, Vector2 {
-            pnl->dest.x + pnl->dest.width *.5f, pnl->dest.y + pnl->dest.height*.5f
-          }, WHITE, true, true);
-        }
-      }
-      EndScissorMode();
-    }
-
-    if(gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_MAP_CHOICE_BACK), BTN_ID_MAINMENU_MAP_CHOICE_BACK, VECTOR2(-35.f, 66.5f), SMM_BASE_RENDER_DIV2, true)) {
-      state->mainmenu_state = MAIN_MENU_SCENE_DEFAULT;
-    }
   }
   else if(state->mainmenu_state == MAIN_MENU_SCENE_TO_PLAY_TRAIT_CHOICE) {
     draw_trait_selection_panel();
@@ -504,7 +499,7 @@ void render_interface_main_menu(void) {
         gui_fire_display_error(LOC_TEXT_DISPLAY_ERROR_TEXT_STARTER_ABILITY_NOT_SELECTED);
       }
       else {
-        smm_begin_fadeout(data128(SCENE_TYPE_IN_GAME, true), fade_on_complete_change_scene); 
+        begin_scene_change(MAIN_MENU_SCENE_TO_PLAY_MAP_CHOICE);
       }
     }
   }
@@ -1176,6 +1171,7 @@ void smm_update_mouse_bindings(void) {
     }
     case MAIN_MENU_SCENE_TO_PLAY_MAP_CHOICE: {
       state->ingame_scene_feed.hovered_stage = U16_MAX;
+      Vector2 hovered_stage = ZEROVEC2;
       for (i32 itr_000 = 0; itr_000 < MAX_WORLDMAP_LOCATIONS; ++itr_000) {
         const f32 image_ratio = 3840.f / 2160.f; // INFO: ratio of map texture
         const f32 image_height = static_cast<f32>(SMM_BASE_RENDER_HEIGHT * .85f);
@@ -1191,6 +1187,7 @@ void smm_update_mouse_bindings(void) {
         };
         if (CheckCollisionPointRec( *state->mouse_pos_screen, scrloc)) {
           state->ingame_scene_feed.hovered_stage = itr_000;
+          hovered_stage = Vector2 {scrloc.x + map_pin_dim * .5f, scrloc.y + map_pin_dim * .5f};
         }
       }
       
@@ -1203,7 +1200,8 @@ void smm_update_mouse_bindings(void) {
         }
         else {
           set_worldmap_location(state->ingame_scene_feed.hovered_stage);
-          begin_scene_change(MAIN_MENU_SCENE_TO_PLAY_TRAIT_CHOICE, event_context());
+          smm_begin_fadeout(data128(SCENE_TYPE_IN_GAME, true), fade_on_complete_change_scene);
+          event_fire(EVENT_CODE_CAMERA_SET_ZOOM_TARGET, event_context(static_cast<f32>(ZOOM_CAMERA_MAP_ENTRY), static_cast<f32>(true), hovered_stage.x, hovered_stage.y));
         }
       }
       break;
@@ -1514,6 +1512,7 @@ void begin_scene_change(main_menu_scene_type mms, [[__maybe_unused__]] event_con
       break;
     }
     case MAIN_MENU_SCENE_TO_PLAY_MAP_CHOICE: {
+      event_fire(EVENT_CODE_CAMERA_SET_CAMERA_POSITION, event_context(state->in_app_settings->render_width * .5f,state->in_app_settings->render_height * .5f));
       state->mainmenu_state = MAIN_MENU_SCENE_TO_PLAY_MAP_CHOICE;
       break;
     }
@@ -1619,3 +1618,18 @@ void chosen_trait_button_on_click(size_t index) {
   state->available_trait_points -= _trait_ptr->point;
   state->ingame_info->chosen_traits->erase(state->ingame_info->chosen_traits->begin() + index);
 }
+
+#undef DENY_NOTIFY_TIME
+#undef MAIN_MENU_FADE_DURATION
+#undef MAIN_MENU_UPGRADE_PANEL_COL
+#undef MAIN_MENU_UPGRADE_PANEL_ROW
+#undef DRAW_UPGRADE_LABEL
+#undef SMM_BASE_RENDER_SCALE
+#undef SMM_BASE_RENDER_DIV2
+#undef SMM_BASE_RENDER_RES_VEC
+#undef SMM_BASE_RENDER_WIDTH
+#undef SMM_BASE_RENDER_HEIGHT
+#undef SMM_MAP_PIN_SOURCE_LOCATION_UP
+#undef SMM_MAP_PIN_SOURCE_LOCATION_HOVER
+#undef SMM_SCROLL_HANDLE_HEIGHT
+#undef ZOOM_CAMERA_MAP_ENTRY

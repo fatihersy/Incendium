@@ -60,18 +60,24 @@ typedef struct camera_shake_control_system {
 } camera_shake_control_system;
 
 typedef struct camera_zoom_control_system {
+  Vector2 target_initial;
+  Vector2 target_final;
   f32 accumulator;
   f32 camera_old_zoom;
   f32 camera_target_zoom;
   bool is_active;
+  bool track_target;
 
   camera_zoom_control_system(void) {
+    this->target_initial = ZEROVEC2;
+    this->target_final = ZEROVEC2;
     this->accumulator = 0.f;
-    this->camera_target_zoom = 0.f;
     this->camera_old_zoom = 0.f;
+    this->camera_target_zoom = 0.f;
     this->is_active = false;
+    this->track_target = false;
   }
-  camera_zoom_control_system(f32 old_zoom, f32 new_zoom) {
+  camera_zoom_control_system(f32 old_zoom, f32 new_zoom) : camera_zoom_control_system() {
     this->camera_target_zoom = new_zoom;
     this->camera_old_zoom = old_zoom;
     this->is_active = true;
@@ -175,6 +181,7 @@ bool update_camera(void) {
 
   if (state->zoom_ctrl.is_active) {
     camera_zoom_control_system& zoom_ctrl = state->zoom_ctrl;
+    zoom_ctrl.accumulator = FCLAMP(zoom_ctrl.accumulator, 0.f, ZOOM_CAMERA_DURATION);
 
     set_camera_zoom(EaseCircOut(zoom_ctrl.accumulator, zoom_ctrl.camera_old_zoom, zoom_ctrl.camera_target_zoom - zoom_ctrl.camera_old_zoom, ZOOM_CAMERA_DURATION));
 
@@ -207,6 +214,14 @@ bool update_camera(void) {
 
   x -= state->cam_met.handle.offset.x / state->cam_met.handle.zoom;
   y -= state->cam_met.handle.offset.y / state->cam_met.handle.zoom;
+
+  if (state->zoom_ctrl.is_active and state->zoom_ctrl.track_target) {
+    camera_zoom_control_system& zoom_ctrl = state->zoom_ctrl;
+    zoom_ctrl.accumulator = FCLAMP(zoom_ctrl.accumulator, 0.f, ZOOM_CAMERA_DURATION);
+
+    state->cam_met.handle.target.x = EaseCircOut(zoom_ctrl.accumulator, zoom_ctrl.target_initial.x, zoom_ctrl.target_final.x - zoom_ctrl.target_initial.x, ZOOM_CAMERA_DURATION);
+    state->cam_met.handle.target.y = EaseCircOut(zoom_ctrl.accumulator, zoom_ctrl.target_initial.y, zoom_ctrl.target_final.y - zoom_ctrl.target_initial.y, ZOOM_CAMERA_DURATION);
+  }
 
   state->cam_met.frustum = Rectangle { x, y, view_width, view_height };
   return true;
@@ -294,6 +309,11 @@ bool camera_on_event(i32 code, event_context context) {
     case EVENT_CODE_CAMERA_SET_ZOOM_TARGET: {
       f32 new_zoom = FCLAMP(context.data.f32[0], ZOOM_CAMERA_MIN, ZOOM_CAMERA_MAX);
       state->zoom_ctrl = camera_zoom_control_system(state->cam_met.handle.zoom, new_zoom);
+      state->zoom_ctrl.track_target = static_cast<bool>(context.data.f32[1]);
+      state->zoom_ctrl.target_final.x = context.data.f32[2];
+      state->zoom_ctrl.target_final.y = context.data.f32[3];
+      state->zoom_ctrl.target_initial.x = state->cam_met.handle.target.x;
+      state->zoom_ctrl.target_initial.y = state->cam_met.handle.target.y;
       return true;
     }
     case EVENT_CODE_CAMERA_ADD_ZOOM: {
