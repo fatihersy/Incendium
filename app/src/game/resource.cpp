@@ -162,7 +162,8 @@ bool resource_system_initialize(void) {
 
   load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_LOOT_ITEM_HEALTH,     VECTOR2(1888, 768), 12,  16,  16, 1,  6);
   load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_LOOT_ITEM_COIN,       VECTOR2(1888, 784), 12,  16,  16, 1,  7);
-  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_LOOT_ITEM_EXPERIENCE, VECTOR2(1888, 800), 8,  16,  16, 1,  4);
+  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_LOOT_ITEM_EXPERIENCE, VECTOR2(1888, 800),  8,  16,  16, 1,  4);
+  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_LOOT_ITEM_CHEST,      VECTOR2(1888, 816), 15,  32,  32, 1,  4);
 
   load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_ENVIRONMENTAL_PARTICLES, VECTOR2( 576, 3456), 5, 160,  96, 1, 12);
   load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_LIGHT_INSECTS,           VECTOR2(1248, 2400), 5,  58,  71, 1, 12);

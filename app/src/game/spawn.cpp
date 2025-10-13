@@ -49,10 +49,14 @@ CheckCollisionRecs(REC1, \
 #define SPAWN_BASE_SPEED 50
 #define SPAWN_SPEED_CURVE(LEVEL, SCALE, TYPE) (SPAWN_BASE_SPEED + ((SPAWN_BASE_SPEED * (LEVEL + (LEVEL * 0.2f)) + (TYPE + (TYPE * 0.25f))) / SCALE))
 
+#define GET_SPW_EXP(CHARACTER)  level_curve[CHARACTER->genp.i32[1]] * (static_cast<f32>(CHARACTER->type) / static_cast<f32>(SPAWN_TYPE_MAX)) * (CHARACTER->scale / SPAWN_RND_SCALE_MAX)
+#define GET_SPW_COIN(CHARACTER) level_curve[CHARACTER->genp.i32[1]] * (static_cast<f32>(CHARACTER->type) / static_cast<f32>(SPAWN_TYPE_MAX)) * (CHARACTER->scale / SPAWN_RND_SCALE_MAX)
+
 void spawn_play_anim(Character2D* spawn, spawn_movement_animations sheet);
 void remove_spawn(i32 index);
 void register_spawn_animation(Character2D* spawn, spawn_movement_animations movement);
 void update_spawn_animation(Character2D* spawn);
+void spawn_item(std::vector<std::tuple<item_type, i32, data128>> items, data128 context);
 
 bool spawn_system_initialize(const camera_metrics* _camera_metrics, const ingame_info* _ingame_info) {
   if (state and state != nullptr) {
@@ -80,7 +84,12 @@ damage_deal_result damage_spawn(i32 _id, i32 damage) {
       break;
     }
   }
-  if (not character or character == nullptr) return damage_deal_result(DAMAGE_DEAL_RESULT_ERROR, 0, 0);
+  if (not character or character == nullptr) return DAMAGE_DEAL_RESULT_ERROR;
+
+  if (character->type >= SPAWN_TYPE_MAX or character->type <= SPAWN_TYPE_UNDEFINED) {
+    (*character) = Character2D();
+    return DAMAGE_DEAL_RESULT_ERROR;
+  }
   if (not character->is_damagable) { return damage_deal_result(DAMAGE_DEAL_RESULT_IN_DAMAGE_BREAKE, 0, character->health_current); }
 
   if(character->health_current - damage > 0 && character->health_current - damage < MAX_SPAWN_HEALTH) {
@@ -96,50 +105,69 @@ damage_deal_result damage_spawn(i32 _id, i32 damage) {
   character->damage_break_time = character->take_damage_left_animation.fps / static_cast<f32>(TARGET_FPS);
   event_fire(EVENT_CODE_PLAY_SOUND_GROUP, event_context(SOUNDGROUP_ID_ZOMBIE_DIE, static_cast<i32>(true)));
 
-  bool loot_rnd = get_random(0, 100) > 24;
-
-  if (loot_rnd) {
-    event_fire(EVENT_CODE_SPAWN_ITEM, event_context(
-      static_cast<i16>(ITEM_TYPE_EXPERIENCE),
+  data128 context = data128(
       static_cast<i16>(character->collision.x + character->collision.width  * .5f), // INFO: Position x
       static_cast<i16>(character->collision.y + character->collision.height * .5f), // INFO: Position y
       static_cast<i16>(character->collision.y + character->collision.height * .5f), // INFO: Loot drop animation position y begin
-      static_cast<i16>(character->collision.height * .5f), // INFO: Loot drop animation position y change
-      static_cast<i16>(
-        level_curve[character->buffer.i32[1]] 
-          * (static_cast<f32>(character->buffer.i32[0]) / static_cast<f32>(SPAWN_TYPE_MAX)) 
-          * (character->scale / SPAWN_RND_SCALE_MAX)
-      )
-    ));
-  } else {
-    event_fire(EVENT_CODE_SPAWN_ITEM, event_context(
-      static_cast<i16>(ITEM_TYPE_COIN),
-      static_cast<i16>(character->collision.x + character->collision.width  * .5f), // INFO: Position x
-      static_cast<i16>(character->collision.y + character->collision.height * .5f), // INFO: Position y
-      static_cast<i16>(character->collision.y + character->collision.height * .5f), // INFO: Loot drop animation start
-      static_cast<i16>(character->collision.height * .5f), // INFO: Loot drop animation end
-      static_cast<i16>(
-        level_curve[character->buffer.i32[1]] 
-          * (static_cast<f32>(character->buffer.i32[0]) / static_cast<f32>(SPAWN_TYPE_MAX)) 
-          * (character->scale / SPAWN_RND_SCALE_MAX)
-      )
-    ));
+      static_cast<i16>(character->collision.height * .5f) // INFO: Loot drop animation position y change
+  );
+  switch (character->type) {
+    case SPAWN_TYPE_BROWN: {
+      spawn_item(std::vector<std::tuple<item_type, i32, data128>>({
+          std::tuple<item_type, i32, data128>(ITEM_TYPE_EXPERIENCE, 100, data128(static_cast<i32>(GET_SPW_EXP(character)))),
+          std::tuple<item_type, i32, data128>(ITEM_TYPE_COIN, 65, data128(static_cast<i32>(GET_SPW_COIN(character)))),
+        }), 
+        context
+      );
+      break;
+    }
+    case SPAWN_TYPE_ORANGE: {
+      spawn_item(std::vector<std::tuple<item_type, i32, data128>>({
+          std::tuple<item_type, i32, data128>(ITEM_TYPE_EXPERIENCE, 100, data128(static_cast<i32>(GET_SPW_EXP(character)))),
+          std::tuple<item_type, i32, data128>(ITEM_TYPE_COIN, 65, data128(static_cast<i32>(GET_SPW_COIN(character)))),
+        }), 
+        context
+      );
+      break;
+    }
+    case SPAWN_TYPE_YELLOW: {
+      spawn_item(std::vector<std::tuple<item_type, i32, data128>>({
+          std::tuple<item_type, i32, data128>(ITEM_TYPE_EXPERIENCE, 100, data128(static_cast<i32>(GET_SPW_EXP(character)))),
+          std::tuple<item_type, i32, data128>(ITEM_TYPE_COIN, 65, data128(static_cast<i32>(GET_SPW_COIN(character)))),
+        }), 
+        context
+      );
+      break;
+    }
+    case SPAWN_TYPE_RED: {
+      spawn_item(std::vector<std::tuple<item_type, i32, data128>>({
+          std::tuple<item_type, i32, data128>(ITEM_TYPE_EXPERIENCE, 100, data128(static_cast<i32>(GET_SPW_EXP(character)))),
+          std::tuple<item_type, i32, data128>(ITEM_TYPE_COIN, 65, data128(static_cast<i32>(GET_SPW_COIN(character)))),
+        }), 
+        context
+      );
+      break;
+    }
+    case SPAWN_TYPE_BOSS: {
+      spawn_item(std::vector<std::tuple<item_type, i32, data128>>({std::tuple<item_type, i32, data128>(ITEM_TYPE_CHEST, 100, data128())}), context);
+      break;
+    }
+    default: {}
   }
 
   return damage_deal_result(DAMAGE_DEAL_RESULT_SUCCESS, remaining_health, 0);
 }
 
 i32 spawn_character(Character2D _character) {
-  if (_character.buffer.i32[0] <= SPAWN_TYPE_UNDEFINED or _character.buffer.i32[0] >= SPAWN_TYPE_MAX) {
+  if (_character.type <= SPAWN_TYPE_UNDEFINED or _character.type >= SPAWN_TYPE_MAX) {
     return -1;
   }
-  spawn_type spw_type = static_cast<spawn_type>(_character.buffer.i32[0]);
-  _character.scale =  SPAWN_RND_SCALE_MIN + (SPAWN_RND_SCALE_MAX * _character.buffer.i32[2] / 100.f);
-  _character.scale += SPAWN_SCALE_INCREASE_BY_LEVEL(_character.buffer.i32[1]);
+  _character.scale =  SPAWN_RND_SCALE_MIN + (SPAWN_RND_SCALE_MAX * _character.genp.i32[2] / 100.f);
+  _character.scale += SPAWN_SCALE_INCREASE_BY_LEVEL(_character.genp.i32[1]);
 
-  _character.health_max = SPAWN_HEALTH_CURVE(_character.buffer.i32[1], _character.scale, static_cast<f32>(spw_type));
-  _character.damage = SPAWN_DAMAGE_CURVE(_character.buffer.i32[1], _character.scale, static_cast<f32>(spw_type));
-  _character.speed =  SPAWN_SPEED_CURVE(_character.buffer.i32[1], _character.scale, static_cast<f32>(spw_type));
+  _character.health_max = SPAWN_HEALTH_CURVE(_character.genp.i32[1], _character.scale, static_cast<f32>(_character.type));
+  _character.damage = SPAWN_DAMAGE_CURVE(_character.genp.i32[1], _character.scale, static_cast<f32>(_character.type));
+  _character.speed =  SPAWN_SPEED_CURVE(_character.genp.i32[1], _character.scale, static_cast<f32>(_character.type));
   
   _character.health_current = _character.health_max;
 
@@ -428,6 +456,18 @@ void update_spawn_animation(Character2D* spawn) {
     }
   }
 }
+void spawn_item(std::vector<std::tuple<item_type, i32, data128>> items, data128 context) {
+
+  for (auto& item : items) {
+    item_type type = std::get<0>(item);
+    i32 chance = std::get<1>(item);
+    data128 item_values = std::get<2>(item);
+
+    if (get_random(0, 100) < chance) {
+      event_fire(EVENT_CODE_SPAWN_ITEM, event_context(static_cast<i16>(type), context.i16[0], context.i16[1], context.i16[2], context.i16[3], item_values.i16[0]));
+    }
+  }
+}
  
 void remove_spawn(i32 index) {
   if (not state or state == nullptr) {
@@ -449,7 +489,7 @@ void register_spawn_animation(Character2D* spawn, spawn_movement_animations move
   }
   switch (movement) {
     case SPAWN_ZOMBIE_ANIMATION_MOVE_LEFT: {
-      switch (spawn->buffer.i32[0]) {
+      switch (spawn->type) {
         case SPAWN_TYPE_BROWN: {
           spawn->move_left_animation.sheet_id = SHEET_ID_SPAWN_BROWN_ZOMBIE_ANIMATION_MOVE_LEFT;
           set_sprite(&spawn->move_left_animation, true, false);
@@ -483,7 +523,7 @@ void register_spawn_animation(Character2D* spawn, spawn_movement_animations move
       break;
     }
     case SPAWN_ZOMBIE_ANIMATION_MOVE_RIGHT: {
-      switch (spawn->buffer.i32[0]) {
+      switch (spawn->type) {
         case SPAWN_TYPE_BROWN: {
           spawn->move_right_animation.sheet_id = SHEET_ID_SPAWN_BROWN_ZOMBIE_ANIMATION_MOVE_RIGHT;
           set_sprite(&spawn->move_right_animation, true, false);
@@ -517,7 +557,7 @@ void register_spawn_animation(Character2D* spawn, spawn_movement_animations move
       break;
     }
     case SPAWN_ZOMBIE_ANIMATION_TAKE_DAMAGE_LEFT:  {
-      switch (spawn->buffer.i32[0]) {
+      switch (spawn->type) {
         case SPAWN_TYPE_BROWN: {
           spawn->take_damage_left_animation.sheet_id = SHEET_ID_SPAWN_BROWN_ZOMBIE_ANIMATION_TAKE_DAMAGE_LEFT;
           set_sprite(&spawn->take_damage_left_animation, false, true);
@@ -551,7 +591,7 @@ void register_spawn_animation(Character2D* spawn, spawn_movement_animations move
       break;
     }
     case SPAWN_ZOMBIE_ANIMATION_TAKE_DAMAGE_RIGHT:  {
-      switch (spawn->buffer.i32[0]) {
+      switch (spawn->type) {
         case SPAWN_TYPE_BROWN: {
           spawn->take_damage_right_animation.sheet_id = SHEET_ID_SPAWN_BROWN_ZOMBIE_ANIMATION_TAKE_DAMAGE_RIGHT;
           set_sprite(&spawn->take_damage_right_animation, false, true);

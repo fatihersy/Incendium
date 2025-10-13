@@ -651,8 +651,8 @@ void draw_main_menu_character_subscene_stat_list_panel(Rectangle panel_dest, con
       };
       // ICON POS
 
-      gui_draw_atlas_texture_id(ATLAS_TEX_ID_DARK_FANTASY_PANEL_BG, Rectangle {showcase_position.x, showcase_position.y, showcase_new_dim, showcase_new_dim}, VECTOR2(0, 0), 0.f);
-      gui_draw_atlas_texture_id(ATLAS_TEX_ID_DARK_FANTASY_PANEL,    Rectangle {showcase_position.x, showcase_position.y, showcase_new_dim, showcase_new_dim}, VECTOR2(0, 0), 0.f);
+      gui_draw_atlas_texture_id(ATLAS_TEX_ID_DARK_FANTASY_PANEL_BG, Rectangle {showcase_position.x, showcase_position.y, showcase_new_dim, showcase_new_dim}, VECTOR2(0, 0), 0.f, WHITE);
+      gui_draw_atlas_texture_id(ATLAS_TEX_ID_DARK_FANTASY_PANEL,    Rectangle {showcase_position.x, showcase_position.y, showcase_new_dim, showcase_new_dim}, VECTOR2(0, 0), 0.f, WHITE);
 
       for (i32 itr_000 = 0; itr_000 < MAX_STAT_UPGRADE_TIER; ++itr_000) {
         Vector2 tier_pos = {tier_symbols_left_edge + itr_000 * star_spacing, tier_symbols_vertical_center};
@@ -692,7 +692,7 @@ void draw_main_menu_character_subscene_stat_list_panel(Rectangle panel_dest, con
     total_stock_icon_dim, total_stock_icon_dim
   };
 
-  gui_draw_atlas_texture_id(icon_tex_id, total_stock_icon_pos, VECTOR2(0.f, total_stock_icon_pos.height * .5f), 0.f);
+  gui_draw_atlas_texture_id(icon_tex_id, total_stock_icon_pos, VECTOR2(0.f, total_stock_icon_pos.height * .5f), 0.f, WHITE);
   gui_label(total_stock_desc_text, panel_font_type, panel_font_size, total_stock_desc_text_total_dest, WHITE, false, false);
   gui_label_box(total_stock_text, panel_font_type, panel_font_size, total_stock_dest, WHITE, TEXT_ALIGN_BOTTOM_CENTER);
 }
@@ -799,7 +799,7 @@ void draw_main_menu_character_subscene_stat_details_panel(Rectangle panel_dest, 
     cost_icon_dest.width / 2.f,
     cost_icon_dest.height / 2.f
   );
-  gui_draw_atlas_texture_id(icon_tex_id, cost_icon_dest, cost_icon_origin, true);
+  gui_draw_atlas_texture_id(icon_tex_id, cost_icon_dest, cost_icon_origin, true, WHITE);
 
   if (state->deny_notify_timer > DENY_NOTIFY_TIME) {
     state->deny_notify_timer = DENY_NOTIFY_TIME;
@@ -1567,14 +1567,20 @@ void begin_scene_change(scene_id sid, event_context context) {
 
   switch (sid) {
     case SCENE_TYPE_MAIN_MENU: {
+      event_fire(EVENT_CODE_CAMERA_SET_CAMERA_POSITION, event_context(0.f, 0.f));
+      event_fire(EVENT_CODE_CAMERA_SET_ZOOM, event_context(1.f));
       event_fire(EVENT_CODE_SCENE_MAIN_MENU, context);
       return; 
     }
     case SCENE_TYPE_IN_GAME: {
+      event_fire(EVENT_CODE_CAMERA_SET_CAMERA_POSITION, event_context(0.f, 0.f));
+      event_fire(EVENT_CODE_CAMERA_SET_ZOOM, event_context(1.f));
       event_fire(EVENT_CODE_SCENE_IN_GAME, context);
       return; 
     }
     case SCENE_TYPE_EDITOR: {
+      event_fire(EVENT_CODE_CAMERA_SET_CAMERA_POSITION, event_context(0.f, 0.f));
+      event_fire(EVENT_CODE_CAMERA_SET_ZOOM, event_context(1.f));
       event_fire(EVENT_CODE_SCENE_EDITOR, context);
       return; 
     }

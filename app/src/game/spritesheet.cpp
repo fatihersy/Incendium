@@ -17,11 +17,13 @@ void update_sprite(spritesheet *const sheet) {
     IWARN("spritesheet::update_sprite()::Sheet not meant to be playable");
     return;
   }
+  if (not sheet->is_started or (sheet->is_played and (sheet->play_once or not sheet->reset_after_finish)) ) {
+    return;
+  }
   sheet->time_accumulator += GetFrameTime();
   f32 time_per_frame = 1.0f / static_cast<f32>(sheet->fps);
 
-  while (sheet->time_accumulator >= time_per_frame) 
-  {
+  while (sheet->time_accumulator >= time_per_frame) {
     sheet->time_accumulator -= time_per_frame;
     sheet->current_col++;
     sheet->current_frame++;
@@ -30,16 +32,17 @@ void update_sprite(spritesheet *const sheet) {
       sheet->current_col = 0;
     }
     if (sheet->current_row >= sheet->row_total) {
-      sheet->current_row = 0;
-      sheet->current_col = 0;
-      sheet->current_frame = 0;
-
-      if (sheet->play_looped) {
-        reset_sprite(sheet, false);
-        return;
-      }
-      else {
-        stop_sprite(sheet, true);
+      if (sheet->reset_after_finish) {
+        if (sheet->play_looped) {
+          reset_sprite(sheet, false);
+          return;
+        }
+        else {
+          stop_sprite(sheet, true);
+          sheet->is_played = true;
+          return;
+        }
+      } else {
         sheet->is_played = true;
         return;
       }
@@ -68,7 +71,7 @@ constexpr void render_sprite(const spritesheet * sheet,const Color _tint,const R
 }
 constexpr void render_sprite_pro(const spritesheet * sheet, const Rectangle source, const Rectangle dest, const Vector2 origin, const f32 rotation, const Color _tint) {
   if (not sheet or sheet == nullptr or not sheet->tex_handle) {
-    IWARN("spritesheet::render_sprite()::Sheet is not valid");
+    IWARN("spritesheet::render_sprite_pro()::Sheet is not valid");
     return;
   }
 
@@ -81,12 +84,12 @@ constexpr void render_sprite_pro(const spritesheet * sheet, const Rectangle sour
 }
 void set_sprite(spritesheet *const sheet, bool _loop_animation, bool _lock_after_finish) {
   if (not sheet or sheet == nullptr or sheet->sheet_id >= SHEET_ID_SPRITESHEET_TYPE_MAX or sheet->sheet_id <= SHEET_ID_SPRITESHEET_UNSPECIFIED) {
-    IWARN("spritesheet::register_sprite()::Sheet is not valid");
+    IWARN("spritesheet::set_sprite()::Sheet is not valid");
     return;
   }
   const spritesheet * const _sheet_ptr = get_spritesheet_by_enum(sheet->sheet_id);
   if (not _sheet_ptr or _sheet_ptr == nullptr) {
-    IERROR("spritesheet::register_sprite()::Sheet resourse pointer is not valid");
+    IERROR("spritesheet::set_sprite()::Sheet resourse pointer is not valid");
     return;
   }
   *sheet = (*_sheet_ptr);
@@ -94,6 +97,7 @@ void set_sprite(spritesheet *const sheet, bool _loop_animation, bool _lock_after
   sheet->play_looped = _loop_animation;
   sheet->play_once = _lock_after_finish;
   sheet->is_started = false;
+  sheet->reset_after_finish = true;
 }
 void play_sprite_on_site(spritesheet *const sheet, Color _tint, const Rectangle dest) {
   if (not sheet or sheet == nullptr or sheet->sheet_id >= SHEET_ID_SPRITESHEET_TYPE_MAX or sheet->sheet_id <= SHEET_ID_SPRITESHEET_UNSPECIFIED) {
@@ -166,7 +170,7 @@ void draw_sprite_on_site_by_id(spritesheet_id _id, Color _tint, Vector2 pos, Vec
   #endif
 }
 
-void draw_sprite_on_site(spritesheet *const sheet, Color _tint, Vector2 pos, Vector2 scale, i32 frame) {
+void draw_sprite_on_site(spritesheet *const sheet, Color _tint, i32 frame) {
   if (not sheet or sheet == nullptr  or sheet->sheet_id > SHEET_ID_SPRITESHEET_TYPE_MAX or sheet->sheet_id <= SHEET_ID_SPRITESHEET_UNSPECIFIED) {
     IWARN("spritesheet::draw_sprite_on_site()::invalid sprite type");
     return;
@@ -180,9 +184,8 @@ void draw_sprite_on_site(spritesheet *const sheet, Color _tint, Vector2 pos, Vec
     sheet->current_frame_rect.width,
     sheet->current_frame_rect.height
   };
-  Rectangle dest = Rectangle{ pos.x,  pos.y, sheet->current_frame_rect.width * scale.x,  sheet->current_frame_rect.height * scale.y};
-
-  DrawTexturePro(*sheet->tex_handle,source,dest, ZEROVEC2, 0.f, _tint);
+  
+  DrawTexturePro(*sheet->tex_handle, source, sheet->coord, sheet->origin, sheet->rotation, _tint);
   
   #if DEBUG_COLLISIONS
     DrawRectangleLines( static_cast<i32>(dest.x),  static_cast<i32>(dest.y),  static_cast<i32>(dest.width),  static_cast<i32>(dest.height), WHITE);

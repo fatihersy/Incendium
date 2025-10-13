@@ -481,7 +481,7 @@ void gui_label_wrap(const char* text, font_type type, i32 font_size, Rectangle p
 void gui_label_grid(const char* text, font_type type, i32 font_size, Vector2 position, Color tint, bool _center_h, bool _center_v, Vector2 grid_coord);
 void gui_label_wrap_grid(const char* text, font_type type, i32 font_size, Rectangle position, Color tint, bool _should_center, Vector2 grid_pos);
 void gui_draw_atlas_texture_id_pro(atlas_texture_id _id, Rectangle src, Rectangle dest, bool should_center, i32 texture_wrap = TEXTURE_WRAP_REPEAT, Color tint = WHITE);
-void gui_draw_atlas_texture_id(atlas_texture_id _id, Rectangle dest, Vector2 origin, f32 rotation, Color tint = WHITE); 
+void gui_draw_atlas_texture_id(atlas_texture_id _id, Rectangle dest, Vector2 origin, f32 rotation, Color tint); 
 void gui_draw_atlas_texture_id_scale(atlas_texture_id _id, Vector2 position, f32 scale, Color tint, bool should_center); 
 void gui_draw_atlas_texture_id_pro_grid(atlas_texture_id _id, Rectangle src, Rectangle dest, bool relative);
 void gui_draw_texture_id_pro(texture_id _id, Rectangle src, Rectangle dest, Color tint = WHITE, Vector2 origin = ZEROVEC2, i32 texture_wrap = TEXTURE_WRAP_REPEAT);
@@ -497,6 +497,8 @@ void combat_feedback_spawn_floating_text(const char* _text, combat_feedback_floa
  
 // Exposed
 void ui_play_sprite_on_site(spritesheet *sheet, Color _tint, Rectangle dest);
+void ui_draw_sprite_on_site(spritesheet *const sheet, Color _tint, i32 frame);
+void ui_draw_sprite_on_site_by_id(spritesheet_id _id, Color _tint, Vector2 pos, Vector2 scale, i32 frame);
 void ui_set_sprite(spritesheet *sheet, bool _play_looped, bool _play_once);
 const spritesheet * ui_get_spritesheet_by_id(spritesheet_id type);
 void ui_update_sprite(spritesheet *sheet);

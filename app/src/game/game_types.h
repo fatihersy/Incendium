@@ -88,14 +88,6 @@ typedef enum spawn_type {
   SPAWN_TYPE_MAX
 } spawn_type;
 
-typedef enum actor_type {
-  ACTOR_TYPE_UNDEFINED,
-  ACTOR_TYPE_SPAWN,
-  ACTOR_TYPE_PROJECTILE_SPAWN,
-  ACTOR_TYPE_PLAYER,
-  ACTOR_TYPE_PROJECTILE_PLAYER,
-} actor_type;
-
 typedef enum scene_id {
   SCENE_TYPE_UNSPECIFIED,
   SCENE_TYPE_MAIN_MENU,
@@ -201,7 +193,6 @@ typedef enum tilemap_prop_types {
 typedef enum ingame_play_phases {
   INGAME_PLAY_PHASE_UNDEFINED,
   INGAME_PLAY_PHASE_CLEAR_ZOMBIES,
-  INGAME_PLAY_PHASE_DEFEAT_BOSS,
   INGAME_PLAY_PHASE_RESULTS,
   INGAME_PLAY_PHASE_MAX,
 }ingame_play_phases;
@@ -246,6 +237,7 @@ typedef enum item_type {
   ITEM_TYPE_EXPERIENCE,
   ITEM_TYPE_COIN,
   ITEM_TYPE_HEALTH_FRAGMENT,
+  ITEM_TYPE_CHEST,
   ITEM_TYPE_MAX
 } item_type;
 
@@ -281,7 +273,7 @@ typedef struct damage_deal_result {
     this->inflicted_damage = 0;
     this->remaining_health = 0;
   }
-  damage_deal_result(damage_deal_result_type type, i32 inflicted, i32 remaining) : damage_deal_result() {
+  damage_deal_result(damage_deal_result_type type, i32 inflicted = 0, i32 remaining = 0) : damage_deal_result() {
     this->type = type;
     this->inflicted_damage = inflicted;
     this->remaining_health = remaining;
@@ -312,6 +304,7 @@ typedef struct spritesheet {
   bool is_played;
   bool play_looped;
   bool play_once;
+  bool reset_after_finish;
 
   spritesheet(void) {
     this->sheet_id = SHEET_ID_SPRITESHEET_UNSPECIFIED;
@@ -336,6 +329,7 @@ typedef struct spritesheet {
     this->is_played = false;
     this->play_looped = false;
     this->play_once = false;
+    this->reset_after_finish = false;
   }
 } spritesheet;
 
@@ -753,7 +747,7 @@ typedef struct Character2D {
   i32 health_current;
   i32 damage;
   f32 speed;
-  actor_type type;
+  spawn_type type;
   Rectangle collision;
   world_direction w_direction;
   spritesheet move_right_animation;
@@ -772,7 +766,7 @@ typedef struct Character2D {
   bool is_invisible;
   bool initialized;
 
-  data128 buffer;
+  data128 genp;
 
   Character2D(void) {
     this->character_id = I32_MAX;
@@ -780,7 +774,7 @@ typedef struct Character2D {
     this->health_current = 0;
     this->damage = 0;
     this->speed = 0.f;
-    this->type = ACTOR_TYPE_UNDEFINED;
+    this->type = SPAWN_TYPE_UNDEFINED;
     this->collision = ZERORECT;
     this->w_direction = WORLD_DIRECTION_UNDEFINED;
     this->move_right_animation = spritesheet();
@@ -798,15 +792,14 @@ typedef struct Character2D {
     this->is_on_screen = false;
     this->is_invisible = false;
     this->initialized = false;
-    this->buffer = data128();
+    this->genp = data128();
   }
-  Character2D(i32 spawn_type, i32 player_level, i32 rnd_scale, Vector2 position) : Character2D() {
-    type = ACTOR_TYPE_SPAWN;
-    buffer.i32[0] = spawn_type;
-    buffer.i32[1] = player_level;
-    buffer.i32[2] = rnd_scale;
+  Character2D(spawn_type _type, i32 player_level, i32 rnd_scale, Vector2 position) : Character2D() {
+    this->type = _type;
+    this->genp.i32[1] = player_level;
+    this->genp.i32[2] = rnd_scale;
     this->position = position;
-    is_damagable = true;
+    this->is_damagable = true;
   }
   Character2D(Rectangle collision, i32 damage) : Character2D() {
     this->collision = collision;
@@ -1106,9 +1099,10 @@ typedef struct ingame_info {
   ability_id starter_ability;
 
   ingame_info(void) {
+    this->player_state_dynamic = nullptr;
+    this->player_state_static = nullptr;
     this->in_spawns = nullptr;
     this->nearest_spawn = nullptr;
-    this->player_state_dynamic = nullptr;
     this->mouse_pos_world = nullptr;
     this->mouse_pos_screen = nullptr;
     this->ingame_phase = nullptr;
@@ -1118,7 +1112,7 @@ typedef struct ingame_info {
     this->collected_coins = 0;
     this->play_time = 0.f;
     this->is_win = false;
-    this->stage_boss_id = -1;
+    this->stage_boss_id = INVALID_IDI32;
     this->starter_ability = ABILITY_ID_UNDEFINED;
   }
 } ingame_info;

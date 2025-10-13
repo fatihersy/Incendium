@@ -2,6 +2,7 @@
 #include <settings.h>
 #include "save_game.h"
 #include <sound.h>
+#include <reasings.h>
 
 #include "core/ftime.h"
 #include "core/event.h"
@@ -13,7 +14,6 @@
 #include "game/collectible_manager.h"
 #include "game/player.h"
 #include "game/spawn.h"
-#include "game/user_interface.h"
 
 typedef struct game_manager_system_state {
   tilemap ** in_active_map;
@@ -32,11 +32,12 @@ typedef struct game_manager_system_state {
   playlist_control_system_state playlist;
 
   bool game_manager_initialized;
+
   game_manager_system_state(void) {
+    this->in_active_map = nullptr;
     this->game_progression_data = nullptr;
     this->in_camera_metrics = nullptr;
     this->in_app_settings = nullptr;
-    this->in_active_map = nullptr;
 
     this->stage = worldmap_stage();
     this->ingame_phase = INGAME_PLAY_PHASE_UNDEFINED;
@@ -216,41 +217,22 @@ void update_game_manager(void) {
         update_collectible_manager();
         
         if (state->game_info.in_spawns->size() == 0) {
-          if ( (spawn_boss() >= 0) && state->ingame_phase != INGAME_PLAY_PHASE_DEFEAT_BOSS) {
-            state->ingame_phase = INGAME_PLAY_PHASE_DEFEAT_BOSS;
-          }
-          else {
-            gm_end_game(true);
-          }
+          spawn_boss();
         }
+
         update_spawns(state->game_info.player_state_dynamic->position);
         generate_in_game_info();
         update_abilities(__builtin_addressof(state->game_info.player_state_dynamic->ability_system));
+
+        const Character2D * const boss = get_spawn_by_id(state->game_info.stage_boss_id);
+        if (boss) {
+          f32 boss_health_perc = static_cast<f32>(boss->health_current) / static_cast<f32>(boss->health_max);
+          event_fire(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, event_context(static_cast<f32>(PRG_BAR_ID_BOSS_HEALTH), boss_health_perc));
+        }
       }
       else {
         gm_end_game(false);
         return;
-      }
-      break;
-    }
-    case INGAME_PLAY_PHASE_DEFEAT_BOSS: {
-      if (not state->game_info.player_state_dynamic->is_dead) {
-        const Character2D * const boss = get_spawn_by_id(state->game_info.stage_boss_id);
-        if (boss) {
-          update_collectible_manager();
-
-          f32 boss_health_perc = static_cast<f32>(boss->health_current) / static_cast<f32>(boss->health_max);
-          event_fire(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, event_context(static_cast<f32>(PRG_BAR_ID_BOSS_HEALTH), boss_health_perc));
-          gm_update_player();
-          update_spawns(state->game_info.player_state_dynamic->position);
-          generate_in_game_info();
-          update_abilities(__builtin_addressof(state->game_info.player_state_dynamic->ability_system));
-        } else {
-          gm_end_game(true);
-        }
-      }
-      else {
-        gm_end_game(false);
       }
       break;
     }
@@ -302,36 +284,23 @@ void render_game(void) {
         render_player();
         render_spawns();
       }
-      break;
+      return;
     }
-    case INGAME_PLAY_PHASE_DEFEAT_BOSS: { 
-      if (not state->game_info.player_state_dynamic->is_dead) {
-        render_player();
-        render_collectible_manager();
-        render_abilities(__builtin_addressof(state->game_info.player_state_dynamic->ability_system));
-        render_spawns();
+    case INGAME_PLAY_PHASE_RESULTS: {
       
-        //for (size_t itr_000 = 0; itr_000 < (*state->in_active_map)->collisions.size() ; ++itr_000) {
-        //  DrawRectangleLinesEx((*state->in_active_map)->collisions.at(itr_000).dest, 2.f, BLUE);
-        //}
-      }
-      else {
-        render_player();
-        render_spawns();
-      }
-      break;
-    }
-    case INGAME_PLAY_PHASE_RESULTS: { 
-        render_collectible_manager();
-      break;
+      return;
     }
     default: {
       IWARN("game_manager::render_game()::Unsupported in-game phase");
       gm_end_game(false);
       event_fire(EVENT_CODE_SCENE_MAIN_MENU, event_context());
+      return;
     }
-    break;
   }
+
+  IERROR("game_manager::render_game()::Function ended unexpectedly");
+  gm_end_game(false);
+  event_fire(EVENT_CODE_SCENE_MAIN_MENU, event_context());
 }
 
 // OPS
@@ -371,16 +340,18 @@ bool gm_start_game(worldmap_stage stage) {
   upgrade_ability(player_starter_ability);
   refresh_ability(player_starter_ability);
   
-  populate_map_with_spawns(stage.total_spawn_count);
-  if (state->game_info.in_spawns->size() <= 0) {
-    return false;
-  }
+  // TODO: Uncomment later
+  //populate_map_with_spawns(stage.total_spawn_count);
+  //if (state->game_info.in_spawns->size() <= 0) {
+  //  return false;
+  //}
   player_state& p_player_dynamic = (*state->game_info.player_state_dynamic);
   p_player_dynamic.health_current = p_player_dynamic.stats.at(CHARACTER_STATS_HEALTH).buffer.i32[3];
   p_player_dynamic.health_perc = static_cast<f32>(p_player_dynamic.health_current) / static_cast<f32>(p_player_dynamic.stats.at(CHARACTER_STATS_HEALTH).buffer.i32[3]);
   event_fire(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, event_context((f32)PRG_BAR_ID_PLAYER_EXPERIANCE, (f32)state->game_info.player_state_dynamic->exp_perc));
   event_fire(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, event_context((f32)PRG_BAR_ID_PLAYER_HEALTH, (f32)state->game_info.player_state_dynamic->health_perc));
 
+  // TODO: Change to INGAME_PLAY_PHASE_CLEAR_ZOMBIES later
   state->ingame_phase = INGAME_PLAY_PHASE_CLEAR_ZOMBIES;
   reset_ingame_info();
 
@@ -430,10 +401,10 @@ void gm_damage_spawn_if_collide(data128 coll_data, i32 damage, collision_type co
             const Character2D *const spw = __builtin_addressof(state->game_info.in_spawns->at(itr_000));
             damage_deal_result result = damage_spawn(spw->character_id, damage);
             if (result.type == DAMAGE_DEAL_RESULT_SUCCESS) {
-              combat_feedback_spawn_floating_text(TextFormat("%d", damage), COMBAT_FEEDBACK_FLOATING_TEXT_TYPE_DAMAGE, Vector2 {
-                spw->collision.x + spw->collision.width * .5f,
-                spw->collision.y - spw->collision.height * .15f
-              });
+              event_fire(EVENT_CODE_SPAWN_COMBAT_FEEDBACK_FLOATING_TEXT, event_context(
+                static_cast<f32>(spw->collision.x + spw->collision.width * .5f), static_cast<f32>(spw->collision.y - spw->collision.height * .15f),
+                static_cast<f32>(result.inflicted_damage)
+              ));
             }
           }
         }
@@ -489,7 +460,6 @@ void gm_damage_player_if_collide(data128 coll_data, i32 damage, collision_type c
 
   IERROR("game_manager::gm_damage_player_if_collide()::Function terminated unexpectedly");
 }
-
 void populate_map_with_spawns(i32 min_count) {
   if (not state or state == nullptr) {
     IERROR("game_manager::populate_map_with_spawns()::State is not valid");
@@ -507,7 +477,7 @@ void populate_map_with_spawns(i32 min_count) {
       static_cast<f32>(get_random((i32)state->stage.spawning_areas.at(0).y, (i32)state->stage.spawning_areas.at(0).y + state->stage.spawning_areas.at(0).height))
     };
     if (spawn_character(Character2D(
-        static_cast<i32>(SPAWN_TYPE_BROWN), //static_cast<i32>(get_random(SPAWN_TYPE_UNDEFINED+1, SPAWN_TYPE_MAX-2) >= 0),
+        SPAWN_TYPE_BROWN, //static_cast<i32>(get_random(SPAWN_TYPE_UNDEFINED+1, SPAWN_TYPE_MAX-2) >= 0),
         static_cast<i32>(state->game_info.player_state_dynamic->level), 
         static_cast<i32>(get_random(0, 100)), 
         position
@@ -519,7 +489,6 @@ void populate_map_with_spawns(i32 min_count) {
     }
   }
 }
-
 i32 spawn_boss(void) {
   if (not state or state == nullptr) {
     IERROR("game_manager::spawn_boss()::State is invalid");
@@ -544,7 +513,6 @@ i32 spawn_boss(void) {
   }
   return -1;
 }
-
 void currency_coins_add(i32 value) {
   state->game_progression_data->currency_coins_player_have += value;
 }
@@ -592,6 +560,8 @@ void reset_ingame_info(void) {
   state->game_info.collected_coins = 0;
   state->game_info.play_time = 0.f;
   state->game_info.is_win = false;
+  state->game_info.stage_boss_id = INVALID_IDI32;
+  state->game_info.starter_ability = ABILITY_ID_UNDEFINED;
 }
 void gm_update_player(void) {
   if (state->game_info.player_state_dynamic and state->game_info.player_state_dynamic != nullptr and not state->game_info.player_state_dynamic->is_dead) {
@@ -631,7 +601,6 @@ void gm_update_player(void) {
     }
   }
 }
-
 // OPS
 
 // GET / SET
@@ -926,9 +895,12 @@ bool game_manager_on_event(i32 code, event_context context) {
       return false;
     }
   }
-
   IERROR("game_manager::game_manager_on_event()::Fire event ended unexpectedly");
   return false;
 }
 
 #undef SPAWN_TRYING_LIMIT
+#undef GET_BOSS_LEVEL
+#undef GET_BOSS_SCALE
+#undef GET_BOSS_SPEED
+#undef ZOOM_CAMERA_GAME_RESULTS

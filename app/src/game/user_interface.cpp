@@ -2248,6 +2248,12 @@ Vector2 ui_align_text(Rectangle in_dest, Vector2 in_text_measure, text_alignment
 void ui_play_sprite_on_site(spritesheet *sheet, Color _tint, Rectangle dest) {
   play_sprite_on_site(sheet, _tint, dest);
 }
+void ui_draw_sprite_on_site(spritesheet *const sheet, Color _tint, i32 frame) {
+  draw_sprite_on_site(sheet, _tint, frame);
+}
+void ui_draw_sprite_on_site_by_id(spritesheet_id _id, Color _tint, Vector2 pos, Vector2 scale, i32 frame) {
+  draw_sprite_on_site_by_id(_id, _tint, pos, scale, frame);
+}
 void ui_set_sprite(spritesheet *sheet, bool _play_looped, bool _play_once) {
   set_sprite(sheet, _play_looped, _play_once);
 }
