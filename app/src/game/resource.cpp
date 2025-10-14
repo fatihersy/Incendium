@@ -78,6 +78,7 @@ bool resource_system_initialize(void) {
   load_texture_pak(PAK_FILE_ASSET1, PAK_FILE_ASSET1_WORLDMAP_IMAGE, false, VECTOR2(0.f, 0.f), TEX_ID_WORLDMAP_WO_CLOUDS);
   load_texture_pak(PAK_FILE_ASSET1, PAK_FILE_ASSET1_BLACK_BACKGROUND_IMAGE1, false, VECTOR2(0.f, 0.f), TEX_ID_BLACK_BACKGROUND_IMG1);
   load_texture_pak(PAK_FILE_ASSET1, PAK_FILE_ASSET1_BLACK_BACKGROUND_IMAGE2, false, VECTOR2(0.f, 0.f), TEX_ID_BLACK_BACKGROUND_IMG2);
+  load_texture_pak(PAK_FILE_ASSET1, PAK_FILE_ASSET1_SPRITESHEET_ZAP, false, VECTOR2(0.f, 0.f), TEX_ID_ZAP);
   #else
     load_texture_disk("atlas.png", false, VECTOR2(0.f, 0.f), TEX_ID_ASSET_ATLAS);
     load_texture_disk("worldmap_wo_clouds.png", false, VECTOR2(0.f, 0.f), TEX_ID_WORLDMAP_WO_CLOUDS);
@@ -114,6 +115,8 @@ bool resource_system_initialize(void) {
   load_texture_from_atlas(ATLAS_TEX_ID_LITTLE_SHOWCASE,                      Rectangle{ 1504,  128,   88,   16 });
   load_texture_from_atlas(ATLAS_TEX_ID_PANEL_SCROLL,                         Rectangle{ 1504,  144,   16,   48 });
   load_texture_from_atlas(ATLAS_TEX_ID_PANEL_SCROLL_HANDLE,                  Rectangle{ 1520,  144,   16,   16 });
+  load_texture_from_atlas(ATLAS_TEX_ID_CHEST_BASE,                           Rectangle{ 1568, 1200,   32,   32 });
+  load_texture_from_atlas(ATLAS_TEX_ID_CHEST_LID,                            Rectangle{ 1600, 1200,   32,   32 });
 
   load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_PLAYER_ANIMATION_IDLE_RIGHT,        VECTOR2(1584,  224), 10,   22,  32, 1,  4);
   load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_PLAYER_ANIMATION_MOVE_RIGHT,        VECTOR2(1584,  160), 10,   22,  32, 1,  6);
@@ -160,10 +163,10 @@ bool resource_system_initialize(void) {
   load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_ABILITY_FIRETRAIL_END_ANIMATION,    VECTOR2(1680.f, 528.f), 15,  24,  32, 1,  5);
   load_spritesheet(TEX_ID_ZAP,         SHEET_ID_ABILITY_CODEX,                      VECTOR2(   0.f,   0.f),240, 517, 517, 1, 60);
 
-  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_LOOT_ITEM_HEALTH,     VECTOR2(1888, 768), 12,  16,  16, 1,  6);
-  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_LOOT_ITEM_COIN,       VECTOR2(1888, 784), 12,  16,  16, 1,  7);
-  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_LOOT_ITEM_EXPERIENCE, VECTOR2(1888, 800),  8,  16,  16, 1,  4);
-  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_LOOT_ITEM_CHEST,      VECTOR2(1888, 816), 15,  32,  32, 1,  4);
+  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_LOOT_ITEM_HEALTH,     VECTOR2(1888,  768), 12,  16,  16, 1,  6);
+  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_LOOT_ITEM_COIN,       VECTOR2(1888,  784), 12,  16,  16, 1,  7);
+  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_LOOT_ITEM_EXPERIENCE, VECTOR2(1888,  800),  8,  16,  16, 1,  4);
+  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_LOOT_ITEM_CHEST,      VECTOR2(1568, 1168), 15,  32,  32, 1,  7);
 
   load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_ENVIRONMENTAL_PARTICLES, VECTOR2( 576, 3456), 5, 160,  96, 1, 12);
   load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_LIGHT_INSECTS,           VECTOR2(1248, 2400), 5,  58,  71, 1, 12);

@@ -59,6 +59,18 @@ bool initialize_shader_system(void) {
       IWARN("fshader::initialize_shader_system()::map choice image shader cannot loaded");
       return false;
     }
+    if(not load_shader_pak(PAK_FILE_ASSET2, PAK_FILE_ASSET2_UNDEFINED, PAK_FILE_ASSET2_SDR_SPAWN, SHADER_ID_SPAWN)) {
+      IWARN("fshader::initialize_shader_system()::spawn shader cannot loaded");
+      return false;
+    }
+    if(not load_shader_pak(PAK_FILE_ASSET2, PAK_FILE_ASSET2_UNDEFINED, PAK_FILE_ASSET2_SDR_SPIN, SHADER_ID_CHEST_OPENING_SPIN_TEXT)) {
+      IWARN("fshader::initialize_shader_system()::Chest opening spin text cannot loaded");
+      return false;
+    }
+    if(not load_shader_pak(PAK_FILE_ASSET2, PAK_FILE_ASSET2_UNDEFINED, PAK_FILE_ASSET2_SDF_TEXT, SHADER_ID_SDF_TEXT)) {
+      IWARN("fshader::initialize_shader_system()::SDF text shader cannot loaded");
+      return false;
+    }
   #else 
     if (not load_shader_disk(0, "prg_bar_mask.fs", SHADER_ID_PROGRESS_BAR_MASK)) {
       IWARN("fshader::initialize_shader_system()::mask shader cannot loaded");
@@ -82,6 +94,14 @@ bool initialize_shader_system(void) {
     }
     if(not load_shader_disk(0, "sdr_spawn.fs", SHADER_ID_SPAWN)) {
       IWARN("fshader::initialize_shader_system()::Spawn shader cannot loaded");
+      return false;
+    }
+    if(not load_shader_disk(0, "sdr_spin.fs", SHADER_ID_CHEST_OPENING_SPIN_TEXT)) {
+      IWARN("fshader::initialize_shader_system()::Chest openning shader spin cannot loaded");
+      return false;
+    }
+    if(not load_shader_disk(0, "sdf_text.fs", SHADER_ID_SDF_TEXT)) {
+      IWARN("fshader::initialize_shader_system()::SDF text shader cannot loaded");
       return false;
     }
   #endif

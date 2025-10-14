@@ -105,9 +105,6 @@ void update_ability_codex(ability *const abl) {
   if (not abl->p_owner or abl->p_owner == nullptr or not state->in_ingame_info or state->in_ingame_info == nullptr) {
     return;
   }
-  if (not state->in_ingame_info->nearest_spawn or state->in_ingame_info->nearest_spawn == nullptr ) {
-    return;
-  }
   const player_state *const p_player = reinterpret_cast<player_state*>(abl->p_owner);
 
   Rectangle book_position = Rectangle { 
@@ -129,6 +126,9 @@ void update_ability_codex(ability *const abl) {
     }
     if (prj.PROJ_F32_ACCUMULATOR_F32 > 0.f) {
       prj.PROJ_F32_ACCUMULATOR_F32 -= GetFrameTime();
+      continue;
+    }
+    if (not state->in_ingame_info->nearest_spawn or state->in_ingame_info->nearest_spawn == nullptr ) {
       continue;
     }
     reset_sprite(__builtin_addressof(sheet), true);
@@ -156,6 +156,9 @@ void render_ability_codex(ability *const abl) {
   }
   if (not abl->is_active or not abl->is_initialized) {
     IWARN("ability::render_codex()::Ability is not active or not initialized");
+    return;
+  }
+  if (not state->in_ingame_info->nearest_spawn or state->in_ingame_info->nearest_spawn == nullptr ) {
     return;
   }
   for (size_t itr_000 = 0u; itr_000 < abl->projectiles.size(); ++itr_000) {

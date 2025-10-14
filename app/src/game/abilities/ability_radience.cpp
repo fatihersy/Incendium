@@ -92,7 +92,7 @@ void update_ability_radience(ability *const abl) {
     IWARN("ability::update_radience()::Ability is not active or not initialized");
     return;
   }
-  if (abl->p_owner == nullptr or state->in_ingame_info == nullptr or state->in_ingame_info->nearest_spawn == nullptr) {
+  if (abl->p_owner == nullptr or state->in_ingame_info == nullptr) {
     return;
   }
   const player_state *const p_player = reinterpret_cast<player_state*>(abl->p_owner);
@@ -152,7 +152,10 @@ void render_ability_radience(ability *const abl){
     return;
   }
   if (not abl->is_active or not abl->is_initialized) {
-    IWARN("ability::render_radience()::Ability is not active or not initialized");
+    IWARN("ability::update_radience()::Ability is not active or not initialized");
+    return;
+  }
+  if (abl->p_owner == nullptr or state->in_ingame_info == nullptr) {
     return;
   }
   if (not abl->projectiles.at(0).is_active) { return; }

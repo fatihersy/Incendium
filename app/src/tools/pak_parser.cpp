@@ -147,9 +147,6 @@ bool pak_parser_system_initialize(void) {
       file_buffer(PAK_FILE_UNDEFINED, PAK_FILE_ASSET1_MAX, ""),
     })
   );
-
-
-
   state->asset_pak_datas.at(PAK_FILE_ASSET2) = asset_pak_file("asset2.pak", "asset2_files/",
     std::vector<file_buffer>({
       file_buffer(PAK_FILE_UNDEFINED, PAK_FILE_ASSET2_UNDEFINED, ""),
@@ -162,6 +159,8 @@ bool pak_parser_system_initialize(void) {
       file_buffer(PAK_FILE_ASSET2,    PAK_FILE_ASSET2_POST_PROCESS,    ".fs"),
       file_buffer(PAK_FILE_ASSET2,    PAK_FILE_ASSET2_PRG_BAR_MASK,    ".fs"),
       file_buffer(PAK_FILE_ASSET2,    PAK_FILE_ASSET2_SDR_SPAWN,       ".fs"),
+      file_buffer(PAK_FILE_ASSET2,    PAK_FILE_ASSET2_SDF_TEXT,        ".fs"),
+      file_buffer(PAK_FILE_ASSET2,    PAK_FILE_ASSET2_SDR_SPIN,        ".fs"),
       file_buffer(PAK_FILE_UNDEFINED, PAK_FILE_ASSET2_MAX, ""),
     })
   );

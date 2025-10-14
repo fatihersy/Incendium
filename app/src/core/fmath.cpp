@@ -77,3 +77,6 @@ x -= z;
 
 return x;
 }
+f32 fmod(f32 x, f64 y) {
+  return static_cast<f32>(modf(static_cast<long double>(x), __builtin_addressof(y)));
+}

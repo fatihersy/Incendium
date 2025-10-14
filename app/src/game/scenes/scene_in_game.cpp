@@ -110,7 +110,9 @@ static scene_in_game_state * state = nullptr;
 #define SIG_BASE_RENDER_DIV2 VECTOR2(static_cast<f32>(state->in_app_settings->render_width_div2), static_cast<f32>(state->in_app_settings->render_height_div2))
 #define SIG_BASE_RENDER_WIDTH state->in_app_settings->render_width
 #define SIG_BASE_RENDER_HEIGHT state->in_app_settings->render_height
-#define SIG_SCREEN_POS(X, Y) (Vector2{  \
+#define SIG_BASE_RENDER_WIDTH_F static_cast<f32>(state->in_app_settings->render_width)
+#define SIG_BASE_RENDER_HEIGHT_F static_cast<f32>(state->in_app_settings->render_height)
+#define SIG_SCREEN_POS(X, Y) (Vector2{\
   SIG_BASE_RENDER_WIDTH  * (X / 100), \
   SIG_BASE_RENDER_HEIGHT * (Y / 100)  \
 })
@@ -133,6 +135,7 @@ if (UPG->level == 1) {\
 #define CHEST_OPENING_SEQ_INTRO_DURATION .6f
 #define CHEST_OPENING_SEQ_CHEST_SCALE 6.5f
 #define CHEST_OPENING_SEQ_BG_MAX_OPACITY_SCALE 0.7f
+#define CHEST_OPENING_SPIN_SPEED 100.f
 
 [[__nodiscard__]] bool begin_scene_in_game(bool fade_in);
 
@@ -964,7 +967,7 @@ void sig_init_chest_sequence(chest_opening_sequence sequence, data128 vec_ex = d
       seq.sheet_chest.reset_after_finish = false;
 
       seq.vec_ex.f32[2] = static_cast<f32>(state->in_app_settings->render_width_div2);
-      seq.vec_ex.f32[3] = static_cast<f32>(state->in_app_settings->render_height * .75f);
+      seq.vec_ex.f32[3] = static_cast<f32>(state->in_app_settings->render_height * .65f);
       return;
     }
     case CHEST_OPENING_SEQUENCE_CHEST_OPEN: {
@@ -1021,7 +1024,7 @@ void sig_update_chest_sequence(void) {
         return;
       }
       else {
-        //sig_init_chest_sequence(CHEST_OPENING_SEQUENCE_READY);
+        sig_init_chest_sequence(CHEST_OPENING_SEQUENCE_READY);
         return;
       }
     }
@@ -1029,6 +1032,7 @@ void sig_update_chest_sequence(void) {
       return;
     }
     case CHEST_OPENING_SEQUENCE_SPIN: {
+      seq.mm_ex.f32[2] += GetFrameTime() * CHEST_OPENING_SPIN_SPEED;
       return;
     }
     case CHEST_OPENING_SEQUENCE_RESULT: {
@@ -1051,6 +1055,7 @@ void sig_render_chest_sequence(void) {
         Rectangle {0.f, 0.f, static_cast<f32>(state->in_app_settings->render_width), static_cast<f32>(state->in_app_settings->render_height)}, 
         ZEROVEC2, 0.f, Color {255u, 255u, 255u, bg_opacity}
       );
+      DrawCircle(SIG_BASE_RENDER_DIV2.x, SIG_BASE_RENDER_DIV2.y, state->in_app_settings->render_height_div2, Color {53u, 59u, 72u, 155u});
       ui_draw_sprite_on_site(__builtin_addressof(seq.sheet_chest), WHITE, 0);
       return;
     }
@@ -1060,6 +1065,7 @@ void sig_render_chest_sequence(void) {
         Rectangle {0.f, 0.f, static_cast<f32>(state->in_app_settings->render_width), static_cast<f32>(state->in_app_settings->render_height)}, 
         ZEROVEC2, 0.f, Color {255u, 255u, 255u, bg_opacity}
       );
+      DrawCircle(SIG_BASE_RENDER_DIV2.x, SIG_BASE_RENDER_DIV2.y, state->in_app_settings->render_height_div2, Color {53u, 59u, 72u, 155u});
       ui_play_sprite_on_site(__builtin_addressof(seq.sheet_chest), WHITE, seq.sheet_chest.coord);
       return;
     }
@@ -1069,17 +1075,63 @@ void sig_render_chest_sequence(void) {
         Rectangle {0.f, 0.f, static_cast<f32>(state->in_app_settings->render_width), static_cast<f32>(state->in_app_settings->render_height)}, 
         ZEROVEC2, 0.f, Color {255u, 255u, 255u,  bg_opacity}
       );
-      ui_draw_sprite_on_site_by_id(SHEET_ID_LOOT_ITEM_CHEST, WHITE, 
-        Vector2 { seq.vec_ex.f32[2], seq.vec_ex.f32[3] }, 
-        Vector2 { seq.mm_ex.f32[0], seq.mm_ex.f32[0] }, 
-        0
+      DrawCircle(SIG_BASE_RENDER_DIV2.x, SIG_BASE_RENDER_DIV2.y, state->in_app_settings->render_height_div2, Color {53u, 59u, 72u, 155u});
+      gui_draw_atlas_texture_id(ATLAS_TEX_ID_CHEST_LID, seq.sheet_chest.coord, seq.sheet_chest.origin, seq.sheet_chest.rotation, seq.sheet_chest.tint);
+      const Rectangle& chest_dest = seq.sheet_chest.coord;
+      DrawTriangle(Vector2 { chest_dest.x, chest_dest.y + chest_dest.height * .5f }, Vector2 { SIG_BASE_RENDER_WIDTH_F, 0.f }, Vector2 { 0.f, 0.f }, Color {255u, 255u, 255u, 155u});
+
+      draw_atlas_texture_repeat(ATLAS_TEX_ID_DARK_FANTASY_PANEL_BG, 
+        Rectangle { SIG_BASE_RENDER_WIDTH_F * .5f, SIG_BASE_RENDER_HEIGHT_F * .25f, SIG_BASE_RENDER_WIDTH_F, SIG_BASE_RENDER_HEIGHT_F * .2f}, 
+        20.f, true,  WHITE, 0.f
+      );
+      gui_draw_atlas_texture_id(ATLAS_TEX_ID_CHEST_BASE, seq.sheet_chest.coord, seq.sheet_chest.origin, seq.sheet_chest.rotation, seq.sheet_chest.tint);
+
+      gui_label_shader(
+        lc_txt(LOC_TEXT_INGAME_STATE_CHEST_OPENING_SPIN), 
+        SHADER_ID_CHEST_OPENING_SPIN_TEXT, FONT_TYPE_ITALIC, 2, Vector2 {SIG_BASE_RENDER_WIDTH_F * .5f, SIG_BASE_RENDER_HEIGHT_F * .75f}, WHITE, true, true
       );
       return;
     }
     case CHEST_OPENING_SEQUENCE_SPIN: {
+      const u8 bg_opacity = static_cast<u8>(CHEST_OPENING_SEQ_BG_MAX_OPACITY_SCALE * 255);
+      gui_draw_atlas_texture_id(ATLAS_TEX_ID_BG_BLACK, 
+        Rectangle {0.f, 0.f, static_cast<f32>(state->in_app_settings->render_width), static_cast<f32>(state->in_app_settings->render_height)}, 
+        ZEROVEC2, 0.f, Color {255u, 255u, 255u,  bg_opacity}
+      );
+      DrawCircle(SIG_BASE_RENDER_DIV2.x, SIG_BASE_RENDER_DIV2.y, state->in_app_settings->render_height_div2, Color {53u, 59u, 72u, 155u});
+      gui_draw_atlas_texture_id(ATLAS_TEX_ID_CHEST_LID, seq.sheet_chest.coord, seq.sheet_chest.origin, seq.sheet_chest.rotation, seq.sheet_chest.tint);
+      const Rectangle& chest_dest = seq.sheet_chest.coord;
+      DrawTriangle(Vector2 { chest_dest.x, chest_dest.y + chest_dest.height * .5f }, Vector2 { SIG_BASE_RENDER_WIDTH_F, 0.f }, Vector2 { 0.f, 0.f }, Color {255u, 255u, 255u, 155u});
+
+      //const Rectangle * panel_source = get_atlas_texture_source_rect(ATLAS_TEX_ID_DARK_FANTASY_PANEL);
+      draw_atlas_texture_repeat(ATLAS_TEX_ID_DARK_FANTASY_PANEL_BG, 
+        Rectangle { SIG_BASE_RENDER_WIDTH_F * .5f, SIG_BASE_RENDER_HEIGHT_F * .25f, SIG_BASE_RENDER_WIDTH_F, SIG_BASE_RENDER_HEIGHT_F * .2f}, 
+        20.f, true,  WHITE, seq.mm_ex.f32[2]
+      );
+      gui_draw_atlas_texture_id(ATLAS_TEX_ID_CHEST_BASE, seq.sheet_chest.coord, seq.sheet_chest.origin, seq.sheet_chest.rotation, seq.sheet_chest.tint);
       return;
     }
     case CHEST_OPENING_SEQUENCE_RESULT: {
+      const u8 bg_opacity = static_cast<u8>(CHEST_OPENING_SEQ_BG_MAX_OPACITY_SCALE * 255);
+      gui_draw_atlas_texture_id(ATLAS_TEX_ID_BG_BLACK, 
+        Rectangle {0.f, 0.f, static_cast<f32>(state->in_app_settings->render_width), static_cast<f32>(state->in_app_settings->render_height)}, 
+        ZEROVEC2, 0.f, Color {255u, 255u, 255u,  bg_opacity}
+      );
+      DrawCircle(SIG_BASE_RENDER_DIV2.x, SIG_BASE_RENDER_DIV2.y, state->in_app_settings->render_height_div2, Color {53u, 59u, 72u, 155u});
+      gui_draw_atlas_texture_id(ATLAS_TEX_ID_CHEST_LID, seq.sheet_chest.coord, seq.sheet_chest.origin, seq.sheet_chest.rotation, seq.sheet_chest.tint);
+      const Rectangle& chest_dest = seq.sheet_chest.coord;
+      DrawTriangle(Vector2 { chest_dest.x, chest_dest.y + chest_dest.height * .5f }, Vector2 { SIG_BASE_RENDER_WIDTH_F, 0.f }, Vector2 { 0.f, 0.f }, Color {255u, 255u, 255u, 155u});
+
+      //const Rectangle * panel_source = get_atlas_texture_source_rect(ATLAS_TEX_ID_DARK_FANTASY_PANEL);
+      draw_atlas_texture_repeat(ATLAS_TEX_ID_DARK_FANTASY_PANEL_BG, 
+        Rectangle { SIG_BASE_RENDER_WIDTH_F * .5f, SIG_BASE_RENDER_HEIGHT_F * .25f, SIG_BASE_RENDER_WIDTH_F, SIG_BASE_RENDER_HEIGHT_F * .2f}, 
+        20.f, true,  WHITE, 0.f
+      );
+      gui_draw_atlas_texture_id(ATLAS_TEX_ID_CHEST_BASE, seq.sheet_chest.coord, seq.sheet_chest.origin, seq.sheet_chest.rotation, seq.sheet_chest.tint);
+
+      if(gui_menu_button(lc_txt(LOC_TEXT_INGAME_STATE_RESULT_ACCEPT), BTN_ID_IN_GAME_BUTTON_CHEST_OPENING_ACCEPT, Vector2 {0.f, 45.f}, SIG_BASE_RENDER_DIV2, true)) {
+        sig_change_ingame_state(SCENE_INGAME_STATE_PLAY);
+      }
       return;
     }
     default: {

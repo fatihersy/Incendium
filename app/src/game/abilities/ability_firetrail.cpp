@@ -104,8 +104,7 @@ void update_ability_firetrail(ability *const abl) {
     IWARN("ability::update_ability_firetrail()::Ability is not active or not initialized");
     return;
   }
-  if (abl->p_owner == nullptr or state->in_ingame_info == nullptr or state->in_ingame_info->nearest_spawn == nullptr) {
-    IWARN("ability::update_ability_firetrail()::Ability pointer(s) not valid");
+  if (abl->p_owner == nullptr or state->in_ingame_info == nullptr) {
     return;
   }
   const player_state *const p_player = reinterpret_cast<player_state*>(abl->p_owner);

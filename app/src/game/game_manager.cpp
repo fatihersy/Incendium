@@ -63,6 +63,7 @@ extern const i32 level_curve[MAX_PLAYER_LEVEL+1];
 #define GET_BOSS_SCALE(VAL) (100 + (100 * VAL))
 #define GET_BOSS_SPEED(VAL) (1.1f * VAL)
 #define ZOOM_CAMERA_GAME_RESULTS 1.5f
+#define MAX_NEAREST_SPAWN_DISTANCE 512.f
 
 bool game_manager_on_event(i32 code, event_context context);
 bool game_manager_reinit(const camera_metrics * in_camera_metrics, const app_settings * in_app_settings,tilemap ** const in_active_map_ptr);
@@ -351,7 +352,6 @@ bool gm_start_game(worldmap_stage stage) {
   event_fire(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, event_context((f32)PRG_BAR_ID_PLAYER_EXPERIANCE, (f32)state->game_info.player_state_dynamic->exp_perc));
   event_fire(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, event_context((f32)PRG_BAR_ID_PLAYER_HEALTH, (f32)state->game_info.player_state_dynamic->health_perc));
 
-  // TODO: Change to INGAME_PLAY_PHASE_CLEAR_ZOMBIES later
   state->ingame_phase = INGAME_PLAY_PHASE_CLEAR_ZOMBIES;
   reset_ingame_info();
 
@@ -544,7 +544,7 @@ void generate_in_game_info(void) {
   for (const Character2D& spw : (*state->game_info.in_spawns)) {
     
     f32 dist = vec2_distance(player_position, spw.position);
-    if (dist < dist_cache) {
+    if (dist < dist_cache and dist < MAX_NEAREST_SPAWN_DISTANCE) {
       spw_nearest = __builtin_addressof(spw);
       dist_cache = dist;
     }

@@ -333,8 +333,6 @@ typedef struct spritesheet {
   }
 } spritesheet;
 
-
-
 typedef struct atlas_texture {
   Texture2D* atlas_handle;
   Rectangle source;

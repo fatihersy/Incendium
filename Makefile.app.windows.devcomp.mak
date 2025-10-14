@@ -1,5 +1,5 @@
 DIR := $(subst /,\,${CURDIR})
-BUILD_DIR := bin
+BUILD_DIR := bin/_DEVCOMP
 VENDOR_DIR := vendor
 OBJ_DIR := obj
 

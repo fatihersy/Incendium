@@ -83,17 +83,17 @@ static user_interface_system_state * state = nullptr;
 #define UI_ABRACADABRA_FONT state->display_language->abracadabra
 #define UI_ABRACADABRA_FONT_SIZE state->display_language->abracadabra.baseSize
 
-#define MENU_BUTTON_FONT UI_ABRACADABRA_FONT
+#define MENU_BUTTON_FONT UI_LIGHT_FONT
 #define MENU_BUTTON_FONT_SIZE_SCALE 1
-#define MINI_BUTTON_FONT UI_ABRACADABRA_FONT
+#define MINI_BUTTON_FONT UI_LIGHT_FONT
 #define MINI_BUTTON_FONT_SIZE_SCALE 1
-#define LABEL_FONT UI_ABRACADABRA_FONT
+#define LABEL_FONT UI_LIGHT_FONT
 #define LABEL_FONT_SIZE_SCALE 1
 #define DEFAULT_MENU_BUTTON_SCALE 4
-#define SLIDER_FONT FONT_TYPE_ABRACADABRA
+#define SLIDER_FONT FONT_TYPE_LIGHT
 #define DEFAULT_SLIDER_FONT_SIZE 1
 #define DEFAULT_PERCENT_SLIDER_CIRCLE_AMOUTH 10
-#define DEFAULT_ERROR_FONT_TYPE FONT_TYPE_ABRACADABRA
+#define DEFAULT_ERROR_FONT_TYPE FONT_TYPE_LIGHT
 #define DEFAULT_ERROR_FONT_SIZE 1
 
 #define ERROR_TEXT_DURATION_STAY_ON_SCREEN 2.1f
@@ -190,7 +190,9 @@ constexpr void draw_text_simple(const char* text, Vector2 pos, font_type in_font
     return;
   }
   Font font = font_type_to_font(in_font_type);
-  DrawTextEx(font, text, pos, font.baseSize * fontsize, UI_FONT_SPACING, color);
+  BeginShaderMode(get_shader_by_enum(SHADER_ID_SDF_TEXT)->handle);
+    DrawTextEx(font, text, pos, font.baseSize * fontsize, UI_FONT_SPACING, color);
+  EndShaderMode();
 }
 constexpr void draw_text(const char* text, Vector2 pos, font_type in_font_type, i32 fontsize, Color color, bool center_horizontal, bool center_vertical, bool use_grid_align = false, 
   Vector2 grid_coord = ZEROVEC2
@@ -210,8 +212,9 @@ constexpr void draw_text(const char* text, Vector2 pos, font_type in_font_type, 
   if (center_vertical) {
     text_position.y -= (text_measure.y * .5f);
   }
-
-  DrawTextEx(font, text, text_position, font.baseSize * fontsize, UI_FONT_SPACING, color);
+  BeginShaderMode(get_shader_by_enum(SHADER_ID_SDF_TEXT)->handle);
+    DrawTextEx(font, text, text_position, font.baseSize * fontsize, UI_FONT_SPACING, color);
+  EndShaderMode();
 }
 inline void draw_text_ex(const char* text, Vector2 pos, ::font_type font_type, f32 fontsize, Color tint) {
   if (not text or text == nullptr) {
@@ -219,7 +222,9 @@ inline void draw_text_ex(const char* text, Vector2 pos, ::font_type font_type, f
   }
   Font font = ui_get_font(font_type);
 
-  DrawTextEx(font, text, pos, fontsize, UI_FONT_SPACING, tint);
+  BeginShaderMode(get_shader_by_enum(SHADER_ID_SDF_TEXT)->handle);
+    DrawTextEx(font, text, pos, fontsize, UI_FONT_SPACING, tint);
+  EndShaderMode();
 }
 bool user_interface_system_initialize(const camera_metrics * in_camera_metrics) {
   if (state or state != nullptr) {
@@ -255,7 +260,7 @@ bool user_interface_system_initialize(const camera_metrics * in_camera_metrics) 
     if (data->index <= LANGUAGE_INDEX_UNDEFINED or data->index >= LANGUAGE_INDEX_MAX) {
       continue;
     }
-    const localization_package *const _loc_data = load_localization(data->language_name, data->index, data->codepoints, 34);
+    const localization_package *const _loc_data = load_localization(data->language_name, data->index, data->codepoints, 24);
     if (not _loc_data or _loc_data == nullptr) {
       IERROR("user_interface::user_interface_system_initialize()::Loading localization:%s is failed", data->language_name.c_str());
       continue;
@@ -353,6 +358,7 @@ bool user_interface_system_initialize(const camera_metrics * in_camera_metrics) 
   // IN GAME
   {
     register_button(BTN_ID_IN_GAME_BUTTON_RETURN_MENU, BTN_TYPE_FLAT_BUTTON);
+    register_button(BTN_ID_IN_GAME_BUTTON_CHEST_OPENING_ACCEPT, BTN_TYPE_FLAT_BUTTON);
   }
   // IN GAME
 
@@ -875,30 +881,136 @@ void draw_atlas_texture_stretch(atlas_texture_id tex_id, Rectangle stretch_part,
     return;
   }
   if (should_center) {
-    dest.x -= dest.width * .5f;
-    dest.y -= dest.height * .5f;
+    dest.x -= dest.width * 0.5f;
+    dest.y -= dest.height * 0.5f;
   }
-  f32 left_src_width_ratio = stretch_part.x / tex->source.height;
-  Rectangle left_source = Rectangle {0, 0, stretch_part.x, tex->source.height};
-  Rectangle right_source = Rectangle {
-    stretch_part.x + stretch_part.width, 0.f,
-    tex->source.width - (left_source.width + stretch_part.width), tex->source.height
-  };
-  f32 right_src_width_ratio = (tex->source.width - (left_source.width + stretch_part.width)) / tex->source.height;
   
-  Rectangle left_dest   = Rectangle {dest.x, dest.y,  dest.height * left_src_width_ratio, dest.height};
-  Rectangle right_dest = Rectangle {
-    dest.x + dest.width - (dest.height * right_src_width_ratio), dest.y,
-    dest.height * right_src_width_ratio, dest.height
-  };
-  Rectangle second_dest  = Rectangle {
-    left_dest.x + left_dest.width, dest.y,
-    dest.width - (left_dest.width + right_dest.width), dest.height
-  };
-  gui_draw_atlas_texture_id_pro(tex_id, left_source, left_dest, false, TEXTURE_WRAP_REPEAT, tint);
-  gui_draw_atlas_texture_id_pro(tex_id, stretch_part, second_dest, false, TEXTURE_WRAP_CLAMP, tint);
-  gui_draw_atlas_texture_id_pro(tex_id, right_source, right_dest, false, TEXTURE_WRAP_REPEAT, tint);
+  if (stretch_part.width <= 0 or stretch_part.height <= 0 or stretch_part.x < 0 or stretch_part.y < 0 
+    or (stretch_part.x + stretch_part.width  - tex->atlas_handle->width  > tex->source.width) 
+    or (stretch_part.y + stretch_part.height - tex->atlas_handle->height > tex->source.height)) {
+    IWARN("user_interface::draw_atlas_texture_stretch()::Invalid stretch_part dimensions");
+    return;
+  }
+  f32 left_src_width_ratio = stretch_part.x / stretch_part.height;
+  f32 right_src_width_ratio = (tex->source.width - (stretch_part.x + stretch_part.width)) / stretch_part.height;
+  
+  Rectangle left_source = {0, stretch_part.y, stretch_part.x, stretch_part.height};
+  Rectangle right_source = {stretch_part.x + stretch_part.width, stretch_part.y, tex->source.width - (stretch_part.x + stretch_part.width), stretch_part.height};
+  
+  Rectangle left_dest = {dest.x, dest.y, dest.height * left_src_width_ratio, dest.height};
+  Rectangle right_dest = {dest.x + dest.width - (dest.height * right_src_width_ratio), dest.y, dest.height * right_src_width_ratio, dest.height};
+  Rectangle middle_dest = {left_dest.x + left_dest.width, dest.y, dest.width - (left_dest.width + right_dest.width), dest.height};
+  
+  if (middle_dest.width < 0) {
+    middle_dest.width = 0;
+  }
+  gui_draw_atlas_texture_id_pro(tex_id, left_source, left_dest, false, TEXTURE_WRAP_CLAMP, tint);
+  gui_draw_atlas_texture_id_pro(tex_id, stretch_part, middle_dest, false, TEXTURE_WRAP_REPEAT, tint);
+  gui_draw_atlas_texture_id_pro(tex_id, right_source, right_dest, false, TEXTURE_WRAP_CLAMP, tint);
 }
+
+void draw_atlas_texture_repeat(atlas_texture_id tex_id, Rectangle dest, float gap, bool should_center, Color tint, float offset) {
+  if (tex_id >= ATLAS_TEX_ID_MAX || tex_id <= ATLAS_TEX_ID_UNSPECIFIED) {
+    IWARN("user_interface::draw_atlas_texture_repeat()::Texture id is out of bound");
+    return;
+  }
+  const atlas_texture* tex = ss_get_atlas_texture_by_enum(tex_id);
+  if (!tex || tex->source.width <= 0 || tex->source.height <= 0) {
+    IERROR("user_interface::draw_atlas_texture_repeat()::Texture resource is invalid");
+    return;
+  }
+  if (should_center) {
+    dest.x -= dest.width * 0.5f;
+    dest.y -= dest.height * 0.5f;
+  }
+  
+  // Early checks for invalid dimensions
+  if (dest.width <= 0 || dest.height <= 0) {
+    IWARN("user_interface::draw_atlas_texture_repeat()::Invalid dest dimensions");
+    return;
+  }
+  
+  if (gap < 0) {
+    IWARN("user_interface::draw_atlas_texture_repeat()::Negative gap, setting to 0");
+    gap = 0;
+  }
+  
+  float scale = dest.height / tex->source.height;
+  float tile_width = tex->source.width * scale;
+  float unit_width = tile_width + gap;
+  
+  if (tile_width <= 0 || unit_width <= 0) {
+    IWARN("user_interface::draw_atlas_texture_repeat()::Invalid tile or unit width");
+    return;
+  }
+
+  float centering_offset = 0.f;
+  if (should_center) {
+    float center_delta = dest.width * 0.5f;
+    float desired_center_phase = tile_width * 0.5f;
+    float desired_left_phase = fmod(desired_center_phase - center_delta, unit_width);
+    if (desired_left_phase < 0.f) desired_left_phase += unit_width;
+    float current_left_phase_without_centering = fmod(dest.x, unit_width);
+    if (current_left_phase_without_centering < 0.f) current_left_phase_without_centering += unit_width;
+    centering_offset = desired_left_phase - current_left_phase_without_centering;
+    centering_offset = fmod(centering_offset, unit_width);
+    if (centering_offset < 0.f) centering_offset += unit_width;
+  }
+  float effective_offset = offset + centering_offset;
+  
+  float current_x = dest.x;
+  float remaining_width = dest.width;
+  
+  float phase = fmod(dest.x + effective_offset, unit_width);
+  if (phase < 0) phase += unit_width;
+  
+  if (phase >= tile_width) {
+    // Starting in a gap, skip the remaining gap
+    float remaining_gap = unit_width - phase;
+    float skip = std::min(remaining_gap, remaining_width);
+    current_x += skip;
+    remaining_width -= skip;
+  } else {
+    // Starting inside a tile, draw partial tile
+    float remaining_tile = tile_width - phase;
+    float draw_width = std::min(remaining_tile, remaining_width);
+    float source_x = phase / scale;
+    float source_width = draw_width / scale;
+    Rectangle tile_source = {source_x, 0, source_width, tex->source.height};
+    Rectangle tile_dest = {current_x, dest.y, draw_width, dest.height};
+    gui_draw_atlas_texture_id_pro(tex_id, tile_source, tile_dest, false, TEXTURE_WRAP_CLAMP, tint);
+    current_x += draw_width;
+    remaining_width -= draw_width;
+    
+    if (remaining_width > 0) {
+      // Skip the gap after this tile
+      float skip = std::min(gap, remaining_width);
+      current_x += skip;
+      remaining_width -= skip;
+    }
+  }
+  
+  // Now draw full tiles with gaps in between
+  while (remaining_width > 0) {
+    // Draw full or partial tile (if last)
+    float draw_width = std::min(tile_width, remaining_width);
+    float source_x = 0;
+    float source_width = draw_width / scale;
+    Rectangle tile_source = {source_x, 0, source_width, tex->source.height};
+    Rectangle tile_dest = {current_x, dest.y, draw_width, dest.height};
+    gui_draw_atlas_texture_id_pro(tex_id, tile_source, tile_dest, false, TEXTURE_WRAP_CLAMP, tint);
+    current_x += draw_width;
+    remaining_width -= draw_width;
+    
+    if (remaining_width <= 0) break;
+    
+    // Skip gap
+    float skip = std::min(gap, remaining_width);
+    current_x += skip;
+    remaining_width -= skip;
+  }
+}
+
 void gui_slider(slider_id _id, Vector2 pos, Vector2 grid) {
   IF_NOT_STATE("gui_slider", return; );
 
@@ -1771,6 +1883,13 @@ void draw_text_shader(const char *text, shader_id sdr_id, Vector2 position, Font
           EndShaderMode();
           break;
         }
+        case SHADER_ID_SDF_TEXT: {
+          BeginShaderMode(get_shader_by_enum(SHADER_ID_SDF_TEXT)->handle);
+
+          DrawTextCodepoint(font, codepoint, Vector2{ text_position.x + textOffsetX, text_position.y }, fontsize, tint);
+          EndShaderMode();
+          break;
+        }
         default: { break; }
       }
     }
@@ -1799,6 +1918,7 @@ void draw_text_ex(const char *text, Vector2 position, Font font, f32 _fontsize, 
   float textOffsetX = 0.0f;
   float scaleFactor = font_size/(float)font.baseSize;
 
+  BeginShaderMode(get_shader_by_enum(SHADER_ID_SDF_TEXT)->handle);
   for (i32 itr_000 = 0; itr_000 < length; itr_000++)
   {
     int codepointByteCount = 0;
@@ -1814,6 +1934,7 @@ void draw_text_ex(const char *text, Vector2 position, Font font, f32 _fontsize, 
     }
     if ((textOffsetX != 0) || (codepoint != ' ')) textOffsetX += glyphWidth;
   }
+  EndShaderMode();
 } 
 /**
  * @brief NOTE: Source https://github.com/raysan5/raylib/blob/master/examples/text/text_rectangle_bounds.c
@@ -2146,18 +2267,24 @@ data_pack* get_slider_current_value(slider_id id) {
   }
   return __builtin_addressof(state->sliders.at(id).options.at(state->sliders.at(id).current_value).content);
 }
-Font load_font(pak_file_id pak_id, i32 asset_id, i32 font_size, i32* _codepoints, i32 _codepoint_count) {
+Font load_font(pak_file_id pak_id, i32 asset_id, i32 font_size, [[__maybe_unused__]] i32* _codepoints,  [[__maybe_unused__]] i32 _codepoint_count) {
   IF_NOT_STATE("load_font", return GetFontDefault(); );
 
   Font font = ZERO_FONT;
-
+  font.baseSize = font_size;
+ 
   const file_buffer *const file = get_asset_file_buffer(pak_id, asset_id);
   if (not file or file == nullptr) {
     IWARN("user_interface::load_font()::Font cannot loading, returning default");
     return GetFontDefault();
   }
   else {
-    font = LoadFontFromMemory(file->file_extension.c_str(), reinterpret_cast<const u8 *>(file->content.c_str()), static_cast<i32>(file->content.size()), font_size, _codepoints, _codepoint_count); 
+    //font = LoadFontFromMemory(file->file_extension.c_str(), reinterpret_cast<const u8 *>(file->content.c_str()), static_cast<i32>(file->content.size()), font_size, 0, 0); 
+    font.glyphs = LoadFontData(reinterpret_cast<const u8 *>(file->content.c_str()), static_cast<i32>(file->content.size()), font_size, 0, 0, FONT_SDF, __builtin_addressof(font.glyphCount));
+    Image atlas = GenImageFontAtlas(font.glyphs, &font.recs, 0, font_size, 0, 1);
+    font.texture = LoadTextureFromImage(atlas);
+    UnloadImage(atlas);
+    SetTextureFilter(font.texture, TEXTURE_FILTER_BILINEAR);
   }
   return font;
 }

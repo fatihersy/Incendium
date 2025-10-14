@@ -36,7 +36,7 @@
     "editor.showFoldingControls" :"mouseover",
     "editor.renderWhitespace": "none",
     "editor.quickSuggestionsDelay": 0,
-    "editor.fontFamily": "miosevka medium",
+    "editor.fontFamily": "miosevka regular",
     "editor.fontSize": 14,
     "editor.fontLigatures": true,
     "editor.bracketPairColorization.enabled": true,
