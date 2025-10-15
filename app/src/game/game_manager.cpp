@@ -217,8 +217,11 @@ void update_game_manager(void) {
         gm_update_player();
         update_collectible_manager();
         
-        if (state->game_info.in_spawns->size() == 0) {
+        if (state->game_info.total_boss_spawned < state->stage.total_boss_count) {
           spawn_boss();
+        }
+        if (state->game_info.play_time <= 0.f or state->game_info.in_spawns->size() == 0) {
+          gm_end_game(true, true);
         }
 
         update_spawns(state->game_info.player_state_dynamic->position);
@@ -232,7 +235,7 @@ void update_game_manager(void) {
         }
       }
       else {
-        gm_end_game(false);
+        gm_end_game(true, false);
         return;
       }
       break;
@@ -243,7 +246,7 @@ void update_game_manager(void) {
     }
     default: {
       IWARN("game_manager::update_game_manager()::Unsupported in-game phase");
-      gm_end_game(false);
+      gm_end_game(false, false);
       event_fire(EVENT_CODE_SCENE_MAIN_MENU, event_context());
     }
     break;
@@ -293,14 +296,14 @@ void render_game(void) {
     }
     default: {
       IWARN("game_manager::render_game()::Unsupported in-game phase");
-      gm_end_game(false);
+      gm_end_game(false, false);
       event_fire(EVENT_CODE_SCENE_MAIN_MENU, event_context());
       return;
     }
   }
 
   IERROR("game_manager::render_game()::Function ended unexpectedly");
-  gm_end_game(false);
+  gm_end_game(false, false);
   event_fire(EVENT_CODE_SCENE_MAIN_MENU, event_context());
 }
 
@@ -353,21 +356,28 @@ bool gm_start_game(worldmap_stage stage) {
   event_fire(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, event_context((f32)PRG_BAR_ID_PLAYER_HEALTH, (f32)state->game_info.player_state_dynamic->health_perc));
 
   state->ingame_phase = INGAME_PLAY_PHASE_CLEAR_ZOMBIES;
+  
   reset_ingame_info();
+
+  state->game_info.play_time = state->stage.stage_duration;
 
   state->playlist.media_play(__builtin_addressof(state->playlist));
   return true;
 }
-void gm_end_game(bool is_win) {
+void gm_end_game(bool wait_for_results, bool is_win) {
   clean_up_spawn_state();
+  state->playlist.media_stop(__builtin_addressof(state->playlist));
 
   *state->game_info.player_state_dynamic = player_state();
   state->game_info.is_win = is_win;
-  state->ingame_phase = INGAME_PLAY_PHASE_RESULTS;
-
-  state->playlist.media_stop(__builtin_addressof(state->playlist));
-  //event_fire(EVENT_CODE_PLAY_SOUND, event_context()); // TODO: play win or lose sound
-  event_fire(EVENT_CODE_CAMERA_SET_ZOOM_TARGET, event_context(static_cast<f32>(ZOOM_CAMERA_GAME_RESULTS)));
+  if (wait_for_results) {
+    state->ingame_phase = INGAME_PLAY_PHASE_RESULTS;
+    //event_fire(EVENT_CODE_PLAY_SOUND, event_context()); // TODO: play win or lose sound
+    event_fire(EVENT_CODE_CAMERA_SET_ZOOM_TARGET, event_context(static_cast<f32>(ZOOM_CAMERA_GAME_RESULTS)));
+  }
+  else {
+    state->ingame_phase = INGAME_PLAY_PHASE_UNDEFINED;
+  }
 }
 void gm_save_game(void) {
   state->game_progression_data->currency_coins_player_have += state->game_info.collected_coins;
@@ -505,6 +515,7 @@ i32 spawn_boss(void) {
     i32 boss_id = spawn_character(_boss);
     if (boss_id >= 0) {
       state->game_info.stage_boss_id = boss_id;
+      state->game_info.total_boss_spawned++;
       return boss_id;
     }
     else {
@@ -550,7 +561,7 @@ void generate_in_game_info(void) {
     }
   }
   state->game_info.nearest_spawn = spw_nearest;
-  state->game_info.play_time += GetFrameTime();
+  state->game_info.play_time -= GetFrameTime();
 }
 void reset_ingame_info(void) {
   if (not state or state == nullptr) {
@@ -856,7 +867,7 @@ void _set_player_position(Vector2 position) {
 bool game_manager_on_event(i32 code, event_context context) {
   switch (code) {
     case EVENT_CODE_END_GAME: {
-      gm_end_game(static_cast<bool>(context.data.i32[0]));
+      gm_end_game(static_cast<bool>(context.data.i32[0]), static_cast<bool>(context.data.i32[1]));
       return true;
     }
     case EVENT_CODE_DAMAGE_PLAYER_IF_COLLIDE: {

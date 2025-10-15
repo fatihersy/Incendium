@@ -461,7 +461,6 @@ bool ui_set_slider_current_value(slider_id id, slider_option value);
 
 bool gui_slider_add_option(slider_id _id, data_pack content, i32 _localization_symbol, std::string _no_localized_text);
 const Rectangle * get_atlas_texture_source_rect(atlas_texture_id _id);
-const Rectangle * get_atlas_texture_source_rect(atlas_texture_id _id);
 const std::array<button_type, BTN_TYPE_MAX>* get_button_types(void); 
 
 bool gui_menu_button(const char* text, button_id _id, Vector2 grid, Vector2 grid_location, bool play_on_click_sound);

@@ -295,7 +295,7 @@ void player_take_damage(i32 damage) {
   else {
     state->dynamic_player.health_current = 0;
     state->dynamic_player.is_dead = true;
-    event_fire(EVENT_CODE_END_GAME, event_context());
+    event_fire(EVENT_CODE_END_GAME, event_context(static_cast<i32>(true), static_cast<i32>(false)));
   }
 }
 void player_heal_player(i32 amouth){

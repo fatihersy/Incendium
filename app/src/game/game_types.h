@@ -395,7 +395,9 @@ typedef struct worldmap_stage {
   std::array<Rectangle, MAX_SPAWN_COLLISIONS> spawning_areas;
   Vector2 screen_location;
   i32 total_spawn_count;
+  i32 total_boss_count;
   i32 stage_level;
+  f32 stage_duration;
   f32 spawn_scale;
   f32 boss_scale;
   bool is_centered;
@@ -408,7 +410,9 @@ typedef struct worldmap_stage {
     this->spawning_areas.fill(ZERORECT);
     this->screen_location = ZEROVEC2;
     this->total_spawn_count = 0;
+    this->total_boss_count = 0;
     this->stage_level = 0;
+    this->stage_duration = 0.f;
     this->spawn_scale = 0.f;
     this->boss_scale = 0.f;
     this->is_centered = false;
@@ -416,8 +420,8 @@ typedef struct worldmap_stage {
     this->is_playable = false;
   }
   worldmap_stage(
-    i32 in_id, i32 title_txt_id, std::string in_filename, i32 in_stage_level,
-    i32 in_spw_count, f32 in_spw_scale, f32 in_boss_scale, 
+    i32 in_id, i32 title_txt_id, std::string in_filename, i32 in_stage_level, f32 duration,
+    i32 in_spw_count, i32 in_boss_count, f32 in_spw_scale, f32 in_boss_scale, 
     Vector2 in_screen_loc, bool in_is_centered, bool in_display_on_screen, bool in_is_active) : worldmap_stage() 
   {
     this->map_id = in_id;
@@ -425,7 +429,9 @@ typedef struct worldmap_stage {
     this->filename = in_filename;
     this->screen_location = NORMALIZE_VEC2(in_screen_loc.x, in_screen_loc.y, 3840.f, 2160.f);
     this->total_spawn_count = in_spw_count;
+    this->total_boss_count = in_boss_count;
     this->stage_level = in_stage_level;
+    this->stage_duration = duration;
     this->spawn_scale = in_spw_scale;
     this->boss_scale = in_boss_scale;
     this->is_centered = in_is_centered;
@@ -1096,6 +1102,7 @@ typedef struct ingame_info {
   f32 play_time;
   bool is_win;
   i32 stage_boss_id;
+  i32 total_boss_spawned;
   ability_id starter_ability;
 
   ingame_info(void) {
@@ -1113,6 +1120,7 @@ typedef struct ingame_info {
     this->play_time = 0.f;
     this->is_win = false;
     this->stage_boss_id = INVALID_IDI32;
+    this->total_boss_spawned = 0;
     this->starter_ability = ABILITY_ID_UNDEFINED;
   }
 } ingame_info;

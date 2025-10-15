@@ -29,7 +29,7 @@
     "editor.parameterHints.enabled": true,
     "editor.inlayHints.enabled": "off",
     "editor.hover.enabled": false,
-    "editor.hover.delay": 200,
+    //"editor.hover.delay": 200,
     "editor.cursorSmoothCaretAnimation" : "off",
     "editor.cursorBlinking": "smooth",
     "editor.overviewRulerBorder": false,

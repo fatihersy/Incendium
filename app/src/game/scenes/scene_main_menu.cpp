@@ -70,6 +70,7 @@ typedef struct main_menu_scene_state {
   main_menu_scene_character_subscene_type mainmenu_scene_character_subscene;
   bool is_dragging_scroll;
   bool is_any_button_down;
+  bool is_changing_state;
 
   play_scene_info ingame_scene_feed;
   ui_fade_control_system smm_fade;
@@ -112,6 +113,7 @@ typedef struct main_menu_scene_state {
     this->mainmenu_scene_character_subscene = MAIN_MENU_SCENE_CHARACTER_STATS;
     this->is_dragging_scroll = false;
     this->is_any_button_down = false;
+    this->is_changing_state = false;
 
     this->ingame_scene_feed = play_scene_info();
     this->smm_fade = ui_fade_control_system();
@@ -262,7 +264,7 @@ void chosen_trait_button_on_click(size_t index);
   if (fade_in) {
     smm_begin_fadein(data128(static_cast<i32>(MAIN_MENU_SCENE_DEFAULT)), fade_on_complete_change_main_menu_type);
   }
-
+  
   return true;
 }
 void end_scene_main_menu(void) {
@@ -270,13 +272,14 @@ void end_scene_main_menu(void) {
 }
 
 void update_scene_main_menu(void) {
+  
   update_user_interface();
   state->mouse_pos_screen = ui_get_mouse_pos_screen();
   smm_update_bindings();
   update_camera();
   update_map();
   update_sound_system();
-  
+
   switch (state->mainmenu_state) {
     case MAIN_MENU_SCENE_DEFAULT: {
       event_fire(EVENT_CODE_CAMERA_SET_ZOOM, event_context(1.f));
@@ -364,7 +367,7 @@ void render_scene_main_menu(void) {
         gui_draw_texture_id_pro(TEX_ID_ASSET_ATLAS, SMM_MAP_PIN_SOURCE_LOCATION_UP, pin_location);
       }
 
-      for (i32 itr_000 = 0; itr_000 < MAX_WORLDMAP_LOCATIONS; ++itr_000) {
+      for (i32 itr_000 = 0; (itr_000 < MAX_WORLDMAP_LOCATIONS and not state->is_changing_state); ++itr_000) {
         if (not state->worldmap_locations.at(itr_000).display_on_screen) {
           continue;
         }
@@ -412,7 +415,7 @@ void render_scene_main_menu(void) {
         EndScissorMode();
       }
 
-      if(gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_MAP_CHOICE_BACK), BTN_ID_MAINMENU_MAP_CHOICE_BACK, VECTOR2(-35.f, 66.5f), SMM_BASE_RENDER_DIV2, true)) {
+      if(not state->is_changing_state and gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_MAP_CHOICE_BACK), BTN_ID_MAINMENU_MAP_CHOICE_BACK, VECTOR2(-35.f, 66.5f), SMM_BASE_RENDER_DIV2, true)) {
         state->mainmenu_state = MAIN_MENU_SCENE_DEFAULT;
       }
       break;
@@ -1164,7 +1167,7 @@ void trait_selection_panel_list_ability_selection_panel(panel* const pnl, const 
   }
 }
 
-void smm_update_mouse_bindings(void) { 
+void smm_update_mouse_bindings(void) {
   switch (state->mainmenu_state) {
     case MAIN_MENU_SCENE_DEFAULT: {
       break;
@@ -1202,6 +1205,7 @@ void smm_update_mouse_bindings(void) {
           set_worldmap_location(state->ingame_scene_feed.hovered_stage);
           smm_begin_fadeout(data128(SCENE_TYPE_IN_GAME, true), fade_on_complete_change_scene);
           event_fire(EVENT_CODE_CAMERA_SET_ZOOM_TARGET, event_context(static_cast<f32>(ZOOM_CAMERA_MAP_ENTRY), static_cast<f32>(true), hovered_stage.x, hovered_stage.y));
+          state->is_changing_state = true;
         }
       }
       break;
@@ -1342,10 +1346,19 @@ void smm_update_keyboard_bindings(void) {
   }
 }
 void smm_update_bindings(void) {
+  if (not state or state == nullptr) {
+    return;
+  }
+  if (state->is_changing_state) {
+    return;
+  }
   smm_update_mouse_bindings();
   smm_update_keyboard_bindings();
 }
 void smm_update_local_buttons(void) {
+  if (state->is_changing_state) {
+    return;
+  }
   for (size_t itr_000 = 0; itr_000 < state->general_purpose_buttons.size(); ++itr_000) {
     local_button * const _btn = __builtin_addressof(state->general_purpose_buttons.at(itr_000));
     if (!_btn->on_screen) continue;
@@ -1491,6 +1504,7 @@ void fade_on_complete_change_scene(data128 data) {
 void begin_scene_change(main_menu_scene_type mms, [[__maybe_unused__]] event_context context) {
   state->general_purpose_buttons.clear();
   state->general_purpose_panels.clear();
+  state->is_changing_state = false;
 
   switch (mms) {
     case MAIN_MENU_SCENE_DEFAULT: {
@@ -1570,23 +1584,27 @@ void begin_scene_change(scene_id sid, event_context context) {
       event_fire(EVENT_CODE_CAMERA_SET_CAMERA_POSITION, event_context(0.f, 0.f));
       event_fire(EVENT_CODE_CAMERA_SET_ZOOM, event_context(1.f));
       event_fire(EVENT_CODE_SCENE_MAIN_MENU, context);
+      state->is_changing_state = false;
       return; 
     }
     case SCENE_TYPE_IN_GAME: {
       event_fire(EVENT_CODE_CAMERA_SET_CAMERA_POSITION, event_context(0.f, 0.f));
       event_fire(EVENT_CODE_CAMERA_SET_ZOOM, event_context(1.f));
       event_fire(EVENT_CODE_SCENE_IN_GAME, context);
+      state->is_changing_state = false;
       return; 
     }
     case SCENE_TYPE_EDITOR: {
       event_fire(EVENT_CODE_CAMERA_SET_CAMERA_POSITION, event_context(0.f, 0.f));
       event_fire(EVENT_CODE_CAMERA_SET_ZOOM, event_context(1.f));
       event_fire(EVENT_CODE_SCENE_EDITOR, context);
+      state->is_changing_state = false;
       return; 
     }
     default: {
       IWARN("scene_main_menu::begin_scene_change()::Unsupported scene type");
       event_fire(EVENT_CODE_SCENE_MAIN_MENU, event_context(static_cast<i32>(true)));
+      state->is_changing_state = false;
       return;
     }
   }

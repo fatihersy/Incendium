@@ -19,7 +19,7 @@ const ingame_info* gm_get_ingame_info(void);
 const std::vector<character_trait>* gm_get_character_traits(void);
 
 [[nodiscard]] bool gm_start_game(worldmap_stage stage);
-void gm_end_game(bool is_win);
+void gm_end_game(bool wait_for_results, bool is_win);
 void gm_save_game(void);
 void gm_load_game(void);
 void gm_damage_spawn_if_collide(data128 coll_data, i32 damage, collision_type coll_check);

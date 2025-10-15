@@ -1926,6 +1926,13 @@ void draw_text_shader(const char *text, shader_id sdr_id, Vector2 position, Font
           EndShaderMode();
           break;
         }
+        case SHADER_ID_CHEST_OPENING_SPIN_TEXT: {
+          BeginShaderMode(get_shader_by_enum(SHADER_ID_CHEST_OPENING_SPIN_TEXT)->handle);
+
+          DrawTextCodepoint(font, codepoint, Vector2{ text_position.x + textOffsetX, text_position.y }, fontsize, tint);
+          EndShaderMode();
+          break;
+        }
         default: { break; }
       }
     }
