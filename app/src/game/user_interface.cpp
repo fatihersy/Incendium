@@ -76,25 +76,29 @@ static user_interface_system_state * state = nullptr;
 #define MAX_UI_WORDWRAP_WORD_LENGTH 20
 #define MAX_UI_WORDWRAP_SENTENCE_LENGTH 300
 
-#define UI_LIGHT_FONT state->display_language->light_font
-#define UI_LIGHT_FONT_SIZE state->display_language->light_font.baseSize
 #define UI_ITALIC_FONT state->display_language->italic_font
 #define UI_ITALIC_FONT_SIZE state->display_language->italic_font.baseSize
-#define UI_ABRACADABRA_FONT state->display_language->abracadabra
-#define UI_ABRACADABRA_FONT_SIZE state->display_language->abracadabra.baseSize
+#define UI_LIGHT_FONT state->display_language->light_font
+#define UI_LIGHT_FONT_SIZE state->display_language->light_font.baseSize
+#define UI_REGULAR_FONT state->display_language->regular_font
+#define UI_REGULAR_FONT_SIZE state->display_language->regular_font.baseSize
+#define UI_BOLD_FONT state->display_language->bold_font
+#define UI_BOLD_FONT_SIZE state->display_language->bold_font.baseSize
+#define UI_TITLE_FONT state->display_language->mood
+#define UI_TITLE_FONT_SIZE state->display_language->mood.baseSize
 
-#define MENU_BUTTON_FONT UI_LIGHT_FONT
+#define MENU_BUTTON_FONT UI_BOLD_FONT
 #define MENU_BUTTON_FONT_SIZE_SCALE 1
-#define MINI_BUTTON_FONT UI_LIGHT_FONT
+#define MINI_BUTTON_FONT UI_REGULAR_FONT
 #define MINI_BUTTON_FONT_SIZE_SCALE 1
-#define LABEL_FONT UI_LIGHT_FONT
+#define LABEL_FONT UI_REGULAR_FONT
 #define LABEL_FONT_SIZE_SCALE 1
 #define DEFAULT_MENU_BUTTON_SCALE 4
 #define SLIDER_FONT FONT_TYPE_LIGHT
 #define DEFAULT_SLIDER_FONT_SIZE 1
 #define DEFAULT_PERCENT_SLIDER_CIRCLE_AMOUTH 10
-#define DEFAULT_ERROR_FONT_TYPE FONT_TYPE_LIGHT
-#define DEFAULT_ERROR_FONT_SIZE 1
+#define DEFAULT_ERROR_FONT_TYPE FONT_TYPE_REGULAR
+#define DEFAULT_ERROR_FONT_SIZE 2
 
 #define ERROR_TEXT_DURATION_STAY_ON_SCREEN 2.1f
 #define ERROR_TEXT_DURATION_IN_AND_OUT .5f
@@ -169,16 +173,24 @@ constexpr Font font_type_to_font(font_type in_font_type) {
     return GetFontDefault();
   }
   switch (in_font_type) {
-    case FONT_TYPE_LIGHT: {
-      return UI_LIGHT_FONT;
-      break;
-    }
     case FONT_TYPE_ITALIC: {
       return UI_ITALIC_FONT;
       break;
     }
-    case FONT_TYPE_ABRACADABRA: {
-      return UI_ABRACADABRA_FONT;
+    case FONT_TYPE_LIGHT: {
+      return UI_LIGHT_FONT;
+      break;
+    }
+    case FONT_TYPE_REGULAR: {
+      return UI_REGULAR_FONT;
+      break;
+    }
+    case FONT_TYPE_BOLD: {
+      return UI_BOLD_FONT;
+      break;
+    }
+    case FONT_TYPE_TITLE: {
+      return UI_TITLE_FONT;
       break;
     }
     default: return GetFontDefault();
@@ -1208,16 +1220,24 @@ void gui_label_shader(const char* text, shader_id sdr_id, font_type type, i32 fo
     return;
   }
   switch (type) {
-    case FONT_TYPE_LIGHT: {
-      draw_text_shader(text, sdr_id, position, UI_LIGHT_FONT, font_size * UI_LIGHT_FONT_SIZE, tint, _center_h, _center_v, false, VECTOR2(0.f, 0.f));
-      break;
-    }
     case FONT_TYPE_ITALIC: {
       draw_text_shader(text, sdr_id, position, UI_ITALIC_FONT, font_size * UI_ITALIC_FONT_SIZE, tint, _center_h, _center_v, false, VECTOR2(0.f, 0.f));
       break;
     }
-    case FONT_TYPE_ABRACADABRA: {
-      draw_text_shader(text, sdr_id, position, UI_ABRACADABRA_FONT, font_size * UI_ABRACADABRA_FONT_SIZE, tint, _center_h, _center_v, false, VECTOR2(0.f, 0.f));
+    case FONT_TYPE_LIGHT: {
+      draw_text_shader(text, sdr_id, position, UI_LIGHT_FONT, font_size * UI_LIGHT_FONT_SIZE, tint, _center_h, _center_v, false, VECTOR2(0.f, 0.f));
+      break;
+    }
+    case FONT_TYPE_REGULAR: {
+      draw_text_shader(text, sdr_id, position, UI_REGULAR_FONT, font_size * UI_REGULAR_FONT_SIZE, tint, _center_h, _center_v, false, VECTOR2(0.f, 0.f));
+      break;
+    }
+    case FONT_TYPE_BOLD: {
+      draw_text_shader(text, sdr_id, position, UI_BOLD_FONT, font_size * UI_BOLD_FONT_SIZE, tint, _center_h, _center_v, false, VECTOR2(0.f, 0.f));
+      break;
+    }
+    case FONT_TYPE_TITLE: {
+      draw_text_shader(text, sdr_id, position, UI_TITLE_FONT, font_size * UI_TITLE_FONT_SIZE, tint, _center_h, _center_v, false, VECTOR2(0.f, 0.f));
       break;
     }
     default: IWARN("user_interface::gui_label_shader()::Unsupported font type");
@@ -1237,16 +1257,24 @@ void gui_label_wrap(const char* text, font_type type, i32 font_size, Rectangle p
     return;
   }
   switch (type) {
-    case FONT_TYPE_LIGHT: {
-      DrawTextBoxed(UI_LIGHT_FONT, text, position, font_size * UI_LIGHT_FONT_SIZE, UI_FONT_SPACING, true, tint);
-      break;
-    }
     case FONT_TYPE_ITALIC: {
       DrawTextBoxed(UI_ITALIC_FONT, text, position, font_size * UI_ITALIC_FONT_SIZE, UI_FONT_SPACING, true, tint);
       break;
     }
-    case FONT_TYPE_ABRACADABRA: {
-      DrawTextBoxed(UI_ABRACADABRA_FONT, text, position, font_size * UI_ABRACADABRA_FONT_SIZE, UI_FONT_SPACING, true, tint);
+    case FONT_TYPE_LIGHT: {
+      DrawTextBoxed(UI_LIGHT_FONT, text, position, font_size * UI_LIGHT_FONT_SIZE, UI_FONT_SPACING, true, tint);
+      break;
+    }
+    case FONT_TYPE_REGULAR: {
+      DrawTextBoxed(UI_REGULAR_FONT, text, position, font_size * UI_REGULAR_FONT_SIZE, UI_FONT_SPACING, true, tint);
+      break;
+    }
+    case FONT_TYPE_BOLD: {
+      DrawTextBoxed(UI_BOLD_FONT, text, position, font_size * UI_BOLD_FONT_SIZE, UI_FONT_SPACING, true, tint);
+      break;
+    }
+    case FONT_TYPE_TITLE: {
+      DrawTextBoxed(UI_TITLE_FONT, text, position, font_size * UI_TITLE_FONT_SIZE, UI_FONT_SPACING, true, tint);
       break;
     }
     default: IWARN("user_interface::gui_label_wrap()::Unsupported font type");
@@ -1276,16 +1304,24 @@ void gui_label_wrap_grid(const char* text, font_type type, i32 font_size, Rectan
     return;
   }
   switch (type) {
-    case FONT_TYPE_LIGHT: {
-      DrawTextBoxed(UI_LIGHT_FONT, text, position, font_size * UI_LIGHT_FONT_SIZE, UI_FONT_SPACING, true, tint);
-      break;
-    }
     case FONT_TYPE_ITALIC: {
       DrawTextBoxed(UI_ITALIC_FONT, text, position, font_size * UI_ITALIC_FONT_SIZE, UI_FONT_SPACING, true, tint);
       break;
     }
-    case FONT_TYPE_ABRACADABRA: {
-      DrawTextBoxed(UI_ABRACADABRA_FONT, text, position, font_size * UI_ABRACADABRA_FONT_SIZE, UI_FONT_SPACING, true, tint);
+    case FONT_TYPE_LIGHT: {
+      DrawTextBoxed(UI_LIGHT_FONT, text, position, font_size * UI_LIGHT_FONT_SIZE, UI_FONT_SPACING, true, tint);
+      break;
+    }
+    case FONT_TYPE_REGULAR: {
+      DrawTextBoxed(UI_REGULAR_FONT, text, position, font_size * UI_REGULAR_FONT_SIZE, UI_FONT_SPACING, true, tint);
+      break;
+    }
+    case FONT_TYPE_BOLD: {
+      DrawTextBoxed(UI_BOLD_FONT, text, position, font_size * UI_BOLD_FONT_SIZE, UI_FONT_SPACING, true, tint);
+      break;
+    }
+    case FONT_TYPE_TITLE: {
+      DrawTextBoxed(UI_TITLE_FONT, text, position, font_size * UI_TITLE_FONT_SIZE, UI_FONT_SPACING, true, tint);
       break;
     }
     default: IWARN("user_interface::gui_label_wrap_grid()::Unsupported font type");
@@ -1950,6 +1986,8 @@ void DrawTextBoxed(Font font, const char *text, Rectangle rec, float fontSize, f
   int startLine = -1;         // Index where to begin drawing (where a line begins)
   int endLine = -1;           // Index where to stop drawing (where a line ends)
   int lastk = -1;             // Holds last value of the character position
+
+  BeginShaderMode(get_shader_by_enum(SHADER_ID_SDF_TEXT)->handle);
   for (int i = 0, k = 0; i < length; i++, k++)
   {
     // Get next codepoint from byte string and glyph index in font
@@ -2016,7 +2054,7 @@ void DrawTextBoxed(Font font, const char *text, Rectangle rec, float fontSize, f
           // Draw current character glyph
           if ((codepoint != ' ') && (codepoint != '\t'))
           {
-            //DrawTextCodepoint(font, codepoint, Vector2{ rec.x + textOffsetX, rec.y + textOffsetY}, fontSize+5, TEXT_SHADOW_COLOR);
+            
             DrawTextCodepoint(font, codepoint, Vector2{ rec.x + textOffsetX, rec.y + textOffsetY }, fontSize, tint);
           }
       }
@@ -2033,6 +2071,7 @@ void DrawTextBoxed(Font font, const char *text, Rectangle rec, float fontSize, f
       }
     if ((textOffsetX != 0) || (codepoint != ' ')) textOffsetX += glyphWidth;  // avoid leading spaces
   }
+  EndShaderMode();
 }
 void process_fade_effect(ui_fade_control_system *const fade) {
   IF_NOT_STATE("process_fade_effect", return; );
@@ -2176,9 +2215,11 @@ Font ui_get_font(font_type font) {
     return GetFontDefault();
   }
   switch (font) {
-  case FONT_TYPE_LIGHT:       return UI_LIGHT_FONT;
-  case FONT_TYPE_ITALIC:      return UI_ITALIC_FONT;
-  case FONT_TYPE_ABRACADABRA: return UI_ABRACADABRA_FONT;
+  case FONT_TYPE_ITALIC: return UI_ITALIC_FONT;
+  case FONT_TYPE_LIGHT:  return UI_LIGHT_FONT;
+  case FONT_TYPE_REGULAR:return UI_REGULAR_FONT;
+  case FONT_TYPE_BOLD:   return UI_BOLD_FONT;
+  case FONT_TYPE_TITLE:  return UI_TITLE_FONT;
   default: IWARN("user_interface::ui_get_font()::Unsupported font type");
   }
   return GetFontDefault();
@@ -2302,13 +2343,17 @@ localization_package* load_localization(std::string language_name, i32 lang_inde
   loc_pack.index = static_cast<language_index>(lang_index);
   loc_pack.language_name = language_name;
   loc_pack.codepoints = codepoints;
+  loc_pack.italic_font = load_font(PAK_FILE_ASSET1, PAK_FILE_ASSET1_FONT_MIOSEVKA_ITALIC, font_size, codepoints, codepoint_count);
   loc_pack.light_font  = load_font(PAK_FILE_ASSET1, PAK_FILE_ASSET1_FONT_MIOSEVKA_LIGHT, font_size, codepoints, codepoint_count);
-  loc_pack.italic_font = load_font(PAK_FILE_ASSET1, PAK_FILE_ASSET1_FONT_MIOSEVKA_LIGHT_ITALIC, font_size, codepoints, codepoint_count);
-  loc_pack.abracadabra = load_font(PAK_FILE_ASSET1, PAK_FILE_ASSET1_FONT_ABRACADABRA, 28, codepoints, codepoint_count);
+  loc_pack.regular_font  = load_font(PAK_FILE_ASSET1, PAK_FILE_ASSET1_FONT_MIOSEVKA_REGULAR, font_size, codepoints, codepoint_count);
+  loc_pack.bold_font  = load_font(PAK_FILE_ASSET1, PAK_FILE_ASSET1_FONT_MIOSEVKA_BOLD, font_size, codepoints, codepoint_count);
+  loc_pack.mood = load_font(PAK_FILE_ASSET1, PAK_FILE_ASSET1_FONT_MOOD, 28, codepoints, codepoint_count);
 
-  SetTextureFilter(loc_pack.abracadabra.texture, TEXTURE_FILTER_POINT);
-  SetTextureFilter(loc_pack.light_font .texture, TEXTURE_FILTER_ANISOTROPIC_16X);
   SetTextureFilter(loc_pack.italic_font.texture, TEXTURE_FILTER_ANISOTROPIC_16X);
+  SetTextureFilter(loc_pack.light_font .texture, TEXTURE_FILTER_ANISOTROPIC_16X);
+  SetTextureFilter(loc_pack.regular_font .texture, TEXTURE_FILTER_ANISOTROPIC_16X);
+  SetTextureFilter(loc_pack.bold_font .texture, TEXTURE_FILTER_ANISOTROPIC_16X);
+  SetTextureFilter(loc_pack.mood.texture, TEXTURE_FILTER_ANISOTROPIC_16X);
 
   state->localization_info.at(lang_index) = loc_pack;
 

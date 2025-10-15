@@ -507,9 +507,9 @@ void render_interface_editor(void) {
       Vector2 label_anchor  = VECTOR2(pnl->dest.x + pnl->dest.width * .5f, pnl->dest.y + pnl->dest.height * .025f);
       Vector2 slider_anchor = VECTOR2(pnl->dest.x + pnl->dest.width * .5f, pnl->dest.y + pnl->dest.height * .025f);
       
-      gui_label_grid("Layer", FONT_TYPE_ABRACADABRA, 1, label_anchor, WHITE, true, true, VECTOR2(-25.f, -3.f));
+      gui_label_grid("Layer", FONT_TYPE_REGULAR, 1, label_anchor, WHITE, true, true, VECTOR2(-25.f, -3.f));
       gui_slider(SDR_ID_EDITOR_MAP_LAYER_SLC_SLIDER, slider_anchor, VECTOR2(0.f,-3.f));
-      gui_label_grid("Stage", FONT_TYPE_ABRACADABRA, 1, label_anchor, WHITE, true, true, VECTOR2(-25.f, 5.f));
+      gui_label_grid("Stage", FONT_TYPE_REGULAR, 1, label_anchor, WHITE, true, true, VECTOR2(-25.f, 5.f));
       gui_slider(SDR_ID_EDITOR_MAP_STAGE_SLC_SLIDER, slider_anchor, VECTOR2(0.f,5.f));
     }
     BeginScissorMode(pnl_dest.x, pnl_dest.y, pnl_dest.width, pnl_dest.height);
@@ -527,7 +527,7 @@ void render_interface_editor(void) {
     {
       Vector2 label_anchor = VECTOR2(pnl->dest.x + pnl->dest.width * .25f, pnl->dest.y + pnl->dest.height * .05f);
       Vector2 slider_anchor = VECTOR2(pnl->dest.x + pnl->dest.width * .675f, pnl->dest.y + pnl->dest.height * .05f);
-      gui_label_grid("Prop Type", FONT_TYPE_ABRACADABRA, 1, label_anchor, WHITE, true, true, VECTOR2(0.f, 0.f));
+      gui_label_grid("Prop Type", FONT_TYPE_REGULAR, 1, label_anchor, WHITE, true, true, VECTOR2(0.f, 0.f));
       gui_slider(SDR_ID_EDITOR_PROP_TYPE_SLC_SLIDER, slider_anchor, VECTOR2(0.f, 0.f));
     }  
     BeginScissorMode(pnl_dest.x, pnl_dest.y, pnl_dest.width, pnl_dest.height);
@@ -587,12 +587,12 @@ void render_interface_editor(void) {
         );
 
         if (state->sel_map_coll_addr_from_map and state->sel_map_coll_addr_from_map != nullptr and state->sel_map_coll_addr_from_map->coll_id == _map_coll.coll_id) {
-          gui_label_format(FONT_TYPE_ABRACADABRA, 1, dest.x, dest.y, WHITE, true, false, "> %.0f, %.0f, %.0f, %.0f <", 
+          gui_label_format(FONT_TYPE_REGULAR, 1, dest.x, dest.y, WHITE, true, false, "> %.0f, %.0f, %.0f, %.0f <", 
             _map_coll.dest.x, _map_coll.dest.y, _map_coll.dest.width, _map_coll.dest.height
           );
         }
         else {
-          gui_label_format(FONT_TYPE_ABRACADABRA, 1, dest.x, dest.y, WHITE, true, false, "%.0f, %.0f, %.0f, %.0f", 
+          gui_label_format(FONT_TYPE_REGULAR, 1, dest.x, dest.y, WHITE, true, false, "%.0f, %.0f, %.0f, %.0f", 
             _map_coll.dest.x, _map_coll.dest.y, _map_coll.dest.width, _map_coll.dest.height
           );
         }
@@ -664,19 +664,19 @@ void render_interface_editor(void) {
         Vector2 sdr_center = VECTOR2( pnl->dest.x + pnl->dest.width * .75f, pnl->dest.y + pnl->dest.height * .5f);
         Vector2 label_center = VECTOR2( pnl->dest.x + pnl->dest.width * .25f, pnl->dest.y + pnl->dest.height * .5f);
       
-        gui_label_grid("Scale", FONT_TYPE_ABRACADABRA, 1, label_center, WHITE, true, true, VECTOR2(0.f, -10.f));
+        gui_label_grid("Scale", FONT_TYPE_REGULAR, 1, label_center, WHITE, true, true, VECTOR2(0.f, -10.f));
         get_slider_by_id(SDR_ID_EDITOR_PROP_SCALE_SLIDER)->options.at(0).no_localized_text = TextFormat("%.2f", (*p_prop)->scale);
         gui_slider(SDR_ID_EDITOR_PROP_SCALE_SLIDER, sdr_center, VECTOR2(0.f, -10.f));
       
-        gui_label_grid("Rotation", FONT_TYPE_ABRACADABRA, 1, label_center, WHITE, true, true, VECTOR2(0.f, 0.f));
+        gui_label_grid("Rotation", FONT_TYPE_REGULAR, 1, label_center, WHITE, true, true, VECTOR2(0.f, 0.f));
         get_slider_by_id(SDR_ID_EDITOR_PROP_ROTATION_SLIDER)->options.at(0).no_localized_text = TextFormat("%.1f", (*p_prop)->rotation);
         gui_slider(SDR_ID_EDITOR_PROP_ROTATION_SLIDER, sdr_center, VECTOR2(0.f, 0.f));
       
-        gui_label_grid("Z-Index", FONT_TYPE_ABRACADABRA, 1, label_center, WHITE, true, true, VECTOR2(0.f, 10.f));
+        gui_label_grid("Z-Index", FONT_TYPE_REGULAR, 1, label_center, WHITE, true, true, VECTOR2(0.f, 10.f));
         get_slider_by_id(SDR_ID_EDITOR_PROP_ZINDEX_SLIDER)->options.at(0).no_localized_text = TextFormat("%d", (*p_prop)->zindex);
         gui_slider(SDR_ID_EDITOR_PROP_ZINDEX_SLIDER, sdr_center, VECTOR2(0.f, 10.f));
 
-        gui_label_grid("Y-Based", FONT_TYPE_ABRACADABRA, 1, label_center, WHITE, true, true, VECTOR2(0.f, 20.f));
+        gui_label_grid("Y-Based", FONT_TYPE_REGULAR, 1, label_center, WHITE, true, true, VECTOR2(0.f, 20.f));
         get_checkbox_by_id(CHECKBOX_ID_IS_PROP_YBASED)->state = (*p_prop)->use_y_based_zindex ? CHECKBOX_STATE_CHECKED : CHECKBOX_STATE_UNCHECKED;
         gui_checkbox_grid(CHECKBOX_ID_IS_PROP_YBASED, VECTOR2(0.f, 20.f), sdr_center);
       }
@@ -716,19 +716,19 @@ void render_interface_editor(void) {
         Vector2 sdr_center = VECTOR2( pnl->dest.x + pnl->dest.width * .75f, pnl->dest.y + pnl->dest.height * .5f);
         Vector2 label_center = VECTOR2( pnl->dest.x + pnl->dest.width * .25f, pnl->dest.y + pnl->dest.height * .5f);
 
-        gui_label_grid("Scale", FONT_TYPE_ABRACADABRA, 1, label_center, WHITE, true, true, VECTOR2(0.f, -10.f));
+        gui_label_grid("Scale", FONT_TYPE_REGULAR, 1, label_center, WHITE, true, true, VECTOR2(0.f, -10.f));
         get_slider_by_id(SDR_ID_EDITOR_PROP_SCALE_SLIDER)->options.at(0).no_localized_text = TextFormat("%.2f", (*p_prop)->scale);
         gui_slider(SDR_ID_EDITOR_PROP_SCALE_SLIDER, sdr_center, VECTOR2(0.f, -10.f));
 
-        gui_label_grid("Rotation", FONT_TYPE_ABRACADABRA, 1, label_center, WHITE, true, true, VECTOR2(0.f, 0.f));
+        gui_label_grid("Rotation", FONT_TYPE_REGULAR, 1, label_center, WHITE, true, true, VECTOR2(0.f, 0.f));
         get_slider_by_id(SDR_ID_EDITOR_PROP_ROTATION_SLIDER)->options.at(0).no_localized_text = TextFormat("%.1f", (*p_prop)->sprite.rotation);
         gui_slider(SDR_ID_EDITOR_PROP_ROTATION_SLIDER, sdr_center, VECTOR2(0.f, 0.f));
 
-        gui_label_grid("Z-Index", FONT_TYPE_ABRACADABRA, 1, label_center, WHITE, true, true, VECTOR2(0.f, 10.f));
+        gui_label_grid("Z-Index", FONT_TYPE_REGULAR, 1, label_center, WHITE, true, true, VECTOR2(0.f, 10.f));
         get_slider_by_id(SDR_ID_EDITOR_PROP_ZINDEX_SLIDER)->options.at(0).no_localized_text = TextFormat("%d", (*p_prop)->zindex);
         gui_slider(SDR_ID_EDITOR_PROP_ZINDEX_SLIDER, sdr_center, VECTOR2(0.f, 10.f));
 
-        gui_label_grid("Y-Based", FONT_TYPE_ABRACADABRA, 1, label_center, WHITE, true, true, VECTOR2(0.f, 20.f));
+        gui_label_grid("Y-Based", FONT_TYPE_REGULAR, 1, label_center, WHITE, true, true, VECTOR2(0.f, 20.f));
         get_checkbox_by_id(CHECKBOX_ID_IS_PROP_YBASED)->state = (*p_prop)->use_y_based_zindex ? CHECKBOX_STATE_CHECKED : CHECKBOX_STATE_UNCHECKED;
         gui_checkbox_grid(CHECKBOX_ID_IS_PROP_YBASED, VECTOR2(0.f, 20.f), sdr_center);
       }
@@ -749,14 +749,14 @@ void render_interface_editor(void) {
     }
     case SLC_TYPE_DROP_COLLISION_POSITION: {
       state->map_collision_buffer_to_place.dest = Rectangle {state->mouse_pos_world.x, state->mouse_pos_world.y, 0.f, 0.f};
-      gui_label_format(FONT_TYPE_ABRACADABRA, 1, SE_BASE_RENDER_WIDTH * .5f, SE_BASE_RENDER_HEIGHT * .9f, WHITE, true, true, "%.0f, %.0f, %.0f, %.0f",
+      gui_label_format(FONT_TYPE_REGULAR, 1, SE_BASE_RENDER_WIDTH * .5f, SE_BASE_RENDER_HEIGHT * .9f, WHITE, true, true, "%.0f, %.0f, %.0f, %.0f",
         state->map_collision_buffer_to_place.dest.x, state->map_collision_buffer_to_place.dest.y, state->map_collision_buffer_to_place.dest.width, state->map_collision_buffer_to_place.dest.height
       );
       break;
     }
     case SLC_TYPE_DROP_COLLISION_DIMENTIONS: {
       if (state->map_collision_buffer_to_place.dest.width > 0 and state->map_collision_buffer_to_place.dest.height > 0) {
-        gui_label_format(FONT_TYPE_ABRACADABRA, 1, SE_BASE_RENDER_WIDTH * .5f, SE_BASE_RENDER_HEIGHT * .9f, WHITE, true, true, 
+        gui_label_format(FONT_TYPE_REGULAR, 1, SE_BASE_RENDER_WIDTH * .5f, SE_BASE_RENDER_HEIGHT * .9f, WHITE, true, true, 
           "%.1f, %.1f, %.1f, %.1f", 
           state->map_collision_buffer_to_place.dest.x, state->map_collision_buffer_to_place.dest.y, 
           state->map_collision_buffer_to_place.dest.width, state->map_collision_buffer_to_place.dest.height
@@ -768,7 +768,7 @@ void render_interface_editor(void) {
           state->map_collision_buffer_to_place.dest.height * state->in_camera_metrics->handle.zoom}, 2.f, BLUE
         );
       }
-      else gui_label_format(FONT_TYPE_ABRACADABRA, 1, SE_BASE_RENDER_WIDTH * .5f, SE_BASE_RENDER_HEIGHT * .9f, RED, true, true, 
+      else gui_label_format(FONT_TYPE_REGULAR, 1, SE_BASE_RENDER_WIDTH * .5f, SE_BASE_RENDER_HEIGHT * .9f, RED, true, true, 
         "%.1f, %.1f, %.1f, %.1f \\ Rectangle cannot have negative dimention", 
         state->map_collision_buffer_to_place.dest.x, state->map_collision_buffer_to_place.dest.y, 
         state->map_collision_buffer_to_place.dest.width, state->map_collision_buffer_to_place.dest.height

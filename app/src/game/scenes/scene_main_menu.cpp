@@ -129,7 +129,7 @@ static main_menu_scene_state * state = nullptr;
 #define MAIN_MENU_FADE_DURATION 1 * TARGET_FPS
 #define MAIN_MENU_UPGRADE_PANEL_COL 3
 #define MAIN_MENU_UPGRADE_PANEL_ROW 3
-#define DRAW_UPGRADE_LABEL(VEC2, TEXT, PRE_UPG_VAL, POS_UPG_VAL) gui_label_format(FONT_TYPE_ABRACADABRA, 1, VEC2.x, VEC2.y, WHITE, true, false, TEXT, PRE_UPG_VAL, POS_UPG_VAL);
+#define DRAW_UPGRADE_LABEL(VEC2, TEXT, PRE_UPG_VAL, POS_UPG_VAL) gui_label_format(FONT_TYPE_REGULAR, 1, VEC2.x, VEC2.y, WHITE, true, false, TEXT, PRE_UPG_VAL, POS_UPG_VAL);
 
 #define SMM_BASE_RENDER_SCALE(SCALE) VECTOR2(\
   static_cast<f32>(state->in_app_settings->render_width * SCALE),\
@@ -399,12 +399,12 @@ void render_scene_main_menu(void) {
         BeginScissorMode(pnl->dest.x, pnl->dest.y, pnl->dest.width, pnl->dest.height);
         {
           if (worldmap_locations.is_playable) {
-            gui_label(lc_txt(state->worldmap_locations.at(itr_000).title_txt_id), FONT_TYPE_ABRACADABRA, 1, Vector2 {
+            gui_label(lc_txt(state->worldmap_locations.at(itr_000).title_txt_id), FONT_TYPE_REGULAR, 1, Vector2 {
               pnl->dest.x + pnl->dest.width *.5f, pnl->dest.y + pnl->dest.height*.5f
             }, WHITE, true, true);
           }
           else {
-            gui_label(lc_txt(LOC_TEXT_WORLD_STAGE_WORK_IN_PROGRESS), FONT_TYPE_ABRACADABRA, 1, Vector2 {
+            gui_label(lc_txt(LOC_TEXT_WORLD_STAGE_WORK_IN_PROGRESS), FONT_TYPE_REGULAR, 1, Vector2 {
               pnl->dest.x + pnl->dest.width *.5f, pnl->dest.y + pnl->dest.height*.5f
             }, WHITE, true, true);
           }
@@ -442,7 +442,7 @@ void render_interface_main_menu(void) {
 
     Vector2 screen_location_acc = Vector2 {0.f, -21.f};
     
-    gui_label_shader(GAME_TITLE, SHADER_ID_SDF_TEXT, FONT_TYPE_ABRACADABRA, 3, VECTOR2(SMM_BASE_RENDER_WIDTH * .5f, SMM_BASE_RENDER_HEIGHT * .25f), WHITE, true, true);
+    gui_label_shader(GAME_TITLE, SHADER_ID_SDF_TEXT, FONT_TYPE_TITLE, 5, VECTOR2(SMM_BASE_RENDER_WIDTH * .5f, SMM_BASE_RENDER_HEIGHT * .25f), WHITE, true, true);
     if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_PLAY), BTN_ID_MAINMENU_BUTTON_PLAY, screen_location_acc, SMM_BASE_RENDER_DIV2, true)) {
       begin_scene_change(MAIN_MENU_SCENE_TO_PLAY_TRAIT_CHOICE);
     }
@@ -589,7 +589,7 @@ void draw_main_menu_character_subscene_stat_panel(Rectangle panel_dest, const Ve
 }
 void draw_main_menu_character_subscene_stat_list_panel(Rectangle panel_dest, const Vector4 padding) {
   const Rectangle& parent_panel_dest = panel_dest;
-  const font_type panel_font_type = FONT_TYPE_ABRACADABRA;
+  const font_type panel_font_type = FONT_TYPE_REGULAR;
   const i32 panel_font_size = 1;
 
   state->stat_list_panel.dest = Rectangle { 
@@ -739,13 +739,13 @@ void draw_main_menu_character_subscene_stat_details_panel(Rectangle panel_dest, 
     state->stat_details_panel.dest.x + state->stat_details_panel.dest.width * .5f,
     tier_symbols_vertical_position + tier_symbol_src_rect->height + detail_panel_element_spacing * .5f
   );
-  gui_label(lc_txt(state->hovered_stat->passive_display_name_symbol), FONT_TYPE_ABRACADABRA, 1, title_pos, WHITE, true, true);
+  gui_label(lc_txt(state->hovered_stat->passive_display_name_symbol), FONT_TYPE_BOLD, 1, title_pos, WHITE, true, true);
 
   Rectangle description_pos = {
     state->stat_details_panel.dest.x +state->stat_details_panel.dest.width * .05f, title_pos.y + detail_panel_element_spacing * .75f,
     state->stat_details_panel.dest.width * .9f, state->stat_details_panel.dest.width * .35f
   };
-  gui_label_wrap(lc_txt(state->hovered_stat->passive_desc_symbol), FONT_TYPE_ABRACADABRA, 1, description_pos, WHITE, false);
+  gui_label_wrap(lc_txt(state->hovered_stat->passive_desc_symbol), FONT_TYPE_LIGHT, 1, description_pos, WHITE, false);
 
   character_stat pseudo_update = *state->hovered_stat;
   game_manager_set_stat_value_by_level(&pseudo_update, pseudo_update.current_level+1);
@@ -814,7 +814,7 @@ void draw_main_menu_character_subscene_stat_details_panel(Rectangle panel_dest, 
     state->stat_details_panel.dest.x + state->stat_details_panel.dest.width * .575f,
     state->stat_details_panel.dest.y + state->stat_details_panel.dest.height * .85f
   );
-  gui_label_format_v(FONT_TYPE_ABRACADABRA, 1, cost_label_pos, cost_label_color, true, true, "%d", state->hovered_stat->upgrade_cost);
+  gui_label_format_v(FONT_TYPE_REGULAR, 1, cost_label_pos, cost_label_color, true, true, "%d", state->hovered_stat->upgrade_cost);
 
   Vector2 button_location = Vector2 {
     state->stat_details_panel.dest.x + state->stat_details_panel.dest.width * .5f, 
@@ -892,9 +892,9 @@ void draw_trait_selection_panel(void) {
   state->ability_selection_panel.dest = ability_sel_pan_dest;
   gui_panel(state->ability_selection_panel, ability_sel_pan_dest, false);
 
-  gui_label(lc_txt(LOC_TEXT_MAINMENU_TRAIT_CHOICE_AVAILABLE_TRAITS_TITLE), FONT_TYPE_ABRACADABRA, 1, available_traits_title_label_dest, WHITE, true, false);
-  gui_label(lc_txt(LOC_TEXT_MAINMENU_TRAIT_CHOICE_CHOSEN_TRAITS_TITLE),    FONT_TYPE_ABRACADABRA, 1, chosen_traits_title_label_dest, WHITE, true, false);
-  gui_label(lc_txt(LOC_TEXT_MAINMENU_TRAIT_ABILITY_CHOICE_PANEL_TITLE),    FONT_TYPE_ABRACADABRA, 1, chosen_trait_desc_title_label_dest, WHITE, true, false);
+  gui_label(lc_txt(LOC_TEXT_MAINMENU_TRAIT_CHOICE_AVAILABLE_TRAITS_TITLE), FONT_TYPE_REGULAR, 1, available_traits_title_label_dest, WHITE, true, false);
+  gui_label(lc_txt(LOC_TEXT_MAINMENU_TRAIT_CHOICE_CHOSEN_TRAITS_TITLE),    FONT_TYPE_REGULAR, 1, chosen_traits_title_label_dest, WHITE, true, false);
+  gui_label(lc_txt(LOC_TEXT_MAINMENU_TRAIT_ABILITY_CHOICE_PANEL_TITLE),    FONT_TYPE_REGULAR, 1, chosen_trait_desc_title_label_dest, WHITE, true, false);
 
   Rectangle positive_selection_panel_with_padding = Rectangle {
     positive_traits_sel_pan_dest.x      + (positive_traits_sel_pan_dest.width  * .025f),
@@ -937,7 +937,7 @@ void draw_trait_selection_panel(void) {
   );
 
   const char * lc_txt_remaining_trt_pnts = lc_txt(LOC_TEXT_MAINMENU_TRAIT_CHOICE_PANEL_REMANING_TRAIT_POINTS);
-  Vector2 txt_measure_remaining_trt_pnts = ui_measure_text(lc_txt_remaining_trt_pnts, FONT_TYPE_ABRACADABRA, 1);
+  Vector2 txt_measure_remaining_trt_pnts = ui_measure_text(lc_txt_remaining_trt_pnts, FONT_TYPE_REGULAR, 1);
   f32 remaining_traits_dest_width = state->in_app_settings->render_width * .2f;
   Rectangle remaining_traits_dest = Rectangle {
     bg_trait_sel_pan_dest.x + (bg_trait_sel_pan_dest.width * .5f) - (remaining_traits_dest_width * .5f),
@@ -945,8 +945,8 @@ void draw_trait_selection_panel(void) {
     remaining_traits_dest_width,
     txt_measure_remaining_trt_pnts.y
   };
-  gui_label_box_format(FONT_TYPE_ABRACADABRA, 1, remaining_traits_dest, WHITE, TEXT_ALIGN_TOP_LEFT, "%s:", lc_txt_remaining_trt_pnts);
-  gui_label_box_format(FONT_TYPE_ABRACADABRA, 1, remaining_traits_dest, WHITE, TEXT_ALIGN_TOP_RIGHT, "%d", state->available_trait_points);
+  gui_label_box_format(FONT_TYPE_REGULAR, 1, remaining_traits_dest, WHITE, TEXT_ALIGN_TOP_LEFT, "%s:", lc_txt_remaining_trt_pnts);
+  gui_label_box_format(FONT_TYPE_REGULAR, 1, remaining_traits_dest, WHITE, TEXT_ALIGN_TOP_RIGHT, "%d", state->available_trait_points);
 }
 void trait_selection_panel_list_traits(panel* const pnl, const Rectangle rect, std::vector<character_trait> * const traits, void (*trait_button_on_click_pfn)(size_t index)) {
   BeginScissorMode(rect.x, rect.y, rect.width, rect.height);
@@ -986,13 +986,13 @@ void trait_selection_panel_list_traits(panel* const pnl, const Rectangle rect, s
     for (size_t itr_000 = 0; itr_000 < traits->size(); ++itr_000) {
       _trait = __builtin_addressof(traits->at(itr_000));
       local_button* _lc_btn = smm_get_local_button(_trait->ui_ops.i32[0]);
-      text_measure = ui_measure_text(_trait->title.c_str(), FONT_TYPE_ABRACADABRA, 1);
+      text_measure = ui_measure_text(_trait->title.c_str(), FONT_TYPE_REGULAR, 1);
       Vector2 _lc_btn_pos = VECTOR2(rect.x, rect.y + trait_list_height_buffer + (pnl->buffer.f32[0] * pnl->scroll));
       Rectangle _lc_btn_dest = Rectangle {
         _lc_btn_pos.x, _lc_btn_pos.y, _lc_btn->btn_type.dest_frame_dim.x, _lc_btn->btn_type.dest_frame_dim.y
       };
 
-      if (gui_draw_local_button(_trait->title.c_str(), _lc_btn, FONT_TYPE_ABRACADABRA, 1, _lc_btn_pos, TEXT_ALIGN_LEFT_CENTER, false)) {
+      if (gui_draw_local_button(_trait->title.c_str(), _lc_btn, FONT_TYPE_REGULAR, 1, _lc_btn_pos, TEXT_ALIGN_LEFT_CENTER, false)) {
         if (trait_list_height_buffer + (pnl->buffer.f32[0] * pnl->scroll) < rect.height) {
           trait_button_on_click_pfn(itr_000);
           _lc_btn->current_state = BTN_STATE_UP;
@@ -1001,15 +1001,15 @@ void trait_selection_panel_list_traits(panel* const pnl, const Rectangle rect, s
       }
       switch (_lc_btn->current_state) {
         case BTN_STATE_UP:{
-          gui_label_box_format(FONT_TYPE_ABRACADABRA, 1, _lc_btn_dest, _lc_btn->btn_type.forground_color_btn_state_up, TEXT_ALIGN_RIGHT_CENTER, "%d", _trait->point);
+          gui_label_box_format(FONT_TYPE_REGULAR, 1, _lc_btn_dest, _lc_btn->btn_type.forground_color_btn_state_up, TEXT_ALIGN_RIGHT_CENTER, "%d", _trait->point);
           break;
         }
         case BTN_STATE_HOVER:{
-          gui_label_box_format(FONT_TYPE_ABRACADABRA, 1, _lc_btn_dest, _lc_btn->btn_type.forground_color_btn_state_hover, TEXT_ALIGN_RIGHT_CENTER, "%d", _trait->point);
+          gui_label_box_format(FONT_TYPE_REGULAR, 1, _lc_btn_dest, _lc_btn->btn_type.forground_color_btn_state_hover, TEXT_ALIGN_RIGHT_CENTER, "%d", _trait->point);
           break;
         }
         case BTN_STATE_PRESSED:{
-          gui_label_box_format(FONT_TYPE_ABRACADABRA, 1, _lc_btn_dest, _lc_btn->btn_type.forground_color_btn_state_pressed, TEXT_ALIGN_RIGHT_CENTER, "%d", _trait->point);
+          gui_label_box_format(FONT_TYPE_REGULAR, 1, _lc_btn_dest, _lc_btn->btn_type.forground_color_btn_state_pressed, TEXT_ALIGN_RIGHT_CENTER, "%d", _trait->point);
           break;
         }
         default: break; 
@@ -1087,7 +1087,7 @@ void trait_selection_panel_list_ability_selection_panel(panel* const pnl, const 
         continue;
       }
       panel * _lc_pnl = smm_get_local_panel(_abl.ui_use.i32[0]);
-      text_measure = ui_measure_text(lc_txt(_abl.display_name_loc_text_id), FONT_TYPE_ABRACADABRA, 1);
+      text_measure = ui_measure_text(lc_txt(_abl.display_name_loc_text_id), FONT_TYPE_REGULAR, 1);
       Vector2 _lc_pnl_pos = VECTOR2(
         rect.x + (rect.width * .5f) - (_lc_pnl_dim.x * .5f), 
         rect.y + ability_list_height_buffer + (pnl->buffer.f32[0] * pnl->scroll)
@@ -1117,7 +1117,7 @@ void trait_selection_panel_list_ability_selection_panel(panel* const pnl, const 
       gui_draw_texture_id_pro(TEX_ID_ASSET_ATLAS, _abl.icon_src, ability_icon_dest);
 
       // � Return here
-      gui_label(lc_txt(_abl.display_name_loc_text_id), FONT_TYPE_ABRACADABRA, 1, 
+      gui_label(lc_txt(_abl.display_name_loc_text_id), FONT_TYPE_REGULAR, 1, 
         VECTOR2(_lc_pnl_dest.x + ((_lc_pnl_dest.width + ability_icon_width) * .5f), _lc_pnl_dest.y + _lc_pnl_dest.height * .5f), 
         WHITE, true, true
       );

@@ -133,9 +133,11 @@ typedef enum character_stat_id {
 
 typedef enum font_type {
   FONT_TYPE_UNDEFINED,
-  FONT_TYPE_LIGHT,
   FONT_TYPE_ITALIC,
-  FONT_TYPE_ABRACADABRA,
+  FONT_TYPE_LIGHT,
+  FONT_TYPE_REGULAR,
+  FONT_TYPE_BOLD,
+  FONT_TYPE_TITLE,
   FONT_TYPE_MAX
 } font_type;
 
@@ -1130,16 +1132,20 @@ typedef struct localization_package {
   std::string language_name;
   language_index index;
   i32 * codepoints;
-  Font light_font;
   Font italic_font;
-  Font abracadabra;
+  Font light_font;
+  Font regular_font;
+  Font bold_font;
+  Font mood;
   localization_package(void) {
     this->language_name.clear();
     this->index = LANGUAGE_INDEX_UNDEFINED;
     this->codepoints = nullptr;
-    this->light_font = ZERO_FONT;
     this->italic_font = ZERO_FONT;
-    this->abracadabra = ZERO_FONT;
+    this->light_font = ZERO_FONT;
+    this->regular_font = ZERO_FONT;
+    this->bold_font = ZERO_FONT;
+    this->mood = ZERO_FONT;
   }
 } localization_package;
 

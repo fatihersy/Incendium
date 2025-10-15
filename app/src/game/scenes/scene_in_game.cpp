@@ -124,10 +124,10 @@ static scene_in_game_state * state = nullptr;
 #define INGAME_FADE_DURATION 1 * TARGET_FPS
 #define DRAW_ABL_UPG_STAT_PNL(UPG, TEXT, ...){ \
 if (UPG->level == 1) {\
-  gui_label_format(FONT_TYPE_ABRACADABRA, upgr_font_size, (f32)start_upgradables_x_exis, (f32)upgradables_height_buffer, WHITE, false, false, TEXT, __VA_ARGS__);\
+  gui_label_format(FONT_TYPE_REGULAR, upgr_font_size, (f32)start_upgradables_x_exis, (f32)upgradables_height_buffer, WHITE, false, false, TEXT, __VA_ARGS__);\
   upgradables_height_buffer += btw_space_gap;\
 } else {\
-  gui_label_format(FONT_TYPE_ABRACADABRA, upgr_font_size, (f32)start_upgradables_x_exis, (f32)upgradables_height_buffer, WHITE, false, false, TEXT, __VA_ARGS__);\
+  gui_label_format(FONT_TYPE_REGULAR, upgr_font_size, (f32)start_upgradables_x_exis, (f32)upgradables_height_buffer, WHITE, false, false, TEXT, __VA_ARGS__);\
   upgradables_height_buffer += btw_space_gap;\
 }}
 #define HEALTH_BAR_WIDTH static_cast<f32>(state->in_app_settings->render_width) * .15f
@@ -394,7 +394,7 @@ void render_interface_in_game(void) {
   
   switch (state->ingame_state) {
     case SCENE_INGAME_STATE_IDLE: { 
-      gui_label(lc_txt(LOC_TEXT_INGAME_LABEL_PRESS_SPACE), FONT_TYPE_ABRACADABRA, 1, Vector2 {SIG_BASE_RENDER_WIDTH * .5f, SIG_BASE_RENDER_HEIGHT * .75f}, WHITE, true, true);
+      gui_label(lc_txt(LOC_TEXT_INGAME_LABEL_PRESS_SPACE), FONT_TYPE_REGULAR, 1, Vector2 {SIG_BASE_RENDER_WIDTH * .5f, SIG_BASE_RENDER_HEIGHT * .75f}, WHITE, true, true);
       render_user_interface();
       return; 
     }
@@ -456,7 +456,7 @@ void render_interface_in_game(void) {
     case SCENE_INGAME_STATE_PLAY_DEBUG: {
       const Vector2& mouse_pos_screen = (*state->in_ingame_info->mouse_pos_screen);
       gui_label_format(
-        FONT_TYPE_ABRACADABRA, 1, mouse_pos_screen.x, mouse_pos_screen.y, 
+        FONT_TYPE_REGULAR, 1, mouse_pos_screen.x, mouse_pos_screen.y, 
         WHITE, false, false, "world_pos {%.1f, %.1f}", state->in_ingame_info->mouse_pos_world->x, state->in_ingame_info->mouse_pos_world->y
       );
       if(static_cast<size_t>(state->hovered_spawn) < state->in_ingame_info->in_spawns->size()){
@@ -471,32 +471,32 @@ void render_interface_in_game(void) {
           BeginScissorMode(pnl->dest.x, pnl->dest.y, pnl->dest.width, pnl->dest.height);
           {
             gui_label_format(
-              FONT_TYPE_ABRACADABRA, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
+              FONT_TYPE_REGULAR, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
               WHITE, false, false, "Id: %d", spawn->character_id
             );
             debug_info_position_buffer.y += line_height;
             gui_label_format(
-              FONT_TYPE_ABRACADABRA, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
+              FONT_TYPE_REGULAR, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
               WHITE, false, false, "Collision: {%.1f, %.1f, %.1f, %.1f}", spawn->collision.x, spawn->collision.y, spawn->collision.width, spawn->collision.height
             );
             debug_info_position_buffer.y += line_height;
             gui_label_format(
-              FONT_TYPE_ABRACADABRA, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
+              FONT_TYPE_REGULAR, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
               WHITE, false, false, "Position: {%.1f, %.1f}", spawn->position.x, spawn->position.y
             );
             debug_info_position_buffer.y += line_height;
             gui_label_format(
-              FONT_TYPE_ABRACADABRA, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
+              FONT_TYPE_REGULAR, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
               WHITE, false, false, "Health: %d", spawn->health_current
             );
             debug_info_position_buffer.y += line_height;
             gui_label_format(
-              FONT_TYPE_ABRACADABRA, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
+              FONT_TYPE_REGULAR, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
               WHITE, false, false, "Scale: %.1f", spawn->scale
             );
             debug_info_position_buffer.y += line_height;
             gui_label_format(
-              FONT_TYPE_ABRACADABRA, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
+              FONT_TYPE_REGULAR, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
               WHITE, false, false, "Speed: %.1f", spawn->speed
             );
           }
@@ -519,34 +519,34 @@ void render_interface_in_game(void) {
             BeginScissorMode(pnl->dest.x, pnl->dest.y, pnl->dest.width, pnl->dest.height);
             {
               gui_label_format(
-                FONT_TYPE_ABRACADABRA, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
+                FONT_TYPE_REGULAR, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
                 WHITE, false, false, "Collision: {%.1f, %.1f, %.1f, %.1f}", prj->collision.x, prj->collision.y, prj->collision.width, prj->collision.height
               );
               debug_info_position_buffer.y += line_height;
               gui_label_format(
-                FONT_TYPE_ABRACADABRA, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
+                FONT_TYPE_REGULAR, font_size, debug_info_position_buffer.x, debug_info_position_buffer.y, 
                 WHITE, false, false, "Rotation: %.1f", prj->animations.at(prj->active_sprite).rotation
               );
             }
             EndScissorMode();
           }
       }
-      gui_label_format(FONT_TYPE_ABRACADABRA, 1, SIG_BASE_RENDER_WIDTH * .75f, SCREEN_OFFSET.y, WHITE, false, false, 
+      gui_label_format(FONT_TYPE_REGULAR, 1, SIG_BASE_RENDER_WIDTH * .75f, SCREEN_OFFSET.y, WHITE, false, false, 
         "Remaining: %d", state->in_ingame_info->in_spawns->size()
       );
-      gui_label_format(FONT_TYPE_ABRACADABRA, 1, SIG_BASE_RENDER_WIDTH * .75f, SCREEN_OFFSET.y * 5.f, WHITE, false, false, 
+      gui_label_format(FONT_TYPE_REGULAR, 1, SIG_BASE_RENDER_WIDTH * .75f, SCREEN_OFFSET.y * 5.f, WHITE, false, false, 
         "Collected Coins: %d", state->in_ingame_info->collected_coins
       );
-      gui_label_format(FONT_TYPE_ABRACADABRA, 1, SIG_BASE_RENDER_WIDTH * .75f, SCREEN_OFFSET.y * 5.f, WHITE, false, false, 
+      gui_label_format(FONT_TYPE_REGULAR, 1, SIG_BASE_RENDER_WIDTH * .75f, SCREEN_OFFSET.y * 5.f, WHITE, false, false, 
         "Total Coin: %d", state->in_ingame_info->collected_coins
       );
-      gui_label_format(FONT_TYPE_ABRACADABRA, 1, 0, SIG_BASE_RENDER_HEIGHT * .35f, WHITE, false, false, 
+      gui_label_format(FONT_TYPE_REGULAR, 1, 0, SIG_BASE_RENDER_HEIGHT * .35f, WHITE, false, false, 
         "Health: %d", state->in_ingame_info->player_state_dynamic->stats.at(CHARACTER_STATS_HEALTH).buffer.i32[3]
       );
-      gui_label_format(FONT_TYPE_ABRACADABRA, 1, 0, SIG_BASE_RENDER_HEIGHT * .40f, WHITE, false, false, 
+      gui_label_format(FONT_TYPE_REGULAR, 1, 0, SIG_BASE_RENDER_HEIGHT * .40f, WHITE, false, false, 
         "Current Health: %d", state->in_ingame_info->player_state_dynamic->health_current
       );
-      gui_label_format(FONT_TYPE_ABRACADABRA, 1, 0, SIG_BASE_RENDER_HEIGHT * .45f, WHITE, false, false, 
+      gui_label_format(FONT_TYPE_REGULAR, 1, 0, SIG_BASE_RENDER_HEIGHT * .45f, WHITE, false, false, 
         "Damage: %d", state->in_ingame_info->player_state_dynamic->stats.at(CHARACTER_STATS_DAMAGE).buffer.i32[3]
       );
       
@@ -722,13 +722,13 @@ void draw_in_game_upgrade_panel(u16 which_panel, Rectangle panel_dest) {
   const i32 upgr_font_size = 1;
 
   gui_draw_texture_id_pro(TEX_ID_ASSET_ATLAS, upg->icon_src, icon_rect);
-  gui_label(lc_txt(upg->display_name_loc_text_id), FONT_TYPE_ABRACADABRA, title_font_size, ability_name_pos, WHITE, true, true);
+  gui_label(lc_txt(upg->display_name_loc_text_id), FONT_TYPE_REGULAR, title_font_size, ability_name_pos, WHITE, true, true);
 
   if (upg->level == 0) {
-    gui_label(lc_txt(LOC_TEXT_INGAME_UPGRADE_ABILITY_NEW), FONT_TYPE_ABRACADABRA, level_ind_font_size, ability_level_ind, WHITE, true, true);
+    gui_label(lc_txt(LOC_TEXT_INGAME_UPGRADE_ABILITY_NEW), FONT_TYPE_REGULAR, level_ind_font_size, ability_level_ind, WHITE, true, true);
   } 
   else if(upg->level > 0 and upg->level <= MAX_ABILITY_LEVEL) {
-    gui_label_format_v(FONT_TYPE_ABRACADABRA, level_ind_font_size, ability_level_ind, WHITE, true, true, "%d -> %d", abl->level, upg->level);
+    gui_label_format_v(FONT_TYPE_REGULAR, level_ind_font_size, ability_level_ind, WHITE, true, true, "%d -> %d", abl->level, upg->level);
   } 
   else {
     IWARN("scene_in_game::draw_in_game_upgrade_panel()::Ability level is out of bound");
@@ -770,7 +770,7 @@ void draw_passive_selection_panel(const character_stat *const stat, const Rectan
   const i32 title_font_size = 1; 
   
   gui_draw_texture_id_pro(TEX_ID_ASSET_ATLAS, stat->passive_icon_src, icon_rect);
-  gui_label(lc_txt(stat->passive_display_name_symbol), FONT_TYPE_ABRACADABRA, title_font_size, passive_name_pos, WHITE, true, true);
+  gui_label(lc_txt(stat->passive_display_name_symbol), FONT_TYPE_REGULAR, title_font_size, passive_name_pos, WHITE, true, true);
   
   const i32 desc_font_size = 1;
   const f32 desc_box_height = panel_dest.y + (panel_dest.height * .5f) - passive_name_pos.y - elm_space_gap;
@@ -781,7 +781,7 @@ void draw_passive_selection_panel(const character_stat *const stat, const Rectan
     panel_dest.width - padding.x,
     desc_box_height - padding.y,
   };
-  gui_label_wrap(lc_txt(stat->passive_desc_symbol), FONT_TYPE_ABRACADABRA, desc_font_size, desc_box, WHITE, false);
+  gui_label_wrap(lc_txt(stat->passive_desc_symbol), FONT_TYPE_REGULAR, desc_font_size, desc_box, WHITE, false);
 }
 void draw_end_game_panel(void) {
   STATE_ASSERT("draw_end_game_panel", {
@@ -795,12 +795,12 @@ void draw_end_game_panel(void) {
 	
 	Vector2 result_title_text_dest = Vector2 { result_title_header_dest.x + (result_title_header_dest.width * .5f), result_title_header_dest.y + (result_title_header_dest.height * .5f)};
   if (state->in_ingame_info->is_win) {
-    gui_label(lc_txt(LOC_TEXT_INGAME_STATE_RESULT_CLEARED), FONT_TYPE_ABRACADABRA, 1, result_title_text_dest, WHITE, true, true);
+    gui_label(lc_txt(LOC_TEXT_INGAME_STATE_RESULT_CLEARED), FONT_TYPE_REGULAR, 1, result_title_text_dest, WHITE, true, true);
   }
   else {
-    gui_label(lc_txt(LOC_TEXT_INGAME_STATE_RESULT_DEAD), FONT_TYPE_ABRACADABRA, 1, result_title_text_dest, RED, true, true);
+    gui_label(lc_txt(LOC_TEXT_INGAME_STATE_RESULT_DEAD), FONT_TYPE_REGULAR, 1, result_title_text_dest, RED, true, true);
   }
-  gui_label_format_v(FONT_TYPE_ABRACADABRA, 1, VECTOR2(static_cast<f32>(state->in_app_settings->render_width_div2), SIG_BASE_RENDER_HEIGHT * .75f), WHITE, true, true, 
+  gui_label_format_v(FONT_TYPE_REGULAR, 1, VECTOR2(static_cast<f32>(state->in_app_settings->render_width_div2), SIG_BASE_RENDER_HEIGHT * .75f), WHITE, true, true, 
     "%s%d", lc_txt(LOC_TEXT_INGAME_STATE_RESULT_COLLECTED_COINS), state->in_ingame_info->collected_coins
   );
 	Vector2 accept_btn_dest = Vector2 { bg_panel_dest.x + (bg_panel_dest.width * .5f), bg_panel_dest.y + (bg_panel_dest.height * .9f)};
@@ -864,7 +864,7 @@ void draw_ingame_state_play_ui_clear_zombies(void) {
   Rectangle exp_bar_orn_dest = Rectangle {exp_bar_dest.x + exp_bar_dest.width * .5f + ((exp_bar_orn_width / exp_bar_orn_src_rect->width) * .5f),  exp_bar_dest.y, exp_bar_orn_width,  exp_bar_dest.height };
   gui_draw_atlas_texture_id(ATLAS_TEX_ID_DARK_FANTASY_BOSSBAR_6_MIDDLE, exp_bar_orn_dest, Vector2{exp_bar_orn_dest.width * .5f, 0.f}, 0.f, WHITE);
 
-  gui_label_format(FONT_TYPE_ABRACADABRA, 1, 
+  gui_label_format(FONT_TYPE_REGULAR, 1, 
     static_cast<f32>(state->in_app_settings->render_width_div2), 
     static_cast<f32>(state->in_app_settings->render_height * .05f), WHITE, true, false, "%.2d:%.2d", 
     static_cast<i32>(state->in_ingame_info->play_time / 60.f),
