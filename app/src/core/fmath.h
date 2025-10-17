@@ -20,5 +20,7 @@ f32 vec2_lenght(Vector2 v1);
 f32 get_movement_rotation(Vector2 from, Vector2 to);
 f64 fast_sin(f64 x);
 f32 fmod(f32 x, f64 y);
+f32 ffloor(f32 x);
+f32 fceil(f32 x);
 
 #endif

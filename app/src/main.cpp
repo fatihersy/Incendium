@@ -128,7 +128,7 @@ void MiniDumpFunction([[maybe_unused]] unsigned int nExceptionCode, [[maybe_unus
 	// maybe you want to put what level the user was playing, how many players on the server,
 	// how much memory is free, etc...
 
-	#ifdef _DEBUG
+	#ifndef _RELEASE
 		const char * last_log = get_last_log();
 		if (last_log and last_log != nullptr) {
 			SteamAPI_SetMiniDumpComment( last_log );

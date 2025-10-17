@@ -236,7 +236,7 @@ bool load_shader_pak([[__maybe_unused__]] pak_file_id pak_id, [[__maybe_unused__
       state->shaders.at(_id).total_locations = 0;
     }
 
-    if (IsShaderValid(state->shaders.at(id).handle)) {
+    if (IsShaderValid(state->shaders.at(_id).handle)) {
       return true;
     }
     return false;

@@ -59,7 +59,7 @@ int alert(const char* caption, const char* message);
 
 #define DEBUG_COLLISIONS 0
 
-#ifdef _DEBUG
+#ifndef _RELEASE
   #define USE_PAK_FORMAT 0
 #else
   #define USE_PAK_FORMAT 1

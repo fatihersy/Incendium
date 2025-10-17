@@ -110,7 +110,7 @@ bool player_system_initialize(const camera_metrics* in_camera_metrics,const app_
     state->defualt_player.stats.at(CHARACTER_STATS_ABILITY_CD) = character_stat(CHARACTER_STATS_ABILITY_CD, LOC_TEXT_PLAYER_STAT_HOURGLASS, LOC_TEXT_PLAYER_STAT_DESC_HOURGLASS, 
       Rectangle{1696, 672, 32, 32}, 0, (i32)level_curve[1], data128(static_cast<f32>(0.f))
     );
-    state->defualt_player.stats.at(CHARACTER_STATS_PROJECTILE_AMOUTH) = character_stat(CHARACTER_STATS_PROJECTILE_AMOUTH, LOC_TEXT_PLAYER_STAT_SECOND_HAND, LOC_TEXT_PLAYER_STAT_DESC_SECOND_HAND, 
+    state->defualt_player.stats.at(CHARACTER_STATS_PROJECTILE_AMOUNT) = character_stat(CHARACTER_STATS_PROJECTILE_AMOUNT, LOC_TEXT_PLAYER_STAT_SECOND_HAND, LOC_TEXT_PLAYER_STAT_DESC_SECOND_HAND, 
       Rectangle{1632, 1056, 32, 32}, 1, (i32) level_curve[1], data128(static_cast<i32>(0))
     );
     state->defualt_player.stats.at(CHARACTER_STATS_EXP_GAIN) =  character_stat(CHARACTER_STATS_EXP_GAIN, LOC_TEXT_PLAYER_STAT_SEEING_EYES, LOC_TEXT_PLAYER_STAT_DESC_SEEING_EYES, 

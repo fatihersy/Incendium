@@ -220,7 +220,9 @@ void update_game_manager(void) {
         if (state->game_info.total_boss_spawned < state->stage.total_boss_count) {
           spawn_boss();
         }
-        if (state->game_info.play_time <= 0.f or state->game_info.in_spawns->size() == 0) {
+        if (state->game_info.play_time <= 0.f 
+          //or state->game_info.in_spawns->size() == 0 // TODO: Uncomment
+        ) {
           gm_end_game(true, true);
         }
 
@@ -713,7 +715,7 @@ void game_manager_set_stat_value_by_level(character_stat* stat, i32 level) {
       stat->buffer.f32[3] = stat->buffer.f32[0] + stat->buffer.f32[1] + stat->buffer.f32[2];
       return;
     }
-    case CHARACTER_STATS_PROJECTILE_AMOUTH:{
+    case CHARACTER_STATS_PROJECTILE_AMOUNT:{
       const i32 value = stat->current_level;
 
       stat->buffer.i32[1] = value;
@@ -782,7 +784,7 @@ void game_manager_set_stat_trait_value_by_level(character_stat* stat, data128 va
       stat->buffer.f32[3] = stat->buffer.f32[0] + stat->buffer.f32[1] + stat->buffer.f32[2];
       break;
     }
-    case CHARACTER_STATS_PROJECTILE_AMOUTH:{
+    case CHARACTER_STATS_PROJECTILE_AMOUNT:{
       stat->buffer.i32[2] = value.i32[0];
       stat->buffer.i32[3] = stat->buffer.i32[0] + stat->buffer.i32[1] + stat->buffer.i32[2];
       break;
@@ -832,7 +834,7 @@ bool _add_ability(ability_id _id) {
   }
   abl.p_owner = state->game_info.player_state_dynamic;
   abl.is_initialized = true;
-  abl.proj_count += state->game_info.player_state_dynamic->stats.at(CHARACTER_STATS_PROJECTILE_AMOUTH).buffer.i32[3];
+  abl.proj_count += state->game_info.player_state_dynamic->stats.at(CHARACTER_STATS_PROJECTILE_AMOUNT).buffer.i32[3];
   abl.is_active = true;
 
   refresh_ability(__builtin_addressof(abl));

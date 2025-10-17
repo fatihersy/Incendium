@@ -21,7 +21,7 @@ void memory_system_initialize(void) {
 }
 
 void* allocate_memory_linear(u64 size, bool will_zero_memory) {
-    #ifdef _DEBUG
+    #ifndef _RELEASE
       if (memory_system->linear_memory_allocated + size > memory_system->linear_memory_total_size) {
         exit(EXIT_FAILURE);
       }

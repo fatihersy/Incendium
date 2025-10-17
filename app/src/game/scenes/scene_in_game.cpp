@@ -41,6 +41,7 @@ typedef struct chest_opening_sequence_intro_animation_control {
 
   spritesheet sheet_chest;
   std::vector<spritesheet> sheets_background;
+  std::vector<atlas_texture_id> item_ids_to_scroll;
 
   data128 mm_ex;
   data128 vec_ex;
@@ -136,7 +137,7 @@ if (UPG->level == 1) {\
 #define CHEST_OPENING_SEQ_READY_DURATION .275f
 #define CHEST_OPENING_SEQ_CHEST_SCALE 6.5f
 #define CHEST_OPENING_SEQ_BG_MAX_OPACITY_SCALE 0.7f
-#define CHEST_OPENING_SPIN_SPEED 2000.f
+#define CHEST_OPENING_SPIN_SPEED 500.f
 
 [[__nodiscard__]] bool begin_scene_in_game(bool fade_in);
 
@@ -986,6 +987,13 @@ void sig_init_chest_sequence(chest_opening_sequence sequence, data128 vec_ex = d
       seq.sequence = sequence;
       seq.accumulator = 0.f;
       seq.duration = CHEST_OPENING_SEQ_READY_DURATION;
+
+      seq.item_ids_to_scroll.push_back(ATLAS_TEX_ID_PORTRAIT_FRAME);
+      seq.item_ids_to_scroll.push_back(ATLAS_TEX_ID_CURRENCY_COIN_ICON_5000);
+      seq.item_ids_to_scroll.push_back(ATLAS_TEX_ID_CURRENCY_COIN_ICON_15000);
+      seq.item_ids_to_scroll.push_back(ATLAS_TEX_ID_CURRENCY_COIN_ICON_45000);
+      seq.item_ids_to_scroll.push_back(ATLAS_TEX_ID_CHEST_BASE);
+      seq.item_ids_to_scroll.push_back(ATLAS_TEX_ID_CHEST_LID);
       return;
     }
     case CHEST_OPENING_SEQUENCE_SPIN: {
@@ -1061,83 +1069,91 @@ void sig_update_chest_sequence(void) {
   }
   IERROR("game_manager::gm_update_chest_sequence()::Function ended unexpectedly");
 }
+/**
+ * @brief Renders the chest opening sequence with background, chest, and scrolling items.
+ *
+ * Updated to:
+ * - Use draw_scrolling_band_with_items for band and items in READY, SPIN, and RESULT states.
+ * - Explicitly center the item_band_dest rectangle relative to the screen center.
+ * - Ensure items are synchronized with band tiles using the same offset and centering logic.
+ * - Maintain rendering order: background, circle, chest lid, band/items, chest base, other elements.
+ * - Use consistent 2-space indentation.
+ * - Add comments for clarity and maintain existing functionality.
+ * - Handle invalid sequence cases gracefully.
+ *
+ * @note Assumes draw_scrolling_band_with_items and other referenced functions are defined.
+ */
 void sig_render_chest_sequence(void) {
   chest_opening_sequence_intro_animation_control& seq = state->chest_intro_ctrl;
-  Rectangle background_layer_dest = Rectangle {0.f, 0.f, static_cast<f32>(state->in_app_settings->render_width), static_cast<f32>(state->in_app_settings->render_height)};
+  Rectangle background_layer_dest = {0.f, 0.f,static_cast<f32>(state->in_app_settings->render_width),static_cast<f32>(state->in_app_settings->render_height)};
   u8 bg_layer_opacity = static_cast<u8>(CHEST_OPENING_SEQ_BG_MAX_OPACITY_SCALE * 255);
   Color bg_layer_color = {255u, 255u, 255u, bg_layer_opacity};
   Color light_color = {255u, 255u, 255u, 115u};
   Color circle_color = {53u, 59u, 72u, 155u};
   const Rectangle& chest_dest = seq.sheet_chest.coord;
-  Rectangle item_band_dest = Rectangle { SIG_BASE_RENDER_WIDTH_F * .5f, SIG_BASE_RENDER_HEIGHT_F * .25f, SIG_BASE_RENDER_WIDTH_F, SIG_BASE_RENDER_HEIGHT_F * .2f};
+  Rectangle item_band_dest = { (SIG_BASE_RENDER_WIDTH_F - SIG_BASE_RENDER_WIDTH_F) * 0.5f, SIG_BASE_RENDER_HEIGHT_F * 0.25f, SIG_BASE_RENDER_WIDTH_F, SIG_BASE_RENDER_HEIGHT_F * 0.2f };
   const f32 accumulator = seq.accumulator / seq.duration;
   const f32 item_band_unit_gap = 20.f;
+  const std::vector<atlas_texture_id> empty_items;
+  const f32 item_scale = 0.85f;
 
+  auto draw_common_background = [&](Color bg_tint) {
+    gui_draw_atlas_texture_id(ATLAS_TEX_ID_BG_BLACK, background_layer_dest, ZEROVEC2, 0.f, bg_tint);
+    DrawCircle(SIG_BASE_RENDER_DIV2.x, SIG_BASE_RENDER_DIV2.y, state->in_app_settings->render_height_div2, circle_color);
+  };
+  auto draw_chest_part = [&](atlas_texture_id part_id) {
+    gui_draw_atlas_texture_id(part_id, seq.sheet_chest.coord, seq.sheet_chest.origin, seq.sheet_chest.rotation, seq.sheet_chest.tint);
+  };
   switch (seq.sequence) {
     case CHEST_OPENING_SEQUENCE_CHEST_IN: {
-      gui_draw_atlas_texture_id(ATLAS_TEX_ID_BG_BLACK, background_layer_dest, ZEROVEC2, 0.f, 
-        Color {bg_layer_color.r, bg_layer_color.g, bg_layer_color.b, static_cast<u8>(bg_layer_opacity * accumulator)}
-      );
-      DrawCircle(SIG_BASE_RENDER_DIV2.x, SIG_BASE_RENDER_DIV2.y, state->in_app_settings->render_height_div2, circle_color);
-      ui_draw_sprite_on_site(__builtin_addressof(seq.sheet_chest), WHITE, 0);
+      draw_common_background( {bg_layer_color.r, bg_layer_color.g, bg_layer_color.b, static_cast<u8>(bg_layer_opacity * accumulator)});
+      ui_draw_sprite_on_site(&seq.sheet_chest, WHITE, 0);
       return;
     }
     case CHEST_OPENING_SEQUENCE_CHEST_OPEN: {
-      gui_draw_atlas_texture_id(ATLAS_TEX_ID_BG_BLACK, background_layer_dest, ZEROVEC2, 0.f, bg_layer_color);
-      DrawCircle(SIG_BASE_RENDER_DIV2.x, SIG_BASE_RENDER_DIV2.y, state->in_app_settings->render_height_div2, circle_color);
-      ui_play_sprite_on_site(__builtin_addressof(seq.sheet_chest), WHITE, seq.sheet_chest.coord);
+      draw_common_background(bg_layer_color);
+      ui_play_sprite_on_site(&seq.sheet_chest, WHITE, seq.sheet_chest.coord);
       return;
     }
     case CHEST_OPENING_SEQUENCE_READY: {
-      gui_draw_atlas_texture_id(ATLAS_TEX_ID_BG_BLACK, background_layer_dest, ZEROVEC2, 0.f, bg_layer_color);
-      DrawCircle(SIG_BASE_RENDER_DIV2.x, SIG_BASE_RENDER_DIV2.y, state->in_app_settings->render_height_div2, circle_color);
-      gui_draw_atlas_texture_id(ATLAS_TEX_ID_CHEST_LID, seq.sheet_chest.coord, seq.sheet_chest.origin, seq.sheet_chest.rotation, seq.sheet_chest.tint);
-      DrawTriangle(
-        Vector2 { chest_dest.x,                                 chest_dest.y + chest_dest.height * .5f }, 
-        Vector2 { SIG_BASE_RENDER_WIDTH_F * accumulator,                                           0.f }, 
-        Vector2 { SIG_BASE_RENDER_WIDTH_F * (1.f - accumulator),                                   0.f }, 
-        light_color
-      );
-      draw_atlas_texture_repeat(ATLAS_TEX_ID_DARK_FANTASY_PANEL_BG, item_band_dest, item_band_unit_gap, true,  WHITE, 0.f);
-      gui_draw_atlas_texture_id(ATLAS_TEX_ID_CHEST_BASE, seq.sheet_chest.coord, seq.sheet_chest.origin, seq.sheet_chest.rotation, seq.sheet_chest.tint);
+      draw_common_background(bg_layer_color);
+      draw_chest_part(ATLAS_TEX_ID_CHEST_LID);
+      DrawTriangle({chest_dest.x, chest_dest.y + chest_dest.height * 0.5f}, {SIG_BASE_RENDER_WIDTH_F * accumulator, 0.f}, {SIG_BASE_RENDER_WIDTH_F * (1.f - accumulator), 0.f}, light_color);
+      draw_scrolling_band_with_items( ATLAS_TEX_ID_DARK_FANTASY_PANEL_BG, item_band_unit_gap, empty_items, item_band_dest, 0.f, true, 42u, WHITE, WHITE, item_scale);
+      draw_chest_part(ATLAS_TEX_ID_CHEST_BASE);
       if (accumulator >= 1.f) {
-        gui_label_shader(
-          lc_txt(LOC_TEXT_INGAME_STATE_CHEST_OPENING_SPIN), 
-          SHADER_ID_CHEST_OPENING_SPIN_TEXT, FONT_TYPE_ITALIC, 2, Vector2 {SIG_BASE_RENDER_WIDTH_F * .5f, SIG_BASE_RENDER_HEIGHT_F * .5f}, WHITE, true, true
+        gui_label_shader(lc_txt(LOC_TEXT_INGAME_STATE_CHEST_OPENING_SPIN),
+          SHADER_ID_CHEST_OPENING_SPIN_TEXT, FONT_TYPE_ITALIC, 2, {SIG_BASE_RENDER_WIDTH_F * 0.5f, SIG_BASE_RENDER_HEIGHT_F * 0.5f}, WHITE, true, true
         );
       }
       return;
     }
     case CHEST_OPENING_SEQUENCE_SPIN: {
-      gui_draw_atlas_texture_id(ATLAS_TEX_ID_BG_BLACK, background_layer_dest, ZEROVEC2, 0.f, bg_layer_color);
-      DrawCircle(SIG_BASE_RENDER_DIV2.x, SIG_BASE_RENDER_DIV2.y, state->in_app_settings->render_height_div2, circle_color);
-      gui_draw_atlas_texture_id(ATLAS_TEX_ID_CHEST_LID, seq.sheet_chest.coord, seq.sheet_chest.origin, seq.sheet_chest.rotation, seq.sheet_chest.tint);
-      DrawTriangle(Vector2 { chest_dest.x, chest_dest.y + chest_dest.height * .5f }, Vector2 { SIG_BASE_RENDER_WIDTH_F, 0.f }, Vector2 { 0.f, 0.f }, light_color);
-      draw_atlas_texture_repeat(ATLAS_TEX_ID_DARK_FANTASY_PANEL_BG, item_band_dest, item_band_unit_gap, true,  WHITE, seq.mm_ex.f32[2]);
-      gui_draw_atlas_texture_id(ATLAS_TEX_ID_CHEST_BASE, seq.sheet_chest.coord, seq.sheet_chest.origin, seq.sheet_chest.rotation, seq.sheet_chest.tint);
+      draw_common_background(bg_layer_color);
+      draw_chest_part(ATLAS_TEX_ID_CHEST_LID);
+      DrawTriangle({chest_dest.x, chest_dest.y + chest_dest.height * 0.5f}, {SIG_BASE_RENDER_WIDTH_F, 0.f}, {0.f, 0.f}, light_color);
+      draw_scrolling_band_with_items(ATLAS_TEX_ID_DARK_FANTASY_PANEL_BG, item_band_unit_gap, seq.item_ids_to_scroll, item_band_dest, seq.mm_ex.f32[2], true,  42u, WHITE, WHITE, item_scale);
+      draw_chest_part(ATLAS_TEX_ID_CHEST_BASE);
       return;
     }
     case CHEST_OPENING_SEQUENCE_RESULT: {
-      gui_draw_atlas_texture_id(ATLAS_TEX_ID_BG_BLACK, background_layer_dest, ZEROVEC2, 0.f, bg_layer_color);
-      DrawCircle(SIG_BASE_RENDER_DIV2.x, SIG_BASE_RENDER_DIV2.y, state->in_app_settings->render_height_div2, circle_color);
-      gui_draw_atlas_texture_id(ATLAS_TEX_ID_CHEST_LID, seq.sheet_chest.coord, seq.sheet_chest.origin, seq.sheet_chest.rotation, seq.sheet_chest.tint);
-      DrawTriangle(Vector2 { chest_dest.x, chest_dest.y + chest_dest.height * .5f }, Vector2 { SIG_BASE_RENDER_WIDTH_F, 0.f }, Vector2 { 0.f, 0.f }, light_color);
-      draw_atlas_texture_repeat(ATLAS_TEX_ID_DARK_FANTASY_PANEL_BG, item_band_dest, item_band_unit_gap, true,  WHITE, 0.f);
-      gui_draw_atlas_texture_id(ATLAS_TEX_ID_CHEST_BASE, seq.sheet_chest.coord, seq.sheet_chest.origin, seq.sheet_chest.rotation, seq.sheet_chest.tint);
-
-      if(gui_menu_button(lc_txt(LOC_TEXT_INGAME_STATE_RESULT_ACCEPT), BTN_ID_IN_GAME_BUTTON_CHEST_OPENING_ACCEPT, Vector2 {0.f, 45.f}, SIG_BASE_RENDER_DIV2, true)) {
+      draw_common_background(bg_layer_color);
+      draw_chest_part(ATLAS_TEX_ID_CHEST_LID);
+      DrawTriangle({chest_dest.x, chest_dest.y + chest_dest.height * 0.5f}, {SIG_BASE_RENDER_WIDTH_F, 0.f}, {0.f, 0.f}, light_color);
+      draw_scrolling_band_with_items(ATLAS_TEX_ID_DARK_FANTASY_PANEL_BG, item_band_unit_gap, empty_items, item_band_dest, 0.f, true, 42u, WHITE, WHITE, item_scale);
+      draw_chest_part(ATLAS_TEX_ID_CHEST_BASE);
+      if (gui_menu_button(lc_txt(LOC_TEXT_INGAME_STATE_RESULT_ACCEPT), BTN_ID_IN_GAME_BUTTON_CHEST_OPENING_ACCEPT, {0.f, 45.f}, SIG_BASE_RENDER_DIV2, true)) {
         sig_change_ingame_state(SCENE_INGAME_STATE_PLAY);
       }
       return;
     }
     default: {
       seq = chest_opening_sequence_intro_animation_control();
+      IERROR("game_manager::sig_render_chest_sequence::Invalid sequence state");
       return;
     }
   }
-  IERROR("game_manager::gm_render_chest_sequence()::Function ended unexpectedly");
 }
-
 
 bool scene_in_game_on_event(i32 code, [[maybe_unused]] event_context context) {
   switch (code) {

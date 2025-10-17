@@ -487,7 +487,9 @@ void gui_draw_texture_id_pro(texture_id _id, Rectangle src, Rectangle dest, Colo
 void gui_draw_texture_id(const texture_id _id, const Rectangle dest, const Vector2 origin, i32 texture_wrap = TEXTURE_WRAP_REPEAT);
 void gui_draw_spritesheet_id(spritesheet_id _id, Color _tint, Vector2 pos, Vector2 scale, u16 frame);
 void draw_atlas_texture_stretch(atlas_texture_id tex_id, Rectangle stretch_part, Rectangle dest, bool should_center, Color tint = WHITE);
-void draw_atlas_texture_repeat(atlas_texture_id tex_id, Rectangle dest, float gap, bool should_center, Color tint, float offset);
+void draw_scrolling_band_with_items(
+  atlas_texture_id band_tex_id,f32 band_gap,const std::vector<atlas_texture_id>& item_tex_ids,Rectangle dest,f32 offset,bool should_center,u32 seed,Color band_tint,Color item_tint,f32 item_scale
+);
 void gui_draw_settings_screen(void);
 void gui_draw_pause_screen(bool in_game_play_state);
 void gui_fire_display_error(int loc_text_id);

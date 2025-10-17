@@ -18,13 +18,13 @@
 
 #define ZOOM_CAMERA_DURATION 0.8f
 
-#ifdef _DEBUG
+#ifndef _RELEASE
   #define ZOOM_CAMERA_MIN 0.01f
 #else
   #define ZOOM_CAMERA_MIN 0.85f
 #endif
 
-#ifdef _DEBUG
+#ifndef _RELEASE
   #define ZOOM_CAMERA_MAX 2.0f
 #else
   #define ZOOM_CAMERA_MAX 1.5f

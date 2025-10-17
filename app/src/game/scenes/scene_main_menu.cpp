@@ -462,7 +462,7 @@ void render_interface_main_menu(void) {
     }
     screen_location_acc.y += 10.5f;
 
-    #ifdef _DEBUG
+    #ifndef _RELEASE
       if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_EDITOR), BTN_ID_MAINMENU_BUTTON_EDITOR, screen_location_acc, SMM_BASE_RENDER_DIV2, true)) {
         smm_begin_fadeout(data128(SCENE_TYPE_EDITOR, true), fade_on_complete_change_scene);
       }
@@ -776,7 +776,7 @@ void draw_main_menu_character_subscene_stat_details_panel(Rectangle panel_dest, 
     case CHARACTER_STATS_ABILITY_CD: {
       DRAW_UPGRADE_LABEL(upg_stat_text_pos, "%.1f -> %.1f", state->hovered_stat->buffer.f32[1], pseudo_update.buffer.f32[1]) break;
     }
-    case CHARACTER_STATS_PROJECTILE_AMOUTH: {
+    case CHARACTER_STATS_PROJECTILE_AMOUNT: {
       DRAW_UPGRADE_LABEL(upg_stat_text_pos, "%d -> %d", state->hovered_stat->buffer.i32[1], pseudo_update.buffer.i32[1]) break;
     }
     case CHARACTER_STATS_EXP_GAIN: {

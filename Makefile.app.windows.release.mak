@@ -8,8 +8,10 @@ ASSEMBLY := app
 EXTENSION := .exe
 COMPILER_FLAGS := -std=c++23 -Werror=vla -Wall -Wextra -Wpedantic -Wno-unused-function -O3
 INCLUDE_FLAGS := -Ivendor/include -Iapp/src
-LINKER_FLAGS := -mwindows -L$(OBJ_DIR)/ -L$(VENDOR_DIR)/lib/ -L$(BUILD_DIR) -L$(VENDOR_DIR)/lib/steam/win64/ -lsdkencryptedappticket64 -lsteam_api64 -lraylib -lucrtbase -lGdi32 -lWinMM -lUser32 -lShell32 -static-libstdc++ #-Wl,-rpath,.
-DEFINES := 
+LINKER_FLAGS := -static -mwindows                                                                   \
+                -L$(OBJ_DIR)/ -L$(VENDOR_DIR)/lib/ -L$(BUILD_DIR) -L$(VENDOR_DIR)/lib/steam/win64/  \
+                -lsdkencryptedappticket64 -lsteam_api64 -lraylib -lucrtbase -lGdi32 -lWinMM -lUser32 -lShell32 -static-libstdc++ -libcrypto -libssl
+DEFINES := -D_RELEASE
 
 # Make does not offer a recursive wildcard function, so here's one:
 rwildcard=$(wildcard $1$2) $(foreach d,$(wildcard $1*),$(call rwildcard,$d/,$2))

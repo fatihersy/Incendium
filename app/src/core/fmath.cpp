@@ -1,5 +1,5 @@
 #include "fmath.h"
-#include "math.h"
+#include <cmath>
 
 #include "raymath.h"
 
@@ -77,6 +77,14 @@ x -= z;
 
 return x;
 }
+
 f32 fmod(f32 x, f64 y) {
   return static_cast<f32>(modf(static_cast<long double>(x), __builtin_addressof(y)));
 }
+f32 ffloor(f32 x) {
+  return std::floor(x);
+}
+f32 fceil(f32 x) {
+  return std::ceil(x);
+}
+

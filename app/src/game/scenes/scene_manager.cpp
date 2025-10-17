@@ -12,6 +12,10 @@
 typedef struct scene_manager_system_state {
   scene_id scene_data;
   const app_settings * in_app_settings;
+  scene_manager_system_state(void) {
+    this->scene_data = SCENE_TYPE_UNSPECIFIED;
+    this->in_app_settings = nullptr;
+  }
 } scene_manager_system_state;
 
 static scene_manager_system_state * state = nullptr;
@@ -30,6 +34,8 @@ bool scene_manager_initialize(const app_settings * _in_app_settings) {
     IERROR("scene_manager::scene_manager_initialize()::State allocation failed");
     return false;
   }
+  *state = scene_manager_system_state();
+
   event_register(EVENT_CODE_SCENE_IN_GAME, scene_manager_on_event);
   event_register(EVENT_CODE_SCENE_EDITOR, scene_manager_on_event);
   event_register(EVENT_CODE_SCENE_MAIN_MENU, scene_manager_on_event);
@@ -81,15 +87,21 @@ void render_scene_interface(void) {
 
 void end_scene(scene_id scene_id) {
   switch (scene_id) {
-  case SCENE_TYPE_UNSPECIFIED: { return; }
-
-  case SCENE_TYPE_MAIN_MENU: end_scene_main_menu(); return;
-  case SCENE_TYPE_IN_GAME: end_scene_in_game(true); return;
-  case SCENE_TYPE_EDITOR: end_scene_editor(); return;
-
-  default:
-  IWARN("scene_manager::end_scene()::Unsupported scene");
-  return;
+    case SCENE_TYPE_MAIN_MENU: {
+      end_scene_main_menu(); 
+      return;
+    }
+    case SCENE_TYPE_IN_GAME: {
+      end_scene_in_game(true); 
+      return;
+    }
+    case SCENE_TYPE_EDITOR: {
+      end_scene_editor(); 
+      return;
+    }
+    default: {
+      return;
+    }
   }
   IERROR("scene_manager::end_scene()::Function ended unexpectedly");
 }
@@ -123,8 +135,12 @@ bool scene_manager_on_event(i32 code,[[maybe_unused]] event_context context) {
     }
     return true;
   }
-  default:
-    break;
+  default:{
+      IWARN("scene_manager::scene_manager_on_event()::Unsupported scene");
+      event_fire(EVENT_CODE_SCENE_MAIN_MENU, event_context(static_cast<i32>(true)));
+      return false;
   }
+  }
+  IERROR("scene_manager::scene_manager_on_event()::Function ended unexpectedly");
   return false;
 }

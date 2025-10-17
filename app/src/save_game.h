@@ -12,6 +12,17 @@ typedef enum save_slot_id {
   SAVE_SLOT_MAX,
 }save_slot_id;
 
+// Save data structure
+//struct save_data {
+//  save_slot_id id = SAVE_SLOT_UNDEFINED;
+//  std::string file_name;
+//  bool is_success = false;
+//  int32_t currency_coins_player_have = 0;
+//  struct player_stats {
+//    std::array<int32_t, CHARACTER_STATS_COUNT> stats = {0}; // HEALTH, HP_REGEN, etc.
+//  } player_data;
+//};
+
 typedef struct save_data {
   save_slot_id id;
   std::string file_name;
