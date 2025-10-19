@@ -9,6 +9,7 @@
 #include "core/fmemory.h"
 #include "core/logger.h"
 #include "core/ftime.h"
+#include "core/fmath.h"
 
 #include "game_types.h"
 #include "game/spritesheet.h"
@@ -920,130 +921,93 @@ void draw_atlas_texture_stretch(atlas_texture_id tex_id, Rectangle stretch_part,
   gui_draw_atlas_texture_id_pro(tex_id, stretch_part, middle_dest, false, TEXTURE_WRAP_REPEAT, tint);
   gui_draw_atlas_texture_id_pro(tex_id, right_source, right_dest, false, TEXTURE_WRAP_CLAMP, tint);
 }
-void draw_scrolling_band_with_items(
-  atlas_texture_id band_tex_id,f32 band_gap,const std::vector<atlas_texture_id>& item_tex_ids,Rectangle dest,f32 offset,bool should_center,u32 seed,Color band_tint,Color item_tint,f32 item_scale
+
+atlas_texture_id draw_scrolling_textures(
+  const std::vector<atlas_texture_id>& item_tex_ids, f32 _offset, f32 draw_width, Rectangle center_unit, bool use_dest_dim, f32 unit_gap, Color item_tint, f32 source_scale, 
+  f32* out_distance_to_center
 ) {
-  if (band_tex_id >= ATLAS_TEX_ID_MAX or band_tex_id <= ATLAS_TEX_ID_UNSPECIFIED) {
-    IWARN("user_interface::draw_scrolling_band_with_items::Band texture id is out of bound");
-    return;
+  if (item_tex_ids.empty()) {
+    return ATLAS_TEX_ID_UNSPECIFIED;
   }
-  const atlas_texture * const band_tex = ss_get_atlas_texture_by_enum(band_tex_id);
-  if (not band_tex or band_tex == nullptr or band_tex->source.width <= 0 or band_tex->source.height <= 0) {
-    IERROR("user_interface::draw_scrolling_band_with_items::Band texture resource is invalid");
-    return;
-  }
-  if (dest.width <= 0 or dest.height <= 0) {
-    IWARN("user_interface::draw_scrolling_band_with_items::Invalid dest dimensions");
-    return;
-  }
-  if (band_gap < 0) {
-    IWARN("user_interface::draw_scrolling_band_with_items::Negative gap, setting to 0");
-    band_gap = 0;
-  }
-  f32 scale = dest.height / band_tex->source.height;
-  f32 tile_width = band_tex->source.width * scale;
-  f32 unit_width = tile_width + band_gap;
+  const Rectangle _center_rect = center_unit;
+  const f32 true_center = _center_rect.x + _center_rect.width * .5f;
+  
+  const f32 unit_count = math_ceil((draw_width + (center_unit.width + unit_gap) * 2.f) / (center_unit.width + unit_gap));
+  center_unit.x += math_fmod(_offset, center_unit.width + unit_gap);
 
-  if (tile_width <= 0 or unit_width <= 0) {
-    IWARN("user_interface::draw_scrolling_band_with_items::Invalid tile or unit width");
-    return;
-  }
-  f32 centering_offset = 0.f;
-  if (should_center) {
-    f32 center_delta = dest.width * 0.5f;
-    f32 desired_center_phase = tile_width * 0.5f;
-    f32 desired_left_phase = fmod(desired_center_phase - center_delta, unit_width);
-    if (desired_left_phase < 0.f) desired_left_phase += unit_width;
-    f32 current_left_phase_without_centering = fmod(dest.x, unit_width);
-    if (current_left_phase_without_centering < 0.f) current_left_phase_without_centering += unit_width;
-    centering_offset = desired_left_phase - current_left_phase_without_centering;
-    centering_offset = fmod(centering_offset, unit_width);
-    if (centering_offset < 0.f) centering_offset += unit_width;
-  }
-  f32 effective_offset = offset + centering_offset;
-  f32 current_x = dest.x;
-  f32 remaining_width = dest.width;
-  f32 phase = fmod(dest.x + effective_offset, unit_width);
-  if (phase < 0) phase += unit_width;
+  const i32 texture_array_size = static_cast<i32>(item_tex_ids.size());
+  i32 tex_id_scroll = math_floor(_offset / (center_unit.width + unit_gap));
+  
+  const i32 base_center_index = math_floor(unit_count * .5f) + tex_id_scroll;
+  const i32 center_unit_index = (base_center_index % texture_array_size + texture_array_size) % texture_array_size;
 
-  if (phase >= tile_width) {
-    f32 remaining_gap = unit_width - phase;
-    f32 skip = std::min(remaining_gap, remaining_width);
-    current_x += skip;
-    remaining_width -= skip;
-  } else {
-    f32 remaining_tile = tile_width - phase;
-    f32 draw_width = std::min(remaining_tile, remaining_width);
-    f32 source_x = phase / scale;
-    f32 source_width = draw_width / scale;
-    Rectangle tile_source = {source_x, 0, source_width, band_tex->source.height};
-    Rectangle tile_dest = {current_x, dest.y, draw_width, dest.height};
-    gui_draw_atlas_texture_id_pro(band_tex_id, tile_source, tile_dest, false, TEXTURE_WRAP_CLAMP, band_tint);
-    current_x += draw_width;
-    remaining_width -= draw_width;
+  Vector2 unit_origin = {center_unit.width * .5f, center_unit.height * .5f};
 
-    if (remaining_width > 0) {
-      f32 skip = std::min(band_gap, remaining_width);
-      current_x += skip;
-      remaining_width -= skip;
+  Rectangle _center_unit = center_unit;
+  if (not use_dest_dim) {
+    const atlas_texture * const tex = ss_get_atlas_texture_by_enum(item_tex_ids.at(center_unit_index));
+    _center_unit.width = tex->source.width * source_scale;
+    _center_unit.height = tex->source.height * source_scale;
+    unit_origin = Vector2 { _center_unit.width * .5f, _center_unit.height * .5f };
+  }
+  gui_draw_atlas_texture_id(item_tex_ids.at(center_unit_index), _center_unit, unit_origin, 0.f, item_tint);
+
+  for (i32 itr_000 = 1; itr_000 < unit_count; itr_000++) {
+
+    const f32 leftmost_x = center_unit.x - (itr_000 * (center_unit.width + unit_gap));
+    Rectangle leftmost_dest = Rectangle {leftmost_x, center_unit.y, center_unit.width, center_unit.height};
+    const size_t leftmost_tex_id = static_cast<size_t>(((center_unit_index + itr_000) % texture_array_size + texture_array_size) % texture_array_size);
+
+    if (not use_dest_dim) {
+      const atlas_texture * const tex = ss_get_atlas_texture_by_enum(item_tex_ids.at(leftmost_tex_id));
+      leftmost_dest.width = tex->source.width * source_scale;
+      leftmost_dest.height = tex->source.height * source_scale;
+      unit_origin = Vector2 { leftmost_dest.width * .5f, leftmost_dest.height * .5f };
+    }
+    gui_draw_atlas_texture_id(item_tex_ids.at(leftmost_tex_id), leftmost_dest, unit_origin, 0.f, item_tint);
+
+    const f32 rightmost_x = center_unit.x + (itr_000 * (center_unit.width + unit_gap));
+    Rectangle rightmost_dest = Rectangle {rightmost_x, center_unit.y, center_unit.width, center_unit.height};
+    const size_t rightmost_tex_id = static_cast<size_t>(((center_unit_index - itr_000) % texture_array_size + texture_array_size) % texture_array_size);
+
+    if (not use_dest_dim) {
+      const atlas_texture * const tex = ss_get_atlas_texture_by_enum(item_tex_ids.at(rightmost_tex_id));
+      rightmost_dest.width = tex->source.width * source_scale;
+      rightmost_dest.height = tex->source.height * source_scale;
+      unit_origin = { rightmost_dest.width * .5f, rightmost_dest.height * .5f };
+    }
+    gui_draw_atlas_texture_id(item_tex_ids.at(rightmost_tex_id), rightmost_dest, unit_origin, 0.f, item_tint);
+  }
+  
+  atlas_texture_id most_center = ATLAS_TEX_ID_UNSPECIFIED;
+  f32 distance_to_center = 0;
+  const bool units_moving_right = _offset >= 0;
+  if (units_moving_right) {
+    const bool center_unit_is_on_center = ((true_center + (unit_gap * .5f)) - center_unit.x) >= 0;
+    if (center_unit_is_on_center) {
+      most_center = item_tex_ids.at(center_unit_index);
+      distance_to_center = _center_rect.x - center_unit.x;
+    }
+    else {
+      most_center = item_tex_ids.at(static_cast<size_t>(((center_unit_index + 1) % texture_array_size + texture_array_size) % texture_array_size));
+      distance_to_center = _center_rect.x + _center_rect.width + unit_gap - center_unit.x;
     }
   }
-  while (remaining_width > 0) {
-    f32 draw_width = std::min(tile_width, remaining_width);
-    f32 source_x = 0;
-    f32 source_width = draw_width / scale;
-    Rectangle tile_source = {source_x, 0, source_width, band_tex->source.height};
-    Rectangle tile_dest = {current_x, dest.y, draw_width, dest.height};
-    gui_draw_atlas_texture_id_pro(band_tex_id, tile_source, tile_dest, false, TEXTURE_WRAP_CLAMP, band_tint);
-    current_x += draw_width;
-    remaining_width -= draw_width;
-
-    if (remaining_width <= 0) break;
-
-    f32 skip = std::min(band_gap, remaining_width);
-    current_x += skip;
-    remaining_width -= skip;
-  }
-  if (item_tex_ids.empty()) return;
-
-  f32 virtual_start_x = effective_offset;
-  f32 virtual_end_x = effective_offset + dest.width;
-
-  i32 start_index = static_cast<i32>(floor(virtual_start_x / unit_width)) - 1;
-  i32 max_index = static_cast<i32>(ceil(virtual_end_x / unit_width)) + 1;
-
-  for (i32 i = start_index; i <= max_index; ++i) {
-    f32 slot_virtual_x = static_cast<f32>(i) * unit_width;
-    uint32_t slot_hash = static_cast<uint32_t>(i) ^ seed;
-    slot_hash = slot_hash * 0x5bd1e995u;
-    slot_hash ^= (slot_hash >> 15);
-    size_t random_index = slot_hash % item_tex_ids.size();
-    atlas_texture_id tex_id = item_tex_ids[random_index];
-
-    const atlas_texture * const tex = ss_get_atlas_texture_by_enum(tex_id);
-    if (not tex or tex == nullptr or tex->source.width <= 0 or tex->source.height <= 0) {
-      continue;
+  else {
+    const bool center_unit_is_on_center = ((center_unit.x + center_unit.width + unit_gap * .5f) - true_center) >= 0;
+    if (center_unit_is_on_center) {
+      most_center = item_tex_ids.at(center_unit_index);
+      distance_to_center = center_unit.x - _center_rect.x;
     }
-    f32 item_scale_val = (dest.height * item_scale) / tex->source.height;
-    f32 item_width = tex->source.width * item_scale_val;
-    f32 item_height = tex->source.height * item_scale_val;
-
-    if (item_width > tile_width) {
-      item_scale_val = tile_width / tex->source.width;
-      item_width = tile_width;
-      item_height = tex->source.height * item_scale_val;
+    else {
+      most_center = item_tex_ids.at( static_cast<size_t>(((center_unit_index - 1) % texture_array_size + texture_array_size) % texture_array_size));
+      distance_to_center = _center_rect.x - _center_rect.width - unit_gap + center_unit.x;
     }
-    f32 item_centering_offset = (tile_width - item_width) * 0.5f;
-    f32 item_virtual_x = slot_virtual_x + item_centering_offset;
-    f32 item_screen_x = dest.x + (item_virtual_x - virtual_start_x);
-
-    if (item_screen_x + item_width < dest.x or item_screen_x > dest.x + dest.width) continue;
-    f32 item_screen_y = dest.y + (dest.height - item_height) * 0.5f;
-    Rectangle item_source = {0, 0, tex->source.width, tex->source.height};
-    Rectangle item_dest = {item_screen_x, item_screen_y, item_width, item_height};
-
-    gui_draw_atlas_texture_id_pro(tex_id, item_source, item_dest, false, TEXTURE_WRAP_CLAMP, item_tint);
   }
+  if (out_distance_to_center and out_distance_to_center != nullptr) {
+    (*out_distance_to_center) = distance_to_center;
+  }
+  return most_center;
 }
 
 void gui_slider(slider_id _id, Vector2 pos, Vector2 grid) {

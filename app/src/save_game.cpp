@@ -25,6 +25,16 @@ using json = nlohmann::json;
 #define AES_IV_SIZE 16 // CBC IV size (must be equal to AES_BLOCK_SIZE)
 #define HMAC_TAG_SIZE 32 // HMAC-SHA256 always produces 32 bytes
 
+#define M_CHARACTER_STAT_HEALTH "HEALTH"
+#define M_CHARACTER_STAT_HP_REGEN "HP_REGEN"
+#define M_CHARACTER_STAT_MOVE_SPEED "MOVE_SPEED"
+#define M_CHARACTER_STAT_AOE "AOE"
+#define M_CHARACTER_STAT_DAMAGE "DAMAGE"
+#define M_CHARACTER_STAT_ABILITY_CD "ABILITY_CD"
+#define M_CHARACTER_STAT_PROJECTILE_AMOUNT "PROJECTILE_AMOUNT"
+#define M_CHARACTER_STAT_EXP_GAIN "EXP_GAIN"
+#define M_CHARACTER_STAT_TOTAL_TRAIT_POINTS "TOTAL_TRAIT_POINTS"
+
 // Save system state
 struct save_game_system_state {
   std::array<save_data, SAVE_SLOT_MAX> save_slots;
@@ -384,16 +394,17 @@ json serialize_save_data(const save_data& data) {
   json j;
   j["currency_coins_player_have"] = data.currency_coins_player_have;
   json stats;
-  stats["HEALTH"] = data.player_data.stats[CHARACTER_STATS_HEALTH].current_level;
-  stats["HP_REGEN"] = data.player_data.stats[CHARACTER_STATS_HP_REGEN].current_level;
-  stats["MOVE_SPEED"] = data.player_data.stats[CHARACTER_STATS_MOVE_SPEED].current_level;
-  stats["AOE"] = data.player_data.stats[CHARACTER_STATS_AOE].current_level;
-  stats["DAMAGE"] = data.player_data.stats[CHARACTER_STATS_DAMAGE].current_level;
-  stats["ABILITY_CD"] = data.player_data.stats[CHARACTER_STATS_ABILITY_CD].current_level;
-  stats["PROJECTILE_AMOUNT"] = data.player_data.stats[CHARACTER_STATS_PROJECTILE_AMOUNT].current_level;
-  stats["EXP_GAIN"] = data.player_data.stats[CHARACTER_STATS_EXP_GAIN].current_level;
-  stats["TOTAL_TRAIT_POINTS"] = data.player_data.stats[CHARACTER_STATS_TOTAL_TRAIT_POINTS].current_level;
+  stats[M_CHARACTER_STAT_HEALTH] = data.player_data.stats[CHARACTER_STATS_HEALTH].current_level;
+  stats[M_CHARACTER_STAT_HP_REGEN] = data.player_data.stats[CHARACTER_STATS_HP_REGEN].current_level;
+  stats[M_CHARACTER_STAT_MOVE_SPEED] = data.player_data.stats[CHARACTER_STATS_MOVE_SPEED].current_level;
+  stats[M_CHARACTER_STAT_AOE] = data.player_data.stats[CHARACTER_STATS_AOE].current_level;
+  stats[M_CHARACTER_STAT_DAMAGE] = data.player_data.stats[CHARACTER_STATS_DAMAGE].current_level;
+  stats[M_CHARACTER_STAT_ABILITY_CD] = data.player_data.stats[CHARACTER_STATS_ABILITY_CD].current_level;
+  stats[M_CHARACTER_STAT_PROJECTILE_AMOUNT] = data.player_data.stats[CHARACTER_STATS_PROJECTILE_AMOUNT].current_level;
+  stats[M_CHARACTER_STAT_EXP_GAIN] = data.player_data.stats[CHARACTER_STATS_EXP_GAIN].current_level;
+  stats[M_CHARACTER_STAT_TOTAL_TRAIT_POINTS] = data.player_data.stats[CHARACTER_STATS_TOTAL_TRAIT_POINTS].current_level;
   j["player_data"]["stats"] = stats;
+
   return j;
 }
 
@@ -403,14 +414,14 @@ void deserialize_save_data(const json& j, save_data& data) {
   }
   if (j.contains("player_data") && j["player_data"].contains("stats")) {
     const auto& stats = j["player_data"]["stats"];
-    data.player_data.stats[CHARACTER_STATS_HEALTH].current_level             = stats.value("HEALTH",            -1);
-    data.player_data.stats[CHARACTER_STATS_HP_REGEN].current_level           = stats.value("HP_REGEN",          -1);
-    data.player_data.stats[CHARACTER_STATS_MOVE_SPEED].current_level         = stats.value("MOVE_SPEED",        -1);
-    data.player_data.stats[CHARACTER_STATS_AOE].current_level                = stats.value("AOE",               -1);
-    data.player_data.stats[CHARACTER_STATS_DAMAGE].current_level             = stats.value("DAMAGE",            -1);
-    data.player_data.stats[CHARACTER_STATS_ABILITY_CD].current_level         = stats.value("ABILITY_CD",        -1);
-    data.player_data.stats[CHARACTER_STATS_PROJECTILE_AMOUNT].current_level  = stats.value("PROJECTILE_AMOUNT", -1);
-    data.player_data.stats[CHARACTER_STATS_EXP_GAIN].current_level           = stats.value("EXP_GAIN",          -1);
-    data.player_data.stats[CHARACTER_STATS_TOTAL_TRAIT_POINTS].current_level = stats.value("TOTAL_TRAIT_POINTS",-1);
+    data.player_data.stats[CHARACTER_STATS_HEALTH].current_level             = stats.value(M_CHARACTER_STAT_HEALTH,            -1);
+    data.player_data.stats[CHARACTER_STATS_HP_REGEN].current_level           = stats.value(M_CHARACTER_STAT_HP_REGEN,          -1);
+    data.player_data.stats[CHARACTER_STATS_MOVE_SPEED].current_level         = stats.value(M_CHARACTER_STAT_MOVE_SPEED,        -1);
+    data.player_data.stats[CHARACTER_STATS_AOE].current_level                = stats.value(M_CHARACTER_STAT_AOE,               -1);
+    data.player_data.stats[CHARACTER_STATS_DAMAGE].current_level             = stats.value(M_CHARACTER_STAT_DAMAGE,            -1);
+    data.player_data.stats[CHARACTER_STATS_ABILITY_CD].current_level         = stats.value(M_CHARACTER_STAT_ABILITY_CD,        -1);
+    data.player_data.stats[CHARACTER_STATS_PROJECTILE_AMOUNT].current_level  = stats.value(M_CHARACTER_STAT_PROJECTILE_AMOUNT, -1);
+    data.player_data.stats[CHARACTER_STATS_EXP_GAIN].current_level           = stats.value(M_CHARACTER_STAT_EXP_GAIN,          -1);
+    data.player_data.stats[CHARACTER_STATS_TOTAL_TRAIT_POINTS].current_level = stats.value(M_CHARACTER_STAT_TOTAL_TRAIT_POINTS,-1);
   }
 }

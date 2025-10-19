@@ -78,13 +78,44 @@ x -= z;
 return x;
 }
 
-f32 fmod(f32 x, f64 y) {
-  return static_cast<f32>(modf(static_cast<long double>(x), __builtin_addressof(y)));
+f32 math_fmod(f32 x, f64 y) {
+  if (std::isnan(x) or std::isinf(x) or std::isnan(y) or std::isinf(y)) {
+    return F32_MAX;
+  }
+  f32 result = fmod(x, y);
+  if (std::isnan(result) or std::isinf(result)) {
+    return F32_MAX;
+  }
+  return result;
 }
-f32 ffloor(f32 x) {
-  return std::floor(x);
+f32 math_floor(f32 x) {
+  if (std::isnan(x) or std::isinf(x)) {
+    return F32_MAX;
+  }
+  f32 result = std::floor(x);
+  if (std::isnan(result) or std::isinf(result)) {
+    return F32_MAX;
+  }
+  return result;
 }
-f32 fceil(f32 x) {
-  return std::ceil(x);
+f32 math_ceil(f32 x) {
+  if (std::isnan(x) or std::isinf(x)) {
+    return F32_MAX;
+  }
+  f32 result = std::ceil(x);
+  if (std::isnan(result) or std::isinf(result)) {
+    return F32_MAX;
+  }
+  return result;
+}
+f32 math_abs(f32 x) {
+  if (std::isnan(x) or std::isinf(x)) {
+    return F32_MAX;
+  }
+  f32 result = std::abs(x);
+  if (std::isnan(result) or std::isinf(result)) {
+    return F32_MAX;
+  }
+  return result;
 }
 

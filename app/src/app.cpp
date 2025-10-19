@@ -41,7 +41,6 @@ constexpr void toggle_fullscreen(void);
 constexpr void toggle_windowed(i32 width, i32 height);
 
 bool app_initialize(void) {
-
   // Subsystems
   memory_system_initialize();
   if(not event_system_initialize()) {

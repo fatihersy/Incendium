@@ -266,6 +266,19 @@ typedef enum damage_deal_result_type {
   DAMAGE_DEAL_RESULT_MAX,
 } damage_deal_result_type;
 
+typedef enum rune_item_type {
+  RUNE_ITEM_TYPE_UNDEFINED,
+  RUNE_ITEM_TYPE_DAMAGE_COMMON,
+  RUNE_ITEM_TYPE_DAMAGE_UNCOMMON,
+  RUNE_ITEM_TYPE_DAMAGE_RARE,
+  RUNE_ITEM_TYPE_DAMAGE_EPIC,
+  RUNE_ITEM_TYPE_RESISTANCE_COMMON,
+  RUNE_ITEM_TYPE_RESISTANCE_UNCOMMON,
+  RUNE_ITEM_TYPE_RESISTANCE_RARE,
+  RUNE_ITEM_TYPE_RESISTANCE_EPIC,
+  RUNE_ITEM_TYPE_MAX,
+} rune_item_type;
+
 typedef struct damage_deal_result {
   damage_deal_result_type type;
   i32 inflicted_damage;
@@ -661,6 +674,25 @@ typedef struct loot_item {
   }
 } loot_item;
 
+typedef struct rune_item {
+  i32 id;
+  rune_item_type type;
+  atlas_texture_id tex_id;
+  f32 value;
+
+  rune_item(void) {
+    this->id = -1;
+    this->type = RUNE_ITEM_TYPE_UNDEFINED;
+    this->tex_id = ATLAS_TEX_ID_UNSPECIFIED;
+    this->value = 0.f;
+  }
+  rune_item(rune_item_type _type, f32 _value, atlas_texture_id _tex_id) : rune_item() {
+    this->type = _type;
+    this->tex_id = _tex_id;
+    this->value = _value;
+  }
+} rune_item;
+
 typedef struct combat_feedback_floating_text {
   i32 id;
   combat_feedback_floating_text_type type;
@@ -1004,13 +1036,23 @@ typedef struct character_trait {
     this->point = _point;
     this->ingame_ops = buffer;
   }
-}character_trait;
+} character_trait;
+
+typedef struct player_inventory_rune_slot {
+  rune_item_type rune_type;
+  i32 amount;
+  player_inventory_rune_slot(void) {
+    this->rune_type = RUNE_ITEM_TYPE_UNDEFINED;
+    this->amount = 0;
+  }
+} player_inventory_rune_slot;
 
 // LABEL: Player State
 typedef struct player_state {
   ability_play_system ability_system;
   std::array<character_stat, CHARACTER_STATS_MAX> stats;
-  
+  std::vector<player_inventory_rune_slot> rune_inventory;
+
   Rectangle collision;
   Rectangle map_level_collision;
 

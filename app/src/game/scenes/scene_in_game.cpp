@@ -137,7 +137,11 @@ if (UPG->level == 1) {\
 #define CHEST_OPENING_SEQ_READY_DURATION .275f
 #define CHEST_OPENING_SEQ_CHEST_SCALE 6.5f
 #define CHEST_OPENING_SEQ_BG_MAX_OPACITY_SCALE 0.7f
-#define CHEST_OPENING_SPIN_SPEED 500.f
+#define CHEST_OPENING_SPIN_SPEED 1500.f
+#define CHEST_OPENING_SPIN_ACCELERATION_DURATION .5f
+#define CHEST_OPENING_SPIN_LOCATION VECTOR2(SIG_BASE_RENDER_WIDTH_F * 0.5f, SIG_BASE_RENDER_HEIGHT_F * 0.25f)
+#define CHEST_OPENING_SPIN_UNIT_SIZE VECTOR2(SIG_BASE_RENDER_HEIGHT_F * .2f, SIG_BASE_RENDER_HEIGHT_F * .2f)
+#define CHEST_OPENING_SPIN_UNIT_GAP (CHEST_OPENING_SPIN_UNIT_SIZE.x * 0.09)
 
 [[__nodiscard__]] bool begin_scene_in_game(bool fade_in);
 
@@ -981,29 +985,48 @@ void sig_init_chest_sequence(chest_opening_sequence sequence, data128 vec_ex = d
     case CHEST_OPENING_SEQUENCE_CHEST_OPEN: {
       seq.sequence = sequence;
       seq.accumulator = 0.f;
+      seq.vec_ex = data128();
+      seq.mm_ex = data128();
       return;
     }
     case CHEST_OPENING_SEQUENCE_READY: {
       seq.sequence = sequence;
       seq.accumulator = 0.f;
+      seq.vec_ex = data128();
+      seq.mm_ex = data128();
       seq.duration = CHEST_OPENING_SEQ_READY_DURATION;
 
-      seq.item_ids_to_scroll.push_back(ATLAS_TEX_ID_PORTRAIT_FRAME);
-      seq.item_ids_to_scroll.push_back(ATLAS_TEX_ID_CURRENCY_COIN_ICON_5000);
-      seq.item_ids_to_scroll.push_back(ATLAS_TEX_ID_CURRENCY_COIN_ICON_15000);
-      seq.item_ids_to_scroll.push_back(ATLAS_TEX_ID_CURRENCY_COIN_ICON_45000);
-      seq.item_ids_to_scroll.push_back(ATLAS_TEX_ID_CHEST_BASE);
-      seq.item_ids_to_scroll.push_back(ATLAS_TEX_ID_CHEST_LID);
+      seq.item_ids_to_scroll.push_back(ATLAS_TEX_ID_RUNE_DAMANGE_COMMON);
+      seq.item_ids_to_scroll.push_back(ATLAS_TEX_ID_RUNE_DAMANGE_UNCOMMON);
+      seq.item_ids_to_scroll.push_back(ATLAS_TEX_ID_RUNE_DAMANGE_RARE);
+      seq.item_ids_to_scroll.push_back(ATLAS_TEX_ID_RUNE_DAMANGE_EPIC);
+      seq.item_ids_to_scroll.push_back(ATLAS_TEX_ID_RUNE_RESISTANCE_COMMON);
+      seq.item_ids_to_scroll.push_back(ATLAS_TEX_ID_RUNE_RESISTANCE_UNCOMMON);
+      seq.item_ids_to_scroll.push_back(ATLAS_TEX_ID_RUNE_RESISTANCE_RARE);
+      seq.item_ids_to_scroll.push_back(ATLAS_TEX_ID_RUNE_RESISTANCE_EPIC);
+      seq.item_ids_to_scroll.push_back(ATLAS_TEX_ID_RUNE_DAMANGE_COMMON);
+      seq.item_ids_to_scroll.push_back(ATLAS_TEX_ID_RUNE_DAMANGE_UNCOMMON);
+      seq.item_ids_to_scroll.push_back(ATLAS_TEX_ID_RUNE_DAMANGE_RARE);
+      seq.item_ids_to_scroll.push_back(ATLAS_TEX_ID_RUNE_DAMANGE_EPIC);
+      seq.item_ids_to_scroll.push_back(ATLAS_TEX_ID_RUNE_RESISTANCE_COMMON);
+      seq.item_ids_to_scroll.push_back(ATLAS_TEX_ID_RUNE_RESISTANCE_UNCOMMON);
+      seq.item_ids_to_scroll.push_back(ATLAS_TEX_ID_RUNE_RESISTANCE_RARE);
+      seq.item_ids_to_scroll.push_back(ATLAS_TEX_ID_RUNE_RESISTANCE_EPIC);
       return;
     }
     case CHEST_OPENING_SEQUENCE_SPIN: {
       seq.sequence = sequence;
+      seq.duration = CHEST_OPENING_SPIN_ACCELERATION_DURATION;
+      seq.vec_ex = data128();
+      seq.mm_ex = data128();
       seq.accumulator = 0.f;
       return;
     }
     case CHEST_OPENING_SEQUENCE_RESULT: {
       seq.sequence = sequence;
       seq.accumulator = 0.f;
+      seq.duration = CHEST_OPENING_SPIN_ACCELERATION_DURATION;
+      seq.mm_ex.f32[1] = seq.mm_ex.f32[0];
       return;
     }
     default: {
@@ -1055,10 +1078,26 @@ void sig_update_chest_sequence(void) {
       return;
     }
     case CHEST_OPENING_SEQUENCE_SPIN: {
-      seq.mm_ex.f32[2] += GetFrameTime() * CHEST_OPENING_SPIN_SPEED;
+      if(seq.accumulator < seq.duration) {
+        seq.accumulator += GetFrameTime();
+      }
+      else if (seq.accumulator > seq.duration) {
+        seq.accumulator = seq.duration;
+      }
+      if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT)) {
+        sig_init_chest_sequence(CHEST_OPENING_SEQUENCE_RESULT);
+      }
+      seq.mm_ex.f32[0] += EaseSineInOut(seq.accumulator, 0.f, GetFrameTime() * CHEST_OPENING_SPIN_SPEED, seq.duration);
       return;
     }
     case CHEST_OPENING_SEQUENCE_RESULT: {
+      if(seq.accumulator < seq.duration) {
+        seq.accumulator += GetFrameTime();
+      }
+      else if (seq.accumulator > seq.duration) {
+        seq.accumulator = seq.duration;
+      }
+      seq.mm_ex.f32[1] = EaseSineInOut(seq.accumulator, seq.mm_ex.f32[0], seq.mm_ex.f32[2], seq.duration);
       return;
     }
     default: {
@@ -1069,20 +1108,7 @@ void sig_update_chest_sequence(void) {
   }
   IERROR("game_manager::gm_update_chest_sequence()::Function ended unexpectedly");
 }
-/**
- * @brief Renders the chest opening sequence with background, chest, and scrolling items.
- *
- * Updated to:
- * - Use draw_scrolling_band_with_items for band and items in READY, SPIN, and RESULT states.
- * - Explicitly center the item_band_dest rectangle relative to the screen center.
- * - Ensure items are synchronized with band tiles using the same offset and centering logic.
- * - Maintain rendering order: background, circle, chest lid, band/items, chest base, other elements.
- * - Use consistent 2-space indentation.
- * - Add comments for clarity and maintain existing functionality.
- * - Handle invalid sequence cases gracefully.
- *
- * @note Assumes draw_scrolling_band_with_items and other referenced functions are defined.
- */
+
 void sig_render_chest_sequence(void) {
   chest_opening_sequence_intro_animation_control& seq = state->chest_intro_ctrl;
   Rectangle background_layer_dest = {0.f, 0.f,static_cast<f32>(state->in_app_settings->render_width),static_cast<f32>(state->in_app_settings->render_height)};
@@ -1091,11 +1117,11 @@ void sig_render_chest_sequence(void) {
   Color light_color = {255u, 255u, 255u, 115u};
   Color circle_color = {53u, 59u, 72u, 155u};
   const Rectangle& chest_dest = seq.sheet_chest.coord;
-  Rectangle item_band_dest = { (SIG_BASE_RENDER_WIDTH_F - SIG_BASE_RENDER_WIDTH_F) * 0.5f, SIG_BASE_RENDER_HEIGHT_F * 0.25f, SIG_BASE_RENDER_WIDTH_F, SIG_BASE_RENDER_HEIGHT_F * 0.2f };
+  f32 item_band_width = SIG_BASE_RENDER_HEIGHT_F;
+  const f32 item_band_unit_gap = CHEST_OPENING_SPIN_UNIT_GAP;
+  Rectangle center_item_dest = {CHEST_OPENING_SPIN_LOCATION.x, CHEST_OPENING_SPIN_LOCATION.y, CHEST_OPENING_SPIN_UNIT_SIZE.x, CHEST_OPENING_SPIN_UNIT_SIZE.y};
   const f32 accumulator = seq.accumulator / seq.duration;
-  const f32 item_band_unit_gap = 20.f;
-  const std::vector<atlas_texture_id> empty_items;
-  const f32 item_scale = 0.85f;
+  const f32 item_scale = 3.f;
 
   auto draw_common_background = [&](Color bg_tint) {
     gui_draw_atlas_texture_id(ATLAS_TEX_ID_BG_BLACK, background_layer_dest, ZEROVEC2, 0.f, bg_tint);
@@ -1119,31 +1145,51 @@ void sig_render_chest_sequence(void) {
       draw_common_background(bg_layer_color);
       draw_chest_part(ATLAS_TEX_ID_CHEST_LID);
       DrawTriangle({chest_dest.x, chest_dest.y + chest_dest.height * 0.5f}, {SIG_BASE_RENDER_WIDTH_F * accumulator, 0.f}, {SIG_BASE_RENDER_WIDTH_F * (1.f - accumulator), 0.f}, light_color);
-      draw_scrolling_band_with_items( ATLAS_TEX_ID_DARK_FANTASY_PANEL_BG, item_band_unit_gap, empty_items, item_band_dest, 0.f, true, 42u, WHITE, WHITE, item_scale);
       draw_chest_part(ATLAS_TEX_ID_CHEST_BASE);
       if (accumulator >= 1.f) {
+        draw_scrolling_textures( std::vector<atlas_texture_id>({ATLAS_TEX_ID_DARK_FANTASY_PANEL_BG}), 
+          0.f, item_band_width, center_item_dest, true, item_band_unit_gap, WHITE
+        );
+        draw_scrolling_textures( seq.item_ids_to_scroll, 0.f, item_band_width, center_item_dest, false, item_band_unit_gap, WHITE, item_scale);
+        gui_draw_atlas_texture_id(ATLAS_TEX_ID_DARK_FANTASY_PANEL_SELECTED, center_item_dest, Vector2 {center_item_dest.width * .5f, center_item_dest.height * .5f}, 0.f, WHITE);
+
         gui_label_shader(lc_txt(LOC_TEXT_INGAME_STATE_CHEST_OPENING_SPIN),
           SHADER_ID_CHEST_OPENING_SPIN_TEXT, FONT_TYPE_ITALIC, 2, {SIG_BASE_RENDER_WIDTH_F * 0.5f, SIG_BASE_RENDER_HEIGHT_F * 0.5f}, WHITE, true, true
         );
+        DrawLine(center_item_dest.x, center_item_dest.y - center_item_dest.height * .5f, center_item_dest.x, center_item_dest.y + center_item_dest.height * .5f, WHITE);
       }
       return;
     }
     case CHEST_OPENING_SEQUENCE_SPIN: {
       draw_common_background(bg_layer_color);
       draw_chest_part(ATLAS_TEX_ID_CHEST_LID);
-      DrawTriangle({chest_dest.x, chest_dest.y + chest_dest.height * 0.5f}, {SIG_BASE_RENDER_WIDTH_F, 0.f}, {0.f, 0.f}, light_color);
-      draw_scrolling_band_with_items(ATLAS_TEX_ID_DARK_FANTASY_PANEL_BG, item_band_unit_gap, seq.item_ids_to_scroll, item_band_dest, seq.mm_ex.f32[2], true,  42u, WHITE, WHITE, item_scale);
+      DrawTriangle({chest_dest.x, chest_dest.y + chest_dest.height * 0.5f}, {SIG_BASE_RENDER_WIDTH_F, 0.f}, ZEROVEC2, light_color);
       draw_chest_part(ATLAS_TEX_ID_CHEST_BASE);
+      
+      draw_scrolling_textures( std::vector<atlas_texture_id>({ATLAS_TEX_ID_DARK_FANTASY_PANEL_BG}), seq.mm_ex.f32[0], item_band_width, center_item_dest, true, item_band_unit_gap, WHITE);
+      draw_scrolling_textures( seq.item_ids_to_scroll, seq.mm_ex.f32[0], item_band_width, center_item_dest, false, item_band_unit_gap, WHITE, item_scale, __builtin_addressof(seq.mm_ex.f32[2]));
+      gui_draw_atlas_texture_id(ATLAS_TEX_ID_DARK_FANTASY_PANEL_SELECTED, center_item_dest, Vector2 {center_item_dest.width * .5f, center_item_dest.height * .5f}, 0.f, WHITE);
+
+
+      DrawLine(center_item_dest.x, center_item_dest.y - center_item_dest.height * .5f, center_item_dest.x, center_item_dest.y + center_item_dest.height * .5f, WHITE);
       return;
     }
     case CHEST_OPENING_SEQUENCE_RESULT: {
       draw_common_background(bg_layer_color);
       draw_chest_part(ATLAS_TEX_ID_CHEST_LID);
-      DrawTriangle({chest_dest.x, chest_dest.y + chest_dest.height * 0.5f}, {SIG_BASE_RENDER_WIDTH_F, 0.f}, {0.f, 0.f}, light_color);
-      draw_scrolling_band_with_items(ATLAS_TEX_ID_DARK_FANTASY_PANEL_BG, item_band_unit_gap, empty_items, item_band_dest, 0.f, true, 42u, WHITE, WHITE, item_scale);
+      DrawTriangle({chest_dest.x, chest_dest.y + chest_dest.height * 0.5f}, {SIG_BASE_RENDER_WIDTH_F, 0.f}, ZEROVEC2, light_color);
       draw_chest_part(ATLAS_TEX_ID_CHEST_BASE);
-      if (gui_menu_button(lc_txt(LOC_TEXT_INGAME_STATE_RESULT_ACCEPT), BTN_ID_IN_GAME_BUTTON_CHEST_OPENING_ACCEPT, {0.f, 45.f}, SIG_BASE_RENDER_DIV2, true)) {
-        sig_change_ingame_state(SCENE_INGAME_STATE_PLAY);
+
+      draw_scrolling_textures( std::vector<atlas_texture_id>({ATLAS_TEX_ID_DARK_FANTASY_PANEL_BG}), seq.mm_ex.f32[1], item_band_width, center_item_dest, true, item_band_unit_gap, WHITE);
+      draw_scrolling_textures( seq.item_ids_to_scroll, seq.mm_ex.f32[1], item_band_width, center_item_dest, false, item_band_unit_gap, WHITE, item_scale);
+      gui_draw_atlas_texture_id(ATLAS_TEX_ID_DARK_FANTASY_PANEL_SELECTED, center_item_dest, Vector2 {center_item_dest.width * .5f, center_item_dest.height * .5f}, 0.f, WHITE);
+
+      DrawLine(center_item_dest.x, center_item_dest.y - center_item_dest.height * .5f, center_item_dest.x, center_item_dest.y + center_item_dest.height * .5f, WHITE);
+
+      if (accumulator >= 1.f) {
+        if (gui_menu_button(lc_txt(LOC_TEXT_INGAME_STATE_RESULT_ACCEPT), BTN_ID_IN_GAME_BUTTON_CHEST_OPENING_ACCEPT, {0.f, 45.f}, SIG_BASE_RENDER_DIV2, true)) {
+          sig_change_ingame_state(SCENE_INGAME_STATE_PLAY);
+        }
       }
       return;
     }

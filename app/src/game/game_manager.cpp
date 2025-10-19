@@ -31,6 +31,8 @@ typedef struct game_manager_system_state {
   std::vector<character_trait> chosen_traits;
   playlist_control_system_state playlist;
 
+  std::array<rune_item, RUNE_ITEM_TYPE_MAX> default_rune_items; 
+
   bool game_manager_initialized;
 
   game_manager_system_state(void) {
@@ -48,6 +50,8 @@ typedef struct game_manager_system_state {
     this->traits.clear();
     this->chosen_traits = std::vector<character_trait>();
     this->playlist = playlist_control_system_state();
+
+    this->default_rune_items = std::array<rune_item, RUNE_ITEM_TYPE_MAX>();
 
     this->game_manager_initialized = false;
   }
@@ -142,21 +146,11 @@ bool game_manager_initialize(const camera_metrics * in_camera_metrics, const app
   // Traits
   {
     i32 next_trait_id = 0;
-    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_HEALTH,     
-      "Healty", "Increases your healt a bit", -1, data128(static_cast<i32>(300)))
-    );
-    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_HEALTH,     
-      "Tough", "Increases your healt a fair amouth", -2, data128(static_cast<i32>(800)))
-    );
-    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE,     
-      "Artillery", "Increases your damage a fair amouth", -2, data128(static_cast<i32>(8)))
-    );
-    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_MOVE_SPEED, 
-      "Bunny Hop", "Increases your speed a bit", -1, data128(static_cast<f32>(32)))
-    );
-    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_MOVE_SPEED, 
-      "Flash",  "Increases your speed a fair amouth", -2, data128(static_cast<f32>(64.f)))
-    );
+    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_HEALTH, "Healty", "Increases your healt a bit", -1, data128(static_cast<i32>(300))));
+    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_HEALTH, "Tough", "Increases your healt a fair amouth", -2, data128(static_cast<i32>(800))));
+    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE, "Artillery", "Increases your damage a fair amouth", -2, data128(static_cast<i32>(8))));
+    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_MOVE_SPEED, "Bunny Hop", "Increases your speed a bit", -1, data128(static_cast<f32>(32))));
+    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_MOVE_SPEED, "Flash",  "Increases your speed a fair amouth", -2, data128(static_cast<f32>(64.f))));
     state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE, "Trait 6",  "Trait 6 description", -2, data128(static_cast<i32>(8))));
     state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE, "Trait 7",  "Trait 7 description", -2, data128(static_cast<i32>(8))));
     state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE, "Trait 8",  "Trait 8 description",  2, data128(static_cast<i32>(8))));
@@ -175,6 +169,19 @@ bool game_manager_initialize(const camera_metrics * in_camera_metrics, const app
     state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE, "Trait 21", "Trait 21 description", 2, data128(static_cast<i32>(8))));
   }
   // Traits
+
+  // Runes
+  {
+    state->default_rune_items.at(RUNE_ITEM_TYPE_DAMAGE_COMMON)       = rune_item(RUNE_ITEM_TYPE_DAMAGE_COMMON,       3.f, ATLAS_TEX_ID_RUNE_DAMANGE_COMMON);
+    state->default_rune_items.at(RUNE_ITEM_TYPE_DAMAGE_UNCOMMON)     = rune_item(RUNE_ITEM_TYPE_DAMAGE_UNCOMMON,     8.f, ATLAS_TEX_ID_RUNE_DAMANGE_UNCOMMON);
+    state->default_rune_items.at(RUNE_ITEM_TYPE_DAMAGE_RARE)         = rune_item(RUNE_ITEM_TYPE_DAMAGE_RARE,        15.f, ATLAS_TEX_ID_RUNE_DAMANGE_RARE);
+    state->default_rune_items.at(RUNE_ITEM_TYPE_DAMAGE_EPIC)         = rune_item(RUNE_ITEM_TYPE_DAMAGE_EPIC,        25.f, ATLAS_TEX_ID_RUNE_DAMANGE_EPIC);
+    state->default_rune_items.at(RUNE_ITEM_TYPE_RESISTANCE_COMMON)   = rune_item(RUNE_ITEM_TYPE_RESISTANCE_COMMON,   3.f, ATLAS_TEX_ID_RUNE_RESISTANCE_COMMON);
+    state->default_rune_items.at(RUNE_ITEM_TYPE_RESISTANCE_UNCOMMON) = rune_item(RUNE_ITEM_TYPE_RESISTANCE_UNCOMMON, 8.f, ATLAS_TEX_ID_RUNE_RESISTANCE_UNCOMMON);
+    state->default_rune_items.at(RUNE_ITEM_TYPE_RESISTANCE_RARE)     = rune_item(RUNE_ITEM_TYPE_RESISTANCE_RARE,    15.f, ATLAS_TEX_ID_RUNE_RESISTANCE_RARE);
+    state->default_rune_items.at(RUNE_ITEM_TYPE_RESISTANCE_EPIC)     = rune_item(RUNE_ITEM_TYPE_RESISTANCE_EPIC,    25.f, ATLAS_TEX_ID_RUNE_RESISTANCE_EPIC);
+  }
+  // Runes
 
   state->playlist = create_playlist(PLAYLIST_PRESET_INGAME_PLAY_LIST);
 
