@@ -861,6 +861,11 @@ void draw_ingame_state_play_general(void) {
       static_cast<f32>(state->in_app_settings->render_height) * .02f,
     }, false
   );
+  gui_label_format(FONT_TYPE_REGULAR, 1, static_cast<f32>(state->in_app_settings->render_width_div2), static_cast<f32>(state->in_app_settings->render_height * .09f), 
+    WHITE, true, false, "%.2d:%.2d", 
+    static_cast<i32>(state->in_ingame_info->play_time / 60.f),
+    static_cast<i32>(state->in_ingame_info->play_time) % 60
+  );
 }
 void draw_ingame_state_play_ui_clear_zombies(void) {
   Rectangle exp_bar_dest = Rectangle {0.f, 0.f, static_cast<f32>(state->in_app_settings->render_width), static_cast<f32>(state->in_app_settings->render_height) * .05f};
@@ -870,12 +875,6 @@ void draw_ingame_state_play_ui_clear_zombies(void) {
   f32 exp_bar_orn_width = exp_bar_dest.height * exp_bar_orn_height_scale;
   Rectangle exp_bar_orn_dest = Rectangle {exp_bar_dest.x + exp_bar_dest.width * .5f + ((exp_bar_orn_width / exp_bar_orn_src_rect->width) * .5f),  exp_bar_dest.y, exp_bar_orn_width,  exp_bar_dest.height };
   gui_draw_atlas_texture_id(ATLAS_TEX_ID_DARK_FANTASY_BOSSBAR_6_MIDDLE, exp_bar_orn_dest, Vector2{exp_bar_orn_dest.width * .5f, 0.f}, 0.f, WHITE);
-
-  gui_label_format(FONT_TYPE_REGULAR, 1, static_cast<f32>(state->in_app_settings->render_width_div2), static_cast<f32>(state->in_app_settings->render_height * .9f), 
-    WHITE, true, false, "%.2d:%.2d", 
-    static_cast<i32>(state->in_ingame_info->play_time / 60.f),
-    static_cast<i32>(state->in_ingame_info->play_time) % 60
-  );
 }
 void draw_ingame_state_play_ui_defeat_boss(void) {
   f32 boss_health_bar_width = static_cast<f32>(state->in_app_settings->render_width) * .5f;
@@ -903,12 +902,6 @@ void draw_ingame_state_play_ui_defeat_boss(void) {
       gui_draw_atlas_texture_id(ATLAS_TEX_ID_ARROW, boss_location_indicator_dest, ZEROVEC2, rotation, WHITE);
     }
   }
-
-  gui_label_format(FONT_TYPE_REGULAR, 1, static_cast<f32>(state->in_app_settings->render_width_div2), static_cast<f32>(state->in_app_settings->render_height * .09f), 
-    WHITE, true, false, "%.2d:%.2d", 
-    static_cast<i32>(state->in_ingame_info->play_time / 60.f),
-    static_cast<i32>(state->in_ingame_info->play_time) % 60
-  );
 }
 void prepare_ability_upgrade_state(void) {
   for (size_t itr_000 = 0u; itr_000 < MAX_UPDATE_ABILITY_PANEL_COUNT; ++itr_000) {
@@ -1027,6 +1020,15 @@ void sig_init_chest_sequence(chest_opening_sequence sequence, data128 vec_ex = d
       seq.accumulator = 0.f;
       seq.duration = CHEST_OPENING_SPIN_ACCELERATION_DURATION;
       seq.mm_ex.f32[1] = seq.mm_ex.f32[0];
+      seq.mm_ex.f32[3] = static_cast<f32>(false);
+
+      spritesheet& result_vfx = seq.sheets_background.emplace_back(spritesheet());
+      result_vfx.sheet_id = SHEET_ID_SPIN_RESULT_STAR_105_105;
+      ui_set_sprite(__builtin_addressof(result_vfx), true, false);
+      result_vfx.origin = Vector2 {
+        CHEST_OPENING_SPIN_UNIT_SIZE.x * .5f,
+        CHEST_OPENING_SPIN_UNIT_SIZE.y * .5f
+      };
       return;
     }
     default: {
@@ -1098,6 +1100,7 @@ void sig_update_chest_sequence(void) {
         seq.accumulator = seq.duration;
       }
       seq.mm_ex.f32[1] = EaseSineInOut(seq.accumulator, seq.mm_ex.f32[0], seq.mm_ex.f32[2], seq.duration);
+      ui_update_sprite(__builtin_addressof(seq.sheets_background.at(0)));
       return;
     }
     default: {
@@ -1167,9 +1170,14 @@ void sig_render_chest_sequence(void) {
       draw_chest_part(ATLAS_TEX_ID_CHEST_BASE);
       
       draw_scrolling_textures( std::vector<atlas_texture_id>({ATLAS_TEX_ID_DARK_FANTASY_PANEL_BG}), seq.mm_ex.f32[0], item_band_width, center_item_dest, true, item_band_unit_gap, WHITE);
-      draw_scrolling_textures( seq.item_ids_to_scroll, seq.mm_ex.f32[0], item_band_width, center_item_dest, false, item_band_unit_gap, WHITE, item_scale, __builtin_addressof(seq.mm_ex.f32[2]));
+      atlas_texture_id center_tex_id = draw_scrolling_textures( seq.item_ids_to_scroll, seq.mm_ex.f32[0], item_band_width, center_item_dest, false, item_band_unit_gap, WHITE, item_scale, __builtin_addressof(seq.mm_ex.f32[2]));
       gui_draw_atlas_texture_id(ATLAS_TEX_ID_DARK_FANTASY_PANEL_SELECTED, center_item_dest, Vector2 {center_item_dest.width * .5f, center_item_dest.height * .5f}, 0.f, WHITE);
 
+      if (center_tex_id != static_cast<atlas_texture_id>(seq.mm_ex.f32[3])) {
+        event_fire(EVENT_CODE_PLAY_SOUND, event_context(static_cast<i32>(SOUND_ID_SPIN_SFX), 0));
+        
+        seq.mm_ex.f32[3] = center_tex_id;
+      }
 
       DrawLine(center_item_dest.x, center_item_dest.y - center_item_dest.height * .5f, center_item_dest.x, center_item_dest.y + center_item_dest.height * .5f, WHITE);
       return;
@@ -1182,11 +1190,15 @@ void sig_render_chest_sequence(void) {
 
       draw_scrolling_textures( std::vector<atlas_texture_id>({ATLAS_TEX_ID_DARK_FANTASY_PANEL_BG}), seq.mm_ex.f32[1], item_band_width, center_item_dest, true, item_band_unit_gap, WHITE);
       draw_scrolling_textures( seq.item_ids_to_scroll, seq.mm_ex.f32[1], item_band_width, center_item_dest, false, item_band_unit_gap, WHITE, item_scale);
-      gui_draw_atlas_texture_id(ATLAS_TEX_ID_DARK_FANTASY_PANEL_SELECTED, center_item_dest, Vector2 {center_item_dest.width * .5f, center_item_dest.height * .5f}, 0.f, WHITE);
+      gui_draw_atlas_texture_id(ATLAS_TEX_ID_DARK_FANTASY_PANEL, center_item_dest, Vector2 {center_item_dest.width * .5f, center_item_dest.height * .5f}, 0.f, WHITE);
 
-      DrawLine(center_item_dest.x, center_item_dest.y - center_item_dest.height * .5f, center_item_dest.x, center_item_dest.y + center_item_dest.height * .5f, WHITE);
+      ui_play_sprite_on_site(__builtin_addressof(seq.sheets_background.at(0)), WHITE, center_item_dest);
 
       if (accumulator >= 1.f) {
+        if (seq.mm_ex.f32[3] == static_cast<f32>(false)) {
+          event_fire(EVENT_CODE_PLAY_SOUND, event_context(static_cast<i32>(SOUND_ID_SPIN_RESULT), 0));
+          seq.mm_ex.f32[3] = static_cast<f32>(true);
+        }
         if (gui_menu_button(lc_txt(LOC_TEXT_INGAME_STATE_RESULT_ACCEPT), BTN_ID_IN_GAME_BUTTON_CHEST_OPENING_ACCEPT, {0.f, 45.f}, SIG_BASE_RENDER_DIV2, true)) {
           sig_change_ingame_state(SCENE_INGAME_STATE_PLAY);
         }

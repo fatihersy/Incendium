@@ -183,7 +183,7 @@ void refresh_ability_bullet(ability *const abl) {
   abl->animation_ids.push_back(SHEET_ID_FLAME_ENERGY_ANIMATION);
 
   for (int itr_000 = 0; itr_000 < abl->proj_count; ++itr_000) {
-    projectile prj = projectile();
+    projectile& prj = abl->projectiles.emplace_back(projectile());
     prj.collision = Rectangle {0.f, 0.f, abl->proj_dim.x * abl->proj_collision_scale.x, abl->proj_dim.y * abl->proj_collision_scale.y};
     prj.damage = abl->base_damage;
     prj.is_active = true;
@@ -193,15 +193,13 @@ void refresh_ability_bullet(ability *const abl) {
         IWARN("ability::refresh_ability_bullet()::Ability sprite is not initialized or corrupted");
         return;
       }
-      spritesheet spr = spritesheet();
+      spritesheet& spr = prj.animations.emplace_back(spritesheet()); 
       spr.sheet_id = abl->animation_ids.at(itr_111);
       set_sprite(__builtin_addressof(spr), true, false);
       spr.origin = VECTOR2( spr.coord.width * .5f,  spr.coord.height * .5f );
 
-      prj.animations.push_back(spr); 
       prj.active_sprite = 0;
     }
-    abl->projectiles.push_back(prj);
   }
 }
 

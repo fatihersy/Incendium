@@ -1460,15 +1460,13 @@ void gui_fire_display_error(int loc_text_id) {
   if (not state->errors_on_play.empty() and state->errors_on_play.back().error_text == lc_txt(loc_text_id)) {
     return;
   }
-  ui_error_display_control_system err = ui_error_display_control_system();
+  ui_error_display_control_system& err = state->errors_on_play.emplace_back(ui_error_display_control_system());
 
   err.error_text = lc_txt(loc_text_id);
   err.bg_tex_id = ATLAS_TEX_ID_HEADER;
   err.duration = state->error_text_duration_in_and_out;
   err.location = state->error_text_start_position;
   err.display_state = ERROR_DISPLAY_ANIMATION_STATE_MOVE_IN;
-
-  state->errors_on_play.push_back(err);
 }
 void gui_display_error(ui_error_display_control_system err) {
   Font font = font_type_to_font(DEFAULT_ERROR_FONT_TYPE);

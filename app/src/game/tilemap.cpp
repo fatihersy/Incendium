@@ -712,7 +712,7 @@ void str_to_map(tilemap *const map, tilemap_stringtify_package *const out_packag
     }
     tilemap_prop_types type = static_cast<tilemap_prop_types>(TextToInteger(str_par_prop_member.buffer.at(2).c_str()));
     if (type == TILEMAP_PROP_TYPE_SPRITE ) {
-      tilemap_prop_sprite prop = tilemap_prop_sprite();
+      tilemap_prop_sprite& prop = map->sprite_props.emplace_back(tilemap_prop_sprite());
       prop.map_id = map->next_map_id++;
       prop.prop_id = TextToInteger(str_par_prop_member.buffer.at(0).c_str());
       prop.sprite.sheet_id = static_cast<spritesheet_id>(TextToInteger(str_par_prop_member.buffer.at(1).c_str()) + SHEET_ENUM_MAP_SPRITE_START);
@@ -739,10 +739,10 @@ void str_to_map(tilemap *const map, tilemap_stringtify_package *const out_packag
       prop.sprite.origin = VECTOR2(prop.sprite.coord.width / 2.f, prop.sprite.coord.height / 2.f);
 
       prop.is_initialized = true;
-      map->sprite_props.push_back(prop);
     }
     else {
-      tilemap_prop_static prop = tilemap_prop_static();
+      tilemap_prop_static& prop = map->static_props.emplace_back(tilemap_prop_static());
+
       prop.map_id = map->next_map_id++;
       prop.prop_id = TextToInteger(str_par_prop_member.buffer.at(0).c_str());
       prop.prop_type = type;
@@ -770,7 +770,6 @@ void str_to_map(tilemap *const map, tilemap_stringtify_package *const out_packag
       prop.use_y_based_zindex = static_cast<bool>(TextToInteger(str_par_prop_member.buffer.at(12).c_str()));
 
       prop.is_initialized = true;
-      map->static_props.push_back(prop);
     }
   }
 
@@ -781,12 +780,10 @@ void str_to_map(tilemap *const map, tilemap_stringtify_package *const out_packag
       IERROR("tilemap::str_to_map()::Failed to parse collision data, expected 4 values, got %zu", str_coll_par_member.buffer.size());
       continue;
     }
-    map_collision collision = map_collision(map->next_collision_id++, Rectangle {
+    map->collisions.push_back(map_collision(map->next_collision_id++, Rectangle {
       TextToFloat(str_coll_par_member.buffer.at(0).c_str()), TextToFloat(str_coll_par_member.buffer.at(1).c_str()),
       TextToFloat(str_coll_par_member.buffer.at(2).c_str()), TextToFloat(str_coll_par_member.buffer.at(3).c_str())
-    });
-    
-    map->collisions.push_back(collision);
+    }));
   }
 
   out_package->is_success = true;

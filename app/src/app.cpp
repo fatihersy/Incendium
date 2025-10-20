@@ -250,13 +250,13 @@ constexpr void toggle_borderless(void) {
   if (IsWindowState(FLAG_FULLSCREEN_MODE)) {
     ClearWindowState(FLAG_FULLSCREEN_MODE);
   }
-
   set_resolution(GetMonitorWidth(GetCurrentMonitor()), GetMonitorHeight(GetCurrentMonitor()));
   set_window_size(GetMonitorWidth(GetCurrentMonitor()), GetMonitorHeight(GetCurrentMonitor()));
   event_fire(EVENT_CODE_CAMERA_SET_DRAWING_EXTENT, event_context(state->settings->render_width, state->settings->render_height));
   UnloadRenderTexture(state->drawing_target);
   state->drawing_target = LoadRenderTexture(state->settings->render_width, state->settings->render_height);
   SetWindowSize(state->settings->window_width, state->settings->window_height);
+  SetWindowPosition(0, 0);
 
   ToggleBorderlessWindowed();
   state->settings->window_state = FLAG_BORDERLESS_WINDOWED_MODE;
@@ -265,13 +265,13 @@ constexpr void toggle_fullscreen(void) {
   if (IsWindowState(FLAG_BORDERLESS_WINDOWED_MODE)) {
     ClearWindowState(FLAG_BORDERLESS_WINDOWED_MODE);
   }
-
   set_resolution(GetMonitorWidth(GetCurrentMonitor()), GetMonitorHeight(GetCurrentMonitor()));
   set_window_size(GetMonitorWidth(GetCurrentMonitor()), GetMonitorHeight(GetCurrentMonitor()));
   event_fire(EVENT_CODE_CAMERA_SET_DRAWING_EXTENT, event_context(state->settings->render_width, state->settings->render_height));
   UnloadRenderTexture(state->drawing_target);
   state->drawing_target = LoadRenderTexture(state->settings->render_width, state->settings->render_height);
   SetWindowSize(state->settings->window_width, state->settings->window_height);
+  SetWindowPosition(0, 0);
 
   ToggleFullscreen();
   state->settings->window_state = FLAG_FULLSCREEN_MODE;
