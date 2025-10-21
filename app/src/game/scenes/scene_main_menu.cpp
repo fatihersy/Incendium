@@ -40,7 +40,7 @@ typedef struct main_menu_scene_state {
   panel main_menu_state_character_panel;
   panel stat_list_panel;
   panel stat_details_panel;
-  panel inventory_character_panel;
+  panel inventory_item_list_panel;
   panel inventory_slots_panel;
   panel worldmap_selection_panel;
   panel panel_dark_fantasy_selected_default;
@@ -83,7 +83,7 @@ typedef struct main_menu_scene_state {
     this->main_menu_state_character_panel = panel();
     this->stat_list_panel = panel();
     this->stat_details_panel = panel();
-    this->inventory_character_panel = panel();
+    this->inventory_item_list_panel = panel();
     this->inventory_slots_panel = panel();
     this->worldmap_selection_panel = panel();
     this->panel_dark_fantasy_selected_default = panel();
@@ -150,8 +150,8 @@ static main_menu_scene_state * state = nullptr;
 
 void draw_main_menu_character_panel(void);
 void draw_main_menu_character_subscene_inventory_panel(Rectangle panel_dest, const Vector4 padding);
-void draw_main_menu_character_subscene_inventory_character_panel(Rectangle panel_dest, const Vector4 padding);
-void draw_main_menu_character_subscene_inventory_slot_panel(Rectangle panel_dest, const Vector4 padding);
+void draw_main_menu_character_subscene_inventory_item_list_panel(Rectangle parent_dest, const Vector4 padding);
+void draw_main_menu_character_subscene_inventory_slots_panel(Rectangle parent_dest, const Vector4 padding);
 void draw_main_menu_character_subscene_stat_panel(Rectangle panel_dest, const Vector4 padding);
 void draw_main_menu_character_subscene_stat_list_panel(Rectangle panel_dest, const Vector4 padding);
 void draw_main_menu_character_subscene_stat_details_panel(Rectangle panel_dest, const Vector4 padding);
@@ -512,8 +512,8 @@ void render_interface_main_menu(void) {
 void draw_main_menu_character_panel(void) {
   Rectangle dest = gui_draw_default_background_panel();
 
-  const Vector2 parent_panel_left_top_padding     = Vector2 { dest.height * .01f,  dest.height * .01f};
-  const Vector2 parent_panel_right_bottom_padding = Vector2{ dest.height * .01f * -1.f,  dest.height * .01f * -1.f };
+  const Vector2 parent_panel_left_top_padding     = Vector2 { dest.height * .01f,         dest.height * .01f};
+  const Vector2 parent_panel_right_bottom_padding = Vector2 { dest.height * .01f * -1.f,  dest.height * .01f * -1.f };
 
   const Vector4 parent_panel_total_padding = Vector4{
     parent_panel_left_top_padding.x,
@@ -521,12 +521,11 @@ void draw_main_menu_character_panel(void) {
     parent_panel_right_bottom_padding.x - parent_panel_left_top_padding.x,
     parent_panel_right_bottom_padding.y - parent_panel_left_top_padding.y
   };
-
   switch (state->mainmenu_scene_character_subscene) {
-    //case MAIN_MENU_SCENE_CHARACTER_INVENTORY: {
-    //  draw_main_menu_character_subscene_inventory_panel(parent_panel_total_padding);
-    //  break;
-    //}
+    case MAIN_MENU_SCENE_CHARACTER_INVENTORY: {
+      draw_main_menu_character_subscene_inventory_panel(dest, parent_panel_total_padding);
+      break;
+    }
     case MAIN_MENU_SCENE_CHARACTER_STATS: {
       draw_main_menu_character_subscene_stat_panel(dest, parent_panel_total_padding);
       break;
@@ -536,54 +535,59 @@ void draw_main_menu_character_panel(void) {
       break;
     }
   }
-  
-  //Vector2 tab_btn_grid_loc = Vector2 {
-  //  state->main_menu_state_character_panel.dest.x + (state->main_menu_state_character_panel.dest.width * .5f),
-  //  state->main_menu_state_character_panel.dest.y + (state->main_menu_state_character_panel.dest.height * .025f)
-  //};
-  //if(gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_STATE_CHARACTER_BUTTON_ENTER_TAB_INVENTORY), BTN_ID_MAINMENU_STATE_CHARACTER_ENTER_TAB_INVENTORY, VECTOR2(-35, 0), tab_btn_grid_loc, true)) {
-  //  state->mainmenu_scene_character_subscene = MAIN_MENU_SCENE_CHARACTER_INVENTORY;
-  //}
-  //if(gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_STATE_CHARACTER_BUTTON_ENTER_TAB_STATS),  BTN_ID_MAINMENU_STATE_CHARACTER_ENTER_TAB_STATS, VECTOR2(35, 0), tab_btn_grid_loc, true)) {
-  //  state->mainmenu_scene_character_subscene = MAIN_MENU_SCENE_CHARACTER_STATS;
-  //}
+  Vector2 tab_btn_grid_loc = Vector2 { dest.x + (dest.width * .5f), dest.y + (dest.height * .025f) };
+  if(gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_STATE_CHARACTER_BUTTON_ENTER_TAB_INVENTORY), BTN_ID_MAINMENU_STATE_CHARACTER_ENTER_TAB_INVENTORY, VECTOR2(-35, 0), tab_btn_grid_loc, true)) {
+    state->mainmenu_scene_character_subscene = MAIN_MENU_SCENE_CHARACTER_INVENTORY;
+  }
+  if(gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_STATE_CHARACTER_BUTTON_ENTER_TAB_STATS),  BTN_ID_MAINMENU_STATE_CHARACTER_ENTER_TAB_STATS, VECTOR2(35, 0), tab_btn_grid_loc, true)) {
+    state->mainmenu_scene_character_subscene = MAIN_MENU_SCENE_CHARACTER_STATS;
+  }
 }
 void draw_main_menu_character_subscene_inventory_panel(Rectangle panel_dest, const Vector4 padding) {
-  draw_main_menu_character_subscene_inventory_character_panel(panel_dest, padding);
-  draw_main_menu_character_subscene_inventory_slot_panel(panel_dest, padding);
+  draw_main_menu_character_subscene_inventory_slots_panel(panel_dest, padding);
+  draw_main_menu_character_subscene_inventory_item_list_panel(panel_dest, padding);
 }
-void draw_main_menu_character_subscene_inventory_character_panel(Rectangle panel_dest, const Vector4 padding) {
-  const Rectangle& parent_panel_dest = panel_dest;
-  state->inventory_character_panel.dest = Rectangle{ 
-    parent_panel_dest.x + padding.x,
-    parent_panel_dest.y + padding.y,
-    (parent_panel_dest.width * .25f),
-    parent_panel_dest.height + padding.w
+void draw_main_menu_character_subscene_inventory_item_list_panel(Rectangle parent_dest, const Vector4 padding) {
+  const Rectangle& slots_panel_dest = state->inventory_slots_panel.dest;
+  
+  state->inventory_item_list_panel.dest = Rectangle{
+    slots_panel_dest.x + slots_panel_dest.width + padding.x,
+    slots_panel_dest.y,
+    parent_dest.width - slots_panel_dest.width + padding.z - padding.x,
+    slots_panel_dest.height
   };
-  gui_panel(state->inventory_character_panel, state->inventory_character_panel.dest, false);
+  Rectangle& this_dest = state->inventory_item_list_panel.dest;
+  gui_panel(state->inventory_item_list_panel, state->inventory_item_list_panel.dest, false);
 
-  const f32 hero_anim_scale = 5.f;
-  const Vector2 hero_anim_dim = Vector2 {
-    state->inventory_panel_hero_idle_anim.current_frame_rect.width * hero_anim_scale,
-    state->inventory_panel_hero_idle_anim.current_frame_rect.height * hero_anim_scale
-  };
-  Rectangle character_pos = {
-    state->inventory_character_panel.dest.x + (state->inventory_character_panel.dest.width * .5f) - (hero_anim_dim.x * .5f),
-    state->inventory_character_panel.dest.y + (state->inventory_character_panel.dest.height * .35f) - (hero_anim_dim.y * .5f),
-    hero_anim_dim.x, hero_anim_dim.y
-  };
-  ui_play_sprite_on_site(__builtin_addressof(state->inventory_panel_hero_idle_anim), WHITE, character_pos);
+  f32 height_buffer = 0.f;
+  for (player_inventory_slot& slot : state->ingame_info->player_state_dynamic->inventory) {
+    panel * _local_panel = smm_get_local_panel(slot.ui_buffer.i32[0]);
+
+    const Rectangle local_panel_dest = Rectangle {
+      this_dest.x + padding.x + height_buffer,
+      this_dest.y + padding.y,
+      this_dest.width + padding.z,
+      (this_dest.height * .2f)+ padding.w
+    };
+    height_buffer += local_panel_dest.height;
+
+    if (gui_panel_active(_local_panel, local_panel_dest, false)) {
+      
+    }
+    gui_label(
+      "Runes", FONT_TYPE_REGULAR, 1, 
+      Vector2 {local_panel_dest.x + local_panel_dest.width * .5f, local_panel_dest.y + local_panel_dest.height * .5f}, 
+      WHITE, true, true
+    );
+  }
 }
-void draw_main_menu_character_subscene_inventory_slot_panel(Rectangle panel_dest, const Vector4 padding) {
-  const Rectangle& parent_panel_dest = panel_dest;
-  const Rectangle& character_panel_dest = state->inventory_character_panel.dest;
-  state->inventory_slots_panel.dest = Rectangle{ 
-    character_panel_dest.x + character_panel_dest.width + padding.x,
-    character_panel_dest.y,
-    parent_panel_dest.width - character_panel_dest.width + padding.z - padding.x,
-    character_panel_dest.height
+void draw_main_menu_character_subscene_inventory_slots_panel(Rectangle parent_dest, const Vector4 padding) {
+  state->inventory_slots_panel.dest = Rectangle { 
+    parent_dest.x + padding.x,
+    parent_dest.y + padding.y,
+    (parent_dest.width * .75f) + padding.z,
+    parent_dest.height + padding.w
   };
-
   gui_panel(state->inventory_slots_panel, state->inventory_slots_panel.dest, false);
 }
 void draw_main_menu_character_subscene_stat_panel(Rectangle panel_dest, const Vector4 padding) {
@@ -1504,6 +1508,8 @@ void fade_on_complete_change_scene(data128 data) {
 void begin_scene_change(main_menu_scene_type mms, [[__maybe_unused__]] event_context context) {
   state->general_purpose_buttons.clear();
   state->general_purpose_panels.clear();
+  state->next_local_button_id = 0;
+  state->next_local_panel_id = 0;
   state->is_changing_state = false;
 
   switch (mms) {
@@ -1519,6 +1525,12 @@ void begin_scene_change(main_menu_scene_type mms, [[__maybe_unused__]] event_con
     }
     case MAIN_MENU_SCENE_CHARACTER: {
       state->mainmenu_state = MAIN_MENU_SCENE_CHARACTER;
+
+      for (player_inventory_slot& slot : state->ingame_info->player_state_dynamic->inventory) {
+    
+        [[__maybe_unused__]] panel * _lc_pnl = smm_add_local_panel(state->next_local_panel_id, state->panel_active_dark_fantasy_default);
+        slot.ui_buffer.i32[0] = state->next_local_button_id++;
+      }
       break;
     }
     case MAIN_MENU_SCENE_EXTRAS: {

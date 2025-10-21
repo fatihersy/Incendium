@@ -163,6 +163,7 @@ void sig_change_ingame_state(sig_ingame_state state);
 void sig_init_chest_sequence(chest_opening_sequence sequence, data128 vec_ex, data128 mm_ex);
 void sig_update_chest_sequence(void);
 void sig_render_chest_sequence(void);
+item_type sig_atlas_tex_id_to_item_type(atlas_texture_id tex_id);
 
 bool start_game(void);
 
@@ -989,18 +990,18 @@ void sig_init_chest_sequence(chest_opening_sequence sequence, data128 vec_ex = d
       seq.mm_ex = data128();
       seq.duration = CHEST_OPENING_SEQ_READY_DURATION;
 
-      seq.item_ids_to_scroll.push_back(ATLAS_TEX_ID_RUNE_DAMANGE_COMMON);
-      seq.item_ids_to_scroll.push_back(ATLAS_TEX_ID_RUNE_DAMANGE_UNCOMMON);
-      seq.item_ids_to_scroll.push_back(ATLAS_TEX_ID_RUNE_DAMANGE_RARE);
-      seq.item_ids_to_scroll.push_back(ATLAS_TEX_ID_RUNE_DAMANGE_EPIC);
+      seq.item_ids_to_scroll.push_back(ATLAS_TEX_ID_RUNE_DAMAGE_COMMON);
+      seq.item_ids_to_scroll.push_back(ATLAS_TEX_ID_RUNE_DAMAGE_UNCOMMON);
+      seq.item_ids_to_scroll.push_back(ATLAS_TEX_ID_RUNE_DAMAGE_RARE);
+      seq.item_ids_to_scroll.push_back(ATLAS_TEX_ID_RUNE_DAMAGE_EPIC);
       seq.item_ids_to_scroll.push_back(ATLAS_TEX_ID_RUNE_RESISTANCE_COMMON);
       seq.item_ids_to_scroll.push_back(ATLAS_TEX_ID_RUNE_RESISTANCE_UNCOMMON);
       seq.item_ids_to_scroll.push_back(ATLAS_TEX_ID_RUNE_RESISTANCE_RARE);
       seq.item_ids_to_scroll.push_back(ATLAS_TEX_ID_RUNE_RESISTANCE_EPIC);
-      seq.item_ids_to_scroll.push_back(ATLAS_TEX_ID_RUNE_DAMANGE_COMMON);
-      seq.item_ids_to_scroll.push_back(ATLAS_TEX_ID_RUNE_DAMANGE_UNCOMMON);
-      seq.item_ids_to_scroll.push_back(ATLAS_TEX_ID_RUNE_DAMANGE_RARE);
-      seq.item_ids_to_scroll.push_back(ATLAS_TEX_ID_RUNE_DAMANGE_EPIC);
+      seq.item_ids_to_scroll.push_back(ATLAS_TEX_ID_RUNE_DAMAGE_COMMON);
+      seq.item_ids_to_scroll.push_back(ATLAS_TEX_ID_RUNE_DAMAGE_UNCOMMON);
+      seq.item_ids_to_scroll.push_back(ATLAS_TEX_ID_RUNE_DAMAGE_RARE);
+      seq.item_ids_to_scroll.push_back(ATLAS_TEX_ID_RUNE_DAMAGE_EPIC);
       seq.item_ids_to_scroll.push_back(ATLAS_TEX_ID_RUNE_RESISTANCE_COMMON);
       seq.item_ids_to_scroll.push_back(ATLAS_TEX_ID_RUNE_RESISTANCE_UNCOMMON);
       seq.item_ids_to_scroll.push_back(ATLAS_TEX_ID_RUNE_RESISTANCE_RARE);
@@ -1189,7 +1190,7 @@ void sig_render_chest_sequence(void) {
       draw_chest_part(ATLAS_TEX_ID_CHEST_BASE);
 
       draw_scrolling_textures( std::vector<atlas_texture_id>({ATLAS_TEX_ID_DARK_FANTASY_PANEL_BG}), seq.mm_ex.f32[1], item_band_width, center_item_dest, true, item_band_unit_gap, WHITE);
-      draw_scrolling_textures( seq.item_ids_to_scroll, seq.mm_ex.f32[1], item_band_width, center_item_dest, false, item_band_unit_gap, WHITE, item_scale);
+      atlas_texture_id rune_texture_id = draw_scrolling_textures( seq.item_ids_to_scroll, seq.mm_ex.f32[1], item_band_width, center_item_dest, false, item_band_unit_gap, WHITE, item_scale);
       gui_draw_atlas_texture_id(ATLAS_TEX_ID_DARK_FANTASY_PANEL, center_item_dest, Vector2 {center_item_dest.width * .5f, center_item_dest.height * .5f}, 0.f, WHITE);
 
       ui_play_sprite_on_site(__builtin_addressof(seq.sheets_background.at(0)), WHITE, center_item_dest);
@@ -1200,6 +1201,7 @@ void sig_render_chest_sequence(void) {
           seq.mm_ex.f32[3] = static_cast<f32>(true);
         }
         if (gui_menu_button(lc_txt(LOC_TEXT_INGAME_STATE_RESULT_ACCEPT), BTN_ID_IN_GAME_BUTTON_CHEST_OPENING_ACCEPT, {0.f, 45.f}, SIG_BASE_RENDER_DIV2, true)) {
+          gm_add_to_inventory(sig_atlas_tex_id_to_item_type(rune_texture_id));
           sig_change_ingame_state(SCENE_INGAME_STATE_PLAY);
         }
       }
@@ -1211,6 +1213,28 @@ void sig_render_chest_sequence(void) {
       return;
     }
   }
+}
+item_type sig_atlas_tex_id_to_item_type(atlas_texture_id tex_id) {
+  if (tex_id < ATLAS_TEX_ID_UNSPECIFIED or tex_id > ATLAS_TEX_ID_MAX) {
+    IWARN("scene_in_game::sig_atlas_tex_id_to_item_type()::Texture id is out of bound");
+    return ITEM_TYPE_UNDEFINED;
+  }
+  switch (tex_id) {
+    case ATLAS_TEX_ID_RUNE_DAMAGE_COMMON:      { return ITEM_TYPE_RUNE_DAMAGE_COMMON; }
+    case ATLAS_TEX_ID_RUNE_DAMAGE_UNCOMMON:    { return ITEM_TYPE_RUNE_DAMAGE_UNCOMMON; }
+    case ATLAS_TEX_ID_RUNE_DAMAGE_RARE:        { return ITEM_TYPE_RUNE_DAMAGE_RARE; }
+    case ATLAS_TEX_ID_RUNE_DAMAGE_EPIC:        { return ITEM_TYPE_RUNE_DAMAGE_EPIC; }
+    case ATLAS_TEX_ID_RUNE_RESISTANCE_COMMON:  { return ITEM_TYPE_RUNE_RESISTANCE_COMMON; }
+    case ATLAS_TEX_ID_RUNE_RESISTANCE_UNCOMMON:{ return ITEM_TYPE_RUNE_RESISTANCE_UNCOMMON; }
+    case ATLAS_TEX_ID_RUNE_RESISTANCE_RARE:    { return ITEM_TYPE_RUNE_RESISTANCE_RARE; }
+    case ATLAS_TEX_ID_RUNE_RESISTANCE_EPIC:    { return ITEM_TYPE_RUNE_RESISTANCE_EPIC; }
+    default: {
+      IWARN("scene_in_game::sig_atlas_tex_id_to_item_type()::Unsupported texture id");
+      return ITEM_TYPE_UNDEFINED;
+    }
+  }
+  IERROR("scene_in_game::sig_atlas_tex_id_to_item_type()::Function ended unexpectedly");
+  return ITEM_TYPE_UNDEFINED;
 }
 
 bool scene_in_game_on_event(i32 code, [[maybe_unused]] event_context context) {

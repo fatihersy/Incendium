@@ -21,7 +21,7 @@ void inc_logging(logging_severity ls, const char* fmt, ...);
 #define IERROR(fmt, ...) do { inc_logging(LOG_SEV_ERROR,			fmt __VA_OPT__(,) __VA_ARGS__); } while(0)
 #define IFATAL(fmt, ...) do { inc_logging(LOG_SEV_FATAL,			fmt __VA_OPT__(,) __VA_ARGS__); } while(0)
 
-[[__nodiscard__]] bool logging_system_initialize(void);
+[[__nodiscard__]] bool logging_system_initialize(int build_id);
 void logging_system_shutdown(void);
 
 const char * get_last_log(void);

@@ -31,7 +31,8 @@ typedef struct game_manager_system_state {
   std::vector<character_trait> chosen_traits;
   playlist_control_system_state playlist;
 
-  std::array<rune_item, RUNE_ITEM_TYPE_MAX> default_rune_items; 
+  std::array<item_data, ITEM_TYPE_MAX> default_items; 
+  i32 next_inventory_slot_id;
 
   bool game_manager_initialized;
 
@@ -51,7 +52,8 @@ typedef struct game_manager_system_state {
     this->chosen_traits = std::vector<character_trait>();
     this->playlist = playlist_control_system_state();
 
-    this->default_rune_items = std::array<rune_item, RUNE_ITEM_TYPE_MAX>();
+    this->default_items = std::array<item_data, ITEM_TYPE_MAX>();
+    this->next_inventory_slot_id = 0;
 
     this->game_manager_initialized = false;
   }
@@ -142,6 +144,7 @@ bool game_manager_initialize(const camera_metrics * in_camera_metrics, const app
   event_register(EVENT_CODE_DAMAGE_ANY_SPAWN_IF_COLLIDE, game_manager_on_event);
   event_register(EVENT_CODE_ADD_CURRENCY_COINS, game_manager_on_event);
   event_register(EVENT_CODE_KILL_ALL_SPAWNS, game_manager_on_event);
+  event_register(EVENT_CODE_ADD_TO_INVENTORY, game_manager_on_event);
 
   // Traits
   {
@@ -172,14 +175,14 @@ bool game_manager_initialize(const camera_metrics * in_camera_metrics, const app
 
   // Runes
   {
-    state->default_rune_items.at(RUNE_ITEM_TYPE_DAMAGE_COMMON)       = rune_item(RUNE_ITEM_TYPE_DAMAGE_COMMON,       3.f, ATLAS_TEX_ID_RUNE_DAMANGE_COMMON);
-    state->default_rune_items.at(RUNE_ITEM_TYPE_DAMAGE_UNCOMMON)     = rune_item(RUNE_ITEM_TYPE_DAMAGE_UNCOMMON,     8.f, ATLAS_TEX_ID_RUNE_DAMANGE_UNCOMMON);
-    state->default_rune_items.at(RUNE_ITEM_TYPE_DAMAGE_RARE)         = rune_item(RUNE_ITEM_TYPE_DAMAGE_RARE,        15.f, ATLAS_TEX_ID_RUNE_DAMANGE_RARE);
-    state->default_rune_items.at(RUNE_ITEM_TYPE_DAMAGE_EPIC)         = rune_item(RUNE_ITEM_TYPE_DAMAGE_EPIC,        25.f, ATLAS_TEX_ID_RUNE_DAMANGE_EPIC);
-    state->default_rune_items.at(RUNE_ITEM_TYPE_RESISTANCE_COMMON)   = rune_item(RUNE_ITEM_TYPE_RESISTANCE_COMMON,   3.f, ATLAS_TEX_ID_RUNE_RESISTANCE_COMMON);
-    state->default_rune_items.at(RUNE_ITEM_TYPE_RESISTANCE_UNCOMMON) = rune_item(RUNE_ITEM_TYPE_RESISTANCE_UNCOMMON, 8.f, ATLAS_TEX_ID_RUNE_RESISTANCE_UNCOMMON);
-    state->default_rune_items.at(RUNE_ITEM_TYPE_RESISTANCE_RARE)     = rune_item(RUNE_ITEM_TYPE_RESISTANCE_RARE,    15.f, ATLAS_TEX_ID_RUNE_RESISTANCE_RARE);
-    state->default_rune_items.at(RUNE_ITEM_TYPE_RESISTANCE_EPIC)     = rune_item(RUNE_ITEM_TYPE_RESISTANCE_EPIC,    25.f, ATLAS_TEX_ID_RUNE_RESISTANCE_EPIC);
+    state->default_items.at(ITEM_TYPE_RUNE_DAMAGE_COMMON)       = item_data(ITEM_TYPE_RUNE_DAMAGE_COMMON,      data128(3.f), ATLAS_TEX_ID_RUNE_DAMAGE_COMMON);
+    state->default_items.at(ITEM_TYPE_RUNE_DAMAGE_UNCOMMON)     = item_data(ITEM_TYPE_RUNE_DAMAGE_UNCOMMON,    data128(8.f), ATLAS_TEX_ID_RUNE_DAMAGE_UNCOMMON);
+    state->default_items.at(ITEM_TYPE_RUNE_DAMAGE_RARE)         = item_data(ITEM_TYPE_RUNE_DAMAGE_RARE,        data128(5.f), ATLAS_TEX_ID_RUNE_DAMAGE_RARE);
+    state->default_items.at(ITEM_TYPE_RUNE_DAMAGE_EPIC)         = item_data(ITEM_TYPE_RUNE_DAMAGE_EPIC,        data128(5.f), ATLAS_TEX_ID_RUNE_DAMAGE_EPIC);
+    state->default_items.at(ITEM_TYPE_RUNE_RESISTANCE_COMMON)   = item_data(ITEM_TYPE_RUNE_RESISTANCE_COMMON,  data128(3.f), ATLAS_TEX_ID_RUNE_RESISTANCE_COMMON);
+    state->default_items.at(ITEM_TYPE_RUNE_RESISTANCE_UNCOMMON) = item_data(ITEM_TYPE_RUNE_RESISTANCE_UNCOMMON,data128(8.f), ATLAS_TEX_ID_RUNE_RESISTANCE_UNCOMMON);
+    state->default_items.at(ITEM_TYPE_RUNE_RESISTANCE_RARE)     = item_data(ITEM_TYPE_RUNE_RESISTANCE_RARE,    data128(5.f), ATLAS_TEX_ID_RUNE_RESISTANCE_RARE);
+    state->default_items.at(ITEM_TYPE_RUNE_RESISTANCE_EPIC)     = item_data(ITEM_TYPE_RUNE_RESISTANCE_EPIC,    data128(5.f), ATLAS_TEX_ID_RUNE_RESISTANCE_EPIC);
   }
   // Runes
 
@@ -202,6 +205,14 @@ bool game_manager_reinit(const camera_metrics * in_camera_metrics, const app_set
   }
   gm_load_game();
   state->game_manager_initialized = true;
+
+  gm_add_to_inventory(ITEM_TYPE_RUNE_DAMAGE_COMMON);
+  gm_add_to_inventory(ITEM_TYPE_RUNE_DAMAGE_COMMON);
+  gm_add_to_inventory(ITEM_TYPE_RUNE_DAMAGE_COMMON);
+  gm_add_to_inventory(ITEM_TYPE_RUNE_DAMAGE_COMMON);
+  gm_add_to_inventory(ITEM_TYPE_RUNE_DAMAGE_COMMON);
+  gm_add_to_inventory(ITEM_TYPE_RUNE_DAMAGE_COMMON);
+  gm_add_to_inventory(ITEM_TYPE_RUNE_DAMAGE_COMMON);
 
   state->in_camera_metrics = in_camera_metrics;
   state->in_app_settings = in_app_settings;
@@ -621,6 +632,85 @@ void gm_update_player(void) {
     }
   }
 }
+void gm_add_to_inventory(item_type _item_type) {
+  if (_item_type > ITEM_TYPE_MAX or _item_type < ITEM_TYPE_UNDEFINED) {
+    IWARN("game_manager::gm_add_to_inventory()::Item id is out of bounds");
+    return;
+  }
+  if (not state->game_progression_data or state->game_progression_data == nullptr) {
+    return;
+  }
+  std::vector<player_inventory_slot>& inventory = state->game_progression_data->player_data.inventory;
+
+  struct find_or_create_result{
+    player_inventory_slot& ref;
+    size_t index;
+  };
+  auto find_or_create = [&](item_type type, size_t start_with = 0) -> find_or_create_result {
+    for (size_t itr_000 = start_with; itr_000 < inventory.size(); itr_000++) {
+      player_inventory_slot& slot = inventory.at(itr_000);
+      if (slot.item_type == type) {
+        return find_or_create_result { slot, itr_000 };
+      }
+    }
+    player_inventory_slot& slot = inventory.emplace_back(player_inventory_slot());
+    slot.slot_id = state->next_inventory_slot_id++;
+    return find_or_create_result { slot, inventory.size() - 1u };
+  };
+
+  switch (_item_type) {
+    case ITEM_TYPE_EXPERIENCE: return;
+    case ITEM_TYPE_COIN: return;
+    case ITEM_TYPE_HEALTH_FRAGMENT: return;
+    case ITEM_TYPE_CHEST: return;
+    case ITEM_TYPE_RUNE_DAMAGE_COMMON: {
+      find_or_create_result result = find_or_create(_item_type);
+      ++result.ref.amount;
+      return;
+    }
+    case ITEM_TYPE_RUNE_DAMAGE_UNCOMMON: {
+      find_or_create_result result = find_or_create(_item_type);
+      ++result.ref.amount;
+      return;
+    }
+    case ITEM_TYPE_RUNE_DAMAGE_RARE: {
+      find_or_create_result result = find_or_create(_item_type);
+      ++result.ref.amount;
+      return;
+    }
+    case ITEM_TYPE_RUNE_DAMAGE_EPIC: {
+      find_or_create_result result = find_or_create(_item_type);
+      ++result.ref.amount;
+      return;
+    }
+    case ITEM_TYPE_RUNE_RESISTANCE_COMMON: {
+      find_or_create_result result = find_or_create(_item_type);
+      ++result.ref.amount;
+      return;
+    }
+    case ITEM_TYPE_RUNE_RESISTANCE_UNCOMMON: {
+      find_or_create_result result = find_or_create(_item_type);
+      ++result.ref.amount;
+      return;
+    }
+    case ITEM_TYPE_RUNE_RESISTANCE_RARE: {
+      find_or_create_result result = find_or_create(_item_type);
+      ++result.ref.amount;
+      return;
+    }
+    case ITEM_TYPE_RUNE_RESISTANCE_EPIC: {
+      find_or_create_result result = find_or_create(_item_type);
+      ++result.ref.amount;
+      return;
+    }
+    default: {
+      IWARN("game_manager::gm_add_to_inventory()::Unsupported type");
+      return;
+    }
+  }
+
+  IWARN("game_manager::gm_add_to_inventory()::Function ended unexpectedly");
+}
 // OPS
 
 // GET / SET
@@ -909,6 +999,9 @@ bool game_manager_on_event(i32 code, event_context context) {
     case EVENT_CODE_ADD_CURRENCY_COINS: {
       state->game_info.collected_coins += context.data.i32[0];
       return true;
+    }
+    case EVENT_CODE_ADD_TO_INVENTORY: {
+      gm_add_to_inventory(static_cast<item_type>(context.data.i32[0]));
     }
     default: {
       IWARN("game_manager::game_manager_on_event()::Unsuppported code.");

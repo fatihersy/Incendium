@@ -9,6 +9,10 @@
 #define HEADER_SYMBOL_END "__END__"
 #define HEADER_SYMBOL_END_LENGTH 7
 
+#define ASSET1_FILE_SIZE 146122975u
+#define ASSET2_FILE_SIZE 1616472u
+#define MAP_FILE_SIZE 3624970u
+
 typedef enum worldmap_data_type {
   WORLDMAP_DATA_UNDEFINED,
   WORLDMAP_DATA_COLLISION,
@@ -38,7 +42,7 @@ typedef struct filename_offset_data {
     this->path_length = 0u;
     this->is_success = false;
   }
-}filename_offset_data;
+} filename_offset_data;
 
 typedef struct pak_parser_system_state {
   std::array<worldmap_stage_file, MAX_WORLDMAP_LOCATIONS> worldmap_location_file_datas;
@@ -75,7 +79,16 @@ const file_buffer * pak_id_to_file_data_pointer(pak_file_id id, i32 index);
 void assign_pak_data_by_id(pak_file_id id);
 void assign_file_data_by_id(pak_file_id id, i32 index, size_t file_offset_in_pak_data);
 
-i32 read_file(const char * path) {
+u64 get_file_size(pak_file_id id) {
+  switch (id) {
+    case PAK_FILE_ASSET1: return ASSET1_FILE_SIZE;
+    case PAK_FILE_ASSET2: return ASSET2_FILE_SIZE;
+    case PAK_FILE_MAP: return MAP_FILE_SIZE;
+    default: return 0u;
+  }
+}
+
+i32 read_file(const char * path, u64 max_size) {
   if (not FileExists(path)) {
     IERROR("main::write_map_pak()::file '%s' doesn't exist", path);
     return 0;
@@ -83,13 +96,11 @@ i32 read_file(const char * path) {
   state->read_buffer.clear();
   i32 loaded_data = 1;
   u8* data = LoadFileData(path, &loaded_data);
-  if (loaded_data <= 1 ) {
-    IERROR("main::write_map_pak()::file '%s' doesn't exist", path);
+  if (loaded_data <= 1 or static_cast<u64>(loaded_data) > max_size) {
+    IERROR("pak_parser::read_file()::file '%s' doesn't exist or exceeds the maximum size", path);
     return 0;
   }
   state->read_buffer.assign(data, data + loaded_data);
-
-  //std::string buffer_end = state->read_buffer.substr(state->read_buffer.size() - 16u, 16u);
 
   UnloadFileData(data);
 	return loaded_data;
@@ -111,41 +122,41 @@ bool pak_parser_system_initialize(void) {
     std::vector<file_buffer>({
       file_buffer(PAK_FILE_UNDEFINED, PAK_FILE_ASSET1_UNDEFINED, ""),
       file_buffer(PAK_FILE_ASSET1,    PAK_FILE_ASSET1_THUMBNAIL,               ".png"),
-      file_buffer(PAK_FILE_ASSET1,    PAK_FILE_ASSET1_WORLDMAP_IMAGE,          ".ttf"),
+      file_buffer(PAK_FILE_ASSET1,    PAK_FILE_ASSET1_WORLDMAP_IMAGE,          ".png"),
       file_buffer(PAK_FILE_ASSET1,    PAK_FILE_ASSET1_BLACK_BACKGROUND_IMAGE1, ".png"),
       file_buffer(PAK_FILE_ASSET1,    PAK_FILE_ASSET1_BLACK_BACKGROUND_IMAGE2, ".png"),
-      file_buffer(PAK_FILE_ASSET1,    PAK_FILE_ASSET1_SPRITESHEET_ZAP,         ".wav"),
-      file_buffer(PAK_FILE_ASSET1,    PAK_FILE_ASSET1_FONT_MOOD,               ".wav"),
-      file_buffer(PAK_FILE_ASSET1,    PAK_FILE_ASSET1_FONT_MIOSEVKA_ITALIC,    ".wav"),
-      file_buffer(PAK_FILE_ASSET1,    PAK_FILE_ASSET1_FONT_MIOSEVKA_LIGHT,     ".mp3"),
-      file_buffer(PAK_FILE_ASSET1,    PAK_FILE_ASSET1_FONT_MIOSEVKA_REGULAR,   ".wav"),
-      file_buffer(PAK_FILE_ASSET1,    PAK_FILE_ASSET1_FONT_MIOSEVKA_BOLD,      ".wav"),
-      file_buffer(PAK_FILE_ASSET1,    PAK_FILE_ASSET1_COIN_PICKUP,             ".wav"),
-      file_buffer(PAK_FILE_ASSET1,    PAK_FILE_ASSET1_HEALTH_PICKUP,           ".wav"),
+      file_buffer(PAK_FILE_ASSET1,    PAK_FILE_ASSET1_SPRITESHEET_ZAP,         ".png"),
+      file_buffer(PAK_FILE_ASSET1,    PAK_FILE_ASSET1_FONT_MOOD,               ".ttf"),
+      file_buffer(PAK_FILE_ASSET1,    PAK_FILE_ASSET1_FONT_MIOSEVKA_ITALIC,    ".ttf"),
+      file_buffer(PAK_FILE_ASSET1,    PAK_FILE_ASSET1_FONT_MIOSEVKA_LIGHT,     ".ttf"),
+      file_buffer(PAK_FILE_ASSET1,    PAK_FILE_ASSET1_FONT_MIOSEVKA_REGULAR,   ".ttf"),
+      file_buffer(PAK_FILE_ASSET1,    PAK_FILE_ASSET1_FONT_MIOSEVKA_BOLD,      ".ttf"),
+      file_buffer(PAK_FILE_ASSET1,    PAK_FILE_ASSET1_COIN_PICKUP,             ".mp3"),
+      file_buffer(PAK_FILE_ASSET1,    PAK_FILE_ASSET1_HEALTH_PICKUP,           ".mp3"),
       file_buffer(PAK_FILE_ASSET1,    PAK_FILE_ASSET1_SOUND_LEVEL_UP,          ".mp3"),
-      file_buffer(PAK_FILE_ASSET1,    PAK_FILE_ASSET1_SOUND_BTN_CLICK_1,       ".ogg"),
-      file_buffer(PAK_FILE_ASSET1,    PAK_FILE_ASSET1_SOUND_BTN_CLICK_2,       ".ogg"),
-      file_buffer(PAK_FILE_ASSET1,    PAK_FILE_ASSET1_SOUND_BTN_CLICK_3,       ".ogg"),
-      file_buffer(PAK_FILE_ASSET1,    PAK_FILE_ASSET1_SOUND_DENY1,             ".ogg"),
-      file_buffer(PAK_FILE_ASSET1,    PAK_FILE_ASSET1_SOUND_DENY2,             ".mp3"),
+      file_buffer(PAK_FILE_ASSET1,    PAK_FILE_ASSET1_SOUND_BTN_CLICK_1,       ".wav"),
+      file_buffer(PAK_FILE_ASSET1,    PAK_FILE_ASSET1_SOUND_BTN_CLICK_2,       ".wav"),
+      file_buffer(PAK_FILE_ASSET1,    PAK_FILE_ASSET1_SOUND_BTN_CLICK_3,       ".wav"),
+      file_buffer(PAK_FILE_ASSET1,    PAK_FILE_ASSET1_SOUND_DENY1,             ".wav"),
+      file_buffer(PAK_FILE_ASSET1,    PAK_FILE_ASSET1_SOUND_DENY2,             ".wav"),
       file_buffer(PAK_FILE_ASSET1,    PAK_FILE_ASSET1_EXP_PICKUP,              ".wav"),
       file_buffer(PAK_FILE_ASSET1,    PAK_FILE_ASSET1_SOUND_GAME_OVER,         ".wav"),
       file_buffer(PAK_FILE_ASSET1,    PAK_FILE_ASSET1_SOUND_ZAP_1,             ".wav"),
       file_buffer(PAK_FILE_ASSET1,    PAK_FILE_ASSET1_SOUND_ZAP_2,             ".wav"),
       file_buffer(PAK_FILE_ASSET1,    PAK_FILE_ASSET1_SOUND_ZAP_3,             ".wav"),
-      file_buffer(PAK_FILE_ASSET1,    PAK_FILE_ASSET1_SOUND_ZAP_4,             ".ttf"),
-      file_buffer(PAK_FILE_ASSET1,    PAK_FILE_ASSET1_SOUND_ZOMBIE_DIE_1,      ".ttf"),
-      file_buffer(PAK_FILE_ASSET1,    PAK_FILE_ASSET1_SOUND_ZOMBIE_DIE_2,      ".png"),
-      file_buffer(PAK_FILE_ASSET1,    PAK_FILE_ASSET1_SOUND_ZOMBIE_DIE_3,      ".png"),
+      file_buffer(PAK_FILE_ASSET1,    PAK_FILE_ASSET1_SOUND_ZAP_4,             ".wav"),
+      file_buffer(PAK_FILE_ASSET1,    PAK_FILE_ASSET1_SOUND_ZOMBIE_DIE_1,      ".wav"),
+      file_buffer(PAK_FILE_ASSET1,    PAK_FILE_ASSET1_SOUND_ZOMBIE_DIE_2,      ".wav"),
+      file_buffer(PAK_FILE_ASSET1,    PAK_FILE_ASSET1_SOUND_ZOMBIE_DIE_3,      ".wav"),
       file_buffer(PAK_FILE_ASSET1,    PAK_FILE_ASSET1_THEME_MAINMENU_1,        ".wav"),
       file_buffer(PAK_FILE_ASSET1,    PAK_FILE_ASSET1_THEME_MAINMENU_2,        ".wav"),
       file_buffer(PAK_FILE_ASSET1,    PAK_FILE_ASSET1_THEME_MAINMENU_3,        ".wav"),
       file_buffer(PAK_FILE_ASSET1,    PAK_FILE_ASSET1_THEME_MAP_SELECTION_1,   ".wav"),
       file_buffer(PAK_FILE_ASSET1,    PAK_FILE_ASSET1_THEME_MAP_SELECTION_2,   ".wav"),
-      file_buffer(PAK_FILE_ASSET1,    PAK_FILE_ASSET1_THEME_INGAME_PLAY_1,     ".wav"),
-      file_buffer(PAK_FILE_ASSET1,    PAK_FILE_ASSET1_THEME_INGAME_PLAY_2,     ".wav"),
-      file_buffer(PAK_FILE_ASSET1,    PAK_FILE_ASSET1_THEME_INGAME_PLAY_3,     ".wav"),
-      file_buffer(PAK_FILE_ASSET1,    PAK_FILE_ASSET1_THEME_INGAME_PLAY_4,     ".wav"),
+      file_buffer(PAK_FILE_ASSET1,    PAK_FILE_ASSET1_THEME_INGAME_PLAY_1,     ".ogg"),
+      file_buffer(PAK_FILE_ASSET1,    PAK_FILE_ASSET1_THEME_INGAME_PLAY_2,     ".ogg"),
+      file_buffer(PAK_FILE_ASSET1,    PAK_FILE_ASSET1_THEME_INGAME_PLAY_3,     ".ogg"),
+      file_buffer(PAK_FILE_ASSET1,    PAK_FILE_ASSET1_THEME_INGAME_PLAY_4,     ".ogg"),
       file_buffer(PAK_FILE_ASSET1,    PAK_FILE_ASSET1_SPIN_RESULT_STAR_105_105,".png"),
       file_buffer(PAK_FILE_ASSET1,    PAK_FILE_ASSET1_SPIN_SFX,                ".wav"),
       file_buffer(PAK_FILE_ASSET1,    PAK_FILE_ASSET1_SPIN_RESULT,             ".wav"),
@@ -183,7 +194,7 @@ bool parse_asset_pak(pak_file_id id) {
   		  const std::string path = pak_id_to_file_name(id);
   		  state->read_buffer.clear();
 
-  		  if (not read_file(path.c_str())) {
+  		  if (not read_file(path.c_str(), get_file_size(id))) {
   		    IERROR("pak_parser::parse_asset_pak()::File read failed");
   		    return false;
   		  }
@@ -208,7 +219,7 @@ bool parse_asset_pak(pak_file_id id) {
   		  const std::string path = pak_id_to_file_name(id);
   		  state->read_buffer.clear();
 
-  		  if (not read_file(path.c_str())) {
+  		  if (not read_file(path.c_str(), get_file_size(id))) {
   		    IERROR("pak_parser::parse_asset_pak()::File read failed");
   		    return false;
   		  }
@@ -244,7 +255,7 @@ bool parse_map_pak(void) {
   if(state->map_pak_data.empty()) {
     const std::string path = pak_id_to_file_name(PAK_FILE_MAP);
     state->read_buffer.clear();
-    if (not read_file(path.c_str())) {
+    if (not read_file(path.c_str(), get_file_size(PAK_FILE_MAP))) {
       IERROR("pak_parser::parse_map_pak()::Pak file:'%s' read failed", path.c_str());
       return false;
     }
@@ -588,7 +599,7 @@ const file_buffer * fetch_asset_file_buffer(pak_file_id id, i32 index) {
   if (not state->asset_pak_datas.at(id).is_initialized) {
     const std::string path = pak_id_to_file_name(id);
     state->read_buffer.clear();
-    if (not read_file(path.c_str())) {
+    if (not read_file(path.c_str(), get_file_size(id))) {
       IERROR("pak_parser::fetch_asset_file_buffer()::File read failed");
       return nullptr;
     }
@@ -629,7 +640,7 @@ const worldmap_stage_file * fetch_map_file_buffer(i32 index) {
   if (state->map_pak_data.empty()) {
     const std::string path = pak_id_to_file_name(PAK_FILE_MAP);
     state->read_buffer.clear();
-    if (not read_file(path.c_str())) {
+    if (not read_file(path.c_str(), get_file_size(PAK_FILE_MAP))) {
       IERROR("pak_parser::fetch_asset_file_buffer()::File read failed");
       return nullptr;
     }

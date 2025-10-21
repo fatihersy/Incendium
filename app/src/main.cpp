@@ -3,7 +3,10 @@
 #include <eh.h>
 
 #include "defines.h"
-#include "core/logger.h"
+
+#ifdef _RELEASE
+	#include "core/logger.h"
+#endif
 
 #include <steam/steam_api.h>
 
@@ -91,17 +94,17 @@ int entry(void)
 	// do a DRM self check
 	Steamworks_SelfCheck();
 
-  if(not app_initialize()) {
+	if(not app_initialize(SteamApps()->GetAppBuildId())) {
 		alert("main::entry()::App initialize return with failure", "Oh no!");
 		return EXIT_FAILURE;
 	}
 
-  while (window_should_close())
-  {
-    app_update();
-    
-    app_render();
-  }
+  	while (window_should_close())
+  	{
+  	  app_update();
+	
+  	  app_render();
+  	}
 
     // TODO: Destr
 
@@ -128,7 +131,7 @@ void MiniDumpFunction([[maybe_unused]] unsigned int nExceptionCode, [[maybe_unus
 	// maybe you want to put what level the user was playing, how many players on the server,
 	// how much memory is free, etc...
 
-	#ifndef _RELEASE
+	#ifdef _RELEASE
 		const char * last_log = get_last_log();
 		if (last_log and last_log != nullptr) {
 			SteamAPI_SetMiniDumpComment( last_log );

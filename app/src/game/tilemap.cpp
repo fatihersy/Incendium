@@ -592,7 +592,11 @@ void map_to_str(tilemap *const map, tilemap_stringtify_package *const out_packag
     out_package->size_tilemap_str[itr_000] = sizeof(tile_symbol) * MAX_TILEMAP_TILESLOT_X * MAX_TILEMAP_TILESLOT_Y;
 
     for (size_t itr_111 = 0u; itr_111 < MAX_TILEMAP_TILESLOT_X; ++itr_111) {
-      copy_memory(out_package->str_tilemap[itr_000] + (sizeof(tile_symbol) * itr_111 * MAX_TILEMAP_TILESLOT_Y), map->tiles[itr_000][itr_111], sizeof(tile_symbol) * MAX_TILEMAP_TILESLOT_Y);
+      copy_memory(
+        out_package->str_tilemap[itr_000] + (sizeof(tile_symbol) * itr_111 * MAX_TILEMAP_TILESLOT_Y), 
+        map->tiles[itr_000][itr_111], 
+        sizeof(tile_symbol) * MAX_TILEMAP_TILESLOT_Y
+      );
     }
   }
   // TILE SERIALIZE
@@ -821,27 +825,30 @@ bool load_map_data(tilemap *const map, tilemap_stringtify_package *const out_pac
   #if USE_PAK_FORMAT
     const worldmap_stage_file *const file = get_map_file_buffer(map->index);
     if (not file or file == nullptr) {
-      {
-        out_package->str_collisions = file->file_collision;
-      }
-      {
-        for(i32 itr_000 = 0; itr_000 < MAX_TILEMAP_LAYERS; ++itr_000){
-          copy_memory(out_package->str_tilemap[itr_000], file->layer_data.at(itr_000).c_str(), file->layer_data.at(itr_000).size());
-          out_package->size_tilemap_str[itr_000] = file->layer_data.at(itr_000).size();
-        }
-      }
-      {
-        out_package->str_props = file->file_prop;
-      }
-      str_to_map(map, out_package);
+      IWARN("tilemap::load_map_data()::Map:%d file is invalid", map->index);
+      return false;
     }
+    out_package->str_collisions = file->file_collision;
+    
+    for(i32 itr_000 = 0; itr_000 < MAX_TILEMAP_LAYERS; ++itr_000) {
+      const std::string& src_str = file->layer_data.at(itr_000);
+      u8* dest_buffer = out_package->str_tilemap[itr_000];
+      const size_t bytes_to_copy = std::min(src_str.size(), sizeof(out_package->str_tilemap[itr_000]));
+  
+      copy_memory(dest_buffer, src_str.c_str(), bytes_to_copy);
+      
+      out_package->size_tilemap_str[itr_000] = bytes_to_copy;
+    }
+    out_package->str_props = file->file_prop;
+    str_to_map(map, out_package);
+    
     return out_package->is_success;
   #else
     {
       for(int i = 0;  i < MAX_TILEMAP_LAYERS; ++i){
         int dataSize = 1;
         u8* _str_tile = LoadFileData(map_layer_path(map->filename.at(i).c_str()), &dataSize);
-        if (dataSize <= 0) {
+        if (dataSize <= 0 or dataSize > MAX_MAP_FILESIZE)  {
           IERROR("tilemap::load_map_data()::Reading data returned null");
         }
         copy_memory(&out_package->str_tilemap[i], _str_tile, dataSize);
@@ -851,7 +858,7 @@ bool load_map_data(tilemap *const map, tilemap_stringtify_package *const out_pac
     {
       int dataSize = 1;
       u8* _str_prop = LoadFileData(map_layer_path(map->propfile.c_str()), &dataSize);
-      if (dataSize <= 0) {
+      if (dataSize <= 0 or dataSize > MAX_MAP_FILESIZE) {
         IERROR("tilemap::load_map_data()::Reading data returned null");
       }
       out_package->str_props.assign((char*)_str_prop, dataSize);
@@ -868,21 +875,22 @@ bool load_or_create_map_data(tilemap *const map, tilemap_stringtify_package *con
       IWARN("tilemap::load_or_create_map_data()::Map:%d file is invalid", map->index);
       return false;
     }
-    //map_to_str(map, out_package);
-    {
-      out_package->str_collisions = file->file_collision;
+    out_package->str_collisions = file->file_collision;
+
+    for(i32 itr_000 = 0; itr_000 < MAX_TILEMAP_LAYERS; ++itr_000) {
+      const std::string& src_str = file->layer_data.at(itr_000);
+      u8* dest_buffer = out_package->str_tilemap[itr_000];
+      const size_t bytes_to_copy = std::min(src_str.size(), sizeof(out_package->str_tilemap[itr_000]));
+  
+      copy_memory(dest_buffer, src_str.c_str(), bytes_to_copy);
+      
+      out_package->size_tilemap_str[itr_000] = bytes_to_copy;
     }
-    {
-      for(i32 itr_000 = 0; itr_000 < MAX_TILEMAP_LAYERS; ++itr_000){
-        copy_memory(out_package->str_tilemap[itr_000], file->layer_data.at(itr_000).c_str(), file->layer_data.at(itr_000).size());
-        out_package->size_tilemap_str[itr_000] = file->layer_data.at(itr_000).size();
-      }
-    }
-    {
-      out_package->str_props = file->file_prop;
-    }
+  
+    out_package->str_props = file->file_prop;
     str_to_map(map, out_package);
-  return out_package->is_success;
+
+    return out_package->is_success;
 
   #else
 
@@ -892,10 +900,18 @@ bool load_or_create_map_data(tilemap *const map, tilemap_stringtify_package *con
       if (FileExists(map_layer_path(map->filename.at(i).c_str()))) {
         int dataSize = 1;
         u8* _str_tile = LoadFileData(map_layer_path(map->filename.at(i).c_str()), &dataSize);
-        if (dataSize > 1 && dataSize < TOTAL_ALLOCATED_MEMORY) {
-          out_package->size_tilemap_str[i] = dataSize;
-          copy_memory(out_package->str_tilemap[i], _str_tile, dataSize);
+        if (dataSize < 1) {
+          #ifndef _RELEASE 
+            //IWARN("Map File:%s Doesn't exist", map->filename.at(i).c_str());
+          #endif
         }
+        else if (dataSize > MAX_MAP_FILESIZE) {
+          IERROR("Map file size out of bound");
+          continue;
+        }
+        out_package->size_tilemap_str[i] = dataSize;
+        copy_memory(out_package->str_tilemap[i], _str_tile, dataSize);
+
         if (_str_tile) {
           UnloadFileData(_str_tile);
         }
@@ -914,9 +930,16 @@ bool load_or_create_map_data(tilemap *const map, tilemap_stringtify_package *con
     if (FileExists(map_layer_path(map->propfile.c_str()))) {
       int dataSize = 1;
       u8* _str_prop = LoadFileData(map_layer_path(map->propfile.c_str()), &dataSize);
-      if (dataSize > 1 && dataSize < TOTAL_ALLOCATED_MEMORY) {
-        out_package->str_props.assign(reinterpret_cast<char*>(_str_prop), dataSize);
+      if (dataSize < 1) {
+        #ifndef _RELEASE 
+          //IWARN("Map File:%s Doesn't exist", map->propfile.c_str());
+        #endif
       }
+      else if (dataSize > MAX_MAP_FILESIZE) {
+        IERROR("Map file size out of bound");
+      }
+      else { out_package->str_props.assign(reinterpret_cast<char*>(_str_prop), dataSize); }
+      
       if (_str_prop) {
         UnloadFileData(_str_prop);
       }
@@ -934,9 +957,16 @@ bool load_or_create_map_data(tilemap *const map, tilemap_stringtify_package *con
     if (FileExists(map_layer_path(map->collisionfile.c_str()))) {
       int dataSize = 1;
       u8* _str_collision = LoadFileData(map_layer_path(map->collisionfile.c_str()), &dataSize);
-      if (dataSize > 1 && dataSize < TOTAL_ALLOCATED_MEMORY) {
-        out_package->str_collisions.assign(reinterpret_cast<char*>(_str_collision), dataSize);
+      if (dataSize < 1) { 
+        #ifndef _RELEASE 
+          //IWARN("Map File:%s Doesn't exist", map->collisionfile.c_str());
+        #endif
       }
+      else if (dataSize > MAX_MAP_FILESIZE) {
+        IERROR("Map file size out of bound");
+      }
+      else { out_package->str_collisions.assign(reinterpret_cast<char*>(_str_collision), dataSize); }
+
       if (_str_collision) {
         UnloadFileData(_str_collision);
       }

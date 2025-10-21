@@ -240,6 +240,14 @@ typedef enum item_type {
   ITEM_TYPE_COIN,
   ITEM_TYPE_HEALTH_FRAGMENT,
   ITEM_TYPE_CHEST,
+  ITEM_TYPE_RUNE_DAMAGE_COMMON,
+  ITEM_TYPE_RUNE_DAMAGE_UNCOMMON,
+  ITEM_TYPE_RUNE_DAMAGE_RARE,
+  ITEM_TYPE_RUNE_DAMAGE_EPIC,
+  ITEM_TYPE_RUNE_RESISTANCE_COMMON,
+  ITEM_TYPE_RUNE_RESISTANCE_UNCOMMON,
+  ITEM_TYPE_RUNE_RESISTANCE_RARE,
+  ITEM_TYPE_RUNE_RESISTANCE_EPIC,
   ITEM_TYPE_MAX
 } item_type;
 
@@ -265,19 +273,6 @@ typedef enum damage_deal_result_type {
   DAMAGE_DEAL_RESULT_IN_DAMAGE_BREAKE,
   DAMAGE_DEAL_RESULT_MAX,
 } damage_deal_result_type;
-
-typedef enum rune_item_type {
-  RUNE_ITEM_TYPE_UNDEFINED,
-  RUNE_ITEM_TYPE_DAMAGE_COMMON,
-  RUNE_ITEM_TYPE_DAMAGE_UNCOMMON,
-  RUNE_ITEM_TYPE_DAMAGE_RARE,
-  RUNE_ITEM_TYPE_DAMAGE_EPIC,
-  RUNE_ITEM_TYPE_RESISTANCE_COMMON,
-  RUNE_ITEM_TYPE_RESISTANCE_UNCOMMON,
-  RUNE_ITEM_TYPE_RESISTANCE_RARE,
-  RUNE_ITEM_TYPE_RESISTANCE_EPIC,
-  RUNE_ITEM_TYPE_MAX,
-} rune_item_type;
 
 typedef struct damage_deal_result {
   damage_deal_result_type type;
@@ -674,24 +669,25 @@ typedef struct loot_item {
   }
 } loot_item;
 
-typedef struct rune_item {
+typedef struct item_data {
   i32 id;
-  rune_item_type type;
+  item_type type;
   atlas_texture_id tex_id;
-  f32 value;
+  
+  data128 buffer;
 
-  rune_item(void) {
+  item_data(void) {
     this->id = -1;
-    this->type = RUNE_ITEM_TYPE_UNDEFINED;
+    this->type = ITEM_TYPE_UNDEFINED;
     this->tex_id = ATLAS_TEX_ID_UNSPECIFIED;
-    this->value = 0.f;
+    this->buffer = data128();
   }
-  rune_item(rune_item_type _type, f32 _value, atlas_texture_id _tex_id) : rune_item() {
+  item_data(item_type _type, data128 _buffer, atlas_texture_id _tex_id) : item_data() {
     this->type = _type;
     this->tex_id = _tex_id;
-    this->value = _value;
+    this->buffer = _buffer;
   }
-} rune_item;
+} item_data;
 
 typedef struct combat_feedback_floating_text {
   i32 id;
@@ -1038,20 +1034,29 @@ typedef struct character_trait {
   }
 } character_trait;
 
-typedef struct player_inventory_rune_slot {
-  rune_item_type rune_type;
+typedef struct player_inventory_slot {
+  i32 slot_id;
+  ::item_type item_type;
   i32 amount;
-  player_inventory_rune_slot(void) {
-    this->rune_type = RUNE_ITEM_TYPE_UNDEFINED;
+
+  data128 ui_buffer;
+
+  player_inventory_slot(void) {
+    this->slot_id = 0;
+    this->item_type = ITEM_TYPE_UNDEFINED;
     this->amount = 0;
+    this->ui_buffer = data128();
   }
-} player_inventory_rune_slot;
+  player_inventory_slot(::item_type _type) : player_inventory_slot() {
+    this->item_type = _type;
+  }
+} player_inventory_slot;
 
 // LABEL: Player State
 typedef struct player_state {
   ability_play_system ability_system;
   std::array<character_stat, CHARACTER_STATS_MAX> stats;
-  std::vector<player_inventory_rune_slot> rune_inventory;
+  std::vector<player_inventory_slot> inventory;
 
   Rectangle collision;
   Rectangle map_level_collision;
@@ -1091,6 +1096,7 @@ typedef struct player_state {
   player_state(void) {
     this->ability_system = ability_play_system();
     this->stats.fill(character_stat());
+    this->inventory = std::vector<player_inventory_slot>();
 
     this->collision = ZERORECT;
     this->map_level_collision = ZERORECT;

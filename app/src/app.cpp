@@ -40,7 +40,7 @@ constexpr void toggle_borderless(void);
 constexpr void toggle_fullscreen(void);
 constexpr void toggle_windowed(i32 width, i32 height);
 
-bool app_initialize(void) {
+bool app_initialize(i32 build_id) {
   // Subsystems
   memory_system_initialize();
   if(not event_system_initialize()) {
@@ -68,11 +68,10 @@ bool app_initialize(void) {
   SetConfigFlags(FLAG_VSYNC_HINT | FLAG_WINDOW_HIGHDPI | FLAG_WINDOW_UNDECORATED);
   InitWindow(initializer->window_width ,initializer->window_height, GAME_TITLE);
 
-  if(not logging_system_initialize()) { // INFO: Requires Raylib to file system operations
+  if(not logging_system_initialize(build_id)) { // INFO: Requires Raylib to file system operations
     alert("Logging system init failed", "Fatal");
     return false;
   }
-
   set_settings_from_ini_file(CONFIG_FILE_LOCATION);
   state->settings = get_app_settings();
 

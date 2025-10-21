@@ -5,16 +5,17 @@
 #include "core/fmemory.h"
 
 #define LOGGING_SEVERITY LOG_SEV_INFO
-#define LOG_FILE_LOCATION ""
-#define LOG_FILE_NAME "log.txt"
+#define LOG_FILE_DIRECTORY "logs"
 
 typedef struct logging_system_state {
+  int build_id;
   std::vector<std::string> logs;
-
+  std::string log_file_name;
   std::string last_writed;
   std::string dump_string;
   logging_system_state(void) {
     this->logs = std::vector<std::string>();
+    this->log_file_name = std::string();
     this->last_writed = std::string();
     this->dump_string = std::string();
   }
@@ -22,7 +23,7 @@ typedef struct logging_system_state {
 
 static logging_system_state * state = nullptr;
 
-bool logging_system_initialize(void) {
+bool logging_system_initialize(int build_id) {
   if (state and state != nullptr) {
     return false;
   }
@@ -31,12 +32,21 @@ bool logging_system_initialize(void) {
     return false;
   }
   *state = logging_system_state();
+  state->build_id = build_id;
 
-  const char * path = TextFormat("%s%s",LOG_FILE_LOCATION, LOG_FILE_NAME);
-  if (FileExists(path)) {
-    SaveFileText(path, " ");
+  char timeStr[11] = { 0 };
+  time_t now = time(NULL);
+  struct tm *tm_info = localtime(&now);
+  strftime(timeStr, sizeof(timeStr), "%d_%m_%Y", tm_info);
+
+  if (not DirectoryExists(LOG_FILE_DIRECTORY)) {
+    MakeDirectory(LOG_FILE_DIRECTORY);
   }
+  state->log_file_name = TextFormat("%s/%s.txt", LOG_FILE_DIRECTORY, timeStr);
 
+  if (not FileExists(state->log_file_name.c_str())) {
+    SaveFileText(state->log_file_name.c_str(), " ");
+  }
   return true;
 }
 
@@ -69,12 +79,14 @@ void inc_logging(logging_severity ls, const char* fmt, ...) {
 
   switch (ls)
   {
-    case LOG_SEV_INFO : out_log.append("::INFO]: "); break;
-    case LOG_SEV_WARNING : out_log.append("::WARN]: "); break;
-    case LOG_SEV_ERROR : out_log.append("::ERROR]: "); break;
-    case LOG_SEV_FATAL : out_log.append("::FATAL]: "); break;
+    case LOG_SEV_INFO :    out_log.append("::INFO] "); break;
+    case LOG_SEV_WARNING : out_log.append("::WARN] "); break;
+    case LOG_SEV_ERROR :   out_log.append("::ERROR]"); break;
+    case LOG_SEV_FATAL :   out_log.append("::FATAL]"); break;
     default: break;
   }
+  out_log.append(TextFormat("::[bID: %d]::", state->build_id));
+
   __builtin_va_list arg_ptr;
   va_start(arg_ptr, fmt); 
 
@@ -104,19 +116,18 @@ void inc_logging(logging_severity ls, const char* fmt, ...) {
   }
 
 	if (ls >= LOGGING_SEVERITY) {
-		const char * path = TextFormat("%s%s",LOG_FILE_LOCATION, LOG_FILE_NAME);
-    if (FileExists(path)) {
-      char * logged_text = LoadFileText(path);
+    if (FileExists(state->log_file_name.c_str())) {
+      char * logged_text = LoadFileText(state->log_file_name.c_str());
       if (TextLength(logged_text) <= 1) {
-        SaveFileText(path, log.c_str());
+        SaveFileText(state->log_file_name.c_str(), log.c_str());
       }
       else {
-        SaveFileText(path, TextFormat("%s%s", logged_text, log.c_str()));
+        SaveFileText(state->log_file_name.c_str(), TextFormat("%s%s", logged_text, log.c_str()));
       }
       UnloadFileText(logged_text);
     }
     else {
-      SaveFileText(path, TextFormat("%s", log.c_str()));
+      SaveFileText(state->log_file_name.c_str(), TextFormat("%s", log.c_str()));
     }
 	}
 }
