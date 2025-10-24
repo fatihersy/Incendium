@@ -673,6 +673,7 @@ typedef struct item_data {
   i32 id;
   item_type type;
   atlas_texture_id tex_id;
+  std::string display_name;
   
   data128 buffer;
 
@@ -681,11 +682,13 @@ typedef struct item_data {
     this->type = ITEM_TYPE_UNDEFINED;
     this->tex_id = ATLAS_TEX_ID_UNSPECIFIED;
     this->buffer = data128();
+    this->display_name = std::string();
   }
-  item_data(item_type _type, data128 _buffer, atlas_texture_id _tex_id) : item_data() {
+  item_data(item_type _type, const char* _display_name, data128 _buffer, atlas_texture_id _tex_id) : item_data() {
     this->type = _type;
     this->tex_id = _tex_id;
     this->buffer = _buffer;
+    this->display_name = _display_name;
   }
 } item_data;
 
@@ -1038,7 +1041,7 @@ typedef struct player_inventory_slot {
   i32 slot_id;
   ::item_type item_type;
   i32 amount;
-
+  std::string display_name;
   data128 ui_buffer;
 
   player_inventory_slot(void) {

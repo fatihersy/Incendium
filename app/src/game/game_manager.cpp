@@ -175,14 +175,14 @@ bool game_manager_initialize(const camera_metrics * in_camera_metrics, const app
 
   // Runes
   {
-    state->default_items.at(ITEM_TYPE_RUNE_DAMAGE_COMMON)       = item_data(ITEM_TYPE_RUNE_DAMAGE_COMMON,      data128(3.f), ATLAS_TEX_ID_RUNE_DAMAGE_COMMON);
-    state->default_items.at(ITEM_TYPE_RUNE_DAMAGE_UNCOMMON)     = item_data(ITEM_TYPE_RUNE_DAMAGE_UNCOMMON,    data128(8.f), ATLAS_TEX_ID_RUNE_DAMAGE_UNCOMMON);
-    state->default_items.at(ITEM_TYPE_RUNE_DAMAGE_RARE)         = item_data(ITEM_TYPE_RUNE_DAMAGE_RARE,        data128(5.f), ATLAS_TEX_ID_RUNE_DAMAGE_RARE);
-    state->default_items.at(ITEM_TYPE_RUNE_DAMAGE_EPIC)         = item_data(ITEM_TYPE_RUNE_DAMAGE_EPIC,        data128(5.f), ATLAS_TEX_ID_RUNE_DAMAGE_EPIC);
-    state->default_items.at(ITEM_TYPE_RUNE_RESISTANCE_COMMON)   = item_data(ITEM_TYPE_RUNE_RESISTANCE_COMMON,  data128(3.f), ATLAS_TEX_ID_RUNE_RESISTANCE_COMMON);
-    state->default_items.at(ITEM_TYPE_RUNE_RESISTANCE_UNCOMMON) = item_data(ITEM_TYPE_RUNE_RESISTANCE_UNCOMMON,data128(8.f), ATLAS_TEX_ID_RUNE_RESISTANCE_UNCOMMON);
-    state->default_items.at(ITEM_TYPE_RUNE_RESISTANCE_RARE)     = item_data(ITEM_TYPE_RUNE_RESISTANCE_RARE,    data128(5.f), ATLAS_TEX_ID_RUNE_RESISTANCE_RARE);
-    state->default_items.at(ITEM_TYPE_RUNE_RESISTANCE_EPIC)     = item_data(ITEM_TYPE_RUNE_RESISTANCE_EPIC,    data128(5.f), ATLAS_TEX_ID_RUNE_RESISTANCE_EPIC);
+    state->default_items.at(ITEM_TYPE_RUNE_DAMAGE_COMMON)       = item_data(ITEM_TYPE_RUNE_DAMAGE_COMMON,       "Damage common",      data128(3.f), ATLAS_TEX_ID_RUNE_DAMAGE_COMMON);
+    state->default_items.at(ITEM_TYPE_RUNE_DAMAGE_UNCOMMON)     = item_data(ITEM_TYPE_RUNE_DAMAGE_UNCOMMON,     "Damage uncommon",    data128(8.f), ATLAS_TEX_ID_RUNE_DAMAGE_UNCOMMON);
+    state->default_items.at(ITEM_TYPE_RUNE_DAMAGE_RARE)         = item_data(ITEM_TYPE_RUNE_DAMAGE_RARE,         "Damage rare",        data128(5.f), ATLAS_TEX_ID_RUNE_DAMAGE_RARE);
+    state->default_items.at(ITEM_TYPE_RUNE_DAMAGE_EPIC)         = item_data(ITEM_TYPE_RUNE_DAMAGE_EPIC,         "Damage epic",        data128(5.f), ATLAS_TEX_ID_RUNE_DAMAGE_EPIC);
+    state->default_items.at(ITEM_TYPE_RUNE_RESISTANCE_COMMON)   = item_data(ITEM_TYPE_RUNE_RESISTANCE_COMMON,   "Resistance common",  data128(3.f), ATLAS_TEX_ID_RUNE_RESISTANCE_COMMON);
+    state->default_items.at(ITEM_TYPE_RUNE_RESISTANCE_UNCOMMON) = item_data(ITEM_TYPE_RUNE_RESISTANCE_UNCOMMON, "Resistance uncommon",data128(8.f), ATLAS_TEX_ID_RUNE_RESISTANCE_UNCOMMON);
+    state->default_items.at(ITEM_TYPE_RUNE_RESISTANCE_RARE)     = item_data(ITEM_TYPE_RUNE_RESISTANCE_RARE,     "Resistance rare",    data128(5.f), ATLAS_TEX_ID_RUNE_RESISTANCE_RARE);
+    state->default_items.at(ITEM_TYPE_RUNE_RESISTANCE_EPIC)     = item_data(ITEM_TYPE_RUNE_RESISTANCE_EPIC,     "Resistance epic",    data128(5.f), ATLAS_TEX_ID_RUNE_RESISTANCE_EPIC);
   }
   // Runes
 
@@ -199,25 +199,21 @@ bool game_manager_reinit(const camera_metrics * in_camera_metrics, const app_set
     IERROR("game_manager::game_manager_reinit()::Player system initialization failed");
     return false;
   }
+
   if (not parse_or_create_save_data_from_file(SAVE_SLOT_CURRENT_SESSION, save_data(SAVE_SLOT_CURRENT_SESSION, (*get_default_player()), 0))) {
     IERROR("game_manager::game_manager_reinit()::Save system failed to creating/parsing serialization data");
     return false;
   }
   gm_load_game();
-  state->game_manager_initialized = true;
 
-  gm_add_to_inventory(ITEM_TYPE_RUNE_DAMAGE_COMMON);
-  gm_add_to_inventory(ITEM_TYPE_RUNE_DAMAGE_COMMON);
-  gm_add_to_inventory(ITEM_TYPE_RUNE_DAMAGE_COMMON);
-  gm_add_to_inventory(ITEM_TYPE_RUNE_DAMAGE_COMMON);
-  gm_add_to_inventory(ITEM_TYPE_RUNE_DAMAGE_COMMON);
-  gm_add_to_inventory(ITEM_TYPE_RUNE_DAMAGE_COMMON);
-  gm_add_to_inventory(ITEM_TYPE_RUNE_DAMAGE_COMMON);
+  state->game_manager_initialized = true;
 
   state->in_camera_metrics = in_camera_metrics;
   state->in_app_settings = in_app_settings;
   state->in_active_map = in_active_map_ptr;
   *state->game_info.player_state_dynamic = state->player_state_static;
+
+
   return true;
 }
 
@@ -391,6 +387,7 @@ void gm_end_game(bool wait_for_results, bool is_win) {
   *state->game_info.player_state_dynamic = player_state();
   state->game_info.is_win = is_win;
   if (wait_for_results) {
+
     state->ingame_phase = INGAME_PLAY_PHASE_RESULTS;
     //event_fire(EVENT_CODE_PLAY_SOUND, event_context()); // TODO: play win or lose sound
     event_fire(EVENT_CODE_CAMERA_SET_ZOOM_TARGET, event_context(static_cast<f32>(ZOOM_CAMERA_GAME_RESULTS)));
@@ -398,13 +395,16 @@ void gm_end_game(bool wait_for_results, bool is_win) {
   else {
     state->ingame_phase = INGAME_PLAY_PHASE_UNDEFINED;
   }
+  
+  gm_save_game();
 }
 void gm_save_game(void) {
-  state->game_progression_data->currency_coins_player_have += state->game_info.collected_coins;
+  state->game_progression_data->currency_coins_player_have = state->game_info.collected_coins;
   state->game_progression_data->player_data = state->player_state_static;
   save_save_data(SAVE_SLOT_CURRENT_SESSION);
 }
 void gm_load_game(void) {
+  state->player_state_static = *(get_default_player());
   state->game_progression_data = get_save_data(SAVE_SLOT_CURRENT_SESSION);
 
   for (size_t itr_000 = 0; itr_000 < state->player_state_static.stats.size(); ++itr_000) {
@@ -417,7 +417,12 @@ void gm_load_game(void) {
       set_static_player_state_stat(static_cast<character_stat_id>(itr_000), state->player_state_static.stats.at(itr_000).base_level);
     }
   }
-  
+  state->player_state_static.inventory = state->game_progression_data->player_data.inventory;
+  for (player_inventory_slot& slot : state->player_state_static.inventory) {
+    const item_data& item = state->default_items.at(slot.item_type);
+    slot.slot_id = state->next_inventory_slot_id++;
+    slot.display_name = item.display_name;
+  }
   *state->game_info.player_state_dynamic = state->player_state_static;
 }
 void gm_damage_spawn_if_collide(data128 coll_data, i32 damage, collision_type coll_check) {
@@ -637,70 +642,57 @@ void gm_add_to_inventory(item_type _item_type) {
     IWARN("game_manager::gm_add_to_inventory()::Item id is out of bounds");
     return;
   }
-  if (not state->game_progression_data or state->game_progression_data == nullptr) {
-    return;
-  }
-  std::vector<player_inventory_slot>& inventory = state->game_progression_data->player_data.inventory;
+  std::vector<player_inventory_slot>& inventory = state->player_state_static.inventory;
 
-  struct find_or_create_result{
-    player_inventory_slot& ref;
-    size_t index;
-  };
-  auto find_or_create = [&](item_type type, size_t start_with = 0) -> find_or_create_result {
+  auto find_or_create = [&inventory, &_item_type](item_type type, size_t start_with = 0) {
     for (size_t itr_000 = start_with; itr_000 < inventory.size(); itr_000++) {
       player_inventory_slot& slot = inventory.at(itr_000);
       if (slot.item_type == type) {
-        return find_or_create_result { slot, itr_000 };
+        slot.amount++;
+        return;
       }
     }
     player_inventory_slot& slot = inventory.emplace_back(player_inventory_slot());
     slot.slot_id = state->next_inventory_slot_id++;
-    return find_or_create_result { slot, inventory.size() - 1u };
+    slot.item_type = _item_type;
+    slot.display_name = state->default_items.at(_item_type).display_name.c_str();
+    slot.amount++;
   };
-
   switch (_item_type) {
     case ITEM_TYPE_EXPERIENCE: return;
     case ITEM_TYPE_COIN: return;
     case ITEM_TYPE_HEALTH_FRAGMENT: return;
     case ITEM_TYPE_CHEST: return;
     case ITEM_TYPE_RUNE_DAMAGE_COMMON: {
-      find_or_create_result result = find_or_create(_item_type);
-      ++result.ref.amount;
+      find_or_create(_item_type);
       return;
     }
     case ITEM_TYPE_RUNE_DAMAGE_UNCOMMON: {
-      find_or_create_result result = find_or_create(_item_type);
-      ++result.ref.amount;
+      find_or_create(_item_type);
       return;
     }
     case ITEM_TYPE_RUNE_DAMAGE_RARE: {
-      find_or_create_result result = find_or_create(_item_type);
-      ++result.ref.amount;
+      find_or_create(_item_type);
       return;
     }
     case ITEM_TYPE_RUNE_DAMAGE_EPIC: {
-      find_or_create_result result = find_or_create(_item_type);
-      ++result.ref.amount;
+      find_or_create(_item_type);
       return;
     }
     case ITEM_TYPE_RUNE_RESISTANCE_COMMON: {
-      find_or_create_result result = find_or_create(_item_type);
-      ++result.ref.amount;
+      find_or_create(_item_type);
       return;
     }
     case ITEM_TYPE_RUNE_RESISTANCE_UNCOMMON: {
-      find_or_create_result result = find_or_create(_item_type);
-      ++result.ref.amount;
+      find_or_create(_item_type);
       return;
     }
     case ITEM_TYPE_RUNE_RESISTANCE_RARE: {
-      find_or_create_result result = find_or_create(_item_type);
-      ++result.ref.amount;
+      find_or_create(_item_type);
       return;
     }
     case ITEM_TYPE_RUNE_RESISTANCE_EPIC: {
-      find_or_create_result result = find_or_create(_item_type);
-      ++result.ref.amount;
+      find_or_create(_item_type);
       return;
     }
     default: {
@@ -708,14 +700,16 @@ void gm_add_to_inventory(item_type _item_type) {
       return;
     }
   }
-
   IWARN("game_manager::gm_add_to_inventory()::Function ended unexpectedly");
 }
 // OPS
 
 // GET / SET
-const i32* get_currency_coins_total(void) {
-  return __builtin_addressof(state->game_progression_data->currency_coins_player_have);
+i32 get_currency_coins_total(void) {
+  if (not state->game_progression_data or state->game_progression_data == nullptr) {
+    return -1;
+  }
+  return state->game_progression_data->currency_coins_player_have;
 }
 bool get_b_player_have_upgrade_points(void) {
   return state->game_info.player_state_dynamic->is_player_have_ability_upgrade_points;

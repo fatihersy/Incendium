@@ -25,15 +25,23 @@ using json = nlohmann::json;
 #define AES_IV_SIZE 16 // CBC IV size (must be equal to AES_BLOCK_SIZE)
 #define HMAC_TAG_SIZE 32 // HMAC-SHA256 always produces 32 bytes
 
-#define M_CHARACTER_STAT_HEALTH "HEALTH"
-#define M_CHARACTER_STAT_HP_REGEN "HP_REGEN"
-#define M_CHARACTER_STAT_MOVE_SPEED "MOVE_SPEED"
-#define M_CHARACTER_STAT_AOE "AOE"
-#define M_CHARACTER_STAT_DAMAGE "DAMAGE"
-#define M_CHARACTER_STAT_ABILITY_CD "ABILITY_CD"
-#define M_CHARACTER_STAT_PROJECTILE_AMOUNT "PROJECTILE_AMOUNT"
-#define M_CHARACTER_STAT_EXP_GAIN "EXP_GAIN"
-#define M_CHARACTER_STAT_TOTAL_TRAIT_POINTS "TOTAL_TRAIT_POINTS"
+#define JSON_SAVE_DATA_MAP_CURRENCY_COINS "currency_coins_player_have"
+#define JSON_SAVE_DATA_MAP_PLAYER_DATA "player_data"
+
+#define JSON_SAVE_DATA_MAP_PLAYER_DATA_STATS "stats"
+#define JSON_SAVE_DATA_MAP_PLAYER_DATA_STAT_HEALTH "HEALTH"
+#define JSON_SAVE_DATA_MAP_PLAYER_DATA_STAT_HP_REGEN "HP_REGEN"
+#define JSON_SAVE_DATA_MAP_PLAYER_DATA_STAT_MOVE_SPEED "MOVE_SPEED"
+#define JSON_SAVE_DATA_MAP_PLAYER_DATA_STAT_AOE "AOE"
+#define JSON_SAVE_DATA_MAP_PLAYER_DATA_STAT_DAMAGE "DAMAGE"
+#define JSON_SAVE_DATA_MAP_PLAYER_DATA_STAT_ABILITY_CD "ABILITY_CD"
+#define JSON_SAVE_DATA_MAP_PLAYER_DATA_STAT_PROJECTILE_AMOUNT "PROJECTILE_AMOUNT"
+#define JSON_SAVE_DATA_MAP_PLAYER_DATA_STAT_EXP_GAIN "EXP_GAIN"
+#define JSON_SAVE_DATA_MAP_PLAYER_DATA_STAT_TOTAL_TRAIT_POINTS "TOTAL_TRAIT_POINTS"
+
+#define JSON_SAVE_DATA_MAP_PLAYER_DATA_INVENTORY "inventory"
+#define JSON_SAVE_DATA_MAP_PLAYER_DATA_INVENTORY_ITEM_TYPE "item_type"
+#define JSON_SAVE_DATA_MAP_PLAYER_DATA_INVENTORY_AMOUTH "amouth"
 
 // Save system state
 struct save_game_system_state {
@@ -392,36 +400,57 @@ std::string get_save_filename(save_slot_id slot) {
 
 json serialize_save_data(const save_data& data) {
   json j;
-  j["currency_coins_player_have"] = data.currency_coins_player_have;
-  json stats;
-  stats[M_CHARACTER_STAT_HEALTH] = data.player_data.stats[CHARACTER_STATS_HEALTH].current_level;
-  stats[M_CHARACTER_STAT_HP_REGEN] = data.player_data.stats[CHARACTER_STATS_HP_REGEN].current_level;
-  stats[M_CHARACTER_STAT_MOVE_SPEED] = data.player_data.stats[CHARACTER_STATS_MOVE_SPEED].current_level;
-  stats[M_CHARACTER_STAT_AOE] = data.player_data.stats[CHARACTER_STATS_AOE].current_level;
-  stats[M_CHARACTER_STAT_DAMAGE] = data.player_data.stats[CHARACTER_STATS_DAMAGE].current_level;
-  stats[M_CHARACTER_STAT_ABILITY_CD] = data.player_data.stats[CHARACTER_STATS_ABILITY_CD].current_level;
-  stats[M_CHARACTER_STAT_PROJECTILE_AMOUNT] = data.player_data.stats[CHARACTER_STATS_PROJECTILE_AMOUNT].current_level;
-  stats[M_CHARACTER_STAT_EXP_GAIN] = data.player_data.stats[CHARACTER_STATS_EXP_GAIN].current_level;
-  stats[M_CHARACTER_STAT_TOTAL_TRAIT_POINTS] = data.player_data.stats[CHARACTER_STATS_TOTAL_TRAIT_POINTS].current_level;
-  j["player_data"]["stats"] = stats;
+  j[JSON_SAVE_DATA_MAP_CURRENCY_COINS] = data.currency_coins_player_have;
 
+  json stats;
+  stats[JSON_SAVE_DATA_MAP_PLAYER_DATA_STAT_HEALTH] = data.player_data.stats[CHARACTER_STATS_HEALTH].current_level;
+  stats[JSON_SAVE_DATA_MAP_PLAYER_DATA_STAT_HP_REGEN] = data.player_data.stats[CHARACTER_STATS_HP_REGEN].current_level;
+  stats[JSON_SAVE_DATA_MAP_PLAYER_DATA_STAT_MOVE_SPEED] = data.player_data.stats[CHARACTER_STATS_MOVE_SPEED].current_level;
+  stats[JSON_SAVE_DATA_MAP_PLAYER_DATA_STAT_AOE] = data.player_data.stats[CHARACTER_STATS_AOE].current_level;
+  stats[JSON_SAVE_DATA_MAP_PLAYER_DATA_STAT_DAMAGE] = data.player_data.stats[CHARACTER_STATS_DAMAGE].current_level;
+  stats[JSON_SAVE_DATA_MAP_PLAYER_DATA_STAT_ABILITY_CD] = data.player_data.stats[CHARACTER_STATS_ABILITY_CD].current_level;
+  stats[JSON_SAVE_DATA_MAP_PLAYER_DATA_STAT_PROJECTILE_AMOUNT] = data.player_data.stats[CHARACTER_STATS_PROJECTILE_AMOUNT].current_level;
+  stats[JSON_SAVE_DATA_MAP_PLAYER_DATA_STAT_EXP_GAIN] = data.player_data.stats[CHARACTER_STATS_EXP_GAIN].current_level;
+  stats[JSON_SAVE_DATA_MAP_PLAYER_DATA_STAT_TOTAL_TRAIT_POINTS] = data.player_data.stats[CHARACTER_STATS_TOTAL_TRAIT_POINTS].current_level;
+  j[JSON_SAVE_DATA_MAP_PLAYER_DATA][JSON_SAVE_DATA_MAP_PLAYER_DATA_STATS] = stats;
+
+  json inventory;
+  for (const player_inventory_slot& slot : data.player_data.inventory) {
+    inventory.push_back({
+      { JSON_SAVE_DATA_MAP_PLAYER_DATA_INVENTORY_ITEM_TYPE, static_cast<i32>(slot.item_type) },
+      { JSON_SAVE_DATA_MAP_PLAYER_DATA_INVENTORY_AMOUTH,    slot.amount }
+    });
+  }
+  j[JSON_SAVE_DATA_MAP_PLAYER_DATA][JSON_SAVE_DATA_MAP_PLAYER_DATA_INVENTORY] = inventory;
+  
   return j;
 }
 
 void deserialize_save_data(const json& j, save_data& data) {
-  if (j.contains("currency_coins_player_have")) {
-    data.currency_coins_player_have = j.value("currency_coins_player_have", -1);
+  data.player_data.inventory = std::vector<player_inventory_slot>();
+
+  if (j.contains(JSON_SAVE_DATA_MAP_CURRENCY_COINS)) {
+    data.currency_coins_player_have = j.value(JSON_SAVE_DATA_MAP_CURRENCY_COINS, -1);
   }
-  if (j.contains("player_data") && j["player_data"].contains("stats")) {
-    const auto& stats = j["player_data"]["stats"];
-    data.player_data.stats[CHARACTER_STATS_HEALTH].current_level             = stats.value(M_CHARACTER_STAT_HEALTH,            -1);
-    data.player_data.stats[CHARACTER_STATS_HP_REGEN].current_level           = stats.value(M_CHARACTER_STAT_HP_REGEN,          -1);
-    data.player_data.stats[CHARACTER_STATS_MOVE_SPEED].current_level         = stats.value(M_CHARACTER_STAT_MOVE_SPEED,        -1);
-    data.player_data.stats[CHARACTER_STATS_AOE].current_level                = stats.value(M_CHARACTER_STAT_AOE,               -1);
-    data.player_data.stats[CHARACTER_STATS_DAMAGE].current_level             = stats.value(M_CHARACTER_STAT_DAMAGE,            -1);
-    data.player_data.stats[CHARACTER_STATS_ABILITY_CD].current_level         = stats.value(M_CHARACTER_STAT_ABILITY_CD,        -1);
-    data.player_data.stats[CHARACTER_STATS_PROJECTILE_AMOUNT].current_level  = stats.value(M_CHARACTER_STAT_PROJECTILE_AMOUNT, -1);
-    data.player_data.stats[CHARACTER_STATS_EXP_GAIN].current_level           = stats.value(M_CHARACTER_STAT_EXP_GAIN,          -1);
-    data.player_data.stats[CHARACTER_STATS_TOTAL_TRAIT_POINTS].current_level = stats.value(M_CHARACTER_STAT_TOTAL_TRAIT_POINTS,-1);
+  if (j.contains(JSON_SAVE_DATA_MAP_PLAYER_DATA) && j[JSON_SAVE_DATA_MAP_PLAYER_DATA].contains(JSON_SAVE_DATA_MAP_PLAYER_DATA_STATS)) {
+    const auto& stats = j[JSON_SAVE_DATA_MAP_PLAYER_DATA][JSON_SAVE_DATA_MAP_PLAYER_DATA_STATS];
+    data.player_data.stats[CHARACTER_STATS_HEALTH].current_level             = stats.value(JSON_SAVE_DATA_MAP_PLAYER_DATA_STAT_HEALTH,            -1);
+    data.player_data.stats[CHARACTER_STATS_HP_REGEN].current_level           = stats.value(JSON_SAVE_DATA_MAP_PLAYER_DATA_STAT_HP_REGEN,          -1);
+    data.player_data.stats[CHARACTER_STATS_MOVE_SPEED].current_level         = stats.value(JSON_SAVE_DATA_MAP_PLAYER_DATA_STAT_MOVE_SPEED,        -1);
+    data.player_data.stats[CHARACTER_STATS_AOE].current_level                = stats.value(JSON_SAVE_DATA_MAP_PLAYER_DATA_STAT_AOE,               -1);
+    data.player_data.stats[CHARACTER_STATS_DAMAGE].current_level             = stats.value(JSON_SAVE_DATA_MAP_PLAYER_DATA_STAT_DAMAGE,            -1);
+    data.player_data.stats[CHARACTER_STATS_ABILITY_CD].current_level         = stats.value(JSON_SAVE_DATA_MAP_PLAYER_DATA_STAT_ABILITY_CD,        -1);
+    data.player_data.stats[CHARACTER_STATS_PROJECTILE_AMOUNT].current_level  = stats.value(JSON_SAVE_DATA_MAP_PLAYER_DATA_STAT_PROJECTILE_AMOUNT, -1);
+    data.player_data.stats[CHARACTER_STATS_EXP_GAIN].current_level           = stats.value(JSON_SAVE_DATA_MAP_PLAYER_DATA_STAT_EXP_GAIN,          -1);
+    data.player_data.stats[CHARACTER_STATS_TOTAL_TRAIT_POINTS].current_level = stats.value(JSON_SAVE_DATA_MAP_PLAYER_DATA_STAT_TOTAL_TRAIT_POINTS,-1);
+  }
+  if (j.contains(JSON_SAVE_DATA_MAP_PLAYER_DATA) && j[JSON_SAVE_DATA_MAP_PLAYER_DATA].contains(JSON_SAVE_DATA_MAP_PLAYER_DATA_INVENTORY)) {
+    const auto& inventory = j[JSON_SAVE_DATA_MAP_PLAYER_DATA][JSON_SAVE_DATA_MAP_PLAYER_DATA_INVENTORY];
+
+    for (const auto& raw_slot : inventory) {
+      player_inventory_slot& slot = data.player_data.inventory.emplace_back(player_inventory_slot());
+      slot.item_type = static_cast<item_type>(raw_slot.value(JSON_SAVE_DATA_MAP_PLAYER_DATA_INVENTORY_ITEM_TYPE, static_cast<i32>(ITEM_TYPE_UNDEFINED)));
+      slot.amount = raw_slot.value(JSON_SAVE_DATA_MAP_PLAYER_DATA_INVENTORY_AMOUTH, -1);
+    }
   }
 }

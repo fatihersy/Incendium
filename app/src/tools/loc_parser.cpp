@@ -637,12 +637,16 @@ const loc_data*  loc_parser_get_language_by_name(const char * name) {
 
 const char* lc_txt(i32 txt_id) {
   if (not state or state == nullptr) {
-    IERROR("loc_parser::lc_txt()::State is not valid");
-    return "\0";
+    IERROR("loc_parser::lc_txt()::State is invalid");
+    return "NULL";
   }
-  if (txt_id >= LOC_TEXT_MAX or txt_id < LOC_TEXT_UNDEFINED ) {
+  if (not state->active_loc or state->active_loc == nullptr) {
+    IERROR("loc_parser::lc_txt()::Localization is invalid");
+    return "NULL";
+  }
+  if (txt_id >= LOC_TEXT_MAX or txt_id <= LOC_TEXT_UNDEFINED ) {
     IWARN("loc_parser::lc_txt()::Out of range");
-    return "\0";
+    return "NULL";
   }
   return state->active_loc->content.at(static_cast<size_t>(txt_id)).c_str();
 }

@@ -259,7 +259,6 @@ void chosen_trait_button_on_click(size_t index);
   state->main_menu_state_character_panel = panel(BTN_STATE_UNDEFINED, ATLAS_TEX_ID_DARK_FANTASY_PANEL_BG, ATLAS_TEX_ID_DARK_FANTASY_PANEL_SELECTED, 
     Vector4 {6, 6, 6, 6}, Color { 30, 39, 46, 128}
   );
-  gm_save_game();
 
   if (fade_in) {
     smm_begin_fadein(data128(static_cast<i32>(MAIN_MENU_SCENE_DEFAULT)), fade_on_complete_change_main_menu_type);
@@ -442,23 +441,23 @@ void render_scene_main_menu(void) {
 }
 void render_interface_main_menu(void) {
   if (state->mainmenu_state == MAIN_MENU_SCENE_DEFAULT) {
-
     Vector2 screen_location_acc = Vector2 {0.f, -21.f};
     
     gui_label_shader(GAME_TITLE, SHADER_ID_SDF_TEXT, FONT_TYPE_TITLE, 5, VECTOR2(SMM_BASE_RENDER_WIDTH * .5f, SMM_BASE_RENDER_HEIGHT * .25f), WHITE, true, true);
+
     if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_PLAY), BTN_ID_MAINMENU_BUTTON_PLAY, screen_location_acc, SMM_BASE_RENDER_DIV2, true)) {
       begin_scene_change(MAIN_MENU_SCENE_TO_PLAY_TRAIT_CHOICE);
     }
     screen_location_acc.y += 10.5f;
 
     if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_CHARACTER), BTN_ID_MAINMENU_BUTTON_ENTER_STATE_CHARACTER, screen_location_acc, SMM_BASE_RENDER_DIV2, true)) {
-      state->mainmenu_state = MAIN_MENU_SCENE_CHARACTER;
+      begin_scene_change(MAIN_MENU_SCENE_CHARACTER);
     }
     screen_location_acc.y += 10.5f;
 
     if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_SETTINGS), BTN_ID_MAINMENU_BUTTON_SETTINGS, screen_location_acc, SMM_BASE_RENDER_DIV2, true)) {
       ui_refresh_setting_sliders_to_default();
-      state->mainmenu_state = MAIN_MENU_SCENE_SETTINGS;
+      begin_scene_change(MAIN_MENU_SCENE_SETTINGS);
     }
     screen_location_acc.y += 10.5f;
 
@@ -560,25 +559,30 @@ void draw_main_menu_character_subscene_inventory_item_list_panel(Rectangle paren
   gui_panel(state->inventory_item_list_panel, state->inventory_item_list_panel.dest, false);
 
   f32 height_buffer = 0.f;
-  for (player_inventory_slot& slot : state->ingame_info->player_state_dynamic->inventory) {
+  for (const player_inventory_slot& slot : state->ingame_info->player_state_static->inventory) {
     panel * _local_panel = smm_get_local_panel(slot.ui_buffer.i32[0]);
+    if (not _local_panel or _local_panel == nullptr) {
+      throw std::runtime_error("panel is invalid");
+    }
 
     const Rectangle local_panel_dest = Rectangle {
-      this_dest.x + padding.x + height_buffer,
-      this_dest.y + padding.y,
+      this_dest.x + padding.x,
+      this_dest.y + padding.y + height_buffer,
       this_dest.width + padding.z,
       (this_dest.height * .2f)+ padding.w
     };
-    height_buffer += local_panel_dest.height;
+    height_buffer += local_panel_dest.height + padding.y;
 
     if (gui_panel_active(_local_panel, local_panel_dest, false)) {
       
     }
     gui_label(
-      "Runes", FONT_TYPE_REGULAR, 1, 
+      slot.display_name.c_str(), FONT_TYPE_REGULAR, 1, 
       Vector2 {local_panel_dest.x + local_panel_dest.width * .5f, local_panel_dest.y + local_panel_dest.height * .5f}, 
       WHITE, true, true
     );
+
+    gui_label_box_format(FONT_TYPE_LIGHT, 1, local_panel_dest, WHITE, TEXT_ALIGN_BOTTOM_RIGHT, "%d", slot.amount);
   }
 }
 void draw_main_menu_character_subscene_inventory_slots_panel(Rectangle parent_dest, const Vector4 padding) {
@@ -669,15 +673,13 @@ void draw_main_menu_character_subscene_stat_list_panel(Rectangle panel_dest, con
           gui_draw_atlas_texture_id_scale(ATLAS_TEX_ID_PASSIVE_UPGRADE_TIER_STAR, tier_pos, 1.f, WHITE, false);
         }
       }
-
       gui_draw_texture_id_pro(TEX_ID_ASSET_ATLAS, stat->passive_icon_src, icon_pos);
       draw_atlas_texture_stretch(ATLAS_TEX_ID_HEADER, Rectangle {64, 0, 32, 32}, header_tex_pos, true, WHITE);
       gui_label(lc_txt(stat->passive_display_name_symbol), panel_font_type, panel_font_size, title_pos, WHITE, true, true);
     }
   }
-
   atlas_texture_id icon_tex_id = ATLAS_TEX_ID_CURRENCY_COIN_ICON_5000;
-  const char * total_stock_text = TextFormat("%d", (*get_currency_coins_total()));
+  const char * total_stock_text = TextFormat("%d", get_currency_coins_total());
   const char * total_stock_desc_text = lc_txt(LOC_TEXT_MAINMENU_STATE_CHARACTER_TAB_STATS_CURRENCY_TEXT_TOTAL);
   Vector2 total_stock_desc_text_measure = ui_measure_text(total_stock_desc_text, panel_font_type, panel_font_size);
   const f32 total_stock_display_dest_dim = showcase_base_dim;
@@ -829,13 +831,12 @@ void draw_main_menu_character_subscene_stat_details_panel(Rectangle panel_dest, 
   };
   if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_STATE_CHARACTER_TAB_STATS_BUTTON_UPGRADE), BTN_ID_MAINMENU_STATE_CHARACTER_BUY_STAT_UPGRADE, ZEROVEC2, button_location, false)) {
     const i32& cost = state->hovered_stat->upgrade_cost;
-    const i32* stock = get_currency_coins_total();
+    const i32 stock = get_currency_coins_total();
     if ((state->hovered_stat->current_level - state->hovered_stat->base_level) < MAX_STAT_UPGRADE_TIER) {
-      if ( (*stock) - cost >= 0) {
+      if ( stock - cost >= 0) {
         currency_coins_add(-state->hovered_stat->upgrade_cost);
         i32 level = get_static_player_state_stat(state->hovered_stat->id)->current_level;
         set_static_player_state_stat(state->hovered_stat->id, level+1);
-        gm_save_game();
         event_fire(EVENT_CODE_PLAY_SOUND_GROUP, event_context(SOUNDGROUP_ID_BUTTON_ON_CLICK, static_cast<i32>(true)));
       } else {
         event_fire(EVENT_CODE_PLAY_SOUND, event_context(SOUND_ID_DENY1, static_cast<i32>(false)));
@@ -1529,7 +1530,7 @@ void begin_scene_change(main_menu_scene_type mms, [[__maybe_unused__]] event_con
       for (player_inventory_slot& slot : state->ingame_info->player_state_dynamic->inventory) {
     
         [[__maybe_unused__]] panel * _lc_pnl = smm_add_local_panel(state->next_local_panel_id, state->panel_active_dark_fantasy_default);
-        slot.ui_buffer.i32[0] = state->next_local_button_id++;
+        slot.ui_buffer.i32[0] = state->next_local_panel_id++;
       }
       break;
     }

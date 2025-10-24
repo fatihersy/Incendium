@@ -10,7 +10,7 @@
 void update_game_manager(void);
 void update_game_manager_debug(void);
 
-const i32* get_currency_coins_total(void);
+i32 get_currency_coins_total(void);
 bool get_b_player_have_upgrade_points(void);
 void set_dynamic_player_have_ability_upgrade_points(bool _b);
 

@@ -31,7 +31,7 @@ typedef struct save_data {
   bool is_success;
   save_data(void) {
     this->id = SAVE_SLOT_UNDEFINED;
-    this->file_name = std::string("");
+    this->file_name = std::string();
     this->currency_coins_player_have = 0;
     this->player_data = player_state();
     this->is_success = false;

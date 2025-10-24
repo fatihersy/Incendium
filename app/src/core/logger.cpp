@@ -79,13 +79,13 @@ void inc_logging(logging_severity ls, const char* fmt, ...) {
 
   switch (ls)
   {
-    case LOG_SEV_INFO :    out_log.append("::INFO] "); break;
-    case LOG_SEV_WARNING : out_log.append("::WARN] "); break;
-    case LOG_SEV_ERROR :   out_log.append("::ERROR]"); break;
-    case LOG_SEV_FATAL :   out_log.append("::FATAL]"); break;
+    case LOG_SEV_INFO :    out_log.append("::INFO] :"); break;
+    case LOG_SEV_WARNING : out_log.append("::WARN] :"); break;
+    case LOG_SEV_ERROR :   out_log.append("::ERROR]:"); break;
+    case LOG_SEV_FATAL :   out_log.append("::FATAL]:"); break;
     default: break;
   }
-  out_log.append(TextFormat("::[bID: %d]::", state->build_id));
+  out_log.append(TextFormat("bID: %d -- ", state->build_id));
 
   __builtin_va_list arg_ptr;
   va_start(arg_ptr, fmt); 

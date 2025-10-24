@@ -813,7 +813,6 @@ void draw_end_game_panel(void) {
   );
 	Vector2 accept_btn_dest = Vector2 { bg_panel_dest.x + (bg_panel_dest.width * .5f), bg_panel_dest.y + (bg_panel_dest.height * .9f)};
   if(gui_menu_button(lc_txt(LOC_TEXT_INGAME_STATE_RESULT_ACCEPT), BTN_ID_IN_GAME_BUTTON_RETURN_MENU, ZEROVEC2, accept_btn_dest, true)) {
-    gm_save_game();
     end_scene_in_game(true);
     event_fire(EVENT_CODE_SCENE_MAIN_MENU, event_context(static_cast<i32>(false)));
   }
@@ -1100,7 +1099,7 @@ void sig_update_chest_sequence(void) {
       else if (seq.accumulator > seq.duration) {
         seq.accumulator = seq.duration;
       }
-      seq.mm_ex.f32[1] = EaseSineInOut(seq.accumulator, seq.mm_ex.f32[0], seq.mm_ex.f32[2], seq.duration);
+      seq.mm_ex.f32[1] = EaseSineInOut(seq.accumulator, seq.mm_ex.f32[0], -seq.mm_ex.f32[2], seq.duration);
       ui_update_sprite(__builtin_addressof(seq.sheets_background.at(0)));
       return;
     }
@@ -1177,7 +1176,7 @@ void sig_render_chest_sequence(void) {
       if (center_tex_id != static_cast<atlas_texture_id>(seq.mm_ex.f32[3])) {
         event_fire(EVENT_CODE_PLAY_SOUND, event_context(static_cast<i32>(SOUND_ID_SPIN_SFX), 0));
         
-        seq.mm_ex.f32[3] = center_tex_id;
+        seq.mm_ex.f32[3] = static_cast<f32>(center_tex_id);
       }
 
       DrawLine(center_item_dest.x, center_item_dest.y - center_item_dest.height * .5f, center_item_dest.x, center_item_dest.y + center_item_dest.height * .5f, WHITE);
