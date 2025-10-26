@@ -5,6 +5,11 @@
 #include "defines.h"
 #include "raylib.h"
 
+#define DIRECTION_VECTOR_LEFT  (Vector2{-1.f, 0.f})
+#define DIRECTION_VECTOR_RIGHT (Vector2{ 1.f, 0.f})
+#define DIRECTION_VECTOR_UP    (Vector2{ 0.f,-1.f})
+#define DIRECTION_VECTOR_DOWN  (Vector2{ 0.f, 1.f})
+
 Vector2 get_a_point_of_a_circle(Vector2 position, i16 radius, i16 angle);
 
 Vector2 move_towards(Vector2 position, Vector2 target, f32 speed);
@@ -23,5 +28,7 @@ f32 math_fmod(f32 x, f64 y);
 f32 math_floor(f32 x);
 f32 math_ceil(f32 x);
 f32 math_abs(f32 x);
+
+f32 math_easing(f32 accumulator, f32 begin, f32 change, f32 duration, easing_type easing_function);
 
 #endif

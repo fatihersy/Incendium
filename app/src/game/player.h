@@ -24,6 +24,8 @@ void player_move_player(Vector2 new_pos);
 void player_add_exp_to_player(i32 raw_exp);
 void player_take_damage(i32 damage);
 void player_heal_player(i32 amouth);
+void player_attack_init(void);
+void player_roll_init(void);
 
 player_state* get_player_state(void);
 const player_state* get_default_player(void);

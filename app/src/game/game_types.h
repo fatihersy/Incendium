@@ -24,13 +24,6 @@
 #define ZERO_IMAGE (Image {nullptr, 0, 0, 0, 0})
 #define ZERO_FONT (Font {0, 0, 0, ZERO_TEXTURE, nullptr, nullptr})
 
-//   int baseSize;           // Base size (default chars height)
-//   int glyphCount;         // Number of glyph characters
-//   int glyphPadding;       // Padding around the glyph characters
-//   Texture2D texture;      // Texture atlas containing the glyphs
-//   Rectangle *recs;        // Rectangles in texture for the glyphs
-//   GlyphInfo *glyphs;      // Glyphs info data
-
 #define ATLAS_TEXTURE_ID TEX_ID_ASSET_ATLAS
 
 #define WHITE_ROCK CLITERAL(Color) {245, 246, 250,255}
@@ -130,6 +123,14 @@ typedef enum character_stat_id {
   CHARACTER_STATS_TOTAL_TRAIT_POINTS,
   CHARACTER_STATS_MAX,
 } character_stat_id;
+
+typedef enum character_attack_combo {
+  CHARACTER_ATTACK_COMBO_UNDEFINED,
+  CHARACTER_ATTACK_COMBO_1,
+  CHARACTER_ATTACK_COMBO_2,
+  CHARACTER_ATTACK_COMBO_3,
+  CHARACTER_ATTACK_COMBO_MAX
+} character_attack_combo;
 
 typedef enum font_type {
   FONT_TYPE_UNDEFINED,
@@ -234,6 +235,16 @@ typedef enum player_animation_set {
   PLAYER_ANIMATION_MAX,
 } player_animation_set;
 
+typedef enum player_animation_state {
+  PL_ANIM_STATE_UNDEFINED,
+  PL_ANIM_STATE_IDLE,
+  PL_ANIM_STATE_WALK,
+  PL_ANIM_STATE_ROLL,
+  PL_ANIM_STATE_ATTACK,
+  PL_ANIM_STATE_TAKE_DAMAGE,
+  PL_ANIM_STATE_MAX,
+} player_animation_state;
+
 typedef enum item_type {
   ITEM_TYPE_UNDEFINED,
   ITEM_TYPE_EXPERIENCE,
@@ -274,6 +285,26 @@ typedef enum damage_deal_result_type {
   DAMAGE_DEAL_RESULT_MAX,
 } damage_deal_result_type;
 
+struct easing_accumulation_control {
+  easing_type ease_type;
+  f32 accumulator;
+  f32 duration;
+  f32 begin_x;
+  f32 begin_y;
+  f32 change_x;
+  f32 change_y;
+
+  easing_accumulation_control(void) {
+    this->ease_type = EASING_TYPE_UNDEFINED;
+    this->accumulator = 0.f;
+    this->duration = 0.f;
+    this->begin_x = 0.f;
+    this->begin_y = 0.f;
+    this->change_x = 0.f;
+    this->change_y = 0.f;
+  }
+};
+
 typedef struct damage_deal_result {
   damage_deal_result_type type;
   i32 inflicted_damage;
@@ -307,7 +338,7 @@ typedef struct spritesheet {
 
   Color tint;
   f32 rotation;
-  i32 fps;
+  f32 fps;
   f32 time_accumulator;
   world_direction w_direction;
   bool is_started;
@@ -332,7 +363,7 @@ typedef struct spritesheet {
     this->coord = ZERORECT;
     this->tint = WHITE;
     this->rotation = 0.f;
-    this->fps = 0;
+    this->fps = 0.f;
     this->time_accumulator = 0.f;
     this->w_direction = WORLD_DIRECTION_UNDEFINED;
     this->is_started = false;
@@ -402,6 +433,7 @@ typedef struct worldmap_stage {
   std::string filename;
   std::array<Rectangle, MAX_SPAWN_COLLISIONS> spawning_areas;
   Vector2 screen_location;
+  Rectangle level_bound;
   i32 total_spawn_count;
   i32 total_boss_count;
   i32 stage_level;
@@ -417,6 +449,7 @@ typedef struct worldmap_stage {
     this->filename = std::string("");
     this->spawning_areas.fill(ZERORECT);
     this->screen_location = ZEROVEC2;
+    this->level_bound = ZERORECT;
     this->total_spawn_count = 0;
     this->total_boss_count = 0;
     this->stage_level = 0;
@@ -430,12 +463,13 @@ typedef struct worldmap_stage {
   worldmap_stage(
     i32 in_id, i32 title_txt_id, std::string in_filename, i32 in_stage_level, f32 duration,
     i32 in_spw_count, i32 in_boss_count, f32 in_spw_scale, f32 in_boss_scale, 
-    Vector2 in_screen_loc, bool in_is_centered, bool in_display_on_screen, bool in_is_active) : worldmap_stage() 
+    Vector2 in_screen_loc, Rectangle _level_bound, bool in_is_centered, bool in_display_on_screen, bool in_is_active) : worldmap_stage() 
   {
     this->map_id = in_id;
     this->title_txt_id = title_txt_id;
     this->filename = in_filename;
     this->screen_location = NORMALIZE_VEC2(in_screen_loc.x, in_screen_loc.y, 3840.f, 2160.f);
+    this->level_bound = _level_bound;
     this->total_spawn_count = in_spw_count;
     this->total_boss_count = in_boss_count;
     this->stage_level = in_stage_level;
@@ -1055,7 +1089,6 @@ typedef struct player_inventory_slot {
   }
 } player_inventory_slot;
 
-// LABEL: Player State
 typedef struct player_state {
   ability_play_system ability_system;
   std::array<character_stat, CHARACTER_STATS_MAX> stats;
@@ -1078,7 +1111,9 @@ typedef struct player_state {
   spritesheet current_anim_to_play;
 
   world_direction w_direction;
+  character_attack_combo combo_type;
   Vector2 position;
+  player_animation_state anim_state;
   f32 damage_break_time;
   f32 damage_break_current;
   i32 exp_to_next_level;
@@ -1087,12 +1122,11 @@ typedef struct player_state {
   f32 health_perc;
   i32 health_current;
   i32 interaction_radius;
+  easing_accumulation_control roll_control;
 
   i32 level;
-
   bool is_player_have_ability_upgrade_points;
   bool is_initialized;
-  bool is_moving;
   bool is_dead;
   bool is_damagable;
 
@@ -1118,7 +1152,9 @@ typedef struct player_state {
     this->current_anim_to_play = spritesheet();
 
     this->w_direction = WORLD_DIRECTION_UNDEFINED;
+    this->combo_type = CHARACTER_ATTACK_COMBO_UNDEFINED;
     this->position = ZEROVEC2;
+    this->anim_state = PL_ANIM_STATE_UNDEFINED;
     this->damage_break_time = 0.f;
     this->damage_break_current = 0.f;
     this->exp_to_next_level = 0.f;
@@ -1127,12 +1163,12 @@ typedef struct player_state {
     this->health_perc = 0.f;
     this->health_current = 0.f;
     this->interaction_radius = 0.f;
+    this->roll_control = easing_accumulation_control();
 
     this->level = 0;
 
     this->is_player_have_ability_upgrade_points = false;
     this->is_initialized = false;
-    this->is_moving = false;
     this->is_dead = false;
     this->is_damagable = false;
   }
@@ -1148,6 +1184,7 @@ typedef struct ingame_info {
   const ingame_play_phases* ingame_phase;
   std::vector<character_trait>* chosen_traits;
   const std::vector<loot_item> * loots_on_the_map;
+  const worldmap_stage * current_map_info;
 
   i32 collected_coins;
   f32 play_time;
@@ -1166,6 +1203,7 @@ typedef struct ingame_info {
     this->ingame_phase = nullptr;
     this->chosen_traits = nullptr;
     this->loots_on_the_map = nullptr;
+    this->current_map_info = nullptr;
     
     this->collected_coins = 0;
     this->play_time = 0.f;

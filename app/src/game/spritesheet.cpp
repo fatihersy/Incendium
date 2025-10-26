@@ -13,7 +13,7 @@ void update_sprite(spritesheet *const sheet) {
     IWARN("spritesheet::update_sprite()::Sheet is invalid");
     return;
   }
-  if (sheet->fps <= 0) {
+  if (sheet->fps <= 0.f) {
     IWARN("spritesheet::update_sprite()::Sheet not meant to be playable");
     return;
   }
@@ -21,7 +21,7 @@ void update_sprite(spritesheet *const sheet) {
     return;
   }
   sheet->time_accumulator += GetFrameTime();
-  f32 time_per_frame = 1.0f / static_cast<f32>(sheet->fps);
+  f32 time_per_frame = 1.0f / sheet->fps;
 
   while (sheet->time_accumulator >= time_per_frame) {
     sheet->time_accumulator -= time_per_frame;

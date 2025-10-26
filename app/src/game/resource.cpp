@@ -135,10 +135,10 @@ bool resource_system_initialize(void) {
   load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_PLAYER_ANIMATION_ATTACK_1,          VECTOR2(1568, 1632), 15,  144,  64, 1,  4);
   load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_PLAYER_ANIMATION_ATTACK_2,          VECTOR2(1568, 1696), 15,  144,  64, 1,  4);
   load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_PLAYER_ANIMATION_ATTACK_3,          VECTOR2(1568, 1760), 10,  144,  64, 1,  7);
-  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_PLAYER_ANIMATION_ATTACK_DOWN,       VECTOR2(1568, 1824), 11,  144,  64, 1,  6);
-  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_PLAYER_ANIMATION_ATTACK_UP,         VECTOR2(1568, 1888), 10,  144,  64, 1,  7);
-  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_PLAYER_ANIMATION_ROLL,              VECTOR2(1568, 1952), 12,  144,  64, 1,  5);
-  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_PLAYER_ANIMATION_DASH,              VECTOR2(1568, 2016), 12,  144,  64, 1,  5);
+  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_PLAYER_ANIMATION_ATTACK_DOWN,       VECTOR2(1568, 1952), 12,  144,  64, 1,  5);
+  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_PLAYER_ANIMATION_ATTACK_UP,         VECTOR2(1568, 2016), 12,  144,  64, 1,  5);
+  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_PLAYER_ANIMATION_ROLL,              VECTOR2(1568, 1824), 11,  144,  64, 1,  6);
+  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_PLAYER_ANIMATION_DASH,              VECTOR2(1568, 1888), 10,  144,  64, 1,  7);
 
   load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_SPAWN_BROWN_ZOMBIE_ANIMATION_MOVE_LEFT,          VECTOR2(2032,  16),  8,   32,  40, 1,  8);
   load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_SPAWN_BROWN_ZOMBIE_ANIMATION_MOVE_RIGHT,         VECTOR2(2032, 176),  8,   32,  40, 1,  8);
@@ -819,7 +819,7 @@ void load_spritesheet(texture_id _source_tex, spritesheet_id handle_id, Vector2 
   _sheet.current_frame = 0;
   _sheet.current_frame_rect = Rectangle { 0.f, 0.f, static_cast<f32>(_frame_width), static_cast<f32>(_frame_height) };
   _sheet.coord = Rectangle { 0.f, 0.f, static_cast<f32>(_frame_width), static_cast<f32>(_frame_height)};
-  _sheet.fps = _fps;
+  _sheet.fps = static_cast<f32>(_fps);
 
   state->sprites.at(handle_id) = _sheet;
 }

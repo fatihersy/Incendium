@@ -138,6 +138,7 @@ bool game_manager_initialize(const camera_metrics * in_camera_metrics, const app
   state->game_info.ingame_phase         = __builtin_addressof(state->ingame_phase);
   state->game_info.chosen_traits        = __builtin_addressof(state->chosen_traits);
   state->game_info.loots_on_the_map     = get_loots_pointer();
+  state->game_info.current_map_info     = __builtin_addressof(state->stage);
 
   event_register(EVENT_CODE_END_GAME, game_manager_on_event);
   event_register(EVENT_CODE_DAMAGE_PLAYER_IF_COLLIDE, game_manager_on_event);
@@ -212,7 +213,6 @@ bool game_manager_reinit(const camera_metrics * in_camera_metrics, const app_set
   state->in_app_settings = in_app_settings;
   state->in_active_map = in_active_map_ptr;
   *state->game_info.player_state_dynamic = state->player_state_static;
-
 
   return true;
 }
@@ -359,12 +359,11 @@ bool gm_start_game(worldmap_stage stage) {
   ability *const player_starter_ability = __builtin_addressof(state->game_info.player_state_dynamic->ability_system.abilities.at(state->game_info.starter_ability));
   upgrade_ability(player_starter_ability);
   refresh_ability(player_starter_ability);
-  
-  // TODO: Uncomment later
-  //populate_map_with_spawns(stage.total_spawn_count);
-  //if (state->game_info.in_spawns->size() <= 0) {
-  //  return false;
-  //}
+
+  populate_map_with_spawns(stage.total_spawn_count);
+  if (state->game_info.in_spawns->size() <= 0) {
+    return false;
+  }
   player_state& p_player_dynamic = (*state->game_info.player_state_dynamic);
   p_player_dynamic.health_current = p_player_dynamic.stats.at(CHARACTER_STATS_HEALTH).buffer.i32[3];
   p_player_dynamic.health_perc = static_cast<f32>(p_player_dynamic.health_current) / static_cast<f32>(p_player_dynamic.stats.at(CHARACTER_STATS_HEALTH).buffer.i32[3]);

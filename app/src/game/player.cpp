@@ -3,6 +3,7 @@
 #include "core/event.h"
 #include "core/fmemory.h"
 #include "core/logger.h"
+#include "core/fmath.h"
 
 #include "loc_types.h"
 
@@ -13,6 +14,8 @@ extern const i32 level_curve[MAX_PLAYER_LEVEL+1];
 #define PLAYER_SCALE 3
 #define PLAYER_DAMAGE_BREAK_TIME .5f
 #define PLAYER_INTERACTION_RADIUS 50.f
+#define PLAYER_COMBO_TIMEOUT 0.85f
+#define PLAYER_ROLL_DURATION 0.90f
 
 typedef struct player_system_state {
   const camera_metrics * in_camera_metrics;
@@ -22,13 +25,17 @@ typedef struct player_system_state {
   player_state dynamic_player;
   player_state defualt_player;
 
-  player_system_state(void) {
-  this->in_camera_metrics = nullptr;
-  this->in_app_settings = nullptr;
-  this->in_ingame_info = nullptr;
+  f32 combo_timeout_accumulator;
 
-  this->dynamic_player = player_state();
-  this->defualt_player = player_state();
+  player_system_state(void) {
+    this->in_camera_metrics = nullptr;
+    this->in_app_settings = nullptr;
+    this->in_ingame_info = nullptr;
+
+    this->dynamic_player = player_state();
+    this->defualt_player = player_state();
+
+    this->combo_timeout_accumulator = 0.f;
   }
 } player_system_state;
 
@@ -37,7 +44,13 @@ static player_system_state* state = nullptr;
 bool player_system_on_event(i32 code, event_context context);
 void player_system_reinit(void);
 void play_anim(spritesheet_id player_anim_sheet);
+void player_attack_reset(bool _retrospective);
 void player_update_sprite(void);
+void player_update_attack(void);
+void player_update_movement(Vector2& move_delta);
+void player_update_roll(Vector2& move_delta);
+
+Vector2 get_player_direction(void);
 
 bool player_system_initialize(const camera_metrics* in_camera_metrics,const app_settings* in_app_settings,const ingame_info* in_ingame_info) {
   if (state and state != nullptr){ 
@@ -82,14 +95,16 @@ bool player_system_initialize(const camera_metrics* in_camera_metrics,const app_
   set_sprite(&state->defualt_player.move_right_sprite,        true, false);
   set_sprite(&state->defualt_player.idle_right_sprite,        true, false);
   set_sprite(&state->defualt_player.take_damage_right_sprite, true, false);
-  set_sprite(&state->defualt_player.wreck_right_sprite,       true, false);
-  set_sprite(&state->defualt_player.attack_1_sprite,          true, false);
-  set_sprite(&state->defualt_player.attack_2_sprite,          true, false);
-  set_sprite(&state->defualt_player.attack_3_sprite,          true, false);
-  set_sprite(&state->defualt_player.attack_down_sprite,       true, false);
-  set_sprite(&state->defualt_player.attack_up_sprite,         true, false);
-  set_sprite(&state->defualt_player.roll_sprite,              true, false);
-  set_sprite(&state->defualt_player.dash_sprite,              true, false);
+  set_sprite(&state->defualt_player.wreck_right_sprite,       false, false);
+  set_sprite(&state->defualt_player.attack_1_sprite,          false, false);
+  set_sprite(&state->defualt_player.attack_2_sprite,          false, false);
+  set_sprite(&state->defualt_player.attack_3_sprite,          false, false);
+  set_sprite(&state->defualt_player.attack_down_sprite,       false, false);
+  set_sprite(&state->defualt_player.attack_up_sprite,         false, false);
+  set_sprite(&state->defualt_player.roll_sprite,              false, false);
+  set_sprite(&state->defualt_player.dash_sprite,              false, false);
+
+  state->defualt_player.roll_sprite.fps = state->defualt_player.roll_sprite.frame_total / PLAYER_ROLL_DURATION;
 
   {
     state->defualt_player.stats.at(CHARACTER_STATS_HEALTH) = character_stat(CHARACTER_STATS_HEALTH, LOC_TEXT_PLAYER_STAT_LIFE_ESSENCE, LOC_TEXT_PLAYER_STAT_DESC_LIFE_ESSENCE, 
@@ -125,7 +140,6 @@ bool player_system_initialize(const camera_metrics* in_camera_metrics,const app_
   state->defualt_player.collision.width = (state->defualt_player.idle_right_sprite.coord.width * .9f) * PLAYER_SCALE; // INFO: player collision scales with idle spritesheet
   state->defualt_player.collision.height = (state->defualt_player.idle_right_sprite.coord.height * .9f) * PLAYER_SCALE;
   state->defualt_player.is_dead = false;
-  state->defualt_player.is_moving = false;
   state->defualt_player.w_direction = WORLD_DIRECTION_LEFT;
   state->defualt_player.is_damagable = true;
   state->defualt_player.damage_break_time = PLAYER_DAMAGE_BREAK_TIME;
@@ -156,30 +170,30 @@ void player_system_reinit(void) {
 }
 
 player_update_results update_player(void) {
-  if (not state or state == nullptr) return player_update_results();
-  if (state->dynamic_player.is_dead) { 
-    return player_update_results(); 
+  player_update_results results = player_update_results();
+
+  if (not state or state == nullptr or state->dynamic_player.is_dead) return results;
+
+  player_state& _player = state->dynamic_player;
+
+  if (_player.anim_state <= PL_ANIM_STATE_UNDEFINED or _player.anim_state >= PL_ANIM_STATE_MAX) {
+    _player.anim_state = PL_ANIM_STATE_IDLE;
   }
 
-  if(!state->dynamic_player.is_damagable) {
-    if(state->dynamic_player.damage_break_current <= 0) { state->dynamic_player.is_damagable = true; }
-    else { state->dynamic_player.damage_break_current -= GetFrameTime(); }
+  if(not _player.is_damagable) {
+    if(_player.damage_break_current <= 0) { _player.is_damagable = true; }
+    else { _player.damage_break_current -= GetFrameTime(); }
   }
-  Vector2 new_position = ZEROVEC2;
-  if (IsKeyDown(KEY_W)) {
-    new_position.y -= state->dynamic_player.stats.at(CHARACTER_STATS_MOVE_SPEED).buffer.f32[3] * GetFrameTime();
+  if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON)) {
+    player_attack_init();
   }
-  if (IsKeyDown(KEY_A)) {
-    new_position.x -= state->dynamic_player.stats.at(CHARACTER_STATS_MOVE_SPEED).buffer.f32[3] * GetFrameTime();
+  if (IsKeyReleased(KEY_SPACE)) {
+    player_roll_init();
   }
-  if (IsKeyDown(KEY_S)) {
-    new_position.y += state->dynamic_player.stats.at(CHARACTER_STATS_MOVE_SPEED).buffer.f32[3] * GetFrameTime();
-  }
-  if (IsKeyDown(KEY_D)) {
-    new_position.x += state->dynamic_player.stats.at(CHARACTER_STATS_MOVE_SPEED).buffer.f32[3] * GetFrameTime();
-  }
+  player_update_movement(results.move_request);
+  player_update_attack();
   player_update_sprite();
-  
+
   const i32 elapsed_time = static_cast<i32>(GetTime());
   i32& last_time_hp_regen_fired = state->in_ingame_info->player_state_dynamic->stats.at(CHARACTER_STATS_HP_REGEN).mm_ex.i32[0];
   const i32& hp_max = state->in_ingame_info->player_state_dynamic->stats.at(CHARACTER_STATS_HEALTH).buffer.i32[3];
@@ -191,11 +205,12 @@ player_update_results update_player(void) {
     hp_current += hp_regen_amouth;
     hp_current = FCLAMP(hp_current, 0, hp_max);
   }
+  _player.health_perc = static_cast<f32>(_player.health_current) / static_cast<f32>(_player.stats.at(CHARACTER_STATS_HEALTH).buffer.i32[3]);
 
-  state->dynamic_player.health_perc = static_cast<f32>(state->dynamic_player.health_current) / static_cast<f32>(state->dynamic_player.stats.at(CHARACTER_STATS_HEALTH).buffer.i32[3]);
-  event_fire(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, event_context((f32)PRG_BAR_ID_PLAYER_HEALTH, (f32)state->dynamic_player.health_perc));
+  event_fire(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, event_context((f32)PRG_BAR_ID_PLAYER_HEALTH, (f32)_player.health_perc));
 
-  return player_update_results(new_position, true);
+  results.is_success = true;
+  return results;
 }
 bool render_player(void) {
   if (not state or state == nullptr) { return false; }
@@ -203,22 +218,18 @@ bool render_player(void) {
   spritesheet& _sheet = state->dynamic_player.current_anim_to_play;
   const Rectangle& frame_rect = state->dynamic_player.current_anim_to_play.current_frame_rect;
   
-  play_sprite_on_site_ex(
-    __builtin_addressof(_sheet), 
-    Rectangle {frame_rect.x + _sheet.offset.x, frame_rect.y + _sheet.offset.y, frame_rect.width, frame_rect.height}, 
+  play_sprite_on_site_ex(__builtin_addressof(_sheet), Rectangle {frame_rect.x + _sheet.offset.x, frame_rect.y + _sheet.offset.y, frame_rect.width, frame_rect.height}, 
     state->dynamic_player.current_anim_to_play.coord, 
     state->dynamic_player.current_anim_to_play.origin, 
     state->dynamic_player.current_anim_to_play.rotation, 
     WHITE
   );
-
   // TODO: Remove Later
   //DrawRectangleLines(
   //  static_cast<i32>(state->dynamic_player.collision.x), static_cast<i32>(state->dynamic_player.collision.y),
   //  static_cast<i32>(state->dynamic_player.collision.width), static_cast<i32>(state->dynamic_player.collision.height), 
   //  WHITE
   //);
-
   #if DEBUG_COLLISIONS
     DrawRectangleLines(
       static_cast<i32>(state->dynamic_player.collision.x), static_cast<i32>(state->dynamic_player.collision.y),
@@ -234,33 +245,46 @@ void player_move_player(Vector2 new_pos) {
     IERROR("player::player_move_player()::State is invalid");
     return;
   }
-  if (new_pos.x < 0.f) {
-    state->dynamic_player.w_direction = WORLD_DIRECTION_LEFT;
-  }
-  else if (new_pos.x > 0.f) {
-    state->dynamic_player.w_direction = WORLD_DIRECTION_RIGHT;
-  }
-  else if(new_pos.x == 0.f && new_pos.y == 0.f) {
-    state->dynamic_player.is_moving = false;
+  player_state& _player = state->dynamic_player;
+  if (_player.is_dead or _player.anim_state <= PL_ANIM_STATE_UNDEFINED or _player.anim_state >= PL_ANIM_STATE_MAX) {
     return;
   }
+  if (new_pos.x < 0.f) {
+    _player.w_direction = WORLD_DIRECTION_LEFT;
+  }
+  else if (new_pos.x > 0.f) {
+    _player.w_direction = WORLD_DIRECTION_RIGHT;
+  }
   
-  state->dynamic_player.is_moving = true;
-  state->dynamic_player.position.x += new_pos.x;
-  state->dynamic_player.position.y += new_pos.y;
+  const bool is_moving = (new_pos.x != 0.f or new_pos.y != 0.f);
+  const bool can_change_anim = (_player.anim_state != PL_ANIM_STATE_ATTACK and _player.anim_state != PL_ANIM_STATE_ROLL);
 
-  state->dynamic_player.collision = Rectangle {
-    state->dynamic_player.position.x - (state->dynamic_player.collision.width * .5f),
-    state->dynamic_player.position.y - (state->dynamic_player.collision.height * .5f),
-    state->dynamic_player.collision.width,
-    state->dynamic_player.collision.height
+  if (can_change_anim) {
+    if (is_moving) {
+      _player.anim_state = PL_ANIM_STATE_WALK;
+    } else {
+      _player.anim_state = PL_ANIM_STATE_IDLE;
+    }
+  }
+
+  _player.position.x += new_pos.x;
+  _player.position.y += new_pos.y;
+
+  const Rectangle& bounds = state->in_ingame_info->current_map_info->level_bound;
+  _player.position.x = FCLAMP(_player.position.x, bounds.x, bounds.x + bounds.width);
+  _player.position.y = FCLAMP(_player.position.y, bounds.y, bounds.y + bounds.height);
+
+  _player.collision = Rectangle {
+    _player.position.x - (_player.collision.width * .5f),
+    _player.position.y - (_player.collision.height * .5f),
+    _player.collision.width,
+    _player.collision.height
   };
-
-  state->dynamic_player.map_level_collision = Rectangle {
-    state->dynamic_player.collision.x + (state->dynamic_player.collision.width * .25f),
-    state->dynamic_player.collision.y + (state->dynamic_player.collision.height * .8f),
-    state->dynamic_player.collision.width * .5f,
-    state->dynamic_player.collision.height * .2f
+  _player.map_level_collision = Rectangle {
+    _player.collision.x + (_player.collision.width * .25f),
+    _player.collision.y + (_player.collision.height * .8f),
+    _player.collision.width * .5f,
+    _player.collision.height * .2f
   };
 }
 void player_add_exp_to_player(i32 raw_exp) {
@@ -286,8 +310,8 @@ void player_add_exp_to_player(i32 raw_exp) {
 void player_take_damage(i32 damage) {
   if (not state or state == nullptr) { return; }
 
-  if(!state->dynamic_player.is_damagable || state->dynamic_player.is_dead) return;
-  if((state->dynamic_player.health_current - damage) > 0 && (state->dynamic_player.health_current - damage) <= state->dynamic_player.stats.at(CHARACTER_STATS_HEALTH).buffer.i32[3]) {
+  if(not state->dynamic_player.is_damagable or state->dynamic_player.is_dead) return;
+  if((state->dynamic_player.health_current - damage) > 0 and (state->dynamic_player.health_current - damage) <= state->dynamic_player.stats.at(CHARACTER_STATS_HEALTH).buffer.i32[3]) {
     state->dynamic_player.health_current -= damage;
     state->dynamic_player.is_damagable = false;
     state->dynamic_player.damage_break_current = state->dynamic_player.damage_break_time;
@@ -312,45 +336,220 @@ void player_heal_player(i32 amouth){
 }
 void player_update_sprite(void) {
   if (not state or state == nullptr) { return; }
+  player_state& _player = state->dynamic_player;
 
-  if( not state->dynamic_player.is_dead ) {
-    if(state->dynamic_player.is_damagable) {
-      if(state->dynamic_player.is_moving) {
-        if (state->dynamic_player.current_anim_to_play.sheet_id != state->dynamic_player.move_right_sprite.sheet_id) {
-          state->dynamic_player.current_anim_to_play = state->dynamic_player.move_right_sprite;
-        }
-			}
-      else {
-        if (state->dynamic_player.current_anim_to_play.sheet_id != state->dynamic_player.idle_right_sprite.sheet_id) {
-          state->dynamic_player.current_anim_to_play = state->dynamic_player.idle_right_sprite;
-        }
-			}
-    }	
-    else {
-      if (state->dynamic_player.current_anim_to_play.sheet_id != state->dynamic_player.take_damage_right_sprite.sheet_id) {
-        state->dynamic_player.current_anim_to_play = state->dynamic_player.take_damage_right_sprite;
-      }
+  auto set_sheet_if_not_already = [&_player](spritesheet& sheet_to_set) {
+    if (_player.current_anim_to_play.sheet_id != sheet_to_set.sheet_id) {
+      _player.current_anim_to_play = sheet_to_set;
     }
-  } 
-  else {
-    if (state->dynamic_player.current_anim_to_play.sheet_id != state->dynamic_player.wreck_right_sprite.sheet_id) {
-      state->dynamic_player.current_anim_to_play = state->dynamic_player.wreck_right_sprite;
+  };
+  switch (_player.anim_state) {
+    case PL_ANIM_STATE_IDLE: set_sheet_if_not_already(_player.idle_right_sprite); break;
+    case PL_ANIM_STATE_WALK: set_sheet_if_not_already(_player.move_right_sprite); break;
+    case PL_ANIM_STATE_ROLL: set_sheet_if_not_already(_player.roll_sprite); break;
+    case PL_ANIM_STATE_ATTACK: {
+      switch (_player.combo_type) {
+        case CHARACTER_ATTACK_COMBO_1: set_sheet_if_not_already(_player.attack_1_sprite); break;
+        case CHARACTER_ATTACK_COMBO_2: set_sheet_if_not_already(_player.attack_2_sprite); break;
+        case CHARACTER_ATTACK_COMBO_3: set_sheet_if_not_already(_player.attack_3_sprite); break;
+        default: return;
+      }
+      break;
+    }
+    case PL_ANIM_STATE_TAKE_DAMAGE: set_sheet_if_not_already(_player.take_damage_right_sprite); break;
+    default: {
+      return;
     }
   }
-  spritesheet& _sheet = state->dynamic_player.current_anim_to_play;
-  if (state->dynamic_player.w_direction == WORLD_DIRECTION_LEFT && _sheet.current_frame_rect.width > 0) {
+  spritesheet& _sheet = _player.current_anim_to_play;
+  if (_player.w_direction == WORLD_DIRECTION_LEFT && _sheet.current_frame_rect.width > 0) {
     _sheet.current_frame_rect.width *= -1;
   }
-  if (state->dynamic_player.w_direction == WORLD_DIRECTION_RIGHT && _sheet.current_frame_rect.width < 0) {
+  if (_player.w_direction == WORLD_DIRECTION_RIGHT && _sheet.current_frame_rect.width < 0) {
     _sheet.current_frame_rect.width *= -1;
   }
   _sheet.coord = Rectangle { 
-    state->dynamic_player.position.x, state->dynamic_player.position.y,
+    _player.position.x, _player.position.y,
     std::abs(_sheet.current_frame_rect.width) * PLAYER_SCALE, std::abs(_sheet.current_frame_rect.height) * PLAYER_SCALE
   };
   _sheet.origin = Vector2 { _sheet.coord.width * .5f, _sheet.coord.height * .5f};
   
   update_sprite(__builtin_addressof(_sheet));
+}
+void player_update_attack(void) {
+  if (not state or state == nullptr) { return; }
+
+  player_state& _player = state->dynamic_player;
+
+  if (state->combo_timeout_accumulator > 0.f) {
+    state->combo_timeout_accumulator -= GetFrameTime();
+    if (state->combo_timeout_accumulator <= 0.f) {
+      player_attack_reset(true);
+    }
+  }
+  if (_player.anim_state != PL_ANIM_STATE_ATTACK) {
+    return;
+  }
+  if (_player.combo_type <= CHARACTER_ATTACK_COMBO_UNDEFINED or _player.combo_type >= CHARACTER_ATTACK_COMBO_MAX) {
+    player_attack_reset(true);
+  }
+
+  if (_player.current_anim_to_play.is_played) {
+    player_attack_reset(false);
+    state->combo_timeout_accumulator = PLAYER_COMBO_TIMEOUT;
+  }
+}
+void player_attack_init(void) {
+  if (not state or state == nullptr) { return; }
+
+  player_state& _player = state->dynamic_player;
+  if (_player.is_dead) {
+    return;
+  }
+  if (_player.anim_state < PL_ANIM_STATE_UNDEFINED and _player.anim_state > PL_ANIM_STATE_MAX) {
+    IWARN("player::player_attack_init()::Player state is out of bound");
+    return;
+  }
+  const bool able_to_attack = _player.anim_state == PL_ANIM_STATE_IDLE or _player.anim_state == PL_ANIM_STATE_WALK;
+  if (not able_to_attack) {
+    return;
+  }
+  _player.anim_state = PL_ANIM_STATE_ATTACK;
+
+  switch (_player.combo_type) {
+    case CHARACTER_ATTACK_COMBO_UNDEFINED: {
+      _player.combo_type = CHARACTER_ATTACK_COMBO_1;
+      return;
+    }
+    case CHARACTER_ATTACK_COMBO_1: {
+      _player.combo_type = CHARACTER_ATTACK_COMBO_2;
+      return;
+    }
+    case CHARACTER_ATTACK_COMBO_2: {
+      _player.combo_type = CHARACTER_ATTACK_COMBO_3;
+      return;
+    }
+    case CHARACTER_ATTACK_COMBO_3: { player_attack_reset(true); return; }
+    default: {
+      IWARN("player::player_attack_init()::Unsupported combo type");
+      player_attack_reset(true);
+      return;
+    }
+  }
+  IERROR("player::player_attack_init()::Function ended unexpectedly");
+}
+void player_attack_reset(bool _retrospective) {
+  if (not state or state == nullptr) { return; }
+
+  if (_retrospective) {
+    state->dynamic_player.combo_type = CHARACTER_ATTACK_COMBO_UNDEFINED;
+    state->combo_timeout_accumulator = 0.f;
+  }
+  state->dynamic_player.anim_state = PL_ANIM_STATE_IDLE;
+
+  switch (state->dynamic_player.combo_type) {
+    case CHARACTER_ATTACK_COMBO_1: { reset_sprite(&state->dynamic_player.attack_1_sprite, true); return; }
+    case CHARACTER_ATTACK_COMBO_2: { reset_sprite(&state->dynamic_player.attack_2_sprite, true); return; }
+    case CHARACTER_ATTACK_COMBO_3: { reset_sprite(&state->dynamic_player.attack_3_sprite, true); return; }
+    default: {
+      reset_sprite(&state->dynamic_player.attack_1_sprite, true);
+      reset_sprite(&state->dynamic_player.attack_2_sprite, true);
+      reset_sprite(&state->dynamic_player.attack_3_sprite, true);
+      state->dynamic_player.combo_type = CHARACTER_ATTACK_COMBO_UNDEFINED;
+      state->combo_timeout_accumulator = 0.f;
+      return;
+    }
+  }
+}
+void player_update_movement(Vector2& move_delta) {
+  if (not state or state == nullptr) { return; }
+
+  player_state& _player = state->dynamic_player;
+  if (_player.is_dead) {
+    return;
+  }
+
+  if (_player.anim_state == PL_ANIM_STATE_ROLL) {
+    player_update_roll(move_delta);
+    return;
+  }
+
+  const bool able_to_walk = _player.anim_state == PL_ANIM_STATE_IDLE or _player.anim_state == PL_ANIM_STATE_WALK;
+  if (not able_to_walk) {
+    return;
+  }
+  move_delta = vec2_scale(get_player_direction(), _player.stats.at(CHARACTER_STATS_MOVE_SPEED).buffer.f32[3] * GetFrameTime());
+}
+Vector2 get_player_direction(void) {
+  Vector2 out_delta = ZEROVEC2;
+
+  if (IsKeyDown(KEY_W)) {
+    out_delta.y += DIRECTION_VECTOR_UP.y;
+  }
+  if (IsKeyDown(KEY_A)) {
+    out_delta.x += DIRECTION_VECTOR_LEFT.x;
+  }
+  if (IsKeyDown(KEY_S)) {
+    out_delta.y += DIRECTION_VECTOR_DOWN.y;
+  }
+  if (IsKeyDown(KEY_D)) {
+    out_delta.x += DIRECTION_VECTOR_RIGHT.x;
+  }
+  return vec2_normalize(out_delta);
+}
+void player_roll_init(void) {
+  if (not state or state == nullptr) { return; }
+
+  player_state& _player = state->dynamic_player;
+  if (_player.is_dead) {
+    return;
+  }
+  if (_player.anim_state < PL_ANIM_STATE_UNDEFINED and _player.anim_state > PL_ANIM_STATE_MAX) {
+    IWARN("player::player_attack_init()::Player state is out of bound");
+    return;
+  }
+  const bool able_to_roll = _player.anim_state == PL_ANIM_STATE_IDLE or _player.anim_state == PL_ANIM_STATE_WALK or _player.anim_state == PL_ANIM_STATE_ATTACK;
+  if (not able_to_roll) {
+    return;
+  }
+  _player.anim_state = PL_ANIM_STATE_ROLL;
+
+  _player.roll_control = easing_accumulation_control();
+  _player.roll_control.duration = PLAYER_ROLL_DURATION;
+  _player.roll_control.begin_x = _player.position.x;
+  _player.roll_control.begin_y = _player.position.y;
+  _player.roll_control.ease_type = EASING_TYPE_SINE_INOUT;
+
+  Vector2 player_direction = get_player_direction();
+  if (player_direction.x == 0.f and player_direction.y == 0.f) {
+    switch (_player.w_direction) {
+      case WORLD_DIRECTION_LEFT:  player_direction = DIRECTION_VECTOR_LEFT; break;
+      case WORLD_DIRECTION_RIGHT: player_direction = DIRECTION_VECTOR_RIGHT; break;
+      default: return;
+    }
+  }
+  const f32 roll_distance = _player.stats.at(CHARACTER_STATS_MOVE_SPEED).buffer.f32[3] * PLAYER_ROLL_DURATION * 1.5f;
+  _player.roll_control.change_x = player_direction.x * roll_distance;
+  _player.roll_control.change_y = player_direction.y * roll_distance;
+}
+void player_update_roll(Vector2& move_delta) {
+  if (not state or state == nullptr) { return; }
+
+  player_state& _player = state->dynamic_player;
+
+  if (_player.anim_state != PL_ANIM_STATE_ROLL) {
+    return;
+  }
+  _player.roll_control.accumulator += GetFrameTime();
+  if (_player.roll_control.accumulator >= _player.roll_control.duration) {
+    _player.roll_control = easing_accumulation_control();
+    _player.anim_state = PL_ANIM_STATE_IDLE;
+    return;
+  }
+  easing_accumulation_control& ease = _player.roll_control;
+
+  move_delta.x = math_easing(ease.accumulator, ease.begin_x, ease.change_x, ease.duration, ease.ease_type) - _player.position.x;
+  move_delta.y = math_easing(ease.accumulator, ease.begin_y, ease.change_y, ease.duration, ease.ease_type) - _player.position.y;
 }
 
 player_state* get_player_state(void) {

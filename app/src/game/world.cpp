@@ -29,10 +29,10 @@ constexpr size_t get_renderqueue_prop_index_by_id(i16 zindex, i32 map_id);
 void sort_render_y_based_queue(i32 id);
 
 void create_worldmap_stage(i32 in_map_id, i32 in_title_txt_id, std::string filename, i32 in_stage_level, f32 duration,
-  i32 total_spawn_count, i32 total_boss_count, f32 spawn_scale, f32 boss_scale, Vector2 in_screen_location, bool is_display_on_screen, bool is_active) 
+  i32 total_spawn_count, i32 total_boss_count, f32 spawn_scale, f32 boss_scale, Vector2 in_screen_location, Rectangle level_bounds, bool is_display_on_screen, bool is_active) 
 {
   state->worldmap_locations.at(in_map_id) = worldmap_stage(
-    in_map_id, in_title_txt_id, filename, in_stage_level, duration, total_spawn_count, total_boss_count, spawn_scale, boss_scale, in_screen_location, true, is_display_on_screen, is_active
+    in_map_id, in_title_txt_id, filename, in_stage_level, duration, total_spawn_count, total_boss_count, spawn_scale, boss_scale, in_screen_location, level_bounds, true, is_display_on_screen, is_active
   );
 }
 
@@ -61,31 +61,30 @@ bool world_system_initialize(const app_settings *const _in_app_settings) {
 
   { // WORLD LOCATIONS
     i32 map_id_counter = 0;
-    create_worldmap_stage(map_id_counter++, static_cast<i32>(LOC_TEXT_UNDEFINED),          "stage1", 1, 300.f,   0, 0, 1, .5f, VECTOR2(   0,    0), false, false); // main menu background
-    create_worldmap_stage(map_id_counter++, static_cast<i32>(LOC_TEXT_WORLD_STAGE_1_TITLE),"stage2", 1, 90.f, 100, 1, 1, .5f, VECTOR2(1024, 1744),  true,  true);
-    create_worldmap_stage(map_id_counter++, static_cast<i32>(LOC_TEXT_UNDEFINED),          "stage3", 1, 300.f,  75, 1, 1, .5f, VECTOR2(1467, 1755),  true, false);
-    create_worldmap_stage(map_id_counter++, static_cast<i32>(LOC_TEXT_UNDEFINED),          "stage4", 1, 300.f,  75, 1, 1, .5f, VECTOR2(1674, 1727),  true, false);
-    create_worldmap_stage(map_id_counter++, static_cast<i32>(LOC_TEXT_UNDEFINED),          "stage5", 1, 300.f,  75, 1, 1, .5f, VECTOR2(2179, 1623),  true, false);
-    create_worldmap_stage(map_id_counter++, static_cast<i32>(LOC_TEXT_UNDEFINED),          "stage6", 1, 300.f,  75, 1, 1, .5f, VECTOR2(1811, 1230),  true, false);
-    create_worldmap_stage(map_id_counter++, static_cast<i32>(LOC_TEXT_UNDEFINED),          "stage7", 1, 300.f,  75, 1, 1, .5f, VECTOR2(2233, 1240),  true, false);
-    create_worldmap_stage(map_id_counter++, static_cast<i32>(LOC_TEXT_UNDEFINED),          "stage8", 1, 300.f,  75, 1, 1, .5f, VECTOR2(2658, 1202),  true, false);
-    create_worldmap_stage(map_id_counter++, static_cast<i32>(LOC_TEXT_UNDEFINED),          "stage9", 1, 300.f,  75, 1, 1, .5f, VECTOR2(3009, 1511),  true, false);
-    create_worldmap_stage(map_id_counter++, static_cast<i32>(LOC_TEXT_UNDEFINED),         "stage10", 1, 300.f,  75, 1, 1, .5f, VECTOR2(2767, 1972),  true, false);
-    create_worldmap_stage(map_id_counter++, static_cast<i32>(LOC_TEXT_UNDEFINED),         "stage11", 1, 300.f,  75, 1, 1, .5f, VECTOR2(3188, 1415),  true, false);
-    create_worldmap_stage(map_id_counter++, static_cast<i32>(LOC_TEXT_UNDEFINED),         "stage12", 1, 300.f,  75, 1, 1, .5f, VECTOR2(3449, 1773),  true, false);
-    create_worldmap_stage(map_id_counter++, static_cast<i32>(LOC_TEXT_UNDEFINED),         "stage13", 1, 300.f,  75, 1, 1, .5f, VECTOR2(3073, 1146),  true, false);
-    create_worldmap_stage(map_id_counter++, static_cast<i32>(LOC_TEXT_UNDEFINED),         "stage14", 1, 300.f,  75, 1, 1, .5f, VECTOR2(3574, 1291),  true, false);
-    create_worldmap_stage(map_id_counter++, static_cast<i32>(LOC_TEXT_UNDEFINED),         "stage15", 1, 300.f,  75, 1, 1, .5f, VECTOR2(3462,  773),  true, false);
-    create_worldmap_stage(map_id_counter++, static_cast<i32>(LOC_TEXT_UNDEFINED),         "stage16", 1, 300.f,  75, 1, 1, .5f, VECTOR2(2661,  951),  true, false);
-    create_worldmap_stage(map_id_counter++, static_cast<i32>(LOC_TEXT_UNDEFINED),         "stage17", 1, 300.f,  75, 1, 1, .5f, VECTOR2(3548,  974),  true, false);
-    create_worldmap_stage(map_id_counter++, static_cast<i32>(LOC_TEXT_UNDEFINED),         "stage18", 1, 300.f,  75, 1, 1, .5f, VECTOR2(2400,  596),  true, false);
-    create_worldmap_stage(map_id_counter++, static_cast<i32>(LOC_TEXT_UNDEFINED),         "stage19", 1, 300.f,  75, 1, 1, .5f, VECTOR2(3290,  369),  true, false);
-    create_worldmap_stage(map_id_counter++, static_cast<i32>(LOC_TEXT_UNDEFINED),         "stage20", 1, 300.f,  75, 1, 1, .5f, VECTOR2(3449,  224),  true, false);
-    create_worldmap_stage(map_id_counter++, static_cast<i32>(LOC_TEXT_UNDEFINED),         "stage21", 1, 300.f,  75, 1, 1, .5f, VECTOR2(1977,  385),  true, false);
-    create_worldmap_stage(map_id_counter++, static_cast<i32>(LOC_TEXT_UNDEFINED),         "stage22", 1, 300.f,  75, 1, 1, .5f, VECTOR2(1661,  410),  true, false);
+    create_worldmap_stage(map_id_counter++, static_cast<i32>(LOC_TEXT_UNDEFINED),          "stage1", 1, 300.f,   0, 0, 1, .5f, VECTOR2(   0,    0), ZERORECT, false, false); // main menu background
+    create_worldmap_stage(map_id_counter++, static_cast<i32>(LOC_TEXT_WORLD_STAGE_1_TITLE),"stage2", 1,  90.f, 100, 1, 1, .5f, VECTOR2(1024, 1744), ZERORECT,  true,  true);
+    create_worldmap_stage(map_id_counter++, static_cast<i32>(LOC_TEXT_UNDEFINED),          "stage3", 1, 300.f,  75, 1, 1, .5f, VECTOR2(1467, 1755), ZERORECT,  true, false);
+    create_worldmap_stage(map_id_counter++, static_cast<i32>(LOC_TEXT_UNDEFINED),          "stage4", 1, 300.f,  75, 1, 1, .5f, VECTOR2(1674, 1727), ZERORECT,  true, false);
+    create_worldmap_stage(map_id_counter++, static_cast<i32>(LOC_TEXT_UNDEFINED),          "stage5", 1, 300.f,  75, 1, 1, .5f, VECTOR2(2179, 1623), ZERORECT,  true, false);
+    create_worldmap_stage(map_id_counter++, static_cast<i32>(LOC_TEXT_UNDEFINED),          "stage6", 1, 300.f,  75, 1, 1, .5f, VECTOR2(1811, 1230), ZERORECT,  true, false);
+    create_worldmap_stage(map_id_counter++, static_cast<i32>(LOC_TEXT_UNDEFINED),          "stage7", 1, 300.f,  75, 1, 1, .5f, VECTOR2(2233, 1240), ZERORECT,  true, false);
+    create_worldmap_stage(map_id_counter++, static_cast<i32>(LOC_TEXT_UNDEFINED),          "stage8", 1, 300.f,  75, 1, 1, .5f, VECTOR2(2658, 1202), ZERORECT,  true, false);
+    create_worldmap_stage(map_id_counter++, static_cast<i32>(LOC_TEXT_UNDEFINED),          "stage9", 1, 300.f,  75, 1, 1, .5f, VECTOR2(3009, 1511), ZERORECT,  true, false);
+    create_worldmap_stage(map_id_counter++, static_cast<i32>(LOC_TEXT_UNDEFINED),         "stage10", 1, 300.f,  75, 1, 1, .5f, VECTOR2(2767, 1972), ZERORECT,  true, false);
+    create_worldmap_stage(map_id_counter++, static_cast<i32>(LOC_TEXT_UNDEFINED),         "stage11", 1, 300.f,  75, 1, 1, .5f, VECTOR2(3188, 1415), ZERORECT,  true, false);
+    create_worldmap_stage(map_id_counter++, static_cast<i32>(LOC_TEXT_UNDEFINED),         "stage12", 1, 300.f,  75, 1, 1, .5f, VECTOR2(3449, 1773), ZERORECT,  true, false);
+    create_worldmap_stage(map_id_counter++, static_cast<i32>(LOC_TEXT_UNDEFINED),         "stage13", 1, 300.f,  75, 1, 1, .5f, VECTOR2(3073, 1146), ZERORECT,  true, false);
+    create_worldmap_stage(map_id_counter++, static_cast<i32>(LOC_TEXT_UNDEFINED),         "stage14", 1, 300.f,  75, 1, 1, .5f, VECTOR2(3574, 1291), ZERORECT,  true, false);
+    create_worldmap_stage(map_id_counter++, static_cast<i32>(LOC_TEXT_UNDEFINED),         "stage15", 1, 300.f,  75, 1, 1, .5f, VECTOR2(3462,  773), ZERORECT,  true, false);
+    create_worldmap_stage(map_id_counter++, static_cast<i32>(LOC_TEXT_UNDEFINED),         "stage16", 1, 300.f,  75, 1, 1, .5f, VECTOR2(2661,  951), ZERORECT,  true, false);
+    create_worldmap_stage(map_id_counter++, static_cast<i32>(LOC_TEXT_UNDEFINED),         "stage17", 1, 300.f,  75, 1, 1, .5f, VECTOR2(3548,  974), ZERORECT,  true, false);
+    create_worldmap_stage(map_id_counter++, static_cast<i32>(LOC_TEXT_UNDEFINED),         "stage18", 1, 300.f,  75, 1, 1, .5f, VECTOR2(2400,  596), ZERORECT,  true, false);
+    create_worldmap_stage(map_id_counter++, static_cast<i32>(LOC_TEXT_UNDEFINED),         "stage19", 1, 300.f,  75, 1, 1, .5f, VECTOR2(3290,  369), ZERORECT,  true, false);
+    create_worldmap_stage(map_id_counter++, static_cast<i32>(LOC_TEXT_UNDEFINED),         "stage20", 1, 300.f,  75, 1, 1, .5f, VECTOR2(3449,  224), ZERORECT,  true, false);
+    create_worldmap_stage(map_id_counter++, static_cast<i32>(LOC_TEXT_UNDEFINED),         "stage21", 1, 300.f,  75, 1, 1, .5f, VECTOR2(1977,  385), ZERORECT,  true, false);
+    create_worldmap_stage(map_id_counter++, static_cast<i32>(LOC_TEXT_UNDEFINED),         "stage22", 1, 300.f,  75, 1, 1, .5f, VECTOR2(1661,  410), ZERORECT,  true, false);
   }
-  for (size_t itr_000 = 0u; itr_000 < MAX_WORLDMAP_LOCATIONS; ++itr_000) 
-  {
+  for (size_t itr_000 = 0u; itr_000 < MAX_WORLDMAP_LOCATIONS; ++itr_000) {
     for (size_t itr_111 = 0u; itr_111 < MAX_TILEMAP_LAYERS; ++itr_111) {
       state->map.at(itr_000).filename.at(itr_111) = TextFormat("%s_layer%d.txt", state->worldmap_locations.at(itr_000).filename.c_str(), itr_111);
     }
@@ -109,12 +108,14 @@ bool world_system_initialize(const app_settings *const _in_app_settings) {
       IWARN("world::world_system_initialize::Stage:%d read failed", itr_000);
       continue;
     }
-    state->worldmap_locations.at(itr_000).spawning_areas.at(0u) = Rectangle { 
+    Rectangle level_bound = Rectangle { 
       state->map.at(itr_000).position.x, 
       state->map.at(itr_000).position.y,
       static_cast<f32>((state->map.at(itr_000).map_dim * state->map.at(itr_000).tile_size)), 
       static_cast<f32>((state->map.at(itr_000).map_dim * state->map.at(itr_000).tile_size))
     };
+    state->worldmap_locations.at(itr_000).spawning_areas.at(0u) = level_bound;
+    state->worldmap_locations.at(itr_000).level_bound = level_bound;
     refresh_render_queue(itr_000);
   }
   return true;

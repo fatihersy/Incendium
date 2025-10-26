@@ -4,7 +4,12 @@
 
 #include "core/fmemory.h"
 
-#define LOGGING_SEVERITY LOG_SEV_INFO
+#ifdef _RELEASE
+  #define LOGGING_SEVERITY LOG_SEV_ERROR
+#else
+  #define LOGGING_SEVERITY LOG_SEV_WARNING
+#endif
+
 #define LOG_FILE_DIRECTORY "logs"
 
 typedef struct logging_system_state {
@@ -22,6 +27,20 @@ typedef struct logging_system_state {
 } logging_system_state;
 
 static logging_system_state * state = nullptr;
+
+TraceLogLevel to_rl_log_level(logging_severity sev) {
+  switch (sev) {
+    case LOG_SEV_TRACE: return TraceLogLevel::LOG_TRACE;
+    case LOG_SEV_DEBUG: return TraceLogLevel::LOG_DEBUG;
+    case LOG_SEV_INFO: return TraceLogLevel::LOG_INFO;
+    case LOG_SEV_WARNING: return TraceLogLevel::LOG_WARNING;
+    case LOG_SEV_ERROR: return TraceLogLevel::LOG_ERROR;
+    case LOG_SEV_FATAL: return TraceLogLevel::LOG_FATAL;
+    default: {
+      return TraceLogLevel::LOG_NONE;
+    }
+  }
+}
 
 bool logging_system_initialize(int build_id) {
   if (state and state != nullptr) {
@@ -108,14 +127,14 @@ void inc_logging(logging_severity ls, const char* fmt, ...) {
   std::vsnprintf(zc.data(), zc.size(), fmt, arg_ptr);
   va_end(arg_ptr);
 
-  out_log.append(std::string(zc.data(), zc.size()-1)).append("\n");
+  out_log.append(std::string(zc.data(), zc.size()-1));
 	std::string& log = state->logs.emplace_back(out_log);
 
   if (log == state->last_writed) {
     return;
   }
-
 	if (ls >= LOGGING_SEVERITY) {
+    log.append("\n");
     if (FileExists(state->log_file_name.c_str())) {
       char * logged_text = LoadFileText(state->log_file_name.c_str());
       if (TextLength(logged_text) <= 1) {
@@ -129,9 +148,12 @@ void inc_logging(logging_severity ls, const char* fmt, ...) {
     else {
       SaveFileText(state->log_file_name.c_str(), TextFormat("%s", log.c_str()));
     }
-	}
+	} else {
+    #ifndef _RELEASE 
+    TraceLog(to_rl_log_level(ls), log.c_str());
+    #endif
+  }
 }
-
 
 const char * get_last_log(void) {
   if (not state or state == nullptr) {
@@ -145,3 +167,4 @@ const char * get_last_log(void) {
 
   return state->dump_string.c_str();
 }
+
