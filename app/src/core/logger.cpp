@@ -11,6 +11,7 @@
 #endif
 
 #define LOG_FILE_DIRECTORY "logs"
+#define LOGGING_TIMEOUT 0.275f
 
 typedef struct logging_system_state {
   int build_id;
@@ -18,11 +19,13 @@ typedef struct logging_system_state {
   std::string log_file_name;
   std::string last_writed;
   std::string dump_string;
+  double last_log_time;
   logging_system_state(void) {
     this->logs = std::vector<std::string>();
     this->log_file_name = std::string();
     this->last_writed = std::string();
     this->dump_string = std::string();
+    this->last_log_time = 0.f;
   }
 } logging_system_state;
 
@@ -52,6 +55,7 @@ bool logging_system_initialize(int build_id) {
   }
   *state = logging_system_state();
   state->build_id = build_id;
+  state->last_log_time = GetTime();
 
   char timeStr[11] = { 0 };
   time_t now = time(NULL);
@@ -88,6 +92,11 @@ void inc_logging(logging_severity ls, const char* fmt, ...) {
   if(not state or state == nullptr) {
 		return;
   }
+  if (GetTime() - state->last_log_time < LOGGING_TIMEOUT) {
+    return;
+  }
+  state->last_log_time = GetTime();
+
   std::string out_log = std::string();
   char timeStr[64] = { 0 };
   time_t now = time(NULL);

@@ -135,6 +135,8 @@ void render_tilemap(const tilemap *const _tilemap, Rectangle camera_view) {
   end_x = end_x < 0 ? 0 : (end_x > _tilemap->map_dim ? _tilemap->map_dim : end_x);
   end_y = end_y < 0 ? 0 : (end_y > _tilemap->map_dim ? _tilemap->map_dim : end_y);
 
+  
+
   for (i32 y = start_y; y < end_y; ++y) {
     for (i32 x = start_x; x < end_x; ++x) {
       if (x < 0 or x >= MAX_TILEMAP_TILESLOT_X or y < 0 or y >= MAX_TILEMAP_TILESLOT_Y) {

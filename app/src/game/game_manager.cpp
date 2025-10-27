@@ -360,10 +360,10 @@ bool gm_start_game(worldmap_stage stage) {
   upgrade_ability(player_starter_ability);
   refresh_ability(player_starter_ability);
 
-  populate_map_with_spawns(stage.total_spawn_count);
-  if (state->game_info.in_spawns->size() <= 0) {
-    return false;
-  }
+  //populate_map_with_spawns(stage.total_spawn_count);
+  //if (state->game_info.in_spawns->size() <= 0) {
+  //  return false;
+  //}
   player_state& p_player_dynamic = (*state->game_info.player_state_dynamic);
   p_player_dynamic.health_current = p_player_dynamic.stats.at(CHARACTER_STATS_HEALTH).buffer.i32[3];
   p_player_dynamic.health_perc = static_cast<f32>(p_player_dynamic.health_current) / static_cast<f32>(p_player_dynamic.stats.at(CHARACTER_STATS_HEALTH).buffer.i32[3]);

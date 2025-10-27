@@ -23,6 +23,9 @@ bool vec2_equals(Vector2 v1, Vector2 v2, f32 tolerans) {
     tolerans2 <= tolerans &&
     tolerans2 >= 0);
 }
+Vector2 vec2_clamp(Vector2 v, Vector2 min, Vector2 max) {
+  return Vector2Clamp(v, min, max);
+}
  Vector2 vec2_subtract(Vector2 v1, Vector2 v2) {
   return Vector2Subtract(v1, v2);
 }

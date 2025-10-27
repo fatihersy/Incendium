@@ -15,7 +15,7 @@ extern const i32 level_curve[MAX_PLAYER_LEVEL+1];
 #define PLAYER_DAMAGE_BREAK_TIME .5f
 #define PLAYER_INTERACTION_RADIUS 50.f
 #define PLAYER_COMBO_TIMEOUT 0.85f
-#define PLAYER_ROLL_DURATION 0.65f
+#define PLAYER_ROLL_DURATION 0.45f
 #define NORMAL_ATTACK_DIM_SCALE (Vector2 {1.5f, 1.5f})
 
 typedef struct player_system_state {
@@ -117,7 +117,7 @@ bool player_system_initialize(const camera_metrics* in_camera_metrics,const app_
       Rectangle{1856, 896, 32, 32}, (i32) 0, level_curve[1], data128(static_cast<i32>(0))
     );
     state->defualt_player.stats.at(CHARACTER_STATS_MOVE_SPEED) = character_stat(CHARACTER_STATS_MOVE_SPEED, LOC_TEXT_PLAYER_STAT_CARDINAL_BOOTS, LOC_TEXT_PLAYER_STAT_DESC_CARDINAL_BOOTS, 
-      Rectangle{1632, 960, 32, 32}, 1, (i32) level_curve[1], data128(static_cast<f32>(128.f))
+      Rectangle{1632, 960, 32, 32}, 1, (i32) level_curve[1], data128(static_cast<f32>(228.f))
     );
     state->defualt_player.stats.at(CHARACTER_STATS_AOE) =  character_stat(CHARACTER_STATS_AOE, LOC_TEXT_PLAYER_STAT_BLAST_SCROLL, LOC_TEXT_PLAYER_STAT_DESC_BLAST_SCROLL, 
       Rectangle{1888, 640, 32, 32}, 0, (i32)  level_curve[1], data128(static_cast<f32>(0.f))

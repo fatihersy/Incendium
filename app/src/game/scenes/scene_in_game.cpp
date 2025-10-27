@@ -75,6 +75,7 @@ typedef struct scene_in_game_state {
   ui_fade_control_system sig_fade;
   bool is_upgrade_choices_ready;
   chest_opening_sequence_intro_animation_control chest_intro_ctrl;
+  Rectangle cam_bounds;
 
   scene_in_game_state(void) {
     this->worldmap_locations.fill(worldmap_stage());
@@ -95,6 +96,7 @@ typedef struct scene_in_game_state {
     this->sig_fade = ui_fade_control_system();
     this->is_upgrade_choices_ready = false;
     this->chest_intro_ctrl = chest_opening_sequence_intro_animation_control();
+    this->cam_bounds = ZERORECT;
   }
 } scene_in_game_state;
 
@@ -252,6 +254,13 @@ bool start_game(void) {
   }
   _set_player_position(ZEROVEC2);
   sig_change_ingame_state(SCENE_INGAME_STATE_PLAY);
+
+  state->cam_bounds = { 
+    state->in_ingame_info->current_map_info->level_bound.x,
+    state->in_ingame_info->current_map_info->level_bound.y,
+    state->in_ingame_info->current_map_info->level_bound.x + state->in_ingame_info->current_map_info->level_bound.width,
+    state->in_ingame_info->current_map_info->level_bound.y + state->in_ingame_info->current_map_info->level_bound.height,
+  };
   return true;
 }
 void end_scene_in_game(bool abort) {
@@ -285,7 +294,15 @@ void update_scene_in_game(void) {
       switch ( (*state->in_ingame_info->ingame_phase) ) {
         case INGAME_PLAY_PHASE_CLEAR_ZOMBIES: {
           if (not state->in_ingame_info->player_state_dynamic->is_player_have_ability_upgrade_points) {
-            event_fire(EVENT_CODE_CAMERA_SET_TARGET, event_context(state->in_ingame_info->player_state_dynamic->position.x,state->in_ingame_info->player_state_dynamic->position.y));
+            const Vector2& player_pos = state->in_ingame_info->player_state_dynamic->position;
+            const Rectangle& cam_bounds = state->cam_bounds;
+            const Vector2 frustum_half = Vector2 { state->in_camera_metrics->frustum.width * .5f, state->in_camera_metrics->frustum.height * .5f };
+            Vector2 cam_target = { player_pos.x, player_pos.y };
+            cam_target = vec2_clamp(cam_target, 
+              Vector2 { cam_bounds.x     + frustum_half.x, cam_bounds.y      + frustum_half.y }, // Map left up
+              Vector2 { cam_bounds.width - frustum_half.x, cam_bounds.height - frustum_half.y }  // Map right down 
+            );
+            event_fire(EVENT_CODE_CAMERA_SET_TARGET, event_context(cam_target.x, cam_target.y));
             update_map();
             update_game_manager();
           }
@@ -392,7 +409,7 @@ void render_scene_in_game(void) {
       break;
     }
   }
-  
+
   EndMode2D();
 }
 void render_interface_in_game(void) {
