@@ -15,7 +15,8 @@ extern const i32 level_curve[MAX_PLAYER_LEVEL+1];
 #define PLAYER_DAMAGE_BREAK_TIME .5f
 #define PLAYER_INTERACTION_RADIUS 50.f
 #define PLAYER_COMBO_TIMEOUT 0.85f
-#define PLAYER_ROLL_DURATION 0.90f
+#define PLAYER_ROLL_DURATION 0.65f
+#define NORMAL_ATTACK_DIM_SCALE (Vector2 {1.5f, 1.5f})
 
 typedef struct player_system_state {
   const camera_metrics * in_camera_metrics;
@@ -51,6 +52,8 @@ void player_update_movement(Vector2& move_delta);
 void player_update_roll(Vector2& move_delta);
 
 Vector2 get_player_direction(void);
+void player_damage_break_init(const f32 duration);
+void player_damage_break_update(void); 
 
 bool player_system_initialize(const camera_metrics* in_camera_metrics,const app_settings* in_app_settings,const ingame_info* in_ingame_info) {
   if (state and state != nullptr){ 
@@ -142,8 +145,8 @@ bool player_system_initialize(const camera_metrics* in_camera_metrics,const app_
   state->defualt_player.is_dead = false;
   state->defualt_player.w_direction = WORLD_DIRECTION_LEFT;
   state->defualt_player.is_damagable = true;
-  state->defualt_player.damage_break_time = PLAYER_DAMAGE_BREAK_TIME;
-  state->defualt_player.damage_break_current = state->defualt_player.damage_break_time;
+  state->defualt_player.damage_break_duration = PLAYER_DAMAGE_BREAK_TIME;
+  state->defualt_player.damage_break_accumulator = 0.f;
   state->defualt_player.level = 1;
   state->defualt_player.exp_to_next_level = level_curve[state->defualt_player.level];
   state->defualt_player.exp_current = 0;
@@ -180,10 +183,8 @@ player_update_results update_player(void) {
     _player.anim_state = PL_ANIM_STATE_IDLE;
   }
 
-  if(not _player.is_damagable) {
-    if(_player.damage_break_current <= 0) { _player.is_damagable = true; }
-    else { _player.damage_break_current -= GetFrameTime(); }
-  }
+  player_damage_break_update();
+
   if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON)) {
     player_attack_init();
   }
@@ -224,12 +225,6 @@ bool render_player(void) {
     state->dynamic_player.current_anim_to_play.rotation, 
     WHITE
   );
-  // TODO: Remove Later
-  //DrawRectangleLines(
-  //  static_cast<i32>(state->dynamic_player.collision.x), static_cast<i32>(state->dynamic_player.collision.y),
-  //  static_cast<i32>(state->dynamic_player.collision.width), static_cast<i32>(state->dynamic_player.collision.height), 
-  //  WHITE
-  //);
   #if DEBUG_COLLISIONS
     DrawRectangleLines(
       static_cast<i32>(state->dynamic_player.collision.x), static_cast<i32>(state->dynamic_player.collision.y),
@@ -312,9 +307,10 @@ void player_take_damage(i32 damage) {
 
   if(not state->dynamic_player.is_damagable or state->dynamic_player.is_dead) return;
   if((state->dynamic_player.health_current - damage) > 0 and (state->dynamic_player.health_current - damage) <= state->dynamic_player.stats.at(CHARACTER_STATS_HEALTH).buffer.i32[3]) {
+    //i32 health_prev = state->dynamic_player.health_current;
     state->dynamic_player.health_current -= damage;
-    state->dynamic_player.is_damagable = false;
-    state->dynamic_player.damage_break_current = state->dynamic_player.damage_break_time;
+    player_damage_break_init(PLAYER_DAMAGE_BREAK_TIME);
+    //TraceLog(LOG_INFO, "%.1f -- Player Health : %d - %d = %d", GetTime(), health_prev, damage, state->dynamic_player.health_current);
   }
   else {
     state->dynamic_player.health_current = 0;
@@ -397,6 +393,27 @@ void player_update_attack(void) {
   if (_player.current_anim_to_play.is_played) {
     player_attack_reset(false);
     state->combo_timeout_accumulator = PLAYER_COMBO_TIMEOUT;
+    Rectangle damage_area = Rectangle {
+      _player.position.x,
+      _player.position.y,
+      _player.collision.width * NORMAL_ATTACK_DIM_SCALE.x,
+      _player.collision.height * NORMAL_ATTACK_DIM_SCALE.y
+    };
+
+    f32 direction = (_player.w_direction == WORLD_DIRECTION_RIGHT) ? 1.f : -1.f;
+    damage_area.x -= damage_area.width * .5f;
+    damage_area.y -= damage_area.height * .5f;
+
+    damage_area.x += direction * damage_area.width;
+
+    event_fire(EVENT_CODE_DAMAGE_ANY_SPAWN_IF_COLLIDE, event_context(
+      static_cast<i16>(damage_area.x),
+      static_cast<i16>(damage_area.y),
+      static_cast<i16>(damage_area.width),
+      static_cast<i16>(damage_area.height),
+      static_cast<i16>(_player.stats.at(CHARACTER_STATS_DAMAGE).buffer.i32[3]),
+      static_cast<i16>(COLLISION_TYPE_RECTANGLE_RECTANGLE)
+    ));
   }
 }
 void player_attack_init(void) {
@@ -512,6 +529,9 @@ void player_roll_init(void) {
   if (not able_to_roll) {
     return;
   }
+  if (_player.anim_state == PL_ANIM_STATE_ATTACK) {
+    player_attack_reset(false);
+  }
   _player.anim_state = PL_ANIM_STATE_ROLL;
 
   _player.roll_control = easing_accumulation_control();
@@ -519,6 +539,7 @@ void player_roll_init(void) {
   _player.roll_control.begin_x = _player.position.x;
   _player.roll_control.begin_y = _player.position.y;
   _player.roll_control.ease_type = EASING_TYPE_SINE_INOUT;
+  player_damage_break_init(PLAYER_ROLL_DURATION);
 
   Vector2 player_direction = get_player_direction();
   if (player_direction.x == 0.f and player_direction.y == 0.f) {
@@ -550,6 +571,26 @@ void player_update_roll(Vector2& move_delta) {
 
   move_delta.x = math_easing(ease.accumulator, ease.begin_x, ease.change_x, ease.duration, ease.ease_type) - _player.position.x;
   move_delta.y = math_easing(ease.accumulator, ease.begin_y, ease.change_y, ease.duration, ease.ease_type) - _player.position.y;
+}
+void player_damage_break_init(const f32 duration) {
+  state->dynamic_player.is_damagable = false;
+  state->dynamic_player.damage_break_duration = duration;
+}
+void player_damage_break_update(void) {
+  if (not state or state == nullptr) {
+    return;
+  }
+  player_state& _player = state->dynamic_player;
+
+  if(_player.is_damagable) {
+    return;
+  }
+  if(_player.damage_break_accumulator >= _player.damage_break_duration) { 
+    _player.is_damagable = true;
+    _player.damage_break_accumulator = 0.f;
+    return;
+  }
+  _player.damage_break_accumulator += GetFrameTime();
 }
 
 player_state* get_player_state(void) {

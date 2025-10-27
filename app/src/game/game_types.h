@@ -1114,8 +1114,8 @@ typedef struct player_state {
   character_attack_combo combo_type;
   Vector2 position;
   player_animation_state anim_state;
-  f32 damage_break_time;
-  f32 damage_break_current;
+  f32 damage_break_duration;
+  f32 damage_break_accumulator;
   i32 exp_to_next_level;
   i32 exp_current;
   f32 exp_perc;
@@ -1155,8 +1155,8 @@ typedef struct player_state {
     this->combo_type = CHARACTER_ATTACK_COMBO_UNDEFINED;
     this->position = ZEROVEC2;
     this->anim_state = PL_ANIM_STATE_UNDEFINED;
-    this->damage_break_time = 0.f;
-    this->damage_break_current = 0.f;
+    this->damage_break_duration = 0.f;
+    this->damage_break_accumulator = 0.f;
     this->exp_to_next_level = 0.f;
     this->exp_current = 0.f;
     this->exp_perc = 0.f;
