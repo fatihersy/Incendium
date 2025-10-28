@@ -427,17 +427,17 @@ typedef struct ui_error_display_control_system {
   f32 accumulator;
   ui_error_display_control_system(void) {
     this->display_state = ERROR_DISPLAY_ANIMATION_STATE_UNDEFINED;
-    this->error_text = std::string("");
+    this->error_text = std::string();
     this->bg_tex_id = ATLAS_TEX_ID_UNSPECIFIED;
     this->location = ZEROVEC2;
-    this->duration = 0.f; 
+    this->duration = 0.f;
     this->accumulator = 0.f;
   }
 } ui_error_display_control_system;
 
 [[__nodiscard__]] bool user_interface_system_initialize(const camera_metrics * in_camera_metrics);
 
-void update_user_interface(void);
+void update_user_interface(f32 delta_time);
 void render_user_interface(void);
 
 Vector2 position_element_by_grid(Vector2 grid_location, Vector2 grid, Vector2 grid_dim);
@@ -504,7 +504,7 @@ void ui_draw_sprite_on_site(spritesheet *const sheet, Color _tint, i32 frame);
 void ui_draw_sprite_on_site_by_id(spritesheet_id _id, Color _tint, Vector2 pos, Vector2 scale, i32 frame);
 void ui_set_sprite(spritesheet *sheet, bool _play_looped, bool _play_once);
 const spritesheet * ui_get_spritesheet_by_id(spritesheet_id type);
-void ui_update_sprite(spritesheet *sheet);
+void ui_update_sprite(spritesheet *sheet, f32 delta_time);
 Vector2 ui_align_text(Rectangle in_dest, Vector2 in_text_measure, text_alignment align_to);
 
 #define gui_label_box_format(FONT, FONT_SIZE, RECT, COLOR, ALIGN, TEXT, ...) gui_label_box(TextFormat(TEXT, __VA_ARGS__), FONT, FONT_SIZE, RECT, COLOR, ALIGN)

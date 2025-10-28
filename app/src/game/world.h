@@ -33,7 +33,7 @@ bool add_prop_curr_map(tilemap_prop_sprite prop_sprite);
 bool add_map_coll_curr_map(Rectangle map_coll);
 bool remove_prop_cur_map_by_id(i32 map_id, tilemap_prop_types type);
 bool remove_map_collision_by_id(i32 coll_id);
-void update_map(void);
+void update_map(f32 delta_time);
 void drag_tilesheet(Vector2 vec);
 void _render_tile_on_pos(const tile *const _tile, Vector2 pos, const tilesheet *const sheet);
 void render_map(void);

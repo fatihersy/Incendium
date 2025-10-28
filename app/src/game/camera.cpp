@@ -115,7 +115,7 @@ static camera_system_state * state = nullptr;
 bool camera_on_event(i32 code, event_context context);
 bool recreate_camera(i32 target_x, i32 target_y, i32 render_width, i32 render_height);
 Vector2 get_perlin_2d(u16 seed);
-Vector2 update_camera_shake(void);
+Vector2 update_camera_shake(f32 delta_time);
 void set_camera_zoom(f32 value);
 
 bool create_camera(i32 target_x, i32 target_y, i32 render_width, i32 render_height) {
@@ -175,9 +175,9 @@ const camera_metrics* get_in_game_camera(void) {
   return __builtin_addressof(state->cam_met);
 }
 
-bool update_camera(void) {
+bool update_camera(f32 delta_time) {
   Vector2 diff = vec2_subtract(state->position, state->cam_met.handle.target);
-  float length = vec2_lenght(diff);
+  f32 length = vec2_lenght(diff);
 
   if (state->zoom_ctrl.is_active) {
     camera_zoom_control_system& zoom_ctrl = state->zoom_ctrl;
@@ -190,17 +190,17 @@ bool update_camera(void) {
       zoom_ctrl = camera_zoom_control_system();
     }
     else {
-      zoom_ctrl.accumulator += GetFrameTime();
+      zoom_ctrl.accumulator += delta_time;
     }
   }
 
   if (length > state->camera_min_effect_lenght) {
-    float speed = FMAX(state->camera_fraction_speed * length, state->camera_min_speed);
+    f32 speed = FMAX(state->camera_fraction_speed * length, state->camera_min_speed);
 
-    state->cam_met.handle.target = vec2_add(state->cam_met.handle.target, vec2_scale(diff, speed * GetFrameTime() / length));
+    state->cam_met.handle.target = vec2_add(state->cam_met.handle.target, vec2_scale(diff, speed * delta_time / length));
 
     if (state->shake_ctrl.is_active) {
-      Vector2 shake = update_camera_shake();
+      Vector2 shake = update_camera_shake(delta_time);
       state->cam_met.handle.target.x += shake.x;
       state->cam_met.handle.target.y += shake.y;
     }
@@ -227,7 +227,7 @@ bool update_camera(void) {
   return true;
 }
 
-Vector2 update_camera_shake(void) {
+Vector2 update_camera_shake(f32 delta_time) {
   if (not state or state == nullptr) {
     IERROR("camera::update_camera_shake()::State is not valid");
     return ZEROVEC2;
@@ -242,7 +242,7 @@ Vector2 update_camera_shake(void) {
     shake.is_active = false;
     return ZEROVEC2;
   }
-  shake.accumulator += GetFrameTime();
+  shake.accumulator += delta_time;
 
   f32 sin = static_cast<f32>(fast_sin(static_cast<f64>(shake.speed) * (static_cast<f64>(shake.seed) + GetTime())));
   Vector2 noise = vec2_scale(get_perlin_2d(shake.seed), shake.noise_magnitude);

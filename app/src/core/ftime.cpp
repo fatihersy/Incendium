@@ -1,4 +1,5 @@
 #include "ftime.h"
+#include "raylib.h"
 #include "core/fmemory.h"
 
 const u32 random_table[RANDOM_TABLE_NUMBER_COUNT] = {
@@ -39,11 +40,13 @@ const u32 random_table[RANDOM_TABLE_NUMBER_COUNT] = {
 typedef struct time_system_state {
   u16 rand_start_index;
   u16 rand_ind;
-  i32 padding;
+
+  f32 ingame_delta_time_multiplier;
+
   time_system_state(void) {
     this->rand_start_index = 0u;
     this->rand_ind = 0u;
-    this->padding = 0;
+    this->ingame_delta_time_multiplier = 0.f;
   }
 } time_system_state;
 
@@ -95,3 +98,19 @@ void update_time(void) {
 
   return rnd;
 }
+
+void set_ingame_delta_time_multiplier(f32 val) {
+  if (not state or state == nullptr) {
+    return;
+  }
+  state->ingame_delta_time_multiplier = val;
+}
+
+f32 delta_time_ingame(void) {
+  if (not state or state == nullptr) {
+    return 0.f;
+  }
+  return GetFrameTime() * state->ingame_delta_time_multiplier;
+}
+
+

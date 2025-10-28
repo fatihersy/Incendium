@@ -105,7 +105,7 @@ bool update_collectible_manager(void) {
     }
 
 		if (CheckCollisionRecs(item->world_collision, state->in_camera_metrics->frustum)) {
-      update_sprite(__builtin_addressof(item->sheet));
+      update_sprite(__builtin_addressof(item->sheet), state->in_ingame_info->delta_time);
 			item->is_on_screen = true;
       if (item->drop_control.play_animation) {
 
@@ -115,7 +115,7 @@ bool update_collectible_manager(void) {
               item->world_collision.y = EaseElasticOut(drop_control.accumulator, drop_control.buffer.f32[0], drop_control.buffer.f32[1], drop_control.animation_duration);
               item->sheet.coord.x = item->world_collision.x;
               item->sheet.coord.y = item->world_collision.y;
-              drop_control.accumulator += GetFrameTime();
+              drop_control.accumulator += state->in_ingame_info->delta_time;
               break;
             }
             case LOOT_DROP_ANIMATION_PLAYER_GRAB: {
@@ -136,7 +136,7 @@ bool update_collectible_manager(void) {
               item->sheet.coord.x = position.x;
               item->sheet.coord.y = position.y;
 
-              drop_control.accumulator += GetFrameTime();
+              drop_control.accumulator += state->in_ingame_info->delta_time;
               break;
             }
             default: {

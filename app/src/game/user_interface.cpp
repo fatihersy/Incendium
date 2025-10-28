@@ -136,9 +136,9 @@ bool user_interface_on_event(i32 code, event_context context);
 void update_buttons(void);
 void update_sliders(void);
 void update_checkboxes(void);
-void update_display_errors(void);
+void update_display_errors(f32 delta_time);
 void render_display_errors(void);
-void combat_feedback_update_floating_texts(void);
+void combat_feedback_update_floating_texts(f32 delta_time);
 void combat_feedback_render_floating_texts(void);
  
 void draw_slider_body(const slider *const sdr);
@@ -465,7 +465,7 @@ bool user_interface_system_initialize(const camera_metrics * in_camera_metrics) 
   event_register(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, user_interface_on_event);
   return true;
 }
-void update_user_interface(void) {
+void update_user_interface(f32 delta_time) {
   IF_NOT_STATE("update_user_interface", return; );
 
   Vector2 mouse_pos_screen_unscaled = GetMousePosition();
@@ -479,8 +479,8 @@ void update_user_interface(void) {
   update_buttons();
   update_sliders();
   update_checkboxes();
-  update_display_errors();
-  combat_feedback_update_floating_texts();
+  update_display_errors(delta_time);
+  combat_feedback_update_floating_texts(delta_time);
 }
  void update_buttons(void) {
   for (size_t itr_000 = 0; itr_000 < state->buttons.size(); ++itr_000) {
@@ -595,7 +595,7 @@ void update_checkboxes(void) {
     _checkbox.on_screen = false;
   }
 }
-void update_display_errors(void) {
+void update_display_errors(f32 delta_time) {
   for (size_t itr_000 = 0u; itr_000 < state->errors_on_play.size(); ++itr_000) {
     ui_error_display_control_system& err = state->errors_on_play.at(itr_000);
 
@@ -608,7 +608,7 @@ void update_display_errors(void) {
           err.duration
         );
 
-        err.accumulator += GetFrameTime();
+        err.accumulator += delta_time;
 
         if (err.accumulator > err.duration) {
           err.display_state = ERROR_DISPLAY_ANIMATION_STATE_STAY;
@@ -618,7 +618,7 @@ void update_display_errors(void) {
         return;
       }
       case ERROR_DISPLAY_ANIMATION_STATE_STAY: {
-        err.accumulator += GetFrameTime();
+        err.accumulator += delta_time;
 
         if (err.accumulator > err.duration) {
           err.display_state = ERROR_DISPLAY_ANIMATION_STATE_MOVE_OUT;
@@ -635,7 +635,7 @@ void update_display_errors(void) {
           err.duration
         );
 
-        err.accumulator += GetFrameTime();
+        err.accumulator += delta_time;
 
         if (err.accumulator > err.duration) {
           state->errors_on_play.erase(state->errors_on_play.begin() + itr_000);
@@ -1105,7 +1105,7 @@ void draw_slider_body(const slider *const sdr) {
       f32 each_body_scale = (float)each_body_width / sdr_type.origin_body_width;
       Vector2 draw_sprite_scale = Vector2 {each_body_scale, sdr_type.scale};
       Vector2 _pos_temp = Vector2 {sdr->position.x + SCREEN_OFFSET.x, sdr->position.y};
-      std::string text = std::string("");
+      std::string text = std::string();
       if (sdr->localize_text) {
         text = lc_txt(sdr->options.at(sdr->current_value).localization_symbol);
       } else {
@@ -1560,13 +1560,13 @@ void combat_feedback_spawn_floating_text(const char* _text, combat_feedback_floa
     Color { 223, 249, 251, 255}
   ));
 }
-void combat_feedback_update_floating_texts(void) {
+void combat_feedback_update_floating_texts(f32 delta_time) {
   IF_NOT_STATE("combat_feedback_update_floating_texts", return; );
 
   floating_text_display_system_state& system = state->cfft_display_state;
 
   for (auto iterator = system.queue.begin(); iterator != system.queue.end();) {
-    iterator->accumulator += GetFrameTime();
+    iterator->accumulator += delta_time;
     iterator->accumulator = FCLAMP(iterator->accumulator, 0, iterator->duration);
 
     Vector2& interpolate = iterator->interpolate;
@@ -2439,8 +2439,8 @@ void ui_set_sprite(spritesheet *sheet, bool _play_looped, bool _play_once) {
 const spritesheet * ui_get_spritesheet_by_id(spritesheet_id type) {
   return ss_get_spritesheet_by_enum(type);
 }
-void ui_update_sprite(spritesheet *sheet) {
-  update_sprite(sheet);
+void ui_update_sprite(spritesheet *sheet, f32 delta_time) {
+  update_sprite(sheet, delta_time);
 }
 // EXPOSED
 

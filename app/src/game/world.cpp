@@ -271,8 +271,8 @@ void load_current_map(void) {
   refresh_render_queue(state->active_map_stage.map_id);
 }
 
-void update_map(void) {
-  update_tilemap(&state->map.at(state->active_map_stage.map_id));
+void update_map(f32 delta_time) {
+  update_tilemap(&state->map.at(state->active_map_stage.map_id), delta_time);
 }
 
 void drag_tilesheet(Vector2 vec) {

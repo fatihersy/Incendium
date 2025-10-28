@@ -29,8 +29,11 @@ typedef struct game_manager_system_state {
   Vector2 mouse_pos_screen;
   std::vector<character_trait> traits;
   std::vector<character_trait> chosen_traits;
+  
   playlist_control_system_state playlist;
-
+  
+  #warning "Game manager --- Rules"
+  std::array<game_rule, GAME_RULE_MAX> default_game_rules;
   std::array<item_data, ITEM_TYPE_MAX> default_items; 
   i32 next_inventory_slot_id;
 
@@ -51,7 +54,8 @@ typedef struct game_manager_system_state {
     this->traits.clear();
     this->chosen_traits = std::vector<character_trait>();
     this->playlist = playlist_control_system_state();
-
+    
+    this->default_game_rules = std::array<game_rule, GAME_RULE_MAX>();
     this->default_items = std::array<item_data, ITEM_TYPE_MAX>();
     this->next_inventory_slot_id = 0;
 
@@ -187,6 +191,20 @@ bool game_manager_initialize(const camera_metrics * in_camera_metrics, const app
   }
   // Runes
 
+  // Rules
+  {
+    #warning "Do localization"
+    state->default_game_rules.at(GAME_RULE_SPAWN_MULTIPLIER)        = game_rule(GAME_RULE_SPAWN_MULTIPLIER,       "Curse",       Rectangle {2144, 672, 32, 32}, 0, data128());
+    state->default_game_rules.at(GAME_RULE_PLAY_TIME_MULTIPLIER)    = game_rule(GAME_RULE_PLAY_TIME_MULTIPLIER,   "Pocket Watch",Rectangle {1792, 640, 32, 32}, 0, data128());
+    state->default_game_rules.at(GAME_RULE_DELTA_TIME_MULTIPLIER)   = game_rule(GAME_RULE_DELTA_TIME_MULTIPLIER,  "Hourglass",   Rectangle {1696, 672, 32, 32}, 0, data128());
+    state->default_game_rules.at(GAME_RULE_BOSS_MODIFIER)           = game_rule(GAME_RULE_BOSS_MODIFIER,          "Shrine",      Rectangle {1728, 800, 32, 32}, 0, data128());
+    state->default_game_rules.at(GAME_RULE_AREA_UNLOCKER)           = game_rule(GAME_RULE_AREA_UNLOCKER,          "Compass",     Rectangle {2144, 672, 32, 32}, 0, data128());
+    state->default_game_rules.at(GAME_RULE_TRAIT_POINT_MODIFIER)    = game_rule(GAME_RULE_TRAIT_POINT_MODIFIER,   "Enlightened", Rectangle {1600, 640, 32, 32}, 0, data128());
+    state->default_game_rules.at(GAME_RULE_BONUS_RESULT_MULTIPLIER) = game_rule(GAME_RULE_BONUS_RESULT_MULTIPLIER,"Big Pouch",   Rectangle {1792, 736, 32, 32}, 0, data128());
+    state->default_game_rules.at(GAME_RULE_ZOMBIE_LEVEL_MODIFIER)   = game_rule(GAME_RULE_ZOMBIE_LEVEL_MODIFIER,  "Totem",       Rectangle {1568, 672, 32, 32}, 0, data128());
+  }
+  // Rules
+
   state->playlist = create_playlist(PLAYLIST_PRESET_INGAME_PLAY_LIST);
 
   return game_manager_reinit(in_camera_metrics, in_app_settings, in_active_map_ptr);
@@ -223,6 +241,8 @@ void update_game_manager(void) {
   }
   state->mouse_pos_screen = Vector2 { GetMousePosition().x * get_app_settings()->scale_ratio.at(0), GetMousePosition().y * get_app_settings()->scale_ratio.at(1)};
   state->mouse_pos_world = GetScreenToWorld2D(Vector2 {state->mouse_pos_screen.x,state->mouse_pos_screen.y}, state->in_camera_metrics->handle);
+  state->game_info.delta_time = delta_time_ingame();
+  IINFO("Delta --- %.1f", state->game_info.delta_time);
   update_sound_system();
 
   switch (state->ingame_phase) {
@@ -375,6 +395,8 @@ bool gm_start_game(worldmap_stage stage) {
   reset_ingame_info();
 
   state->game_info.play_time = state->stage.stage_duration;
+
+  set_ingame_delta_time_multiplier(1.5f);
 
   state->playlist.media_play(__builtin_addressof(state->playlist));
   return true;
@@ -585,7 +607,7 @@ void generate_in_game_info(void) {
     }
   }
   state->game_info.nearest_spawn = spw_nearest;
-  state->game_info.play_time -= GetFrameTime();
+  state->game_info.play_time -= state->game_info.delta_time;
 }
 void reset_ingame_info(void) {
   if (not state or state == nullptr) {
@@ -631,7 +653,7 @@ void gm_update_player(void) {
 
     for (size_t itr_000 = 0; itr_000 < ABILITY_ID_MAX; ++itr_000) {
       if (state->game_info.player_state_dynamic->ability_system.abilities.at(itr_000).is_active) {
-        state->game_info.player_state_dynamic->ability_system.abilities.at(itr_000).ability_play_time += GetFrameTime();
+        state->game_info.player_state_dynamic->ability_system.abilities.at(itr_000).ability_play_time += state->game_info.delta_time;
       }
     }
   }

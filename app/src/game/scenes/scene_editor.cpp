@@ -434,8 +434,8 @@ void update_scene_editor(void) {
   editor_update_bindings();
   event_fire(EVENT_CODE_CAMERA_SET_TARGET, event_context(data128(state->target.x, state->target.y)));
 
-  update_map();
-  update_camera();
+  update_map(GetFrameTime());
+  update_camera(GetFrameTime());
   
   if(state->se_fade.fade_animation_playing){
     process_fade_effect(__builtin_addressof(state->se_fade));
@@ -459,14 +459,14 @@ void update_scene_editor(void) {
   if (state->b_prop_selection_screen_update_prop_sprites) {
     for (size_t itr_000 = 0u; itr_000 < state->tilemap_props_sprite->size(); itr_000++) {
       spritesheet *const sprite = __builtin_addressof(state->tilemap_props_sprite->at(itr_000).sprite);
-      ui_update_sprite(sprite);
+      ui_update_sprite(sprite, GetFrameTime());
     }
     state->b_prop_selection_screen_update_prop_sprites = false;
   }
   if (state->selected_prop_sprite_panel_selection_copy.is_initialized and state->selection_type == SLC_TYPE_DROP_PROP_SPRITE) {
-    ui_update_sprite(__builtin_addressof(state->selected_prop_sprite_panel_selection_copy.sprite));
+    ui_update_sprite(__builtin_addressof(state->selected_prop_sprite_panel_selection_copy.sprite), GetFrameTime());
   }
-  update_user_interface();
+  update_user_interface(GetFrameTime());
 }
 void render_scene_editor(void) {
   BeginMode2D(get_in_game_camera()->handle);

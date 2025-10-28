@@ -106,9 +106,9 @@ typedef struct loc_data {
   std::array<std::string, LOC_TEXT_MAX> content;
   language_index index;
   loc_data(void) {
-    this->language_name = std::string("");
-    this->codepoints = std::string("");
-    this->content.fill(std::string(""));
+    this->language_name = std::string();
+    this->codepoints = std::string();
+    this->content.fill(std::string());
     this->index = LANGUAGE_INDEX_UNDEFINED;
   }
 } loc_data;

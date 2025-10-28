@@ -149,7 +149,7 @@ void update_ability_comet(ability *const abl) {
       prj.collision.y = prj.position.y - prj.collision.height * .5f;
     }
 
-    update_sprite(__builtin_addressof(prj.animations.at(prj.active_sprite)));
+    update_sprite(__builtin_addressof(prj.animations.at(prj.active_sprite)), state->in_ingame_info->delta_time);
   }
 }
 void render_ability_comet(ability *const abl){

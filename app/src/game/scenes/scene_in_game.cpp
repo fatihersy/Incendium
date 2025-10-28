@@ -279,9 +279,9 @@ void update_scene_in_game(void) {
     return;
   });
 
-  update_camera();
+  update_camera(delta_time_ingame());
   in_game_update_bindings();
-  update_user_interface();
+  update_user_interface(delta_time_ingame());
   
   if(state->sig_fade.fade_animation_playing){
     process_fade_effect(__builtin_addressof(state->sig_fade));
@@ -303,7 +303,7 @@ void update_scene_in_game(void) {
               Vector2 { cam_bounds.width - frustum_half.x, cam_bounds.height - frustum_half.y }  // Map right down 
             );
             event_fire(EVENT_CODE_CAMERA_SET_TARGET, event_context(cam_target.x, cam_target.y));
-            update_map();
+            update_map(state->in_ingame_info->delta_time);
             update_game_manager();
           }
           break;
@@ -325,7 +325,7 @@ void update_scene_in_game(void) {
       break; 
     }
     case SCENE_INGAME_STATE_PLAY_DEBUG: {
-      update_map();
+      update_map(GetFrameTime());
       update_game_manager_debug();
 
       event_fire(EVENT_CODE_CAMERA_SET_TARGET, event_context(state->in_ingame_info->player_state_dynamic->position.x,state->in_ingame_info->player_state_dynamic->position.y));
@@ -1063,7 +1063,7 @@ void sig_update_chest_sequence(void) {
         sig_init_chest_sequence(CHEST_OPENING_SEQUENCE_CHEST_OPEN);
         return;
       }
-      seq.accumulator += GetFrameTime();
+      seq.accumulator += state->in_ingame_info->delta_time;
       seq.accumulator = FCLAMP(seq.accumulator, 0.f, seq.duration);
 
       seq.mm_ex.f32[0] = EaseBackOut(seq.accumulator, seq.mm_ex.f32[1], CHEST_OPENING_SEQ_CHEST_SCALE - seq.mm_ex.f32[1], seq.duration);
@@ -1078,7 +1078,7 @@ void sig_update_chest_sequence(void) {
     }
     case CHEST_OPENING_SEQUENCE_CHEST_OPEN: {
       if (not seq.sheet_chest.is_played) {
-        ui_update_sprite(__builtin_addressof(seq.sheet_chest));
+        ui_update_sprite(__builtin_addressof(seq.sheet_chest), state->in_ingame_info->delta_time);
         return;
       }
       else {
@@ -1088,7 +1088,7 @@ void sig_update_chest_sequence(void) {
     }
     case CHEST_OPENING_SEQUENCE_READY: {
       if(seq.accumulator < seq.duration) {
-        seq.accumulator += GetFrameTime();
+        seq.accumulator += state->in_ingame_info->delta_time;
         return;
       }
       if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT)) {
@@ -1098,7 +1098,7 @@ void sig_update_chest_sequence(void) {
     }
     case CHEST_OPENING_SEQUENCE_SPIN: {
       if(seq.accumulator < seq.duration) {
-        seq.accumulator += GetFrameTime();
+        seq.accumulator += state->in_ingame_info->delta_time;
       }
       else if (seq.accumulator > seq.duration) {
         seq.accumulator = seq.duration;
@@ -1106,18 +1106,18 @@ void sig_update_chest_sequence(void) {
       if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT)) {
         sig_init_chest_sequence(CHEST_OPENING_SEQUENCE_RESULT);
       }
-      seq.mm_ex.f32[0] += EaseSineInOut(seq.accumulator, 0.f, GetFrameTime() * CHEST_OPENING_SPIN_SPEED, seq.duration);
+      seq.mm_ex.f32[0] += EaseSineInOut(seq.accumulator, 0.f, state->in_ingame_info->delta_time * CHEST_OPENING_SPIN_SPEED, seq.duration);
       return;
     }
     case CHEST_OPENING_SEQUENCE_RESULT: {
       if(seq.accumulator < seq.duration) {
-        seq.accumulator += GetFrameTime();
+        seq.accumulator += state->in_ingame_info->delta_time;
       }
       else if (seq.accumulator > seq.duration) {
         seq.accumulator = seq.duration;
       }
       seq.mm_ex.f32[1] = EaseSineInOut(seq.accumulator, seq.mm_ex.f32[0], -seq.mm_ex.f32[2], seq.duration);
-      ui_update_sprite(__builtin_addressof(seq.sheets_background.at(0)));
+      ui_update_sprite(__builtin_addressof(seq.sheets_background.at(0)), state->in_ingame_info->delta_time);
       return;
     }
     default: {

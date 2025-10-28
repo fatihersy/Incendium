@@ -7,7 +7,7 @@
 bool create_tilemap(const tilesheet_type _type, const Vector2 _position, const i32 _grid_size, const i32 _tile_size,tilemap *const out_tilemap);
 void create_tilesheet(tilesheet_type _type, i32 _dest_tile_size, f32 _offset, tilesheet *const out_tilesheet);
 
-void update_tilemap(tilemap *const _tilemap);
+void update_tilemap(tilemap *const _tilemap, f32 delta_time);
 void render_tilemap(const tilemap *const _tilemap, Rectangle camera_view);
 void render_props_y_based_all(const tilemap *const _tilemap, Rectangle camera_view, i32 start_y, i32 end_y);
 void render_props_y_based_by_zindex(const tilemap *const _tilemap, size_t index, Rectangle camera_view, i32 start_y, i32 end_y);

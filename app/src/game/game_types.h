@@ -57,7 +57,7 @@
 #define WORLDMAP_LOC_PIN_SIZE_DIV2 WORLDMAP_LOC_PIN_SIZE * .5f // Needed?
 #define WORLDMAP_MAINMENU_MAP 0
 
-typedef enum collision_type {
+enum collision_type {
   COLLISION_TYPE_UNDEFINED,
   COLLISION_TYPE_RECTANGLE_RECTANGLE,
   COLLISION_TYPE_CIRCLE_CIRCLE,
@@ -69,9 +69,9 @@ typedef enum collision_type {
   COLLISION_TYPE_POINT_LINE,
   COLLISION_TYPE_POINT_POLY,
   COLLISION_TYPE_MAX,
-} collision_type;
+};
 
-typedef enum spawn_type {
+enum spawn_type {
   SPAWN_TYPE_UNDEFINED,
   SPAWN_TYPE_BROWN,
   SPAWN_TYPE_ORANGE,
@@ -79,27 +79,27 @@ typedef enum spawn_type {
   SPAWN_TYPE_RED,
   SPAWN_TYPE_BOSS,
   SPAWN_TYPE_MAX
-} spawn_type;
+};
 
-typedef enum scene_id {
+enum scene_id {
   SCENE_TYPE_UNSPECIFIED,
   SCENE_TYPE_MAIN_MENU,
   SCENE_TYPE_IN_GAME,
   SCENE_TYPE_EDITOR,
   SCENE_TYPE_MAX
-} scene_id;
+};
 
-typedef enum ability_upgradables {
+enum ability_upgradables {
   ABILITY_UPG_UNDEFINED,
   ABILITY_UPG_DAMAGE,
   ABILITY_UPG_HITBOX,
   ABILITY_UPG_SPEED,
   ABILITY_UPG_AMOUNT,
   ABILITY_UPG_MAX,
-} ability_upgradables;
+};
 
 // LABEL: Ability types
-typedef enum ability_id {
+enum ability_id {
   ABILITY_ID_UNDEFINED,
   ABILITY_ID_FIREBALL,
   ABILITY_ID_BULLET,
@@ -108,9 +108,9 @@ typedef enum ability_id {
   ABILITY_ID_CODEX,
   ABILITY_ID_FIRETRAIL,
   ABILITY_ID_MAX,
-} ability_id;
+};
 
-typedef enum character_stat_id {
+enum character_stat_id {
   CHARACTER_STATS_UNDEFINED,
   CHARACTER_STATS_HEALTH,
   CHARACTER_STATS_HP_REGEN,
@@ -122,17 +122,17 @@ typedef enum character_stat_id {
   CHARACTER_STATS_EXP_GAIN,
   CHARACTER_STATS_TOTAL_TRAIT_POINTS,
   CHARACTER_STATS_MAX,
-} character_stat_id;
+};
 
-typedef enum character_attack_combo {
+enum character_attack_combo {
   CHARACTER_ATTACK_COMBO_UNDEFINED,
   CHARACTER_ATTACK_COMBO_1,
   CHARACTER_ATTACK_COMBO_2,
   CHARACTER_ATTACK_COMBO_3,
   CHARACTER_ATTACK_COMBO_MAX
-} character_attack_combo;
+};
 
-typedef enum font_type {
+enum font_type {
   FONT_TYPE_UNDEFINED,
   FONT_TYPE_ITALIC,
   FONT_TYPE_LIGHT,
@@ -140,43 +140,43 @@ typedef enum font_type {
   FONT_TYPE_BOLD,
   FONT_TYPE_TITLE,
   FONT_TYPE_MAX
-} font_type;
+};
 
-typedef enum image_type {
+enum image_type {
   IMAGE_TYPE_UNSPECIFIED,
   IMAGE_TYPE_A, // To Avoid warning
   IMAGE_TYPE_MAX
-} image_type;
+};
 
-typedef enum world_direction {
+enum world_direction {
   WORLD_DIRECTION_UNDEFINED,
   WORLD_DIRECTION_LEFT,
   WORLD_DIRECTION_RIGHT,
   WORLD_DIRECTION_UP,
   WORLD_DIRECTION_DOWN,
-} world_direction;
+};
 
-typedef enum resource_type {
+enum resource_type {
   RESOURCE_TYPE_SPRITESHEET,
   RESOURCE_TYPE_TEXTURE
-} resource_type;
+};
 
-typedef enum dialog_type {
+enum dialog_type {
   DIALOG_TYPE_IN_GAME_UI,
   DIALOG_TYPE_MAIN_MENU_UI,
   DIALOG_TYPE_PAUSE_MENU,
   DIALOG_TYPE_ABILITY_UPGRADE,
   DIALOG_TYPE_TILE_SELECTION
-} dialog_type;
+};
 
-typedef enum tilesheet_type {
+enum tilesheet_type {
   TILESHEET_TYPE_UNSPECIFIED,
   TILESHEET_TYPE_MAP,
 
   TILESHEET_TYPE_MAX
-} tilesheet_type;
+};
 
-typedef enum tilemap_prop_types {
+enum tilemap_prop_types {
   TILEMAP_PROP_TYPE_UNDEFINED,
   TILEMAP_PROP_TYPE_TREE,
   TILEMAP_PROP_TYPE_TOMBSTONE,
@@ -191,16 +191,16 @@ typedef enum tilemap_prop_types {
   TILEMAP_PROP_TYPE_BUILDING,
   TILEMAP_PROP_TYPE_SPRITE,
   TILEMAP_PROP_TYPE_MAX,
-}tilemap_prop_types;
+};
 
-typedef enum ingame_play_phases {
+enum ingame_play_phases {
   INGAME_PLAY_PHASE_UNDEFINED,
   INGAME_PLAY_PHASE_CLEAR_ZOMBIES,
   INGAME_PLAY_PHASE_RESULTS,
   INGAME_PLAY_PHASE_MAX,
-}ingame_play_phases;
+};
 
-typedef enum text_alignment {
+enum text_alignment {
   TEXT_ALIGN_UNDEFINED,
   TEXT_ALIGN_TOP_LEFT,
   TEXT_ALIGN_TOP_CENTER,
@@ -211,18 +211,18 @@ typedef enum text_alignment {
   TEXT_ALIGN_LEFT_CENTER,
   TEXT_ALIGN_RIGHT_CENTER,
   TEXT_ALIGN_MAX,
-}text_alignment;
+};
 
-typedef enum spawn_movement_animations {
+enum spawn_movement_animations {
   SPAWN_ZOMBIE_ANIMATION_UNDEFINED,
   SPAWN_ZOMBIE_ANIMATION_MOVE_LEFT,
   SPAWN_ZOMBIE_ANIMATION_MOVE_RIGHT,
   SPAWN_ZOMBIE_ANIMATION_TAKE_DAMAGE_LEFT,
   SPAWN_ZOMBIE_ANIMATION_TAKE_DAMAGE_RIGHT,
   SPAWN_ZOMBIE_ANIMATION_MAX,
-} spawn_movement_animations;
+};
 
-typedef enum player_animation_set {
+enum player_animation_set {
   PLAYER_ANIMATION_UNDEFINED,
   //PLAYER_ANIMATION_MOVE_LEFT,
   PLAYER_ANIMATION_MOVE_RIGHT,
@@ -233,9 +233,9 @@ typedef enum player_animation_set {
   //PLAYER_ANIMATION_WRECK_LEFT,
   PLAYER_ANIMATION_WRECK_RIGHT,
   PLAYER_ANIMATION_MAX,
-} player_animation_set;
+};
 
-typedef enum player_animation_state {
+enum player_animation_state {
   PL_ANIM_STATE_UNDEFINED,
   PL_ANIM_STATE_IDLE,
   PL_ANIM_STATE_WALK,
@@ -243,9 +243,9 @@ typedef enum player_animation_state {
   PL_ANIM_STATE_ATTACK,
   PL_ANIM_STATE_TAKE_DAMAGE,
   PL_ANIM_STATE_MAX,
-} player_animation_state;
+};
 
-typedef enum item_type {
+enum item_type {
   ITEM_TYPE_UNDEFINED,
   ITEM_TYPE_EXPERIENCE,
   ITEM_TYPE_COIN,
@@ -260,30 +260,43 @@ typedef enum item_type {
   ITEM_TYPE_RUNE_RESISTANCE_RARE,
   ITEM_TYPE_RUNE_RESISTANCE_EPIC,
   ITEM_TYPE_MAX
-} item_type;
+};
 
-typedef enum loot_drop_animation {
+enum loot_drop_animation {
   LOOT_DROP_ANIMATION_UNDEFINED,
   LOOT_DROP_ANIMATION_ELASTIC_OUT,
   LOOT_DROP_ANIMATION_PLAYER_GRAB,
   LOOT_DROP_ANIMATION_MAX,
-} loot_drop_animation;
+};
 
-typedef enum combat_feedback_floating_text_type {
+enum combat_feedback_floating_text_type {
   COMBAT_FEEDBACK_FLOATING_TEXT_TYPE_UNDEFINED,
   COMBAT_FEEDBACK_FLOATING_TEXT_TYPE_DAMAGE,
   COMBAT_FEEDBACK_FLOATING_TEXT_TYPE_HEAL,
   COMBAT_FEEDBACK_FLOATING_TEXT_TYPE_CONDITION,
   COMBAT_FEEDBACK_FLOATING_TEXT_TYPE_MAX,
-} combat_feedback_floating_text_type;
+};
 
-typedef enum damage_deal_result_type {
+enum damage_deal_result_type {
   DAMAGE_DEAL_RESULT_UNDEFINED,
   DAMAGE_DEAL_RESULT_SUCCESS,
   DAMAGE_DEAL_RESULT_ERROR,
   DAMAGE_DEAL_RESULT_IN_DAMAGE_BREAKE,
   DAMAGE_DEAL_RESULT_MAX,
-} damage_deal_result_type;
+};
+
+enum game_rule_id {
+  GAME_RULE_UNDEFINED,
+  GAME_RULE_SPAWN_MULTIPLIER,
+  GAME_RULE_PLAY_TIME_MULTIPLIER,
+  GAME_RULE_DELTA_TIME_MULTIPLIER,
+  GAME_RULE_BOSS_MODIFIER,
+  GAME_RULE_AREA_UNLOCKER,
+  GAME_RULE_TRAIT_POINT_MODIFIER,
+  GAME_RULE_BONUS_RESULT_MULTIPLIER,
+  GAME_RULE_ZOMBIE_LEVEL_MODIFIER,
+  GAME_RULE_MAX,
+};
 
 struct easing_accumulation_control {
   easing_type ease_type;
@@ -305,7 +318,7 @@ struct easing_accumulation_control {
   }
 };
 
-typedef struct damage_deal_result {
+struct damage_deal_result {
   damage_deal_result_type type;
   i32 inflicted_damage;
   i32 remaining_health;
@@ -319,9 +332,9 @@ typedef struct damage_deal_result {
     this->inflicted_damage = inflicted;
     this->remaining_health = remaining;
   }
-} damage_deal_result;
+};
 
-typedef struct spritesheet {
+struct spritesheet {
   spritesheet_id sheet_id;
   texture_id tex_id;
   Texture2D* tex_handle;
@@ -372,18 +385,18 @@ typedef struct spritesheet {
     this->play_once = false;
     this->reset_after_finish = false;
   }
-} spritesheet;
+};
 
-typedef struct atlas_texture {
+struct atlas_texture {
   Texture2D* atlas_handle;
   Rectangle source;
   atlas_texture(void) {
     this->atlas_handle = nullptr;
     this->source = ZERORECT;
   } 
-} atlas_texture;
+};
 
-typedef struct tile_symbol {
+struct tile_symbol {
   u8 c[2];
   tile_symbol(void) {
     zero_memory(this->c, sizeof(u8) * 2);
@@ -392,9 +405,9 @@ typedef struct tile_symbol {
     this->c[0] = u1;
     this->c[1] = u2;
   }
-}tile_symbol;
+};
 
-typedef struct tilesheet {
+struct tilesheet {
   tilesheet_type sheet_id;
   atlas_texture atlas_source;
   Texture2D *atlas_handle;
@@ -425,9 +438,9 @@ typedef struct tilesheet {
     this->offset = 0.f;
     this->is_initialized = false;
   }
-} tilesheet;
+};
 
-typedef struct worldmap_stage {
+struct worldmap_stage {
   i32 map_id;
   i32 title_txt_id;
   std::string filename;
@@ -446,7 +459,7 @@ typedef struct worldmap_stage {
   worldmap_stage(void) {
     this->map_id = INVALID_IDI32;
     this->title_txt_id = 0;
-    this->filename = std::string("");
+    this->filename = std::string();
     this->spawning_areas.fill(ZERORECT);
     this->screen_location = ZEROVEC2;
     this->level_bound = ZERORECT;
@@ -480,9 +493,9 @@ typedef struct worldmap_stage {
     this->display_on_screen = in_display_on_screen;
     this->is_playable = in_is_active;
   }
-} worldmap_stage;
+};
 
-typedef struct tilemap_prop_static {
+struct tilemap_prop_static {
   i32 map_id;
   i32 prop_id;
 	texture_id tex_id;
@@ -511,9 +524,9 @@ typedef struct tilemap_prop_static {
     this->is_initialized = false;
     this->use_y_based_zindex = false;
   }
-} tilemap_prop_static;
+};
 
-typedef struct tilemap_prop_sprite {
+struct tilemap_prop_sprite {
   i32 prop_id;
   i32 map_id;
   tilemap_prop_types prop_type;
@@ -532,9 +545,9 @@ typedef struct tilemap_prop_sprite {
     this->is_initialized = false;
     this->use_y_based_zindex = false;
   }
-} tilemap_prop_sprite;
+};
 
-typedef struct tilemap_prop_address {
+struct tilemap_prop_address {
   tilemap_prop_types type;
   union {
     tilemap_prop_static* prop_static;
@@ -552,9 +565,9 @@ typedef struct tilemap_prop_address {
     this->data.prop_sprite = _prop;
     this->type = _prop->prop_type;
   }
-}tilemap_prop_address;
+};
 
-typedef struct tile_position {
+struct tile_position {
   u16 layer;
   u16 x;
   u16 y;
@@ -563,9 +576,9 @@ typedef struct tile_position {
     this->y = 0u;
     this->layer = 0u;
   }
-} tile_position;
+};
 
-typedef struct tile {
+struct tile {
   tile_position position;
   tile_symbol symbol;
   bool is_initialized;
@@ -574,9 +587,9 @@ typedef struct tile {
     this->position = tile_position();
     this->is_initialized = false;
   }
-} tile;
+};
 
-typedef struct map_collision {
+struct map_collision {
   i32 coll_id;
   Rectangle dest;
   map_collision(void) {
@@ -587,9 +600,9 @@ typedef struct map_collision {
     this->coll_id = collision_id;
     this->dest = dest;
   }
-} map_collision;
+};
 
-typedef struct tilemap {
+struct tilemap {
   i32 index;
   std::array<std::string, MAX_TILEMAP_LAYERS> filename;
   std::string propfile;
@@ -610,9 +623,9 @@ typedef struct tilemap {
   tilemap(void) {
     zero_memory(tiles, sizeof(tile_symbol) * MAX_TILEMAP_LAYERS * MAX_TILEMAP_TILESLOT_X * MAX_TILEMAP_TILESLOT_Y);
     this->index = 0;
-    this->filename.fill(std::string(""));
-    this->propfile = std::string("");
-    this->collisionfile = std::string("");
+    this->filename.fill(std::string());
+    this->propfile = std::string();
+    this->collisionfile = std::string();
     this->position = ZEROVEC2;
     this->next_map_id = 0;
     this->next_collision_id = 0;
@@ -626,9 +639,9 @@ typedef struct tilemap {
     this->collisions = std::vector<map_collision>();
     this->is_initialized = false;
   }
-} tilemap;
+};
 
-typedef struct tilemap_stringtify_package {
+struct tilemap_stringtify_package {
   u8 str_tilemap[MAX_TILEMAP_LAYERS][MAX_TILEMAP_TILESLOT * TILESHEET_TILE_SYMBOL_STR_LEN];
   i32 size_tilemap_str[MAX_TILEMAP_LAYERS];
   std::string str_props;
@@ -640,9 +653,9 @@ typedef struct tilemap_stringtify_package {
     this->str_props.clear();
     this->is_success = false;
   }
-}tilemap_stringtify_package;
+};
 
-typedef struct loot_drop_animation_control_system {
+struct loot_drop_animation_control_system {
   loot_drop_animation drop_anim_type;
   f32 accumulator;
   f32 animation_duration;
@@ -664,9 +677,9 @@ typedef struct loot_drop_animation_control_system {
     this->buffer.f32[0] = begin;
     this->buffer.f32[1] = change;
   }
-} loot_drop_animation_control_system;
+};
 
-typedef struct loot_item {
+struct loot_item {
   item_type type;
   i32 id;
   spritesheet sheet;
@@ -701,9 +714,9 @@ typedef struct loot_item {
     this->is_active = _is_active;
     this->is_initialized = true;
   }
-} loot_item;
+};
 
-typedef struct item_data {
+struct item_data {
   i32 id;
   item_type type;
   atlas_texture_id tex_id;
@@ -724,9 +737,9 @@ typedef struct item_data {
     this->buffer = _buffer;
     this->display_name = _display_name;
   }
-} item_data;
+};
 
-typedef struct combat_feedback_floating_text {
+struct combat_feedback_floating_text {
   i32 id;
   combat_feedback_floating_text_type type;
   atlas_texture_id background_tex_id;
@@ -781,9 +794,9 @@ typedef struct combat_feedback_floating_text {
     this->background_tint = _bg_tint;
     this->font_tint = _font_tint;
   }
-} combat_feedback_floating_text;
+};
 
-typedef struct floating_text_display_system_state {
+struct floating_text_display_system_state {
   std::vector<combat_feedback_floating_text> queue;
   i32 next_cfft_id;
   f32 duration_min;
@@ -805,14 +818,14 @@ typedef struct floating_text_display_system_state {
     this->scale_min = _scale_min;
     this->scale_max = _scale_max;
   }
-} floating_text_display_system_state;
+};
 
 /**
  * @param buffer.i32[0] = SPAWN_TYPE
  * @param buffer.i32[1] = SPAWN_LEVEL
  * @param buffer.i32[2] = SPAWN_RND_SCALE
  */
-typedef struct Character2D {
+struct Character2D {
   i32 character_id;
   i32 health_max;
   i32 health_current;
@@ -877,13 +890,13 @@ typedef struct Character2D {
     this->damage = damage;
     this->initialized = true;
   }
-} Character2D;
+};
 
 /**
  * @brief vec_ex buffer summary: {f32[0], f32[1]}, {f32[2], f32[3]} = {target x, target y}, {explosion.x, explosion.y}
  * @brief mm_ex buffer  summary: {u16[0]} = {counter, }
  */
-typedef struct projectile {
+struct projectile {
   i32 id;
   std::vector<spritesheet> animations;
   i32 active_sprite;
@@ -912,9 +925,9 @@ typedef struct projectile {
     this->duration = 0.f;
     this->is_active = false;
   }
-} projectile;
+};
 
-typedef struct ability {
+struct ability {
   ability_id id;
   i32 display_name_loc_text_id;
   std::vector<projectile> projectiles;
@@ -992,14 +1005,14 @@ typedef struct ability {
     this->icon_src = icon_src;
     this->level = 0;
   }
-}ability;
+};
 
-typedef struct ability_play_system {
+struct ability_play_system {
   std::array<ability, ABILITY_ID_MAX> abilities;
   ability_play_system(void) {
     this->abilities.fill(ability());
   }
-} ability_play_system;
+};
 
 /**
 * @brief buffer[0] : Default value
@@ -1007,7 +1020,7 @@ typedef struct ability_play_system {
 * @brief buffer[2] : Trait value
 * @brief buffer[3] : Total value
 */
-typedef struct character_stat {
+struct character_stat {
   character_stat_id id;
   i32 base_level;
   i32 current_level;
@@ -1040,9 +1053,9 @@ typedef struct character_stat {
     this->upgrade_cost = upgrade_cost;
     this->buffer = buffer;
   }
-}character_stat;
+};
 
-typedef struct character_trait {
+struct character_trait {
   i32 id;
   character_stat_id type;
   std::string title;
@@ -1055,8 +1068,8 @@ typedef struct character_trait {
   character_trait(void) {
     this->id = 0;
     this->type = CHARACTER_STATS_UNDEFINED;
-    this->title = std::string("");
-    this->description = std::string("");
+    this->title = std::string();
+    this->description = std::string();
     this->ingame_ops = data128();
     this->ui_ops = data128();
     this->point = 0;
@@ -1069,9 +1082,9 @@ typedef struct character_trait {
     this->point = _point;
     this->ingame_ops = buffer;
   }
-} character_trait;
+};
 
-typedef struct player_inventory_slot {
+struct player_inventory_slot {
   i32 slot_id;
   ::item_type item_type;
   i32 amount;
@@ -1087,9 +1100,9 @@ typedef struct player_inventory_slot {
   player_inventory_slot(::item_type _type) : player_inventory_slot() {
     this->item_type = _type;
   }
-} player_inventory_slot;
+};
 
-typedef struct player_state {
+struct player_state {
   ability_play_system ability_system;
   std::array<character_stat, CHARACTER_STATS_MAX> stats;
   std::vector<player_inventory_slot> inventory;
@@ -1172,9 +1185,38 @@ typedef struct player_state {
     this->is_dead = false;
     this->is_damagable = false;
   }
-} player_state;
+};
 
-typedef struct ingame_info {
+//#warning "game types --- game rules struct"
+struct game_rule {
+  game_rule_id id;
+  std::string display_name;
+  Rectangle icon_src;
+  i32 base_level;
+  i32 level;
+
+  data128 mm_ex;
+  data128 ui_buffer;
+
+  game_rule(void) {
+    this->id = GAME_RULE_UNDEFINED;
+    this->display_name = std::string();
+    this->icon_src = ZERORECT;
+    this->base_level = 0;
+    this->level = 0;
+    this->mm_ex = data128();
+    this->ui_buffer = data128();
+  }
+  game_rule(game_rule_id _id, std::string _display_name, Rectangle _icon_rect, i32 _base_level, data128 values) : game_rule() {
+    this->id = _id;
+    this->display_name = _display_name;
+    this->icon_src = _icon_rect;
+    this->base_level = _base_level;
+    this->mm_ex = values;
+  }
+};
+
+struct ingame_info {
   player_state* player_state_dynamic;
   const player_state* player_state_static;
   const std::vector<Character2D>* in_spawns;
@@ -1188,6 +1230,7 @@ typedef struct ingame_info {
 
   i32 collected_coins;
   f32 play_time;
+  f32 delta_time;
   bool is_win;
   i32 stage_boss_id;
   i32 total_boss_spawned;
@@ -1212,9 +1255,9 @@ typedef struct ingame_info {
     this->total_boss_spawned = 0;
     this->starter_ability = ABILITY_ID_UNDEFINED;
   }
-} ingame_info;
+};
 
-typedef struct camera_metrics {
+struct camera_metrics {
   Camera2D handle;
   Rectangle frustum;
   Vector2 screen_offset;
@@ -1223,9 +1266,9 @@ typedef struct camera_metrics {
     this->frustum = ZERORECT;
     this->screen_offset = ZEROVEC2;
   }
-} camera_metrics;
+};
 
-typedef struct localization_package {
+struct localization_package {
   std::string language_name;
   language_index index;
   i32 * codepoints;
@@ -1244,9 +1287,9 @@ typedef struct localization_package {
     this->bold_font = ZERO_FONT;
     this->mood = ZERO_FONT;
   }
-} localization_package;
+};
 
-typedef struct text_spec {
+struct text_spec {
   std::string text;
   Vector2 text_pos;
   Font* font;
@@ -1270,7 +1313,7 @@ typedef struct text_spec {
     this->color = _color;
     this->language_index = _language_index;
   }
-}text_spec;
+};
 
 static const i32 level_curve[MAX_PLAYER_LEVEL + 1] = {
   0, //	0

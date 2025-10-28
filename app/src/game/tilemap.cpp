@@ -103,10 +103,10 @@ void create_tilesheet(tilesheet_type _type, i32 _dest_tile_size, f32 _offset, ti
   out_tilesheet->is_initialized = true; 
 }
 
-void update_tilemap(tilemap *const _tilemap) {
+void update_tilemap(tilemap *const _tilemap, f32 delta_time) {
   if (_tilemap and _tilemap != nullptr) {
     for (size_t itr_000 = 0u; itr_000 < _tilemap->sprite_props.size(); ++itr_000) {
-      update_sprite(__builtin_addressof(_tilemap->sprite_props.at(itr_000).sprite));
+      update_sprite(__builtin_addressof(_tilemap->sprite_props.at(itr_000).sprite), delta_time);
     }
   }
 }

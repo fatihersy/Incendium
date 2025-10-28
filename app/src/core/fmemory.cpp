@@ -2,6 +2,7 @@
 
 #include <stdlib.h> // Required for: malloc(), free()
 #include <string.h> // Required for: memset(), memcpy()
+#include <stdexcept> // Required for: runtime_error()
 
 #define TOTAL_ALLOCATED_MEMORY 512 * 1024 * 1024
 
@@ -23,14 +24,13 @@ void memory_system_initialize(void) {
 }
 
 void* allocate_memory_linear(unsigned long long  size, bool will_zero_memory) {
-    #ifndef _RELEASE
-      if (memory_system->linear_memory_allocated + size > memory_system->linear_memory_total_size) {
-        exit(EXIT_FAILURE);
-      }
-      if (size % sizeof(size_t) != 0) {
-        exit(EXIT_FAILURE);
-      }
-    #endif
+
+    if (memory_system->linear_memory_allocated + size > memory_system->linear_memory_total_size) {
+      throw std::runtime_error("Insufficient memory");
+    }
+    if (size % sizeof(size_t) != 0) {
+      throw std::runtime_error("Unaligned memory");
+    }
     void* block = ((unsigned char*)memory_system->linear_memory) + memory_system->linear_memory_allocated;
     memory_system->linear_memory_allocated += size;
 

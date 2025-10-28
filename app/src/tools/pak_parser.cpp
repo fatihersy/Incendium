@@ -57,10 +57,10 @@ typedef struct pak_parser_system_state {
     this->worldmap_location_file_datas.fill(worldmap_stage_file());
 
     this->asset_pak_datas.fill(asset_pak_file());
-    this->map_pak_data = std::string("");
+    this->map_pak_data = std::string();
     this->is_map_pak_data_initialized = false;
 
-    this->read_buffer = std::string("");
+    this->read_buffer = std::string();
     this->read_wsf_buffer = worldmap_stage_file();
   }
 } pak_parser_system_state;
@@ -382,7 +382,7 @@ size_t pak_parser_read_map_data(size_t offset, size_t *const out_pak_start_offse
 std::string pak_id_to_file_name(pak_file_id id) {
   if (id >= PAK_FILE_MAX or id <= PAK_FILE_UNDEFINED) {
     IWARN("pak_parser::pak_id_to_file_name()::File id is out of bound");
-    return std::string("");
+    return std::string();
   }
   switch (id) {
     case PAK_FILE_ASSET1: return std::string("asset1.pak");
@@ -390,11 +390,11 @@ std::string pak_id_to_file_name(pak_file_id id) {
     case PAK_FILE_MAP: return std::string("map.pak");
     default:{
       IWARN("pak_parser::pak_id_to_file_name()::Unsupported pak id");
-      return std::string("");
+      return std::string();
     }
   }
   IERROR("pak_parser::pak_id_to_file_name()::Function ended unexpectedly");
-  return std::string("");
+  return std::string();
 }
 const asset_pak_file * pak_id_to_pak_file(pak_file_id id) {
 	if (not state or state == nullptr) {

@@ -139,7 +139,7 @@ void update_ability_radience(ability *const abl) {
     static_cast<i16>(COLLISION_TYPE_CIRCLE_RECTANGLE)
   ));
 
-  update_sprite(__builtin_addressof(prj.animations.at(prj.active_sprite)));
+  update_sprite(__builtin_addressof(prj.animations.at(prj.active_sprite)), state->in_ingame_info->delta_time);
 }
 
 void render_ability_radience(ability *const abl){

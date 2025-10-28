@@ -92,11 +92,6 @@ void inc_logging(logging_severity ls, const char* fmt, ...) {
   if(not state or state == nullptr) {
 		return;
   }
-  if (GetTime() - state->last_log_time < LOGGING_TIMEOUT) {
-    return;
-  }
-  state->last_log_time = GetTime();
-
   std::string out_log = std::string();
   char timeStr[64] = { 0 };
   time_t now = time(NULL);
@@ -139,9 +134,12 @@ void inc_logging(logging_severity ls, const char* fmt, ...) {
   out_log.append(std::string(zc.data(), zc.size()-1));
 	std::string& log = state->logs.emplace_back(out_log);
 
-  if (log == state->last_writed) {
+  if (log == state->last_writed and GetTime() - state->last_log_time < LOGGING_TIMEOUT) {
     return;
   }
+  state->last_writed = log;
+  state->last_log_time = GetTime();
+
 	if (ls >= LOGGING_SEVERITY) {
     log.append("\n");
     if (FileExists(state->log_file_name.c_str())) {

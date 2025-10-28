@@ -1040,9 +1040,9 @@ typedef struct worldmap_stage_file {
   bool is_success;
   worldmap_stage_file(void) {
     this->stage_index = 0;
-    this->layer_data.fill(std::string(""));
-    this->file_collision = std::string("");
-    this->file_prop = std::string("");
+    this->layer_data.fill(std::string());
+    this->file_collision = std::string();
+    this->file_prop = std::string();
     this->pak_offset = 0u;
     this->is_success = false;
   }

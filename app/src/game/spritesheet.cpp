@@ -4,11 +4,10 @@
 
 #include "game/resource.h"
 
-void update_sprite(spritesheet *const sheet);
 constexpr void render_sprite(const spritesheet * sheet,const Color _tint,const Rectangle dest);
 constexpr void render_sprite_pro(const spritesheet * sheet, const Rectangle source, const Rectangle dest, const Vector2 origin, const f32 rotation, const Color _tint);
  
-void update_sprite(spritesheet *const sheet) {
+void update_sprite(spritesheet *const sheet, f32 delta_time) {
   if (not sheet or sheet == nullptr) {
     IWARN("spritesheet::update_sprite()::Sheet is invalid");
     return;
@@ -20,7 +19,7 @@ void update_sprite(spritesheet *const sheet) {
   if (not sheet->is_started or (sheet->is_played and (sheet->play_once or not sheet->reset_after_finish)) ) {
     return;
   }
-  sheet->time_accumulator += GetFrameTime();
+  sheet->time_accumulator += delta_time;
   f32 time_per_frame = 1.0f / sheet->fps;
 
   while (sheet->time_accumulator >= time_per_frame) {

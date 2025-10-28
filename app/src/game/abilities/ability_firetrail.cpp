@@ -128,8 +128,8 @@ void update_ability_firetrail(ability *const abl) {
       static_cast<i16>(prj->damage + p_player->stats.at(CHARACTER_STATS_DAMAGE).buffer.i32[3]),
       static_cast<i16>(COLLISION_TYPE_RECTANGLE_RECTANGLE)
     ));
-    update_sprite(__builtin_addressof(prj->animations.at(prj->active_sprite)));
-    prj->duration -= GetFrameTime();
+    update_sprite(__builtin_addressof(prj->animations.at(prj->active_sprite)), state->in_ingame_info->delta_time);
+    prj->duration -= state->in_ingame_info->delta_time;
   }
 
   Rectangle last_placed_projectile_dest = Rectangle { 
@@ -144,7 +144,7 @@ void update_ability_firetrail(ability *const abl) {
     p_player->collision.height * .2f 
   };
 
-  cd_accumulator += GetFrameTime();
+  cd_accumulator += state->in_ingame_info->delta_time;
   if (not CheckCollisionRecs(last_placed_projectile_dest, player_collision) and cd_duration < cd_accumulator) {
     cd_accumulator = 0.f;
     projectile prj = projectile();

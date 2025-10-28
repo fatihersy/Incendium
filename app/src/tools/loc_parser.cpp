@@ -10,7 +10,7 @@
 typedef struct loc_content_text {
   std::string str;
   loc_content_text(void) {
-    this->str = std::string("");
+    this->str = std::string();
   }
 } loc_content_text;
 
@@ -306,7 +306,7 @@ loc_content_text loc_parser_get_next_content_text(size_t& offset) {
 }
 i32 get_content_text_value(size_t& offset) {
   i32 loc_con_value = 0;
-  std::string value_str = std::string("");
+  std::string value_str = std::string();
   bool number_found = false;
 
   for (; offset < state->file_buffer.size(); ++offset) {
@@ -324,7 +324,7 @@ i32 get_content_text_value(size_t& offset) {
 }
 
 std::string loc_parser_get_text(size_t& offset, std::string text) {
-  std::string _text = std::string("");
+  std::string _text = std::string();
 
   bool quote_found = false;
   for (; offset < state->file_buffer.size(); ++offset) {
@@ -347,7 +347,7 @@ std::string loc_parser_get_text(size_t& offset, std::string text) {
   else return "";
 }
 std::string loc_parser_get_next_text(size_t& offset) {
-  std::string text = std::string("");
+  std::string text = std::string();
 
   bool quote_found = false;
   for (; offset < state->file_buffer.size(); ++offset) {
@@ -394,7 +394,7 @@ loc_file_scope loc_parser_get_scope_range(size_t offset) {
 }
 
 size_t loc_parser_go_to_variable(std::string variable_name) {
-  std::string variable = std::string("");
+  std::string variable = std::string();
   bool variable_found = false;
   bool in_variable_try = false;
   size_t variable_search_offset = 0u;
@@ -432,7 +432,7 @@ size_t loc_parser_go_to_variable(std::string variable_name) {
 }
 
 std::string loc_parser_read_symbol(size_t& offset) {
-  std::string symbol = std::string("");
+  std::string symbol = std::string();
   char parser = '=';
 
   for (; offset < state->file_buffer.size(); ++offset) {

@@ -272,11 +272,11 @@ void end_scene_main_menu(void) {
 
 void update_scene_main_menu(void) {
   
-  update_user_interface();
+  update_user_interface(GetFrameTime());
   state->mouse_pos_screen = ui_get_mouse_pos_screen();
   smm_update_bindings();
-  update_camera();
-  update_map();
+  update_camera(GetFrameTime());
+  update_map(GetFrameTime());
   update_sound_system();
 
   switch (state->mainmenu_state) {
