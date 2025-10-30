@@ -10,7 +10,7 @@
 #define HEADER_SYMBOL_END_LENGTH 7
 
 #define ASSET1_FILE_SIZE 146122975u
-#define ASSET2_FILE_SIZE 1616472u
+#define ASSET2_FILE_SIZE 3016472u // WARN: This is not exact number of asset2 pak file byte size 
 #define MAP_FILE_SIZE 3624970u
 
 typedef enum worldmap_data_type {

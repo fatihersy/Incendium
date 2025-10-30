@@ -196,13 +196,13 @@ player_update_results update_player(void) {
   player_update_sprite();
 
   const i32 elapsed_time = static_cast<i32>(GetTime());
-  i32& last_time_hp_regen_fired = state->in_ingame_info->player_state_dynamic->stats.at(CHARACTER_STATS_HP_REGEN).mm_ex.i32[0];
-  const i32& hp_max = state->in_ingame_info->player_state_dynamic->stats.at(CHARACTER_STATS_HEALTH).buffer.i32[3];
-  i32& hp_current = state->in_ingame_info->player_state_dynamic->health_current;
+  i32& last_time_hp_regen_fired = state->dynamic_player.stats.at(CHARACTER_STATS_HP_REGEN).mm_ex.i32[0];
+  const i32& hp_max = state->dynamic_player.stats.at(CHARACTER_STATS_HEALTH).buffer.i32[3];
+  i32& hp_current = state->dynamic_player.health_current;
 
   if (last_time_hp_regen_fired < elapsed_time and hp_current < hp_max) {
     last_time_hp_regen_fired = elapsed_time;
-    const i32& hp_regen_amouth = state->in_ingame_info->player_state_dynamic->stats.at(CHARACTER_STATS_HP_REGEN).buffer.i32[3];
+    const i32& hp_regen_amouth = state->dynamic_player.stats.at(CHARACTER_STATS_HP_REGEN).buffer.i32[3];
     hp_current += hp_regen_amouth;
     hp_current = FCLAMP(hp_current, 0, hp_max);
   }
@@ -370,7 +370,7 @@ void player_update_sprite(void) {
   };
   _sheet.origin = Vector2 { _sheet.coord.width * .5f, _sheet.coord.height * .5f};
   
-  update_sprite(__builtin_addressof(_sheet), state->in_ingame_info->delta_time);
+  update_sprite(__builtin_addressof(_sheet), (*state->in_ingame_info->delta_time));
 }
 void player_update_attack(void) {
   if (not state or state == nullptr) { return; }
@@ -378,7 +378,7 @@ void player_update_attack(void) {
   player_state& _player = state->dynamic_player;
 
   if (state->combo_timeout_accumulator > 0.f) {
-    state->combo_timeout_accumulator -= state->in_ingame_info->delta_time;
+    state->combo_timeout_accumulator -= (*state->in_ingame_info->delta_time);
     if (state->combo_timeout_accumulator <= 0.f) {
       player_attack_reset(true);
     }
@@ -495,7 +495,7 @@ void player_update_movement(Vector2& move_delta) {
   if (not able_to_walk) {
     return;
   }
-  move_delta = vec2_scale(get_player_direction(), _player.stats.at(CHARACTER_STATS_MOVE_SPEED).buffer.f32[3] * state->in_ingame_info->delta_time);
+  move_delta = vec2_scale(get_player_direction(), _player.stats.at(CHARACTER_STATS_MOVE_SPEED).buffer.f32[3] * (*state->in_ingame_info->delta_time));
 }
 Vector2 get_player_direction(void) {
   Vector2 out_delta = ZEROVEC2;
@@ -561,7 +561,7 @@ void player_update_roll(Vector2& move_delta) {
   if (_player.anim_state != PL_ANIM_STATE_ROLL) {
     return;
   }
-  _player.roll_control.accumulator += state->in_ingame_info->delta_time;
+  _player.roll_control.accumulator += (*state->in_ingame_info->delta_time);
   if (_player.roll_control.accumulator >= _player.roll_control.duration) {
     _player.roll_control = easing_accumulation_control();
     _player.anim_state = PL_ANIM_STATE_IDLE;
@@ -590,7 +590,7 @@ void player_damage_break_update(void) {
     _player.damage_break_accumulator = 0.f;
     return;
   }
-  _player.damage_break_accumulator += state->in_ingame_info->delta_time;
+  _player.damage_break_accumulator += (*state->in_ingame_info->delta_time);
 }
 
 player_state* get_player_state(void) {
@@ -598,6 +598,13 @@ player_state* get_player_state(void) {
     return nullptr;
   }
   return __builtin_addressof(state->dynamic_player);
+}
+void set_player_state(player_state _player_state) {
+  if (not state or state == nullptr) {
+    IERROR("player::set_player_state()::State is invalid");
+    return;
+  }
+  state->dynamic_player = _player_state;
 }
 const player_state* get_default_player(void) {
   if (not state or state == nullptr) {

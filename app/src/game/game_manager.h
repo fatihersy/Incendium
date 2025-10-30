@@ -14,9 +14,9 @@ i32 get_currency_coins_total(void);
 bool get_b_player_have_upgrade_points(void);
 void set_dynamic_player_have_ability_upgrade_points(bool _b);
 
-const character_stat* get_static_player_state_stat(character_stat_id stat);
 const ingame_info* gm_get_ingame_info(void);
-const std::vector<character_trait>* gm_get_character_traits(void);
+const std::vector<character_trait>* gm_get_character_traits_all(void);
+const std::vector<character_trait>* gm_get_game_rules_all(void);
 
 [[nodiscard]] bool gm_start_game(worldmap_stage stage);
 void gm_end_game(bool wait_for_results, bool is_win);
@@ -24,11 +24,17 @@ void gm_save_game(void);
 void gm_load_game(void);
 void gm_damage_spawn_if_collide(data128 coll_data, i32 damage, collision_type coll_check);
 void gm_damage_player_if_collide(data128 coll_data, i32 damage, collision_type coll_check);
-void game_manager_set_stat_value_by_level(character_stat* stat, i32 level);
+void gm_refresh_stat_by_level(character_stat* stat, i32 level);
+bool gm_refresh_game_rule_by_level(game_rule* rule, i32 level);
 void set_static_player_state_stat(character_stat_id stat_id, i32 level);
+void gm_set_game_rule_level_by_id(game_rule_id rule_id, i32 level);
 void currency_coins_add(i32 value);
 void set_starter_ability(ability_id _id);
 void gm_add_to_inventory(item_type _item_type);
+void gm_chosen_traits_add(const character_trait *const _trait);
+void gm_chosen_traits_erase(size_t index);
+void gm_chosen_traits_clear(void);
+
 
 bool    _add_ability(ability_id _type);
 bool    _upgrade_ability(ability* abl);
@@ -37,6 +43,7 @@ ability _get_next_level(ability abl);
 const ability * _get_ability(ability_id _id);
 const std::array<ability, ABILITY_ID_MAX> * _get_all_abilities(void);
 const Character2D * _get_spawn_by_id(i32 _id);
+player_state * gm_get_player_state(void);
 
 void render_game(void);
 

@@ -28,20 +28,23 @@ typedef struct save_data {
   std::string file_name;
   i32 currency_coins_player_have;
   player_state player_data;
+  std::array<game_rule, GAME_RULE_MAX> game_rules;
   bool is_success;
   save_data(void) {
     this->id = SAVE_SLOT_UNDEFINED;
     this->file_name = std::string();
     this->currency_coins_player_have = 0;
     this->player_data = player_state();
+    this->game_rules.fill(game_rule());
     this->is_success = false;
   }
   save_data(std::string filename) : save_data() {
     this->file_name = filename;
   }
-  save_data(save_slot_id id, player_state in_player_state, i32 currency_coins) : save_data() {
+  save_data(save_slot_id id, player_state in_player_state, std::array<game_rule, GAME_RULE_MAX>& _game_rules, i32 currency_coins) : save_data() {
     this->id = id;
     this->player_data = in_player_state;
+    this->game_rules = _game_rules;
     this->currency_coins_player_have = currency_coins;
   }
 } save_data;

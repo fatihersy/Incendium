@@ -295,6 +295,7 @@ enum game_rule_id {
   GAME_RULE_TRAIT_POINT_MODIFIER,
   GAME_RULE_BONUS_RESULT_MULTIPLIER,
   GAME_RULE_ZOMBIE_LEVEL_MODIFIER,
+  GAME_RULE_RESERVED_FOR_FUTURE_USE,
   GAME_RULE_MAX,
 };
 
@@ -1190,51 +1191,61 @@ struct player_state {
 //#warning "game types --- game rules struct"
 struct game_rule {
   game_rule_id id;
-  std::string display_name;
+  i32 display_name_loc_id;
+  i32 desc_loc_id;
   Rectangle icon_src;
   i32 base_level;
   i32 level;
+  i32 upgrade_cost;
 
   data128 mm_ex;
   data128 ui_buffer;
 
   game_rule(void) {
     this->id = GAME_RULE_UNDEFINED;
-    this->display_name = std::string();
+    this->display_name_loc_id = 0;
+    this->desc_loc_id = 0;
     this->icon_src = ZERORECT;
     this->base_level = 0;
     this->level = 0;
+    this->upgrade_cost = 0;
     this->mm_ex = data128();
     this->ui_buffer = data128();
   }
-  game_rule(game_rule_id _id, std::string _display_name, Rectangle _icon_rect, i32 _base_level, data128 values) : game_rule() {
+  game_rule(game_rule_id _id, i32 _display_name_loc_id, i32 _description_loc_id, Rectangle _icon_rect, i32 _base_level, i32 _upgrade_cost, data128 values) : game_rule() {
     this->id = _id;
-    this->display_name = _display_name;
+    this->display_name_loc_id = _display_name_loc_id;
+    this->desc_loc_id = _description_loc_id;
     this->icon_src = _icon_rect;
     this->base_level = _base_level;
+    this->level = _base_level;
+    this->upgrade_cost = _upgrade_cost;
     this->mm_ex = values;
   }
 };
 
 struct ingame_info {
-  player_state* player_state_dynamic;
-  const player_state* player_state_static;
+  const player_state * player_state_dynamic;
+  const player_state * player_state_static;
   const std::vector<Character2D>* in_spawns;
   const Character2D* nearest_spawn;
   const Vector2* mouse_pos_world;
   const Vector2* mouse_pos_screen;
   const ingame_play_phases* ingame_phase;
-  std::vector<character_trait>* chosen_traits;
+  const std::vector<character_trait>* chosen_traits;
   const std::vector<loot_item> * loots_on_the_map;
   const worldmap_stage * current_map_info;
-
-  i32 collected_coins;
-  f32 play_time;
-  f32 delta_time;
-  bool is_win;
-  i32 stage_boss_id;
-  i32 total_boss_spawned;
-  ability_id starter_ability;
+  const std::array<game_rule, GAME_RULE_MAX> * game_rules;
+  const i32 * collected_coins;
+  const i32 * total_spawn_count;
+  const i32 * total_boss_count;
+  const i32 * total_boss_spawned;
+  const f32 * total_play_time;
+  const f32 * play_time;
+  const f32 * delta_time;
+  const bool * is_win;
+  const i32 * stage_boss_id;
+  const ability_id * starter_ability;
 
   ingame_info(void) {
     this->player_state_dynamic = nullptr;
@@ -1247,13 +1258,17 @@ struct ingame_info {
     this->chosen_traits = nullptr;
     this->loots_on_the_map = nullptr;
     this->current_map_info = nullptr;
-    
-    this->collected_coins = 0;
-    this->play_time = 0.f;
-    this->is_win = false;
-    this->stage_boss_id = INVALID_IDI32;
-    this->total_boss_spawned = 0;
-    this->starter_ability = ABILITY_ID_UNDEFINED;
+    this->game_rules = nullptr;
+    this->collected_coins = nullptr;
+    this->total_spawn_count = nullptr;
+    this->total_boss_count = nullptr;
+    this->total_boss_spawned = nullptr;
+    this->total_play_time = nullptr;
+    this->play_time = nullptr;
+    this->delta_time = nullptr;
+    this->is_win = nullptr;
+    this->stage_boss_id = nullptr;
+    this->starter_ability = nullptr;
   }
 };
 

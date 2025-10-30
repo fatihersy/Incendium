@@ -121,11 +121,11 @@ void update_ability_codex(ability *const abl) {
     if (not prj.is_active) { continue; }
 
     if (not sheet.is_played) {
-      update_sprite(__builtin_addressof(sheet), state->in_ingame_info->delta_time);
+      update_sprite(__builtin_addressof(sheet), (*state->in_ingame_info->delta_time) );
       continue;
     }
     if (prj.PROJ_F32_ACCUMULATOR_F32 > 0.f) {
-      prj.PROJ_F32_ACCUMULATOR_F32 -= state->in_ingame_info->delta_time;
+      prj.PROJ_F32_ACCUMULATOR_F32 -= (*state->in_ingame_info->delta_time) ;
       continue;
     }
     if (not state->in_ingame_info->nearest_spawn or state->in_ingame_info->nearest_spawn == nullptr ) {

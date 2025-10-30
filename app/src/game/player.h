@@ -28,6 +28,7 @@ void player_attack_init(void);
 void player_roll_init(void);
 
 player_state* get_player_state(void);
+void set_player_state(player_state _player_state);
 const player_state* get_default_player(void);
 
 player_update_results update_player(void);

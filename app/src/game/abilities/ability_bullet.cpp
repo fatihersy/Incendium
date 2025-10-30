@@ -106,7 +106,7 @@ void update_ability_bullet(ability *const abl) {
       prj.direction = player->w_direction;
     }
     else {
-     prj.duration -= state->in_ingame_info->delta_time;
+     prj.duration -= (*state->in_ingame_info->delta_time) ;
     }
     prj.position.x += prj.direction == WORLD_DIRECTION_RIGHT ? abl->proj_speed : -abl->proj_speed;
     prj.collision.x = prj.position.x - prj.collision.width  * .5f;
@@ -126,7 +126,7 @@ void update_ability_bullet(ability *const abl) {
       static_cast<i16>(prj.damage + player->stats.at(CHARACTER_STATS_DAMAGE).buffer.i32[3]),
       static_cast<i16>(COLLISION_TYPE_RECTANGLE_RECTANGLE)
     ));
-    update_sprite(__builtin_addressof(prj.animations.at(0)), state->in_ingame_info->delta_time);
+    update_sprite(__builtin_addressof(prj.animations.at(0)), (*state->in_ingame_info->delta_time) );
   }
 }
 void render_ability_bullet(ability *const abl){

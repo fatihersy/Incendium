@@ -13,7 +13,6 @@
 
 bool update_collectible_manager(void);
 bool render_collectible_manager(void);
-//void update_collectible_manager_debug(void);
 
 const loot_item * get_loot_by_id(i32 id);
 const std::vector<loot_item> * get_loots_pointer(void);
@@ -21,5 +20,6 @@ const std::vector<loot_item> * get_loots_pointer(void);
 loot_item * create_loot_item(item_type type, Vector2 position);
 
 bool remove_item(i32 id);
+void collectible_manager_state_clear(void);
 
 #endif

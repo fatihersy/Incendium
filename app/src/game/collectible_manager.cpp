@@ -105,7 +105,7 @@ bool update_collectible_manager(void) {
     }
 
 		if (CheckCollisionRecs(item->world_collision, state->in_camera_metrics->frustum)) {
-      update_sprite(__builtin_addressof(item->sheet), state->in_ingame_info->delta_time);
+      update_sprite(__builtin_addressof(item->sheet), (*state->in_ingame_info->delta_time));
 			item->is_on_screen = true;
       if (item->drop_control.play_animation) {
 
@@ -115,7 +115,7 @@ bool update_collectible_manager(void) {
               item->world_collision.y = EaseElasticOut(drop_control.accumulator, drop_control.buffer.f32[0], drop_control.buffer.f32[1], drop_control.animation_duration);
               item->sheet.coord.x = item->world_collision.x;
               item->sheet.coord.y = item->world_collision.y;
-              drop_control.accumulator += state->in_ingame_info->delta_time;
+              drop_control.accumulator += (*state->in_ingame_info->delta_time);
               break;
             }
             case LOOT_DROP_ANIMATION_PLAYER_GRAB: {
@@ -136,7 +136,7 @@ bool update_collectible_manager(void) {
               item->sheet.coord.x = position.x;
               item->sheet.coord.y = position.y;
 
-              drop_control.accumulator += state->in_ingame_info->delta_time;
+              drop_control.accumulator += (*state->in_ingame_info->delta_time);
               break;
             }
             default: {
@@ -237,13 +237,17 @@ const loot_item * get_loot_by_id(i32 id) {
 }
 const std::vector<loot_item> * get_loots_pointer(void) {
 	if (not state or state == nullptr) {
-    IWARN("collectible_manager::get_loots_pointer()::State is not valid");
+    IERROR("collectible_manager::get_loots_pointer()::State is not valid");
 		return nullptr;
 	}
 
 	return __builtin_addressof(state->loots_on_the_map);
 }
 bool remove_item(i32 id) {
+	if (not state or state == nullptr) {
+    IERROR("collectible_manager::remove_item()::State is not valid");
+		return false;
+	}
 	if (id >= ITEM_TYPE_MAX or id <= ITEM_TYPE_UNDEFINED) {
     IWARN("collectible_manager::remove_item()::Id is out of bound");
 		return false;
@@ -258,6 +262,14 @@ bool remove_item(i32 id) {
 
   IWARN("collectible_manager::remove_item()::Item cannot found");
 	return false;
+}
+void collectible_manager_state_clear(void) {
+	if (not state or state == nullptr) {
+    IERROR("collectible_manager::collectible_manager_state_clear()::State is not valid");
+		return;
+	}
+  state->loots_on_the_map.clear();
+  state->next_item_id = 0;
 }
 loot_item * create_loot_item(item_type type, Vector2 position, data128 context) {
   if (not state or state == nullptr) {

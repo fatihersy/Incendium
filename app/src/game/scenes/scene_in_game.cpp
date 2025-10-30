@@ -123,7 +123,7 @@ static scene_in_game_state * state = nullptr;
 #define PASSIVE_SELECTION_PANEL_ICON_SIZE ABILITY_UPG_PANEL_ICON_SIZE
 #define CLOUDS_ANIMATION_DURATION TARGET_FPS * 1.5f // second
 #define GET_PLAYER_DYNAMIC_STAT(STAT_TYPE) __builtin_addressof(state->in_ingame_info->player_state_dynamic->stats[(static_cast<character_stat_id>(STAT_TYPE))])
-#define GET_PLAYER_DYNAMIC_ABILITY(ABILITY_TYPE) __builtin_addressof(state->in_ingame_info->player_state_dynamic->ability_system.abilities.at(ABILITY_TYPE))
+#define GET_PLAYER_DYNAMIC_ABILITY(PLAYER_STATE, ABILITY_TYPE) __builtin_addressof(PLAYER_STATE->ability_system.abilities.at(ABILITY_TYPE))
 #define INGAME_FADE_DURATION 1 * TARGET_FPS
 #define DRAW_ABL_UPG_STAT_PNL(UPG, TEXT, ...){ \
 if (UPG->level == 1) {\
@@ -168,7 +168,6 @@ void sig_render_chest_sequence(void);
 item_type sig_atlas_tex_id_to_item_type(atlas_texture_id tex_id);
 
 bool start_game(void);
-
 
 /**
  * @brief Requires world system, world init moved to app, as well as its loading time
@@ -255,7 +254,7 @@ bool start_game(void) {
   _set_player_position(ZEROVEC2);
   sig_change_ingame_state(SCENE_INGAME_STATE_PLAY);
 
-  state->cam_bounds = { 
+  state->cam_bounds = Rectangle { 
     state->in_ingame_info->current_map_info->level_bound.x,
     state->in_ingame_info->current_map_info->level_bound.y,
     state->in_ingame_info->current_map_info->level_bound.x + state->in_ingame_info->current_map_info->level_bound.width,
@@ -267,7 +266,7 @@ void end_scene_in_game(bool abort) {
   if (not state or state == nullptr ) {
     return;
   }
-  gm_end_game(not abort, state->in_ingame_info->is_win);
+  gm_end_game(not abort, (*state->in_ingame_info->is_win));
   
   state->hovered_spawn = I32_MAX;
   state->hovered_ability = ABILITY_ID_MAX;
@@ -303,7 +302,7 @@ void update_scene_in_game(void) {
               Vector2 { cam_bounds.width - frustum_half.x, cam_bounds.height - frustum_half.y }  // Map right down 
             );
             event_fire(EVENT_CODE_CAMERA_SET_TARGET, event_context(cam_target.x, cam_target.y));
-            update_map(state->in_ingame_info->delta_time);
+            update_map( (*state->in_ingame_info->delta_time) );
             update_game_manager();
           }
           break;
@@ -328,7 +327,7 @@ void update_scene_in_game(void) {
       update_map(GetFrameTime());
       update_game_manager_debug();
 
-      event_fire(EVENT_CODE_CAMERA_SET_TARGET, event_context(state->in_ingame_info->player_state_dynamic->position.x,state->in_ingame_info->player_state_dynamic->position.y));
+      event_fire(EVENT_CODE_CAMERA_SET_TARGET, event_context(state->in_ingame_info->player_state_dynamic->position.x, state->in_ingame_info->player_state_dynamic->position.y));
       break;
     }
     default: {
@@ -452,7 +451,7 @@ void render_interface_in_game(void) {
           }
           draw_ingame_state_play_general();
         
-          const Character2D * const boss = _get_spawn_by_id(state->in_ingame_info->stage_boss_id);
+          const Character2D * const boss = _get_spawn_by_id( (*state->in_ingame_info->stage_boss_id) );
           if (boss) { draw_ingame_state_play_ui_defeat_boss(); }
           else { draw_ingame_state_play_ui_clear_zombies(); }
           render_user_interface();
@@ -528,7 +527,7 @@ void render_interface_in_game(void) {
           EndScissorMode();
       }
       if(state->hovered_ability > 0 && state->hovered_ability < ABILITY_ID_MAX) {
-          const ability* const abl = GET_PLAYER_DYNAMIC_ABILITY(state->hovered_ability);
+          const ability* const abl = GET_PLAYER_DYNAMIC_ABILITY(gm_get_player_state(), state->hovered_ability);
           panel* const pnl = __builtin_addressof(state->debug_info_panel);
           pnl->dest = Rectangle {
             mouse_pos_screen.x, mouse_pos_screen.y, 
@@ -557,13 +556,13 @@ void render_interface_in_game(void) {
           }
       }
       gui_label_format(FONT_TYPE_REGULAR, 1, SIG_BASE_RENDER_WIDTH * .75f, SCREEN_OFFSET.y, WHITE, false, false, 
-        "Remaining: %d", state->in_ingame_info->in_spawns->size()
+        "Remaining: %u", state->in_ingame_info->in_spawns->size()
       );
       gui_label_format(FONT_TYPE_REGULAR, 1, SIG_BASE_RENDER_WIDTH * .75f, SCREEN_OFFSET.y * 5.f, WHITE, false, false, 
-        "Collected Coins: %d", state->in_ingame_info->collected_coins
+        "Collected Coins: %d", (*state->in_ingame_info->collected_coins)
       );
       gui_label_format(FONT_TYPE_REGULAR, 1, SIG_BASE_RENDER_WIDTH * .75f, SCREEN_OFFSET.y * 5.f, WHITE, false, false, 
-        "Total Coin: %d", state->in_ingame_info->collected_coins
+        "Total Coin: %d", (*state->in_ingame_info->collected_coins)
       );
       gui_label_format(FONT_TYPE_REGULAR, 1, 0, SIG_BASE_RENDER_HEIGHT * .35f, WHITE, false, false, 
         "Health: %d", state->in_ingame_info->player_state_dynamic->stats.at(CHARACTER_STATS_HEALTH).buffer.i32[3]
@@ -726,7 +725,7 @@ void draw_in_game_upgrade_panel(u16 which_panel, Rectangle panel_dest) {
   if (upg->id < 0 and upg->id >= state->in_ingame_info->player_state_dynamic->ability_system.abilities.size()) {
     return;
   }
-  const ability *const abl = GET_PLAYER_DYNAMIC_ABILITY(upg->id);
+  const ability *const abl = GET_PLAYER_DYNAMIC_ABILITY(gm_get_player_state(), upg->id);
   if (upg->id <= ABILITY_ID_UNDEFINED or upg->id >= ABILITY_ID_MAX) {
     IWARN("scene_in_game::draw_in_game_upgrade_panel()::Upgraded ability is out of bounds"); 
     return;
@@ -819,14 +818,14 @@ void draw_end_game_panel(void) {
   draw_atlas_texture_stretch(ATLAS_TEX_ID_HEADER, Rectangle {64.f, 0.f, 32.f, 32.f}, result_title_header_dest, false, WHITE);
 	
 	Vector2 result_title_text_dest = Vector2 { result_title_header_dest.x + (result_title_header_dest.width * .5f), result_title_header_dest.y + (result_title_header_dest.height * .5f)};
-  if (state->in_ingame_info->is_win) {
+  if ( (*state->in_ingame_info->is_win) ) {
     gui_label(lc_txt(LOC_TEXT_INGAME_STATE_RESULT_CLEARED), FONT_TYPE_REGULAR, 1, result_title_text_dest, WHITE, true, true);
   }
   else {
     gui_label(lc_txt(LOC_TEXT_INGAME_STATE_RESULT_DEAD), FONT_TYPE_REGULAR, 1, result_title_text_dest, RED, true, true);
   }
   gui_label_format_v(FONT_TYPE_REGULAR, 1, VECTOR2(static_cast<f32>(state->in_app_settings->render_width_div2), SIG_BASE_RENDER_HEIGHT * .75f), WHITE, true, true, 
-    "%s%d", lc_txt(LOC_TEXT_INGAME_STATE_RESULT_COLLECTED_COINS), state->in_ingame_info->collected_coins
+    "%s%d", lc_txt(LOC_TEXT_INGAME_STATE_RESULT_COLLECTED_COINS), (*state->in_ingame_info->collected_coins)
   );
 	Vector2 accept_btn_dest = Vector2 { bg_panel_dest.x + (bg_panel_dest.width * .5f), bg_panel_dest.y + (bg_panel_dest.height * .9f)};
   if(gui_menu_button(lc_txt(LOC_TEXT_INGAME_STATE_RESULT_ACCEPT), BTN_ID_IN_GAME_BUTTON_RETURN_MENU, ZEROVEC2, accept_btn_dest, true)) {
@@ -878,10 +877,12 @@ void draw_ingame_state_play_general(void) {
       static_cast<f32>(state->in_app_settings->render_height) * .02f,
     }, false
   );
+
+  i32 left_min = static_cast<i32>(((*state->in_ingame_info->play_time)) / 60.f);
+  i32 left_sec = static_cast<i32>(((*state->in_ingame_info->play_time))) % 60;
+
   gui_label_format(FONT_TYPE_REGULAR, 1, static_cast<f32>(state->in_app_settings->render_width_div2), static_cast<f32>(state->in_app_settings->render_height * .09f), 
-    WHITE, true, false, "%.2d:%.2d", 
-    static_cast<i32>(state->in_ingame_info->play_time / 60.f),
-    static_cast<i32>(state->in_ingame_info->play_time) % 60
+    WHITE, true, false, "%.2d:%.2d", left_min, left_sec
   );
 }
 void draw_ingame_state_play_ui_clear_zombies(void) {
@@ -903,7 +904,7 @@ void draw_ingame_state_play_ui_defeat_boss(void) {
   };
   gui_progress_bar(PRG_BAR_ID_BOSS_HEALTH, boss_health_bar_dest, false, Color {192, 57, 43, 96});
 
-  const Character2D *const boss = _get_spawn_by_id(state->in_ingame_info->stage_boss_id);
+  const Character2D *const boss = _get_spawn_by_id( (*state->in_ingame_info->stage_boss_id) );
   if (boss and boss != nullptr) {
     if (not boss->is_on_screen) {
       const Vector2 boss_location = Vector2 { boss->position.x + boss->collision.width * .5f, boss->position.y + boss->collision.height * .5f};
@@ -930,7 +931,7 @@ void prepare_ability_upgrade_state(void) {
     if (pnl->buffer.u16[0] < 0 or pnl->buffer.u16[0] >= state->in_ingame_info->player_state_dynamic->ability_system.abilities.size()) {
       continue;
     }
-    const ability *const player_ability = GET_PLAYER_DYNAMIC_ABILITY(static_cast<ability_id>(pnl->buffer.u16[0])); // INFO: do we need upgrade the ability player already have
+    const ability *const player_ability = GET_PLAYER_DYNAMIC_ABILITY(gm_get_player_state(), static_cast<ability_id>(pnl->buffer.u16[0])); // INFO: do we need upgrade the ability player already have
     if (player_ability->id <= ABILITY_ID_UNDEFINED or player_ability->id >= ABILITY_ID_MAX) {
       *pnl_slot = (*_get_ability(static_cast<ability_id>(pnl->buffer.u16[0])));
     }
@@ -946,11 +947,12 @@ void prepare_ability_upgrade_state(void) {
 }
 void end_ability_upgrade_state(u16 which_panel_chosen) {
   const ability *const new_ability = __builtin_addressof(state->ability_upgrade_choices.at(which_panel_chosen));
+
   if (new_ability->level >= MAX_ABILITY_LEVEL or new_ability->level < 1) {
     _add_ability(new_ability->id);
   }
   else {
-    _upgrade_ability(GET_PLAYER_DYNAMIC_ABILITY(new_ability->id)); 
+    _upgrade_ability(GET_PLAYER_DYNAMIC_ABILITY(gm_get_player_state(), new_ability->id)); 
   }
   state->ability_upgrade_choices.fill(ability());
   set_dynamic_player_have_ability_upgrade_points(false);
@@ -1063,7 +1065,7 @@ void sig_update_chest_sequence(void) {
         sig_init_chest_sequence(CHEST_OPENING_SEQUENCE_CHEST_OPEN);
         return;
       }
-      seq.accumulator += state->in_ingame_info->delta_time;
+      seq.accumulator += (*state->in_ingame_info->delta_time);
       seq.accumulator = FCLAMP(seq.accumulator, 0.f, seq.duration);
 
       seq.mm_ex.f32[0] = EaseBackOut(seq.accumulator, seq.mm_ex.f32[1], CHEST_OPENING_SEQ_CHEST_SCALE - seq.mm_ex.f32[1], seq.duration);
@@ -1078,7 +1080,7 @@ void sig_update_chest_sequence(void) {
     }
     case CHEST_OPENING_SEQUENCE_CHEST_OPEN: {
       if (not seq.sheet_chest.is_played) {
-        ui_update_sprite(__builtin_addressof(seq.sheet_chest), state->in_ingame_info->delta_time);
+        ui_update_sprite(__builtin_addressof(seq.sheet_chest), (*state->in_ingame_info->delta_time) );
         return;
       }
       else {
@@ -1088,7 +1090,7 @@ void sig_update_chest_sequence(void) {
     }
     case CHEST_OPENING_SEQUENCE_READY: {
       if(seq.accumulator < seq.duration) {
-        seq.accumulator += state->in_ingame_info->delta_time;
+        seq.accumulator += (*state->in_ingame_info->delta_time );
         return;
       }
       if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT)) {
@@ -1098,7 +1100,7 @@ void sig_update_chest_sequence(void) {
     }
     case CHEST_OPENING_SEQUENCE_SPIN: {
       if(seq.accumulator < seq.duration) {
-        seq.accumulator += state->in_ingame_info->delta_time;
+        seq.accumulator += (*state->in_ingame_info->delta_time);
       }
       else if (seq.accumulator > seq.duration) {
         seq.accumulator = seq.duration;
@@ -1106,18 +1108,18 @@ void sig_update_chest_sequence(void) {
       if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT)) {
         sig_init_chest_sequence(CHEST_OPENING_SEQUENCE_RESULT);
       }
-      seq.mm_ex.f32[0] += EaseSineInOut(seq.accumulator, 0.f, state->in_ingame_info->delta_time * CHEST_OPENING_SPIN_SPEED, seq.duration);
+      seq.mm_ex.f32[0] += EaseSineInOut(seq.accumulator, 0.f, (*state->in_ingame_info->delta_time) * CHEST_OPENING_SPIN_SPEED, seq.duration);
       return;
     }
     case CHEST_OPENING_SEQUENCE_RESULT: {
       if(seq.accumulator < seq.duration) {
-        seq.accumulator += state->in_ingame_info->delta_time;
+        seq.accumulator += (*state->in_ingame_info->delta_time);
       }
       else if (seq.accumulator > seq.duration) {
         seq.accumulator = seq.duration;
       }
       seq.mm_ex.f32[1] = EaseSineInOut(seq.accumulator, seq.mm_ex.f32[0], -seq.mm_ex.f32[2], seq.duration);
-      ui_update_sprite(__builtin_addressof(seq.sheets_background.at(0)), state->in_ingame_info->delta_time);
+      ui_update_sprite(__builtin_addressof(seq.sheets_background.at(0)), (*state->in_ingame_info->delta_time) );
       return;
     }
     default: {

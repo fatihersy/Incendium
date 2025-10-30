@@ -16,12 +16,14 @@
 typedef struct logging_system_state {
   int build_id;
   std::vector<std::string> logs;
+  std::string log_file_data;
   std::string log_file_name;
   std::string last_writed;
   std::string dump_string;
   double last_log_time;
   logging_system_state(void) {
     this->logs = std::vector<std::string>();
+    this->log_file_data = std::string();
     this->log_file_name = std::string();
     this->last_writed = std::string();
     this->dump_string = std::string();
@@ -69,7 +71,13 @@ bool logging_system_initialize(int build_id) {
 
   if (not FileExists(state->log_file_name.c_str())) {
     SaveFileText(state->log_file_name.c_str(), " ");
+    return true;
   }
+  char * _log_data = LoadFileText(state->log_file_name.c_str());
+  if (not _log_data or _log_data == nullptr) {
+    return true;
+  }
+  state->log_file_data = _log_data;
   return true;
 }
 
@@ -141,20 +149,8 @@ void inc_logging(logging_severity ls, const char* fmt, ...) {
   state->last_log_time = GetTime();
 
 	if (ls >= LOGGING_SEVERITY) {
-    log.append("\n");
-    if (FileExists(state->log_file_name.c_str())) {
-      char * logged_text = LoadFileText(state->log_file_name.c_str());
-      if (TextLength(logged_text) <= 1) {
-        SaveFileText(state->log_file_name.c_str(), log.c_str());
-      }
-      else {
-        SaveFileText(state->log_file_name.c_str(), TextFormat("%s%s", logged_text, log.c_str()));
-      }
-      UnloadFileText(logged_text);
-    }
-    else {
-      SaveFileText(state->log_file_name.c_str(), TextFormat("%s", log.c_str()));
-    }
+    state->log_file_data.append(log).append("\n");
+    SaveFileData(state->log_file_name.c_str(), state->log_file_data.data(), state->log_file_data.size());
 	} else {
     #ifndef _RELEASE 
     TraceLog(to_rl_log_level(ls), log.c_str());

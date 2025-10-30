@@ -12,8 +12,8 @@
 
 typedef struct spawn_system_state {
   std::vector<Character2D> spawns; // NOTE: See also clean-up function
-  const camera_metrics* in_camera_metrics;
-  const ingame_info* in_ingame_info;
+  const camera_metrics * in_camera_metrics;
+  const ingame_info * in_ingame_info;
   i32 next_spawn_id;
 
   spawn_system_state(void) {
@@ -217,7 +217,7 @@ bool update_spawns(Vector2 player_position) {
     }
     if (not character->is_damagable) {
       if (character->damage_break_time >= 0) {
-        character->damage_break_time -= state->in_ingame_info->delta_time;
+        character->damage_break_time -= (*state->in_ingame_info->delta_time);
       }
       else {
         character->is_damagable = true;
@@ -239,7 +239,7 @@ bool update_spawns(Vector2 player_position) {
         continue;
       }
       
-      update_sprite(__builtin_addressof(character->death_effect_animation), state->in_ingame_info->delta_time);
+      update_sprite(__builtin_addressof(character->death_effect_animation), (*state->in_ingame_info->delta_time) );
       update_spawn_animation(character);
       
       continue;
@@ -248,7 +248,7 @@ bool update_spawns(Vector2 player_position) {
 
     character->is_on_screen = CheckCollisionRecs(character->collision, state->in_camera_metrics->frustum);
 
-    Vector2 new_position = move_towards(character->position, player_position, character->speed * state->in_ingame_info->delta_time);
+    Vector2 new_position = move_towards(character->position, player_position, character->speed * (*state->in_ingame_info->delta_time) );
     bool x0_collide = false;
     bool y0_collide = false;
     for (size_t itr_111 = 0; itr_111 < state->spawns.size(); ++itr_111) {
@@ -435,19 +435,19 @@ void update_spawn_animation(Character2D* spawn) {
   }
   switch (spawn->last_played_animation) {
     case SPAWN_ZOMBIE_ANIMATION_MOVE_LEFT: {
-      update_sprite(__builtin_addressof(spawn->move_left_animation), state->in_ingame_info->delta_time);
+      update_sprite(__builtin_addressof(spawn->move_left_animation), (*state->in_ingame_info->delta_time) );
       break;
     }
     case SPAWN_ZOMBIE_ANIMATION_MOVE_RIGHT: {
-      update_sprite(__builtin_addressof(spawn->move_right_animation), state->in_ingame_info->delta_time);
+      update_sprite(__builtin_addressof(spawn->move_right_animation), (*state->in_ingame_info->delta_time) );
       break;
     }
     case SPAWN_ZOMBIE_ANIMATION_TAKE_DAMAGE_LEFT:  {
-      update_sprite(__builtin_addressof(spawn->take_damage_left_animation), state->in_ingame_info->delta_time);
+      update_sprite(__builtin_addressof(spawn->take_damage_left_animation), (*state->in_ingame_info->delta_time) );
       break;
     }
     case SPAWN_ZOMBIE_ANIMATION_TAKE_DAMAGE_RIGHT:  {
-      update_sprite(__builtin_addressof(spawn->take_damage_right_animation), state->in_ingame_info->delta_time);
+      update_sprite(__builtin_addressof(spawn->take_damage_right_animation), (*state->in_ingame_info->delta_time) );
       break;
     }
     default: {

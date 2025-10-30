@@ -26,22 +26,22 @@ using json = nlohmann::json;
 #define HMAC_TAG_SIZE 32 // HMAC-SHA256 always produces 32 bytes
 
 #define JSON_SAVE_DATA_MAP_CURRENCY_COINS "currency_coins_player_have"
+
 #define JSON_SAVE_DATA_MAP_PLAYER_DATA "player_data"
-
-#define JSON_SAVE_DATA_MAP_PLAYER_DATA_STATS "stats"
-#define JSON_SAVE_DATA_MAP_PLAYER_DATA_STAT_HEALTH "HEALTH"
-#define JSON_SAVE_DATA_MAP_PLAYER_DATA_STAT_HP_REGEN "HP_REGEN"
-#define JSON_SAVE_DATA_MAP_PLAYER_DATA_STAT_MOVE_SPEED "MOVE_SPEED"
-#define JSON_SAVE_DATA_MAP_PLAYER_DATA_STAT_AOE "AOE"
-#define JSON_SAVE_DATA_MAP_PLAYER_DATA_STAT_DAMAGE "DAMAGE"
-#define JSON_SAVE_DATA_MAP_PLAYER_DATA_STAT_ABILITY_CD "ABILITY_CD"
-#define JSON_SAVE_DATA_MAP_PLAYER_DATA_STAT_PROJECTILE_AMOUNT "PROJECTILE_AMOUNT"
-#define JSON_SAVE_DATA_MAP_PLAYER_DATA_STAT_EXP_GAIN "EXP_GAIN"
-#define JSON_SAVE_DATA_MAP_PLAYER_DATA_STAT_TOTAL_TRAIT_POINTS "TOTAL_TRAIT_POINTS"
-
 #define JSON_SAVE_DATA_MAP_PLAYER_DATA_INVENTORY "inventory"
 #define JSON_SAVE_DATA_MAP_PLAYER_DATA_INVENTORY_ITEM_TYPE "item_type"
 #define JSON_SAVE_DATA_MAP_PLAYER_DATA_INVENTORY_AMOUTH "amouth"
+
+#define JSON_SAVE_DATA_MAP_GAME_RULE "game_rule"
+#define JSON_SAVE_DATA_MAP_GAME_RULE_SPAWN_MULTIPLIER "spawn_multiplier"
+#define JSON_SAVE_DATA_MAP_GAME_RULE_PLAY_TIME_MULTIPLIER "play_time_multiplier"
+#define JSON_SAVE_DATA_MAP_GAME_RULE_DELTA_TIME_MULTIPLIER "delta_time_multiplier"
+#define JSON_SAVE_DATA_MAP_GAME_RULE_BOSS_MODIFIER "boss_modifier"
+#define JSON_SAVE_DATA_MAP_GAME_RULE_AREA_UNLOCKER "area_unlocker"
+#define JSON_SAVE_DATA_MAP_GAME_RULE_TRAIT_POINT_MODIFIER "trait_point_modifier"
+#define JSON_SAVE_DATA_MAP_GAME_RULE_BONUS_RESULT_MULTIPLIER "bonus_result_multiplier"
+#define JSON_SAVE_DATA_MAP_GAME_RULE_ZOMBIE_LEVEL_MODIFIER "zombie_level_modifier"
+#define JSON_SAVE_DATA_MAP_GAME_RULE_RESERVED_FOR_FUTURE_USE "future_use"
 
 // Save system state
 struct save_game_system_state {
@@ -125,26 +125,27 @@ bool save_system_initialize() {
 }
 
 bool parse_or_create_save_data_from_file(save_slot_id slot, save_data default_save) {
-  if (!state) {
+  if (not state or state == nullptr) {
     IFATAL("save_game::parse_or_create_save_data_from_file()::Save game state is not valid");
     return false;
   }
-  if (slot < SAVE_SLOT_UNDEFINED || slot >= SAVE_SLOT_MAX) {
+  if (slot <= SAVE_SLOT_UNDEFINED or slot >= SAVE_SLOT_MAX) {
     IWARN("save_game::parse_or_create_save_data_from_file()::Slot out of bound");
     return false;
   }
+  save_data& save = state->save_slots[slot];
+  save = default_save;
+  save.id = slot;
+  save.file_name = state->slot_filenames[slot];
 
-  if (!FileExists(state->slot_filenames[slot].c_str())) {
-    state->save_slots[slot] = default_save;
-    state->save_slots[slot].id = slot;
-    state->save_slots[slot].file_name = state->slot_filenames[slot];
+  if (not FileExists(save.file_name.c_str())) {
     return save_save_data(slot);
   }
 
   int32_t out_datasize = 0;
-  uint8_t* data = LoadFileData(state->slot_filenames[slot].c_str(), &out_datasize);
+  uint8_t* data = LoadFileData(save.file_name.c_str(), &out_datasize);
   // Check minimum required size: IV + 1 Block (Ciphertext) + HMAC Tag
-  if (!data || out_datasize < (AES_IV_SIZE + AES_BLOCK_SIZE + HMAC_TAG_SIZE)) {
+  if (not data or out_datasize < (AES_IV_SIZE + AES_BLOCK_SIZE + HMAC_TAG_SIZE)) {
     IERROR("save_game::parse_or_create_save_data_from_file()::File too small or failed to load");
     UnloadFileData(data);
     return false;
@@ -181,8 +182,8 @@ bool parse_or_create_save_data_from_file(save_slot_id slot, save_data default_sa
   // 4. Parse JSON
   try {
     json j = json::parse(decrypted);
-    deserialize_save_data(j, state->save_slots[slot]);
-    state->save_slots[slot].is_success = true;
+    deserialize_save_data(j, save);
+    save.is_success = true;
   } catch (const json::exception& e) {
     IERROR("save_game::parse_or_create_save_data_from_file()::JSON parse error: %s", e.what());
     return false;
@@ -402,17 +403,17 @@ json serialize_save_data(const save_data& data) {
   json j;
   j[JSON_SAVE_DATA_MAP_CURRENCY_COINS] = data.currency_coins_player_have;
 
-  json stats;
-  stats[JSON_SAVE_DATA_MAP_PLAYER_DATA_STAT_HEALTH] = data.player_data.stats[CHARACTER_STATS_HEALTH].current_level;
-  stats[JSON_SAVE_DATA_MAP_PLAYER_DATA_STAT_HP_REGEN] = data.player_data.stats[CHARACTER_STATS_HP_REGEN].current_level;
-  stats[JSON_SAVE_DATA_MAP_PLAYER_DATA_STAT_MOVE_SPEED] = data.player_data.stats[CHARACTER_STATS_MOVE_SPEED].current_level;
-  stats[JSON_SAVE_DATA_MAP_PLAYER_DATA_STAT_AOE] = data.player_data.stats[CHARACTER_STATS_AOE].current_level;
-  stats[JSON_SAVE_DATA_MAP_PLAYER_DATA_STAT_DAMAGE] = data.player_data.stats[CHARACTER_STATS_DAMAGE].current_level;
-  stats[JSON_SAVE_DATA_MAP_PLAYER_DATA_STAT_ABILITY_CD] = data.player_data.stats[CHARACTER_STATS_ABILITY_CD].current_level;
-  stats[JSON_SAVE_DATA_MAP_PLAYER_DATA_STAT_PROJECTILE_AMOUNT] = data.player_data.stats[CHARACTER_STATS_PROJECTILE_AMOUNT].current_level;
-  stats[JSON_SAVE_DATA_MAP_PLAYER_DATA_STAT_EXP_GAIN] = data.player_data.stats[CHARACTER_STATS_EXP_GAIN].current_level;
-  stats[JSON_SAVE_DATA_MAP_PLAYER_DATA_STAT_TOTAL_TRAIT_POINTS] = data.player_data.stats[CHARACTER_STATS_TOTAL_TRAIT_POINTS].current_level;
-  j[JSON_SAVE_DATA_MAP_PLAYER_DATA][JSON_SAVE_DATA_MAP_PLAYER_DATA_STATS] = stats;
+  json rules;
+  rules[JSON_SAVE_DATA_MAP_GAME_RULE_SPAWN_MULTIPLIER]            = data.game_rules.at(GAME_RULE_SPAWN_MULTIPLIER).level;
+  rules[JSON_SAVE_DATA_MAP_GAME_RULE_PLAY_TIME_MULTIPLIER]        = data.game_rules.at(GAME_RULE_PLAY_TIME_MULTIPLIER).level;
+  rules[JSON_SAVE_DATA_MAP_GAME_RULE_DELTA_TIME_MULTIPLIER]       = data.game_rules.at(GAME_RULE_DELTA_TIME_MULTIPLIER).level;
+  rules[JSON_SAVE_DATA_MAP_GAME_RULE_BOSS_MODIFIER]               = data.game_rules.at(GAME_RULE_BOSS_MODIFIER).level;
+  rules[JSON_SAVE_DATA_MAP_GAME_RULE_AREA_UNLOCKER]               = data.game_rules.at(GAME_RULE_AREA_UNLOCKER).level;
+  rules[JSON_SAVE_DATA_MAP_GAME_RULE_TRAIT_POINT_MODIFIER]        = data.game_rules.at(GAME_RULE_TRAIT_POINT_MODIFIER).level;
+  rules[JSON_SAVE_DATA_MAP_GAME_RULE_BONUS_RESULT_MULTIPLIER]     = data.game_rules.at(GAME_RULE_BONUS_RESULT_MULTIPLIER).level;
+  rules[JSON_SAVE_DATA_MAP_GAME_RULE_ZOMBIE_LEVEL_MODIFIER]       = data.game_rules.at(GAME_RULE_ZOMBIE_LEVEL_MODIFIER).level;
+  rules[JSON_SAVE_DATA_MAP_GAME_RULE_RESERVED_FOR_FUTURE_USE]     = data.game_rules.at(GAME_RULE_RESERVED_FOR_FUTURE_USE).level;
+  j[JSON_SAVE_DATA_MAP_GAME_RULE] = rules;
 
   json inventory;
   for (const player_inventory_slot& slot : data.player_data.inventory) {
@@ -432,17 +433,17 @@ void deserialize_save_data(const json& j, save_data& data) {
   if (j.contains(JSON_SAVE_DATA_MAP_CURRENCY_COINS)) {
     data.currency_coins_player_have = j.value(JSON_SAVE_DATA_MAP_CURRENCY_COINS, -1);
   }
-  if (j.contains(JSON_SAVE_DATA_MAP_PLAYER_DATA) && j[JSON_SAVE_DATA_MAP_PLAYER_DATA].contains(JSON_SAVE_DATA_MAP_PLAYER_DATA_STATS)) {
-    const auto& stats = j[JSON_SAVE_DATA_MAP_PLAYER_DATA][JSON_SAVE_DATA_MAP_PLAYER_DATA_STATS];
-    data.player_data.stats[CHARACTER_STATS_HEALTH].current_level             = stats.value(JSON_SAVE_DATA_MAP_PLAYER_DATA_STAT_HEALTH,            -1);
-    data.player_data.stats[CHARACTER_STATS_HP_REGEN].current_level           = stats.value(JSON_SAVE_DATA_MAP_PLAYER_DATA_STAT_HP_REGEN,          -1);
-    data.player_data.stats[CHARACTER_STATS_MOVE_SPEED].current_level         = stats.value(JSON_SAVE_DATA_MAP_PLAYER_DATA_STAT_MOVE_SPEED,        -1);
-    data.player_data.stats[CHARACTER_STATS_AOE].current_level                = stats.value(JSON_SAVE_DATA_MAP_PLAYER_DATA_STAT_AOE,               -1);
-    data.player_data.stats[CHARACTER_STATS_DAMAGE].current_level             = stats.value(JSON_SAVE_DATA_MAP_PLAYER_DATA_STAT_DAMAGE,            -1);
-    data.player_data.stats[CHARACTER_STATS_ABILITY_CD].current_level         = stats.value(JSON_SAVE_DATA_MAP_PLAYER_DATA_STAT_ABILITY_CD,        -1);
-    data.player_data.stats[CHARACTER_STATS_PROJECTILE_AMOUNT].current_level  = stats.value(JSON_SAVE_DATA_MAP_PLAYER_DATA_STAT_PROJECTILE_AMOUNT, -1);
-    data.player_data.stats[CHARACTER_STATS_EXP_GAIN].current_level           = stats.value(JSON_SAVE_DATA_MAP_PLAYER_DATA_STAT_EXP_GAIN,          -1);
-    data.player_data.stats[CHARACTER_STATS_TOTAL_TRAIT_POINTS].current_level = stats.value(JSON_SAVE_DATA_MAP_PLAYER_DATA_STAT_TOTAL_TRAIT_POINTS,-1);
+  if (j.contains(JSON_SAVE_DATA_MAP_GAME_RULE)) {
+    const auto& rules = j[JSON_SAVE_DATA_MAP_GAME_RULE];
+    data.game_rules.at(GAME_RULE_SPAWN_MULTIPLIER).level        = rules.value(JSON_SAVE_DATA_MAP_GAME_RULE_SPAWN_MULTIPLIER,       -1);
+    data.game_rules.at(GAME_RULE_PLAY_TIME_MULTIPLIER).level    = rules.value(JSON_SAVE_DATA_MAP_GAME_RULE_PLAY_TIME_MULTIPLIER,   -1);
+    data.game_rules.at(GAME_RULE_DELTA_TIME_MULTIPLIER).level   = rules.value(JSON_SAVE_DATA_MAP_GAME_RULE_DELTA_TIME_MULTIPLIER,  -1);
+    data.game_rules.at(GAME_RULE_BOSS_MODIFIER).level           = rules.value(JSON_SAVE_DATA_MAP_GAME_RULE_BOSS_MODIFIER,          -1);
+    data.game_rules.at(GAME_RULE_AREA_UNLOCKER).level           = rules.value(JSON_SAVE_DATA_MAP_GAME_RULE_AREA_UNLOCKER,          -1);
+    data.game_rules.at(GAME_RULE_TRAIT_POINT_MODIFIER).level    = rules.value(JSON_SAVE_DATA_MAP_GAME_RULE_TRAIT_POINT_MODIFIER,   -1);
+    data.game_rules.at(GAME_RULE_BONUS_RESULT_MULTIPLIER).level = rules.value(JSON_SAVE_DATA_MAP_GAME_RULE_BONUS_RESULT_MULTIPLIER,-1);
+    data.game_rules.at(GAME_RULE_ZOMBIE_LEVEL_MODIFIER).level   = rules.value(JSON_SAVE_DATA_MAP_GAME_RULE_ZOMBIE_LEVEL_MODIFIER,  -1);
+    data.game_rules.at(GAME_RULE_RESERVED_FOR_FUTURE_USE).level = rules.value(JSON_SAVE_DATA_MAP_GAME_RULE_RESERVED_FOR_FUTURE_USE,-1);
   }
   if (j.contains(JSON_SAVE_DATA_MAP_PLAYER_DATA) && j[JSON_SAVE_DATA_MAP_PLAYER_DATA].contains(JSON_SAVE_DATA_MAP_PLAYER_DATA_INVENTORY)) {
     const auto& inventory = j[JSON_SAVE_DATA_MAP_PLAYER_DATA][JSON_SAVE_DATA_MAP_PLAYER_DATA_INVENTORY];

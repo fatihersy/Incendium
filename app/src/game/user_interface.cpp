@@ -2355,6 +2355,7 @@ localization_package* load_localization(std::string language_name, i32 lang_inde
   loc_pack.regular_font  = load_font(PAK_FILE_ASSET1, PAK_FILE_ASSET1_FONT_MIOSEVKA_REGULAR, font_size, codepoints, codepoint_count);
   loc_pack.bold_font  = load_font(PAK_FILE_ASSET1, PAK_FILE_ASSET1_FONT_MIOSEVKA_BOLD, font_size, codepoints, codepoint_count);
   loc_pack.mood = load_font(PAK_FILE_ASSET1, PAK_FILE_ASSET1_FONT_MOOD, 28, codepoints, codepoint_count);
+  UnloadCodepoints(codepoints);
 
   SetTextureFilter(loc_pack.italic_font.texture, TEXTURE_FILTER_ANISOTROPIC_16X);
   SetTextureFilter(loc_pack.light_font .texture, TEXTURE_FILTER_ANISOTROPIC_16X);
