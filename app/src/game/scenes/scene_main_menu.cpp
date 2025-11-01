@@ -848,9 +848,9 @@ void draw_main_menu_character_subscene_stat_details_panel(Rectangle panel_dest, 
     if ((rule->level - rule->base_level) < MAX_STAT_UPGRADE_TIER) {
       if ( stock - cost >= 0) {
         currency_coins_add(-rule->upgrade_cost);
-        i32 level = state->in_ingame_info->player_state_static->stats.at(rule->id).current_level;
-        gm_set_game_rule_level_by_id(rule->id, level+1);
+        gm_set_game_rule_level_by_id(rule->id, rule->level+1);
         event_fire(EVENT_CODE_PLAY_SOUND_GROUP, event_context(SOUNDGROUP_ID_BUTTON_ON_CLICK, static_cast<i32>(true)));
+        gm_save_game();
       } else {
         event_fire(EVENT_CODE_PLAY_SOUND, event_context(SOUND_ID_DENY1, static_cast<i32>(false)));
         state->deny_notify_timer = DENY_NOTIFY_TIME;
@@ -1007,13 +1007,13 @@ void trait_selection_panel_list_traits(panel* const pnl, const Rectangle rect, c
     for (size_t itr_000 = 0; itr_000 < traits->size(); ++itr_000) {
       _trait = __builtin_addressof(traits->at(itr_000));
       local_button* _lc_btn = smm_get_local_button(_trait->ui_ops.i32[0]);
-      text_measure = ui_measure_text(_trait->title.c_str(), FONT_TYPE_REGULAR, 1);
+      text_measure = ui_measure_text(lc_txt(_trait->loc_title), FONT_TYPE_REGULAR, 1);
       Vector2 _lc_btn_pos = VECTOR2(rect.x, rect.y + trait_list_height_buffer + (pnl->buffer.f32[0] * pnl->scroll));
       Rectangle _lc_btn_dest = Rectangle {
         _lc_btn_pos.x, _lc_btn_pos.y, _lc_btn->btn_type.dest_frame_dim.x, _lc_btn->btn_type.dest_frame_dim.y
       };
 
-      if (gui_draw_local_button(_trait->title.c_str(), _lc_btn, FONT_TYPE_REGULAR, 1, _lc_btn_pos, TEXT_ALIGN_LEFT_CENTER, false)) {
+      if (gui_draw_local_button(lc_txt(_trait->loc_title), _lc_btn, FONT_TYPE_REGULAR, 1, _lc_btn_pos, TEXT_ALIGN_LEFT_CENTER, false)) {
         if (trait_list_height_buffer + (pnl->buffer.f32[0] * pnl->scroll) < rect.height) {
           trait_button_on_click_pfn(itr_000);
           _lc_btn->current_state = BTN_STATE_UP;

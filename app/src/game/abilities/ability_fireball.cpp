@@ -124,7 +124,7 @@ void update_ability_fireball(ability *const abl) {
 
     event_fire(EVENT_CODE_DAMAGE_ANY_SPAWN_IF_COLLIDE, event_context(
       static_cast<i16>(prj_collision.x), static_cast<i16>(prj_collision.y), static_cast<i16>(prj_collision.width), static_cast<i16>(prj_collision.height),
-      static_cast<i16>(prj.damage + player->stats.at(CHARACTER_STATS_DAMAGE).buffer.i32[3]),
+      static_cast<i16>(prj.damage + player->stats.at(CHARACTER_STATS_OVERALL_DAMAGE).buffer.i32[3]),
       static_cast<i16>(COLLISION_TYPE_RECTANGLE_RECTANGLE)
     ));
     update_sprite(__builtin_addressof(prj.animations.at(0)), (*state->in_ingame_info->delta_time) );

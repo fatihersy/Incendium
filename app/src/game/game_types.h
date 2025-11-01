@@ -116,11 +116,25 @@ enum character_stat_id {
   CHARACTER_STATS_HP_REGEN,
   CHARACTER_STATS_MOVE_SPEED,
   CHARACTER_STATS_AOE,
-  CHARACTER_STATS_DAMAGE,
+  CHARACTER_STATS_OVERALL_DAMAGE,
   CHARACTER_STATS_ABILITY_CD,
   CHARACTER_STATS_PROJECTILE_AMOUNT,
   CHARACTER_STATS_EXP_GAIN,
   CHARACTER_STATS_TOTAL_TRAIT_POINTS,
+  CHARACTER_STATS_BASIC_ATTACK_DAMAGE,
+  CHARACTER_STATS_BASIC_ATTACK_SPEED,
+  CHARACTER_STATS_CRITICAL_CHANCE,
+  CHARACTER_STATS_CRITICAL_DAMAGE,
+  CHARACTER_STATS_OVERALL_LUCK,
+  CHARACTER_STATS_DAMAGE_REDUCTION,
+  CHARACTER_STATS_CONDITION_DURATION,
+  CHARACTER_STATS_DAMAGE_OVER_TIME,
+  CHARACTER_STATS_DAMAGE_DEFERRAL,
+  CHARACTER_STATS_SIGIL_EFFECTIVENESS,
+  CHARACTER_STATS_VITAL_SIGIL_EFFECTIVENESS,
+  CHARACTER_STATS_LETAL_SIGIL_EFFECTIVENESS,
+  CHARACTER_STATS_DROP_RATE,
+  CHARACTER_STATS_REWARD_MODIFIER,
   CHARACTER_STATS_MAX,
 };
 
@@ -251,14 +265,14 @@ enum item_type {
   ITEM_TYPE_COIN,
   ITEM_TYPE_HEALTH_FRAGMENT,
   ITEM_TYPE_CHEST,
-  ITEM_TYPE_RUNE_DAMAGE_COMMON,
-  ITEM_TYPE_RUNE_DAMAGE_UNCOMMON,
-  ITEM_TYPE_RUNE_DAMAGE_RARE,
-  ITEM_TYPE_RUNE_DAMAGE_EPIC,
-  ITEM_TYPE_RUNE_RESISTANCE_COMMON,
-  ITEM_TYPE_RUNE_RESISTANCE_UNCOMMON,
-  ITEM_TYPE_RUNE_RESISTANCE_RARE,
-  ITEM_TYPE_RUNE_RESISTANCE_EPIC,
+  ITEM_TYPE_SIGIL_DAMAGE_COMMON,
+  ITEM_TYPE_SIGIL_DAMAGE_UNCOMMON,
+  ITEM_TYPE_SIGIL_DAMAGE_RARE,
+  ITEM_TYPE_SIGIL_DAMAGE_EPIC,
+  ITEM_TYPE_SIGIL_RESISTANCE_COMMON,
+  ITEM_TYPE_SIGIL_RESISTANCE_UNCOMMON,
+  ITEM_TYPE_SIGIL_RESISTANCE_RARE,
+  ITEM_TYPE_SIGIL_RESISTANCE_EPIC,
   ITEM_TYPE_MAX
 };
 
@@ -1059,8 +1073,8 @@ struct character_stat {
 struct character_trait {
   i32 id;
   character_stat_id type;
-  std::string title;
-  std::string description;
+  i32 loc_title;
+  i32 loc_description;
   i32 point;
 
   data128 ingame_ops;
@@ -1069,17 +1083,17 @@ struct character_trait {
   character_trait(void) {
     this->id = 0;
     this->type = CHARACTER_STATS_UNDEFINED;
-    this->title = std::string();
-    this->description = std::string();
+    this->loc_title = 0;
+    this->loc_description = 0;
     this->ingame_ops = data128();
     this->ui_ops = data128();
     this->point = 0;
   }
-  character_trait(i32 _id, character_stat_id _type, const char* _title, const char * _description, i32 _point, data128 buffer) : character_trait() {
+  character_trait(i32 _id, character_stat_id _type, i32 _title, i32 _description, i32 _point, data128 buffer) : character_trait() {
     this->id = _id;
     this->type = _type;
-    this->title = _title;
-    this->description = _description;
+    this->loc_title = _title;
+    this->loc_description = _description;
     this->point = _point;
     this->ingame_ops = buffer;
   }

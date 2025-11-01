@@ -5,7 +5,7 @@
 #include "core/logger.h"
 #include "core/fmath.h"
 
-#include "loc_types.h"
+//#include "loc_types.h"
 
 #include "game/spritesheet.h"
 
@@ -110,37 +110,33 @@ bool player_system_initialize(const camera_metrics* in_camera_metrics,const app_
   state->defualt_player.roll_sprite.fps = state->defualt_player.roll_sprite.frame_total / PLAYER_ROLL_DURATION;
 
   {
-    state->defualt_player.stats.at(CHARACTER_STATS_HEALTH) = character_stat(CHARACTER_STATS_HEALTH, LOC_TEXT_PLAYER_STAT_LIFE_ESSENCE, LOC_TEXT_PLAYER_STAT_DESC_LIFE_ESSENCE, 
-      Rectangle{2016, 640, 32, 32}, (i32) 1, level_curve[1], data128(static_cast<i32>(0))
-    );
-    state->defualt_player.stats.at(CHARACTER_STATS_HP_REGEN) = character_stat(CHARACTER_STATS_HP_REGEN, LOC_TEXT_PLAYER_STAT_BREAD, LOC_TEXT_PLAYER_STAT_DESC_BREAD, 
-      Rectangle{1856, 896, 32, 32}, (i32) 0, level_curve[1], data128(static_cast<i32>(0))
-    );
-    state->defualt_player.stats.at(CHARACTER_STATS_MOVE_SPEED) = character_stat(CHARACTER_STATS_MOVE_SPEED, LOC_TEXT_PLAYER_STAT_CARDINAL_BOOTS, LOC_TEXT_PLAYER_STAT_DESC_CARDINAL_BOOTS, 
-      Rectangle{1632, 960, 32, 32}, 1, (i32) level_curve[1], data128(static_cast<f32>(228.f))
-    );
-    state->defualt_player.stats.at(CHARACTER_STATS_AOE) =  character_stat(CHARACTER_STATS_AOE, LOC_TEXT_PLAYER_STAT_BLAST_SCROLL, LOC_TEXT_PLAYER_STAT_DESC_BLAST_SCROLL, 
-      Rectangle{1888, 640, 32, 32}, 0, (i32)  level_curve[1], data128(static_cast<f32>(0.f))
-    );
-    state->defualt_player.stats.at(CHARACTER_STATS_DAMAGE) =  character_stat(CHARACTER_STATS_DAMAGE, LOC_TEXT_PLAYER_STAT_HEAVY_CROSS, LOC_TEXT_PLAYER_STAT_DESC_HEAVY_CROSS, 
-      Rectangle{1856, 640, 32, 32}, 1, (i32) level_curve[1], data128(static_cast<i32>(0))
-    );
-    state->defualt_player.stats.at(CHARACTER_STATS_ABILITY_CD) = character_stat(CHARACTER_STATS_ABILITY_CD, LOC_TEXT_PLAYER_STAT_HOURGLASS, LOC_TEXT_PLAYER_STAT_DESC_HOURGLASS, 
-      Rectangle{1696, 672, 32, 32}, 0, (i32)level_curve[1], data128(static_cast<f32>(0.f))
-    );
-    state->defualt_player.stats.at(CHARACTER_STATS_PROJECTILE_AMOUNT) = character_stat(CHARACTER_STATS_PROJECTILE_AMOUNT, LOC_TEXT_PLAYER_STAT_SECOND_HAND, LOC_TEXT_PLAYER_STAT_DESC_SECOND_HAND, 
-      Rectangle{1632, 1056, 32, 32}, 1, (i32) level_curve[1], data128(static_cast<i32>(0))
-    );
-    state->defualt_player.stats.at(CHARACTER_STATS_EXP_GAIN) =  character_stat(CHARACTER_STATS_EXP_GAIN, LOC_TEXT_PLAYER_STAT_SEEING_EYES, LOC_TEXT_PLAYER_STAT_DESC_SEEING_EYES, 
-      Rectangle{1760, 640, 32, 32}, 0, (i32) level_curve[1], data128(static_cast<f32>(0.f))
-    );
-    state->defualt_player.stats.at(CHARACTER_STATS_TOTAL_TRAIT_POINTS) =  character_stat(CHARACTER_STATS_TOTAL_TRAIT_POINTS, LOC_TEXT_PLAYER_STAT_TOTAL_TRAIT_POINTS, LOC_TEXT_PLAYER_STAT_DESC_TOTAL_TRAIT_POINTS, 
-      Rectangle{2272, 640, 32, 32}, 1, (i32) level_curve[1], data128(static_cast<i32>(7))
-    );
+    state->defualt_player.stats[CHARACTER_STATS_HEALTH]                    = character_stat(CHARACTER_STATS_HEALTH,                   0, 0, ZERORECT, 1, 100, data128(100.00f));
+    state->defualt_player.stats[CHARACTER_STATS_HP_REGEN]                  = character_stat(CHARACTER_STATS_HP_REGEN,                 0, 0, ZERORECT, 1,  50, data128(001.00f));
+    state->defualt_player.stats[CHARACTER_STATS_MOVE_SPEED]                = character_stat(CHARACTER_STATS_MOVE_SPEED,               0, 0, ZERORECT, 1,  75, data128(005.00f));
+    state->defualt_player.stats[CHARACTER_STATS_AOE]                       = character_stat(CHARACTER_STATS_AOE,                      0, 0, ZERORECT, 1, 100, data128(001.00f));
+    state->defualt_player.stats[CHARACTER_STATS_OVERALL_DAMAGE]            = character_stat(CHARACTER_STATS_OVERALL_DAMAGE,           0, 0, ZERORECT, 1, 100, data128(001.00f));
+    state->defualt_player.stats[CHARACTER_STATS_ABILITY_CD]                = character_stat(CHARACTER_STATS_ABILITY_CD,               0, 0, ZERORECT, 1, 100, data128(010.00f));
+    state->defualt_player.stats[CHARACTER_STATS_PROJECTILE_AMOUNT]         = character_stat(CHARACTER_STATS_PROJECTILE_AMOUNT,        0, 0, ZERORECT, 1, 100, data128(001.00f));
+    state->defualt_player.stats[CHARACTER_STATS_EXP_GAIN]                  = character_stat(CHARACTER_STATS_EXP_GAIN,                 0, 0, ZERORECT, 1, 150, data128(000.05f));
+    state->defualt_player.stats[CHARACTER_STATS_TOTAL_TRAIT_POINTS]        = character_stat(CHARACTER_STATS_TOTAL_TRAIT_POINTS,       0, 0, ZERORECT, 1, 150, data128(001.50f));
+    state->defualt_player.stats[CHARACTER_STATS_BASIC_ATTACK_DAMAGE]       = character_stat(CHARACTER_STATS_BASIC_ATTACK_DAMAGE,      0, 0, ZERORECT, 1, 120, data128(000.00f));
+    state->defualt_player.stats[CHARACTER_STATS_BASIC_ATTACK_SPEED]        = character_stat(CHARACTER_STATS_BASIC_ATTACK_SPEED,       0, 0, ZERORECT, 1, 200, data128(000.00f));
+    state->defualt_player.stats[CHARACTER_STATS_CRITICAL_CHANCE]           = character_stat(CHARACTER_STATS_CRITICAL_CHANCE,          0, 0, ZERORECT, 1,  80, data128(001.00f));
+    state->defualt_player.stats[CHARACTER_STATS_CRITICAL_DAMAGE]           = character_stat(CHARACTER_STATS_CRITICAL_DAMAGE,          0, 0, ZERORECT, 1,  80, data128(001.00f));
+    state->defualt_player.stats[CHARACTER_STATS_OVERALL_LUCK]              = character_stat(CHARACTER_STATS_OVERALL_LUCK,             0, 0, ZERORECT, 1, 100, data128(001.00f));
+    state->defualt_player.stats[CHARACTER_STATS_DAMAGE_REDUCTION]          = character_stat(CHARACTER_STATS_DAMAGE_REDUCTION,         0, 0, ZERORECT, 1, 100, data128(001.00f));
+    state->defualt_player.stats[CHARACTER_STATS_CONDITION_DURATION]        = character_stat(CHARACTER_STATS_CONDITION_DURATION,       0, 0, ZERORECT, 1, 100, data128(010.00f));
+    state->defualt_player.stats[CHARACTER_STATS_DAMAGE_OVER_TIME]          = character_stat(CHARACTER_STATS_DAMAGE_OVER_TIME,         0, 0, ZERORECT, 1, 100, data128(001.00f));
+    state->defualt_player.stats[CHARACTER_STATS_DAMAGE_DEFERRAL]           = character_stat(CHARACTER_STATS_DAMAGE_DEFERRAL,          0, 0, ZERORECT, 1, 150, data128(000.05f));
+    state->defualt_player.stats[CHARACTER_STATS_SIGIL_EFFECTIVENESS]       = character_stat(CHARACTER_STATS_SIGIL_EFFECTIVENESS,      0, 0, ZERORECT, 1, 150, data128(001.50f));
+    state->defualt_player.stats[CHARACTER_STATS_VITAL_SIGIL_EFFECTIVENESS] = character_stat(CHARACTER_STATS_VITAL_SIGIL_EFFECTIVENESS,0, 0, ZERORECT, 1, 120, data128(000.00f));
+    state->defualt_player.stats[CHARACTER_STATS_LETAL_SIGIL_EFFECTIVENESS] = character_stat(CHARACTER_STATS_LETAL_SIGIL_EFFECTIVENESS,0, 0, ZERORECT, 1, 200, data128(000.00f));
+    state->defualt_player.stats[CHARACTER_STATS_DROP_RATE]                 = character_stat(CHARACTER_STATS_DROP_RATE,                0, 0, ZERORECT, 1,  80, data128(001.00f));
+    state->defualt_player.stats[CHARACTER_STATS_REWARD_MODIFIER]           = character_stat(CHARACTER_STATS_REWARD_MODIFIER,          0, 0, ZERORECT, 1,  80, data128(001.00f));
   }
 
   state->defualt_player.position = ZEROVEC2;
-  state->defualt_player.collision.width = (state->defualt_player.idle_right_sprite.coord.width * .9f) * PLAYER_SCALE; // INFO: player collision scales with idle spritesheet
+  state->defualt_player.collision.width  = (state->defualt_player.idle_right_sprite.coord.width  * .9f) * PLAYER_SCALE; // INFO: player collision scales with idle spritesheet
   state->defualt_player.collision.height = (state->defualt_player.idle_right_sprite.coord.height * .9f) * PLAYER_SCALE;
   state->defualt_player.is_dead = false;
   state->defualt_player.w_direction = WORLD_DIRECTION_LEFT;
@@ -411,7 +407,7 @@ void player_update_attack(void) {
       static_cast<i16>(damage_area.y),
       static_cast<i16>(damage_area.width),
       static_cast<i16>(damage_area.height),
-      static_cast<i16>(_player.stats.at(CHARACTER_STATS_DAMAGE).buffer.i32[3]),
+      static_cast<i16>(_player.stats.at(CHARACTER_STATS_OVERALL_DAMAGE).buffer.i32[3]),
       static_cast<i16>(COLLISION_TYPE_RECTANGLE_RECTANGLE)
     ));
   }

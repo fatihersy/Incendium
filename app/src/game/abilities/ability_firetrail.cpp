@@ -125,7 +125,7 @@ void update_ability_firetrail(ability *const abl) {
     }
     event_fire(EVENT_CODE_DAMAGE_ANY_SPAWN_IF_COLLIDE, event_context(
       static_cast<i16>(prj->collision.x), static_cast<i16>(prj->collision.y), static_cast<i16>(prj->collision.width), static_cast<i16>(prj->collision.height), 
-      static_cast<i16>(prj->damage + p_player->stats.at(CHARACTER_STATS_DAMAGE).buffer.i32[3]),
+      static_cast<i16>(prj->damage + p_player->stats.at(CHARACTER_STATS_OVERALL_DAMAGE).buffer.i32[3]),
       static_cast<i16>(COLLISION_TYPE_RECTANGLE_RECTANGLE)
     ));
     update_sprite(__builtin_addressof(prj->animations.at(prj->active_sprite)), (*state->in_ingame_info->delta_time) );

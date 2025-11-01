@@ -187,42 +187,81 @@ bool game_manager_initialize(const camera_metrics * in_camera_metrics, const app
   // Traits
   {
     i32 next_trait_id = 0;
-    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_HEALTH, "Healty", "Increases your healt a bit", -1, data128(static_cast<i32>(300))));
-    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_HEALTH, "Tough", "Increases your healt a fair amouth", -2, data128(static_cast<i32>(800))));
-    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE, "Artillery", "Increases your damage a fair amouth", -2, data128(static_cast<i32>(8))));
-    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_MOVE_SPEED, "Bunny Hop", "Increases your speed a bit", -1, data128(static_cast<f32>(32))));
-    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_MOVE_SPEED, "Flash",  "Increases your speed a fair amouth", -2, data128(static_cast<f32>(64.f))));
-    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE, "Trait 6",  "Trait 6 description", -2, data128(static_cast<i32>(8))));
-    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE, "Trait 7",  "Trait 7 description", -2, data128(static_cast<i32>(8))));
-    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE, "Trait 8",  "Trait 8 description",  2, data128(static_cast<i32>(8))));
-    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE, "Trait 9",  "Trait 9 description",  2, data128(static_cast<i32>(8))));
-    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE, "Trait 10", "Trait 10 description", 2, data128(static_cast<i32>(8))));
-    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE, "Trait 11", "Trait 11 description", 2, data128(static_cast<i32>(8))));
-    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE, "Trait 12", "Trait 12 description", 2, data128(static_cast<i32>(8))));
-    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE, "Trait 13", "Trait 13 description", 2, data128(static_cast<i32>(8))));
-    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE, "Trait 14", "Trait 14 description", 2, data128(static_cast<i32>(8))));
-    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE, "Trait 15", "Trait 15 description", 2, data128(static_cast<i32>(8))));
-    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE, "Trait 16", "Trait 16 description", 2, data128(static_cast<i32>(8))));
-    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE, "Trait 17", "Trait 17 description", 2, data128(static_cast<i32>(8))));
-    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE, "Trait 18", "Trait 18 description", 2, data128(static_cast<i32>(8))));
-    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE, "Trait 19", "Trait 19 description", 2, data128(static_cast<i32>(8))));
-    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE, "Trait 20", "Trait 20 description", 2, data128(static_cast<i32>(8))));
-    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE, "Trait 21", "Trait 21 description", 2, data128(static_cast<i32>(8))));
+    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_MOVE_SPEED, LOC_TEXT_PLAYER_TRAIT_ALACRITY, LOC_TEXT_PLAYER_TRAIT_ALACRITY_DESC, 
+      -1, data128(static_cast<f32>(00.10f)))
+    );
+    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_HEALTH, LOC_TEXT_PLAYER_TRAIT_FORTITUDE, LOC_TEXT_PLAYER_TRAIT_FORTITUDE_DESC, 
+      -1, data128(static_cast<i32>(20.00f)))
+    );
+    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_OVERALL_DAMAGE, LOC_TEXT_PLAYER_TRAIT_POWER, LOC_TEXT_PLAYER_TRAIT_POWER_DESC, 
+      -1, data128(static_cast<f32>(00.05f)))
+    );
+    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_OVERALL_LUCK, LOC_TEXT_PLAYER_TRAIT_FORTUNE, LOC_TEXT_PLAYER_TRAIT_FORTUNE_DESC, 
+      -1, data128(static_cast<i32>(10.00f)))
+    );
+    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_CRITICAL_CHANCE, LOC_TEXT_PLAYER_TRAIT_KEEN, LOC_TEXT_PLAYER_TRAIT_KEEN_DESC, 
+      -1, data128(static_cast<f32>(00.05f)))
+    );
+    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DROP_RATE, LOC_TEXT_PLAYER_TRAIT_SERENDIPITY, LOC_TEXT_PLAYER_TRAIT_SERENDIPITY_DESC, 
+      -1, data128(static_cast<f32>(00.15f)))
+    );
+    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_HP_REGEN, LOC_TEXT_PLAYER_TRAIT_VIGOR, LOC_TEXT_PLAYER_TRAIT_VIGOR_DESC, 
+      -1, data128(static_cast<f32>(10.00f)))
+    );
+    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_CONDITION_DURATION, LOC_TEXT_PLAYER_TRAIT_PERSISTENCE, LOC_TEXT_PLAYER_TRAIT_PERSISTENCE_DESC, 
+      -1, data128(static_cast<f32>(00.20f)))
+    );
+    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE_OVER_TIME, LOC_TEXT_PLAYER_TRAIT_AFFLICTION, LOC_TEXT_PLAYER_TRAIT_AFFLICTION_DESC, 
+      -1, data128(static_cast<f32>(00.15f)))
+    );
+    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_BASIC_ATTACK_SPEED, LOC_TEXT_PLAYER_TRAIT_FRENZY, LOC_TEXT_PLAYER_TRAIT_FRENZY_DESC, 
+      -1, data128(static_cast<f32>(00.10f)))
+    );
+    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_BASIC_ATTACK_DAMAGE, LOC_TEXT_PLAYER_TRAIT_BRUTALITY, LOC_TEXT_PLAYER_TRAIT_BRUTALITY_DESC, 
+      -1, data128(static_cast<i32>(50.00f)))
+    );
+    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_CRITICAL_DAMAGE, LOC_TEXT_PLAYER_TRAIT_DEVASTATOR, LOC_TEXT_PLAYER_TRAIT_DEVASTATOR_DESC, 
+      -1, data128(static_cast<f32>(00.25f)))
+    );
+    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE_REDUCTION, LOC_TEXT_PLAYER_TRAIT_RESILIENCE, LOC_TEXT_PLAYER_TRAIT_RESILIENCE_DESC, 
+      -1, data128(static_cast<f32>(00.05f)))
+    );
+    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_AOE, LOC_TEXT_PLAYER_TRAIT_AMPLITUDE, LOC_TEXT_PLAYER_TRAIT_AMPLITUDE_DESC, 
+      -1, data128(static_cast<f32>(00.15f)))
+    );
+    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_MOVE_SPEED, LOC_TEXT_PLAYER_TRAIT_EXPEDITION, LOC_TEXT_PLAYER_TRAIT_EXPEDITION_DESC, 
+      -2, data128(static_cast<f32>(00.20f)))
+    );
+    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_REWARD_MODIFIER, LOC_TEXT_PLAYER_TRAIT_TRIBUTE, LOC_TEXT_PLAYER_TRAIT_TRIBUTE_DESC, 
+      -2, data128(static_cast<f32>(00.20f)))
+    );
+    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE_DEFERRAL, LOC_TEXT_PLAYER_TRAIT_STAGGER, LOC_TEXT_PLAYER_TRAIT_STAGGER_DESC, 
+      -2, data128(static_cast<f32>(00.30f)))
+    ); 
+    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_SIGIL_EFFECTIVENESS, LOC_TEXT_PLAYER_TRAIT_SIGILIC, LOC_TEXT_PLAYER_TRAIT_SIGILIC_DESC, 
+      -2, data128(static_cast<f32>(00.10f)))
+    );
+    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_SIGIL_EFFECTIVENESS, LOC_TEXT_PLAYER_TRAIT_VITALITY, LOC_TEXT_PLAYER_TRAIT_VITALITY_DESC, 
+      -2, data128(static_cast<f32>(00.25f)))
+    ); 
+    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_SIGIL_EFFECTIVENESS, LOC_TEXT_PLAYER_TRAIT_LETHAL, LOC_TEXT_PLAYER_TRAIT_LETHAL_DESC, 
+      -2, data128(static_cast<f32>(00.25f)))
+    ); 
   }
   // Traits
 
-  // Runes
+  // Sigils
   {
-    state->default_items.at(ITEM_TYPE_RUNE_DAMAGE_COMMON)       = item_data(ITEM_TYPE_RUNE_DAMAGE_COMMON,       "Damage common",      data128(3.f), ATLAS_TEX_ID_RUNE_DAMAGE_COMMON);
-    state->default_items.at(ITEM_TYPE_RUNE_DAMAGE_UNCOMMON)     = item_data(ITEM_TYPE_RUNE_DAMAGE_UNCOMMON,     "Damage uncommon",    data128(8.f), ATLAS_TEX_ID_RUNE_DAMAGE_UNCOMMON);
-    state->default_items.at(ITEM_TYPE_RUNE_DAMAGE_RARE)         = item_data(ITEM_TYPE_RUNE_DAMAGE_RARE,         "Damage rare",        data128(5.f), ATLAS_TEX_ID_RUNE_DAMAGE_RARE);
-    state->default_items.at(ITEM_TYPE_RUNE_DAMAGE_EPIC)         = item_data(ITEM_TYPE_RUNE_DAMAGE_EPIC,         "Damage epic",        data128(5.f), ATLAS_TEX_ID_RUNE_DAMAGE_EPIC);
-    state->default_items.at(ITEM_TYPE_RUNE_RESISTANCE_COMMON)   = item_data(ITEM_TYPE_RUNE_RESISTANCE_COMMON,   "Resistance common",  data128(3.f), ATLAS_TEX_ID_RUNE_RESISTANCE_COMMON);
-    state->default_items.at(ITEM_TYPE_RUNE_RESISTANCE_UNCOMMON) = item_data(ITEM_TYPE_RUNE_RESISTANCE_UNCOMMON, "Resistance uncommon",data128(8.f), ATLAS_TEX_ID_RUNE_RESISTANCE_UNCOMMON);
-    state->default_items.at(ITEM_TYPE_RUNE_RESISTANCE_RARE)     = item_data(ITEM_TYPE_RUNE_RESISTANCE_RARE,     "Resistance rare",    data128(5.f), ATLAS_TEX_ID_RUNE_RESISTANCE_RARE);
-    state->default_items.at(ITEM_TYPE_RUNE_RESISTANCE_EPIC)     = item_data(ITEM_TYPE_RUNE_RESISTANCE_EPIC,     "Resistance epic",    data128(5.f), ATLAS_TEX_ID_RUNE_RESISTANCE_EPIC);
+    state->default_items.at(ITEM_TYPE_SIGIL_DAMAGE_COMMON)       = item_data(ITEM_TYPE_SIGIL_DAMAGE_COMMON,       "Damage common",      data128(3.f), ATLAS_TEX_ID_SIGIL_DAMAGE_COMMON);
+    state->default_items.at(ITEM_TYPE_SIGIL_DAMAGE_UNCOMMON)     = item_data(ITEM_TYPE_SIGIL_DAMAGE_UNCOMMON,     "Damage uncommon",    data128(8.f), ATLAS_TEX_ID_SIGIL_DAMAGE_UNCOMMON);
+    state->default_items.at(ITEM_TYPE_SIGIL_DAMAGE_RARE)         = item_data(ITEM_TYPE_SIGIL_DAMAGE_RARE,         "Damage rare",        data128(5.f), ATLAS_TEX_ID_SIGIL_DAMAGE_RARE);
+    state->default_items.at(ITEM_TYPE_SIGIL_DAMAGE_EPIC)         = item_data(ITEM_TYPE_SIGIL_DAMAGE_EPIC,         "Damage epic",        data128(5.f), ATLAS_TEX_ID_SIGIL_DAMAGE_EPIC);
+    state->default_items.at(ITEM_TYPE_SIGIL_RESISTANCE_COMMON)   = item_data(ITEM_TYPE_SIGIL_RESISTANCE_COMMON,   "Resistance common",  data128(3.f), ATLAS_TEX_ID_SIGIL_RESISTANCE_COMMON);
+    state->default_items.at(ITEM_TYPE_SIGIL_RESISTANCE_UNCOMMON) = item_data(ITEM_TYPE_SIGIL_RESISTANCE_UNCOMMON, "Resistance uncommon",data128(8.f), ATLAS_TEX_ID_SIGIL_RESISTANCE_UNCOMMON);
+    state->default_items.at(ITEM_TYPE_SIGIL_RESISTANCE_RARE)     = item_data(ITEM_TYPE_SIGIL_RESISTANCE_RARE,     "Resistance rare",    data128(5.f), ATLAS_TEX_ID_SIGIL_RESISTANCE_RARE);
+    state->default_items.at(ITEM_TYPE_SIGIL_RESISTANCE_EPIC)     = item_data(ITEM_TYPE_SIGIL_RESISTANCE_EPIC,     "Resistance epic",    data128(5.f), ATLAS_TEX_ID_SIGIL_RESISTANCE_EPIC);
   }
-  // Runes
+  // Sigils
 
   // Rules
   {
@@ -489,8 +528,8 @@ void gm_end_game(bool wait_for_results, bool is_win) {
   gm_save_game();
 }
 void gm_save_game(void) {
-  state->game_progression_data->currency_coins_player_have = state->collected_coins;
   state->game_progression_data->player_data = state->player_state_static;
+  state->game_progression_data->game_rules = state->game_rules;
   save_save_data(SAVE_SLOT_CURRENT_SESSION);
 }
 void gm_load_game(void) {
@@ -763,35 +802,35 @@ void gm_add_to_inventory(item_type _item_type) {
     case ITEM_TYPE_COIN: return;
     case ITEM_TYPE_HEALTH_FRAGMENT: return;
     case ITEM_TYPE_CHEST: return;
-    case ITEM_TYPE_RUNE_DAMAGE_COMMON: {
+    case ITEM_TYPE_SIGIL_DAMAGE_COMMON: {
       find_or_create(_item_type);
       return;
     }
-    case ITEM_TYPE_RUNE_DAMAGE_UNCOMMON: {
+    case ITEM_TYPE_SIGIL_DAMAGE_UNCOMMON: {
       find_or_create(_item_type);
       return;
     }
-    case ITEM_TYPE_RUNE_DAMAGE_RARE: {
+    case ITEM_TYPE_SIGIL_DAMAGE_RARE: {
       find_or_create(_item_type);
       return;
     }
-    case ITEM_TYPE_RUNE_DAMAGE_EPIC: {
+    case ITEM_TYPE_SIGIL_DAMAGE_EPIC: {
       find_or_create(_item_type);
       return;
     }
-    case ITEM_TYPE_RUNE_RESISTANCE_COMMON: {
+    case ITEM_TYPE_SIGIL_RESISTANCE_COMMON: {
       find_or_create(_item_type);
       return;
     }
-    case ITEM_TYPE_RUNE_RESISTANCE_UNCOMMON: {
+    case ITEM_TYPE_SIGIL_RESISTANCE_UNCOMMON: {
       find_or_create(_item_type);
       return;
     }
-    case ITEM_TYPE_RUNE_RESISTANCE_RARE: {
+    case ITEM_TYPE_SIGIL_RESISTANCE_RARE: {
       find_or_create(_item_type);
       return;
     }
-    case ITEM_TYPE_RUNE_RESISTANCE_EPIC: {
+    case ITEM_TYPE_SIGIL_RESISTANCE_EPIC: {
       find_or_create(_item_type);
       return;
     }
@@ -874,11 +913,6 @@ void gm_set_game_rule_level_by_id(game_rule_id rule_id, i32 level) {
     IWARN("game_manager::gm_set_game_rule_level_by_id()::Rule id is out of bound");
     return;
   }
-  if (level < 0 or level > MAX_GAME_RULE_LEVEL) {
-    IWARN("game_manager::gm_set_game_rule_level_by_id()::Rule level is out of bound");
-    return;
-  }
-
   gm_refresh_game_rule_by_level(__builtin_addressof(state->game_rules.at(rule_id)), level);
 }
 const ingame_info* gm_get_ingame_info(void){
@@ -898,92 +932,124 @@ const std::vector<character_trait>* gm_get_character_traits_all(void) {
 }
 void gm_refresh_stat_by_level(character_stat* stat, i32 level) {
   if (not state or state == nullptr) {
-    IERROR("game_manager::game_manager_set_stats()::State is not valid");
+    IERROR("game_manager::gm_refresh_stat_by_level()::State is not valid");
     return;
   }
   if (not stat or stat == nullptr) {
-    IWARN("game_manager::game_manager_set_stats()::stat is not valid");
+    IWARN("game_manager::gm_refresh_stat_by_level()::stat is not valid");
     return;
   }
-  if (stat->id >= CHARACTER_STATS_MAX || stat->id <= CHARACTER_STATS_UNDEFINED) {
+  if (stat->id >= CHARACTER_STATS_MAX or stat->id <= CHARACTER_STATS_UNDEFINED) {
     IWARN("game_manager::gm_refresh_stat_by_level()::Stat id is out of bound");
     return;
   }
-
+  if (level < 0 or (level + 1) - stat->base_level < 0) {
+    IWARN("game_manager::gm_refresh_stat_by_level()::Stat level is out of bound");
+    return;
+  }
   i32 next_curve_value = level_curve[level];
   stat->upgrade_cost = level_curve[ (level+1) - stat->base_level ];
   stat->current_level = level;
+
+  auto set_stat_value_int = [&](i32 value) {
+    stat->buffer.i32[1] = value;
+    stat->buffer.i32[3] = stat->buffer.i32[0] + stat->buffer.i32[1] + stat->buffer.i32[2];
+  };
+  auto set_stat_value_f32 = [&](f32 value) {
+    stat->buffer.f32[1] = value;
+    stat->buffer.f32[3] = stat->buffer.f32[0] + stat->buffer.f32[1] + stat->buffer.f32[2];
+  };
   switch (stat->id) {
     case CHARACTER_STATS_HEALTH:{
-      const i32 value = next_curve_value;
-
-      stat->buffer.i32[1] = value;
-      stat->buffer.i32[3] = stat->buffer.i32[0] + stat->buffer.i32[1] + stat->buffer.i32[2];
+      set_stat_value_int(next_curve_value);
       return;
     }
-    case CHARACTER_STATS_HP_REGEN:{ 
-      const i32 value = next_curve_value / 100.f;
-
-      stat->buffer.i32[1] = value;
-      stat->buffer.i32[3] = stat->buffer.i32[0] + stat->buffer.i32[1] + stat->buffer.i32[2];
+    case CHARACTER_STATS_HP_REGEN:{
+      set_stat_value_int(next_curve_value / 100.f);
       return;
     }
     case CHARACTER_STATS_MOVE_SPEED:{
-      const f32 value = next_curve_value * .05f;
-
-      stat->buffer.f32[1] = value;
-      stat->buffer.f32[3] = stat->buffer.f32[0] + stat->buffer.f32[1] + stat->buffer.f32[2];
+      set_stat_value_f32(next_curve_value * .05f);
       return;
     }
     case CHARACTER_STATS_AOE:{
-      const f32 value = next_curve_value / 1000.f;
-
-      stat->buffer.f32[1] = value;
-      stat->buffer.f32[3] = stat->buffer.f32[0] + stat->buffer.f32[1] + stat->buffer.f32[2];
+      set_stat_value_f32(next_curve_value / 1000.f);
       return;
     }
-    case CHARACTER_STATS_DAMAGE:{
-      const i32 value = next_curve_value * .1f;
-
-      stat->buffer.i32[1] = value;
-      stat->buffer.i32[3] = stat->buffer.i32[0] + stat->buffer.i32[1] + stat->buffer.i32[2];
+    case CHARACTER_STATS_OVERALL_DAMAGE: {
+      set_stat_value_int(next_curve_value * .1f);
       return;
     }
-    case CHARACTER_STATS_ABILITY_CD:{
-      const f32 value = next_curve_value / 1000.f;
-
-      stat->buffer.f32[1] = value;
-      stat->buffer.f32[3] = stat->buffer.f32[0] + stat->buffer.f32[1] + stat->buffer.f32[2];
+    case CHARACTER_STATS_ABILITY_CD: {
+      set_stat_value_f32(next_curve_value / 1000.f);
       return;
     }
-    case CHARACTER_STATS_PROJECTILE_AMOUNT:{
-      const i32 value = stat->current_level;
-
-      stat->buffer.i32[1] = value;
-      stat->buffer.i32[3] = stat->buffer.i32[0] + stat->buffer.i32[1] + stat->buffer.i32[2];
+    case CHARACTER_STATS_PROJECTILE_AMOUNT: {
+      set_stat_value_int(stat->current_level);
       return;
     }
-    case CHARACTER_STATS_EXP_GAIN:{
-      const f32 value = next_curve_value / 1000.f;
-
-      stat->buffer.f32[1] = value;
-      stat->buffer.f32[3] = stat->buffer.f32[0] + stat->buffer.f32[1] + stat->buffer.f32[2];
+    case CHARACTER_STATS_EXP_GAIN: {
+      set_stat_value_f32(next_curve_value / 1000.f);
       return;
     }
-    case CHARACTER_STATS_TOTAL_TRAIT_POINTS:{
-      const i32 value = next_curve_value / 100.f;
-
-      stat->buffer.i32[1] = value;
-      stat->buffer.i32[3] = stat->buffer.i32[0] + stat->buffer.i32[1] + stat->buffer.i32[2];
+    case CHARACTER_STATS_TOTAL_TRAIT_POINTS: {
+      set_stat_value_int(next_curve_value / 100.f);
+      return;
+    }
+    case CHARACTER_STATS_BASIC_ATTACK_DAMAGE: {
+      set_stat_value_int(next_curve_value / 100.f);
+      return;
+    }
+    case CHARACTER_STATS_BASIC_ATTACK_SPEED: { 
+      set_stat_value_int(next_curve_value / 100.f);
+      return;
+    }
+    case CHARACTER_STATS_CRITICAL_CHANCE: {
+      set_stat_value_int(next_curve_value / 100.f);
+      return;
+    }
+    case CHARACTER_STATS_CRITICAL_DAMAGE: {
+      set_stat_value_int(next_curve_value / 100.f);
+      return;
+    }
+    case CHARACTER_STATS_OVERALL_LUCK: {
+      set_stat_value_int(next_curve_value / 100.f);
+      return;
+    }
+    case CHARACTER_STATS_DAMAGE_REDUCTION: {
+      set_stat_value_int(next_curve_value / 100.f);
+      return;
+    }
+    case CHARACTER_STATS_CONDITION_DURATION: {
+      set_stat_value_int(next_curve_value / 100.f);
+      return;
+    }
+    case CHARACTER_STATS_DAMAGE_OVER_TIME: {
+      set_stat_value_int(next_curve_value / 100.f);
+      return;
+    }
+    case CHARACTER_STATS_DAMAGE_DEFERRAL: {
+      set_stat_value_int(next_curve_value / 100.f);
+      return;
+    }
+    case CHARACTER_STATS_SIGIL_EFFECTIVENESS: {
+      set_stat_value_int(next_curve_value / 100.f);
+      return;
+    }
+    case CHARACTER_STATS_DROP_RATE:{
+      set_stat_value_int(next_curve_value / 100.f);
+      return;
+    }
+    case CHARACTER_STATS_REWARD_MODIFIER: {
+      set_stat_value_int(next_curve_value / 100.f);
       return;
     }
     default:{
-      IWARN("game_manager::game_manager_set_stats()::Unsuppported stat id");
+      IWARN("game_manager::gm_refresh_stat_by_level()::Unsuppported stat id");
       return;
     }
   }
-
-  IERROR("game_manager::game_manager_set_stats()::Function ended unexpectedly");
+  IERROR("game_manager::gm_refresh_stat_by_level()::Function ended unexpectedly");
 }
 bool gm_refresh_game_rule_by_level(game_rule* rule, i32 level) {
   if (not state or state == nullptr) {
@@ -1079,64 +1145,112 @@ bool gm_refresh_game_rule_by_level(game_rule* rule, i32 level) {
 }
 void game_manager_set_stat_trait_value_by_level(character_stat* stat, data128 value) {
   if (not state or state == nullptr) {
-    IERROR("game_manager::game_manager_sum_stat_value()::State is not valid");
+    IERROR("game_manager::game_manager_set_stat_trait_value_by_level()::State is not valid");
     return;
   }
   if (not stat or stat == nullptr) {
-    IWARN("game_manager::game_manager_sum_stat_value()::stat is not valid");
+    IWARN("game_manager::game_manager_set_stat_trait_value_by_level()::stat is not valid");
     return;
   }
+  auto set_stat_value_int = [stat, &value](void) {
+    stat->buffer.i32[2] = value.i32[0];
+    stat->buffer.i32[3] = stat->buffer.i32[0] + stat->buffer.i32[1] + stat->buffer.i32[2];
+  };
+  auto set_stat_value_f32 = [stat, &value](void) {
+    stat->buffer.f32[2] = value.f32[0];
+    stat->buffer.f32[3] = stat->buffer.f32[0] + stat->buffer.f32[1] + stat->buffer.f32[2];
+  };
   switch (stat->id) {
     case CHARACTER_STATS_HEALTH:{
-      stat->buffer.i32[2] = value.i32[0];
-      stat->buffer.i32[3] = stat->buffer.i32[0] + stat->buffer.i32[1] + stat->buffer.i32[2];
-      break;
+      set_stat_value_int();
+      return;
     }
-    case CHARACTER_STATS_HP_REGEN:{ 
-      stat->buffer.i32[2] = value.i32[0];
-      stat->buffer.i32[3] = stat->buffer.i32[0] + stat->buffer.i32[1] + stat->buffer.i32[2];
-      break;
+    case CHARACTER_STATS_HP_REGEN:{
+      set_stat_value_int();
+      return;
     }
     case CHARACTER_STATS_MOVE_SPEED:{
-      stat->buffer.f32[2] = value.f32[0];
-      stat->buffer.f32[3] = stat->buffer.f32[0] + stat->buffer.f32[1] + stat->buffer.f32[2];
-      break;
+      set_stat_value_f32();
+      return;
     }
     case CHARACTER_STATS_AOE:{
-      stat->buffer.f32[2] = value.f32[0];
-      stat->buffer.f32[3] = stat->buffer.f32[0] + stat->buffer.f32[1] + stat->buffer.f32[2];
-      break;
+      set_stat_value_f32();
+      return;
     }
-    case CHARACTER_STATS_DAMAGE:{
-      stat->buffer.i32[2] = value.i32[0];
-      stat->buffer.f32[3] = stat->buffer.f32[0] + stat->buffer.f32[1] + stat->buffer.f32[2];
-      break;
+    case CHARACTER_STATS_OVERALL_DAMAGE:{
+      set_stat_value_int();
+      return;
     }
     case CHARACTER_STATS_ABILITY_CD:{
-      stat->buffer.f32[2] = value.f32[0];
-      stat->buffer.f32[3] = stat->buffer.f32[0] + stat->buffer.f32[1] + stat->buffer.f32[2];
-      break;
+      set_stat_value_f32();
+      return;
     }
     case CHARACTER_STATS_PROJECTILE_AMOUNT:{
-      stat->buffer.i32[2] = value.i32[0];
-      stat->buffer.i32[3] = stat->buffer.i32[0] + stat->buffer.i32[1] + stat->buffer.i32[2];
-      break;
+      set_stat_value_int();
+      return;
     }
     case CHARACTER_STATS_EXP_GAIN:{
-      stat->buffer.f32[2] = value.f32[0];
-      stat->buffer.f32[3] = stat->buffer.f32[0] + stat->buffer.f32[1] + stat->buffer.f32[2];
-      break;
+      set_stat_value_f32();
+      return;
     }
     case CHARACTER_STATS_TOTAL_TRAIT_POINTS:{
-      stat->buffer.i32[2] = value.i32[0];
-      stat->buffer.i32[3] = stat->buffer.i32[0] + stat->buffer.i32[1] + stat->buffer.i32[2];
-      break;
+      set_stat_value_int();
+      return;
+    }
+    case CHARACTER_STATS_BASIC_ATTACK_DAMAGE: {
+      set_stat_value_int();
+      return;
+    }
+    case CHARACTER_STATS_BASIC_ATTACK_SPEED: { 
+      set_stat_value_int();
+      return;
+    }
+    case CHARACTER_STATS_CRITICAL_CHANCE: {
+      set_stat_value_int();
+      return;
+    }
+    case CHARACTER_STATS_CRITICAL_DAMAGE: {
+      set_stat_value_int();
+      return;
+    }
+    case CHARACTER_STATS_OVERALL_LUCK: {
+      set_stat_value_int();
+      return;
+    }
+    case CHARACTER_STATS_DAMAGE_REDUCTION: {
+      set_stat_value_int();
+      return;
+    }
+    case CHARACTER_STATS_CONDITION_DURATION: {
+      set_stat_value_int();
+      return;
+    }
+    case CHARACTER_STATS_DAMAGE_OVER_TIME: {
+      set_stat_value_int();
+      return;
+    }
+    case CHARACTER_STATS_DAMAGE_DEFERRAL: {
+      set_stat_value_int();
+      return;
+    }
+    case CHARACTER_STATS_SIGIL_EFFECTIVENESS: {
+      set_stat_value_int();
+      return;
+    }
+    case CHARACTER_STATS_DROP_RATE:{
+      set_stat_value_int();
+      return;
+    }
+    case CHARACTER_STATS_REWARD_MODIFIER: {
+      set_stat_value_int();
+      return;
     }
     default:{
-      IWARN("game_manager::game_manager_sum_stat_value()::Unsuppported stat id");
-      break;
+      IWARN("game_manager::game_manager_set_stat_trait_value_by_level()::Unsuppported stat id");
+      return;
     }
   }
+  IERROR("game_manager::game_manager_set_stat_trait_value_by_level()::Function ended unexpectedly");
 }
 // GET / SET
 

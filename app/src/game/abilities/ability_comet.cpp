@@ -136,7 +136,7 @@ void update_ability_comet(ability *const abl) {
       else if (prj.active_sprite == 1 and prj.animations.at(prj.active_sprite).current_frame == 0) {
         event_fire(EVENT_CODE_DAMAGE_ANY_SPAWN_IF_COLLIDE, event_context(
           static_cast<i16>(prj.position.x), static_cast<i16>(prj.position.y), static_cast<i16>(prj.collision.width * prj.mm_ex.f32[0]), static_cast<i16>(0),
-          static_cast<i16>(prj.damage + p_player->stats.at(CHARACTER_STATS_DAMAGE).buffer.i32[3]),
+          static_cast<i16>(prj.damage + p_player->stats.at(CHARACTER_STATS_OVERALL_DAMAGE).buffer.i32[3]),
           static_cast<i16>(COLLISION_TYPE_CIRCLE_RECTANGLE)
         ));
       }
