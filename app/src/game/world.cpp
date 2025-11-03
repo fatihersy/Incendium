@@ -62,7 +62,7 @@ bool world_system_initialize(const app_settings *const _in_app_settings) {
   { // WORLD LOCATIONS
     i32 map_id_counter = 0;
     create_worldmap_stage(map_id_counter++, static_cast<i32>(LOC_TEXT_UNDEFINED),          "stage1", 1, 300.f,   0, 0, 1, .5f, VECTOR2(   0,    0), ZERORECT, false, false); // main menu background
-    create_worldmap_stage(map_id_counter++, static_cast<i32>(LOC_TEXT_WORLD_STAGE_1_TITLE),"stage2", 1,  90.f, 100, 1, 1, .5f, VECTOR2(1024, 1744), ZERORECT,  true,  true);
+    create_worldmap_stage(map_id_counter++, static_cast<i32>(LOC_TEXT_WORLD_STAGE_1_TITLE),"stage2", 1,  90.f, 1000, 1, 1, .5f, VECTOR2(1024, 1744), ZERORECT,  true,  true);
     create_worldmap_stage(map_id_counter++, static_cast<i32>(LOC_TEXT_UNDEFINED),          "stage3", 1, 300.f,  75, 1, 1, .5f, VECTOR2(1467, 1755), ZERORECT,  true, false);
     create_worldmap_stage(map_id_counter++, static_cast<i32>(LOC_TEXT_UNDEFINED),          "stage4", 1, 300.f,  75, 1, 1, .5f, VECTOR2(1674, 1727), ZERORECT,  true, false);
     create_worldmap_stage(map_id_counter++, static_cast<i32>(LOC_TEXT_UNDEFINED),          "stage5", 1, 300.f,  75, 1, 1, .5f, VECTOR2(2179, 1623), ZERORECT,  true, false);

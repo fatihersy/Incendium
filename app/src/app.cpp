@@ -224,7 +224,7 @@ bool app_render(void) {
     render_scene_world();
     render_scene_interface();
     
-    //DrawFPS(state->settings->render_width * .8f , state->settings->render_height - SCREEN_OFFSET.y * 5.f );
+    DrawFPS(state->settings->render_width * .8f , state->settings->render_height - SCREEN_OFFSET.y * 5.f );
   EndTextureMode();
   
   state->screen_space_camera.target = Vector2 {0.f, 0.f};

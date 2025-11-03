@@ -68,11 +68,13 @@ typedef enum system_event_code {
 	
   // game_manager
   EVENT_CODE_END_GAME,
+  /**
+   * @brief WARN: This event fires 'clean_up_spawn_state()' function if player die from damage
+  */
   EVENT_CODE_DAMAGE_PLAYER_IF_COLLIDE,
   EVENT_CODE_ADD_CURRENCY_COINS,
   EVENT_CODE_ADD_TO_INVENTORY,
   EVENT_CODE_SPAWN_ITEM,
-
   /**
    * @brief coll_data data128(i16[0], i16[1], i16[2], i16[3])
    * @brief gm_damage_spawn_if_collide(coll_data, damage i16[4], collision_type i16[5]);

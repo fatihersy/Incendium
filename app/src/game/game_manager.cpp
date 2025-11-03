@@ -275,7 +275,7 @@ bool game_manager_initialize(const camera_metrics * in_camera_metrics, const app
     );
     state->default_game_rules.at(GAME_RULE_DELTA_TIME_MULTIPLIER) = game_rule(
       GAME_RULE_DELTA_TIME_MULTIPLIER, static_cast<i32>(LOC_TEXT_INGAME_GAME_RULE_DELTA_TIME_MULTIPLIER), static_cast<i32>(LOC_TEXT_INGAME_GAME_RULE_DELTA_TIME_MULTIPLIER_DESCRIPTION),
-      Rectangle {1696, 672, 32, 32}, 6, level_curve[0], data128()
+      Rectangle {1696, 672, 32, 32}, 6, level_curve[0], data128(static_cast<f32>(.2f))
     );
     state->default_game_rules.at(GAME_RULE_BOSS_MODIFIER) = game_rule(
       GAME_RULE_BOSS_MODIFIER, static_cast<i32>(LOC_TEXT_INGAME_GAME_RULE_BOSS_MODIFIER), static_cast<i32>(LOC_TEXT_INGAME_GAME_RULE_BOSS_MODIFIER_DESCRIPTION), 
@@ -484,10 +484,10 @@ bool gm_start_game(worldmap_stage stage) {
   refresh_ability(player_starter_ability);
 
   #warning "Uncomment later"
-  //populate_map_with_spawns(stage.total_spawn_count);
-  //if (state->game_info.in_spawns->size() <= 0) {
-  //  return false;
-  //}
+  populate_map_with_spawns(stage.total_spawn_count);
+  if (state->game_info.in_spawns->size() <= 0) {
+    return false;
+  }
 
   _player->health_current = _player->stats.at(CHARACTER_STATS_HEALTH).buffer.i32[3];
   _player->health_perc = static_cast<f32>(_player->health_current) / static_cast<f32>(_player->stats.at(CHARACTER_STATS_HEALTH).buffer.i32[3]);

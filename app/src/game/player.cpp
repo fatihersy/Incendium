@@ -110,29 +110,75 @@ bool player_system_initialize(const camera_metrics* in_camera_metrics,const app_
   state->defualt_player.roll_sprite.fps = state->defualt_player.roll_sprite.frame_total / PLAYER_ROLL_DURATION;
 
   {
-    state->defualt_player.stats[CHARACTER_STATS_HEALTH]                    = character_stat(CHARACTER_STATS_HEALTH,                   0, 0, ZERORECT, 1, 100, data128(100.00f));
-    state->defualt_player.stats[CHARACTER_STATS_HP_REGEN]                  = character_stat(CHARACTER_STATS_HP_REGEN,                 0, 0, ZERORECT, 1,  50, data128(001.00f));
-    state->defualt_player.stats[CHARACTER_STATS_MOVE_SPEED]                = character_stat(CHARACTER_STATS_MOVE_SPEED,               0, 0, ZERORECT, 1,  75, data128(005.00f));
-    state->defualt_player.stats[CHARACTER_STATS_AOE]                       = character_stat(CHARACTER_STATS_AOE,                      0, 0, ZERORECT, 1, 100, data128(001.00f));
-    state->defualt_player.stats[CHARACTER_STATS_OVERALL_DAMAGE]            = character_stat(CHARACTER_STATS_OVERALL_DAMAGE,           0, 0, ZERORECT, 1, 100, data128(001.00f));
-    state->defualt_player.stats[CHARACTER_STATS_ABILITY_CD]                = character_stat(CHARACTER_STATS_ABILITY_CD,               0, 0, ZERORECT, 1, 100, data128(010.00f));
-    state->defualt_player.stats[CHARACTER_STATS_PROJECTILE_AMOUNT]         = character_stat(CHARACTER_STATS_PROJECTILE_AMOUNT,        0, 0, ZERORECT, 1, 100, data128(001.00f));
-    state->defualt_player.stats[CHARACTER_STATS_EXP_GAIN]                  = character_stat(CHARACTER_STATS_EXP_GAIN,                 0, 0, ZERORECT, 1, 150, data128(000.05f));
-    state->defualt_player.stats[CHARACTER_STATS_TOTAL_TRAIT_POINTS]        = character_stat(CHARACTER_STATS_TOTAL_TRAIT_POINTS,       0, 0, ZERORECT, 1, 150, data128(001.50f));
-    state->defualt_player.stats[CHARACTER_STATS_BASIC_ATTACK_DAMAGE]       = character_stat(CHARACTER_STATS_BASIC_ATTACK_DAMAGE,      0, 0, ZERORECT, 1, 120, data128(000.00f));
-    state->defualt_player.stats[CHARACTER_STATS_BASIC_ATTACK_SPEED]        = character_stat(CHARACTER_STATS_BASIC_ATTACK_SPEED,       0, 0, ZERORECT, 1, 200, data128(000.00f));
-    state->defualt_player.stats[CHARACTER_STATS_CRITICAL_CHANCE]           = character_stat(CHARACTER_STATS_CRITICAL_CHANCE,          0, 0, ZERORECT, 1,  80, data128(001.00f));
-    state->defualt_player.stats[CHARACTER_STATS_CRITICAL_DAMAGE]           = character_stat(CHARACTER_STATS_CRITICAL_DAMAGE,          0, 0, ZERORECT, 1,  80, data128(001.00f));
-    state->defualt_player.stats[CHARACTER_STATS_OVERALL_LUCK]              = character_stat(CHARACTER_STATS_OVERALL_LUCK,             0, 0, ZERORECT, 1, 100, data128(001.00f));
-    state->defualt_player.stats[CHARACTER_STATS_DAMAGE_REDUCTION]          = character_stat(CHARACTER_STATS_DAMAGE_REDUCTION,         0, 0, ZERORECT, 1, 100, data128(001.00f));
-    state->defualt_player.stats[CHARACTER_STATS_CONDITION_DURATION]        = character_stat(CHARACTER_STATS_CONDITION_DURATION,       0, 0, ZERORECT, 1, 100, data128(010.00f));
-    state->defualt_player.stats[CHARACTER_STATS_DAMAGE_OVER_TIME]          = character_stat(CHARACTER_STATS_DAMAGE_OVER_TIME,         0, 0, ZERORECT, 1, 100, data128(001.00f));
-    state->defualt_player.stats[CHARACTER_STATS_DAMAGE_DEFERRAL]           = character_stat(CHARACTER_STATS_DAMAGE_DEFERRAL,          0, 0, ZERORECT, 1, 150, data128(000.05f));
-    state->defualt_player.stats[CHARACTER_STATS_SIGIL_EFFECTIVENESS]       = character_stat(CHARACTER_STATS_SIGIL_EFFECTIVENESS,      0, 0, ZERORECT, 1, 150, data128(001.50f));
-    state->defualt_player.stats[CHARACTER_STATS_VITAL_SIGIL_EFFECTIVENESS] = character_stat(CHARACTER_STATS_VITAL_SIGIL_EFFECTIVENESS,0, 0, ZERORECT, 1, 120, data128(000.00f));
-    state->defualt_player.stats[CHARACTER_STATS_LETAL_SIGIL_EFFECTIVENESS] = character_stat(CHARACTER_STATS_LETAL_SIGIL_EFFECTIVENESS,0, 0, ZERORECT, 1, 200, data128(000.00f));
-    state->defualt_player.stats[CHARACTER_STATS_DROP_RATE]                 = character_stat(CHARACTER_STATS_DROP_RATE,                0, 0, ZERORECT, 1,  80, data128(001.00f));
-    state->defualt_player.stats[CHARACTER_STATS_REWARD_MODIFIER]           = character_stat(CHARACTER_STATS_REWARD_MODIFIER,          0, 0, ZERORECT, 1,  80, data128(001.00f));
+    state->defualt_player.stats[CHARACTER_STATS_HEALTH] = character_stat(CHARACTER_STATS_HEALTH,                   
+      0, 0, ZERORECT, 1, 100, data128(static_cast<i32>(100.00f))
+    );
+    state->defualt_player.stats[CHARACTER_STATS_HP_REGEN] = character_stat(CHARACTER_STATS_HP_REGEN,                 
+      0, 0, ZERORECT, 1,  50, data128(static_cast<i32>(000.00f))
+    );
+    state->defualt_player.stats[CHARACTER_STATS_MOVE_SPEED] = character_stat(CHARACTER_STATS_MOVE_SPEED,               
+      0, 0, ZERORECT, 1,  75, data128(static_cast<f32>(128.00f))
+    );
+    state->defualt_player.stats[CHARACTER_STATS_AOE] = character_stat(CHARACTER_STATS_AOE,                      
+      0, 0, ZERORECT, 1, 100, data128(static_cast<f32>(000.00f))
+    );
+    state->defualt_player.stats[CHARACTER_STATS_OVERALL_DAMAGE] = character_stat(CHARACTER_STATS_OVERALL_DAMAGE,           
+      0, 0, ZERORECT, 1, 100, data128(static_cast<i32>(000.00f))
+    );
+    state->defualt_player.stats[CHARACTER_STATS_ABILITY_CD] = character_stat(CHARACTER_STATS_ABILITY_CD,               
+      0, 0, ZERORECT, 1, 100, data128(static_cast<f32>(000.00f))
+    );
+    state->defualt_player.stats[CHARACTER_STATS_PROJECTILE_AMOUNT] = character_stat(CHARACTER_STATS_PROJECTILE_AMOUNT,        
+      0, 0, ZERORECT, 1, 100, data128(static_cast<i32>(000.00f))
+    );
+    state->defualt_player.stats[CHARACTER_STATS_EXP_GAIN] = character_stat(CHARACTER_STATS_EXP_GAIN,                 
+      0, 0, ZERORECT, 1, 150, data128(static_cast<f32>(000.00f))
+    );
+    state->defualt_player.stats[CHARACTER_STATS_TOTAL_TRAIT_POINTS] = character_stat(CHARACTER_STATS_TOTAL_TRAIT_POINTS,       
+      0, 0, ZERORECT, 1, 150, data128(static_cast<i32>(000.00f))
+    );
+    state->defualt_player.stats[CHARACTER_STATS_BASIC_ATTACK_DAMAGE] = character_stat(CHARACTER_STATS_BASIC_ATTACK_DAMAGE,      
+      0, 0, ZERORECT, 1, 120, data128(static_cast<i32>(000.00f))
+    );
+    state->defualt_player.stats[CHARACTER_STATS_BASIC_ATTACK_SPEED] = character_stat(CHARACTER_STATS_BASIC_ATTACK_SPEED,       
+      0, 0, ZERORECT, 1, 200, data128(static_cast<f32>(000.00f))
+    );
+    state->defualt_player.stats[CHARACTER_STATS_CRITICAL_CHANCE] = character_stat(CHARACTER_STATS_CRITICAL_CHANCE,          
+      0, 0, ZERORECT, 1,  80, data128(static_cast<f32>(000.00f))
+    );
+    state->defualt_player.stats[CHARACTER_STATS_CRITICAL_DAMAGE] = character_stat(CHARACTER_STATS_CRITICAL_DAMAGE,          
+      0, 0, ZERORECT, 1,  80, data128(static_cast<f32>(000.00f))
+    );
+    state->defualt_player.stats[CHARACTER_STATS_OVERALL_LUCK] = character_stat(CHARACTER_STATS_OVERALL_LUCK,             
+      0, 0, ZERORECT, 1, 100, data128(static_cast<f32>(000.00f))
+    );
+    state->defualt_player.stats[CHARACTER_STATS_DAMAGE_REDUCTION] = character_stat(CHARACTER_STATS_DAMAGE_REDUCTION,         
+      0, 0, ZERORECT, 1, 100, data128(static_cast<f32>(000.00f))
+    );
+    state->defualt_player.stats[CHARACTER_STATS_CONDITION_DURATION] = character_stat(CHARACTER_STATS_CONDITION_DURATION,       
+      0, 0, ZERORECT, 1, 100, data128(static_cast<f32>(000.00f))
+    );
+    state->defualt_player.stats[CHARACTER_STATS_DAMAGE_OVER_TIME] = character_stat(CHARACTER_STATS_DAMAGE_OVER_TIME,         
+      0, 0, ZERORECT, 1, 100, data128(static_cast<i32>(000.00f))
+    );
+    state->defualt_player.stats[CHARACTER_STATS_DAMAGE_DEFERRAL] = character_stat(CHARACTER_STATS_DAMAGE_DEFERRAL,          
+      0, 0, ZERORECT, 1, 150, data128(static_cast<f32>(000.00f))
+    );
+    state->defualt_player.stats[CHARACTER_STATS_SIGIL_EFFECTIVENESS] = character_stat(CHARACTER_STATS_SIGIL_EFFECTIVENESS,      
+      0, 0, ZERORECT, 1, 150, data128(static_cast<f32>(000.00f))
+    );
+    state->defualt_player.stats[CHARACTER_STATS_VITAL_SIGIL_EFFECTIVENESS] = character_stat(CHARACTER_STATS_VITAL_SIGIL_EFFECTIVENESS,
+      0, 0, ZERORECT, 1, 120, data128(static_cast<f32>(000.00f))
+    );
+    state->defualt_player.stats[CHARACTER_STATS_LETAL_SIGIL_EFFECTIVENESS] = character_stat(CHARACTER_STATS_LETAL_SIGIL_EFFECTIVENESS,
+      0, 0, ZERORECT, 1, 200, data128(static_cast<f32>(000.00f))
+    );
+    state->defualt_player.stats[CHARACTER_STATS_DROP_RATE] = character_stat(CHARACTER_STATS_DROP_RATE,                
+      0, 0, ZERORECT, 1,  80, data128(static_cast<f32>(000.00f))
+    );
+    state->defualt_player.stats[CHARACTER_STATS_REWARD_MODIFIER] = character_stat(CHARACTER_STATS_REWARD_MODIFIER,          
+      0, 0, ZERORECT, 1,  80, data128(static_cast<f32>(000.00f))
+    );
   }
 
   state->defualt_player.position = ZEROVEC2;
