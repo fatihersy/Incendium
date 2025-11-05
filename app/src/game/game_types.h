@@ -113,7 +113,11 @@ enum ability_id {
 enum character_stat_id {
   CHARACTER_STATS_UNDEFINED,
   CHARACTER_STATS_HEALTH,
+  CHARACTER_STATS_STAMINA,
+  CHARACTER_STATS_MANA,
   CHARACTER_STATS_HP_REGEN,
+  CHARACTER_STATS_STAMINA_REGEN,
+  CHARACTER_STATS_MANA_REGEN,
   CHARACTER_STATS_MOVE_SPEED,
   CHARACTER_STATS_AOE,
   CHARACTER_STATS_OVERALL_DAMAGE,
@@ -209,6 +213,7 @@ enum tilemap_prop_types {
 
 enum ingame_play_phases {
   INGAME_PLAY_PHASE_UNDEFINED,
+  INGAME_PLAY_PHASE_IDLE,
   INGAME_PLAY_PHASE_CLEAR_ZOMBIES,
   INGAME_PLAY_PHASE_RESULTS,
   INGAME_PLAY_PHASE_MAX,
@@ -299,8 +304,23 @@ enum damage_deal_result_type {
   DAMAGE_DEAL_RESULT_MAX,
 };
 
+enum game_rule_zombie_bite_condition_type {
+  GAME_RULE_ZOMBIE_BITE_CONDITION_UNDEFINED,
+  GAME_RULE_ZOMBIE_BITE_CONDITION_BLEED,
+  GAME_RULE_ZOMBIE_BITE_CONDITION_INFECT,
+  GAME_RULE_ZOMBIE_BITE_CONDITION_MAX,
+};
+
+enum game_rule_near_zombie_condition_type {
+  GAME_RULE_NEAR_ZOMBIE_CONDITION_UNDEFINED,
+  GAME_RULE_NEAR_ZOMBIE_CONDITION_LOSE_SPEED,
+  GAME_RULE_NEAR_ZOMBIE_CONDITION_MAX,
+};
+
 enum game_rule_id {
   GAME_RULE_UNDEFINED,
+
+  // MAIN MENU UPGRADABLE RULES
   GAME_RULE_SPAWN_MULTIPLIER,
   GAME_RULE_PLAY_TIME_MULTIPLIER,
   GAME_RULE_DELTA_TIME_MULTIPLIER,
@@ -310,7 +330,33 @@ enum game_rule_id {
   GAME_RULE_BONUS_RESULT_MULTIPLIER,
   GAME_RULE_ZOMBIE_LEVEL_MODIFIER,
   GAME_RULE_RESERVED_FOR_FUTURE_USE,
+  // MAIN MENU UPGRADABLE RULES
+
+  GAME_RULE_BASIC_ATTACKS_REQUIRE_STAMINA,
+  GAME_RULE_JUMP_REQUIRE_STAMINA,
+  GAME_RULE_LOOTING_DISTANCE,
+  GAME_RULE_ZOMBIE_BITE_CONDITIONS,
+  GAME_RULE_NEAR_ZOMBIE_CONDITIONS,
+  GAME_RULE_ITEM_SLOT_COUNT,
+  GAME_RULE_YOUR_SKILLS_DAMAGES_YOU,
+  GAME_RULE_HEALTH_BAR_VISIBILITY,
+  GAME_RULE_INGAME_ZOOM,
+  GAME_RULE_CHEST_SCROLL_SPEED,
+  GAME_RULE_SKILL_SLOT_COUNT,
+  GAME_RULE_ZOMBIE_FOLLOW_DISTANCE,
+  GAME_RULE_TIMER_VISIBILITY,
+  GAME_RULE_EXP_BAR_VISIBILITY,
+  GAME_RULE_PROJECTILE_PASS_THROUGH_MODIFIER,
+  GAME_RULE_ROLL_DISTANCE_MULTIPLIER,
+  
   GAME_RULE_MAX,
+};
+
+enum character_trait_type {
+  CHARACTER_TRAIT_UNDEFINED,
+  CHARACTER_TRAIT_CHARACTER_STAT,
+  CHARACTER_TRAIT_GAME_RULE,
+  CHARACTER_TRAIT_MAX,
 };
 
 struct easing_accumulation_control {
@@ -1043,7 +1089,8 @@ struct character_stat {
   i32 passive_desc_symbol;
   Rectangle passive_icon_src;
   i32 upgrade_cost;
-  
+
+  ::data_type data_type;
   data128 buffer; // INFO: To store information
   data128 mm_ex; // INFO: To calculate things
 
@@ -1055,10 +1102,13 @@ struct character_stat {
     this->passive_desc_symbol = 0;
     this->passive_icon_src = ZERORECT;
     this->upgrade_cost = 0;
+    this->data_type = DATA_TYPE_UNDEFINED;
     this->buffer = data128();
     this->mm_ex = data128();
   }
-  character_stat(character_stat_id id, i32 display_name_symbol, i32 desc_symbol, Rectangle icon_src, i32 base_level, i32 upgrade_cost, data128 buffer = data128()) : character_stat() {
+  character_stat(
+    character_stat_id id, i32 display_name_symbol, i32 desc_symbol, Rectangle icon_src, i32 base_level, i32 upgrade_cost, ::data_type _data_type, data128 buffer = data128()) : character_stat() 
+    {
     this->id = id;
     this->base_level = base_level;
     this->current_level = base_level;
@@ -1066,13 +1116,15 @@ struct character_stat {
     this->passive_desc_symbol = desc_symbol;
     this->passive_icon_src = icon_src;
     this->upgrade_cost = upgrade_cost;
+    this->data_type = _data_type;
     this->buffer = buffer;
   }
 };
 
 struct character_trait {
   i32 id;
-  character_stat_id type;
+  character_trait_type type;
+  i32 context_id; // INFO: Game rule or character stat
   i32 loc_title;
   i32 loc_description;
   i32 point;
@@ -1082,16 +1134,17 @@ struct character_trait {
 
   character_trait(void) {
     this->id = 0;
-    this->type = CHARACTER_STATS_UNDEFINED;
+    this->type = CHARACTER_TRAIT_UNDEFINED;
     this->loc_title = 0;
     this->loc_description = 0;
     this->ingame_ops = data128();
     this->ui_ops = data128();
     this->point = 0;
   }
-  character_trait(i32 _id, character_stat_id _type, i32 _title, i32 _description, i32 _point, data128 buffer) : character_trait() {
+  character_trait(i32 _id, character_trait_type _type, i32 _context_id, i32 _title, i32 _description, i32 _point, data128 buffer) : character_trait() {
     this->id = _id;
     this->type = _type;
+    this->context_id = _context_id;
     this->loc_title = _title;
     this->loc_description = _description;
     this->point = _point;
@@ -1149,6 +1202,10 @@ struct player_state {
   f32 exp_perc;
   f32 health_perc;
   i32 health_current;
+  f32 stamina_perc;
+  i32 stamina_current;
+  f32 mana_perc;
+  i32 mana_current;
   i32 interaction_radius;
   easing_accumulation_control roll_control;
 
@@ -1212,6 +1269,7 @@ struct game_rule {
   i32 level;
   i32 upgrade_cost;
 
+  ::data_type data_type;
   data128 mm_ex;
   data128 ui_buffer;
 
@@ -1223,17 +1281,18 @@ struct game_rule {
     this->base_level = 0;
     this->level = 0;
     this->upgrade_cost = 0;
+    this->data_type = DATA_TYPE_UNDEFINED,
     this->mm_ex = data128();
     this->ui_buffer = data128();
   }
-  game_rule(game_rule_id _id, i32 _display_name_loc_id, i32 _description_loc_id, Rectangle _icon_rect, i32 _base_level, i32 _upgrade_cost, data128 values) : game_rule() {
+  game_rule(game_rule_id _id, i32 _display_name_loc_id, i32 _description_loc_id, Rectangle _icon_rect, i32 _base_level, ::data_type _data_type, data128 values) : game_rule() {
     this->id = _id;
     this->display_name_loc_id = _display_name_loc_id;
     this->desc_loc_id = _description_loc_id;
     this->icon_src = _icon_rect;
     this->base_level = _base_level;
     this->level = _base_level;
-    this->upgrade_cost = _upgrade_cost;
+    this->data_type = _data_type;
     this->mm_ex = values;
   }
 };

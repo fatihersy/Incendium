@@ -13,7 +13,6 @@
 extern const i32 level_curve[MAX_PLAYER_LEVEL+1];
 #define PLAYER_SCALE 3
 #define PLAYER_DAMAGE_BREAK_TIME .5f
-#define PLAYER_INTERACTION_RADIUS 50.f
 #define PLAYER_COMBO_TIMEOUT 0.85f
 #define PLAYER_ROLL_DURATION 0.45f
 #define NORMAL_ATTACK_DIM_SCALE (Vector2 {1.5f, 1.5f})
@@ -107,83 +106,42 @@ bool player_system_initialize(const camera_metrics* in_camera_metrics,const app_
   set_sprite(&state->defualt_player.roll_sprite,              false, false);
   set_sprite(&state->defualt_player.dash_sprite,              false, false);
 
-  state->defualt_player.roll_sprite.fps = state->defualt_player.roll_sprite.frame_total / PLAYER_ROLL_DURATION;
-
   {
-    state->defualt_player.stats[CHARACTER_STATS_HEALTH] = character_stat(CHARACTER_STATS_HEALTH,                   
-      0, 0, ZERORECT, 1, 100, data128(static_cast<i32>(100.00f))
-    );
-    state->defualt_player.stats[CHARACTER_STATS_HP_REGEN] = character_stat(CHARACTER_STATS_HP_REGEN,                 
-      0, 0, ZERORECT, 1,  50, data128(static_cast<i32>(000.00f))
-    );
-    state->defualt_player.stats[CHARACTER_STATS_MOVE_SPEED] = character_stat(CHARACTER_STATS_MOVE_SPEED,               
-      0, 0, ZERORECT, 1,  75, data128(static_cast<f32>(128.00f))
-    );
-    state->defualt_player.stats[CHARACTER_STATS_AOE] = character_stat(CHARACTER_STATS_AOE,                      
-      0, 0, ZERORECT, 1, 100, data128(static_cast<f32>(000.00f))
-    );
-    state->defualt_player.stats[CHARACTER_STATS_OVERALL_DAMAGE] = character_stat(CHARACTER_STATS_OVERALL_DAMAGE,           
-      0, 0, ZERORECT, 1, 100, data128(static_cast<i32>(000.00f))
-    );
-    state->defualt_player.stats[CHARACTER_STATS_ABILITY_CD] = character_stat(CHARACTER_STATS_ABILITY_CD,               
-      0, 0, ZERORECT, 1, 100, data128(static_cast<f32>(000.00f))
-    );
-    state->defualt_player.stats[CHARACTER_STATS_PROJECTILE_AMOUNT] = character_stat(CHARACTER_STATS_PROJECTILE_AMOUNT,        
-      0, 0, ZERORECT, 1, 100, data128(static_cast<i32>(000.00f))
-    );
-    state->defualt_player.stats[CHARACTER_STATS_EXP_GAIN] = character_stat(CHARACTER_STATS_EXP_GAIN,                 
-      0, 0, ZERORECT, 1, 150, data128(static_cast<f32>(000.00f))
-    );
-    state->defualt_player.stats[CHARACTER_STATS_TOTAL_TRAIT_POINTS] = character_stat(CHARACTER_STATS_TOTAL_TRAIT_POINTS,       
-      0, 0, ZERORECT, 1, 150, data128(static_cast<i32>(000.00f))
-    );
-    state->defualt_player.stats[CHARACTER_STATS_BASIC_ATTACK_DAMAGE] = character_stat(CHARACTER_STATS_BASIC_ATTACK_DAMAGE,      
-      0, 0, ZERORECT, 1, 120, data128(static_cast<i32>(000.00f))
-    );
-    state->defualt_player.stats[CHARACTER_STATS_BASIC_ATTACK_SPEED] = character_stat(CHARACTER_STATS_BASIC_ATTACK_SPEED,       
-      0, 0, ZERORECT, 1, 200, data128(static_cast<f32>(000.00f))
-    );
-    state->defualt_player.stats[CHARACTER_STATS_CRITICAL_CHANCE] = character_stat(CHARACTER_STATS_CRITICAL_CHANCE,          
-      0, 0, ZERORECT, 1,  80, data128(static_cast<f32>(000.00f))
-    );
-    state->defualt_player.stats[CHARACTER_STATS_CRITICAL_DAMAGE] = character_stat(CHARACTER_STATS_CRITICAL_DAMAGE,          
-      0, 0, ZERORECT, 1,  80, data128(static_cast<f32>(000.00f))
-    );
-    state->defualt_player.stats[CHARACTER_STATS_OVERALL_LUCK] = character_stat(CHARACTER_STATS_OVERALL_LUCK,             
-      0, 0, ZERORECT, 1, 100, data128(static_cast<f32>(000.00f))
-    );
-    state->defualt_player.stats[CHARACTER_STATS_DAMAGE_REDUCTION] = character_stat(CHARACTER_STATS_DAMAGE_REDUCTION,         
-      0, 0, ZERORECT, 1, 100, data128(static_cast<f32>(000.00f))
-    );
-    state->defualt_player.stats[CHARACTER_STATS_CONDITION_DURATION] = character_stat(CHARACTER_STATS_CONDITION_DURATION,       
-      0, 0, ZERORECT, 1, 100, data128(static_cast<f32>(000.00f))
-    );
-    state->defualt_player.stats[CHARACTER_STATS_DAMAGE_OVER_TIME] = character_stat(CHARACTER_STATS_DAMAGE_OVER_TIME,         
-      0, 0, ZERORECT, 1, 100, data128(static_cast<i32>(000.00f))
-    );
-    state->defualt_player.stats[CHARACTER_STATS_DAMAGE_DEFERRAL] = character_stat(CHARACTER_STATS_DAMAGE_DEFERRAL,          
-      0, 0, ZERORECT, 1, 150, data128(static_cast<f32>(000.00f))
-    );
-    state->defualt_player.stats[CHARACTER_STATS_SIGIL_EFFECTIVENESS] = character_stat(CHARACTER_STATS_SIGIL_EFFECTIVENESS,      
-      0, 0, ZERORECT, 1, 150, data128(static_cast<f32>(000.00f))
-    );
-    state->defualt_player.stats[CHARACTER_STATS_VITAL_SIGIL_EFFECTIVENESS] = character_stat(CHARACTER_STATS_VITAL_SIGIL_EFFECTIVENESS,
-      0, 0, ZERORECT, 1, 120, data128(static_cast<f32>(000.00f))
-    );
-    state->defualt_player.stats[CHARACTER_STATS_LETAL_SIGIL_EFFECTIVENESS] = character_stat(CHARACTER_STATS_LETAL_SIGIL_EFFECTIVENESS,
-      0, 0, ZERORECT, 1, 200, data128(static_cast<f32>(000.00f))
-    );
-    state->defualt_player.stats[CHARACTER_STATS_DROP_RATE] = character_stat(CHARACTER_STATS_DROP_RATE,                
-      0, 0, ZERORECT, 1,  80, data128(static_cast<f32>(000.00f))
-    );
-    state->defualt_player.stats[CHARACTER_STATS_REWARD_MODIFIER] = character_stat(CHARACTER_STATS_REWARD_MODIFIER,          
-      0, 0, ZERORECT, 1,  80, data128(static_cast<f32>(000.00f))
-    );
+    auto set_character_stat = [](character_stat_id id, ::data_type _data_type, data128 default_value){
+      state->defualt_player.stats[id] = character_stat(id, 0, 0, ZERORECT, 1, 100, _data_type, default_value);
+    };
+    set_character_stat(CHARACTER_STATS_HEALTH,                    DATA_TYPE_I32, data128(999999));
+    set_character_stat(CHARACTER_STATS_STAMINA,                   DATA_TYPE_I32, data128(100));
+    set_character_stat(CHARACTER_STATS_MANA,                      DATA_TYPE_I32, data128(100));
+    set_character_stat(CHARACTER_STATS_HP_REGEN,                  DATA_TYPE_I32, data128());
+    set_character_stat(CHARACTER_STATS_STAMINA_REGEN,             DATA_TYPE_I32, data128(10));
+    set_character_stat(CHARACTER_STATS_MANA_REGEN,                DATA_TYPE_I32, data128(10));
+    set_character_stat(CHARACTER_STATS_MOVE_SPEED,                DATA_TYPE_F32, data128(128.00f));
+    set_character_stat(CHARACTER_STATS_AOE,                       DATA_TYPE_F32, data128());
+    set_character_stat(CHARACTER_STATS_OVERALL_DAMAGE,            DATA_TYPE_F32, data128());
+    set_character_stat(CHARACTER_STATS_ABILITY_CD,                DATA_TYPE_F32, data128());
+    set_character_stat(CHARACTER_STATS_PROJECTILE_AMOUNT,         DATA_TYPE_I32, data128());
+    set_character_stat(CHARACTER_STATS_EXP_GAIN,                  DATA_TYPE_F32, data128());
+    set_character_stat(CHARACTER_STATS_TOTAL_TRAIT_POINTS,        DATA_TYPE_I32, data128(7));
+    set_character_stat(CHARACTER_STATS_BASIC_ATTACK_DAMAGE,       DATA_TYPE_I32, data128(40));
+    set_character_stat(CHARACTER_STATS_BASIC_ATTACK_SPEED,        DATA_TYPE_F32, data128(.6f));
+    set_character_stat(CHARACTER_STATS_CRITICAL_CHANCE,           DATA_TYPE_F32, data128());
+    set_character_stat(CHARACTER_STATS_CRITICAL_DAMAGE,           DATA_TYPE_F32, data128());
+    set_character_stat(CHARACTER_STATS_OVERALL_LUCK,              DATA_TYPE_F32, data128());
+    set_character_stat(CHARACTER_STATS_DAMAGE_REDUCTION,          DATA_TYPE_F32, data128());
+    set_character_stat(CHARACTER_STATS_CONDITION_DURATION,        DATA_TYPE_F32, data128());
+    set_character_stat(CHARACTER_STATS_DAMAGE_OVER_TIME,          DATA_TYPE_I32, data128());
+    set_character_stat(CHARACTER_STATS_DAMAGE_DEFERRAL,           DATA_TYPE_F32, data128());
+    set_character_stat(CHARACTER_STATS_SIGIL_EFFECTIVENESS,       DATA_TYPE_F32, data128());
+    set_character_stat(CHARACTER_STATS_VITAL_SIGIL_EFFECTIVENESS, DATA_TYPE_F32, data128());
+    set_character_stat(CHARACTER_STATS_LETAL_SIGIL_EFFECTIVENESS, DATA_TYPE_F32, data128());
+    set_character_stat(CHARACTER_STATS_DROP_RATE,                 DATA_TYPE_F32, data128());
+    set_character_stat(CHARACTER_STATS_REWARD_MODIFIER,           DATA_TYPE_F32, data128());
   }
 
-  state->defualt_player.position = ZEROVEC2;
   state->defualt_player.collision.width  = (state->defualt_player.idle_right_sprite.coord.width  * .9f) * PLAYER_SCALE; // INFO: player collision scales with idle spritesheet
   state->defualt_player.collision.height = (state->defualt_player.idle_right_sprite.coord.height * .9f) * PLAYER_SCALE;
+  state->defualt_player.position = ZEROVEC2;
   state->defualt_player.is_dead = false;
   state->defualt_player.w_direction = WORLD_DIRECTION_LEFT;
   state->defualt_player.is_damagable = true;
@@ -192,12 +150,11 @@ bool player_system_initialize(const camera_metrics* in_camera_metrics,const app_
   state->defualt_player.level = 1;
   state->defualt_player.exp_to_next_level = level_curve[state->defualt_player.level];
   state->defualt_player.exp_current = 0;
-  state->defualt_player.stats.at(CHARACTER_STATS_HEALTH).buffer.i32[0] = 0; // INFO: Will be Modified by player stats
   state->defualt_player.health_current = 0;
   state->defualt_player.health_perc = 0.f;
-  state->defualt_player.interaction_radius = PLAYER_INTERACTION_RADIUS;
   state->defualt_player.is_initialized = true;
-
+  state->defualt_player.roll_sprite.fps = state->defualt_player.roll_sprite.frame_total / PLAYER_ROLL_DURATION;
+  
   event_register(EVENT_CODE_PLAYER_ADD_EXP, player_system_on_event);
   event_register(EVENT_CODE_PLAYER_SET_POSITION, player_system_on_event);
   event_register(EVENT_CODE_PLAYER_TAKE_DAMAGE, player_system_on_event);
@@ -211,7 +168,7 @@ void player_system_reinit(void) {
     IERROR("player::player_system_reinit()::State is invalid");
     return;
   }
-  state->dynamic_player = state->defualt_player;
+  //state->dynamic_player = state->defualt_player;
 }
 
 player_update_results update_player(void) {
@@ -250,7 +207,10 @@ player_update_results update_player(void) {
   }
   _player.health_perc = static_cast<f32>(_player.health_current) / static_cast<f32>(_player.stats.at(CHARACTER_STATS_HEALTH).buffer.i32[3]);
 
-  event_fire(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, event_context((f32)PRG_BAR_ID_PLAYER_HEALTH, (f32)_player.health_perc));
+  event_fire(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, event_context((f32)PRG_BAR_ID_PLAYER_EXPERIANCE, (f32)state->dynamic_player.exp_perc));
+  event_fire(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, event_context((f32)PRG_BAR_ID_PLAYER_HEALTH, (f32)state->dynamic_player.health_perc));
+  event_fire(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, event_context((f32)PRG_BAR_ID_PLAYER_MANA, (f32)state->dynamic_player.mana_perc));
+  event_fire(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, event_context((f32)PRG_BAR_ID_PLAYER_STAMINA, (f32)state->dynamic_player.stamina_perc));
 
   results.is_success = true;
   return results;
@@ -357,7 +317,7 @@ void player_take_damage(i32 damage) {
   else {
     state->dynamic_player.health_current = 0;
     state->dynamic_player.is_dead = true;
-    event_fire(EVENT_CODE_END_GAME, event_context(static_cast<i32>(true), static_cast<i32>(false)));
+    event_fire(EVENT_CODE_END_GAME, event_context(static_cast<i32>(false)));
   }
 }
 void player_heal_player(i32 amouth){
@@ -442,7 +402,7 @@ void player_update_attack(void) {
       _player.collision.height * NORMAL_ATTACK_DIM_SCALE.y
     };
 
-    f32 direction = (_player.w_direction == WORLD_DIRECTION_RIGHT) ? 1.f : -1.f;
+    f32 direction = (_player.w_direction == WORLD_DIRECTION_RIGHT) ? 1.0f : -1.0f;
     damage_area.x -= damage_area.width * .5f;
     damage_area.y -= damage_area.height * .5f;
 

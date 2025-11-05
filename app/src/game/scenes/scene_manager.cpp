@@ -92,7 +92,7 @@ void end_scene(scene_id scene_id) {
       return;
     }
     case SCENE_TYPE_IN_GAME: {
-      end_scene_in_game(true); 
+      end_scene_in_game(); 
       return;
     }
     case SCENE_TYPE_EDITOR: {

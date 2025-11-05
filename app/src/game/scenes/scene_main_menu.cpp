@@ -61,6 +61,9 @@ typedef struct main_menu_scene_state {
   const app_settings   * in_app_settings;
   const ingame_info * in_ingame_info;
   std::array<ability, ABILITY_ID_MAX> abilities;
+  std::vector<character_trait> chosen_traits;
+  ability_id starter_ability;
+
   std::array<worldmap_stage, MAX_WORLDMAP_LOCATIONS> worldmap_locations;
   
   const Vector2* mouse_pos_screen;
@@ -93,8 +96,8 @@ typedef struct main_menu_scene_state {
     this->negative_traits_selection_panel = panel();
     this->chosen_traits_selection_panel = panel();
     this->ability_selection_panel = panel();
-    this->positive_traits = std::vector<character_trait>();
-    this->negative_traits = std::vector<character_trait>();
+    //this->positive_traits
+    //this->negative_traits
     this->available_trait_points = 0;
     this->inventory_panel_hero_idle_anim = spritesheet();
     this->playlist = playlist_control_system_state();
@@ -104,6 +107,9 @@ typedef struct main_menu_scene_state {
     this->in_app_settings = nullptr;
     this->in_ingame_info = nullptr;
     this->abilities.fill(ability());
+    //this->chosen_traits
+    this->starter_ability = ABILITY_ID_UNDEFINED;
+    
     this->worldmap_locations.fill(worldmap_stage());
 
     this->mouse_pos_screen = nullptr;
@@ -128,7 +134,7 @@ static main_menu_scene_state * state = nullptr;
 
 #define DENY_NOTIFY_TIME .8f
 
-#define MAIN_MENU_FADE_DURATION 1 * TARGET_FPS
+#define MAIN_MENU_FADE_DURATION .6f
 #define MAIN_MENU_UPGRADE_PANEL_COL 3
 #define MAIN_MENU_UPGRADE_PANEL_ROW 3
 
@@ -144,6 +150,8 @@ static main_menu_scene_state * state = nullptr;
 #define SMM_MAP_PIN_SOURCE_LOCATION_HOVER (Rectangle{1632, 928, 32, 32})
 #define SMM_SCROLL_HANDLE_HEIGHT state->in_app_settings->render_height * .05f
 #define ZOOM_CAMERA_MAP_ENTRY 2.0f
+#define UI_CHARACTER_TRAIT_DISPLAY 0
+#define UI_CHARACTER_TRAIT_HIDDEN 1
 
 [[__nodiscard__]] bool begin_scene_main_menu(bool fade_in);
 
@@ -151,11 +159,11 @@ void draw_main_menu_character_panel(void);
 void draw_main_menu_character_subscene_inventory_panel(Rectangle panel_dest, const Vector4 padding);
 void draw_main_menu_character_subscene_inventory_item_list_panel(Rectangle parent_dest, const Vector4 padding);
 void draw_main_menu_character_subscene_inventory_slots_panel(Rectangle parent_dest, const Vector4 padding);
-void draw_main_menu_character_subscene_stat_panel(Rectangle panel_dest, const Vector4 padding);
-void draw_main_menu_character_subscene_stat_list_panel(Rectangle panel_dest, const Vector4 padding);
-void draw_main_menu_character_subscene_stat_details_panel(Rectangle panel_dest, const Vector4 padding);
+void draw_main_menu_character_subscene_game_rule_panel(Rectangle panel_dest, const Vector4 padding);
+void draw_main_menu_character_subscene_game_rule_list_panel(Rectangle panel_dest, const Vector4 padding);
+void draw_main_menu_character_subscene_game_rule_details_panel(Rectangle panel_dest, const Vector4 padding);
 void draw_trait_selection_panel(void);
-void trait_selection_panel_list_traits(panel* const pnl, const Rectangle rect, const std::vector<character_trait> * const traits, void (*trait_button_on_click_pfn)(size_t index));
+void trait_selection_panel_list_traits(panel* const pnl, const Rectangle rect, std::vector<character_trait>& traits, void (*trait_button_on_click_pfn)(i32 index));
 void trait_selection_panel_list_ability_selection_panel(panel* const pnl, const Rectangle rect, Vector2 border_gap);
 void smm_update_mouse_bindings(void);
 void smm_update_keyboard_bindings(void);
@@ -173,9 +181,9 @@ void fade_on_complete_change_scene(data128 data);
 void begin_scene_change(main_menu_scene_type mms, event_context context = event_context());
 void begin_scene_change(scene_id sid, event_context context = event_context());
 
-void positive_trait_button_on_click(size_t index);
-void negative_trait_button_on_click(size_t index);
-void chosen_trait_button_on_click(size_t index);
+void positive_trait_button_on_click(i32 index);
+void negative_trait_button_on_click(i32 index);
+void chosen_trait_button_on_click(i32 index);
 
 [[__nodiscard__]] bool initialize_scene_main_menu(const app_settings * _in_app_settings, bool fade_in) {
   if (state and state != nullptr) {
@@ -267,6 +275,30 @@ void chosen_trait_button_on_click(size_t index);
 }
 void end_scene_main_menu(void) {
   event_fire(EVENT_CODE_RESET_MUSIC, event_context((i32)MUSIC_ID_MAINMENU_THEME1));
+
+  state->positive_traits.clear();
+  state->negative_traits.clear();
+  state->available_trait_points = 0;
+  state->selected_rule = nullptr ;
+  state->abilities.fill(ability());
+  state->chosen_traits.clear();
+  state->starter_ability = ABILITY_ID_UNDEFINED;
+  state->worldmap_locations.fill(worldmap_stage());
+  state->deny_notify_timer = 0.f;
+  state->bg_scroll = 0.f;
+  state->mainmenu_state = MAIN_MENU_SCENE_DEFAULT;
+  state->mainmenu_scene_character_subscene = MAIN_MENU_SCENE_CHARACTER_UNDEFINED;
+  state->is_dragging_scroll = false;
+  state->is_any_button_down = false;
+  state->is_changing_state = false;
+  state->ingame_scene_feed = play_scene_info();
+  state->smm_fade = ui_fade_control_system();
+  state->general_purpose_buttons.clear();
+  state->general_purpose_panels.clear();
+  state->next_local_button_id = 0;
+  state->next_local_panel_id = 0;
+
+  ui_refresh_setting_sliders_to_default();
 }
 
 void update_scene_main_menu(void) {
@@ -493,10 +525,10 @@ void render_interface_main_menu(void) {
     if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_TRAIT_CHOICE_BUTTON_BACK), BTN_ID_MAINMENU_TRAIT_CHOICE_BACK, VECTOR2(-35.f, 66.5f), SMM_BASE_RENDER_DIV2, true)) {
       begin_scene_change(MAIN_MENU_SCENE_DEFAULT);
     }
-
-    if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_TRAIT_CHOICE_BUTTON_ACCEPT), BTN_ID_MAINMENU_TRAIT_CHOICE_ACCEPT, VECTOR2(35.f, 66.5f), SMM_BASE_RENDER_DIV2, true)) {
-      if ( (*state->in_ingame_info->starter_ability) <= ABILITY_ID_UNDEFINED or (*state->in_ingame_info->starter_ability) >= ABILITY_ID_MAX) {
-
+    if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_TRAIT_CHOICE_BUTTON_ACCEPT), BTN_ID_MAINMENU_TRAIT_CHOICE_ACCEPT, VECTOR2(35.f, 66.5f), SMM_BASE_RENDER_DIV2, true)) 
+    {
+      if ( state->starter_ability <= ABILITY_ID_UNDEFINED or state->starter_ability >= ABILITY_ID_MAX) 
+      {
         gui_fire_display_error(LOC_TEXT_DISPLAY_ERROR_TEXT_STARTER_ABILITY_NOT_SELECTED);
       }
       else {
@@ -525,7 +557,7 @@ void draw_main_menu_character_panel(void) {
       break;
     }
     case MAIN_MENU_SCENE_CHARACTER_STATS: {
-      draw_main_menu_character_subscene_stat_panel(dest, parent_panel_total_padding);
+      draw_main_menu_character_subscene_game_rule_panel(dest, parent_panel_total_padding);
       break;
     }
     default: {
@@ -593,11 +625,11 @@ void draw_main_menu_character_subscene_inventory_slots_panel(Rectangle parent_de
   };
   gui_panel(state->inventory_slots_panel, state->inventory_slots_panel.dest, false);
 }
-void draw_main_menu_character_subscene_stat_panel(Rectangle panel_dest, const Vector4 padding) {
-  draw_main_menu_character_subscene_stat_list_panel(panel_dest, padding);
-  draw_main_menu_character_subscene_stat_details_panel(panel_dest, padding);
+void draw_main_menu_character_subscene_game_rule_panel(Rectangle panel_dest, const Vector4 padding) {
+  draw_main_menu_character_subscene_game_rule_list_panel(panel_dest, padding);
+  draw_main_menu_character_subscene_game_rule_details_panel(panel_dest, padding);
 }
-void draw_main_menu_character_subscene_stat_list_panel(Rectangle panel_dest, const Vector4 padding) {
+void draw_main_menu_character_subscene_game_rule_list_panel(Rectangle panel_dest, const Vector4 padding) {
   const Rectangle& parent_panel_dest = panel_dest;
   const font_type panel_font_type = FONT_TYPE_REGULAR;
   const i32 panel_font_size = 1;
@@ -707,7 +739,7 @@ void draw_main_menu_character_subscene_stat_list_panel(Rectangle panel_dest, con
   gui_label(total_stock_desc_text, panel_font_type, panel_font_size, total_stock_desc_text_total_dest, WHITE, false, false);
   gui_label_box(total_stock_text, panel_font_type, panel_font_size, total_stock_dest, WHITE, TEXT_ALIGN_BOTTOM_CENTER);
 }
-void draw_main_menu_character_subscene_stat_details_panel(Rectangle panel_dest, const Vector4 padding) {
+void draw_main_menu_character_subscene_game_rule_details_panel(Rectangle panel_dest, const Vector4 padding) {
   const Rectangle& parent_panel_dest = panel_dest;
   const Rectangle& stat_list_panel_dest = state->stat_list_panel.dest;
   
@@ -924,7 +956,7 @@ void draw_trait_selection_panel(void) {
     positive_traits_sel_pan_dest.height - (positive_traits_sel_pan_dest.height * .05f)
   };
   trait_selection_panel_list_traits(
-    __builtin_addressof(state->positive_traits_selection_panel), positive_selection_panel_with_padding, __builtin_addressof(state->positive_traits), positive_trait_button_on_click
+    __builtin_addressof(state->positive_traits_selection_panel), positive_selection_panel_with_padding, state->positive_traits, positive_trait_button_on_click
   );
 
   Rectangle negative_selection_panel_with_padding = Rectangle {
@@ -934,7 +966,7 @@ void draw_trait_selection_panel(void) {
     negative_traits_sel_pan_dest.height - (negative_traits_sel_pan_dest.height * .05f)
   };
   trait_selection_panel_list_traits(
-    __builtin_addressof(state->negative_traits_selection_panel), negative_selection_panel_with_padding, __builtin_addressof(state->negative_traits), negative_trait_button_on_click
+    __builtin_addressof(state->negative_traits_selection_panel), negative_selection_panel_with_padding, state->negative_traits, negative_trait_button_on_click
   );
 
   Rectangle chosen_panel_with_padding = Rectangle {
@@ -944,7 +976,7 @@ void draw_trait_selection_panel(void) {
     chosen_traits_sel_pan_dest.height - (chosen_traits_sel_pan_dest.height * .05f)
   };
   trait_selection_panel_list_traits(
-    __builtin_addressof(state->chosen_traits_selection_panel), chosen_panel_with_padding, state->in_ingame_info->chosen_traits, chosen_trait_button_on_click
+    __builtin_addressof(state->chosen_traits_selection_panel), chosen_panel_with_padding, state->chosen_traits, chosen_trait_button_on_click
   );
 
   Rectangle ability_selection_panel_padding = Rectangle {
@@ -969,7 +1001,7 @@ void draw_trait_selection_panel(void) {
   gui_label_box_format(FONT_TYPE_REGULAR, 1, remaining_traits_dest, WHITE, TEXT_ALIGN_TOP_LEFT, "%s:", lc_txt_remaining_trt_pnts);
   gui_label_box_format(FONT_TYPE_REGULAR, 1, remaining_traits_dest, WHITE, TEXT_ALIGN_TOP_RIGHT, "%d", state->available_trait_points);
 }
-void trait_selection_panel_list_traits(panel* const pnl, const Rectangle rect, const std::vector<character_trait> * const traits, void (*trait_button_on_click_pfn)(size_t index)) {
+void trait_selection_panel_list_traits(panel* const pnl, const Rectangle rect, std::vector<character_trait>& traits, void (*trait_button_on_click_pfn)(i32 index)) {
   BeginScissorMode(rect.x, rect.y, rect.width, rect.height);
   {
     const f32 scroll_handle_texture_w_ratio = 16.f / 16.f;
@@ -1003,40 +1035,41 @@ void trait_selection_panel_list_traits(panel* const pnl, const Rectangle rect, c
 
     f32 trait_list_height_buffer = 0.f;
     Vector2 text_measure = ZEROVEC2;
-    const character_trait * _trait = nullptr;
-    for (size_t itr_000 = 0; itr_000 < traits->size(); ++itr_000) {
-      _trait = __builtin_addressof(traits->at(itr_000));
-      local_button* _lc_btn = smm_get_local_button(_trait->ui_ops.i32[0]);
-      text_measure = ui_measure_text(lc_txt(_trait->loc_title), FONT_TYPE_REGULAR, 1);
+    i32 index = 0;
+    for (character_trait& trait : traits) {
+      local_button* _lc_btn = smm_get_local_button(trait.ui_ops.i32[0]);
+      text_measure = ui_measure_text(lc_txt(trait.loc_title), FONT_TYPE_REGULAR, 1);
       Vector2 _lc_btn_pos = VECTOR2(rect.x, rect.y + trait_list_height_buffer + (pnl->buffer.f32[0] * pnl->scroll));
       Rectangle _lc_btn_dest = Rectangle {
         _lc_btn_pos.x, _lc_btn_pos.y, _lc_btn->btn_type.dest_frame_dim.x, _lc_btn->btn_type.dest_frame_dim.y
       };
 
-      if (gui_draw_local_button(lc_txt(_trait->loc_title), _lc_btn, FONT_TYPE_REGULAR, 1, _lc_btn_pos, TEXT_ALIGN_LEFT_CENTER, false)) {
+      if (gui_draw_local_button(lc_txt(trait.loc_title), _lc_btn, FONT_TYPE_REGULAR, 1, _lc_btn_pos, TEXT_ALIGN_LEFT_CENTER, false)) {
         if (trait_list_height_buffer + (pnl->buffer.f32[0] * pnl->scroll) < rect.height) {
-          trait_button_on_click_pfn(itr_000);
           _lc_btn->current_state = BTN_STATE_UP;
-          continue;
+          break;
         }
       }
       switch (_lc_btn->current_state) {
         case BTN_STATE_UP:{
-          gui_label_box_format(FONT_TYPE_REGULAR, 1, _lc_btn_dest, _lc_btn->btn_type.forground_color_btn_state_up, TEXT_ALIGN_RIGHT_CENTER, "%d", _trait->point);
+          gui_label_box_format(FONT_TYPE_REGULAR, 1, _lc_btn_dest, _lc_btn->btn_type.forground_color_btn_state_up, TEXT_ALIGN_RIGHT_CENTER, "%d", trait.point);
           break;
         }
         case BTN_STATE_HOVER:{
-          gui_label_box_format(FONT_TYPE_REGULAR, 1, _lc_btn_dest, _lc_btn->btn_type.forground_color_btn_state_hover, TEXT_ALIGN_RIGHT_CENTER, "%d", _trait->point);
+          gui_label_box_format(FONT_TYPE_REGULAR, 1, _lc_btn_dest, _lc_btn->btn_type.forground_color_btn_state_hover, TEXT_ALIGN_RIGHT_CENTER, "%d", trait.point);
           break;
         }
         case BTN_STATE_PRESSED:{
-          gui_label_box_format(FONT_TYPE_REGULAR, 1, _lc_btn_dest, _lc_btn->btn_type.forground_color_btn_state_pressed, TEXT_ALIGN_RIGHT_CENTER, "%d", _trait->point);
+          gui_label_box_format(FONT_TYPE_REGULAR, 1, _lc_btn_dest, _lc_btn->btn_type.forground_color_btn_state_pressed, TEXT_ALIGN_RIGHT_CENTER, "%d", trait.point);
           break;
         }
         default: break; 
       }
       trait_list_height_buffer += text_measure.y + (text_measure.y * .1f);
+      index++;
     }
+    trait_button_on_click_pfn(index);
+    
     pnl->buffer.f32[0] = trait_list_height_buffer - rect.height - (text_measure.y * .2f);
     pnl->scroll_handle.x = rect.x + rect.width - scroll_handle_width;
     pnl->scroll_handle.width = scroll_handle_width;
@@ -1122,7 +1155,7 @@ void trait_selection_panel_list_ability_selection_panel(panel* const pnl, const 
           const ability& _prev_starter_abl = state->abilities.at( static_cast<size_t>( (*state->in_ingame_info->starter_ability)) );
           panel * const _prev_starter_abls_lc_panel = smm_get_local_panel(_prev_starter_abl.ui_use.i32[0]);
 
-          set_starter_ability(_abl.id);
+          state->starter_ability = _abl.id;
 
           if (not _prev_starter_abls_lc_panel or _prev_starter_abls_lc_panel == nullptr) {
             continue;
@@ -1221,6 +1254,10 @@ void smm_update_mouse_bindings(void) {
         }
         else {
           set_worldmap_location(state->ingame_scene_feed.hovered_stage);
+          if(not gm_init_game(state->worldmap_locations[state->ingame_scene_feed.hovered_stage], state->chosen_traits, state->starter_ability)) {
+            IWARN("scene_in_game::smm_update_mouse_bindings()::Failed to initialize game");
+            begin_scene_change(SCENE_TYPE_MAIN_MENU, data128(static_cast<i32>(true)));
+          }
           smm_begin_fadeout(data128(SCENE_TYPE_IN_GAME, true), fade_on_complete_change_scene);
           event_fire(EVENT_CODE_CAMERA_SET_ZOOM_TARGET, event_context(static_cast<f32>(ZOOM_CAMERA_MAP_ENTRY), static_cast<f32>(true), hovered_stage.x, hovered_stage.y));
           state->is_changing_state = true;
@@ -1412,7 +1449,7 @@ void smm_begin_fadeout(data128 data, void(*on_change_complete)(data128)) {
 
   state->smm_fade.fade_animation_duration = MAIN_MENU_FADE_DURATION;
   state->smm_fade.fade_type = FADE_TYPE_FADEOUT;
-  state->smm_fade.fade_animation_timer = 0.f;
+  state->smm_fade.fade_animation_accumulator = 0.f;
   state->smm_fade.fade_animation_playing = true;
   state->smm_fade.is_fade_animation_played = false;
   state->smm_fade.data = data;
@@ -1425,7 +1462,7 @@ void smm_begin_fadein(data128 data, void(*on_change_complete)(data128)) {
   }
   state->smm_fade.fade_animation_duration = MAIN_MENU_FADE_DURATION;
   state->smm_fade.fade_type = FADE_TYPE_FADEIN;
-  state->smm_fade.fade_animation_timer = 0.f;
+  state->smm_fade.fade_animation_accumulator = 0.f;
   state->smm_fade.fade_animation_playing = true;
   state->smm_fade.is_fade_animation_played = false;
   state->smm_fade.data = data;
@@ -1526,6 +1563,10 @@ void begin_scene_change(main_menu_scene_type mms, [[__maybe_unused__]] event_con
   state->next_local_panel_id = 0;
   state->is_changing_state = false;
 
+  for (const player_inventory_slot& slot : gm_get_player_state()->inventory) {
+    set_inventory_ui_ex(slot.slot_id, data128());
+  }
+
   switch (mms) {
     case MAIN_MENU_SCENE_DEFAULT: {
       set_worldmap_location(WORLDMAP_MAINMENU_MAP);
@@ -1540,9 +1581,9 @@ void begin_scene_change(main_menu_scene_type mms, [[__maybe_unused__]] event_con
     case MAIN_MENU_SCENE_CHARACTER: {
       state->mainmenu_state = MAIN_MENU_SCENE_CHARACTER;
 
-      for (player_inventory_slot& slot : gm_get_player_state()->inventory) {
-        [[__maybe_unused__]] panel * _lc_pnl = smm_add_local_panel(state->next_local_panel_id, state->panel_active_dark_fantasy_default);
-        slot.ui_buffer.i32[0] = state->next_local_panel_id++;
+      for (const player_inventory_slot& slot : gm_get_player_state()->inventory) {
+        smm_add_local_panel(state->next_local_panel_id, state->panel_active_dark_fantasy_default);
+        set_inventory_ui_ex(slot.slot_id, data128(state->next_local_panel_id++));
       }
       break;
     }
@@ -1558,12 +1599,13 @@ void begin_scene_change(main_menu_scene_type mms, [[__maybe_unused__]] event_con
     case MAIN_MENU_SCENE_TO_PLAY_TRAIT_CHOICE: {
       state->available_trait_points = state->in_ingame_info->player_state_static->stats.at(CHARACTER_STATS_TOTAL_TRAIT_POINTS).buffer.i32[3];
       state->mainmenu_state = MAIN_MENU_SCENE_TO_PLAY_TRAIT_CHOICE;
+      state->chosen_traits.clear();
       state->positive_traits.clear();
       state->negative_traits.clear();
-      gm_chosen_traits_clear();
       state->abilities = (*_get_all_abilities());
 
       const std::vector<character_trait> * const gm_traits = gm_get_character_traits_all();
+
       for (character_trait _trait : (*gm_traits)) {
         _trait.ui_ops.i32[0] = state->next_local_button_id;
         local_button * const lcl_btn_ptr = smm_add_local_button(state->next_local_button_id++, BTN_TYPE_FLAT_BUTTON, BTN_STATE_RELEASED);
@@ -1636,36 +1678,47 @@ void begin_scene_change(scene_id sid, event_context context) {
   IERROR("scene_main_menu::begin_scene_change()::Function ended unexpectedly");
 }
 
-void positive_trait_button_on_click(size_t index) {
-  character_trait * _trait_ptr = __builtin_addressof(state->positive_traits.at(index));
-  if (state->available_trait_points >= std::abs(_trait_ptr->point)) {
-    state->available_trait_points += _trait_ptr->point; // INFO: Positive traits have negative points by default
-    
-    gm_chosen_traits_add(_trait_ptr);
+void positive_trait_button_on_click(i32 index) {
+  if (index < 0 or index > static_cast<i32>(state->positive_traits.size() - 1u)) {
+    return;
+  }
+  character_trait& trait = state->positive_traits[index];
+
+  if (state->available_trait_points >= std::abs(trait.point)) {
+    state->available_trait_points += trait.point; // INFO: Positive traits have negative points by default
+
+    state->chosen_traits.push_back(trait);
     state->positive_traits.erase(state->positive_traits.begin() + index);
   }
   else {
     event_fire(EVENT_CODE_PLAY_SOUND, event_context(SOUND_ID_DENY1, static_cast<i32>(false)));
   }
 }
-void negative_trait_button_on_click(size_t index) {
-  const character_trait *const _trait_ptr = __builtin_addressof(state->negative_traits.at(index));
-  state->available_trait_points += _trait_ptr->point;
+void negative_trait_button_on_click(i32 index) {
+  if (index < 0 or index > static_cast<i32>(state->negative_traits.size() - 1u)) {
+    return;
+  }
+  character_trait& trait = state->negative_traits[index];
 
-  gm_chosen_traits_add(_trait_ptr);
+  state->available_trait_points += trait.point;
+
+  state->chosen_traits.push_back(trait);
   state->negative_traits.erase(state->negative_traits.begin() + index);
 }
-void chosen_trait_button_on_click(size_t index) {
-  const character_trait *const _trait_ptr = __builtin_addressof(state->in_ingame_info->chosen_traits->at(index));
+void chosen_trait_button_on_click(i32 index) {
+  if (index < 0 or index > static_cast<i32>(state->chosen_traits.size() - 1u)) {
+    return;
+  }
+  character_trait& trait = state->chosen_traits[index];
 
-  if (_trait_ptr->point < 0) {
-    state->positive_traits.push_back(*_trait_ptr);
+  if (trait.point < 0) {
+    state->positive_traits.push_back(trait);
   }
   else {
-    state->negative_traits.push_back(*_trait_ptr);
+    state->negative_traits.push_back(trait);
   }
-  state->available_trait_points -= _trait_ptr->point;
-  gm_chosen_traits_erase(index);
+  state->available_trait_points -= trait.point;
+  state->chosen_traits.erase(state->chosen_traits.begin() + index);
 }
 
 #undef DENY_NOTIFY_TIME

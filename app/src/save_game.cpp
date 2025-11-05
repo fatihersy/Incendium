@@ -26,6 +26,7 @@ using json = nlohmann::json;
 #define HMAC_TAG_SIZE 32 // HMAC-SHA256 always produces 32 bytes
 
 #define JSON_SAVE_DATA_MAP_CURRENCY_COINS "currency_coins_player_have"
+#define JSON_SAVE_DATA_VERSION "version"
 
 #define JSON_SAVE_DATA_MAP_PLAYER_DATA "player_data"
 #define JSON_SAVE_DATA_MAP_PLAYER_DATA_INVENTORY "inventory"
@@ -42,6 +43,10 @@ using json = nlohmann::json;
 #define JSON_SAVE_DATA_MAP_GAME_RULE_BONUS_RESULT_MULTIPLIER "bonus_result_multiplier"
 #define JSON_SAVE_DATA_MAP_GAME_RULE_ZOMBIE_LEVEL_MODIFIER "zombie_level_modifier"
 #define JSON_SAVE_DATA_MAP_GAME_RULE_RESERVED_FOR_FUTURE_USE "future_use"
+
+
+#define SAVE_FILE_VERSION_051125 051125
+#define SAVE_FILE_CURRENT_VERSION SAVE_FILE_VERSION_051125
 
 // Save system state
 struct save_game_system_state {
@@ -76,8 +81,12 @@ static const std::array<uint8_t, HMAC_TAG_SIZE> hmac_key = {
 std::string get_save_filename(save_slot_id slot);
 bool encrypt_data(const std::string& input, std::vector<uint8_t>& output);
 bool decrypt_data(const std::vector<uint8_t>& input, std::string& output);
+
 json serialize_save_data(const save_data& data);
 void deserialize_save_data(const json& j, save_data& data);
+
+json serialize_save_data_v051125(const save_data& data);
+void deserialize_save_data_v051125(const json& j, save_data& data);
 
 // --- OPENSSL HMAC IMPLEMENTATION ---
 // Hash is calculated over the IV and the Ciphertext
@@ -400,8 +409,32 @@ std::string get_save_filename(save_slot_id slot) {
 }
 
 json serialize_save_data(const save_data& data) {
+
+  return serialize_save_data_v051125(data);
+}
+
+void deserialize_save_data(const json& j, save_data& data) {
+  data.player_data.inventory = std::vector<player_inventory_slot>();
+  i32 version = 0;
+
+  if (j.contains(JSON_SAVE_DATA_VERSION)) {
+    version = j.value(JSON_SAVE_DATA_VERSION, -1);
+  }
+  if (version < 0) {
+    data = save_data();
+    IWARN("save_game::deserialize_save_data()::Version read failed");
+    return;
+  }
+  else if (version == SAVE_FILE_VERSION_051125) {
+    deserialize_save_data_v051125(j, data);
+    return;
+  }
+  IERROR("save_game::deserialize_save_data()::Unsupported version");
+}
+json serialize_save_data_v051125(const save_data& data) {
   json j;
   j[JSON_SAVE_DATA_MAP_CURRENCY_COINS] = data.currency_coins_player_have;
+  j[JSON_SAVE_DATA_VERSION] = SAVE_FILE_VERSION_051125;
 
   json rules;
   rules[JSON_SAVE_DATA_MAP_GAME_RULE_SPAWN_MULTIPLIER]            = data.game_rules.at(GAME_RULE_SPAWN_MULTIPLIER).level;
@@ -427,7 +460,7 @@ json serialize_save_data(const save_data& data) {
   return j;
 }
 
-void deserialize_save_data(const json& j, save_data& data) {
+void deserialize_save_data_v051125(const json& j, save_data& data) {
   data.player_data.inventory = std::vector<player_inventory_slot>();
 
   if (j.contains(JSON_SAVE_DATA_MAP_CURRENCY_COINS)) {

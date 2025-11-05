@@ -179,7 +179,7 @@ void se_begin_fadein(data128 data, void(*on_change_complete)(data128));
 
 #define SE_BASE_RENDER_WIDTH state->in_app_settings->render_width
 #define SE_BASE_RENDER_HEIGHT state->in_app_settings->render_height
-#define EDITOR_FADE_DURATION 1 * TARGET_FPS
+#define EDITOR_FADE_DURATION .6f
 
 [[__nodiscard__]] bool initialize_scene_editor(const app_settings *const _in_app_settings, bool fade_in) {
   if (state and state != nullptr) {
@@ -1446,7 +1446,7 @@ void se_begin_fadeout(data128 data, void(*on_change_complete)(data128)) {
   }
   state->se_fade.fade_animation_duration = EDITOR_FADE_DURATION;
   state->se_fade.fade_type = FADE_TYPE_FADEOUT;
-  state->se_fade.fade_animation_timer = 0.f;
+  state->se_fade.fade_animation_accumulator = 0.f;
   state->se_fade.fade_animation_playing = true;
   state->se_fade.is_fade_animation_played = false;
   state->se_fade.data = data;
@@ -1459,7 +1459,7 @@ void se_begin_fadein(data128 data, void(*on_change_complete)(data128)) {
   }
   state->se_fade.fade_animation_duration = EDITOR_FADE_DURATION;
   state->se_fade.fade_type = FADE_TYPE_FADEIN;
-  state->se_fade.fade_animation_timer = 0.f;
+  state->se_fade.fade_animation_accumulator = 0.f;
   state->se_fade.fade_animation_playing = true;
   state->se_fade.is_fade_animation_played = false;
   state->se_fade.data = data;

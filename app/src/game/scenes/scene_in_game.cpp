@@ -14,7 +14,7 @@
 #include "game/world.h"
 #include "game/camera.h"
 
-typedef enum sig_ingame_state {
+enum sig_ingame_state {
   SCENE_INGAME_STATE_UNDEFINED,
   SCENE_INGAME_STATE_IDLE,
   SCENE_INGAME_STATE_PAUSE,
@@ -22,9 +22,9 @@ typedef enum sig_ingame_state {
   SCENE_INGAME_STATE_CHEST_OPENING,
   SCENE_INGAME_STATE_PLAY_DEBUG,
   SCENE_INGAME_STATE_MAX,
-} sig_ingame_state;
+};
 
-typedef enum chest_opening_sequence {
+enum chest_opening_sequence {
   CHEST_OPENING_SEQUENCE_UNDEFINED,
   CHEST_OPENING_SEQUENCE_CHEST_IN,
   CHEST_OPENING_SEQUENCE_CHEST_OPEN,
@@ -32,9 +32,9 @@ typedef enum chest_opening_sequence {
   CHEST_OPENING_SEQUENCE_SPIN,
   CHEST_OPENING_SEQUENCE_RESULT,
   CHEST_OPENING_SEQUENCE_MAX
-} chest_opening_sequence;
+};
 
-typedef struct chest_opening_sequence_intro_animation_control {
+struct chest_opening_sequence_intro_animation_control {
   chest_opening_sequence sequence;
   f32 accumulator;
   f32 duration;
@@ -51,12 +51,13 @@ typedef struct chest_opening_sequence_intro_animation_control {
     this->duration = 0.f;
     this->sheet_chest = spritesheet();
     this->sheets_background = std::vector<spritesheet>();
+    this->item_ids_to_scroll = std::vector<atlas_texture_id>();
     this->mm_ex = data128();
     this->vec_ex = data128();
   }
-} chest_opening_sequence_intro_animation_control;
+};
 
-typedef struct scene_in_game_state {
+struct scene_in_game_state {
   std::array<worldmap_stage, MAX_WORLDMAP_LOCATIONS>  worldmap_locations;
   std::array<panel, MAX_UPDATE_ABILITY_PANEL_COUNT> ability_upg_panels;
   std::array<ability, MAX_UPDATE_ABILITY_PANEL_COUNT> ability_upgrade_choices;
@@ -98,7 +99,7 @@ typedef struct scene_in_game_state {
     this->chest_intro_ctrl = chest_opening_sequence_intro_animation_control();
     this->cam_bounds = ZERORECT;
   }
-} scene_in_game_state;
+};
 
 static scene_in_game_state * state = nullptr;
 
@@ -124,7 +125,7 @@ static scene_in_game_state * state = nullptr;
 #define CLOUDS_ANIMATION_DURATION TARGET_FPS * 1.5f // second
 #define GET_PLAYER_DYNAMIC_STAT(STAT_TYPE) __builtin_addressof(state->in_ingame_info->player_state_dynamic->stats[(static_cast<character_stat_id>(STAT_TYPE))])
 #define GET_PLAYER_DYNAMIC_ABILITY(PLAYER_STATE, ABILITY_TYPE) __builtin_addressof(PLAYER_STATE->ability_system.abilities.at(ABILITY_TYPE))
-#define INGAME_FADE_DURATION 1 * TARGET_FPS
+#define INGAME_FADE_DURATION .6f
 #define DRAW_ABL_UPG_STAT_PNL(UPG, TEXT, ...){ \
 if (UPG->level == 1) {\
   gui_label_format(FONT_TYPE_REGULAR, upgr_font_size, (f32)start_upgradables_x_exis, (f32)upgradables_height_buffer, WHITE, false, false, TEXT, __VA_ARGS__);\
@@ -133,13 +134,11 @@ if (UPG->level == 1) {\
   gui_label_format(FONT_TYPE_REGULAR, upgr_font_size, (f32)start_upgradables_x_exis, (f32)upgradables_height_buffer, WHITE, false, false, TEXT, __VA_ARGS__);\
   upgradables_height_buffer += btw_space_gap;\
 }}
-#define HEALTH_BAR_WIDTH static_cast<f32>(state->in_app_settings->render_width) * .15f
 #define PLAY_RESULTS_CAMERA_ZOOM 1.5f
 #define CHEST_OPENING_SEQ_INTRO_DURATION .6f
 #define CHEST_OPENING_SEQ_READY_DURATION .275f
 #define CHEST_OPENING_SEQ_CHEST_SCALE 6.5f
 #define CHEST_OPENING_SEQ_BG_MAX_OPACITY_SCALE 0.7f
-#define CHEST_OPENING_SPIN_SPEED 1500.f
 #define CHEST_OPENING_SPIN_ACCELERATION_DURATION .5f
 #define CHEST_OPENING_SPIN_LOCATION VECTOR2(SIG_BASE_RENDER_WIDTH_F * 0.5f, SIG_BASE_RENDER_HEIGHT_F * 0.25f)
 #define CHEST_OPENING_SPIN_UNIT_SIZE VECTOR2(SIG_BASE_RENDER_HEIGHT_F * .2f, SIG_BASE_RENDER_HEIGHT_F * .2f)
@@ -167,7 +166,7 @@ void sig_update_chest_sequence(void);
 void sig_render_chest_sequence(void);
 item_type sig_atlas_tex_id_to_item_type(atlas_texture_id tex_id);
 
-bool start_game(void);
+[[__nodiscard__]] bool start_game(void);
 
 /**
  * @brief Requires world system, world init moved to app, as well as its loading time
@@ -248,10 +247,7 @@ bool start_game(void) {
     IERROR("scene_in_game::start_game()::State is not valid");
     return false;
   }
-  if(not gm_start_game( (*get_active_worldmap()) )) {
-    return false;
-  }
-  _set_player_position(ZEROVEC2);
+  gm_start_game();
   sig_change_ingame_state(SCENE_INGAME_STATE_PLAY);
 
   state->cam_bounds = Rectangle { 
@@ -262,11 +258,11 @@ bool start_game(void) {
   };
   return true;
 }
-void end_scene_in_game(bool abort) {
+void end_scene_in_game(void) {
   if (not state or state == nullptr ) {
     return;
   }
-  gm_end_game(not abort, (*state->in_ingame_info->is_win));
+  game_manager_cleanup_state();
   
   state->hovered_spawn = I32_MAX;
   state->hovered_ability = ABILITY_ID_MAX;
@@ -291,6 +287,9 @@ void update_scene_in_game(void) {
     case SCENE_INGAME_STATE_PAUSE: { break; }
     case SCENE_INGAME_STATE_PLAY: {
       switch ( (*state->in_ingame_info->ingame_phase) ) {
+        case INGAME_PLAY_PHASE_IDLE: { 
+          break; 
+        }
         case INGAME_PLAY_PHASE_CLEAR_ZOMBIES: {
           if (not state->in_ingame_info->player_state_dynamic->is_player_have_ability_upgrade_points) {
             const Vector2& player_pos = state->in_ingame_info->player_state_dynamic->position;
@@ -312,7 +311,7 @@ void update_scene_in_game(void) {
         }
         default: {
           IWARN("scene_in_game::update_scene_in_game()::INGAME_STATE_PLAY::Unknown in-game phase");
-          gm_end_game(false, false);
+          game_manager_cleanup_state();
           event_fire(EVENT_CODE_SCENE_MAIN_MENU, event_context());
           break;
         }
@@ -365,11 +364,12 @@ void render_scene_in_game(void) {
       _render_props_y_based(player_texture_begin, bottom_of_the_screen);
 
       switch ( (*state->in_ingame_info->ingame_phase) ) {
+        case INGAME_PLAY_PHASE_IDLE: { break; }
         case INGAME_PLAY_PHASE_CLEAR_ZOMBIES: { break; }
         case INGAME_PLAY_PHASE_RESULTS: { break; }
         default: {
           IWARN("scene_in_game::render_scene_in_game()::INGAME_STATE_PLAY::Unknown in-game phase");
-          gm_end_game(false, false);
+          game_manager_cleanup_state();
           event_fire(EVENT_CODE_SCENE_MAIN_MENU, event_context());
           break;
         }
@@ -387,11 +387,12 @@ void render_scene_in_game(void) {
       _render_props_y_based(player_texture_begin, bottom_of_the_screen);
 
       switch ( (*state->in_ingame_info->ingame_phase) ) {
+        case INGAME_PLAY_PHASE_IDLE: { break; }
         case INGAME_PLAY_PHASE_CLEAR_ZOMBIES: { break; }
         case INGAME_PLAY_PHASE_RESULTS: { break; }
         default: {
           IWARN("scene_in_game::render_scene_in_game()::INGAME_STATE_PLAY::Unknown in-game phase");
-          gm_end_game(false, false);
+          game_manager_cleanup_state();
           event_fire(EVENT_CODE_SCENE_MAIN_MENU, event_context());
           break;
         }
@@ -429,6 +430,7 @@ void render_interface_in_game(void) {
     }
     case SCENE_INGAME_STATE_PLAY: {
       switch ( (*state->in_ingame_info->ingame_phase) ) {
+        case INGAME_PLAY_PHASE_IDLE: { break; }
         case INGAME_PLAY_PHASE_CLEAR_ZOMBIES: {
           if (get_b_player_have_upgrade_points()) {
             if (state->is_upgrade_choices_ready) {
@@ -466,7 +468,7 @@ void render_interface_in_game(void) {
         }
         default: {
           IERROR("scene_in_game::render_interface_in_game()::INGAME_STATE_PLAY::Unknown in-game phase");
-          gm_end_game(false, false);
+          game_manager_cleanup_state();
           event_fire(EVENT_CODE_SCENE_MAIN_MENU, event_context());
           break;
         }
@@ -591,6 +593,7 @@ void in_game_update_mouse_bindings(void) {
     case SCENE_INGAME_STATE_PAUSE: { break; }
     case SCENE_INGAME_STATE_PLAY: {
       switch ( (*state->in_ingame_info->ingame_phase) ) {
+        case INGAME_PLAY_PHASE_IDLE: { break; }
         case INGAME_PLAY_PHASE_CLEAR_ZOMBIES: {
           break;
         }
@@ -599,7 +602,7 @@ void in_game_update_mouse_bindings(void) {
         }
         default: {
           IWARN("scene_in_game::in_game_update_mouse_bindings()::INGAME_STATE_PLAY::Unknown in-game phase");
-          gm_end_game(false, false);
+          game_manager_cleanup_state();
           event_fire(EVENT_CODE_SCENE_MAIN_MENU, event_context());
           break;
         }
@@ -654,7 +657,12 @@ void in_game_update_keyboard_bindings(void) {
         sig_change_ingame_state(SCENE_INGAME_STATE_PAUSE);
       }
       else if (IsKeyPressed(KEY_SPACE)) {
-        start_game();
+        if (not start_game()) {
+          game_manager_cleanup_state();
+          event_fire(EVENT_CODE_SCENE_MAIN_MENU, event_context());
+          return;
+        }
+        sig_change_ingame_state(SCENE_INGAME_STATE_PLAY);
       }
       break; 
     }
@@ -666,6 +674,7 @@ void in_game_update_keyboard_bindings(void) {
     }
     case SCENE_INGAME_STATE_PLAY: {
       switch ( (*state->in_ingame_info->ingame_phase) ) {
+        case INGAME_PLAY_PHASE_IDLE: { break; }
         case INGAME_PLAY_PHASE_CLEAR_ZOMBIES: {
           if (IsKeyDown(KEY_LEFT_SHIFT) and IsKeyReleased(KEY_D)) {
             sig_change_ingame_state(SCENE_INGAME_STATE_PLAY_DEBUG);
@@ -690,7 +699,7 @@ void in_game_update_keyboard_bindings(void) {
         }
         default: {
           IWARN("scene_in_game::in_game_update_keyboard_bindings()::INGAME_STATE_PLAY::Unknown in-game phase");
-          gm_end_game(false, false);
+          game_manager_cleanup_state();
           event_fire(EVENT_CODE_SCENE_MAIN_MENU, event_context());
           break;
         }
@@ -811,7 +820,6 @@ void draw_end_game_panel(void) {
   STATE_ASSERT("draw_end_game_panel", {
     return;
   });
-
 	Rectangle bg_panel_dest = gui_draw_default_background_panel();
 
 	Rectangle result_title_header_dest = Rectangle { bg_panel_dest.x, bg_panel_dest.y + (bg_panel_dest.height * .05f), bg_panel_dest.width, bg_panel_dest.height * .1f};
@@ -829,7 +837,7 @@ void draw_end_game_panel(void) {
   );
 	Vector2 accept_btn_dest = Vector2 { bg_panel_dest.x + (bg_panel_dest.width * .5f), bg_panel_dest.y + (bg_panel_dest.height * .9f)};
   if(gui_menu_button(lc_txt(LOC_TEXT_INGAME_STATE_RESULT_ACCEPT), BTN_ID_IN_GAME_BUTTON_RETURN_MENU, ZEROVEC2, accept_btn_dest, true)) {
-    end_scene_in_game(true);
+    end_scene_in_game();
     event_fire(EVENT_CODE_SCENE_MAIN_MENU, event_context(static_cast<i32>(false)));
   }
 }
@@ -870,13 +878,30 @@ void draw_ingame_state_play_general(void) {
     }
     gui_draw_atlas_texture_id(ATLAS_TEX_ID_ABILITY_SLOT_FRAME, ability_slot_dest, ZEROVEC2, 0.f, WHITE);
   }
-  gui_progress_bar(PRG_BAR_ID_PLAYER_HEALTH, Rectangle {
-      portrait_dest.x + portrait_dest.width + slot_gap,
-      portrait_dest.y + ability_slot_dest_width + slot_gap,
-      HEALTH_BAR_WIDTH,
-      static_cast<f32>(state->in_app_settings->render_height) * .02f,
-    }, false
-  );
+  const f32 health_bar_width = static_cast<f32>(state->in_app_settings->render_width) * .15f;
+  const f32 mana_bar_width = static_cast<f32>(state->in_app_settings->render_width) * .15f;
+  const f32 stamina_bar_width = static_cast<f32>(state->in_app_settings->render_width) * .15f;
+  const Rectangle health_bar_dest = {
+    portrait_dest.x + portrait_dest.width + slot_gap,
+    portrait_dest.y + ability_slot_dest_width + slot_gap,
+    health_bar_width,
+    static_cast<f32>(state->in_app_settings->render_height) * .02f,
+  };
+  const Rectangle mana_bar_dest = {
+    portrait_dest.x + portrait_dest.width + slot_gap,
+    health_bar_dest.y + health_bar_dest.height + slot_gap,
+    mana_bar_width,
+    static_cast<f32>(state->in_app_settings->render_height) * .02f,
+  };
+  const Rectangle stamina_bar_dest = {
+    portrait_dest.x + portrait_dest.width + slot_gap,
+    mana_bar_dest.y + mana_bar_dest.height + slot_gap,
+    stamina_bar_width,
+    static_cast<f32>(state->in_app_settings->render_height) * .02f,
+  };
+  gui_progress_bar(PRG_BAR_ID_PLAYER_HEALTH, health_bar_dest, false);
+  gui_progress_bar(PRG_BAR_ID_PLAYER_MANA, mana_bar_dest, false, BLUE);
+  gui_progress_bar(PRG_BAR_ID_PLAYER_STAMINA, stamina_bar_dest, false, YELLOW);
 
   i32 left_min = static_cast<i32>(((*state->in_ingame_info->play_time)) / 60.f);
   i32 left_sec = static_cast<i32>(((*state->in_ingame_info->play_time))) % 60;
@@ -952,7 +977,7 @@ void end_ability_upgrade_state(u16 which_panel_chosen) {
     _add_ability(new_ability->id);
   }
   else {
-    _upgrade_ability(GET_PLAYER_DYNAMIC_ABILITY(gm_get_player_state(), new_ability->id)); 
+    upgrade_ability_by_id(new_ability->id);
   }
   state->ability_upgrade_choices.fill(ability());
   set_dynamic_player_have_ability_upgrade_points(false);
@@ -964,7 +989,7 @@ void end_ability_upgrade_state(u16 which_panel_chosen) {
 void sig_begin_fade(void) {
   state->sig_fade.fade_animation_duration = INGAME_FADE_DURATION;
   state->sig_fade.fade_type = FADE_TYPE_FADEIN;
-  state->sig_fade.fade_animation_timer = 0.f;
+  state->sig_fade.fade_animation_accumulator = 0.f;
   state->sig_fade.fade_animation_playing = true;
   state->sig_fade.is_fade_animation_played = false;
 }
@@ -1109,7 +1134,12 @@ void sig_update_chest_sequence(void) {
       if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT)) {
         sig_init_chest_sequence(CHEST_OPENING_SEQUENCE_RESULT);
       }
-      seq.mm_ex.f32[0] += EaseSineInOut(seq.accumulator, 0.f, (*state->in_ingame_info->delta_time) * CHEST_OPENING_SPIN_SPEED, seq.duration);
+      seq.mm_ex.f32[0] += EaseSineInOut(
+        seq.accumulator, 
+        0.f,
+        (*state->in_ingame_info->delta_time) * (*state->in_ingame_info->game_rules)[GAME_RULE_CHEST_SCROLL_SPEED].mm_ex.f32[3], 
+        seq.duration
+      );
       return;
     }
     case CHEST_OPENING_SEQUENCE_RESULT: {
@@ -1298,6 +1328,8 @@ bool scene_in_game_on_event(i32 code, [[maybe_unused]] event_context context) {
 #undef SIG_BASE_RENDER_DIV2
 #undef SIG_BASE_RENDER_WIDTH
 #undef SIG_BASE_RENDER_HEIGHT
+#undef SIG_BASE_RENDER_WIDTH_F
+#undef SIG_BASE_RENDER_HEIGHT_F
 #undef SIG_SCREEN_POS
 #undef ABILITY_UPG_PANEL_ICON_SIZE
 #undef PASSIVE_SELECTION_PANEL_ICON_SIZE
@@ -1309,5 +1341,11 @@ bool scene_in_game_on_event(i32 code, [[maybe_unused]] event_context context) {
 #undef HEALTH_BAR_WIDTH
 #undef PLAY_RESULTS_CAMERA_ZOOM
 #undef CHEST_OPENING_SEQ_INTRO_DURATION
+#undef CHEST_OPENING_SEQ_READY_DURATION
 #undef CHEST_OPENING_SEQ_CHEST_SCALE
 #undef CHEST_OPENING_SEQ_BG_MAX_OPACITY_SCALE
+#undef CHEST_OPENING_SPIN_SPEED
+#undef CHEST_OPENING_SPIN_ACCELERATION_DURATION
+#undef CHEST_OPENING_SPIN_LOCATION
+#undef CHEST_OPENING_SPIN_UNIT_SIZE
+#undef CHEST_OPENING_SPIN_UNIT_GAP

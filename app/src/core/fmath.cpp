@@ -122,6 +122,9 @@ f32 math_abs(f32 x) {
   }
   return result;
 }
+bool math_isvalid(f32 x) {
+  return not std::isnan(x) and not std::isinf(x);
+}
 
 f32 math_easing(f32 accumulator, f32 begin, f32 change, f32 duration, easing_type easing_function) {
   switch (easing_function) {

@@ -201,8 +201,7 @@ typedef enum aspect_ratio {
 } aspect_ratio;
 
 typedef enum data_type {
-  DATA_TYPE_UNRESERVED,
-  
+  DATA_TYPE_UNDEFINED,
   DATA_TYPE_I64,
   DATA_TYPE_U64,
   DATA_TYPE_F64,
@@ -215,7 +214,6 @@ typedef enum data_type {
   DATA_TYPE_U8,
   DATA_TYPE_C,
   DATA_TYPE_SAMPLER2D,
-
   DATA_TYPE_MAX,
 }data_type;
 
@@ -577,7 +575,7 @@ typedef struct data_pack {
   i32 array_lenght;
   data128 data;
   data_pack() {
-    this->type_flag = DATA_TYPE_UNRESERVED;
+    this->type_flag = DATA_TYPE_UNDEFINED;
     this->array_lenght = 0;
     this->data = data128();
   };
@@ -933,6 +931,8 @@ typedef enum checkbox_id {
 typedef enum progress_bar_id {
   PRG_BAR_ID_UNDEFINED,
   PRG_BAR_ID_PLAYER_HEALTH,
+  PRG_BAR_ID_PLAYER_STAMINA,
+  PRG_BAR_ID_PLAYER_MANA,
   PRG_BAR_ID_PLAYER_EXPERIANCE,
   PRG_BAR_ID_BOSS_HEALTH,
   PRG_BAR_ID_MAX
@@ -940,7 +940,8 @@ typedef enum progress_bar_id {
 
 typedef enum progress_bar_type_id {
   PRG_BAR_TYPE_ID_UNDEFINED,
-  PRG_BAR_TYPE_ID_CRIMSON_FANT_BAR,
+  PRG_BAR_TYPE_ID_CRIMSON_FANTASY_BAR,
+  PRG_BAR_TYPE_ID_CRIMSON_FANTASY_BAR_WHITE_INNER,
   PRG_BAR_TYPE_ID_DARK_FANTASY_BOSSBAR_6_YELLOW_INNER,
   PRG_BAR_TYPE_ID_DARK_FANTASY_BOSSBAR_6_WHITE_INNER,
   PRG_BAR_TYPE_ID_MAX

@@ -16,7 +16,7 @@
 #include "game/player.h"
 #include "game/spawn.h"
 
-typedef struct game_manager_system_state {
+struct game_manager_system_state {
   tilemap ** in_active_map;
   save_data * game_progression_data;
   const camera_metrics * in_camera_metrics;
@@ -83,7 +83,7 @@ typedef struct game_manager_system_state {
 
     this->game_manager_initialized = false;
   }
-} game_manager_system_state;
+};
 
 static game_manager_system_state * state = nullptr;
 
@@ -98,18 +98,23 @@ extern const i32 level_curve[MAX_PLAYER_LEVEL+1];
 #define MAX_NEAREST_SPAWN_DISTANCE 512.f
 #define MAX_GAME_RULE_LEVEL 5
 
+#define FIRST_UPGRADABLE_GAME_RULE GAME_RULE_SPAWN_MULTIPLIER
+#define LAST_UPGRADABLE_GAME_RULE GAME_RULE_RESERVED_FOR_FUTURE_USE
+
 bool game_manager_on_event(i32 code, event_context context);
-bool game_manager_reinit(const camera_metrics * in_camera_metrics, const app_settings * in_app_settings,tilemap ** const in_active_map_ptr);
+bool game_manager_reinit(void);
 void populate_map_with_spawns(i32 min_count);
 i32 spawn_boss(void);
 void generate_in_game_info(void);
-void game_manager_set_stat_trait_value_by_level(character_stat* stat, data128 value);
+void gm_set_character_stat_trait_value(character_stat* stat, data128 value);
+void gm_set_game_rule_trait_value(game_rule* stat, data128 value);
 void reset_ingame_info(void);
 void gm_update_player(void);
+[[__nodiscard__]] bool player_state_rebuild(void);
 
 bool game_manager_initialize(const camera_metrics * in_camera_metrics, const app_settings * in_app_settings, tilemap ** const in_active_map_ptr) {
   if (state and state != nullptr) {
-    return game_manager_reinit(in_camera_metrics, in_app_settings, in_active_map_ptr);
+    return game_manager_reinit();
   }
   if (not in_camera_metrics or in_camera_metrics == nullptr) {
     IERROR("game_manager::game_manager_initialize()::Camera pointer is invalid");
@@ -187,66 +192,102 @@ bool game_manager_initialize(const camera_metrics * in_camera_metrics, const app
   // Traits
   {
     i32 next_trait_id = 0;
-    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_MOVE_SPEED, LOC_TEXT_PLAYER_TRAIT_ALACRITY, LOC_TEXT_PLAYER_TRAIT_ALACRITY_DESC, 
-      -1, data128(static_cast<f32>(00.10f)))
-    );
-    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_HEALTH, LOC_TEXT_PLAYER_TRAIT_FORTITUDE, LOC_TEXT_PLAYER_TRAIT_FORTITUDE_DESC, 
-      -1, data128(static_cast<i32>(20.00f)))
-    );
-    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_OVERALL_DAMAGE, LOC_TEXT_PLAYER_TRAIT_POWER, LOC_TEXT_PLAYER_TRAIT_POWER_DESC, 
-      -1, data128(static_cast<f32>(00.05f)))
-    );
-    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_OVERALL_LUCK, LOC_TEXT_PLAYER_TRAIT_FORTUNE, LOC_TEXT_PLAYER_TRAIT_FORTUNE_DESC, 
-      -1, data128(static_cast<i32>(10.00f)))
-    );
-    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_CRITICAL_CHANCE, LOC_TEXT_PLAYER_TRAIT_KEEN, LOC_TEXT_PLAYER_TRAIT_KEEN_DESC, 
-      -1, data128(static_cast<f32>(00.05f)))
-    );
-    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DROP_RATE, LOC_TEXT_PLAYER_TRAIT_SERENDIPITY, LOC_TEXT_PLAYER_TRAIT_SERENDIPITY_DESC, 
-      -1, data128(static_cast<f32>(00.15f)))
-    );
-    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_HP_REGEN, LOC_TEXT_PLAYER_TRAIT_VIGOR, LOC_TEXT_PLAYER_TRAIT_VIGOR_DESC, 
-      -1, data128(static_cast<f32>(10.00f)))
-    );
-    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_CONDITION_DURATION, LOC_TEXT_PLAYER_TRAIT_PERSISTENCE, LOC_TEXT_PLAYER_TRAIT_PERSISTENCE_DESC, 
-      -1, data128(static_cast<f32>(00.20f)))
-    );
-    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE_OVER_TIME, LOC_TEXT_PLAYER_TRAIT_AFFLICTION, LOC_TEXT_PLAYER_TRAIT_AFFLICTION_DESC, 
-      -1, data128(static_cast<f32>(00.15f)))
-    );
-    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_BASIC_ATTACK_SPEED, LOC_TEXT_PLAYER_TRAIT_FRENZY, LOC_TEXT_PLAYER_TRAIT_FRENZY_DESC, 
-      -1, data128(static_cast<f32>(00.10f)))
-    );
-    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_BASIC_ATTACK_DAMAGE, LOC_TEXT_PLAYER_TRAIT_BRUTALITY, LOC_TEXT_PLAYER_TRAIT_BRUTALITY_DESC, 
-      -1, data128(static_cast<i32>(50.00f)))
-    );
-    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_CRITICAL_DAMAGE, LOC_TEXT_PLAYER_TRAIT_DEVASTATOR, LOC_TEXT_PLAYER_TRAIT_DEVASTATOR_DESC, 
-      -1, data128(static_cast<f32>(00.25f)))
-    );
-    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE_REDUCTION, LOC_TEXT_PLAYER_TRAIT_RESILIENCE, LOC_TEXT_PLAYER_TRAIT_RESILIENCE_DESC, 
-      -1, data128(static_cast<f32>(00.05f)))
-    );
-    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_AOE, LOC_TEXT_PLAYER_TRAIT_AMPLITUDE, LOC_TEXT_PLAYER_TRAIT_AMPLITUDE_DESC, 
-      -1, data128(static_cast<f32>(00.15f)))
-    );
-    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_MOVE_SPEED, LOC_TEXT_PLAYER_TRAIT_EXPEDITION, LOC_TEXT_PLAYER_TRAIT_EXPEDITION_DESC, 
-      -2, data128(static_cast<f32>(00.20f)))
-    );
-    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_REWARD_MODIFIER, LOC_TEXT_PLAYER_TRAIT_TRIBUTE, LOC_TEXT_PLAYER_TRAIT_TRIBUTE_DESC, 
-      -2, data128(static_cast<f32>(00.20f)))
-    );
-    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_DAMAGE_DEFERRAL, LOC_TEXT_PLAYER_TRAIT_STAGGER, LOC_TEXT_PLAYER_TRAIT_STAGGER_DESC, 
-      -2, data128(static_cast<f32>(00.30f)))
-    ); 
-    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_SIGIL_EFFECTIVENESS, LOC_TEXT_PLAYER_TRAIT_SIGILIC, LOC_TEXT_PLAYER_TRAIT_SIGILIC_DESC, 
-      -2, data128(static_cast<f32>(00.10f)))
-    );
-    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_SIGIL_EFFECTIVENESS, LOC_TEXT_PLAYER_TRAIT_VITALITY, LOC_TEXT_PLAYER_TRAIT_VITALITY_DESC, 
-      -2, data128(static_cast<f32>(00.25f)))
-    ); 
-    state->traits.push_back(character_trait(next_trait_id++, CHARACTER_STATS_SIGIL_EFFECTIVENESS, LOC_TEXT_PLAYER_TRAIT_LETHAL, LOC_TEXT_PLAYER_TRAIT_LETHAL_DESC, 
-      -2, data128(static_cast<f32>(00.25f)))
-    ); 
+    auto add_trait = [&](character_trait_type _trait_type, i32 _context_id, i32 _loc_display_text, i32 loc_desc_text, i32 point, data128 data) {
+      state->traits.push_back(character_trait(next_trait_id++, _trait_type, _context_id, _loc_display_text, loc_desc_text, point, data));
+    };
+    // Positive Traits
+    {
+      add_trait(CHARACTER_TRAIT_CHARACTER_STAT, CHARACTER_STATS_MOVE_SPEED, LOC_TEXT_PLAYER_TRAIT_ALACRITY, LOC_TEXT_PLAYER_TRAIT_ALACRITY_DESC, 
+        -1, data128(static_cast<f32>(00.00f))
+      );
+      add_trait(CHARACTER_TRAIT_CHARACTER_STAT, CHARACTER_STATS_HEALTH, LOC_TEXT_PLAYER_TRAIT_FORTITUDE, LOC_TEXT_PLAYER_TRAIT_FORTITUDE_DESC, 
+        -1, data128(static_cast<f32>(00.00f))
+      );
+      add_trait(CHARACTER_TRAIT_CHARACTER_STAT, CHARACTER_STATS_OVERALL_DAMAGE, LOC_TEXT_PLAYER_TRAIT_POWER, LOC_TEXT_PLAYER_TRAIT_POWER_DESC, 
+        -1, data128(static_cast<f32>(00.00f))
+      );
+      add_trait(CHARACTER_TRAIT_CHARACTER_STAT, CHARACTER_STATS_OVERALL_LUCK, LOC_TEXT_PLAYER_TRAIT_FORTUNE, LOC_TEXT_PLAYER_TRAIT_FORTUNE_DESC, 
+        -1, data128(static_cast<f32>(00.00f))
+      );
+      add_trait(CHARACTER_TRAIT_CHARACTER_STAT, CHARACTER_STATS_CRITICAL_CHANCE, LOC_TEXT_PLAYER_TRAIT_KEEN, LOC_TEXT_PLAYER_TRAIT_KEEN_DESC, 
+        -1, data128(static_cast<f32>(00.00f))
+      );
+      add_trait(CHARACTER_TRAIT_CHARACTER_STAT, CHARACTER_STATS_DROP_RATE, LOC_TEXT_PLAYER_TRAIT_SERENDIPITY, LOC_TEXT_PLAYER_TRAIT_SERENDIPITY_DESC, 
+        -1, data128(static_cast<f32>(00.00f))
+      );
+      add_trait(CHARACTER_TRAIT_CHARACTER_STAT, CHARACTER_STATS_HP_REGEN, LOC_TEXT_PLAYER_TRAIT_VIGOR, LOC_TEXT_PLAYER_TRAIT_VIGOR_DESC, 
+        -1, data128(static_cast<f32>(00.00f))
+      );
+      add_trait(CHARACTER_TRAIT_CHARACTER_STAT, CHARACTER_STATS_CONDITION_DURATION, LOC_TEXT_PLAYER_TRAIT_PERSISTENCE, LOC_TEXT_PLAYER_TRAIT_PERSISTENCE_DESC, 
+        -1, data128(static_cast<f32>(00.00f))
+      );
+      add_trait(CHARACTER_TRAIT_CHARACTER_STAT, CHARACTER_STATS_DAMAGE_OVER_TIME, LOC_TEXT_PLAYER_TRAIT_AFFLICTION, LOC_TEXT_PLAYER_TRAIT_AFFLICTION_DESC, 
+        -1, data128(static_cast<f32>(00.00f))
+      );
+      add_trait(CHARACTER_TRAIT_CHARACTER_STAT, CHARACTER_STATS_BASIC_ATTACK_SPEED, LOC_TEXT_PLAYER_TRAIT_FRENZY, LOC_TEXT_PLAYER_TRAIT_FRENZY_DESC, 
+        -1, data128(static_cast<f32>(00.00f))
+      );
+      add_trait(CHARACTER_TRAIT_CHARACTER_STAT, CHARACTER_STATS_BASIC_ATTACK_DAMAGE, LOC_TEXT_PLAYER_TRAIT_BRUTALITY, LOC_TEXT_PLAYER_TRAIT_BRUTALITY_DESC, 
+        -1, data128(static_cast<f32>(00.00f))
+      );
+      add_trait(CHARACTER_TRAIT_CHARACTER_STAT, CHARACTER_STATS_CRITICAL_DAMAGE, LOC_TEXT_PLAYER_TRAIT_DEVASTATOR, LOC_TEXT_PLAYER_TRAIT_DEVASTATOR_DESC, 
+        -1, data128(static_cast<f32>(00.00f))
+      );
+      add_trait(CHARACTER_TRAIT_CHARACTER_STAT, CHARACTER_STATS_DAMAGE_REDUCTION, LOC_TEXT_PLAYER_TRAIT_RESILIENCE, LOC_TEXT_PLAYER_TRAIT_RESILIENCE_DESC, 
+        -1, data128(static_cast<f32>(00.00f))
+      );
+      add_trait(CHARACTER_TRAIT_CHARACTER_STAT, CHARACTER_STATS_AOE, LOC_TEXT_PLAYER_TRAIT_AMPLITUDE, LOC_TEXT_PLAYER_TRAIT_AMPLITUDE_DESC, 
+        -1, data128(static_cast<f32>(00.00f))
+      );
+      add_trait(CHARACTER_TRAIT_CHARACTER_STAT, CHARACTER_STATS_MOVE_SPEED, LOC_TEXT_PLAYER_TRAIT_EXPEDITION, LOC_TEXT_PLAYER_TRAIT_EXPEDITION_DESC, 
+        -2, data128(static_cast<f32>(00.00f))
+      );
+      add_trait(CHARACTER_TRAIT_CHARACTER_STAT, CHARACTER_STATS_REWARD_MODIFIER, LOC_TEXT_PLAYER_TRAIT_TRIBUTE, LOC_TEXT_PLAYER_TRAIT_TRIBUTE_DESC, 
+        -2, data128(static_cast<f32>(00.00f))
+      );
+      add_trait(CHARACTER_TRAIT_CHARACTER_STAT, CHARACTER_STATS_DAMAGE_DEFERRAL, LOC_TEXT_PLAYER_TRAIT_STAGGER, LOC_TEXT_PLAYER_TRAIT_STAGGER_DESC, 
+        -2, data128(static_cast<f32>(00.00f))
+      );
+      add_trait(CHARACTER_TRAIT_CHARACTER_STAT, CHARACTER_STATS_SIGIL_EFFECTIVENESS, LOC_TEXT_PLAYER_TRAIT_SIGILIC, LOC_TEXT_PLAYER_TRAIT_SIGILIC_DESC, 
+        -2, data128(static_cast<f32>(00.00f))
+      );
+      add_trait(CHARACTER_TRAIT_CHARACTER_STAT, CHARACTER_STATS_VITAL_SIGIL_EFFECTIVENESS, LOC_TEXT_PLAYER_TRAIT_VITALITY_SYNERGY, LOC_TEXT_PLAYER_TRAIT_VITALITY_SYNERGY_DESC, 
+        -2, data128(static_cast<f32>(00.00f))
+      );
+      add_trait(CHARACTER_TRAIT_CHARACTER_STAT, CHARACTER_STATS_LETAL_SIGIL_EFFECTIVENESS, LOC_TEXT_PLAYER_TRAIT_LETHAL_SYNERGY, LOC_TEXT_PLAYER_TRAIT_LETHAL_SYNERGY_DESC, 
+        -2, data128(static_cast<f32>(00.00f))
+      );
+    }
+    // Positive Traits
+
+    // Negavite Traits
+    {
+      add_trait(CHARACTER_TRAIT_GAME_RULE, GAME_RULE_BASIC_ATTACKS_REQUIRE_STAMINA, LOC_TEXT_PLAYER_TRAIT_EXERTION, LOC_TEXT_PLAYER_TRAIT_EXERTION_DESC, 1, data128());
+      add_trait(CHARACTER_TRAIT_GAME_RULE, GAME_RULE_JUMP_REQUIRE_STAMINA, LOC_TEXT_PLAYER_TRAIT_HOBBLED, LOC_TEXT_PLAYER_TRAIT_HOBBLED_DESC,            1, data128());
+      add_trait(CHARACTER_TRAIT_GAME_RULE, GAME_RULE_LOOTING_DISTANCE, LOC_TEXT_PLAYER_TRAIT_MYOPIA, LOC_TEXT_PLAYER_TRAIT_MYOPIA_DESC,                  1, data128(0.6f));
+      add_trait(CHARACTER_TRAIT_GAME_RULE, GAME_RULE_ZOMBIE_BITE_CONDITIONS, LOC_TEXT_PLAYER_TRAIT_HEMOPHILIA, LOC_TEXT_PLAYER_TRAIT_HEMOPHILIA_DESC,    1, 
+        data128(GAME_RULE_ZOMBIE_BITE_CONDITION_BLEED)
+      );
+      add_trait(CHARACTER_TRAIT_GAME_RULE, GAME_RULE_NEAR_ZOMBIE_CONDITIONS, LOC_TEXT_PLAYER_TRAIT_DREAD, LOC_TEXT_PLAYER_TRAIT_DREAD_DESC,
+        1, data128(GAME_RULE_NEAR_ZOMBIE_CONDITION_LOSE_SPEED)
+      );
+      add_trait(CHARACTER_TRAIT_GAME_RULE, GAME_RULE_ZOMBIE_BITE_CONDITIONS, LOC_TEXT_PLAYER_TRAIT_INFECTION, LOC_TEXT_PLAYER_TRAIT_INFECTION_DESC,
+        1, data128(GAME_RULE_ZOMBIE_BITE_CONDITION_INFECT)
+      );
+      add_trait(CHARACTER_TRAIT_GAME_RULE, GAME_RULE_ITEM_SLOT_COUNT,                 LOC_TEXT_PLAYER_TRAIT_CLUMSY,          LOC_TEXT_PLAYER_TRAIT_CLUMSY_DESC,          1, data128(4));
+      add_trait(CHARACTER_TRAIT_GAME_RULE, GAME_RULE_YOUR_SKILLS_DAMAGES_YOU,         LOC_TEXT_PLAYER_TRAIT_BACKLASH,        LOC_TEXT_PLAYER_TRAIT_BACKLASH_DESC,        1, data128());
+      add_trait(CHARACTER_TRAIT_GAME_RULE, GAME_RULE_HEALTH_BAR_VISIBILITY,           LOC_TEXT_PLAYER_TRAIT_OBSCURED_VITALS, LOC_TEXT_PLAYER_TRAIT_OBSCURED_VITALS_DESC, 1, data128());
+      add_trait(CHARACTER_TRAIT_GAME_RULE, GAME_RULE_INGAME_ZOOM,                     LOC_TEXT_PLAYER_TRAIT_TUNNEL_VISION,   LOC_TEXT_PLAYER_TRAIT_TUNNEL_VISION_DESC,   1, data128(1.5f));
+      add_trait(CHARACTER_TRAIT_GAME_RULE, GAME_RULE_CHEST_SCROLL_SPEED,              LOC_TEXT_PLAYER_TRAIT_JITTERY,         LOC_TEXT_PLAYER_TRAIT_JITTERY_DESC,         1, data128(1.5f));
+      add_trait(CHARACTER_TRAIT_GAME_RULE, GAME_RULE_SKILL_SLOT_COUNT,                LOC_TEXT_PLAYER_TRAIT_FORGETFUL,       LOC_TEXT_PLAYER_TRAIT_FORGETFUL_DESC,       1, data128(4));
+      add_trait(CHARACTER_TRAIT_GAME_RULE, GAME_RULE_ZOMBIE_FOLLOW_DISTANCE,          LOC_TEXT_PLAYER_TRAIT_BLOOD_SCENT,     LOC_TEXT_PLAYER_TRAIT_BLOOD_SCENT_DESC,     1, data128(2.f));
+      add_trait(CHARACTER_TRAIT_GAME_RULE, GAME_RULE_TIMER_VISIBILITY,                LOC_TEXT_PLAYER_TRAIT_APATHY,          LOC_TEXT_PLAYER_TRAIT_APATHY_DESC,          1, data128());
+      add_trait(CHARACTER_TRAIT_GAME_RULE, GAME_RULE_EXP_BAR_VISIBILITY,              LOC_TEXT_PLAYER_TRAIT_IGNORANCE,       LOC_TEXT_PLAYER_TRAIT_IGNORANCE_DESC,       1, data128());
+      add_trait(CHARACTER_TRAIT_GAME_RULE, GAME_RULE_PROJECTILE_PASS_THROUGH_MODIFIER,LOC_TEXT_PLAYER_TRAIT_BLUNTED,         LOC_TEXT_PLAYER_TRAIT_BLUNTED_DESC,         1, data128(1));
+      add_trait(CHARACTER_TRAIT_GAME_RULE, GAME_RULE_ROLL_DISTANCE_MULTIPLIER,        LOC_TEXT_PLAYER_TRAIT_ENCUMBERED,      LOC_TEXT_PLAYER_TRAIT_ENCUMBERED_DESC,      1, data128(0.75f));
+    }
+    // Negavite Traits
+
   }
   // Traits
 
@@ -265,43 +306,57 @@ bool game_manager_initialize(const camera_metrics * in_camera_metrics, const app
 
   // Rules
   {
-    state->default_game_rules.at(GAME_RULE_SPAWN_MULTIPLIER) = game_rule(
-      GAME_RULE_SPAWN_MULTIPLIER, static_cast<i32>(LOC_TEXT_INGAME_GAME_RULE_SPAWN_MULTIPLIER), static_cast<i32>(LOC_TEXT_INGAME_GAME_RULE_SPAWN_MULTIPLIER_DESCRIPTION),
-      Rectangle {2144, 672, 32, 32}, 6, level_curve[0], data128()
+    auto add_game_rule_upgradable = [](game_rule_id _rule_id, i32 _loc_display_text, i32 loc_desc_text, Rectangle _icon_src, i32 base_level, data_type _data_type,  data128 data) {
+      state->default_game_rules.at(_rule_id) = game_rule(_rule_id, _loc_display_text, loc_desc_text,_icon_src, base_level, _data_type, data);
+    };
+    add_game_rule_upgradable(GAME_RULE_SPAWN_MULTIPLIER, LOC_TEXT_INGAME_GAME_RULE_SPAWN_MULTIPLIER, LOC_TEXT_INGAME_GAME_RULE_SPAWN_MULTIPLIER_DESCRIPTION,
+      Rectangle {2144, 672, 32, 32}, 6, DATA_TYPE_F32, data128()
     );
-    state->default_game_rules.at(GAME_RULE_PLAY_TIME_MULTIPLIER) = game_rule(
-      GAME_RULE_PLAY_TIME_MULTIPLIER, static_cast<i32>(LOC_TEXT_INGAME_GAME_RULE_PLAY_TIME_MULTIPLIER), static_cast<i32>(LOC_TEXT_INGAME_GAME_RULE_PLAY_TIME_MULTIPLIER_DESCRIPTION), 
-      Rectangle {1792, 640, 32, 32}, 6, level_curve[0], data128()
+    add_game_rule_upgradable(GAME_RULE_PLAY_TIME_MULTIPLIER, LOC_TEXT_INGAME_GAME_RULE_PLAY_TIME_MULTIPLIER, LOC_TEXT_INGAME_GAME_RULE_PLAY_TIME_MULTIPLIER_DESCRIPTION, 
+      Rectangle {1792, 640, 32, 32}, 6, DATA_TYPE_F32, data128()
     );
-    state->default_game_rules.at(GAME_RULE_DELTA_TIME_MULTIPLIER) = game_rule(
-      GAME_RULE_DELTA_TIME_MULTIPLIER, static_cast<i32>(LOC_TEXT_INGAME_GAME_RULE_DELTA_TIME_MULTIPLIER), static_cast<i32>(LOC_TEXT_INGAME_GAME_RULE_DELTA_TIME_MULTIPLIER_DESCRIPTION),
-      Rectangle {1696, 672, 32, 32}, 6, level_curve[0], data128(static_cast<f32>(.2f))
+    add_game_rule_upgradable(GAME_RULE_DELTA_TIME_MULTIPLIER, LOC_TEXT_INGAME_GAME_RULE_DELTA_TIME_MULTIPLIER, LOC_TEXT_INGAME_GAME_RULE_DELTA_TIME_MULTIPLIER_DESCRIPTION,
+      Rectangle {1696, 672, 32, 32}, 6, DATA_TYPE_F32, data128(static_cast<f32>(.2f))
     );
-    state->default_game_rules.at(GAME_RULE_BOSS_MODIFIER) = game_rule(
-      GAME_RULE_BOSS_MODIFIER, static_cast<i32>(LOC_TEXT_INGAME_GAME_RULE_BOSS_MODIFIER), static_cast<i32>(LOC_TEXT_INGAME_GAME_RULE_BOSS_MODIFIER_DESCRIPTION), 
-      Rectangle {1728, 800, 32, 32}, 1, level_curve[0], data128()
+    add_game_rule_upgradable(GAME_RULE_BOSS_MODIFIER, LOC_TEXT_INGAME_GAME_RULE_BOSS_MODIFIER, LOC_TEXT_INGAME_GAME_RULE_BOSS_MODIFIER_DESCRIPTION, 
+      Rectangle {1728, 800, 32, 32}, 1, DATA_TYPE_I32, data128()
     );
-    state->default_game_rules.at(GAME_RULE_AREA_UNLOCKER) = game_rule(
-      GAME_RULE_AREA_UNLOCKER, static_cast<i32>(LOC_TEXT_INGAME_GAME_RULE_AREA_UNLOCKER), static_cast<i32>(LOC_TEXT_INGAME_GAME_RULE_AREA_UNLOCKER_DESCRIPTION), 
-      Rectangle {2144, 672, 32, 32}, 1, level_curve[0], data128()
+    add_game_rule_upgradable(GAME_RULE_AREA_UNLOCKER, LOC_TEXT_INGAME_GAME_RULE_AREA_UNLOCKER, LOC_TEXT_INGAME_GAME_RULE_AREA_UNLOCKER_DESCRIPTION, 
+      Rectangle {2144, 672, 32, 32}, 1, DATA_TYPE_I32, data128()
     );
-    state->default_game_rules.at(GAME_RULE_TRAIT_POINT_MODIFIER) = game_rule(
-      GAME_RULE_TRAIT_POINT_MODIFIER, static_cast<i32>(LOC_TEXT_INGAME_GAME_RULE_TRAIT_POINT_MODIFIER), static_cast<i32>(LOC_TEXT_INGAME_GAME_RULE_TRAIT_POINT_MODIFIER_DESCRIPTION), 
-      Rectangle {1600, 640, 32, 32}, 1, level_curve[0], data128()
+    add_game_rule_upgradable(GAME_RULE_TRAIT_POINT_MODIFIER, LOC_TEXT_INGAME_GAME_RULE_TRAIT_POINT_MODIFIER, LOC_TEXT_INGAME_GAME_RULE_TRAIT_POINT_MODIFIER_DESCRIPTION, 
+      Rectangle {1600, 640, 32, 32}, 1, DATA_TYPE_I32, data128()
     );
-    state->default_game_rules.at(GAME_RULE_BONUS_RESULT_MULTIPLIER) = game_rule(
-      GAME_RULE_BONUS_RESULT_MULTIPLIER, static_cast<i32>(LOC_TEXT_INGAME_GAME_RULE_BONUS_RESULT_MULTIPLIER), static_cast<i32>(LOC_TEXT_INGAME_GAME_RULE_BONUS_RESULT_MULTIPLIER_DESCRIPTION), 
-      Rectangle {1792, 736, 32, 32}, 6, level_curve[0], data128()
+    add_game_rule_upgradable(GAME_RULE_BONUS_RESULT_MULTIPLIER, LOC_TEXT_INGAME_GAME_RULE_BONUS_RESULT_MULTIPLIER, LOC_TEXT_INGAME_GAME_RULE_BONUS_RESULT_MULTIPLIER_DESCRIPTION, 
+      Rectangle {1792, 736, 32, 32}, 6, DATA_TYPE_F32, data128()
     );
-    state->default_game_rules.at(GAME_RULE_ZOMBIE_LEVEL_MODIFIER) = game_rule(
-      GAME_RULE_ZOMBIE_LEVEL_MODIFIER, static_cast<i32>(LOC_TEXT_INGAME_GAME_RULE_ZOMBIE_LEVEL_MODIFIER), static_cast<i32>(LOC_TEXT_INGAME_GAME_RULE_ZOMBIE_LEVEL_MODIFIER_DESCRIPTION), 
-      Rectangle {1568, 672, 32, 32}, 1, level_curve[0], data128()
+    add_game_rule_upgradable(GAME_RULE_ZOMBIE_LEVEL_MODIFIER, LOC_TEXT_INGAME_GAME_RULE_ZOMBIE_LEVEL_MODIFIER, LOC_TEXT_INGAME_GAME_RULE_ZOMBIE_LEVEL_MODIFIER_DESCRIPTION, 
+      Rectangle {1568, 672, 32, 32}, 1, DATA_TYPE_I32, data128()
     );
-    state->default_game_rules.at(GAME_RULE_RESERVED_FOR_FUTURE_USE) = game_rule(
-      GAME_RULE_RESERVED_FOR_FUTURE_USE, static_cast<i32>(LOC_TEXT_INGAME_GAME_RULE_RESERVED_FOR_FUTURE_USE), static_cast<i32>(LOC_TEXT_INGAME_GAME_RULE_RESERVED_FOR_FUTURE_USE_DESCRIPTION), 
-      Rectangle {1568, 672, 32, 32}, 1, level_curve[0], data128()
+    add_game_rule_upgradable(GAME_RULE_RESERVED_FOR_FUTURE_USE, LOC_TEXT_INGAME_GAME_RULE_RESERVED_FOR_FUTURE_USE, LOC_TEXT_INGAME_GAME_RULE_RESERVED_FOR_FUTURE_USE_DESCRIPTION, 
+      Rectangle {1568, 672, 32, 32}, 1, DATA_TYPE_UNDEFINED, data128()
     );
-    for (size_t itr_000 = 1u; itr_000 < state->default_game_rules.size(); itr_000++) {
+    auto add_game_rule = [](game_rule_id _rule_id, data_type _data_type,  data128 data) {
+      state->default_game_rules.at(_rule_id) = game_rule(_rule_id, 0, 0, ZERORECT, 0, _data_type, data);
+    };
+    add_game_rule(GAME_RULE_BASIC_ATTACKS_REQUIRE_STAMINA,    DATA_TYPE_I32, data128(0));     // INFO: i32, bool
+    add_game_rule(GAME_RULE_JUMP_REQUIRE_STAMINA,             DATA_TYPE_I32, data128(0));     // INFO: i32, bool
+    add_game_rule(GAME_RULE_LOOTING_DISTANCE,                 DATA_TYPE_F32, data128(50.f));  // INFO: f32
+    add_game_rule(GAME_RULE_ZOMBIE_BITE_CONDITIONS,           DATA_TYPE_I32, data128());      // INFO: i32, enum
+    add_game_rule(GAME_RULE_NEAR_ZOMBIE_CONDITIONS,           DATA_TYPE_I32, data128());      // INFO: i32, enum
+    add_game_rule(GAME_RULE_ITEM_SLOT_COUNT,                  DATA_TYPE_I32, data128(6));     // INFO: i32
+    add_game_rule(GAME_RULE_YOUR_SKILLS_DAMAGES_YOU,          DATA_TYPE_I32, data128(0));     // INFO: i32, bool
+    add_game_rule(GAME_RULE_HEALTH_BAR_VISIBILITY,            DATA_TYPE_I32, data128(1));     // INFO: i32, bool
+    add_game_rule(GAME_RULE_INGAME_ZOOM,                      DATA_TYPE_F32, data128(.85f));  // INFO: f32
+    add_game_rule(GAME_RULE_CHEST_SCROLL_SPEED,               DATA_TYPE_F32, data128(1500.f));// INFO: f32
+    add_game_rule(GAME_RULE_SKILL_SLOT_COUNT,                 DATA_TYPE_I32, data128(5));     // INFO: i32
+    add_game_rule(GAME_RULE_ZOMBIE_FOLLOW_DISTANCE,           DATA_TYPE_F32, data128(728.f)); // INFO: f32
+    add_game_rule(GAME_RULE_TIMER_VISIBILITY,                 DATA_TYPE_I32, data128(1));     // INFO: i32, bool
+    add_game_rule(GAME_RULE_EXP_BAR_VISIBILITY,               DATA_TYPE_I32, data128(1));     // INFO: i32, bool
+    add_game_rule(GAME_RULE_PROJECTILE_PASS_THROUGH_MODIFIER, DATA_TYPE_I32, data128(0));     // INFO: i32
+    add_game_rule(GAME_RULE_ROLL_DISTANCE_MULTIPLIER,         DATA_TYPE_F32, data128(1.5f));  // INFO: f32
+
+    for (size_t itr_000 = 1u; itr_000 < state->default_game_rules.size() - 1u; itr_000++) {
       game_rule& rule = state->default_game_rules.at(itr_000);
       gm_refresh_game_rule_by_level(&rule, rule.level);
     }
@@ -309,10 +364,7 @@ bool game_manager_initialize(const camera_metrics * in_camera_metrics, const app
   // Rules
 
   state->playlist = create_playlist(PLAYLIST_PRESET_INGAME_PLAY_LIST);
-
-  return game_manager_reinit(in_camera_metrics, in_app_settings, in_active_map_ptr);
-}
-bool game_manager_reinit(const camera_metrics * in_camera_metrics, const app_settings * in_app_settings, tilemap ** const in_active_map_ptr) {
+  
   if (not in_app_settings or in_app_settings == nullptr or not in_active_map_ptr or in_active_map_ptr == nullptr) {
     IERROR("game_manager::game_manager_reinit()::Recieved pointer(s) is/are invalid");
     return false;
@@ -321,7 +373,6 @@ bool game_manager_reinit(const camera_metrics * in_camera_metrics, const app_set
     IERROR("game_manager::game_manager_reinit()::Player system initialization failed");
     return false;
   }
-
   if (not parse_or_create_save_data_from_file(SAVE_SLOT_CURRENT_SESSION, save_data(SAVE_SLOT_CURRENT_SESSION, (*get_default_player()), state->default_game_rules, 0))) {
     IERROR("game_manager::game_manager_reinit()::Save system failed to creating/parsing serialization data");
     return false;
@@ -333,15 +384,37 @@ bool game_manager_reinit(const camera_metrics * in_camera_metrics, const app_set
   state->in_camera_metrics = in_camera_metrics;
   state->in_app_settings = in_app_settings;
   state->in_active_map = in_active_map_ptr;
-  set_player_state(state->player_state_static);
 
-  state->game_rules = state->game_progression_data->game_rules;
-  for (size_t itr_000 = 1u; itr_000 < state->game_rules.size(); itr_000++) {
-    game_rule& rule = state->game_rules.at(itr_000);
-    gm_refresh_game_rule_by_level(&rule, rule.level);
-  }
-
+  return game_manager_reinit();
+}
+bool game_manager_reinit(void) {
+  
   return true;
+}
+
+void game_manager_cleanup_state(void) {
+  clean_up_spawn_state();
+  collectible_manager_state_clear();
+  set_player_state(player_state());
+
+  if (state and state != nullptr) {
+    state->ingame_phase = INGAME_PLAY_PHASE_UNDEFINED;
+    state->playlist.media_stop(__builtin_addressof(state->playlist));
+    state->is_win = false;
+    state->stage = worldmap_stage();
+    state->ingame_phase = INGAME_PLAY_PHASE_UNDEFINED;
+    state->chosen_traits.clear();
+    state->collected_coins = 0;
+    state->total_spawn_count = 0;
+    state->total_boss_count = 0;
+    state->total_boss_spawned = 0;
+    state->total_play_time = 0.f;
+    state->play_time = 0.f;
+    state->delta_time = 0.f;
+    state->stage_boss_id = I32_MAX;
+    state->starter_ability = ABILITY_ID_UNDEFINED;
+    state->game_rules = state->default_game_rules;
+  }
 }
 
 void update_game_manager(void) {
@@ -354,6 +427,9 @@ void update_game_manager(void) {
   update_sound_system();
 
   switch (state->ingame_phase) {
+    case INGAME_PLAY_PHASE_IDLE: { 
+      break; 
+    }
     case INGAME_PLAY_PHASE_CLEAR_ZOMBIES: {
       if (not state->game_info.player_state_dynamic->is_dead) {
         gm_update_player();
@@ -372,11 +448,11 @@ void update_game_manager(void) {
           spawn_boss();
         }
         if (state->play_time <= 0.f) {
-          gm_end_game(true, true);
+          gm_end_game(true);
         }
       }
       else {
-        gm_end_game(true, false);
+        gm_end_game(false);
         return;
       }
       break;
@@ -387,7 +463,7 @@ void update_game_manager(void) {
     }
     default: {
       IWARN("game_manager::update_game_manager()::Unsupported in-game phase");
-      gm_end_game(false, false);
+      gm_end_game(false);
       event_fire(EVENT_CODE_SCENE_MAIN_MENU, event_context());
     }
     break;
@@ -414,6 +490,9 @@ void render_game(void) {
     return;
   }
   switch (state->ingame_phase) {
+    case INGAME_PLAY_PHASE_IDLE: {
+      return;
+    }
     case INGAME_PLAY_PHASE_CLEAR_ZOMBIES: {
       if (not state->game_info.player_state_dynamic->is_dead) {
         render_player();
@@ -437,14 +516,14 @@ void render_game(void) {
     }
     default: {
       IWARN("game_manager::render_game()::Unsupported in-game phase");
-      gm_end_game(false, false);
+      gm_end_game(false);
       event_fire(EVENT_CODE_SCENE_MAIN_MENU, event_context());
       return;
     }
   }
 
   IERROR("game_manager::render_game()::Function ended unexpectedly");
-  gm_end_game(false, false);
+  gm_end_game(false);
   event_fire(EVENT_CODE_SCENE_MAIN_MENU, event_context());
 }
 
@@ -452,30 +531,62 @@ void render_game(void) {
 /**
  * @brief Start game before, then upgrade the stat
  */
-bool gm_start_game(worldmap_stage stage) {
+void gm_start_game() {
+  if (not state or state == nullptr) {
+    IERROR("game_manager::gm_start_game()::State is invalid");
+    return;
+  }
+  _set_player_position(ZEROVEC2);
+  state->playlist.media_play(__builtin_addressof(state->playlist));
+  state->ingame_phase = INGAME_PLAY_PHASE_CLEAR_ZOMBIES;
+}
+[[nodiscard]] bool gm_init_game(worldmap_stage stage, std::vector<character_trait>& _chosen_traits, ability_id starter_ability) {
   if (not state or state == nullptr) {
     IERROR("game_manager::gm_start_game()::State is invalid");
     return false;
   }
+  reset_ingame_info();
+  state->chosen_traits = _chosen_traits;
+  state->starter_ability = starter_ability;
+
+  if (not player_state_rebuild()) {
+    IERROR("game_manager::gm_start_game()::Player rebuild is failed");
+    game_manager_cleanup_state();
+    return false;
+  }
+  set_player_state(state->player_state_static);
   player_state * const _player = get_player_state();
   if (not _player or _player == nullptr) {
     IERROR("game_manager::gm_start_game()::Player state is invalid");
     return false;
   }
-  (*_player) = state->player_state_static;
-
-  state->stage = stage;
-  std::array<character_stat, CHARACTER_STATS_MAX> * const _stat_array_ptr = __builtin_addressof(_player->stats);
-
-  for (size_t itr_000 = 0; itr_000 < state->chosen_traits.size(); ++itr_000) {
-    const character_trait * const _trait_ptr = __builtin_addressof(state->chosen_traits.at(itr_000));
-    if (_trait_ptr->type < 0 && _trait_ptr->type >= CHARACTER_STATS_MAX) {
-      IWARN("game_manager::gm_start_game()::Trait type is out of bound");
-      continue;
+  for (character_trait& trait : state->chosen_traits) {
+    i32 _trait_type = 0;
+    if (trait.type == character_trait_type::CHARACTER_TRAIT_CHARACTER_STAT) {
+      if (_trait_type <= CHARACTER_STATS_UNDEFINED or _trait_type >= CHARACTER_STATS_MAX) {
+        IWARN("game_manager::gm_start_game()::Trait type is out of bound");
+        continue;
+      }
+      gm_set_character_stat_trait_value(&_player->stats[trait.type], trait.ingame_ops);
     }
-    character_stat * const _stat_ptr = __builtin_addressof(_stat_array_ptr->at(_trait_ptr->type));
-    
-    game_manager_set_stat_trait_value_by_level(_stat_ptr, _trait_ptr->ingame_ops);
+    else if (trait.type == character_trait_type::CHARACTER_TRAIT_GAME_RULE) {
+      if (_trait_type <= GAME_RULE_UNDEFINED or _trait_type >= GAME_RULE_MAX) {
+        IWARN("game_manager::gm_start_game()::Rule type is out of bound");
+        continue;
+      }
+      gm_set_game_rule_trait_value(&state->game_rules[trait.type], trait.ingame_ops);
+    }
+  }
+  state->stage = stage;
+  state->ingame_phase = INGAME_PLAY_PHASE_IDLE;
+  state->total_spawn_count = state->stage.total_spawn_count * state->game_rules.at(GAME_RULE_SPAWN_MULTIPLIER).mm_ex.f32[3];
+  state->total_play_time   = state->stage.stage_duration * state->game_rules.at(GAME_RULE_PLAY_TIME_MULTIPLIER).mm_ex.f32[3];
+  state->total_boss_count  = state->stage.total_boss_count + state->game_rules.at(GAME_RULE_BOSS_MODIFIER).mm_ex.i32[3];
+  state->play_time = (*state->game_info.total_play_time);
+
+  populate_map_with_spawns(stage.total_spawn_count);
+  if (state->game_info.in_spawns->size() <= 0) {
+    return false;
   }
 
   _add_ability(state->starter_ability);
@@ -483,48 +594,19 @@ bool gm_start_game(worldmap_stage stage) {
   upgrade_ability(player_starter_ability);
   refresh_ability(player_starter_ability);
 
-  #warning "Uncomment later"
-  populate_map_with_spawns(stage.total_spawn_count);
-  if (state->game_info.in_spawns->size() <= 0) {
-    return false;
-  }
-
-  _player->health_current = _player->stats.at(CHARACTER_STATS_HEALTH).buffer.i32[3];
-  _player->health_perc = static_cast<f32>(_player->health_current) / static_cast<f32>(_player->stats.at(CHARACTER_STATS_HEALTH).buffer.i32[3]);
-  event_fire(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, event_context((f32)PRG_BAR_ID_PLAYER_EXPERIANCE, (f32)state->game_info.player_state_dynamic->exp_perc));
-  event_fire(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, event_context((f32)PRG_BAR_ID_PLAYER_HEALTH, (f32)state->game_info.player_state_dynamic->health_perc));
-
-  state->ingame_phase = INGAME_PLAY_PHASE_CLEAR_ZOMBIES;
-  
-  reset_ingame_info();
-
+  event_fire(EVENT_CODE_SET_SPAWN_FOLLOW_DISTANCE, event_context(state->game_rules[GAME_RULE_ZOMBIE_FOLLOW_DISTANCE].mm_ex.f32[3]));
   set_ingame_delta_time_multiplier(state->game_rules.at(GAME_RULE_DELTA_TIME_MULTIPLIER).mm_ex.f32[3]);
-
-  state->total_spawn_count = state->stage.total_spawn_count * state->game_rules.at(GAME_RULE_SPAWN_MULTIPLIER).mm_ex.f32[3];
-  state->total_play_time   = state->stage.stage_duration * state->game_rules.at(GAME_RULE_PLAY_TIME_MULTIPLIER).mm_ex.f32[3];
-  state->total_boss_count  = state->stage.total_boss_count + state->game_rules.at(GAME_RULE_BOSS_MODIFIER).mm_ex.i32[3];
-
-  state->play_time = (*state->game_info.total_play_time);
-  state->playlist.media_play(__builtin_addressof(state->playlist));
+  
   return true;
 }
-void gm_end_game(bool wait_for_results, bool is_win) {
-  clean_up_spawn_state();
-  state->playlist.media_stop(__builtin_addressof(state->playlist));
-  collectible_manager_state_clear();
 
-  set_player_state(player_state());
+void gm_end_game(bool is_win) {
+
   state->is_win = is_win;
-  if (wait_for_results) {
+  state->ingame_phase = INGAME_PLAY_PHASE_RESULTS;
+  //event_fire(EVENT_CODE_PLAY_SOUND, event_context()); // TODO: play win or lose sound
+  event_fire(EVENT_CODE_CAMERA_SET_ZOOM_TARGET, event_context(static_cast<f32>(ZOOM_CAMERA_GAME_RESULTS)));
 
-    state->ingame_phase = INGAME_PLAY_PHASE_RESULTS;
-    //event_fire(EVENT_CODE_PLAY_SOUND, event_context()); // TODO: play win or lose sound
-    event_fire(EVENT_CODE_CAMERA_SET_ZOOM_TARGET, event_context(static_cast<f32>(ZOOM_CAMERA_GAME_RESULTS)));
-  }
-  else {
-    state->ingame_phase = INGAME_PLAY_PHASE_UNDEFINED;
-  }
-  
   gm_save_game();
 }
 void gm_save_game(void) {
@@ -537,7 +619,7 @@ void gm_load_game(void) {
   state->game_progression_data = get_save_data(SAVE_SLOT_CURRENT_SESSION);
   state->game_rules = state->default_game_rules;
 
-  for (size_t itr_000 = 0u; itr_000 < state->player_state_static.stats.size(); ++itr_000) {
+  for (size_t itr_000 = FIRST_UPGRADABLE_GAME_RULE; itr_000 < LAST_UPGRADABLE_GAME_RULE; ++itr_000) {
     i32 level = state->game_progression_data->player_data.stats.at(itr_000).current_level;
     const character_stat& stat = state->player_state_static.stats.at(itr_000);
     if (level - stat.base_level >= 0 and level < MAX_PLAYER_LEVEL) {
@@ -547,8 +629,7 @@ void gm_load_game(void) {
       set_static_player_state_stat(static_cast<character_stat_id>(itr_000), state->player_state_static.stats.at(itr_000).base_level);
     }
   }
-
-  for (size_t itr_000 = 1u; itr_000 < state->game_rules.size() - 1u; ++itr_000) { // First is GAME_RULE_UNDEFINED and last one GAME_RULE_MAX
+  for (size_t itr_000 = FIRST_UPGRADABLE_GAME_RULE; itr_000 < LAST_UPGRADABLE_GAME_RULE; ++itr_000) { // First is GAME_RULE_UNDEFINED and last one GAME_RULE_MAX
     game_rule& base_rule = state->game_rules.at(itr_000);
     game_rule& saved_rule = state->game_progression_data->game_rules.at(itr_000);
     if (not gm_refresh_game_rule_by_level(__builtin_addressof(base_rule), saved_rule.level)) {
@@ -690,18 +771,6 @@ i32 spawn_boss(void) {
 void currency_coins_add(i32 value) {
   state->game_progression_data->currency_coins_player_have += value;
 }
-void set_starter_ability(ability_id _id) {
-  if (not state or state == nullptr) {
-    IERROR("game_manager::set_starter_ability()::State is invalid");
-    return;
-  }
-  if (_id <= ABILITY_ID_UNDEFINED or _id >= ABILITY_ID_MAX) {
-    IWARN("game_manager::set_starter_ability()::Ability id is out of bound");
-    return;
-  }
-
-  state->starter_ability = _id;
-}
 void generate_in_game_info(void) {
   if (not state or state == nullptr) {
     IERROR("game_manager::generate_in_game_info()::State is not valid");
@@ -732,11 +801,24 @@ void reset_ingame_info(void) {
     IERROR("game_manager::reset_ingame_info()::State is invalid");
     return;
   }
+  clean_up_spawn_state();
+  collectible_manager_state_clear();
+  state->ingame_phase = INGAME_PLAY_PHASE_UNDEFINED;
+  state->chosen_traits.clear();
+  state->stage = worldmap_stage();
+  state->game_rules.fill(game_rule());
   state->collected_coins = 0;
+  state->total_spawn_count = 0;
+  state->total_boss_count = 0;
+  state->total_boss_spawned = 0;
+  state->total_play_time = 0.f;
   state->play_time = 0.f;
+  state->delta_time = 0.f;
   state->is_win = false;
   state->stage_boss_id = INVALID_IDI32;
   state->starter_ability = ABILITY_ID_UNDEFINED;
+
+  state->game_rules = state->default_game_rules;
 }
 void gm_update_player(void) {
   if (state->game_info.player_state_dynamic and state->game_info.player_state_dynamic != nullptr and not state->game_info.player_state_dynamic->is_dead) {
@@ -841,34 +923,61 @@ void gm_add_to_inventory(item_type _item_type) {
   }
   IWARN("game_manager::gm_add_to_inventory()::Function ended unexpectedly");
 }
-void gm_chosen_traits_add(const character_trait *const _trait) {
+void gm_set_chosen_traits(std::vector<character_trait> traits) {
   if (not state or state == nullptr) {
-    IERROR("game_manager::gm_add_chosen_trait()::State is invalid");
+    IERROR("game_manager::gm_set_chosen_traits()::State is not valid");
     return;
   }
-  if (not _trait or _trait == nullptr) {
-    IERROR("game_manager::gm_add_chosen_trait()::Trait is invalid");
-    return;
-  }
-  state->chosen_traits.push_back( (*_trait) );
+  state->chosen_traits = traits;
 }
-void gm_chosen_traits_erase(size_t index) {
+bool player_state_rebuild(void) {
   if (not state or state == nullptr) {
-    IERROR("game_manager::gm_erase_chosen_trait()::State is invalid");
-    return;
+    IERROR("player::player_state_rebuild()::State is invalid");
+    return false;
   }
-  if (index >= state->chosen_traits.size()) {
-    IERROR("game_manager::gm_erase_chosen_trait()::Index out of bound");
-    return;
+  player_state _player = state->player_state_static; 
+
+  for (size_t itr_000 = 1u; itr_000 < _player.stats.size() - 1u; itr_000++) {
+    character_stat& stat = _player.stats[itr_000];
+    gm_refresh_stat_by_level(&stat, stat.current_level);
   }
-  state->chosen_traits.erase(state->chosen_traits.begin() + index);
+
+  _player.exp_to_next_level = level_curve[_player.level];
+
+  _player.health_current = _player.stats[CHARACTER_STATS_HEALTH].buffer.i32[3];
+  _player.health_perc = 1.f;
+  _player.stamina_current = _player.stats[CHARACTER_STATS_STAMINA].buffer.i32[3];
+  _player.stamina_perc = 1.f;
+  _player.mana_current = _player.stats[CHARACTER_STATS_MANA].buffer.i32[3];
+  _player.mana_perc = 1.f;
+  
+  _player.attack_1_sprite.fps = _player.attack_1_sprite.frame_total / _player.stats[CHARACTER_STATS_BASIC_ATTACK_SPEED].buffer.f32[3];
+  _player.attack_2_sprite.fps = _player.attack_2_sprite.frame_total / _player.stats[CHARACTER_STATS_BASIC_ATTACK_SPEED].buffer.f32[3];
+  _player.attack_3_sprite.fps = _player.attack_3_sprite.frame_total / _player.stats[CHARACTER_STATS_BASIC_ATTACK_SPEED].buffer.f32[3];
+
+  if (not math_isvalid(_player.attack_1_sprite.fps) or not math_isvalid(_player.attack_2_sprite.fps) or not math_isvalid(_player.attack_3_sprite.fps)) {
+    return false;
+  }
+  state->player_state_static = _player;
+  return true;
 }
-void gm_chosen_traits_clear(void) {
-  if (not state or state == nullptr) {
-    IERROR("game_manager::gm_chosen_traits_clear()::State is invalid");
-    return;
+bool upgrade_ability_by_id(ability_id abl_id) {
+  if (abl_id <= ABILITY_ID_UNDEFINED or abl_id >= ABILITY_ID_MAX) {
+    IWARN("game_manager::upgrade_ability_by_id::Ability id is out of bound");
+    return false;
   }
-  state->chosen_traits.clear();
+  upgrade_ability(&get_player_state()->ability_system.abilities[abl_id]);
+  refresh_ability(&get_player_state()->ability_system.abilities[abl_id]);
+  return true;
+}
+bool set_inventory_ui_ex(i32 slot_id, data128 data) {
+  for (player_inventory_slot& slot : get_player_state()->inventory) {
+    if (slot_id == slot.slot_id) {
+      slot.ui_buffer = data;
+      return true;
+    }
+  }
+  return false;
 }
 // OPS
 
@@ -960,90 +1069,33 @@ void gm_refresh_stat_by_level(character_stat* stat, i32 level) {
     stat->buffer.f32[3] = stat->buffer.f32[0] + stat->buffer.f32[1] + stat->buffer.f32[2];
   };
   switch (stat->id) {
-    case CHARACTER_STATS_HEALTH:{
-      set_stat_value_int(next_curve_value);
-      return;
-    }
-    case CHARACTER_STATS_HP_REGEN:{
-      set_stat_value_int(next_curve_value / 100.f);
-      return;
-    }
-    case CHARACTER_STATS_MOVE_SPEED:{
-      set_stat_value_f32(next_curve_value * .05f);
-      return;
-    }
-    case CHARACTER_STATS_AOE:{
-      set_stat_value_f32(next_curve_value / 1000.f);
-      return;
-    }
-    case CHARACTER_STATS_OVERALL_DAMAGE: {
-      set_stat_value_int(next_curve_value * .1f);
-      return;
-    }
-    case CHARACTER_STATS_ABILITY_CD: {
-      set_stat_value_f32(next_curve_value / 1000.f);
-      return;
-    }
-    case CHARACTER_STATS_PROJECTILE_AMOUNT: {
-      set_stat_value_int(stat->current_level);
-      return;
-    }
-    case CHARACTER_STATS_EXP_GAIN: {
-      set_stat_value_f32(next_curve_value / 1000.f);
-      return;
-    }
-    case CHARACTER_STATS_TOTAL_TRAIT_POINTS: {
-      set_stat_value_int(next_curve_value / 100.f);
-      return;
-    }
-    case CHARACTER_STATS_BASIC_ATTACK_DAMAGE: {
-      set_stat_value_int(next_curve_value / 100.f);
-      return;
-    }
-    case CHARACTER_STATS_BASIC_ATTACK_SPEED: { 
-      set_stat_value_int(next_curve_value / 100.f);
-      return;
-    }
-    case CHARACTER_STATS_CRITICAL_CHANCE: {
-      set_stat_value_int(next_curve_value / 100.f);
-      return;
-    }
-    case CHARACTER_STATS_CRITICAL_DAMAGE: {
-      set_stat_value_int(next_curve_value / 100.f);
-      return;
-    }
-    case CHARACTER_STATS_OVERALL_LUCK: {
-      set_stat_value_int(next_curve_value / 100.f);
-      return;
-    }
-    case CHARACTER_STATS_DAMAGE_REDUCTION: {
-      set_stat_value_int(next_curve_value / 100.f);
-      return;
-    }
-    case CHARACTER_STATS_CONDITION_DURATION: {
-      set_stat_value_int(next_curve_value / 100.f);
-      return;
-    }
-    case CHARACTER_STATS_DAMAGE_OVER_TIME: {
-      set_stat_value_int(next_curve_value / 100.f);
-      return;
-    }
-    case CHARACTER_STATS_DAMAGE_DEFERRAL: {
-      set_stat_value_int(next_curve_value / 100.f);
-      return;
-    }
-    case CHARACTER_STATS_SIGIL_EFFECTIVENESS: {
-      set_stat_value_int(next_curve_value / 100.f);
-      return;
-    }
-    case CHARACTER_STATS_DROP_RATE:{
-      set_stat_value_int(next_curve_value / 100.f);
-      return;
-    }
-    case CHARACTER_STATS_REWARD_MODIFIER: {
-      set_stat_value_int(next_curve_value / 100.f);
-      return;
-    }
+    case CHARACTER_STATS_HEALTH:                    { set_stat_value_int(next_curve_value         ); return; } // DATA_TYPE_I32
+    case CHARACTER_STATS_STAMINA:                   { set_stat_value_int(next_curve_value         ); return; } // DATA_TYPE_I32
+    case CHARACTER_STATS_MANA:                      { set_stat_value_int(next_curve_value         ); return; } // DATA_TYPE_I32
+    case CHARACTER_STATS_HP_REGEN:                  { set_stat_value_int(next_curve_value / 10.f  ); return; } // DATA_TYPE_I32
+    case CHARACTER_STATS_STAMINA_REGEN:             { set_stat_value_int(next_curve_value / 10.f  ); return; } // DATA_TYPE_I32
+    case CHARACTER_STATS_MANA_REGEN:                { set_stat_value_int(next_curve_value / 10.f  ); return; } // DATA_TYPE_I32
+    case CHARACTER_STATS_MOVE_SPEED:                { set_stat_value_f32(next_curve_value / 100.f ); return; } // DATA_TYPE_F32
+    case CHARACTER_STATS_AOE:                       { set_stat_value_f32(next_curve_value / 1000.f); return; } // DATA_TYPE_F32
+    case CHARACTER_STATS_OVERALL_DAMAGE:            { set_stat_value_f32(next_curve_value / 1000.f); return; } // DATA_TYPE_F32
+    case CHARACTER_STATS_ABILITY_CD:                { set_stat_value_f32(next_curve_value / 1000.f); return; } // DATA_TYPE_F32
+    case CHARACTER_STATS_PROJECTILE_AMOUNT:         { set_stat_value_int(level                    ); return; } // DATA_TYPE_I32
+    case CHARACTER_STATS_EXP_GAIN:                  { set_stat_value_f32(next_curve_value / 100.f ); return; } // DATA_TYPE_F32
+    case CHARACTER_STATS_TOTAL_TRAIT_POINTS:        { set_stat_value_int(next_curve_value / 100.f ); return; } // DATA_TYPE_I32
+    case CHARACTER_STATS_BASIC_ATTACK_DAMAGE:       { set_stat_value_int(next_curve_value / 100.f ); return; } // DATA_TYPE_I32
+    case CHARACTER_STATS_BASIC_ATTACK_SPEED:        { set_stat_value_f32(next_curve_value / 100.f ); return; } // DATA_TYPE_F32
+    case CHARACTER_STATS_CRITICAL_CHANCE:           { set_stat_value_f32(next_curve_value / 100.f ); return; } // DATA_TYPE_F32
+    case CHARACTER_STATS_CRITICAL_DAMAGE:           { set_stat_value_f32(next_curve_value / 100.f ); return; } // DATA_TYPE_F32
+    case CHARACTER_STATS_OVERALL_LUCK:              { set_stat_value_f32(next_curve_value / 100.f ); return; } // DATA_TYPE_F32
+    case CHARACTER_STATS_DAMAGE_REDUCTION:          { set_stat_value_f32(next_curve_value / 100.f ); return; } // DATA_TYPE_F32
+    case CHARACTER_STATS_CONDITION_DURATION:        { set_stat_value_f32(next_curve_value / 100.f ); return; } // DATA_TYPE_F32
+    case CHARACTER_STATS_DAMAGE_OVER_TIME:          { set_stat_value_int(next_curve_value / 100.f ); return; } // DATA_TYPE_I32
+    case CHARACTER_STATS_DAMAGE_DEFERRAL:           { set_stat_value_f32(next_curve_value / 100.f ); return; } // DATA_TYPE_F32
+    case CHARACTER_STATS_SIGIL_EFFECTIVENESS:       { set_stat_value_f32(next_curve_value / 100.f ); return; } // DATA_TYPE_F32
+    case CHARACTER_STATS_VITAL_SIGIL_EFFECTIVENESS: { set_stat_value_f32(next_curve_value / 100.f ); return; } // DATA_TYPE_F32
+    case CHARACTER_STATS_LETAL_SIGIL_EFFECTIVENESS: { set_stat_value_f32(next_curve_value / 100.f ); return; } // DATA_TYPE_F32
+    case CHARACTER_STATS_DROP_RATE:                 { set_stat_value_f32(next_curve_value / 100.f ); return; } // DATA_TYPE_F32
+    case CHARACTER_STATS_REWARD_MODIFIER:           { set_stat_value_f32(next_curve_value / 100.f ); return; } // DATA_TYPE_F32
     default:{
       IWARN("game_manager::gm_refresh_stat_by_level()::Unsuppported stat id");
       return;
@@ -1068,73 +1120,48 @@ bool gm_refresh_game_rule_by_level(game_rule* rule, i32 level) {
     IWARN("game_manager::gm_refresh_game_rule_by_level()::Level is out of bound");
     return false;
   }
-
   i32 next_curve_value = level_curve[static_cast<size_t>(level)];
   rule->upgrade_cost = level_curve[static_cast<size_t>(level - rule->base_level + 1u)];
   rule->level = level;
-
+  
+  auto set_game_rule_value_int = [&](i32 value) {
+    rule->mm_ex.i32[1] = value;
+    rule->mm_ex.i32[3] = rule->mm_ex.i32[0] + rule->mm_ex.i32[1] + rule->mm_ex.i32[2];
+  };
+  auto set_game_rule_value_f32 = [&](f32 value) {
+    rule->mm_ex.f32[1] = value;
+    rule->mm_ex.f32[3] = rule->mm_ex.f32[0] + rule->mm_ex.f32[1] + rule->mm_ex.f32[2];
+  };
   switch (rule->id) {
-    case GAME_RULE_SPAWN_MULTIPLIER:{
-      const f32 value = next_curve_value / 10000.f;
-
-      rule->mm_ex.f32[1] = value;
-      rule->mm_ex.f32[3] = rule->mm_ex.f32[0] + rule->mm_ex.f32[1] + rule->mm_ex.f32[2];
-      return true;
-    }
-    case GAME_RULE_PLAY_TIME_MULTIPLIER:{ 
-      const f32 value = next_curve_value / 10000.f;
-
-      rule->mm_ex.f32[1] = value;
-      rule->mm_ex.f32[3] = rule->mm_ex.f32[0] + rule->mm_ex.f32[1] + rule->mm_ex.f32[2];
-      return true;
-    }
-    case GAME_RULE_DELTA_TIME_MULTIPLIER:{
-      const f32 value = next_curve_value / 10000.f;
-
-      rule->mm_ex.f32[1] = value;
-      rule->mm_ex.f32[3] = rule->mm_ex.f32[0] + rule->mm_ex.f32[1] + rule->mm_ex.f32[2];
-      return true;
-    }
-    case GAME_RULE_BOSS_MODIFIER:{
-      const i32 value = level;
-
-      rule->mm_ex.i32[1] = value;
-      rule->mm_ex.i32[3] = rule->mm_ex.i32[0] + rule->mm_ex.i32[1] + rule->mm_ex.i32[2];
-      return true;
-    }
-    case GAME_RULE_AREA_UNLOCKER:{
-      const i32 value = level;
-
-      rule->mm_ex.i32[1] = value;
-      rule->mm_ex.i32[3] = rule->mm_ex.i32[0] + rule->mm_ex.i32[1] + rule->mm_ex.i32[2];
-      return true;
-    }
-    case GAME_RULE_TRAIT_POINT_MODIFIER:{
-      const i32 value = next_curve_value / 100.f;
-
-      rule->mm_ex.i32[1] = value;
-      rule->mm_ex.i32[3] = rule->mm_ex.i32[0] + rule->mm_ex.i32[1] + rule->mm_ex.i32[2];
-      return true;
-    }
-    case GAME_RULE_BONUS_RESULT_MULTIPLIER:{
-      const f32 value = next_curve_value / 10000.f;
-
-      rule->mm_ex.f32[1] = value;
-      rule->mm_ex.f32[3] = rule->mm_ex.f32[0] + rule->mm_ex.f32[1] + rule->mm_ex.f32[2];
-      return true;
-    }
-    case GAME_RULE_ZOMBIE_LEVEL_MODIFIER:{
-      const i32 value = level;
-
-      rule->mm_ex.i32[1] = value;
-      rule->mm_ex.i32[3] = rule->mm_ex.i32[0] + rule->mm_ex.i32[1] + rule->mm_ex.i32[2];
-      return true;
-    }
+    case GAME_RULE_SPAWN_MULTIPLIER:{        set_game_rule_value_f32(next_curve_value / 10000.f); return true; }
+    case GAME_RULE_PLAY_TIME_MULTIPLIER:{    set_game_rule_value_f32(next_curve_value / 10000.f); return true; }
+    case GAME_RULE_DELTA_TIME_MULTIPLIER:{   set_game_rule_value_f32(next_curve_value / 10000.f); return true; }
+    case GAME_RULE_BOSS_MODIFIER:{           set_game_rule_value_int(level);                      return true; }
+    case GAME_RULE_AREA_UNLOCKER:{           set_game_rule_value_int(level);                      return true; }
+    case GAME_RULE_TRAIT_POINT_MODIFIER:{    set_game_rule_value_int(next_curve_value / 100.f);   return true; }
+    case GAME_RULE_BONUS_RESULT_MULTIPLIER:{ set_game_rule_value_f32(next_curve_value / 10000.f); return true; }
+    case GAME_RULE_ZOMBIE_LEVEL_MODIFIER:{   set_game_rule_value_int(level);                      return true; }
     case GAME_RULE_RESERVED_FOR_FUTURE_USE:{
       #warning "GAME_RULE_RESERVED_FOR_FUTURE_USE"
 
       return true;
     }
+    case GAME_RULE_BASIC_ATTACKS_REQUIRE_STAMINA: {    return true; }                                //INFO: i32, bool Should not set by level
+    case GAME_RULE_JUMP_REQUIRE_STAMINA: {             return true; }                                //INFO: i32, bool Should not set by level
+    case GAME_RULE_LOOTING_DISTANCE: {                 set_game_rule_value_f32(level); return true; }//INFO: f32
+    case GAME_RULE_ZOMBIE_BITE_CONDITIONS: {           return true; }                                //INFO: i32, enum Should not set by level
+    case GAME_RULE_NEAR_ZOMBIE_CONDITIONS: {           return true; }                                //INFO: i32, enum Should not set by level
+    case GAME_RULE_ITEM_SLOT_COUNT: {                  set_game_rule_value_int(level); return true; }//INFO: i32
+    case GAME_RULE_YOUR_SKILLS_DAMAGES_YOU: {          return true; }                                //INFO: i32, bool Should not set by level
+    case GAME_RULE_HEALTH_BAR_VISIBILITY: {            return true; }                                //INFO: i32, bool Should not set by level
+    case GAME_RULE_INGAME_ZOOM: {                      set_game_rule_value_f32(level); return true; }//INFO: f32
+    case GAME_RULE_CHEST_SCROLL_SPEED: {               set_game_rule_value_f32(level); return true; }//INFO: f32
+    case GAME_RULE_SKILL_SLOT_COUNT: {                 set_game_rule_value_int(level); return true; }//INFO: i32
+    case GAME_RULE_ZOMBIE_FOLLOW_DISTANCE: {           set_game_rule_value_f32(level); return true; }//INFO: f32
+    case GAME_RULE_TIMER_VISIBILITY: {                 return true; }                                //INFO: i32, bool Should not set by level
+    case GAME_RULE_EXP_BAR_VISIBILITY: {               return true; }                                //INFO: i32, bool Should not set by level
+    case GAME_RULE_PROJECTILE_PASS_THROUGH_MODIFIER: { set_game_rule_value_int(level); return true; }//INFO: i32
+    case GAME_RULE_ROLL_DISTANCE_MULTIPLIER: {         set_game_rule_value_f32(level); return true; }//INFO: f32
     default:{
       IWARN("game_manager::gm_refresh_game_rule_by_level()::Unsuppported stat id");
       return false;
@@ -1143,13 +1170,14 @@ bool gm_refresh_game_rule_by_level(game_rule* rule, i32 level) {
   IERROR("game_manager::gm_refresh_game_rule_by_level()::Function ended unexpectedly");
   return false;
 }
-void game_manager_set_stat_trait_value_by_level(character_stat* stat, data128 value) {
+
+void gm_set_character_stat_trait_value(character_stat* stat, data128 value) {
   if (not state or state == nullptr) {
-    IERROR("game_manager::game_manager_set_stat_trait_value_by_level()::State is not valid");
+    IERROR("game_manager::gm_set_character_stat_trait_value()::State is not valid");
     return;
   }
   if (not stat or stat == nullptr) {
-    IWARN("game_manager::game_manager_set_stat_trait_value_by_level()::stat is not valid");
+    IWARN("game_manager::gm_set_character_stat_trait_value()::stat is not valid");
     return;
   }
   auto set_stat_value_int = [stat, &value](void) {
@@ -1160,97 +1188,54 @@ void game_manager_set_stat_trait_value_by_level(character_stat* stat, data128 va
     stat->buffer.f32[2] = value.f32[0];
     stat->buffer.f32[3] = stat->buffer.f32[0] + stat->buffer.f32[1] + stat->buffer.f32[2];
   };
-  switch (stat->id) {
-    case CHARACTER_STATS_HEALTH:{
+  switch (stat->data_type) {
+    case DATA_TYPE_I32:{
       set_stat_value_int();
       return;
     }
-    case CHARACTER_STATS_HP_REGEN:{
-      set_stat_value_int();
-      return;
-    }
-    case CHARACTER_STATS_MOVE_SPEED:{
+    case DATA_TYPE_F32:{
       set_stat_value_f32();
-      return;
-    }
-    case CHARACTER_STATS_AOE:{
-      set_stat_value_f32();
-      return;
-    }
-    case CHARACTER_STATS_OVERALL_DAMAGE:{
-      set_stat_value_int();
-      return;
-    }
-    case CHARACTER_STATS_ABILITY_CD:{
-      set_stat_value_f32();
-      return;
-    }
-    case CHARACTER_STATS_PROJECTILE_AMOUNT:{
-      set_stat_value_int();
-      return;
-    }
-    case CHARACTER_STATS_EXP_GAIN:{
-      set_stat_value_f32();
-      return;
-    }
-    case CHARACTER_STATS_TOTAL_TRAIT_POINTS:{
-      set_stat_value_int();
-      return;
-    }
-    case CHARACTER_STATS_BASIC_ATTACK_DAMAGE: {
-      set_stat_value_int();
-      return;
-    }
-    case CHARACTER_STATS_BASIC_ATTACK_SPEED: { 
-      set_stat_value_int();
-      return;
-    }
-    case CHARACTER_STATS_CRITICAL_CHANCE: {
-      set_stat_value_int();
-      return;
-    }
-    case CHARACTER_STATS_CRITICAL_DAMAGE: {
-      set_stat_value_int();
-      return;
-    }
-    case CHARACTER_STATS_OVERALL_LUCK: {
-      set_stat_value_int();
-      return;
-    }
-    case CHARACTER_STATS_DAMAGE_REDUCTION: {
-      set_stat_value_int();
-      return;
-    }
-    case CHARACTER_STATS_CONDITION_DURATION: {
-      set_stat_value_int();
-      return;
-    }
-    case CHARACTER_STATS_DAMAGE_OVER_TIME: {
-      set_stat_value_int();
-      return;
-    }
-    case CHARACTER_STATS_DAMAGE_DEFERRAL: {
-      set_stat_value_int();
-      return;
-    }
-    case CHARACTER_STATS_SIGIL_EFFECTIVENESS: {
-      set_stat_value_int();
-      return;
-    }
-    case CHARACTER_STATS_DROP_RATE:{
-      set_stat_value_int();
-      return;
-    }
-    case CHARACTER_STATS_REWARD_MODIFIER: {
-      set_stat_value_int();
       return;
     }
     default:{
-      IWARN("game_manager::game_manager_set_stat_trait_value_by_level()::Unsuppported stat id");
+      IWARN("game_manager::gm_set_character_stat_trait_value()::Unsuppported data type");
       return;
     }
   }
-  IERROR("game_manager::game_manager_set_stat_trait_value_by_level()::Function ended unexpectedly");
+  IERROR("game_manager::gm_set_character_stat_trait_value()::Function ended unexpectedly");
+}
+void gm_set_game_rule_trait_value(game_rule* rule, data128 value) {
+  if (not state or state == nullptr) {
+    IERROR("game_manager::gm_set_game_rule_trait_value()::State is not valid");
+    return;
+  }
+  if (not rule or rule == nullptr) {
+    IWARN("game_manager::gm_set_game_rule_trait_value()::stat is not valid");
+    return;
+  }
+  auto set_rule_value_int = [rule, &value](void) {
+    rule->mm_ex.i32[2] = value.i32[0];
+    rule->mm_ex.i32[3] = rule->mm_ex.i32[0] + rule->mm_ex.i32[1] + rule->mm_ex.i32[2];
+  };
+  auto set_rule_value_f32 = [rule, &value](void) {
+    rule->mm_ex.f32[2] = value.f32[0];
+    rule->mm_ex.f32[3] = rule->mm_ex.f32[0] + rule->mm_ex.f32[1] + rule->mm_ex.f32[2];
+  };
+  switch (rule->data_type) {
+    case DATA_TYPE_I32:{
+      set_rule_value_int();
+      return;
+    }
+    case DATA_TYPE_F32:{
+      set_rule_value_f32();
+      return;
+    }
+    default:{
+      IWARN("game_manager::gm_set_game_rule_trait_value()::Unsuppported data type");
+      return;
+    }
+  }
+  IERROR("game_manager::gm_set_game_rule_trait_value()::Function ended unexpectedly");
 }
 // GET / SET
 
@@ -1268,7 +1253,7 @@ const std::array<ability, ABILITY_ID_MAX> * _get_all_abilities(void) {
 const Character2D * _get_spawn_by_id(i32 _id) {
   return get_spawn_by_id(_id);
 }
-player_state * gm_get_player_state(void) {
+const player_state * gm_get_player_state(void) {
   return get_player_state();
 }
 bool _add_ability(ability_id _id) {
@@ -1285,16 +1270,6 @@ bool _add_ability(ability_id _id) {
   abl.is_active = true;
   refresh_ability(__builtin_addressof(abl));
   system.abilities.at(_id) = abl;
-  return true;
-}
-bool _upgrade_ability(ability* abl) {
-  if (not abl or abl == nullptr or not abl->is_initialized) {
-    IWARN("game_manager::_upgrade_ability::Recieved ability has not initialized yet");
-    return false;
-  }
-  upgrade_ability(abl);
-  refresh_ability(abl);
-
   return true;
 }
 ability _get_next_level(ability abl) {
@@ -1315,7 +1290,7 @@ void _set_player_position(Vector2 position) {
 bool game_manager_on_event(i32 code, event_context context) {
   switch (code) {
     case EVENT_CODE_END_GAME: {
-      gm_end_game(static_cast<bool>(context.data.i32[0]), static_cast<bool>(context.data.i32[1]));
+      gm_end_game(static_cast<bool>(context.data.i32[1]));
       return true;
     }
     case EVENT_CODE_DAMAGE_PLAYER_IF_COLLIDE: {
@@ -1366,3 +1341,7 @@ bool game_manager_on_event(i32 code, event_context context) {
 #undef GET_BOSS_SCALE
 #undef GET_BOSS_SPEED
 #undef ZOOM_CAMERA_GAME_RESULTS
+#undef MAX_NEAREST_SPAWN_DISTANCE
+#undef MAX_GAME_RULE_LEVEL
+#undef FIRST_UPGRADABLE_GAME_RULE
+#undef LAST_UPGRADABLE_GAME_RULE

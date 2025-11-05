@@ -30,6 +30,8 @@ f32 math_floor(f32 x);
 f32 math_ceil(f32 x);
 f32 math_abs(f32 x);
 
+bool math_isvalid(f32 x);
+
 f32 math_easing(f32 accumulator, f32 begin, f32 change, f32 duration, easing_type easing_function);
 
 #endif

@@ -340,7 +340,7 @@ bool user_interface_system_initialize(const camera_metrics * in_camera_metrics) 
   // PROGRES BAR TYPES
   {
     register_progress_bar_type(progress_bar_type(
-      PRG_BAR_TYPE_ID_CRIMSON_FANT_BAR, ATLAS_TEX_ID_PROGRESS_BAR_INSIDE_FULL, ATLAS_TEX_ID_PROGRESS_BAR_OUTSIDE_FULL, SHADER_ID_PROGRESS_BAR_MASK, 
+      PRG_BAR_TYPE_ID_CRIMSON_FANTASY_BAR, ATLAS_TEX_ID_PROGRESS_BAR_INSIDE_FULL, ATLAS_TEX_ID_PROGRESS_BAR_OUTSIDE_FULL, SHADER_ID_PROGRESS_BAR_MASK, 
       Rectangle {3.f, 0.f, 42.f, 4}, Rectangle {23.f, 0.f, 14.f, 4.f}, Rectangle {16.f, 0.f, 16.f, 4.f})
     );
     register_progress_bar_type(progress_bar_type(
@@ -351,14 +351,20 @@ bool user_interface_system_initialize(const camera_metrics * in_camera_metrics) 
       PRG_BAR_TYPE_ID_DARK_FANTASY_BOSSBAR_6_WHITE_INNER, ATLAS_TEX_ID_DARK_FANTASY_BOSSBAR_6_INSIDE_WHITE, ATLAS_TEX_ID_DARK_FANTASY_BOSSBAR_6_OUTSIDE, SHADER_ID_PROGRESS_BAR_MASK, 
       Rectangle {0.f, 0.f, 192.f, 7}, Rectangle {32.f, 0.f, 128.f, 7}, Rectangle {32.f, 0.f, 128.f, 7})
     );
+    register_progress_bar_type(progress_bar_type(
+      PRG_BAR_TYPE_ID_CRIMSON_FANTASY_BAR_WHITE_INNER, ATLAS_TEX_ID_DARK_FANTASY_BOSSBAR_6_INSIDE_WHITE, ATLAS_TEX_ID_PROGRESS_BAR_OUTSIDE_FULL, SHADER_ID_PROGRESS_BAR_MASK, 
+      Rectangle {3.f, 0.f, 42.f, 4}, Rectangle {32.f, 0.f, 128.f, 7}, Rectangle {16.f, 0.f, 16.f, 4.f})
+    );
   }
   // PROGRES BAR TYPES
 
   // PROGRES BARS
   {
     register_progress_bar(PRG_BAR_ID_PLAYER_EXPERIANCE, PRG_BAR_TYPE_ID_DARK_FANTASY_BOSSBAR_6_YELLOW_INNER);
-    register_progress_bar(PRG_BAR_ID_PLAYER_HEALTH, PRG_BAR_TYPE_ID_CRIMSON_FANT_BAR);
     register_progress_bar(PRG_BAR_ID_BOSS_HEALTH, PRG_BAR_TYPE_ID_DARK_FANTASY_BOSSBAR_6_WHITE_INNER);
+    register_progress_bar(PRG_BAR_ID_PLAYER_HEALTH, PRG_BAR_TYPE_ID_CRIMSON_FANTASY_BAR);
+    register_progress_bar(PRG_BAR_ID_PLAYER_STAMINA, PRG_BAR_TYPE_ID_CRIMSON_FANTASY_BAR_WHITE_INNER);
+    register_progress_bar(PRG_BAR_ID_PLAYER_MANA, PRG_BAR_TYPE_ID_CRIMSON_FANTASY_BAR_WHITE_INNER);
   }
   // PROGRES BARS
 
@@ -1441,7 +1447,7 @@ void ui_refresh_setting_sliders_to_default(void) {
 	i32 language_index = loc_parser_get_active_language()->index;
 	for (size_t itr_000 = 0u; itr_000 < SDR_AT(SDR_ID_SETTINGS_LANGUAGE).options.size(); ++itr_000) {
 		data_pack opt = SDR_AT(SDR_ID_SETTINGS_LANGUAGE).options.at(itr_000).content;
-		if (opt.data.i32[0] == language_index && (opt.type_flag < DATA_TYPE_MAX && opt.type_flag > DATA_TYPE_UNRESERVED)) {
+		if (opt.data.i32[0] == language_index && (opt.type_flag < DATA_TYPE_MAX && opt.type_flag > DATA_TYPE_UNDEFINED)) {
 			SDR_AT(SDR_ID_SETTINGS_LANGUAGE).current_value = itr_000;
 			break;
 		}
@@ -2088,12 +2094,26 @@ void process_fade_effect(ui_fade_control_system *const fade) {
   }
   switch (fade->fade_type) {
     case FADE_TYPE_FADEIN: {
-      f32 process = EaseQuadIn(fade->fade_animation_timer, 0.f, 1.f, fade->fade_animation_duration);
+      f32 process = EaseQuadIn(fade->fade_animation_accumulator, 0.f, 1.f, fade->fade_animation_duration);
+      if (not math_isvalid(process)) {
+        process = 1.f;
+        fade->fade_animation_accumulator = fade->fade_animation_duration;
+        event_fire(EVENT_CODE_SET_POST_PROCESS_FADE_VALUE, event_context(1.f));
+        break;
+      }
+      process = FCLAMP(process, 0.f, 1.f);
       event_fire(EVENT_CODE_SET_POST_PROCESS_FADE_VALUE, event_context(static_cast<f32>(process)));
       break;
     }
     case FADE_TYPE_FADEOUT: {
-      f32 process = EaseQuadOut(fade->fade_animation_timer, 1.f, -1.f, fade->fade_animation_duration);
+      f32 process = EaseQuadOut(fade->fade_animation_accumulator, 1.f, -1.f, fade->fade_animation_duration);
+      if (not math_isvalid(process)) {
+        process = 0.f;
+        fade->fade_animation_accumulator = fade->fade_animation_duration;
+        event_fire(EVENT_CODE_SET_POST_PROCESS_FADE_VALUE, event_context(0.f));
+        break;
+      }
+      process = FCLAMP(process, 0.f, 1.f);
       event_fire(EVENT_CODE_SET_POST_PROCESS_FADE_VALUE, event_context(static_cast<f32>(process)));
       break;
     }
@@ -2101,11 +2121,13 @@ void process_fade_effect(ui_fade_control_system *const fade) {
       return;
     }
   }
-  if (fade->fade_animation_timer >= fade->fade_animation_duration) {
+  if (fade->fade_animation_accumulator >= fade->fade_animation_duration) {
     fade->is_fade_animation_played = true; 
     fade->fade_animation_playing = false;
   }
-  else fade->fade_animation_timer++;
+  else {
+    fade->fade_animation_accumulator += GetFrameTime();
+  }
 }
 /**
  * @brief relative if you want to draw from another atlas.

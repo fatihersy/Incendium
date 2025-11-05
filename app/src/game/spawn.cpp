@@ -88,6 +88,8 @@ void register_spawn_animation(Character2D& spawn, spawn_movement_animations move
 void update_spawn_animation(Character2D& spawn);
 void spawn_item(std::vector<std::tuple<item_type, i32, data128>> items, data128 context);
 
+bool spawn_on_event(i32 code, event_context context);
+
 grid_cell_id get_cell_id(Vector2 position) {
   return {
     static_cast<int>(position.x / CELL_SIZE),
@@ -119,7 +121,8 @@ bool spawn_system_initialize(const camera_metrics* _camera_metrics, const ingame
   *state = spawn_system_state();
   state->in_camera_metrics = _camera_metrics;
   state->in_ingame_info = _ingame_info;
-  state->spawn_follow_distance = SPAWN_FOLLOW_DISTANCE;
+
+  event_register(EVENT_CODE_SET_SPAWN_FOLLOW_DISTANCE, spawn_on_event);
 
   return true;
 }
@@ -302,61 +305,62 @@ bool update_spawns(Vector2 player_position) {
       }
       continue; 
     }
+    f32 distance = vec2_distance(character.position, player_position);
+    if (distance < state->spawn_follow_distance) {
+      grid_cell_id old_cell = get_cell_id(character.position);
+      Vector2 new_position = move_towards(character.position, player_position, character.speed * (*state->in_ingame_info->delta_time) );
+      bool x0_collide = false;
+      bool y0_collide = false;
 
-    grid_cell_id old_cell = get_cell_id(character.position);
-    Vector2 new_position = move_towards(character.position, player_position, character.speed * (*state->in_ingame_info->delta_time) );
-    bool x0_collide = false;
-    bool y0_collide = false;
+      grid_cell_id current_cell = get_cell_id(character.position);
 
-    grid_cell_id current_cell = get_cell_id(character.position);
+      for (int x = current_cell.x - 1; x <= current_cell.x + 1; ++x) { 
+        for (int y = current_cell.y - 1; y <= current_cell.y + 1; ++y) {
 
-    for (int x = current_cell.x - 1; x <= current_cell.x + 1; ++x) { 
-      for (int y = current_cell.y - 1; y <= current_cell.y + 1; ++y) {
-
-        auto it = state->spatial_grid.find({x, y});
-        if (it == state->spatial_grid.end()) {
-          continue;
-        }
-        for (Character2D* neighbor : it->second) {
-          if (neighbor->character_id == character.character_id) {
+          auto it = state->spatial_grid.find({x, y});
+          if (it == state->spatial_grid.end()) {
             continue;
           }
-          const Rectangle spw_col = character.collision;
-          const Rectangle x0 = {spw_col.x, new_position.y, spw_col.width, spw_col.height};
-          const Rectangle y0 = {new_position.x, spw_col.y, spw_col.width, spw_col.height};
-          if (CheckCollisionRecs(neighbor->collision, x0)) {
-            x0_collide = true;
-          }
-          if (CheckCollisionRecs(neighbor->collision, y0)) {
-            y0_collide = true;
+          for (Character2D* neighbor : it->second) {
+            if (neighbor->character_id == character.character_id) {
+              continue;
+            }
+            const Rectangle spw_col = character.collision;
+            const Rectangle x0 = {spw_col.x, new_position.y, spw_col.width, spw_col.height};
+            const Rectangle y0 = {new_position.x, spw_col.y, spw_col.width, spw_col.height};
+            if (CheckCollisionRecs(neighbor->collision, x0)) {
+              x0_collide = true;
+            }
+            if (CheckCollisionRecs(neighbor->collision, y0)) {
+              y0_collide = true;
+            }
           }
         }
       }
+      if (not x0_collide) {
+        character.position.y = new_position.y;
+        character.collision.y = character.position.y;
+      }
+      if (not y0_collide) {
+        if (character.position.x - new_position.x > 0) {
+          character.w_direction = WORLD_DIRECTION_LEFT;
+        } else {
+          character.w_direction = WORLD_DIRECTION_RIGHT;
+        }
+        character.position.x = new_position.x;
+        character.collision.x = character.position.x;
+      }
+      grid_cell_id new_cell = get_cell_id(character.position);
+      if (new_cell.x != old_cell.x or new_cell.y != old_cell.y) {
+        auto it = state->spatial_grid.find(old_cell);
+        if (it != state->spatial_grid.end()) {
+          std::erase(it->second, &character);
+        }
+        state->spatial_grid[new_cell].push_back(&character);
+      }
     }
 
-    if (not x0_collide) {
-      character.position.y = new_position.y;
-      character.collision.y = character.position.y;
-    }
-    if (not y0_collide) {
-      if (character.position.x - new_position.x > 0) {
-        character.w_direction = WORLD_DIRECTION_LEFT;
-      } else {
-        character.w_direction = WORLD_DIRECTION_RIGHT;
-      }
-      character.position.x = new_position.x;
-      character.collision.x = character.position.x;
-    }
     update_spawn_animation(character);
-
-    grid_cell_id new_cell = get_cell_id(character.position);
-    if (new_cell.x != old_cell.x or new_cell.y != old_cell.y) {
-      auto it = state->spatial_grid.find(old_cell);
-      if (it != state->spatial_grid.end()) {
-        std::erase(it->second, &character);
-      }
-      state->spatial_grid[new_cell].push_back(&character);
-    }
 
     // WARN: This event fires 'clean_up_spawn_state()' function if player die from damage
     event_fire(EVENT_CODE_DAMAGE_PLAYER_IF_COLLIDE, event_context(
@@ -752,6 +756,22 @@ void register_spawn_animation(Character2D& spawn, spawn_movement_animations move
   }
 
   IERROR("spawn::register_spawn_animation()::Function has ended unexpectedly");
+}
+
+bool spawn_on_event(i32 code, event_context context) {
+  switch (code) {
+    case EVENT_CODE_SET_SPAWN_FOLLOW_DISTANCE: {
+      //state->spawn_follow_distance = (*state->in_ingame_info->game_rules)[GAME_RULE_ZOMBIE_FOLLOW_DISTANCE].mm_ex.f32[3];
+      state->spawn_follow_distance = context.data.f32[0];
+      return true;
+    }
+    default: {
+      IWARN("spawn::spawn_on_event()::Unsuppported code.");
+      return false;
+    }
+  }
+  IERROR("spawn::spawn_on_event()::Fire event ended unexpectedly");
+  return false;
 }
 
 #undef DEATH_EFFECT_HEIGHT_SCALE

@@ -390,8 +390,8 @@ typedef enum ui_fade_type {
 } ui_fade_type;
 
 typedef struct ui_fade_control_system {
-  i32 fade_animation_duration;
-  i32 fade_animation_timer; // By frame
+  f32 fade_animation_duration;
+  f32 fade_animation_accumulator;
   ui_fade_type fade_type;
   bool fade_animation_playing;
   bool is_fade_animation_played;
@@ -400,8 +400,8 @@ typedef struct ui_fade_control_system {
   void (*on_change_complete)(data128);
 
   ui_fade_control_system(void) {
-    this->fade_animation_duration = 0;
-    this->fade_animation_timer = 0;
+    this->fade_animation_duration = 0.f;
+    this->fade_animation_accumulator = 0.f;
     this->fade_type = FADE_TYPE_UNDEFINED;
     this->fade_animation_playing = false;
     this->is_fade_animation_played = false;
