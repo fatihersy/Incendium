@@ -1,4 +1,5 @@
 #include "scene_editor.h"
+#include <algorithm>
 #include <defines.h>
 #include <settings.h>
 #include <loc_types.h>
@@ -217,7 +218,7 @@ void se_begin_fadein(data128 data, void(*on_change_complete)(data128));
     IERROR("scene_editor::initialize_scene_editor()::User interface failed to initialize!");
     return false;
   }
-  copy_memory(state->worldmap_locations.data(), get_worldmap_locations(), MAX_WORLDMAP_LOCATIONS * sizeof(worldmap_stage));
+  state->worldmap_locations = get_worldmap_locations();
   state->default_sheet = TILESHEET_TYPE_MAP;
   state->tile_selection_panel = panel();
   state->tile_selection_panel.signal_state = BTN_STATE_HOVER;
@@ -554,8 +555,8 @@ void render_interface_editor(void) {
         }
       }
       pnl->buffer.f32[0] = prop_height_count;
-      pnl->scroll_handle.y = FMAX(pnl->scroll_handle.y, pnl->dest.y + SCROLL_HANDLE_STARTING_HEIGHT);
-      pnl->scroll_handle.y = FMIN(pnl->scroll_handle.y, pnl->dest.y + pnl->dest.height - pnl->scroll_handle.height);
+      pnl->scroll_handle.y = std::max(pnl->scroll_handle.y, pnl->dest.y + SCROLL_HANDLE_STARTING_HEIGHT);
+      pnl->scroll_handle.y = std::min(pnl->scroll_handle.y, pnl->dest.y + pnl->dest.height - pnl->scroll_handle.height);
       pnl->scroll = (pnl->dest.y + pnl->scroll_handle.y - SCROLL_HANDLE_STARTING_HEIGHT) / (pnl->dest.height - pnl->scroll_handle.height) * -1;
       DrawRectangleRec(pnl->scroll_handle, WHITE);
     }
@@ -599,8 +600,8 @@ void render_interface_editor(void) {
         collision_height_count += 30.f;
       }
       pnl->buffer.f32[0] = collision_height_count;
-      pnl->scroll_handle.y = FMAX(pnl->scroll_handle.y, pnl->dest.y + SCROLL_HANDLE_STARTING_HEIGHT);
-      pnl->scroll_handle.y = FMIN(pnl->scroll_handle.y, pnl->dest.y + pnl->dest.height - pnl->scroll_handle.height);
+      pnl->scroll_handle.y = std::max(pnl->scroll_handle.y, pnl->dest.y + SCROLL_HANDLE_STARTING_HEIGHT);
+      pnl->scroll_handle.y = std::min(pnl->scroll_handle.y, pnl->dest.y + pnl->dest.height - pnl->scroll_handle.height);
       pnl->scroll = (pnl->dest.y + pnl->scroll_handle.y - SCROLL_HANDLE_STARTING_HEIGHT) / (pnl->dest.height - pnl->scroll_handle.height) * -1;
       DrawRectangleRec(pnl->scroll_handle, WHITE);
     }
@@ -1238,7 +1239,7 @@ constexpr bool scene_editor_rotation_slider_on_left_button_trigger(void) {
     if(state->selected_prop_static_map_prop_address->rotation < 0.f) {
       state->selected_prop_static_map_prop_address->rotation += 360.f;
     }
-    state->selected_prop_static_map_prop_address->rotation = FCLAMP(state->selected_prop_static_map_prop_address->rotation, 0, 360);
+    state->selected_prop_static_map_prop_address->rotation = std::clamp(state->selected_prop_static_map_prop_address->rotation, 0.f, 360.f);
     return true;
   }
   if (state->selected_prop_sprite_map_prop_address != nullptr) {
@@ -1246,7 +1247,7 @@ constexpr bool scene_editor_rotation_slider_on_left_button_trigger(void) {
     if(state->selected_prop_sprite_map_prop_address->sprite.rotation < 0.f) {
       state->selected_prop_sprite_map_prop_address->sprite.rotation += 360.f;
     }
-    state->selected_prop_sprite_map_prop_address->sprite.rotation = FCLAMP(state->selected_prop_sprite_map_prop_address->sprite.rotation, 0, 360);
+    state->selected_prop_sprite_map_prop_address->sprite.rotation = std::clamp(state->selected_prop_sprite_map_prop_address->sprite.rotation, 0.f, 360.f);
     return true;
   }
 
@@ -1262,7 +1263,7 @@ constexpr bool scene_editor_rotation_slider_on_right_button_trigger(void) {
     if(state->selected_prop_static_map_prop_address->rotation > 360.f) {
       state->selected_prop_static_map_prop_address->rotation -= 360.f;
     }
-    state->selected_prop_static_map_prop_address->rotation = FCLAMP(state->selected_prop_static_map_prop_address->rotation, 0, 360);
+    state->selected_prop_static_map_prop_address->rotation = std::clamp(state->selected_prop_static_map_prop_address->rotation, 0.f, 360.f);
     return true;
   }
   if (state->selected_prop_sprite_map_prop_address != nullptr) {
@@ -1270,7 +1271,7 @@ constexpr bool scene_editor_rotation_slider_on_right_button_trigger(void) {
     if(state->selected_prop_sprite_map_prop_address->sprite.rotation > 360.f) {
       state->selected_prop_sprite_map_prop_address->sprite.rotation -= 360.f;
     }
-    state->selected_prop_sprite_map_prop_address->sprite.rotation = FCLAMP(state->selected_prop_sprite_map_prop_address->sprite.rotation, 0, 360);
+    state->selected_prop_sprite_map_prop_address->sprite.rotation = std::clamp(state->selected_prop_sprite_map_prop_address->sprite.rotation, 0.f, 360.f);
     return true;
   }
 
@@ -1334,7 +1335,7 @@ constexpr bool scene_editor_map_layer_slc_slider_on_left_button_trigger(void) {
   if (state->edit_layer > MAX_TILEMAP_LAYERS - 1) {
     state->edit_layer = MAX_TILEMAP_LAYERS - 1;
   }
-  FCLAMP(state->edit_layer, 0, MAX_TILEMAP_LAYERS - 1);
+  state->edit_layer = std::clamp(static_cast<i32>(state->edit_layer), 0, MAX_TILEMAP_LAYERS - 1);
   get_slider_by_id(SDR_ID_EDITOR_MAP_LAYER_SLC_SLIDER)->options.at(0).no_localized_text = TextFormat("%d", state->edit_layer);
   return true; 
 }
@@ -1347,7 +1348,7 @@ constexpr bool scene_editor_map_layer_slc_slider_on_right_button_trigger(void) {
   if (state->edit_layer > MAX_TILEMAP_LAYERS - 1) {
     state->edit_layer = 0;
   }
-  FCLAMP(state->edit_layer, 0, MAX_TILEMAP_LAYERS - 1);
+  state->edit_layer = std::clamp(static_cast<i32>(state->edit_layer), 0, MAX_TILEMAP_LAYERS - 1);
   get_slider_by_id(SDR_ID_EDITOR_MAP_LAYER_SLC_SLIDER)->options.at(0).no_localized_text = TextFormat("%d", state->edit_layer);
   return true; 
 }
@@ -1360,7 +1361,7 @@ constexpr bool scene_editor_map_stage_slc_slider_on_left_button_trigger(void) {
   if (state->selected_stage >= MAX_WORLDMAP_LOCATIONS) {
     state->selected_stage = MAX_WORLDMAP_LOCATIONS - 1;
   }
-  FCLAMP(state->selected_stage, 0, MAX_WORLDMAP_LOCATIONS - 1);
+  state->selected_stage = std::clamp(static_cast<i32>(state->selected_stage), 0, MAX_WORLDMAP_LOCATIONS - 1);
   set_worldmap_location(state->selected_stage);
   get_slider_by_id(SDR_ID_EDITOR_MAP_STAGE_SLC_SLIDER)->options.at(0).no_localized_text = TextFormat("%d", state->selected_stage);
   return true; 
@@ -1374,7 +1375,7 @@ constexpr bool scene_editor_map_stage_slc_slider_on_right_button_trigger(void) {
   if (state->selected_stage >= MAX_WORLDMAP_LOCATIONS) {
     state->selected_stage = 0;
   }
-  FCLAMP(state->selected_stage, 0, MAX_WORLDMAP_LOCATIONS - 1);
+  state->selected_stage = std::clamp(static_cast<i32>(state->selected_stage), 0, MAX_WORLDMAP_LOCATIONS - 1);
   set_worldmap_location(state->selected_stage);
   get_slider_by_id(SDR_ID_EDITOR_MAP_STAGE_SLC_SLIDER)->options.at(0).no_localized_text = TextFormat("%d", state->selected_stage);
   return true; 

@@ -107,30 +107,32 @@ void update_ability_firetrail(ability *const abl) {
   if (abl->p_owner == nullptr or state->in_ingame_info == nullptr) {
     return;
   }
-  const player_state *const p_player = reinterpret_cast<player_state*>(abl->p_owner);
-  const f32& cd_stat = p_player->stats.at(CHARACTER_STATS_ABILITY_CD).buffer.f32[3];
+  const player_state *const player = reinterpret_cast<player_state*>(abl->p_owner);
+  const f32& cd_stat = player->stats.at(CHARACTER_STATS_ABILITY_CD).buffer.f32[3];
 
   Vector2 ability_projectile_dimentions = Vector2 {abl->proj_dim.x * abl->proj_collision_scale.x, abl->proj_dim.y * abl->proj_collision_scale.y};
-  Vector2 ability_position = VECTOR2(p_player->position.x, p_player->collision.y + p_player->collision.height);
+  Vector2 ability_position = VECTOR2(player->position.x, player->collision.y + player->collision.height);
   abl->position = ability_position;
 
   f32& cd_accumulator = abl->ability_cooldown_accumulator;
   const f32& cd_duration = abl->ability_cooldown_duration - (cd_stat * abl->ability_cooldown_duration);
 
-  for (size_t itr_000 = 0u; itr_000 < abl->projectiles.size(); itr_000++) {
-    projectile* prj = __builtin_addressof(abl->projectiles.at(itr_000));
-    if (prj->duration <= 0.f) {
-      abl->projectiles.erase(abl->projectiles.begin() + itr_000);
+  for (projectile& prj : abl->projectiles) {
+    if (prj.duration <= 0.f) {
       continue;
     }
+    i16 base_damage = static_cast<i16>(prj.damage);
+    i16 final_damage = base_damage + (base_damage * player->stats.at(CHARACTER_STATS_OVERALL_DAMAGE).buffer.f32[3]);
     event_fire(EVENT_CODE_DAMAGE_ANY_SPAWN_IF_COLLIDE, event_context(
-      static_cast<i16>(prj->collision.x), static_cast<i16>(prj->collision.y), static_cast<i16>(prj->collision.width), static_cast<i16>(prj->collision.height), 
-      static_cast<i16>(prj->damage + p_player->stats.at(CHARACTER_STATS_OVERALL_DAMAGE).buffer.i32[3]),
-      static_cast<i16>(COLLISION_TYPE_RECTANGLE_RECTANGLE)
+      static_cast<i16>(prj.collision.x), static_cast<i16>(prj.collision.y), static_cast<i16>(prj.collision.width), static_cast<i16>(prj.collision.height), 
+      final_damage, static_cast<i16>(COLLISION_TYPE_RECTANGLE_RECTANGLE)
     ));
-    update_sprite(__builtin_addressof(prj->animations.at(prj->active_sprite)), (*state->in_ingame_info->delta_time) );
-    prj->duration -= (*state->in_ingame_info->delta_time) ;
+    update_sprite(__builtin_addressof(prj.animations.at(prj.active_sprite)), (*state->in_ingame_info->delta_time) );
+    prj.duration -= (*state->in_ingame_info->delta_time) ;
   }
+  std::erase_if(abl->projectiles, [](projectile& prj){
+    return prj.duration <= 0.f;
+  });
 
   Rectangle last_placed_projectile_dest = Rectangle { 
     abl->vec_ex.f32[0] + abl->vec_ex.f32[2] * .25f, abl->vec_ex.f32[1] + abl->vec_ex.f32[3] * .5f,
@@ -138,10 +140,10 @@ void update_ability_firetrail(ability *const abl) {
   };
 
   Rectangle player_collision = Rectangle {
-    p_player->collision.x + (p_player->collision.width * .25f), 
-    p_player->collision.y + (p_player->collision.height * .8f),
-    p_player->collision.width * .5f, 
-    p_player->collision.height * .2f 
+    player->collision.x + (player->collision.width * .25f), 
+    player->collision.y + (player->collision.height * .8f),
+    player->collision.width * .5f, 
+    player->collision.height * .2f 
   };
 
   cd_accumulator += (*state->in_ingame_info->delta_time) ;
@@ -222,7 +224,7 @@ void refresh_ability_firetrail(ability *const abl) {
   abl->animation_ids.push_back(SHEET_ID_ABILITY_FIRETRAIL_LOOP_ANIMATION);
   abl->animation_ids.push_back(SHEET_ID_ABILITY_FIRETRAIL_END_ANIMATION);
 
-  abl->vec_ex.f32[0] = -5000.f; // x INFO: Random numbers where player can't go for placing first projectile, maybe there is better way to do it but whatever
+  abl->vec_ex.f32[0] = -5000.f; // x INFO: Random numbers where player can't go, for placing first projectile. Maybe there is better way to do it but whatever.
   abl->vec_ex.f32[1] = -5000.f; // y
   abl->vec_ex.f32[2] = 0.f; // width
   abl->vec_ex.f32[3] = 0.f; // height

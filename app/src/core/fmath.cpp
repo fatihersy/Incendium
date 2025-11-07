@@ -82,50 +82,6 @@ x -= z;
 return x;
 }
 
-f32 math_fmod(f32 x, f64 y) {
-  if (std::isnan(x) or std::isinf(x) or std::isnan(y) or std::isinf(y)) {
-    return F32_MAX;
-  }
-  f32 result = fmod(x, y);
-  if (std::isnan(result) or std::isinf(result)) {
-    return F32_MAX;
-  }
-  return result;
-}
-f32 math_floor(f32 x) {
-  if (std::isnan(x) or std::isinf(x)) {
-    return F32_MAX;
-  }
-  f32 result = std::floor(x);
-  if (std::isnan(result) or std::isinf(result)) {
-    return F32_MAX;
-  }
-  return result;
-}
-f32 math_ceil(f32 x) {
-  if (std::isnan(x) or std::isinf(x)) {
-    return F32_MAX;
-  }
-  f32 result = std::ceil(x);
-  if (std::isnan(result) or std::isinf(result)) {
-    return F32_MAX;
-  }
-  return result;
-}
-f32 math_abs(f32 x) {
-  if (std::isnan(x) or std::isinf(x)) {
-    return F32_MAX;
-  }
-  f32 result = std::abs(x);
-  if (std::isnan(result) or std::isinf(result)) {
-    return F32_MAX;
-  }
-  return result;
-}
-bool math_isvalid(f32 x) {
-  return not std::isnan(x) and not std::isinf(x);
-}
-
 f32 math_easing(f32 accumulator, f32 begin, f32 change, f32 duration, easing_type easing_function) {
   switch (easing_function) {
     case EASING_TYPE_LINEAR_NONE:  return EaseLinearNone(accumulator, begin, change, duration);

@@ -104,7 +104,7 @@ void update_ability_fireball(ability *const abl) {
   if (abl->rotation > 360.f) abl->rotation = 0.f;
 
   for (size_t itr_000 = 0u; itr_000 < abl->projectiles.size(); itr_000++) {
-    projectile& prj = abl->projectiles.at(itr_000);
+    projectile& prj = abl->projectiles[itr_000];
     if (not prj.is_active) { continue; }
 
     i16 angle = (i32)(((360.f / abl->projectiles.size()) * itr_000) + abl->rotation) % 360;
@@ -121,11 +121,11 @@ void update_ability_fireball(ability *const abl) {
       prj_collision_width,
       prj_collision_height,
     };
-
+    i16 base_damage = static_cast<i16>(prj.damage);
+    i16 final_damage = base_damage + (base_damage * player->stats.at(CHARACTER_STATS_OVERALL_DAMAGE).buffer.f32[3]);
     event_fire(EVENT_CODE_DAMAGE_ANY_SPAWN_IF_COLLIDE, event_context(
       static_cast<i16>(prj_collision.x), static_cast<i16>(prj_collision.y), static_cast<i16>(prj_collision.width), static_cast<i16>(prj_collision.height),
-      static_cast<i16>(prj.damage + player->stats.at(CHARACTER_STATS_OVERALL_DAMAGE).buffer.i32[3]),
-      static_cast<i16>(COLLISION_TYPE_RECTANGLE_RECTANGLE)
+      final_damage, static_cast<i16>(COLLISION_TYPE_RECTANGLE_RECTANGLE)
     ));
     update_sprite(__builtin_addressof(prj.animations.at(0)), (*state->in_ingame_info->delta_time) );
   }
@@ -146,8 +146,7 @@ void render_ability_fireball(ability *const abl){
   }
   const f32& aoe_scale = state->in_ingame_info->player_state_dynamic->stats.at(CHARACTER_STATS_AOE).buffer.f32[3];
 
-  for (size_t itr_000 = 0u; itr_000 < abl->projectiles.size(); ++itr_000) {
-    projectile& prj = abl->projectiles.at(itr_000);
+  for (projectile& prj : abl->projectiles) {
     if (not prj.is_active) { continue; }
     Vector2 dim = Vector2 {
       prj.animations.at(prj.active_sprite).current_frame_rect.width  * abl->proj_sprite_scale,
@@ -157,6 +156,7 @@ void render_ability_fireball(ability *const abl){
     dim.y += (dim.y * aoe_scale * .5f);
     prj.animations.at(prj.active_sprite).origin.x = dim.x / 2.f;
     prj.animations.at(prj.active_sprite).origin.y = dim.y / 2.f;
+
     play_sprite_on_site(__builtin_addressof(prj.animations.at(prj.active_sprite)), WHITE, Rectangle { prj.position.x, prj.position.y, dim.x, dim.y });
   }
 }
@@ -187,25 +187,18 @@ void refresh_ability_fireball(ability *const abl) {
   abl->animation_ids.clear();
   abl->animation_ids.push_back(SHEET_ID_FLAME_ENERGY_ANIMATION);
 
-  for (int itr_000 = 0; itr_000 < abl->proj_count; ++itr_000) {
-    projectile prj = projectile();
+  for (i32 itr_000 = 0; itr_000 < abl->proj_count; ++itr_000) {
+    projectile& prj = abl->projectiles.emplace_back(projectile());
     prj.collision = Rectangle {0.f, 0.f, abl->proj_dim.x * abl->proj_collision_scale.x, abl->proj_dim.y * abl->proj_collision_scale.y};
     prj.damage = abl->base_damage;
     prj.is_active = true;
     prj.duration = abl->proj_duration;
-    for (size_t itr_111 = 0u; itr_111 < abl->animation_ids.size(); ++itr_111) {
-      if (abl->animation_ids.at(itr_111) <= SHEET_ID_SPRITESHEET_UNSPECIFIED or abl->animation_ids.at(itr_111) >= SHEET_ID_SPRITESHEET_TYPE_MAX) {
-        IWARN("ability::refresh_ability_fireball()::Ability sprite is not initialized or corrupted");
-        return;
-      }
-      spritesheet spr = spritesheet();
-      spr.sheet_id = abl->animation_ids.at(itr_111);
+    for (spritesheet_id& sheet_id : abl->animation_ids) {
+      spritesheet& spr = prj.animations.emplace_back(spritesheet());
+      spr.sheet_id = sheet_id;
       set_sprite(__builtin_addressof(spr), true, false);
       spr.origin = VECTOR2( spr.coord.width * .5f,  spr.coord.height * .5f );
-
-      prj.animations.push_back(spr);
       prj.active_sprite = 0;
     }
-    abl->projectiles.push_back(prj);
   }
 }

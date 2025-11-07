@@ -91,11 +91,6 @@ int alert(const char* caption, const char* message);
 #define WORLDMAP_LOC_PIN_SIZE_DIV2 WORLDMAP_LOC_PIN_SIZE * .5f // Needed?
 #define WORLDMAP_MAINMENU_MAP 0
 
-#define FCLAMP(value, min, max) ((value <= min) ? min : (value >= max) ? max : value)
-#define FMAX(v1, v2) (v1 >= v2) ? v1 : v2
-#define FMIN(v1, v2) (v1 <= v2) ? v1 : v2
-#define FABS(v1) (v1 < 0) ? v1*(-1) : v1
-
 #include <vector>
 
 // Unsigned int types.
@@ -754,6 +749,7 @@ typedef enum atlas_texture_id {
   ATLAS_TEX_ID_DARK_FANTASY_PANEL_BG,
   ATLAS_TEX_ID_HEADER,
   ATLAS_TEX_ID_LITTLE_SHOWCASE,
+  ATLAS_TEX_ID_CRIMSON_FANTASY_ORNATE_FRAME,
   ATLAS_TEX_ID_CRIMSON_FANTASY_PANEL,
   ATLAS_TEX_ID_CRIMSON_FANTASY_PANEL_BG,
   ATLAS_TEX_ID_CRIMSON_FANTASY_SHOWCASE,
@@ -872,6 +868,7 @@ typedef enum button_id {
   BTN_ID_MAINMENU_BUTTON_ENTER_STATE_CHARACTER,
   BTN_ID_MAINMENU_BUTTON_EXIT,
   BTN_ID_MAINMENU_SETTINGS_CANCEL,
+  BTN_ID_MAINMENU_STATE_CHARACTER_ENTER_TAB_UPGRADE,
   BTN_ID_MAINMENU_STATE_CHARACTER_ENTER_TAB_INVENTORY,
   BTN_ID_MAINMENU_STATE_CHARACTER_ENTER_TAB_STATS,
   BTN_ID_MAINMENU_STATE_CHARACTER_BACK,

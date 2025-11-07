@@ -100,6 +100,7 @@ bool resource_system_initialize(void) {
   load_texture_from_atlas(ATLAS_TEX_ID_DARK_FANTASY_BOSSBAR_6_INSIDE_YELLOW, Rectangle{ 1680, 1104,  192,    7 });
   load_texture_from_atlas(ATLAS_TEX_ID_DARK_FANTASY_BOSSBAR_6_INSIDE_WHITE,  Rectangle{ 1680, 1111,  192,    7 });
   load_texture_from_atlas(ATLAS_TEX_ID_DARK_FANTASY_BOSSBAR_6_MIDDLE,        Rectangle{ 1680, 1120,   32,    7 });
+  load_texture_from_atlas(ATLAS_TEX_ID_CRIMSON_FANTASY_ORNATE_FRAME,         Rectangle{ 1568, 1232,   68,   68 });
   load_texture_from_atlas(ATLAS_TEX_ID_CRIMSON_FANTASY_PANEL,                Rectangle{ 1504,   32,   48,   48 });
   load_texture_from_atlas(ATLAS_TEX_ID_CRIMSON_FANTASY_PANEL_BG,             Rectangle{ 1552,   32,   48,   48 });
   load_texture_from_atlas(ATLAS_TEX_ID_DARK_FANTASY_PANEL,                   Rectangle{ 1728,    0,   80,   64 });
@@ -123,10 +124,10 @@ bool resource_system_initialize(void) {
   load_texture_from_atlas(ATLAS_TEX_ID_SIGIL_DAMAGE_UNCOMMON,                Rectangle{ 1920,  816,   32,   32 });
   load_texture_from_atlas(ATLAS_TEX_ID_SIGIL_DAMAGE_RARE,                    Rectangle{ 1952,  816,   32,   32 });
   load_texture_from_atlas(ATLAS_TEX_ID_SIGIL_DAMAGE_EPIC,                    Rectangle{ 1984,  816,   32,   32 });
-  load_texture_from_atlas(ATLAS_TEX_ID_SIGIL_RESISTANCE_COMMON,               Rectangle{ 1888,  848,   32,   32 });
-  load_texture_from_atlas(ATLAS_TEX_ID_SIGIL_RESISTANCE_UNCOMMON,             Rectangle{ 1920,  848,   32,   32 });
-  load_texture_from_atlas(ATLAS_TEX_ID_SIGIL_RESISTANCE_RARE,                 Rectangle{ 1952,  848,   32,   32 });
-  load_texture_from_atlas(ATLAS_TEX_ID_SIGIL_RESISTANCE_EPIC,                 Rectangle{ 1984,  848,   32,   32 });
+  load_texture_from_atlas(ATLAS_TEX_ID_SIGIL_RESISTANCE_COMMON,              Rectangle{ 1888,  848,   32,   32 });
+  load_texture_from_atlas(ATLAS_TEX_ID_SIGIL_RESISTANCE_UNCOMMON,            Rectangle{ 1920,  848,   32,   32 });
+  load_texture_from_atlas(ATLAS_TEX_ID_SIGIL_RESISTANCE_RARE,                Rectangle{ 1952,  848,   32,   32 });
+  load_texture_from_atlas(ATLAS_TEX_ID_SIGIL_RESISTANCE_EPIC,                Rectangle{ 1984,  848,   32,   32 });
 
   load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_PLAYER_ANIMATION_IDLE_RIGHT,        VECTOR2(1584,  224), 10,   22,  32, 1,  4);
   load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_PLAYER_ANIMATION_MOVE_RIGHT,        VECTOR2(1584,  160), 10,   22,  32, 1,  6);

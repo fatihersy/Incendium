@@ -16,8 +16,8 @@ bool get_b_player_have_upgrade_points(void);
 void set_dynamic_player_have_ability_upgrade_points(bool _b);
 
 const ingame_info* gm_get_ingame_info(void);
-const std::vector<character_trait>* gm_get_character_traits_all(void);
-const std::vector<character_trait>* gm_get_game_rules_all(void);
+const std::vector<character_trait>& gm_get_character_traits_all(void);
+const std::array<item_data, ITEM_TYPE_MAX>& gm_get_default_items(void);
 
 [[nodiscard]] bool gm_init_game(worldmap_stage stage, std::vector<character_trait>& _chosen_traits, ability_id starter_ability);
 void gm_start_game(void);

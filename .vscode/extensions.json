@@ -7,6 +7,7 @@
 		"ms-vscode.makefile-tools",
 		"deimonn.oro-theme",
 		"christian-kohler.path-intellisense",
-		"wayou.vscode-todo-highlight"
+		"wayou.vscode-todo-highlight",
+		"usernamehw.errorlens"
 	]
 }

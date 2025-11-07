@@ -13,56 +13,101 @@
 #include "game/world.h"
 #include "game/camera.h"
 
-typedef enum main_menu_scene_type {
+enum main_menu_scene_type {
   MAIN_MENU_SCENE_DEFAULT,
   MAIN_MENU_SCENE_SETTINGS,
   MAIN_MENU_SCENE_CHARACTER,
   MAIN_MENU_SCENE_EXTRAS,
   MAIN_MENU_SCENE_TO_PLAY_MAP_CHOICE,
   MAIN_MENU_SCENE_TO_PLAY_TRAIT_CHOICE,
-} main_menu_scene_type;
-
-typedef enum main_menu_scene_character_subscene_type {
+};
+enum main_menu_scene_character_subscene_type {
   MAIN_MENU_SCENE_CHARACTER_UNDEFINED,
+  MAIN_MENU_SCENE_CHARACTER_UPGRADE,
   MAIN_MENU_SCENE_CHARACTER_INVENTORY,
-  MAIN_MENU_SCENE_CHARACTER_STATS,
+  MAIN_MENU_SCENE_CHARACTER_GAME_RULE,
   MAIN_MENU_SCENE_CHARACTER_MAX,
-} main_menu_scene_character_subscene_type;
+};
 
-typedef struct play_scene_info {
+struct play_scene_info {
   i32 hovered_stage;
   play_scene_info(void) {
     this->hovered_stage = 0;
   }
-}play_scene_info;
-
-typedef struct main_menu_scene_state {
-  panel main_menu_state_character_panel;
-  panel stat_list_panel;
-  panel stat_details_panel;
-  panel inventory_item_list_panel;
-  panel inventory_slots_panel;
-  panel worldmap_selection_panel;
-  panel panel_dark_fantasy_selected_default;
-  panel panel_dark_fantasy_default;
-  panel panel_active_dark_fantasy_default;
+};
+struct mms_trait_ability_selection_context {
+  panel ability_selection_panel;
   panel positive_traits_selection_panel;
   panel negative_traits_selection_panel;
   panel chosen_traits_selection_panel;
-  panel ability_selection_panel;
-  std::vector<character_trait> positive_traits;
-  std::vector<character_trait> negative_traits;
-  i32 available_trait_points;
-  spritesheet inventory_panel_hero_idle_anim;
-  playlist_control_system_state playlist;
-
-  const game_rule * selected_rule;
-  const camera_metrics * in_camera_metrics;
-  const app_settings   * in_app_settings;
-  const ingame_info * in_ingame_info;
   std::array<ability, ABILITY_ID_MAX> abilities;
   std::vector<character_trait> chosen_traits;
   ability_id starter_ability;
+  std::vector<character_trait> positive_traits;
+  std::vector<character_trait> negative_traits;
+  i32 available_trait_points;
+  const game_rule * selected_rule;
+
+  mms_trait_ability_selection_context(void) {
+    this->starter_ability = ABILITY_ID_UNDEFINED ;
+    this->available_trait_points = 0;
+    this->selected_rule = nullptr;
+  }
+};
+struct mms_default_panels {
+  panel panel_dark_fantasy_selected_default;
+  panel panel_active_dark_fantasy_default;
+  panel panel_dark_fantasy_default;
+  mms_default_panels(void) {
+  }
+};
+struct mms_character_game_rule_context {
+  panel rule_list_panel;
+  panel rule_details_panel;
+  const game_rule * selected_rule;
+  mms_character_game_rule_context(void) {
+    this->selected_rule = nullptr;
+  }
+};
+struct mms_character_inventory_context {
+  panel inventory_item_list_panel;
+  panel inventory_slots_panel;
+  mms_character_inventory_context(void) {
+  }
+};
+
+#warning "upgrade state"
+struct mms_character_upgrade_context {
+  panel item_list_panel;
+  panel upgrade_parent_panel;
+  panel left_item_panel;
+  panel right_item_panel;
+  panel result_item_panel;
+  enum character_upgrade_scene_state {
+    CHARACTER_UPGRADE_STATE_UNDEFINED,
+    CHARACTER_UPGRADE_STATE_IDLE,
+    CHARACTER_UPGRADE_STATE_UPGRADE,
+    CHARACTER_UPGRADE_STATE_ERROR_UNSUFFICENT,
+    CHARACTER_UPGRADE_STATE_MAX,
+  } upgrade_state;
+  size_t slot_index;
+  mms_character_upgrade_context(void) {
+    this->upgrade_state = CHARACTER_UPGRADE_STATE_UNDEFINED;
+    this->slot_index = I32_MAX;
+  }
+};
+
+struct main_menu_scene_state {
+  panel worldmap_selection_panel;
+  playlist_control_system_state playlist;
+  mms_default_panels smm_default_panels;
+  mms_trait_ability_selection_context mms_trait_choice;
+  mms_character_inventory_context mms_character_inventory;
+  mms_character_upgrade_context mms_character_upgrade;
+  mms_character_game_rule_context mms_character_game_rule;
+  const camera_metrics * in_camera_metrics;
+  const app_settings   * in_app_settings;
+  const ingame_info * in_ingame_info;
 
   std::array<worldmap_stage, MAX_WORLDMAP_LOCATIONS> worldmap_locations;
   
@@ -83,52 +128,23 @@ typedef struct main_menu_scene_state {
   i32 next_local_panel_id;
 
   main_menu_scene_state(void) {
-    this->main_menu_state_character_panel = panel();
-    this->stat_list_panel = panel();
-    this->stat_details_panel = panel();
-    this->inventory_item_list_panel = panel();
-    this->inventory_slots_panel = panel();
-    this->worldmap_selection_panel = panel();
-    this->panel_dark_fantasy_selected_default = panel();
-    this->panel_dark_fantasy_default = panel();
-    this->panel_active_dark_fantasy_default = panel();
-    this->positive_traits_selection_panel = panel();
-    this->negative_traits_selection_panel = panel();
-    this->chosen_traits_selection_panel = panel();
-    this->ability_selection_panel = panel();
-    //this->positive_traits
-    //this->negative_traits
-    this->available_trait_points = 0;
-    this->inventory_panel_hero_idle_anim = spritesheet();
-    this->playlist = playlist_control_system_state();
-
-    this->selected_rule = nullptr;
     this->in_camera_metrics = nullptr;
     this->in_app_settings = nullptr;
     this->in_ingame_info = nullptr;
-    this->abilities.fill(ability());
-    //this->chosen_traits
-    this->starter_ability = ABILITY_ID_UNDEFINED;
     
-    this->worldmap_locations.fill(worldmap_stage());
-
     this->mouse_pos_screen = nullptr;
     this->deny_notify_timer = 0.f;
     this->bg_scroll = 0.f;
     this->mainmenu_state = MAIN_MENU_SCENE_DEFAULT;
-    this->mainmenu_scene_character_subscene = MAIN_MENU_SCENE_CHARACTER_STATS;
+    this->mainmenu_scene_character_subscene = MAIN_MENU_SCENE_CHARACTER_GAME_RULE;
     this->is_dragging_scroll = false;
     this->is_any_button_down = false;
     this->is_changing_state = false;
 
-    this->ingame_scene_feed = play_scene_info();
-    this->smm_fade = ui_fade_control_system();
-    this->general_purpose_buttons = std::vector<local_button>();
-    this->general_purpose_panels = std::vector<panel>();
     this->next_local_button_id = 0;
     this->next_local_panel_id = 0;
   }
-} main_menu_scene_state;
+};
 
 static main_menu_scene_state * state = nullptr;
 
@@ -156,12 +172,15 @@ static main_menu_scene_state * state = nullptr;
 [[__nodiscard__]] bool begin_scene_main_menu(bool fade_in);
 
 void draw_main_menu_character_panel(void);
-void draw_main_menu_character_subscene_inventory_panel(Rectangle panel_dest, const Vector4 padding);
-void draw_main_menu_character_subscene_inventory_item_list_panel(Rectangle parent_dest, const Vector4 padding);
-void draw_main_menu_character_subscene_inventory_slots_panel(Rectangle parent_dest, const Vector4 padding);
-void draw_main_menu_character_subscene_game_rule_panel(Rectangle panel_dest, const Vector4 padding);
-void draw_main_menu_character_subscene_game_rule_list_panel(Rectangle panel_dest, const Vector4 padding);
-void draw_main_menu_character_subscene_game_rule_details_panel(Rectangle panel_dest, const Vector4 padding);
+void draw_main_menu_character_subscene_upgrade_panel(Rectangle parent_dest, f32 padding);
+void draw_main_menu_character_subscene_upgrade_upgrade_panel(Rectangle parent_dest, f32 padding);
+void draw_main_menu_character_subscene_upgrade_item_list_panel(Rectangle parent_dest, f32 padding);
+void draw_main_menu_character_subscene_inventory_panel(Rectangle parent_dest, f32 padding);
+void draw_main_menu_character_subscene_inventory_item_list_panel(Rectangle parent_dest, f32 padding);
+void draw_main_menu_character_subscene_inventory_slots_panel(Rectangle parent_dest, f32 padding);
+void draw_main_menu_character_subscene_game_rule_panel(Rectangle parent_dest, f32 padding);
+void draw_main_menu_character_subscene_game_rule_list_panel(Rectangle parent_dest, f32 padding);
+void draw_main_menu_character_subscene_game_rule_details_panel(Rectangle parent_dest, f32 padding);
 void draw_trait_selection_panel(void);
 void trait_selection_panel_list_traits(panel* const pnl, const Rectangle rect, std::vector<character_trait>& traits, void (*trait_button_on_click_pfn)(i32 index));
 void trait_selection_panel_list_ability_selection_panel(panel* const pnl, const Rectangle rect, Vector2 border_gap);
@@ -171,6 +190,7 @@ void smm_update_bindings(void);
 void smm_update_local_buttons(void);
 void smm_begin_fadeout(data128 data, void(*on_change_complete)(data128));
 void smm_begin_fadein(data128 data, void(*on_change_complete)(data128));
+void smm_clean_character_context(void);
 local_button* smm_add_local_button(i32 _id, button_type_id _btn_type_id, button_state signal_state);
 panel* smm_add_local_panel(i32 _id, panel pnl);
 local_button* smm_get_local_button(i32 _id);
@@ -238,35 +258,45 @@ void chosen_trait_button_on_click(i32 index);
     return false;
   }
   state->in_ingame_info = gm_get_ingame_info();
-  state->inventory_panel_hero_idle_anim.sheet_id = SHEET_ID_PLAYER_ANIMATION_IDLE_RIGHT;
-  ui_set_sprite(__builtin_addressof(state->inventory_panel_hero_idle_anim), true, false);
-
-  copy_memory(state->worldmap_locations.data(), get_worldmap_locations(), MAX_WORLDMAP_LOCATIONS * sizeof(worldmap_stage));
+  state->worldmap_locations = get_worldmap_locations();
 
   state->mainmenu_state = MAIN_MENU_SCENE_DEFAULT;
-  state->panel_dark_fantasy_selected_default = panel( BTN_STATE_UNDEFINED, ATLAS_TEX_ID_DARK_FANTASY_PANEL_BG, ATLAS_TEX_ID_DARK_FANTASY_PANEL_SELECTED, 
-    Vector4 {10, 10, 10, 10}, Color { 30, 39, 46, 245}, Color { 52, 64, 76, 245}
+  Color bg_black_tint = { 30, 39, 46, 32};
+  Color bg_black_tint_hover = { 52, 64, 76, 196};
+  Color crimson_fantasy_bg_tint = { 30, 39, 46, 64 };
+  Vector4 dark_fantasy_frame_offsets = {6, 6, 6, 6};
+  Vector4 crimson_fantasy_frame_offsets = {6, 6, 6, 6};
+  Vector4 crimson_fantasy_ornate_frame_offsets = {10, 10, 10, 10};
+  state->smm_default_panels.panel_dark_fantasy_selected_default = panel( BTN_STATE_UNDEFINED, ATLAS_TEX_ID_BG_BLACK, ATLAS_TEX_ID_DARK_FANTASY_PANEL_SELECTED, 
+    Vector4 {10, 10, 10, 10}, bg_black_tint
   );
-  state->panel_dark_fantasy_default = panel( BTN_STATE_UNDEFINED, ATLAS_TEX_ID_DARK_FANTASY_PANEL_BG, ATLAS_TEX_ID_DARK_FANTASY_PANEL, 
-    Vector4 {6, 6, 6, 6}, Color { 30, 39, 46, 245}, Color { 52, 64, 76, 245}
+  state->smm_default_panels.panel_dark_fantasy_default = panel( BTN_STATE_UNDEFINED, ATLAS_TEX_ID_BG_BLACK, ATLAS_TEX_ID_DARK_FANTASY_PANEL, 
+    dark_fantasy_frame_offsets, bg_black_tint
   );
-  state->panel_active_dark_fantasy_default = panel(BTN_STATE_RELEASED, ATLAS_TEX_ID_DARK_FANTASY_PANEL_BG, ATLAS_TEX_ID_DARK_FANTASY_PANEL, 
-    Vector4 {6, 6, 6, 6}, Color { 30, 39, 46, 245}, Color { 192, 57, 43, 255}
+  state->smm_default_panels.panel_active_dark_fantasy_default = panel(BTN_STATE_RELEASED, ATLAS_TEX_ID_BG_BLACK, ATLAS_TEX_ID_DARK_FANTASY_PANEL, 
+    dark_fantasy_frame_offsets, bg_black_tint, bg_black_tint_hover
   );
-  state->positive_traits_selection_panel = state->panel_dark_fantasy_default;
-  state->negative_traits_selection_panel = state->panel_dark_fantasy_default;
-  state->chosen_traits_selection_panel = state->panel_dark_fantasy_default;
-  state->ability_selection_panel = state->panel_dark_fantasy_default;
+  state->mms_trait_choice.positive_traits_selection_panel = state->smm_default_panels.panel_dark_fantasy_default;
+  state->mms_trait_choice.negative_traits_selection_panel = state->smm_default_panels.panel_dark_fantasy_default;
+  state->mms_trait_choice.chosen_traits_selection_panel = state->smm_default_panels.panel_dark_fantasy_default;
+  state->mms_trait_choice.ability_selection_panel = state->smm_default_panels.panel_dark_fantasy_default;
 
-  state->worldmap_selection_panel = state->panel_dark_fantasy_selected_default;
-  state->stat_list_panel = panel();
-  state->stat_details_panel = panel(BTN_STATE_UNDEFINED, ATLAS_TEX_ID_DARK_FANTASY_PANEL_BG, ATLAS_TEX_ID_DARK_FANTASY_PANEL, 
-    Vector4 {6, 6, 6, 6}, Color { 30, 39, 46, 196}
-  );
-  state->main_menu_state_character_panel = panel(BTN_STATE_UNDEFINED, ATLAS_TEX_ID_DARK_FANTASY_PANEL_BG, ATLAS_TEX_ID_DARK_FANTASY_PANEL_SELECTED, 
-    Vector4 {6, 6, 6, 6}, Color { 30, 39, 46, 128}
-  );
+  state->worldmap_selection_panel = state->smm_default_panels.panel_dark_fantasy_selected_default;
 
+  state->mms_character_game_rule.rule_details_panel = state->smm_default_panels.panel_dark_fantasy_default;
+
+  state->mms_character_inventory.inventory_item_list_panel = state->smm_default_panels.panel_dark_fantasy_default;
+  state->mms_character_inventory.inventory_slots_panel = state->smm_default_panels.panel_dark_fantasy_default;
+
+  state->mms_character_upgrade.item_list_panel = state->smm_default_panels.panel_dark_fantasy_default;
+  state->mms_character_upgrade.upgrade_parent_panel = state->smm_default_panels.panel_dark_fantasy_default;
+  state->mms_character_upgrade.left_item_panel = panel(BTN_STATE_UNDEFINED, ATLAS_TEX_ID_CRIMSON_FANTASY_PANEL_BG, ATLAS_TEX_ID_CRIMSON_FANTASY_PANEL, 
+    crimson_fantasy_frame_offsets, crimson_fantasy_bg_tint
+  );
+  state->mms_character_upgrade.right_item_panel = state->mms_character_upgrade.left_item_panel;
+  state->mms_character_upgrade.result_item_panel = panel(BTN_STATE_UNDEFINED, ATLAS_TEX_ID_CRIMSON_FANTASY_PANEL_BG, ATLAS_TEX_ID_CRIMSON_FANTASY_ORNATE_FRAME, 
+    crimson_fantasy_ornate_frame_offsets, crimson_fantasy_bg_tint
+  );
   if (fade_in) {
     smm_begin_fadein(data128(static_cast<i32>(MAIN_MENU_SCENE_DEFAULT)), fade_on_complete_change_main_menu_type);
   }
@@ -276,13 +306,13 @@ void chosen_trait_button_on_click(i32 index);
 void end_scene_main_menu(void) {
   event_fire(EVENT_CODE_RESET_MUSIC, event_context((i32)MUSIC_ID_MAINMENU_THEME1));
 
-  state->positive_traits.clear();
-  state->negative_traits.clear();
-  state->available_trait_points = 0;
-  state->selected_rule = nullptr ;
-  state->abilities.fill(ability());
-  state->chosen_traits.clear();
-  state->starter_ability = ABILITY_ID_UNDEFINED;
+  state->mms_trait_choice.positive_traits.clear();
+  state->mms_trait_choice.negative_traits.clear();
+  state->mms_trait_choice.available_trait_points = 0;
+  state->mms_trait_choice.abilities.fill(ability());
+  state->mms_trait_choice.chosen_traits.clear();
+  state->mms_trait_choice.starter_ability = ABILITY_ID_UNDEFINED;
+  state->mms_trait_choice.selected_rule = nullptr ;
   state->worldmap_locations.fill(worldmap_stage());
   state->deny_notify_timer = 0.f;
   state->bg_scroll = 0.f;
@@ -514,6 +544,7 @@ void render_interface_main_menu(void) {
   else if (state->mainmenu_state == MAIN_MENU_SCENE_CHARACTER) {
       draw_main_menu_character_panel();
       if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_STATE_CHARACTER_BUTTON_BACK), BTN_ID_MAINMENU_STATE_CHARACTER_BACK, VECTOR2(0.f, 66.5f), SMM_BASE_RENDER_DIV2, true)) {
+        smm_clean_character_context();
         state->mainmenu_state = MAIN_MENU_SCENE_DEFAULT;
       }
   }
@@ -527,7 +558,7 @@ void render_interface_main_menu(void) {
     }
     if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_TRAIT_CHOICE_BUTTON_ACCEPT), BTN_ID_MAINMENU_TRAIT_CHOICE_ACCEPT, VECTOR2(35.f, 66.5f), SMM_BASE_RENDER_DIV2, true)) 
     {
-      if ( state->starter_ability <= ABILITY_ID_UNDEFINED or state->starter_ability >= ABILITY_ID_MAX) 
+      if ( state->mms_trait_choice.starter_ability <= ABILITY_ID_UNDEFINED or state->mms_trait_choice.starter_ability >= ABILITY_ID_MAX) 
       {
         gui_fire_display_error(LOC_TEXT_DISPLAY_ERROR_TEXT_STARTER_ABILITY_NOT_SELECTED);
       }
@@ -541,53 +572,238 @@ void render_interface_main_menu(void) {
 
 void draw_main_menu_character_panel(void) {
   Rectangle dest = gui_draw_default_background_panel();
+  Rectangle drawing_area = dest;
 
-  const Vector2 parent_panel_left_top_padding     = Vector2 { dest.height * .01f,         dest.height * .01f};
-  const Vector2 parent_panel_right_bottom_padding = Vector2 { dest.height * .01f * -1.f,  dest.height * .01f * -1.f };
+  // 1. Define padding percentages
+  constexpr f32 symmetrical_pad_percent = 0.01f; // e.g., 1% base padding for all sides
+  constexpr f32 additional_top_pad_percent = 0.04f; // e.g., an *extra* 1% for the top
 
-  const Vector4 parent_panel_total_padding = Vector4{
-    parent_panel_left_top_padding.x,
-    parent_panel_left_top_padding.y,
-    parent_panel_right_bottom_padding.x - parent_panel_left_top_padding.x,
-    parent_panel_right_bottom_padding.y - parent_panel_left_top_padding.y
-  };
+  // 2. Calculate padding values
+  const f32 horizontal_symmetrical_pad = dest.height * symmetrical_pad_percent;
+  const f32 vertical_symmetrical_pad = dest.height * symmetrical_pad_percent;
+  const f32 additional_top_pad = dest.height * additional_top_pad_percent;
+
+  // 3. Combine and apply the padding
+  const f32 total_top_pad = vertical_symmetrical_pad + additional_top_pad;
+  const f32 total_bottom_pad = vertical_symmetrical_pad;
+  const f32 total_left_pad = horizontal_symmetrical_pad;
+  const f32 total_right_pad = horizontal_symmetrical_pad;
+
+  // Apply the calculated insets
+  dest.x += total_left_pad;
+  dest.y += total_top_pad;
+  dest.width -= (total_left_pad + total_right_pad);
+  dest.height -= (total_top_pad + total_bottom_pad);
+
+  //f32 vertical_padding = dest.height * padding;
+  //f32 horizontal_padding = dest.height * padding;
+  //dest.x += vertical_padding;
+  //dest.y += horizontal_padding;
+  //dest.width -= vertical_padding * 2.f;
+  //dest.height -= horizontal_padding * 2.f;
+
   switch (state->mainmenu_scene_character_subscene) {
-    case MAIN_MENU_SCENE_CHARACTER_INVENTORY: {
-      draw_main_menu_character_subscene_inventory_panel(dest, parent_panel_total_padding);
+    case MAIN_MENU_SCENE_CHARACTER_UPGRADE: {
+      draw_main_menu_character_subscene_upgrade_panel(dest, symmetrical_pad_percent);
       break;
     }
-    case MAIN_MENU_SCENE_CHARACTER_STATS: {
-      draw_main_menu_character_subscene_game_rule_panel(dest, parent_panel_total_padding);
+    case MAIN_MENU_SCENE_CHARACTER_INVENTORY: {
+      draw_main_menu_character_subscene_inventory_panel(dest, symmetrical_pad_percent);
+      break;
+    }
+    case MAIN_MENU_SCENE_CHARACTER_GAME_RULE: {
+      draw_main_menu_character_subscene_game_rule_panel(dest, symmetrical_pad_percent);
       break;
     }
     default: {
-      state->mainmenu_scene_character_subscene = MAIN_MENU_SCENE_CHARACTER_STATS;
+      state->mainmenu_scene_character_subscene = MAIN_MENU_SCENE_CHARACTER_GAME_RULE;
       break;
     }
   }
-  Vector2 tab_btn_grid_loc = Vector2 { dest.x + (dest.width * .5f), dest.y + (dest.height * .025f) };
-  if(gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_STATE_CHARACTER_BUTTON_ENTER_TAB_INVENTORY), BTN_ID_MAINMENU_STATE_CHARACTER_ENTER_TAB_INVENTORY, VECTOR2(-35, 0), tab_btn_grid_loc, true)) {
+  Vector2 tab_btn_grid_loc = Vector2 { drawing_area.x + (drawing_area.width * .5f), drawing_area.y + (drawing_area.height * .025f) };
+
+  #warning "Localize the display text"
+  if(gui_menu_button("Upgrade", BTN_ID_MAINMENU_STATE_CHARACTER_ENTER_TAB_UPGRADE, VECTOR2(-35, 0), tab_btn_grid_loc, true)) {
+    state->mainmenu_scene_character_subscene = MAIN_MENU_SCENE_CHARACTER_UPGRADE;
+  }
+  if(gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_STATE_CHARACTER_BUTTON_ENTER_TAB_INVENTORY), BTN_ID_MAINMENU_STATE_CHARACTER_ENTER_TAB_INVENTORY, VECTOR2(0.f, 0.f), tab_btn_grid_loc, true)) {
     state->mainmenu_scene_character_subscene = MAIN_MENU_SCENE_CHARACTER_INVENTORY;
   }
   if(gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_STATE_CHARACTER_BUTTON_ENTER_TAB_STATS),  BTN_ID_MAINMENU_STATE_CHARACTER_ENTER_TAB_STATS, VECTOR2(35, 0), tab_btn_grid_loc, true)) {
-    state->mainmenu_scene_character_subscene = MAIN_MENU_SCENE_CHARACTER_STATS;
+    state->mainmenu_scene_character_subscene = MAIN_MENU_SCENE_CHARACTER_GAME_RULE;
   }
 }
-void draw_main_menu_character_subscene_inventory_panel(Rectangle panel_dest, const Vector4 padding) {
-  draw_main_menu_character_subscene_inventory_slots_panel(panel_dest, padding);
-  draw_main_menu_character_subscene_inventory_item_list_panel(panel_dest, padding);
+void draw_main_menu_character_subscene_upgrade_panel(Rectangle parent_dest, f32 padding) {
+  draw_main_menu_character_subscene_upgrade_upgrade_panel(parent_dest, padding);
+  draw_main_menu_character_subscene_upgrade_item_list_panel(parent_dest, padding);
 }
-void draw_main_menu_character_subscene_inventory_item_list_panel(Rectangle parent_dest, const Vector4 padding) {
-  const Rectangle& slots_panel_dest = state->inventory_slots_panel.dest;
+void draw_main_menu_character_subscene_upgrade_upgrade_panel(Rectangle parent_dest, [[__maybe_unused__]] f32 padding) {
+  mms_character_upgrade_context& scene_ctx = state->mms_character_upgrade;
+  scene_ctx.upgrade_parent_panel.dest = Rectangle { parent_dest.x, parent_dest.y, (parent_dest.width * .75f), parent_dest.height};
+
+  const panel_draw_result this_parent = gui_panel(scene_ctx.upgrade_parent_panel, scene_ctx.upgrade_parent_panel.dest, false);
+
+  Rectangle left_item_panel_dest = {
+    this_parent.draw_dest.x + (this_parent.draw_dest.width  * .35f), 
+    this_parent.draw_dest.y + (this_parent.draw_dest.height * .65f),
+    this_parent.draw_dest.height * .2f, 
+    this_parent.draw_dest.height * .2f
+  };
+  const panel_draw_result left_panel_result = gui_panel(scene_ctx.left_item_panel, left_item_panel_dest, true);
+
+  Rectangle right_item_panel_dest = {
+    this_parent.draw_dest.x + (this_parent.draw_dest.width  * .65f), 
+    this_parent.draw_dest.y + (this_parent.draw_dest.height * .65f),
+    this_parent.draw_dest.height  * .2f, 
+    this_parent.draw_dest.height * .2f
+  };
+  const panel_draw_result right_panel_result = gui_panel(scene_ctx.right_item_panel, right_item_panel_dest, true);
+
+  Rectangle result_item_panel_dest = {
+    this_parent.draw_dest.x + (this_parent.draw_dest.width  * .50f), 
+    this_parent.draw_dest.y + (this_parent.draw_dest.height * .25f),
+    this_parent.draw_dest.height  * .2f, 
+    this_parent.draw_dest.height * .2f
+  };
+  const panel_draw_result result_panel_result = gui_panel(scene_ctx.result_item_panel, result_item_panel_dest, true);
+
+  Vector2 left_item_line_start_1 = { 
+    left_panel_result.bound_dest.x + left_panel_result.bound_dest.width, 
+    left_panel_result.bound_dest.y + (left_panel_result.bound_dest.height * .5f)
+  };
+  Vector2 left_item_line_end_1 = { 
+    result_panel_result.bound_dest.x + result_panel_result.bound_dest.width * .25f, 
+    left_item_line_start_1.y
+  };
+  DrawLineEx(left_item_line_start_1, left_item_line_end_1, 1.f, WHITE);
+
+  Vector2 left_item_line_start_2 = left_item_line_end_1;
+  Vector2 left_item_line_end_2 = { 
+    left_item_line_start_2.x, 
+    result_panel_result.bound_dest.y + result_panel_result.bound_dest.height
+  };
+  DrawLineEx(left_item_line_start_2, left_item_line_end_2, 1.f, WHITE);
+
+  Vector2 right_item_line_start_1 = { 
+    right_panel_result.bound_dest.x, 
+    right_panel_result.bound_dest.y + right_panel_result.bound_dest.height * .5f
+  };
+  Vector2 right_item_line_end_1 = { 
+    result_panel_result.bound_dest.x + result_panel_result.bound_dest.width * .75f, 
+    right_item_line_start_1.y
+  };
+  DrawLineEx(right_item_line_start_1, right_item_line_end_1, 1.f, WHITE);
   
-  state->inventory_item_list_panel.dest = Rectangle{
-    slots_panel_dest.x + slots_panel_dest.width + padding.x,
+  Vector2 right_item_line_start_2 = right_item_line_end_1;
+  Vector2 right_item_line_end_2 = { 
+    right_item_line_start_2.x, 
+    result_panel_result.bound_dest.y + result_panel_result.bound_dest.height
+  };
+  DrawLineEx(right_item_line_start_2, right_item_line_end_2, 1.f, WHITE);
+
+  if (scene_ctx.upgrade_state <= scene_ctx.CHARACTER_UPGRADE_STATE_UNDEFINED or scene_ctx.upgrade_state >= scene_ctx.CHARACTER_UPGRADE_STATE_MAX) {
+    return;
+  }
+  if (scene_ctx.upgrade_state == scene_ctx.CHARACTER_UPGRADE_STATE_IDLE) {
+    return;
+  }
+
+  const std::vector<player_inventory_slot>& inventory = state->in_ingame_info->player_state_static->inventory;
+  if (scene_ctx.slot_index >= inventory.size()) {
+    return;
+  }
+  const player_inventory_slot& slot = inventory[scene_ctx.slot_index];
+  if (slot.item_type <= ITEM_TYPE_UNDEFINED or slot.item_type >= ITEM_TYPE_MAX) {
+    return;
+  }
+
+  const item_data& item = gm_get_default_items()[slot.item_type];
+
+  if (scene_ctx.upgrade_state == scene_ctx.CHARACTER_UPGRADE_STATE_ERROR_UNSUFFICENT) {
+
+    gui_draw_atlas_texture_id(item.tex_id, left_panel_result.draw_dest, ZEROVEC2, 0.f, WHITE);
+    return;
+  }
+
+  if (scene_ctx.upgrade_state == scene_ctx.CHARACTER_UPGRADE_STATE_UPGRADE) {
+
+    gui_draw_atlas_texture_id(item.tex_id, left_panel_result.draw_dest, ZEROVEC2, 0.f, WHITE);
+    gui_draw_atlas_texture_id(item.tex_id, right_panel_result.draw_dest, ZEROVEC2, 0.f, WHITE);
+
+    #warning "draw upgrade button"
+  }
+}
+
+#warning "draw upgrade"
+void draw_main_menu_character_subscene_upgrade_item_list_panel(Rectangle parent_dest, f32 padding) {
+  mms_character_upgrade_context& scene_ctx = state->mms_character_upgrade;
+  const Rectangle& slots_panel_dest = scene_ctx.upgrade_parent_panel.dest;
+  
+  const f32 _padding = parent_dest.height * padding;
+  scene_ctx.item_list_panel.dest = Rectangle{
+    slots_panel_dest.x + slots_panel_dest.width + _padding,
     slots_panel_dest.y,
-    parent_dest.width - slots_panel_dest.width + padding.z - padding.x,
+    parent_dest.width - slots_panel_dest.width - _padding,
     slots_panel_dest.height
   };
-  Rectangle& this_dest = state->inventory_item_list_panel.dest;
-  gui_panel(state->inventory_item_list_panel, state->inventory_item_list_panel.dest, false);
+  Rectangle& this_dest = scene_ctx.item_list_panel.dest;
+  gui_panel(scene_ctx.item_list_panel, scene_ctx.item_list_panel.dest, false);
+
+  f32 height_buffer = 0.f;
+  size_t index = 0u;
+  for (const player_inventory_slot& slot : state->in_ingame_info->player_state_static->inventory) {
+    panel * _local_panel = smm_get_local_panel(slot.ui_buffer.i32[0]);
+    if (not _local_panel or _local_panel == nullptr) {
+      state->mainmenu_scene_character_subscene = MAIN_MENU_SCENE_CHARACTER_GAME_RULE;
+      begin_scene_change(MAIN_MENU_SCENE_DEFAULT);
+    }
+    const Rectangle local_panel_dest = Rectangle {
+      this_dest.x + _padding,
+      this_dest.y + _padding + height_buffer,
+      this_dest.width - (_padding * 2.f),
+      (this_dest.height * .2f) - (_padding * 2.f)
+    };
+    height_buffer += local_panel_dest.height + _padding;
+
+    if (gui_panel_active(_local_panel, local_panel_dest, false)) {
+      if (slot.amount >= 2) {
+        scene_ctx.upgrade_state = mms_character_upgrade_context::CHARACTER_UPGRADE_STATE_UPGRADE;
+      }
+      else {
+        scene_ctx.upgrade_state = mms_character_upgrade_context::CHARACTER_UPGRADE_STATE_ERROR_UNSUFFICENT;
+      }
+      scene_ctx.slot_index = index;
+    }
+    gui_label(slot.display_name.c_str(), FONT_TYPE_REGULAR, 1, Vector2 {local_panel_dest.x + local_panel_dest.width * .5f, local_panel_dest.y + local_panel_dest.height * .5f}, 
+      WHITE, true, true
+    );
+    gui_label_box_format(FONT_TYPE_LIGHT, 1, local_panel_dest, WHITE, TEXT_ALIGN_BOTTOM_RIGHT, "%d", slot.amount);
+    index++;
+  }
+}
+void draw_main_menu_character_subscene_inventory_panel(Rectangle parent_dest, f32 padding) {
+  draw_main_menu_character_subscene_inventory_slots_panel(parent_dest, padding);
+  draw_main_menu_character_subscene_inventory_item_list_panel(parent_dest, padding);
+}
+void draw_main_menu_character_subscene_inventory_slots_panel(Rectangle parent_dest, [[__maybe_unused__]] f32 padding) {
+  mms_character_inventory_context& scene_state = state->mms_character_inventory;
+  scene_state.inventory_slots_panel.dest = Rectangle { parent_dest.x, parent_dest.y, (parent_dest.width * .75f), parent_dest.height};
+
+  gui_panel(scene_state.inventory_slots_panel, scene_state.inventory_slots_panel.dest, false);
+}
+void draw_main_menu_character_subscene_inventory_item_list_panel(Rectangle parent_dest, f32 padding) {
+  mms_character_inventory_context& scene_state = state->mms_character_inventory;
+  const Rectangle& slots_panel_dest = scene_state.inventory_slots_panel.dest;
+  
+  const f32 _padding = parent_dest.height * padding;
+  scene_state.inventory_item_list_panel.dest = Rectangle{
+    slots_panel_dest.x + slots_panel_dest.width + _padding,
+    slots_panel_dest.y,
+    parent_dest.width - slots_panel_dest.width - _padding,
+    slots_panel_dest.height
+  };
+  Rectangle& this_dest = scene_state.inventory_item_list_panel.dest;
+  gui_panel(scene_state.inventory_item_list_panel, scene_state.inventory_item_list_panel.dest, false);
 
   f32 height_buffer = 0.f;
   for (const player_inventory_slot& slot : state->in_ingame_info->player_state_static->inventory) {
@@ -597,12 +813,12 @@ void draw_main_menu_character_subscene_inventory_item_list_panel(Rectangle paren
     }
 
     const Rectangle local_panel_dest = Rectangle {
-      this_dest.x + padding.x,
-      this_dest.y + padding.y + height_buffer,
-      this_dest.width + padding.z,
-      (this_dest.height * .2f)+ padding.w
+      this_dest.x + _padding,
+      this_dest.y + _padding + height_buffer,
+      this_dest.width + (_padding * 2.f),
+      (this_dest.height * .2f)+ (_padding * 2.f)
     };
-    height_buffer += local_panel_dest.height + padding.y;
+    height_buffer += local_panel_dest.height + _padding;
 
     if (gui_panel_active(_local_panel, local_panel_dest, false)) {
       
@@ -616,31 +832,16 @@ void draw_main_menu_character_subscene_inventory_item_list_panel(Rectangle paren
     gui_label_box_format(FONT_TYPE_LIGHT, 1, local_panel_dest, WHITE, TEXT_ALIGN_BOTTOM_RIGHT, "%d", slot.amount);
   }
 }
-void draw_main_menu_character_subscene_inventory_slots_panel(Rectangle parent_dest, const Vector4 padding) {
-  state->inventory_slots_panel.dest = Rectangle { 
-    parent_dest.x + padding.x,
-    parent_dest.y + padding.y,
-    (parent_dest.width * .75f) + padding.z,
-    parent_dest.height + padding.w
-  };
-  gui_panel(state->inventory_slots_panel, state->inventory_slots_panel.dest, false);
+void draw_main_menu_character_subscene_game_rule_panel(Rectangle parent_dest, f32 padding) {
+  draw_main_menu_character_subscene_game_rule_list_panel(parent_dest, padding);
+  draw_main_menu_character_subscene_game_rule_details_panel(parent_dest, padding);
 }
-void draw_main_menu_character_subscene_game_rule_panel(Rectangle panel_dest, const Vector4 padding) {
-  draw_main_menu_character_subscene_game_rule_list_panel(panel_dest, padding);
-  draw_main_menu_character_subscene_game_rule_details_panel(panel_dest, padding);
-}
-void draw_main_menu_character_subscene_game_rule_list_panel(Rectangle panel_dest, const Vector4 padding) {
-  const Rectangle& parent_panel_dest = panel_dest;
+void draw_main_menu_character_subscene_game_rule_list_panel(Rectangle parent_dest, [[__maybe_unused__]] f32 padding) {
   const font_type panel_font_type = FONT_TYPE_REGULAR;
   const i32 panel_font_size = 1;
+  state->mms_character_game_rule.rule_list_panel.dest = Rectangle { parent_dest.x, parent_dest.y, (parent_dest.width * .75f), parent_dest.height};
 
-  state->stat_list_panel.dest = Rectangle { 
-    parent_panel_dest.x + padding.x,
-    parent_panel_dest.y + padding.y,
-    (parent_panel_dest.width * .75f) + padding.z,
-    parent_panel_dest.height + padding.w
-  };
-  //gui_panel(state->stat_list_panel, state->stat_list_panel.dest, false);
+  gui_panel(state->mms_character_game_rule.rule_list_panel, state->mms_character_game_rule.rule_list_panel.dest, false);
 
   f32 showcase_hover_scale = 1.1f;
   f32 showcase_base_dim = SMM_BASE_RENDER_HEIGHT * .225f;
@@ -648,8 +849,8 @@ void draw_main_menu_character_subscene_game_rule_list_panel(Rectangle panel_dest
   const f32 total_showcases_width = (MAIN_MENU_UPGRADE_PANEL_COL * showcase_base_dim) + ((MAIN_MENU_UPGRADE_PANEL_COL - 1) * (showcase_dim_with_spacing - showcase_base_dim));
   const f32 total_showcases_height = (MAIN_MENU_UPGRADE_PANEL_ROW * showcase_base_dim) + ((MAIN_MENU_UPGRADE_PANEL_ROW - 1) * (showcase_dim_with_spacing - showcase_base_dim));
   const Vector2 showcase_start_pos = VECTOR2(
-    state->stat_list_panel.dest.x + (state->stat_list_panel.dest.width / 2.f) - (total_showcases_width / 2.f),
-    state->stat_list_panel.dest.y + (state->stat_list_panel.dest.height / 2.f) - (total_showcases_height / 2.f)
+    state->mms_character_game_rule.rule_list_panel.dest.x + (state->mms_character_game_rule.rule_list_panel.dest.width / 2.f) - (total_showcases_width / 2.f),
+    state->mms_character_game_rule.rule_list_panel.dest.y + (state->mms_character_game_rule.rule_list_panel.dest.height / 2.f) - (total_showcases_height / 2.f)
   );
 
   for (i32 iter = 0; iter < MAIN_MENU_UPGRADE_PANEL_ROW; ++iter) {
@@ -672,7 +873,7 @@ void draw_main_menu_character_subscene_game_rule_list_panel(Rectangle panel_dest
         showcase_position.x -= (showcase_new_dim - showcase_base_dim) / 2.f;
         showcase_position.y -= (showcase_new_dim - showcase_base_dim) / 2.f;
         if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT)) {
-          state->selected_rule = rule;
+          state->mms_trait_choice.selected_rule = rule;
         }
       }
       
@@ -739,37 +940,39 @@ void draw_main_menu_character_subscene_game_rule_list_panel(Rectangle panel_dest
   gui_label(total_stock_desc_text, panel_font_type, panel_font_size, total_stock_desc_text_total_dest, WHITE, false, false);
   gui_label_box(total_stock_text, panel_font_type, panel_font_size, total_stock_dest, WHITE, TEXT_ALIGN_BOTTOM_CENTER);
 }
-void draw_main_menu_character_subscene_game_rule_details_panel(Rectangle panel_dest, const Vector4 padding) {
-  const Rectangle& parent_panel_dest = panel_dest;
-  const Rectangle& stat_list_panel_dest = state->stat_list_panel.dest;
+void draw_main_menu_character_subscene_game_rule_details_panel(Rectangle parent_dest, f32 padding) {
+  const Rectangle& parent_panel_dest = parent_dest;
+  const Rectangle& rule_list_panel_dest = state->mms_character_game_rule.rule_list_panel.dest;
+  const panel& this_panel = state->mms_character_game_rule.rule_details_panel;
   
-  state->stat_details_panel.dest = Rectangle{
-    stat_list_panel_dest.x + stat_list_panel_dest.width + padding.x,
-    stat_list_panel_dest.y,
-    parent_panel_dest.width - stat_list_panel_dest.width + padding.z - padding.x,
-    stat_list_panel_dest.height
+  const f32 _padding = parent_dest.height * padding;
+  state->mms_character_game_rule.rule_details_panel.dest = Rectangle{
+    rule_list_panel_dest.x + rule_list_panel_dest.width + _padding,
+    rule_list_panel_dest.y,
+    parent_panel_dest.width - rule_list_panel_dest.width - _padding,
+    rule_list_panel_dest.height
   };
 
-  gui_panel(state->stat_details_panel, state->stat_details_panel.dest, false);
-  if (!state->selected_rule or state->selected_rule == nullptr) {
+  gui_panel(this_panel, this_panel.dest, false);
+  if (!state->mms_character_game_rule.selected_rule or state->mms_character_game_rule.selected_rule == nullptr) {
     return;
   }
-  const game_rule *const rule = state->selected_rule;
+  const game_rule *const rule = state->mms_character_game_rule.selected_rule;
 
-  f32 detail_panel_element_spacing = state->stat_details_panel.dest.height * 0.05f;
+  f32 detail_panel_element_spacing = this_panel.dest.height * 0.05f;
 
   Rectangle icon_pos = {
-    state->stat_details_panel.dest.x + state->stat_details_panel.dest.width * .5f - (state->stat_details_panel.dest.width * .175f),
-    state->stat_details_panel.dest.y + detail_panel_element_spacing,
-    state->stat_details_panel.dest.width * .35f,
-    state->stat_details_panel.dest.width * .35f
+    this_panel.dest.x + this_panel.dest.width * .5f - (this_panel.dest.width * .175f),
+    this_panel.dest.y + detail_panel_element_spacing,
+    this_panel.dest.width * .35f,
+    this_panel.dest.width * .35f
   };
   gui_draw_texture_id_pro(TEX_ID_ASSET_ATLAS, rule->icon_src, icon_pos);
 
   const Rectangle * tier_symbol_src_rect = get_atlas_texture_source_rect(ATLAS_TEX_ID_PASSIVE_UPGRADE_TIER_STAR);
   f32 star_spacing = tier_symbol_src_rect->width * 1.25f;
   f32 tier_symbols_total_width = tier_symbol_src_rect->width + (MAX_STAT_UPGRADE_TIER - 1.f) * star_spacing;
-  f32 tier_symbols_left_edge = state->stat_details_panel.dest.x + (state->stat_details_panel.dest.width - tier_symbols_total_width) / 2.f;
+  f32 tier_symbols_left_edge = this_panel.dest.x + (this_panel.dest.width - tier_symbols_total_width) / 2.f;
   f32 tier_symbols_vertical_position = icon_pos.y + icon_pos.height + detail_panel_element_spacing * .5f;
   for (i32 itr_000 = 0; itr_000 < MAX_STAT_UPGRADE_TIER; ++itr_000) {
     Vector2 tier_pos = {tier_symbols_left_edge + itr_000 * star_spacing, tier_symbols_vertical_position};
@@ -781,22 +984,22 @@ void draw_main_menu_character_subscene_game_rule_details_panel(Rectangle panel_d
   }
 
   Vector2 title_pos = VECTOR2(
-    state->stat_details_panel.dest.x + state->stat_details_panel.dest.width * .5f,
+    this_panel.dest.x + this_panel.dest.width * .5f,
     tier_symbols_vertical_position + tier_symbol_src_rect->height + detail_panel_element_spacing * .5f
   );
   gui_label(lc_txt(rule->display_name_loc_id), FONT_TYPE_BOLD, 1, title_pos, WHITE, true, true);
 
   Rectangle description_pos = {
-    state->stat_details_panel.dest.x +state->stat_details_panel.dest.width * .05f, title_pos.y + detail_panel_element_spacing * .75f,
-    state->stat_details_panel.dest.width * .9f, state->stat_details_panel.dest.width * .35f
+    this_panel.dest.x +this_panel.dest.width * .05f, title_pos.y + detail_panel_element_spacing * .75f,
+    this_panel.dest.width * .9f, this_panel.dest.width * .35f
   };
   gui_label_wrap(lc_txt(rule->desc_loc_id), FONT_TYPE_LIGHT, 1, description_pos, WHITE, false);
 
   game_rule pseudo_update = *rule;
   gm_refresh_game_rule_by_level(&pseudo_update, pseudo_update.level+1);
   Vector2 upg_stat_text_pos = {
-    state->stat_details_panel.dest.x + state->stat_details_panel.dest.width * .5f,
-    state->stat_details_panel.dest.y + state->stat_details_panel.dest.height * .5f,
+    this_panel.dest.x + this_panel.dest.width * .5f,
+    this_panel.dest.y + this_panel.dest.height * .5f,
   };
   font_type details_font_type = FONT_TYPE_REGULAR;
   i32 details_font_size = 1;
@@ -841,13 +1044,12 @@ void draw_main_menu_character_subscene_game_rule_details_panel(Rectangle panel_d
       return;
     }
   }
-
   atlas_texture_id icon_tex_id = ATLAS_TEX_ID_CURRENCY_COIN_ICON_5000;
   Rectangle cost_icon_dest = Rectangle(
-    state->stat_details_panel.dest.x + state->stat_details_panel.dest.width * .425f,
-    state->stat_details_panel.dest.y + state->stat_details_panel.dest.height * .85f,
-    state->stat_details_panel.dest.width * .15f,
-    state->stat_details_panel.dest.width * .15f
+    this_panel.dest.x + this_panel.dest.width * .425f,
+    this_panel.dest.y + this_panel.dest.height * .85f,
+    this_panel.dest.width * .15f,
+    this_panel.dest.width * .15f
   );
   Vector2 cost_icon_origin = Vector2(
     cost_icon_dest.width / 2.f,
@@ -865,14 +1067,14 @@ void draw_main_menu_character_subscene_game_rule_details_panel(Rectangle panel_d
   cost_label_color.g = EaseSineIn(state->deny_notify_timer, 255, -255, DENY_NOTIFY_TIME);
   cost_label_color.b = EaseSineIn(state->deny_notify_timer, 255, -255, DENY_NOTIFY_TIME);
   Vector2 cost_label_pos = VECTOR2(
-    state->stat_details_panel.dest.x + state->stat_details_panel.dest.width * .575f,
-    state->stat_details_panel.dest.y + state->stat_details_panel.dest.height * .85f
+    this_panel.dest.x + this_panel.dest.width * .575f,
+    this_panel.dest.y + this_panel.dest.height * .85f
   );
   gui_label_format_v(FONT_TYPE_REGULAR, 1, cost_label_pos, cost_label_color, true, true, "%d", rule->upgrade_cost);
 
   Vector2 button_location = Vector2 {
-    state->stat_details_panel.dest.x + state->stat_details_panel.dest.width * .5f, 
-    state->stat_details_panel.dest.y  + state->stat_details_panel.dest.height * .95f
+    this_panel.dest.x + this_panel.dest.width * .5f, 
+    this_panel.dest.y  + this_panel.dest.height * .95f
   };
   if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_STATE_CHARACTER_TAB_STATS_BUTTON_UPGRADE), BTN_ID_MAINMENU_STATE_CHARACTER_BUY_STAT_UPGRADE, ZEROVEC2, button_location, false)) {
     const i32& cost = rule->upgrade_cost;
@@ -936,14 +1138,14 @@ void draw_trait_selection_panel(void) {
     bg_trait_sel_pan_dest.y + bg_trait_sel_pan_dest.height * .01f
   };
 
-  state->positive_traits_selection_panel.dest = positive_traits_sel_pan_dest;
-  gui_panel(state->positive_traits_selection_panel, positive_traits_sel_pan_dest, false);
-  state->negative_traits_selection_panel.dest = negative_traits_sel_pan_dest;
-  gui_panel(state->negative_traits_selection_panel, negative_traits_sel_pan_dest, false);
-  state->chosen_traits_selection_panel.dest = chosen_traits_sel_pan_dest;
-  gui_panel(state->chosen_traits_selection_panel, chosen_traits_sel_pan_dest, false);
-  state->ability_selection_panel.dest = ability_sel_pan_dest;
-  gui_panel(state->ability_selection_panel, ability_sel_pan_dest, false);
+  state->mms_trait_choice.positive_traits_selection_panel.dest = positive_traits_sel_pan_dest;
+  gui_panel(state->mms_trait_choice.positive_traits_selection_panel, positive_traits_sel_pan_dest, false);
+  state->mms_trait_choice.negative_traits_selection_panel.dest = negative_traits_sel_pan_dest;
+  gui_panel(state->mms_trait_choice.negative_traits_selection_panel, negative_traits_sel_pan_dest, false);
+  state->mms_trait_choice.chosen_traits_selection_panel.dest = chosen_traits_sel_pan_dest;
+  gui_panel(state->mms_trait_choice.chosen_traits_selection_panel, chosen_traits_sel_pan_dest, false);
+  state->mms_trait_choice.ability_selection_panel.dest = ability_sel_pan_dest;
+  gui_panel(state->mms_trait_choice.ability_selection_panel, ability_sel_pan_dest, false);
 
   gui_label(lc_txt(LOC_TEXT_MAINMENU_TRAIT_CHOICE_AVAILABLE_TRAITS_TITLE), FONT_TYPE_REGULAR, 1, available_traits_title_label_dest, WHITE, true, false);
   gui_label(lc_txt(LOC_TEXT_MAINMENU_TRAIT_CHOICE_CHOSEN_TRAITS_TITLE),    FONT_TYPE_REGULAR, 1, chosen_traits_title_label_dest, WHITE, true, false);
@@ -956,7 +1158,7 @@ void draw_trait_selection_panel(void) {
     positive_traits_sel_pan_dest.height - (positive_traits_sel_pan_dest.height * .05f)
   };
   trait_selection_panel_list_traits(
-    __builtin_addressof(state->positive_traits_selection_panel), positive_selection_panel_with_padding, state->positive_traits, positive_trait_button_on_click
+    __builtin_addressof(state->mms_trait_choice.positive_traits_selection_panel), positive_selection_panel_with_padding, state->mms_trait_choice.positive_traits, positive_trait_button_on_click
   );
 
   Rectangle negative_selection_panel_with_padding = Rectangle {
@@ -966,7 +1168,7 @@ void draw_trait_selection_panel(void) {
     negative_traits_sel_pan_dest.height - (negative_traits_sel_pan_dest.height * .05f)
   };
   trait_selection_panel_list_traits(
-    __builtin_addressof(state->negative_traits_selection_panel), negative_selection_panel_with_padding, state->negative_traits, negative_trait_button_on_click
+    __builtin_addressof(state->mms_trait_choice.negative_traits_selection_panel), negative_selection_panel_with_padding, state->mms_trait_choice.negative_traits, negative_trait_button_on_click
   );
 
   Rectangle chosen_panel_with_padding = Rectangle {
@@ -976,7 +1178,7 @@ void draw_trait_selection_panel(void) {
     chosen_traits_sel_pan_dest.height - (chosen_traits_sel_pan_dest.height * .05f)
   };
   trait_selection_panel_list_traits(
-    __builtin_addressof(state->chosen_traits_selection_panel), chosen_panel_with_padding, state->chosen_traits, chosen_trait_button_on_click
+    __builtin_addressof(state->mms_trait_choice.chosen_traits_selection_panel), chosen_panel_with_padding, state->mms_trait_choice.chosen_traits, chosen_trait_button_on_click
   );
 
   Rectangle ability_selection_panel_padding = Rectangle {
@@ -985,7 +1187,7 @@ void draw_trait_selection_panel(void) {
     ability_sel_pan_dest.width  - (ability_sel_pan_dest.width  * .05f),
     ability_sel_pan_dest.height - (ability_sel_pan_dest.height * .05f)
   };
-  trait_selection_panel_list_ability_selection_panel(__builtin_addressof( state->ability_selection_panel), ability_selection_panel_padding, 
+  trait_selection_panel_list_ability_selection_panel(__builtin_addressof( state->mms_trait_choice.ability_selection_panel), ability_selection_panel_padding, 
     VECTOR2(ability_sel_pan_dest.width  * .025f, ability_sel_pan_dest.height * .025f)
   );
 
@@ -999,7 +1201,7 @@ void draw_trait_selection_panel(void) {
     txt_measure_remaining_trt_pnts.y
   };
   gui_label_box_format(FONT_TYPE_REGULAR, 1, remaining_traits_dest, WHITE, TEXT_ALIGN_TOP_LEFT, "%s:", lc_txt_remaining_trt_pnts);
-  gui_label_box_format(FONT_TYPE_REGULAR, 1, remaining_traits_dest, WHITE, TEXT_ALIGN_TOP_RIGHT, "%d", state->available_trait_points);
+  gui_label_box_format(FONT_TYPE_REGULAR, 1, remaining_traits_dest, WHITE, TEXT_ALIGN_TOP_RIGHT, "%d", state->mms_trait_choice.available_trait_points);
 }
 void trait_selection_panel_list_traits(panel* const pnl, const Rectangle rect, std::vector<character_trait>& traits, void (*trait_button_on_click_pfn)(i32 index)) {
   BeginScissorMode(rect.x, rect.y, rect.width, rect.height);
@@ -1074,8 +1276,8 @@ void trait_selection_panel_list_traits(panel* const pnl, const Rectangle rect, s
     pnl->scroll_handle.x = rect.x + rect.width - scroll_handle_width;
     pnl->scroll_handle.width = scroll_handle_width;
     pnl->scroll_handle.height = SMM_SCROLL_HANDLE_HEIGHT;
-    pnl->scroll_handle.y = FMAX(pnl->scroll_handle.y, rect.y + panel_scroll_bg_head_dest.height);
-    pnl->scroll_handle.y = FMIN(pnl->scroll_handle.y, rect.y + rect.height - panel_scroll_bg_bottom_dest.height - pnl->scroll_handle.height);
+    pnl->scroll_handle.y = std::max(pnl->scroll_handle.y, rect.y + panel_scroll_bg_head_dest.height);
+    pnl->scroll_handle.y = std::min(pnl->scroll_handle.y, rect.y + rect.height - panel_scroll_bg_bottom_dest.height - pnl->scroll_handle.height);
     pnl->scroll = 
       (pnl->scroll_handle.y - rect.y - panel_scroll_bg_head_dest.height) / 
       (rect.height - pnl->scroll_handle.height - panel_scroll_bg_bottom_dest.height - panel_scroll_bg_head_dest.height) * -1;
@@ -1136,7 +1338,7 @@ void trait_selection_panel_list_ability_selection_panel(panel* const pnl, const 
   BeginScissorMode(rect.x, rect.y, rect.width, rect.height);
   {
     for (size_t itr_000 = 0; itr_000 < ABILITY_ID_MAX; ++itr_000) {
-      const ability& _abl = state->abilities.at(itr_000);
+      const ability& _abl = state->mms_trait_choice.abilities.at(itr_000);
       if (_abl.id <= ABILITY_ID_UNDEFINED or _abl.id >= ABILITY_ID_MAX) {
         continue;
       }
@@ -1152,16 +1354,16 @@ void trait_selection_panel_list_ability_selection_panel(panel* const pnl, const 
       }
       if (gui_panel_active(_lc_pnl, _lc_pnl_dest, false)) {
         if (ability_list_height_buffer + (pnl->buffer.f32[0] * pnl->scroll) < rect.height && (*state->in_ingame_info->starter_ability) != _abl.id) {
-          const ability& _prev_starter_abl = state->abilities.at( static_cast<size_t>( (*state->in_ingame_info->starter_ability)) );
+          const ability& _prev_starter_abl = state->mms_trait_choice.abilities.at( static_cast<size_t>( (*state->in_ingame_info->starter_ability)) );
           panel * const _prev_starter_abls_lc_panel = smm_get_local_panel(_prev_starter_abl.ui_use.i32[0]);
 
-          state->starter_ability = _abl.id;
+          state->mms_trait_choice.starter_ability = _abl.id;
 
           if (not _prev_starter_abls_lc_panel or _prev_starter_abls_lc_panel == nullptr) {
             continue;
           }
           const i32 _backup_id = _prev_starter_abls_lc_panel->id;
-          (*_prev_starter_abls_lc_panel) = state->panel_active_dark_fantasy_default;
+          (*_prev_starter_abls_lc_panel) = state->smm_default_panels.panel_active_dark_fantasy_default;
           _prev_starter_abls_lc_panel->id = _backup_id;
         }
       }
@@ -1200,8 +1402,8 @@ void trait_selection_panel_list_ability_selection_panel(panel* const pnl, const 
   pnl->scroll_handle.x = panel_scroll_bg_x;
   pnl->scroll_handle.width = scroll_handle_width;
   pnl->scroll_handle.height = SMM_SCROLL_HANDLE_HEIGHT;
-  pnl->scroll_handle.y = FMAX(pnl->scroll_handle.y, rect.y + panel_scroll_bg_head_dest.height);
-  pnl->scroll_handle.y = FMIN(pnl->scroll_handle.y, rect.y + rect.height - panel_scroll_bg_bottom_dest.height - pnl->scroll_handle.height);
+  pnl->scroll_handle.y = std::max(pnl->scroll_handle.y, rect.y + panel_scroll_bg_head_dest.height);
+  pnl->scroll_handle.y = std::min(pnl->scroll_handle.y, rect.y + rect.height - panel_scroll_bg_bottom_dest.height - pnl->scroll_handle.height);
   pnl->scroll = 
     (pnl->scroll_handle.y - rect.y - panel_scroll_bg_head_dest.height) / 
     (rect.height - pnl->scroll_handle.height - panel_scroll_bg_bottom_dest.height - panel_scroll_bg_head_dest.height) * -1;
@@ -1254,7 +1456,7 @@ void smm_update_mouse_bindings(void) {
         }
         else {
           set_worldmap_location(state->ingame_scene_feed.hovered_stage);
-          if(not gm_init_game(state->worldmap_locations[state->ingame_scene_feed.hovered_stage], state->chosen_traits, state->starter_ability)) {
+          if(not gm_init_game(state->worldmap_locations[state->ingame_scene_feed.hovered_stage], state->mms_trait_choice.chosen_traits, state->mms_trait_choice.starter_ability)) {
             IWARN("scene_in_game::smm_update_mouse_bindings()::Failed to initialize game");
             begin_scene_change(SCENE_TYPE_MAIN_MENU, data128(static_cast<i32>(true)));
           }
@@ -1266,8 +1468,8 @@ void smm_update_mouse_bindings(void) {
       break;
     }
     case MAIN_MENU_SCENE_TO_PLAY_TRAIT_CHOICE: {
-      if (CheckCollisionPointRec( (*state->mouse_pos_screen), state->positive_traits_selection_panel.dest)) {
-        panel* pnl = &state->positive_traits_selection_panel;
+      if (CheckCollisionPointRec( (*state->mouse_pos_screen), state->mms_trait_choice.positive_traits_selection_panel.dest)) {
+        panel* pnl = &state->mms_trait_choice.positive_traits_selection_panel;
 
         if (pnl->is_scrolling_active) {
           pnl->scroll_handle.y += GetMouseWheelMove() * -10.f;
@@ -1279,8 +1481,8 @@ void smm_update_mouse_bindings(void) {
           }
         }
       }
-      if (CheckCollisionPointRec( (*state->mouse_pos_screen), state->negative_traits_selection_panel.dest)) {
-        panel* pnl = &state->negative_traits_selection_panel;
+      if (CheckCollisionPointRec( (*state->mouse_pos_screen), state->mms_trait_choice.negative_traits_selection_panel.dest)) {
+        panel* pnl = &state->mms_trait_choice.negative_traits_selection_panel;
 
         if (pnl->is_scrolling_active) {
           pnl->scroll_handle.y += GetMouseWheelMove() * -10.f;
@@ -1292,8 +1494,8 @@ void smm_update_mouse_bindings(void) {
           }
         }
       }
-      if (CheckCollisionPointRec( (*state->mouse_pos_screen), state->chosen_traits_selection_panel.dest)) {
-        panel* pnl = &state->chosen_traits_selection_panel;
+      if (CheckCollisionPointRec( (*state->mouse_pos_screen), state->mms_trait_choice.chosen_traits_selection_panel.dest)) {
+        panel* pnl = &state->mms_trait_choice.chosen_traits_selection_panel;
 
         if (pnl->is_scrolling_active) {
           pnl->scroll_handle.y += GetMouseWheelMove() * -10.f;
@@ -1305,8 +1507,8 @@ void smm_update_mouse_bindings(void) {
           }
         }
       }
-      if (CheckCollisionPointRec( (*state->mouse_pos_screen), state->ability_selection_panel.dest)) {
-        panel* pnl = &state->ability_selection_panel;
+      if (CheckCollisionPointRec( (*state->mouse_pos_screen), state->mms_trait_choice.ability_selection_panel.dest)) {
+        panel* pnl = &state->mms_trait_choice.ability_selection_panel;
 
         if (pnl->is_scrolling_active) {
           pnl->scroll_handle.y += GetMouseWheelMove() * -10.f;
@@ -1321,39 +1523,39 @@ void smm_update_mouse_bindings(void) {
 
       if (IsMouseButtonDown(MOUSE_LEFT_BUTTON)) 
       {
-        if (state->positive_traits_selection_panel.is_dragging_scroll) {
-          panel* pnl = __builtin_addressof(state->positive_traits_selection_panel);
+        if (state->mms_trait_choice.positive_traits_selection_panel.is_dragging_scroll) {
+          panel* pnl = __builtin_addressof(state->mms_trait_choice.positive_traits_selection_panel);
           pnl->scroll_handle.y = state->mouse_pos_screen->y - pnl->scroll_handle.height * .5f;
         }
-        if (state->negative_traits_selection_panel.is_dragging_scroll) {
-          panel* pnl = __builtin_addressof(state->negative_traits_selection_panel);
+        if (state->mms_trait_choice.negative_traits_selection_panel.is_dragging_scroll) {
+          panel* pnl = __builtin_addressof(state->mms_trait_choice.negative_traits_selection_panel);
           pnl->scroll_handle.y = state->mouse_pos_screen->y - pnl->scroll_handle.height * .5f;
         }
-        if (state->chosen_traits_selection_panel.is_dragging_scroll) {
-          panel* pnl = __builtin_addressof(state->chosen_traits_selection_panel);
+        if (state->mms_trait_choice.chosen_traits_selection_panel.is_dragging_scroll) {
+          panel* pnl = __builtin_addressof(state->mms_trait_choice.chosen_traits_selection_panel);
           pnl->scroll_handle.y = state->mouse_pos_screen->y - pnl->scroll_handle.height * .5f;
         }
-        if (state->ability_selection_panel.is_dragging_scroll) {
-          panel* pnl = __builtin_addressof(state->ability_selection_panel);
+        if (state->mms_trait_choice.ability_selection_panel.is_dragging_scroll) {
+          panel* pnl = __builtin_addressof(state->mms_trait_choice.ability_selection_panel);
           pnl->scroll_handle.y = state->mouse_pos_screen->y - pnl->scroll_handle.height * .5f;
         }
       }
       if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON)) 
       {
-        if (state->positive_traits_selection_panel.is_dragging_scroll) {
-          state->positive_traits_selection_panel.is_dragging_scroll = false;
+        if (state->mms_trait_choice.positive_traits_selection_panel.is_dragging_scroll) {
+          state->mms_trait_choice.positive_traits_selection_panel.is_dragging_scroll = false;
           state->is_dragging_scroll = false;
         }
-        if (state->negative_traits_selection_panel.is_dragging_scroll) {
-          state->negative_traits_selection_panel.is_dragging_scroll = false;
+        if (state->mms_trait_choice.negative_traits_selection_panel.is_dragging_scroll) {
+          state->mms_trait_choice.negative_traits_selection_panel.is_dragging_scroll = false;
           state->is_dragging_scroll = false;
         }
-        if (state->chosen_traits_selection_panel.is_dragging_scroll) {
-          state->chosen_traits_selection_panel.is_dragging_scroll = false;
+        if (state->mms_trait_choice.chosen_traits_selection_panel.is_dragging_scroll) {
+          state->mms_trait_choice.chosen_traits_selection_panel.is_dragging_scroll = false;
           state->is_dragging_scroll = false;
         }
-        if (state->ability_selection_panel.is_dragging_scroll) {
-          state->ability_selection_panel.is_dragging_scroll = false;
+        if (state->mms_trait_choice.ability_selection_panel.is_dragging_scroll) {
+          state->mms_trait_choice.ability_selection_panel.is_dragging_scroll = false;
           state->is_dragging_scroll = false;
         }
       }
@@ -1537,6 +1739,12 @@ panel* smm_get_local_panel(i32 _id) {
   }
   return nullptr;
 }
+void smm_clean_character_context(void) {
+  mms_character_upgrade_context mms_ctx = state->mms_character_upgrade;
+
+  mms_ctx.upgrade_state = mms_ctx.CHARACTER_UPGRADE_STATE_UNDEFINED;
+  mms_ctx.slot_index = I32_MAX;
+}
 void fade_on_complete_change_main_menu_type(data128 data) {
   if (not state or state == nullptr ) {
     IERROR("scene_main_menu::fade_on_complete_change_main_menu_type()::State is not valid");
@@ -1582,7 +1790,7 @@ void begin_scene_change(main_menu_scene_type mms, [[__maybe_unused__]] event_con
       state->mainmenu_state = MAIN_MENU_SCENE_CHARACTER;
 
       for (const player_inventory_slot& slot : gm_get_player_state()->inventory) {
-        smm_add_local_panel(state->next_local_panel_id, state->panel_active_dark_fantasy_default);
+        smm_add_local_panel(state->next_local_panel_id, state->smm_default_panels.panel_active_dark_fantasy_default);
         set_inventory_ui_ex(slot.slot_id, data128(state->next_local_panel_id++));
       }
       break;
@@ -1597,36 +1805,36 @@ void begin_scene_change(main_menu_scene_type mms, [[__maybe_unused__]] event_con
       break;
     }
     case MAIN_MENU_SCENE_TO_PLAY_TRAIT_CHOICE: {
-      state->available_trait_points = state->in_ingame_info->player_state_static->stats.at(CHARACTER_STATS_TOTAL_TRAIT_POINTS).buffer.i32[3];
+      state->mms_trait_choice.available_trait_points = state->in_ingame_info->player_state_static->stats.at(CHARACTER_STATS_TOTAL_TRAIT_POINTS).buffer.i32[3];
       state->mainmenu_state = MAIN_MENU_SCENE_TO_PLAY_TRAIT_CHOICE;
-      state->chosen_traits.clear();
-      state->positive_traits.clear();
-      state->negative_traits.clear();
-      state->abilities = (*_get_all_abilities());
+      state->mms_trait_choice.chosen_traits.clear();
+      state->mms_trait_choice.positive_traits.clear();
+      state->mms_trait_choice.negative_traits.clear();
+      state->mms_trait_choice.abilities = (*_get_all_abilities());
 
-      const std::vector<character_trait> * const gm_traits = gm_get_character_traits_all();
+      const std::vector<character_trait>& gm_traits = gm_get_character_traits_all();
 
-      for (character_trait _trait : (*gm_traits)) {
+      for (character_trait _trait : gm_traits) {
         _trait.ui_ops.i32[0] = state->next_local_button_id;
         local_button * const lcl_btn_ptr = smm_add_local_button(state->next_local_button_id++, BTN_TYPE_FLAT_BUTTON, BTN_STATE_RELEASED);
         if (_trait.point < 0) {
           lcl_btn_ptr->btn_type.forground_color_btn_state_up = GREEN;
           lcl_btn_ptr->btn_type.forground_color_btn_state_hover = GREEN;
           lcl_btn_ptr->btn_type.forground_color_btn_state_pressed = GREEN;
-          state->positive_traits.push_back(_trait);
+          state->mms_trait_choice.positive_traits.push_back(_trait);
         }
         else {
           lcl_btn_ptr->btn_type.forground_color_btn_state_up = RED;
           lcl_btn_ptr->btn_type.forground_color_btn_state_hover = RED;
           lcl_btn_ptr->btn_type.forground_color_btn_state_pressed = RED;
-          state->negative_traits.push_back(_trait);
+          state->mms_trait_choice.negative_traits.push_back(_trait);
         }
       }
 
-      for (ability& _abl : state->abilities) {
+      for (ability& _abl : state->mms_trait_choice.abilities) {
         if (_abl.id <= ABILITY_ID_UNDEFINED or _abl.id >= ABILITY_ID_MAX) continue;
         
-        panel * _lc_pnl = smm_add_local_panel(state->next_local_panel_id, state->panel_active_dark_fantasy_default);
+        panel * _lc_pnl = smm_add_local_panel(state->next_local_panel_id, state->smm_default_panels.panel_active_dark_fantasy_default);
         if (not _lc_pnl or _lc_pnl == nullptr) continue;
 
         _abl.ui_use.i32[0] = state->next_local_panel_id++;
@@ -1679,53 +1887,52 @@ void begin_scene_change(scene_id sid, event_context context) {
 }
 
 void positive_trait_button_on_click(i32 index) {
-  if (index < 0 or index > static_cast<i32>(state->positive_traits.size() - 1u)) {
+  if (index < 0 or index > static_cast<i32>(state->mms_trait_choice.positive_traits.size() - 1u)) {
     return;
   }
-  character_trait& trait = state->positive_traits[index];
+  character_trait& trait = state->mms_trait_choice.positive_traits[index];
 
-  if (state->available_trait_points >= std::abs(trait.point)) {
-    state->available_trait_points += trait.point; // INFO: Positive traits have negative points by default
+  if (state->mms_trait_choice.available_trait_points >= std::abs(trait.point)) {
+    state->mms_trait_choice.available_trait_points += trait.point; // INFO: Positive traits have negative points by default
 
-    state->chosen_traits.push_back(trait);
-    state->positive_traits.erase(state->positive_traits.begin() + index);
+    state->mms_trait_choice.chosen_traits.push_back(trait);
+    state->mms_trait_choice.positive_traits.erase(state->mms_trait_choice.positive_traits.begin() + index);
   }
   else {
     event_fire(EVENT_CODE_PLAY_SOUND, event_context(SOUND_ID_DENY1, static_cast<i32>(false)));
   }
 }
 void negative_trait_button_on_click(i32 index) {
-  if (index < 0 or index > static_cast<i32>(state->negative_traits.size() - 1u)) {
+  if (index < 0 or index > static_cast<i32>(state->mms_trait_choice.negative_traits.size() - 1u)) {
     return;
   }
-  character_trait& trait = state->negative_traits[index];
+  character_trait& trait = state->mms_trait_choice.negative_traits[index];
 
-  state->available_trait_points += trait.point;
+  state->mms_trait_choice.available_trait_points += trait.point;
 
-  state->chosen_traits.push_back(trait);
-  state->negative_traits.erase(state->negative_traits.begin() + index);
+  state->mms_trait_choice.chosen_traits.push_back(trait);
+  state->mms_trait_choice.negative_traits.erase(state->mms_trait_choice.negative_traits.begin() + index);
 }
 void chosen_trait_button_on_click(i32 index) {
-  if (index < 0 or index > static_cast<i32>(state->chosen_traits.size() - 1u)) {
+  if (index < 0 or index > static_cast<i32>(state->mms_trait_choice.chosen_traits.size() - 1u)) {
     return;
   }
-  character_trait& trait = state->chosen_traits[index];
+  character_trait& trait = state->mms_trait_choice.chosen_traits[index];
 
   if (trait.point < 0) {
-    state->positive_traits.push_back(trait);
+    state->mms_trait_choice.positive_traits.push_back(trait);
   }
   else {
-    state->negative_traits.push_back(trait);
+    state->mms_trait_choice.negative_traits.push_back(trait);
   }
-  state->available_trait_points -= trait.point;
-  state->chosen_traits.erase(state->chosen_traits.begin() + index);
+  state->mms_trait_choice.available_trait_points -= trait.point;
+  state->mms_trait_choice.chosen_traits.erase(state->mms_trait_choice.chosen_traits.begin() + index);
 }
 
 #undef DENY_NOTIFY_TIME
 #undef MAIN_MENU_FADE_DURATION
 #undef MAIN_MENU_UPGRADE_PANEL_COL
 #undef MAIN_MENU_UPGRADE_PANEL_ROW
-#undef DRAW_UPGRADE_LABEL
 #undef SMM_BASE_RENDER_SCALE
 #undef SMM_BASE_RENDER_DIV2
 #undef SMM_BASE_RENDER_RES_VEC
@@ -1735,3 +1942,5 @@ void chosen_trait_button_on_click(i32 index) {
 #undef SMM_MAP_PIN_SOURCE_LOCATION_HOVER
 #undef SMM_SCROLL_HANDLE_HEIGHT
 #undef ZOOM_CAMERA_MAP_ENTRY
+#undef UI_CHARACTER_TRAIT_DISPLAY
+#undef UI_CHARACTER_TRAIT_HIDDEN

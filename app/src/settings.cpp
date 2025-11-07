@@ -1,5 +1,6 @@
 #include "settings.h"
 #include <raylib.h>
+#include <algorithm>
 #include <cmath>
 
 #include "core/fmemory.h"
@@ -291,7 +292,7 @@ bool set_master_sound(i32 volume, bool save) {
     IERROR("settings::set_master_sound()::State is invalid");
     return false;
   }
-  volume = FCLAMP(volume, 0, 10);
+  volume = std::clamp(volume, 0, 10);
   
   if (save) {
     state->settings.master_sound_volume = volume;

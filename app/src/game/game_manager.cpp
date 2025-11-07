@@ -1,4 +1,5 @@
 #include "game_manager.h"
+#include <cmath>
 #include <reasings.h>
 #include <settings.h>
 #include <save_game.h>
@@ -588,7 +589,6 @@ void gm_start_game() {
   if (state->game_info.in_spawns->size() <= 0) {
     return false;
   }
-
   _add_ability(state->starter_ability);
   ability *const player_starter_ability = __builtin_addressof(_player->ability_system.abilities.at(state->starter_ability));
   upgrade_ability(player_starter_ability);
@@ -649,33 +649,14 @@ void gm_damage_spawn_if_collide(data128 coll_data, i32 damage, collision_type co
     case COLLISION_TYPE_RECTANGLE_RECTANGLE: {
       Rectangle rect = Rectangle { (f32)coll_data.i16[0],  (f32)coll_data.i16[1], (f32)coll_data.i16[2], (f32)coll_data.i16[3] };
 
-      for (size_t itr_000 = 0; itr_000 < state->game_info.in_spawns->size(); ++itr_000) {
-        if (!state->game_info.in_spawns->at(itr_000).is_dead){
-          if (CheckCollisionRecs(state->game_info.in_spawns->at(itr_000).collision, rect)) {
-            const Character2D *const spw = __builtin_addressof(state->game_info.in_spawns->at(itr_000));
-            damage_deal_result result = damage_spawn(spw->character_id, damage);
-            if (result.type == DAMAGE_DEAL_RESULT_SUCCESS) {
-              event_fire(EVENT_CODE_SPAWN_COMBAT_FEEDBACK_FLOATING_TEXT, event_context(
-                static_cast<f32>(spw->collision.x + spw->collision.width * .5f), static_cast<f32>(spw->collision.y - spw->collision.height * .15f),
-                static_cast<f32>(result.inflicted_damage)
-              ));
-            }
-          }
-        }
-      }
+      damage_spawn_by_collision(rect, damage, coll_check);
       return; 
     }
     case COLLISION_TYPE_CIRCLE_RECTANGLE: { 
       Vector2 circle_center = Vector2 { (f32)coll_data.i16[0],  (f32)coll_data.i16[1] };
       f32 circle_radius = (f32) coll_data.i16[2];
 
-      for (size_t itr_000 = 0; itr_000 < state->game_info.in_spawns->size(); ++itr_000) {
-        if (!state->game_info.in_spawns->at(itr_000).is_dead){
-          if (CheckCollisionCircleRec(circle_center, circle_radius, state->game_info.in_spawns->at(itr_000).collision)) {
-            damage_spawn(state->game_info.in_spawns->at(itr_000).character_id, damage);
-          }
-        }
-      }
+      damage_spawn_by_collision(Rectangle {circle_center.x, circle_center.y, circle_radius, 0.f}, damage, coll_check);
       return; 
     }
     default: {
@@ -955,7 +936,7 @@ bool player_state_rebuild(void) {
   _player.attack_2_sprite.fps = _player.attack_2_sprite.frame_total / _player.stats[CHARACTER_STATS_BASIC_ATTACK_SPEED].buffer.f32[3];
   _player.attack_3_sprite.fps = _player.attack_3_sprite.frame_total / _player.stats[CHARACTER_STATS_BASIC_ATTACK_SPEED].buffer.f32[3];
 
-  if (not math_isvalid(_player.attack_1_sprite.fps) or not math_isvalid(_player.attack_2_sprite.fps) or not math_isvalid(_player.attack_3_sprite.fps)) {
+  if (not std::isfinite(_player.attack_1_sprite.fps) or not std::isfinite(_player.attack_2_sprite.fps) or not std::isfinite(_player.attack_3_sprite.fps)) {
     return false;
   }
   state->player_state_static = _player;
@@ -1031,13 +1012,11 @@ const ingame_info* gm_get_ingame_info(void){
   }
   return __builtin_addressof(state->game_info); 
 }
-const std::vector<character_trait>* gm_get_character_traits_all(void) {
-  if (not state or state == nullptr) {
-    IERROR("game_manager::gm_get_character_traits()::State is not valid");
-    return nullptr;
-  }
-
-  return __builtin_addressof(state->traits);
+const std::vector<character_trait>& gm_get_character_traits_all(void) {
+  return state->traits;
+}
+const std::array<item_data, ITEM_TYPE_MAX>& gm_get_default_items(void) {
+  return state->default_items;
 }
 void gm_refresh_stat_by_level(character_stat* stat, i32 level) {
   if (not state or state == nullptr) {

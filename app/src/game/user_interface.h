@@ -4,22 +4,22 @@
 
 #include "game_types.h"
 
-typedef enum button_state {
+enum button_state {
   BTN_STATE_UNDEFINED,
   BTN_STATE_UP,
   BTN_STATE_HOVER,
   BTN_STATE_PRESSED,
   BTN_STATE_RELEASED,
-} button_state;
+};
 
-typedef enum checkbox_state {
+enum checkbox_state {
   CHECKBOX_STATE_UNDEFINED,
   CHECKBOX_STATE_CHECKED,
   CHECKBOX_STATE_UNCHECKED,
   CHECKBOX_STATE_MAX,
-} checkbox_state;
+};
 
-typedef struct panel {
+struct panel {
   i32 id;
   atlas_texture_id frame_tex_id;
   atlas_texture_id bg_tex_id;
@@ -53,7 +53,6 @@ typedef struct panel {
     this->draggable     = false;
     this->is_dragging_scroll = false;
     this->is_scrolling_active = false;
-    this->buffer = data128();
   };
   panel(button_state signal_state, atlas_texture_id bg_tex_id, atlas_texture_id frame_tex_id, Vector4 offsets, Color bg_tint, Color hover_tint = Color { 52, 64, 76, 245}) : panel() {
     this->signal_state = signal_state;
@@ -72,9 +71,9 @@ typedef struct panel {
     this->offsets = offsets;
     this->bg_hover_tint = hover_tint;
   }
-} panel;
+};
   
-typedef struct button_type {
+struct button_type {
   button_type_id id;
   spritesheet_id ss_type;
   Vector2 source_frame_dim;
@@ -111,9 +110,9 @@ typedef struct button_type {
     this->forground_color_btn_state_hover = _forground_color_btn_state_hover;
     this->forground_color_btn_state_pressed = _forground_color_btn_state_pressed;
   }
-} button_type;
+};
 
-typedef struct button {
+struct button {
   button_id id;
   button_type btn_type;
   button_state current_state;
@@ -126,7 +125,6 @@ typedef struct button {
 
   button(void) {
     this->id = BTN_ID_UNDEFINED;
-    this->btn_type = button_type();
     this->current_state = BTN_STATE_UNDEFINED;
     this->signal_state  = BTN_STATE_UNDEFINED;
     this->prev_state = BTN_STATE_UNDEFINED;
@@ -141,9 +139,9 @@ typedef struct button {
     this->dest = dest;
     this->is_registered = true;
   }
-} button;
+};
 
-typedef struct local_button {
+struct local_button {
   i32 id;
   button_type btn_type;
   button_state current_state;
@@ -169,9 +167,9 @@ typedef struct local_button {
     this->dest = dest;
     this->is_active = true;
   }
-} local_button;
+};
   
-typedef struct checkbox_type {
+struct checkbox_type {
   checkbox_type_id id;
   spritesheet_id ss_type;
   Vector2 source_frame_dim;
@@ -194,9 +192,9 @@ typedef struct checkbox_type {
     this->scale = scale;
     this->should_center = should_center;
   }
-} checkbox_type;
+};
 
-typedef struct checkbox {
+struct checkbox {
   checkbox_id id;
   checkbox_type cb_type;
   checkbox_state state;
@@ -221,16 +219,15 @@ typedef struct checkbox {
     this->dest = dest;
     this->is_registered = true;
   }
-} checkbox;
+};
 
-typedef struct slider_option {
+struct slider_option {
   std::string no_localized_text;
   i32 localization_symbol;
   data_pack content;
   slider_option(void) {
       this->no_localized_text = "::NULL";
       this->localization_symbol = 0;
-      this->content = data_pack();
   }
   slider_option(const char* _str, i32 symbol, data_pack content) : slider_option() {
       this->no_localized_text = _str;
@@ -247,9 +244,9 @@ typedef struct slider_option {
       this->localization_symbol = symbol;
       this->content = content;
   }
-} slider_option;
+};
 
-typedef struct slider_type {
+struct slider_type {
   slider_type_id id;
   spritesheet_id ss_sdr_body;
   Vector2 source_frame_dim;
@@ -298,9 +295,9 @@ typedef struct slider_type {
     this->origin_body_width =  origin_body_width;
     this->body_width = body_width;
   }
-} slider_type;
+};
 
-typedef struct slider {
+struct slider {
   slider_id id;
   slider_type sdr_type;
   Vector2 position;
@@ -317,8 +314,6 @@ typedef struct slider {
   bool is_registered;
   slider(void) {
     this->id = SDR_ID_UNDEFINED;
-    this->sdr_type = slider_type();
-    this->options.clear();
     this->position = ZEROVEC2;
     this->on_click = nullptr;
     this->on_left_button_trigger = nullptr;
@@ -337,9 +332,9 @@ typedef struct slider {
     this->is_clickable = _is_clickable;
     this->is_registered = true;
   }
-} slider;
+};
 
-typedef struct progress_bar_type {
+struct progress_bar_type {
   progress_bar_type_id id;
   atlas_texture_id body_inside;
   atlas_texture_id body_outside;
@@ -365,9 +360,9 @@ typedef struct progress_bar_type {
     this->strecth_part_inside = strecth_part_inside;
     this->strecth_part_outside = strecth_part_outside;
   }
-} progress_bar_type;
+};
 
-typedef struct progress_bar {
+struct progress_bar {
   progress_bar_id id;
   progress_bar_type type;
   Rectangle dest;
@@ -375,21 +370,20 @@ typedef struct progress_bar {
   bool is_initialized;
   progress_bar(void) {
     this->id = PRG_BAR_ID_UNDEFINED;
-    this->type = progress_bar_type();
     this->dest = ZERORECT;
     this->progress = 0.f;
     this->is_initialized = false;
   }
-} progress_bar;
+};
 
-typedef enum ui_fade_type {
+enum ui_fade_type {
   FADE_TYPE_UNDEFINED,
   FADE_TYPE_FADEIN,
   FADE_TYPE_FADEOUT,
   FADE_TYPE_MAX,
-} ui_fade_type;
+};
 
-typedef struct ui_fade_control_system {
+struct ui_fade_control_system {
   f32 fade_animation_duration;
   f32 fade_animation_accumulator;
   ui_fade_type fade_type;
@@ -405,20 +399,19 @@ typedef struct ui_fade_control_system {
     this->fade_type = FADE_TYPE_UNDEFINED;
     this->fade_animation_playing = false;
     this->is_fade_animation_played = false;
-    this->data = data128();
     this->on_change_complete = nullptr;
   }
-} ui_fade_control_system;
+};
 
-typedef enum error_display_animation_state {
+enum error_display_animation_state {
   ERROR_DISPLAY_ANIMATION_STATE_UNDEFINED,
   ERROR_DISPLAY_ANIMATION_STATE_MOVE_IN,
   ERROR_DISPLAY_ANIMATION_STATE_STAY,
   ERROR_DISPLAY_ANIMATION_STATE_MOVE_OUT,
   ERROR_DISPLAY_ANIMATION_STATE_MAX,
-} error_display_animation_state;
+};
 
-typedef struct ui_error_display_control_system {
+struct ui_error_display_control_system {
   error_display_animation_state display_state;
   std::string error_text;
   atlas_texture_id bg_tex_id;
@@ -427,13 +420,18 @@ typedef struct ui_error_display_control_system {
   f32 accumulator;
   ui_error_display_control_system(void) {
     this->display_state = ERROR_DISPLAY_ANIMATION_STATE_UNDEFINED;
-    this->error_text = std::string();
     this->bg_tex_id = ATLAS_TEX_ID_UNSPECIFIED;
     this->location = ZEROVEC2;
     this->duration = 0.f;
     this->accumulator = 0.f;
   }
-} ui_error_display_control_system;
+};
+
+struct panel_draw_result {
+  Rectangle bound_dest;
+  Rectangle draw_dest;
+  bool signal;
+};
 
 [[__nodiscard__]] bool user_interface_system_initialize(const camera_metrics * in_camera_metrics);
 
@@ -471,7 +469,7 @@ void gui_checkbox_grid(checkbox_id _id, Vector2 grid, Vector2 grid_location);
 void gui_slider(slider_id _id, Vector2 pos, Vector2 grid);
 void gui_draw_spritesheet_to_background(spritesheet_id _id, Color _tint);
 void gui_progress_bar(progress_bar_id bar_id, Rectangle dest, bool _should_center, Color tint = BLANK, Color outside_tint = WHITE);
-void gui_panel(panel pan, Rectangle dest, bool _should_center);
+panel_draw_result gui_panel(panel pan, Rectangle dest, bool _should_center);
 bool gui_panel_active(panel *const panel, Rectangle dest, bool _should_center);
 void gui_label_box(const char* text, font_type type, i32 font_size, Rectangle dest, Color tint, text_alignment alignment);
 void gui_label(const char* text, font_type type, i32 font_size, Vector2 position, Color tint, bool _center_h, bool _center_v);

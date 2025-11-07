@@ -11,18 +11,39 @@
 #define RADIENCE_COLOR_TRANSPARENT  CLITERAL(Color){ 255, 255, 255, 0 }
 #define RADIENCE_COLOR_INNER_CIRCLE_BRIGHT_YARROW  CLITERAL(Color){ 253, 203, 110, 32 }
 #define RADIENCE_CIRCLE_RADIUS_CHANGE 50.f
+#define RADIENCE_PULSE_IN_DURATION .75f
+#define RADIENCE_PULSE_OUT_DURATION .75f
+#define RADIENCE_CIRCLE_RADIUS_INNER_SCALE 1.0f
+#define RADIENCE_CIRCLE_RADIUS_OUTER_SCALE 1.2f
+#define RADIENCE_CIRCLE_RADIUS_PULSE_SCALE 1.3f
 
-typedef struct ability_radience_state {
+enum radience_sequence {
+  RADIENCE_SEQUENCE_UNDEFINED,
+  RADIENCE_SEQUENCE_PULSE_OUT,
+  RADIENCE_SEQUENCE_PULSE_IN,
+  RADIENCE_SEQUENCE_MAX,
+};
+
+struct ability_radience_state {
   const camera_metrics* in_camera_metrics;
   const app_settings* in_settings;
   const ingame_info* in_ingame_info;
+
+  radience_sequence current_sequence;
+  f32 pulse_in_duration;
+  f32 pulse_out_duration;
+  f32 pulse_accumulator;
 
   ability_radience_state(void) {
     this->in_camera_metrics = nullptr;
     this->in_settings = nullptr;
     this->in_ingame_info = nullptr;
+    this->current_sequence = RADIENCE_SEQUENCE_UNDEFINED;
+    this->pulse_in_duration = 0.f;
+    this->pulse_out_duration = 0.f;
+    this->pulse_accumulator = 0.f;
   }
-} ability_radience_state;
+};
 static ability_radience_state * state = nullptr;
 
 bool ability_radience_initialize(const camera_metrics *const _camera_metrics, const app_settings *const _settings, const ingame_info *const _ingame_info) {
@@ -80,23 +101,30 @@ ability get_ability_radience_next_level(ability abl) {
 }
 
 void update_ability_radience(ability *const abl) {
-  if (not abl and abl == nullptr) {
-    IWARN("ability::update_radience()::Ability is not valid");
+  if (not state or state == nullptr) {
     return;
   }
-  if (abl->id != ABILITY_ID_RADIANCE) {
-    IWARN("ability::update_radience()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_ID_RADIANCE, abl->id);
+  if (not abl and abl == nullptr) {
+    IWARN("ability::update_ability_radience()::Ability is not valid");
     return;
   }
   if (not abl->is_active or not abl->is_initialized) {
-    IWARN("ability::update_radience()::Ability is not active or not initialized");
+    IWARN("ability::update_ability_radience()::Ability is not active or not initialized");
+    return;
+  }
+  if (abl->id != ABILITY_ID_RADIANCE) {
+    IWARN("ability::update_ability_radience()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_ID_RADIANCE, abl->id);
     return;
   }
   if (abl->p_owner == nullptr or state->in_ingame_info == nullptr) {
     return;
   }
-  const player_state *const p_player = reinterpret_cast<player_state*>(abl->p_owner);
-  abl->position = p_player->position;
+  if (state->current_sequence <= RADIENCE_SEQUENCE_UNDEFINED or state->current_sequence >= RADIENCE_SEQUENCE_MAX) {
+    IWARN("ability::update_ability_radience()::Ability state not initialized correctly");
+    return;
+  }
+  const player_state *const player = reinterpret_cast<player_state*>(abl->p_owner);
+  abl->position = player->position;
 
   projectile& prj = abl->projectiles.at(0);
   if (not prj.is_active) { return; }
@@ -105,40 +133,48 @@ void update_ability_radience(ability *const abl) {
   prj.collision.x = prj.position.x;
   prj.collision.y = prj.position.y;
 
-  u16  frame_counter_max           = TARGET_FPS * 1;
-  u16  circle_inner_radius_base    = prj.mm_ex.u16[0];
-  u16  circle_outer_radius_base    = prj.mm_ex.u16[1];
-  u16& frame_counter               = prj.mm_ex.u16[2];
+  //u16  frame_counter_max           = TARGET_FPS * 1;
+  //u16  circle_inner_radius_base    = prj.mm_ex.u16[0];
+  //u16  circle_outer_radius_base    = prj.mm_ex.u16[1];
+  //u16& frame_counter               = prj.mm_ex.u16[2];
   //f32  circle_inner_radius_current = static_cast<f32>(prj.mm_ex.u16[3]);
   //f32  circle_outer_radius_current = static_cast<f32>(prj.mm_ex.u16[4]);
-  bool  is_increment               = static_cast<bool>(prj.mm_ex.u16[5]);
-  
-  f32 distance_inner = RADIENCE_CIRCLE_RADIUS_CHANGE;
-  f32 distance_outer = RADIENCE_CIRCLE_RADIUS_CHANGE;
 
-  frame_counter++;
-  frame_counter = FCLAMP(frame_counter, 0, frame_counter_max);
-  if (frame_counter >= frame_counter_max) {
-    frame_counter = 0;
-    prj.mm_ex.u16[5] = not is_increment;
-    is_increment = prj.mm_ex.u16[5];
-  }
+  f32  circle_inner_radius_base    = prj.vec_ex.f32[0];
+  f32  circle_outer_radius_base    = prj.vec_ex.f32[1];
+  f32& circle_inner_radius_current = prj.vec_ex.f32[2];
+  f32& circle_outer_radius_current = prj.vec_ex.f32[3];
+  f32 distance_inner = circle_inner_radius_base * RADIENCE_CIRCLE_RADIUS_PULSE_SCALE;
+  f32 distance_outer = circle_outer_radius_base * RADIENCE_CIRCLE_RADIUS_PULSE_SCALE;
+  state->pulse_accumulator += (*state->in_ingame_info->delta_time);
 
-  if (is_increment) {
-    prj.mm_ex.u16[3] = EaseCircIn((f32)frame_counter, circle_inner_radius_base, distance_inner, (f32)frame_counter_max);
-    prj.mm_ex.u16[4] = EaseCircIn((f32)frame_counter, circle_outer_radius_base, distance_outer, (f32)frame_counter_max);
+  switch (state->current_sequence) {
+    case RADIENCE_SEQUENCE_PULSE_OUT:{
+      if (state->pulse_accumulator >= state->pulse_out_duration) {
+        state->pulse_accumulator = 0.f;
+        state->current_sequence = RADIENCE_SEQUENCE_PULSE_IN;
+      }
+      circle_inner_radius_current = EaseCircIn((f32)state->pulse_accumulator, circle_inner_radius_base, distance_inner, state->pulse_out_duration);
+      circle_outer_radius_current = EaseCircIn((f32)state->pulse_accumulator, circle_outer_radius_base, distance_outer, state->pulse_out_duration);
+      break;
+    }
+    case RADIENCE_SEQUENCE_PULSE_IN:{
+      if (state->pulse_accumulator >= state->pulse_out_duration) {
+        state->pulse_accumulator = 0.f;
+        state->current_sequence = RADIENCE_SEQUENCE_PULSE_IN;
+      }
+      circle_inner_radius_current = EaseQuadOut((f32)state->pulse_accumulator, circle_inner_radius_base + distance_inner, -distance_inner,  state->pulse_in_duration);
+      circle_outer_radius_current = EaseQuadOut((f32)state->pulse_accumulator, circle_outer_radius_base + distance_outer, -distance_outer,  state->pulse_in_duration);
+      break;
+    }
+    default:
   }
-  else {
-    prj.mm_ex.u16[3] = EaseQuadOut((f32)frame_counter, circle_inner_radius_base + distance_inner, -distance_inner,  (f32)frame_counter_max);
-    prj.mm_ex.u16[4] = EaseQuadOut((f32)frame_counter, circle_outer_radius_base + distance_outer, -distance_outer,  (f32)frame_counter_max);
-  }
-
+  i16 base_damage = static_cast<i16>(prj.damage);
+  i16 final_damage = base_damage + (base_damage * player->stats.at(CHARACTER_STATS_OVERALL_DAMAGE).buffer.f32[3]);
   event_fire(EVENT_CODE_DAMAGE_ANY_SPAWN_IF_COLLIDE, event_context(
     static_cast<i16>(prj.collision.x), static_cast<i16>(prj.collision.y), static_cast<i16>(prj.collision.width), static_cast<i16>(prj.collision.height),
-    static_cast<i16>(prj.damage + p_player->stats.at(CHARACTER_STATS_OVERALL_DAMAGE).buffer.i32[1]),
-    static_cast<i16>(COLLISION_TYPE_CIRCLE_RECTANGLE)
+    final_damage, static_cast<i16>(COLLISION_TYPE_CIRCLE_RECTANGLE)
   ));
-
   update_sprite(__builtin_addressof(prj.animations.at(prj.active_sprite)), (*state->in_ingame_info->delta_time) );
 }
 
@@ -173,8 +209,8 @@ void render_ability_radience(ability *const abl){
   //u16& circle_inner_radius_base = prj->mm_ex.u16[0];
   //u16& circle_outer_radius_base = prj->mm_ex.u16[1];
   //u16& frame_counter         = prj->mm_ex.u16[2];
-  f32  circle_inner_radius_current = static_cast<f32>(prj->mm_ex.u16[3]);
-  f32  circle_outer_radius_current = static_cast<f32>(prj->mm_ex.u16[4]);
+  f32 circle_inner_radius_current = static_cast<f32>(prj->vec_ex.f32[2]);
+  f32 circle_outer_radius_current = static_cast<f32>(prj->vec_ex.f32[3]);
   //bool  is_increment = static_cast<bool>(prj->mm_ex.u16[5]);
 
   DrawCircleGradient(prj->collision.x, prj->collision.y, circle_outer_radius_current, RADIENCE_COLOR_INNER_CIRCLE_BRIGHT_YARROW, RADIENCE_COLOR_TRANSPARENT);
@@ -198,41 +234,41 @@ void refresh_ability_radience(ability *const abl) {
   abl->animation_ids.clear();
   abl->projectiles.reserve(abl->proj_count);
   abl->animation_ids.push_back(SHEET_ID_GENERIC_LIGHT);
-  {
-    projectile prj = projectile();
-    prj.collision = Rectangle {0.f, 0.f, abl->proj_dim.x * abl->proj_collision_scale.x, abl->proj_dim.y * abl->proj_collision_scale.y};
-    prj.damage = abl->base_damage;
-    prj.is_active = true;
-    prj.duration = abl->proj_duration;
-    for (size_t itr_000 = 0u; itr_000 < abl->animation_ids.size(); ++itr_000) {
-      if (abl->animation_ids.at(itr_000) <= SHEET_ID_SPRITESHEET_UNSPECIFIED or abl->animation_ids.at(itr_000) >= SHEET_ID_SPRITESHEET_TYPE_MAX) {
-        IWARN("ability::refresh_ability_radience()::One of spritesheets is not initialized or ability corrupted");
-        return;
-      }
-      spritesheet spr = spritesheet();
-      spr.sheet_id = abl->animation_ids.at(itr_000);
-      set_sprite(__builtin_addressof(spr), true, false);
-      spr.origin = VECTOR2( spr.coord.width * .5f,  spr.coord.height * .5f );
-
-      prj.animations.push_back(spr); 
+  
+  projectile& prj = abl->projectiles.emplace_back(projectile());
+  
+  prj.collision = Rectangle {0.f, 0.f, abl->proj_dim.x * abl->proj_collision_scale.x, abl->proj_dim.y * abl->proj_collision_scale.y};
+  prj.damage = abl->base_damage;
+  prj.is_active = true;
+  prj.duration = abl->proj_duration;
+  for (size_t itr_000 = 0u; itr_000 < abl->animation_ids.size(); ++itr_000) {
+    if (abl->animation_ids.at(itr_000) <= SHEET_ID_SPRITESHEET_UNSPECIFIED or abl->animation_ids.at(itr_000) >= SHEET_ID_SPRITESHEET_TYPE_MAX) {
+      IWARN("ability::refresh_ability_radience()::One of spritesheets is not initialized or ability corrupted");
+      return;
     }
-    abl->projectiles.push_back(prj);
+    spritesheet spr = spritesheet();
+    spr.sheet_id = abl->animation_ids.at(itr_000);
+    set_sprite(__builtin_addressof(spr), true, false);
+    spr.origin = VECTOR2( spr.coord.width * .5f,  spr.coord.height * .5f );
+    prj.animations.push_back(spr); 
   }
-  projectile& prj = abl->projectiles.at(0);
+  
   prj.active_sprite = 0;
 
-  u16& circle_inner_radius_base = prj.mm_ex.u16[0];
-  u16& circle_outer_radius_base = prj.mm_ex.u16[1];
-  u16& frame_counter            = prj.mm_ex.u16[2];
+  //u16& circle_inner_radius_base = prj.mm_ex.u16[0];
+  //u16& circle_outer_radius_base = prj.mm_ex.u16[1];
+  //u16& frame_counter            = prj.mm_ex.u16[2];
   //f32  circle_inner_radius_current = static_cast<f32>(prj.mm_ex.u16[3]);
   //f32  circle_outer_radius_current = static_cast<f32>(prj.mm_ex.u16[4]);
-  u16&  is_increment            = prj.mm_ex.u16[5];
+  //u16&  is_increment            = prj.mm_ex.u16[5];
 
-  circle_inner_radius_base = (abl->proj_dim.x * abl->proj_collision_scale.x * 1.0f) + (abl->level * .1f);
-  circle_outer_radius_base = (abl->proj_dim.x * abl->proj_collision_scale.x * 1.2f) + (abl->level * .1f);
-  prj.mm_ex.u16[3] = circle_inner_radius_base;
-  prj.mm_ex.u16[4] = circle_outer_radius_base;
+  f32& circle_inner_radius_base = prj.vec_ex.f32[0];
+  f32& circle_outer_radius_base = prj.vec_ex.f32[1];
 
-  frame_counter = 0;
-  is_increment = true;
+  circle_inner_radius_base = (abl->proj_dim.x * abl->proj_collision_scale.x * RADIENCE_CIRCLE_RADIUS_INNER_SCALE) + (abl->level * .1f);
+  circle_outer_radius_base = (abl->proj_dim.x * abl->proj_collision_scale.x * RADIENCE_CIRCLE_RADIUS_OUTER_SCALE) + (abl->level * .1f);
+  
+  state->current_sequence = RADIENCE_SEQUENCE_PULSE_OUT;
+  state->pulse_in_duration = RADIENCE_SEQUENCE_PULSE_IN;
+  state->pulse_out_duration = RADIENCE_SEQUENCE_PULSE_OUT;
 }

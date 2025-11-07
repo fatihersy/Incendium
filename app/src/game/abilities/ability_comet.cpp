@@ -103,15 +103,14 @@ void update_ability_comet(ability *const abl) {
     IWARN("ability::update_ability_comet()::Player pointer is invalid");
     return;
   }
-  const player_state *const p_player = reinterpret_cast<player_state*>(abl->p_owner);
+  const player_state *const player = reinterpret_cast<player_state*>(abl->p_owner);
 
-  if (not p_player or p_player == nullptr or state->in_camera_metrics == nullptr) {
+  if (not player or player == nullptr or state->in_camera_metrics == nullptr) {
     return;
   }
   const Rectangle *const frustum = __builtin_addressof(state->in_camera_metrics->frustum);
 
-  for (size_t itr_000 = 0u; itr_000 < abl->projectiles.size(); itr_000++) {
-    projectile& prj = abl->projectiles.at(itr_000);
+  for (projectile& prj : abl->projectiles) {
     if (not prj.is_active) { continue; }
     if (prj.active_sprite == 1 or vec2_equals(prj.position, pVECTOR2(prj.vec_ex.f32), .1)) {
       if (prj.active_sprite == 0) {
@@ -134,10 +133,11 @@ void update_ability_comet(ability *const abl) {
         prj.animations.at(prj.active_sprite).rotation = get_movement_rotation(prj.position, pVECTOR2(prj.vec_ex.f32)) + 270.f;
       }
       else if (prj.active_sprite == 1 and prj.animations.at(prj.active_sprite).current_frame == 0) {
+        i16 base_damage = static_cast<i16>(prj.damage);
+        i16 final_damage = base_damage + (base_damage * player->stats.at(CHARACTER_STATS_OVERALL_DAMAGE).buffer.f32[3]);
         event_fire(EVENT_CODE_DAMAGE_ANY_SPAWN_IF_COLLIDE, event_context(
           static_cast<i16>(prj.position.x), static_cast<i16>(prj.position.y), static_cast<i16>(prj.collision.width * prj.mm_ex.f32[0]), static_cast<i16>(0),
-          static_cast<i16>(prj.damage + p_player->stats.at(CHARACTER_STATS_OVERALL_DAMAGE).buffer.i32[3]),
-          static_cast<i16>(COLLISION_TYPE_CIRCLE_RECTANGLE)
+          final_damage, static_cast<i16>(COLLISION_TYPE_CIRCLE_RECTANGLE)
         ));
       }
     }
@@ -165,9 +165,7 @@ void render_ability_comet(ability *const abl){
     IWARN("ability::render_comet()::Ability is not active or not initialized");
     return;
   }
-
-  for (size_t itr_000 = 0u; itr_000 < abl->projectiles.size(); ++itr_000) {
-    projectile& prj = abl->projectiles.at(itr_000);
+  for (projectile& prj : abl->projectiles) {
     if (not prj.is_active) { continue; }
     Vector2 dim = ZEROVEC2;
     if (prj.active_sprite == 1) {
@@ -182,7 +180,6 @@ void render_ability_comet(ability *const abl){
         prj.animations.at(prj.active_sprite).current_frame_rect.height * abl->proj_sprite_scale
       };
     }
-
     prj.animations.at(prj.active_sprite).origin.x = dim.x / 2.f;
     prj.animations.at(prj.active_sprite).origin.y = dim.y / 2.f;
     play_sprite_on_site(__builtin_addressof(prj.animations.at(prj.active_sprite)), WHITE, Rectangle { prj.position.x, prj.position.y, dim.x, dim.y });

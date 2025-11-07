@@ -8,7 +8,7 @@
 [[__nodiscard__]] bool world_system_begin(const camera_metrics *const _in_camera_metrics);
 
 void set_worldmap_location(i32 id);
-const worldmap_stage* get_worldmap_locations(void);
+const std::array<worldmap_stage, MAX_WORLDMAP_LOCATIONS>& get_worldmap_locations(void);
 const worldmap_stage* get_active_worldmap(void);
 const tilemap* get_active_map(void);
 tilemap ** get_active_map_ptr(void);

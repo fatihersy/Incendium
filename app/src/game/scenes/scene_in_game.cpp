@@ -1,4 +1,5 @@
 #include "scene_in_game.h"
+#include <algorithm>
 #include <reasings.h>
 #include <settings.h>
 #include <loc_types.h>
@@ -219,7 +220,7 @@ item_type sig_atlas_tex_id_to_item_type(atlas_texture_id tex_id);
     return false;
   }
   state->default_panel = panel(BTN_STATE_UNDEFINED, ATLAS_TEX_ID_DARK_FANTASY_PANEL_BG, ATLAS_TEX_ID_DARK_FANTASY_PANEL_SELECTED, Vector4 {6.f, 6.f, 6.f, 6.f}, Color { 30, 39, 46, 128});
-  copy_memory(state->worldmap_locations.data(), get_worldmap_locations(), MAX_WORLDMAP_LOCATIONS * sizeof(worldmap_stage));
+  state->worldmap_locations = get_worldmap_locations();
   _set_player_position(ZEROVEC2);
   
   for (size_t itr_000 = 0u; itr_000 < MAX_UPDATE_ABILITY_PANEL_COUNT; ++itr_000) {
@@ -1092,7 +1093,7 @@ void sig_update_chest_sequence(void) {
         return;
       }
       seq.accumulator += (*state->in_ingame_info->delta_time);
-      seq.accumulator = FCLAMP(seq.accumulator, 0.f, seq.duration);
+      seq.accumulator = std::clamp(seq.accumulator, 0.f, seq.duration);
 
       seq.mm_ex.f32[0] = EaseBackOut(seq.accumulator, seq.mm_ex.f32[1], CHEST_OPENING_SEQ_CHEST_SCALE - seq.mm_ex.f32[1], seq.duration);
       state->chest_intro_ctrl.sheet_chest.coord.width  = state->chest_intro_ctrl.sheet_chest.current_frame_rect.width  * seq.mm_ex.f32[0];

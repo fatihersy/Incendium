@@ -136,8 +136,8 @@ bool world_system_begin(const camera_metrics *const _in_camera_metrics) {
 /**
  * @brief The size is MAX_WORLDMAP_LOCATIONS
  */
-const worldmap_stage* get_worldmap_locations(void) {
-  return state->worldmap_locations.data();
+const std::array<worldmap_stage, MAX_WORLDMAP_LOCATIONS>& get_worldmap_locations(void) {
+  return state->worldmap_locations;
 }
 const worldmap_stage* get_active_worldmap(void) {
   return __builtin_addressof(state->active_map_stage);

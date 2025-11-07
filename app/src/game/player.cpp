@@ -1,4 +1,5 @@
 #include "player.h"
+#include <algorithm>
 
 #include "core/event.h"
 #include "core/fmemory.h"
@@ -203,7 +204,7 @@ player_update_results update_player(void) {
     last_time_hp_regen_fired = elapsed_time;
     const i32& hp_regen_amouth = state->dynamic_player.stats.at(CHARACTER_STATS_HP_REGEN).buffer.i32[3];
     hp_current += hp_regen_amouth;
-    hp_current = FCLAMP(hp_current, 0, hp_max);
+    hp_current = std::clamp(hp_current, 0, hp_max);
   }
   _player.health_perc = static_cast<f32>(_player.health_current) / static_cast<f32>(_player.stats.at(CHARACTER_STATS_HEALTH).buffer.i32[3]);
 
@@ -268,8 +269,8 @@ void player_move_player(Vector2 new_pos) {
   _player.position.y += new_pos.y;
 
   const Rectangle& bounds = state->in_ingame_info->current_map_info->level_bound;
-  _player.position.x = FCLAMP(_player.position.x, bounds.x, bounds.x + bounds.width);
-  _player.position.y = FCLAMP(_player.position.y, bounds.y, bounds.y + bounds.height);
+  _player.position.x = std::clamp(_player.position.x, bounds.x, bounds.x + bounds.width);
+  _player.position.y = std::clamp(_player.position.y, bounds.y, bounds.y + bounds.height);
 
   _player.collision = Rectangle {
     _player.position.x - (_player.collision.width * .5f),

@@ -1,4 +1,6 @@
 #include "user_interface.h"
+#include <algorithm>
+#include <cmath>
 #include <reasings.h>
 #include <settings.h>
 #include "loc_types.h"
@@ -9,7 +11,7 @@
 #include "core/fmemory.h"
 #include "core/logger.h"
 #include "core/ftime.h"
-#include "core/fmath.h"
+
 
 #include "game_types.h"
 #include "game/spritesheet.h"
@@ -391,6 +393,7 @@ bool user_interface_system_initialize(const camera_metrics * in_camera_metrics) 
     register_button(BTN_ID_MAINMENU_SETTINGS_CANCEL,                    BTN_TYPE_MENU_BUTTON);
     register_button(BTN_ID_MAINMENU_STATE_CHARACTER_BACK,               BTN_TYPE_MENU_BUTTON);
     register_button(BTN_ID_MAINMENU_STATE_CHARACTER_BUY_STAT_UPGRADE,   BTN_TYPE_MENU_BUTTON);
+    register_button(BTN_ID_MAINMENU_STATE_CHARACTER_ENTER_TAB_UPGRADE,  BTN_TYPE_FLAT_BUTTON);
     register_button(BTN_ID_MAINMENU_STATE_CHARACTER_ENTER_TAB_INVENTORY,BTN_TYPE_FLAT_BUTTON);
     register_button(BTN_ID_MAINMENU_STATE_CHARACTER_ENTER_TAB_STATS,    BTN_TYPE_FLAT_BUTTON);
     register_button(BTN_ID_MAINMENU_MAP_CHOICE_BACK,                    BTN_TYPE_MENU_BUTTON);
@@ -433,7 +436,7 @@ bool user_interface_system_initialize(const camera_metrics * in_camera_metrics) 
   }
   // SETTINGS
 
-    // SLIDER OPTIONS
+  // SLIDER OPTIONS
   {
     if (ui_get_localization_by_name(loc_parser_lang_index_to_name(LANGUAGE_INDEX_ENGLISH))) {
       gui_slider_add_option(SDR_ID_SETTINGS_LANGUAGE, data_pack(DATA_TYPE_I32, data128(LANGUAGE_INDEX_ENGLISH), 1), LOC_TEXT_SETTINGS_BUTTON_ENGLISH, "");
@@ -540,7 +543,7 @@ void update_user_interface(f32 delta_time) {
             f32 relative = state->mouse_pos_screen.x - sdr_rect.x;
             f32 ratio = relative / sdr_rect.width;
             sdr->current_value = ratio * sdr->options.size() - 1;
-            sdr->current_value = static_cast<size_t>(FCLAMP(static_cast<size_t>(sdr->current_value), 0u, sdr->options.size() - 1u));
+            sdr->current_value = static_cast<size_t>(std::clamp(static_cast<size_t>(sdr->current_value), static_cast<size_t>(0u), sdr->options.size() - 1u));
 
             if (sdr->on_click != nullptr) {
               sdr->on_click();
@@ -945,12 +948,12 @@ atlas_texture_id draw_scrolling_textures(
   const f32 unit_width_with_gap = center_unit.width + unit_gap;
 
   // Calculate total number of units needed to fill the screen plus a buffer on each side
-  const f32 unit_count_f = math_ceil((draw_width + unit_width_with_gap * 2.f) / unit_width_with_gap);
+  const f32 unit_count_f = std::ceil((draw_width + unit_width_with_gap * 2.f) / unit_width_with_gap);
   const i32 unit_count = static_cast<i32>(unit_count_f);
 
   // --- Fixed Scrolling Logic ---
   // 1. Get the integer number of units scrolled
-  const i32 tex_id_scroll = math_floor(_offset / unit_width_with_gap);
+  const i32 tex_id_scroll = std::floor(_offset / unit_width_with_gap);
   
   // 2. Get the remainder, which is always positive and consistent with floor
   const f32 scroll_remainder = _offset - (static_cast<f32>(tex_id_scroll) * unit_width_with_gap);
@@ -974,7 +977,7 @@ atlas_texture_id draw_scrolling_textures(
   };
 
   // Calculate the texture index for the base unit
-  const i32 base_center_index = math_floor(unit_count_f * .5f) + tex_id_scroll;
+  const i32 base_center_index = std::floor(unit_count_f * .5f) + tex_id_scroll;
   const i32 center_unit_index = wrap_index(base_center_index, texture_array_size);
 
   // Draw the center unit
@@ -1149,14 +1152,38 @@ void draw_slider_body(const slider *const sdr) {
     break;
   }
 }
-void gui_panel(panel pan, Rectangle dest, bool _should_center) {
+panel_draw_result gui_panel(panel pan, Rectangle dest, bool _should_center) {
   Rectangle bg_dest = dest;
+  Vector2 bg_origin = ZEROVEC2;
   if (_should_center) {
-    bg_dest.x -= bg_dest.width / 2.f;
-    bg_dest.y -= bg_dest.height / 2.f;
+    bg_origin.x = bg_dest.width * .5f;
+    bg_origin.y = bg_dest.height * .5f;
   }
-  DrawRectanglePro(bg_dest, Vector2 {0, 0}, 0, pan.bg_tint);
+  const u8 end_bottom_opacity = std::clamp(dest.height * 0.103f, 0.f, 255.f);
+  Color gradient_color_start_top = Color {255u, 255u, 255u, 0u};
+  Color gradient_color_end_bottom = Color {0u, 0u, 0u, end_bottom_opacity};
+  const f32 _offset_ratio_x = pan.offsets.x / dest.width; 
+  const f32 _offset_ratio_y = pan.offsets.y / dest.height; 
+  const f32 _offset_ratio_z = pan.offsets.z / dest.width; 
+  const f32 _offset_ratio_w = pan.offsets.w / dest.height; 
+  bg_dest.x += bg_dest.width * _offset_ratio_x;
+  bg_dest.y += bg_dest.height * _offset_ratio_y;
+  bg_dest.width -= bg_dest.width * (_offset_ratio_z + _offset_ratio_x);
+  bg_dest.height -= bg_dest.height * (_offset_ratio_w + _offset_ratio_y);
+  gui_draw_atlas_texture_id(pan.bg_tex_id, bg_dest, bg_origin, 0.f, pan.bg_tint);
   draw_atlas_texture_npatch(pan.frame_tex_id, dest, pan.offsets, _should_center);
+  if (_should_center) {
+    bg_dest.x -= dest.width * .5f;
+    bg_dest.y -= dest.height * .5f;
+    dest.x -= dest.width * .5f;
+    dest.y -= dest.height * .5f;
+  }
+  DrawRectangleGradientEx(bg_dest, gradient_color_start_top,gradient_color_end_bottom,gradient_color_end_bottom,gradient_color_start_top);
+  return {
+    .bound_dest = dest,
+    .draw_dest = bg_dest,
+    .signal = false,
+  };
 }
 bool gui_panel_active(panel *const pan, Rectangle dest, bool _should_center) {
   IF_NOT_STATE("gui_panel_active", return false; );
@@ -1573,7 +1600,7 @@ void combat_feedback_update_floating_texts(f32 delta_time) {
 
   for (auto iterator = system.queue.begin(); iterator != system.queue.end();) {
     iterator->accumulator += delta_time;
-    iterator->accumulator = FCLAMP(iterator->accumulator, 0, iterator->duration);
+    iterator->accumulator = std::clamp(iterator->accumulator, 0.f, iterator->duration);
 
     Vector2& interpolate = iterator->interpolate;
     const Font font = ui_get_font(iterator->font_type);
@@ -2095,25 +2122,25 @@ void process_fade_effect(ui_fade_control_system *const fade) {
   switch (fade->fade_type) {
     case FADE_TYPE_FADEIN: {
       f32 process = EaseQuadIn(fade->fade_animation_accumulator, 0.f, 1.f, fade->fade_animation_duration);
-      if (not math_isvalid(process)) {
+      if (not std::isfinite(process)) {
         process = 1.f;
         fade->fade_animation_accumulator = fade->fade_animation_duration;
         event_fire(EVENT_CODE_SET_POST_PROCESS_FADE_VALUE, event_context(1.f));
         break;
       }
-      process = FCLAMP(process, 0.f, 1.f);
+      process = std::clamp(process, 0.f, 1.f);
       event_fire(EVENT_CODE_SET_POST_PROCESS_FADE_VALUE, event_context(static_cast<f32>(process)));
       break;
     }
     case FADE_TYPE_FADEOUT: {
       f32 process = EaseQuadOut(fade->fade_animation_accumulator, 1.f, -1.f, fade->fade_animation_duration);
-      if (not math_isvalid(process)) {
+      if (not std::isfinite(process)) {
         process = 0.f;
         fade->fade_animation_accumulator = fade->fade_animation_duration;
         event_fire(EVENT_CODE_SET_POST_PROCESS_FADE_VALUE, event_context(0.f));
         break;
       }
-      process = FCLAMP(process, 0.f, 1.f);
+      process = std::clamp(process, 0.f, 1.f);
       event_fire(EVENT_CODE_SET_POST_PROCESS_FADE_VALUE, event_context(static_cast<f32>(process)));
       break;
     }

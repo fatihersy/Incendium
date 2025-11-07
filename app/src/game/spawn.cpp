@@ -150,6 +150,12 @@ damage_deal_result damage_spawn(i32 _id, i32 damage) {
     character->is_damagable = false;
     character->damage_break_time = character->take_damage_left_animation.fps / static_cast<f32>(TARGET_FPS);
     character->health_current -= damage;
+
+    event_fire(EVENT_CODE_SPAWN_COMBAT_FEEDBACK_FLOATING_TEXT, event_context(
+      static_cast<f32>(character->collision.x + character->collision.width * .5f), 
+      static_cast<f32>(character->collision.y - character->collision.height * .15f),
+      static_cast<f32>(damage)
+    ));
     return damage_deal_result(DAMAGE_DEAL_RESULT_SUCCESS, damage, character->health_current);
   }
   const i32 remaining_health = character->health_current;
@@ -208,8 +214,54 @@ damage_deal_result damage_spawn(i32 _id, i32 damage) {
     }
     default: {}
   }
-
+  event_fire(EVENT_CODE_SPAWN_COMBAT_FEEDBACK_FLOATING_TEXT, event_context(
+    static_cast<f32>(character->collision.x + character->collision.width * .5f), 
+    static_cast<f32>(character->collision.y - character->collision.height * .15f),
+    static_cast<f32>(remaining_health)
+  ));
   return damage_deal_result(DAMAGE_DEAL_RESULT_SUCCESS, remaining_health, 0);
+}
+damage_deal_result damage_spawn_by_collision(Rectangle rect, i32 damage, collision_type coll_type) {
+  Vector2 min_pos, max_pos;
+  switch (coll_type) {
+    case COLLISION_TYPE_RECTANGLE_RECTANGLE: {
+      min_pos = { rect.x, rect.y };
+      max_pos = { rect.x + rect.width, rect.y + rect.height };
+      break;
+    }
+    case COLLISION_TYPE_CIRCLE_RECTANGLE: {
+      float radius = rect.width;
+      min_pos = { rect.x - radius, rect.y - radius };
+      max_pos = { rect.x + radius, rect.y + radius };
+      break;
+    }
+    default: {
+      return DAMAGE_DEAL_RESULT_ERROR;
+    }
+  }
+  grid_cell_id min_cell = get_cell_id(min_pos);
+  grid_cell_id max_cell = get_cell_id(max_pos);
+
+  for (i32 x = min_cell.x; x <= max_cell.x; ++x) {
+    for (i32 y = min_cell.y; y <= max_cell.y; ++y) {
+      auto it = state->spatial_grid.find({x, y});
+      if (it == state->spatial_grid.end()) {
+        continue;
+      }
+      for (Character2D* neighbor : it->second) {
+        if (coll_type == COLLISION_TYPE_RECTANGLE_RECTANGLE) {
+          if (CheckCollisionRecs(neighbor->collision, rect)) {
+            return damage_spawn(neighbor->character_id, damage);
+          }
+        } else { 
+          if (CheckCollisionCircleRec(Vector2{rect.x, rect.y}, rect.width, neighbor->collision)) {
+            return damage_spawn(neighbor->character_id, damage);
+          }
+        }
+      } // end for neighbors
+    } // end for y
+  } // end for x
+  return DAMAGE_DEAL_RESULT_ERROR; 
 }
 
 i32 spawn_character(Character2D _character) {

@@ -77,7 +77,9 @@ bool logging_system_initialize(int build_id) {
   if (not _log_data or _log_data == nullptr) {
     return true;
   }
-  state->log_file_data = _log_data;
+  if (not TextIsEqual(_log_data, " ")) {
+    state->log_file_data = _log_data;
+  }
   return true;
 }
 
@@ -140,20 +142,21 @@ void inc_logging(logging_severity ls, const char* fmt, ...) {
   va_end(arg_ptr);
 
   out_log.append(std::string(zc.data(), zc.size()-1));
-	std::string& log = state->logs.emplace_back(out_log);
+  state->logs.push_back(out_log);
 
-  if (log == state->last_writed and GetTime() - state->last_log_time < LOGGING_TIMEOUT) {
+  if (out_log == state->last_writed and GetTime() - state->last_log_time < LOGGING_TIMEOUT) {
     return;
   }
-  state->last_writed = log;
+  state->last_writed = out_log;
   state->last_log_time = GetTime();
 
 	if (ls >= LOGGING_SEVERITY) {
-    state->log_file_data.append(log).append("\n");
+    out_log.append("\n");
+    state->log_file_data.insert_range(state->log_file_data.begin(), out_log);
     SaveFileData(state->log_file_name.c_str(), state->log_file_data.data(), state->log_file_data.size());
 	} else {
     #ifndef _RELEASE 
-    TraceLog(to_rl_log_level(ls), log.c_str());
+    TraceLog(to_rl_log_level(ls), out_log.c_str());
     #endif
   }
 }

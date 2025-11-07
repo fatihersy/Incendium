@@ -1,4 +1,5 @@
 #include "camera.h"
+#include <algorithm>
 #include <settings.h>
 #include <reasings.h>
 
@@ -181,7 +182,7 @@ bool update_camera(f32 delta_time) {
 
   if (state->zoom_ctrl.is_active) {
     camera_zoom_control_system& zoom_ctrl = state->zoom_ctrl;
-    zoom_ctrl.accumulator = FCLAMP(zoom_ctrl.accumulator, 0.f, ZOOM_CAMERA_DURATION);
+    zoom_ctrl.accumulator = std::clamp(zoom_ctrl.accumulator, 0.f, ZOOM_CAMERA_DURATION);
 
     set_camera_zoom(EaseCircOut(zoom_ctrl.accumulator, zoom_ctrl.camera_old_zoom, zoom_ctrl.camera_target_zoom - zoom_ctrl.camera_old_zoom, ZOOM_CAMERA_DURATION));
 
@@ -195,7 +196,7 @@ bool update_camera(f32 delta_time) {
   }
 
   if (length > state->camera_min_effect_lenght) {
-    f32 speed = FMAX(state->camera_fraction_speed * length, state->camera_min_speed);
+    f32 speed = std::max(state->camera_fraction_speed * length, state->camera_min_speed);
 
     state->cam_met.handle.target = vec2_add(state->cam_met.handle.target, vec2_scale(diff, speed * delta_time / length));
 
@@ -217,7 +218,7 @@ bool update_camera(f32 delta_time) {
 
   if (state->zoom_ctrl.is_active and state->zoom_ctrl.track_target) {
     camera_zoom_control_system& zoom_ctrl = state->zoom_ctrl;
-    zoom_ctrl.accumulator = FCLAMP(zoom_ctrl.accumulator, 0.f, ZOOM_CAMERA_DURATION);
+    zoom_ctrl.accumulator = std::clamp(zoom_ctrl.accumulator, 0.f, ZOOM_CAMERA_DURATION);
 
     state->cam_met.handle.target.x = EaseCircOut(zoom_ctrl.accumulator, zoom_ctrl.target_initial.x, zoom_ctrl.target_final.x - zoom_ctrl.target_initial.x, ZOOM_CAMERA_DURATION);
     state->cam_met.handle.target.y = EaseCircOut(zoom_ctrl.accumulator, zoom_ctrl.target_initial.y, zoom_ctrl.target_final.y - zoom_ctrl.target_initial.y, ZOOM_CAMERA_DURATION);
@@ -281,7 +282,7 @@ void set_camera_zoom(f32 value) {
     return;
   }
   state->cam_met.handle.zoom = value;
-  state->cam_met.handle.zoom = FCLAMP(state->cam_met.handle.zoom, ZOOM_CAMERA_MIN, ZOOM_CAMERA_MAX);
+  state->cam_met.handle.zoom = std::clamp(state->cam_met.handle.zoom, ZOOM_CAMERA_MIN, ZOOM_CAMERA_MAX);
 }
 
 bool camera_on_event(i32 code, event_context context) {
@@ -307,7 +308,7 @@ bool camera_on_event(i32 code, event_context context) {
       return true;
     }
     case EVENT_CODE_CAMERA_SET_ZOOM_TARGET: {
-      f32 new_zoom = FCLAMP(context.data.f32[0], ZOOM_CAMERA_MIN, ZOOM_CAMERA_MAX);
+      f32 new_zoom =  std::clamp(context.data.f32[0], ZOOM_CAMERA_MIN, ZOOM_CAMERA_MAX);
       state->zoom_ctrl = camera_zoom_control_system(state->cam_met.handle.zoom, new_zoom);
       state->zoom_ctrl.track_target = static_cast<bool>(context.data.f32[1]);
       state->zoom_ctrl.target_final.x = context.data.f32[2];

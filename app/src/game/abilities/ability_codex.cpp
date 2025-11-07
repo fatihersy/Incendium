@@ -105,20 +105,19 @@ void update_ability_codex(ability *const abl) {
   if (not abl->p_owner or abl->p_owner == nullptr or not state->in_ingame_info or state->in_ingame_info == nullptr) {
     return;
   }
-  const player_state *const p_player = reinterpret_cast<player_state*>(abl->p_owner);
+  const player_state *const player = reinterpret_cast<player_state*>(abl->p_owner);
 
   Rectangle book_position = Rectangle { 
-    p_player->collision.x - p_player->collision.width * .2f, 
-    p_player->collision.y - p_player->collision.height * .2f, 
+    player->collision.x - player->collision.width * .2f, 
+    player->collision.y - player->collision.height * .2f, 
     CODEX_BOOK_DIM_DEST, CODEX_BOOK_DIM_DEST 
   };
   abl->position.x = book_position.x;
   abl->position.y = book_position.y;
 
-  for (size_t itr_000 = 0u; itr_000 < static_cast<size_t>(abl->proj_count); itr_000++) {
-    projectile& prj = abl->projectiles.at(itr_000);
-    spritesheet& sheet = prj.animations.at(prj.active_sprite);
+  for (projectile& prj : abl->projectiles) {
     if (not prj.is_active) { continue; }
+    spritesheet& sheet = prj.animations.at(prj.active_sprite);
 
     if (not sheet.is_played) {
       update_sprite(__builtin_addressof(sheet), (*state->in_ingame_info->delta_time) );
@@ -137,10 +136,11 @@ void update_ability_codex(ability *const abl) {
     prj.PROJ_TARGET_X = state->in_ingame_info->nearest_spawn->collision.x + state->in_ingame_info->nearest_spawn->collision.width  * .5f;
     prj.PROJ_TARGET_Y = state->in_ingame_info->nearest_spawn->collision.y + state->in_ingame_info->nearest_spawn->collision.height * .5f;
 
+    i16 base_damage = static_cast<i16>(prj.damage);
+    i16 final_damage = base_damage + (base_damage * player->stats.at(CHARACTER_STATS_OVERALL_DAMAGE).buffer.f32[3]);
     event_fire(EVENT_CODE_DAMAGE_ANY_SPAWN_IF_COLLIDE, event_context(
       static_cast<i16>(prj.PROJ_TARGET_X), static_cast<i16>(prj.PROJ_TARGET_Y), static_cast<i16>(prj.collision.width), static_cast<i16>(prj.collision.height),
-      static_cast<i16>(prj.damage + p_player->stats.at(CHARACTER_STATS_OVERALL_DAMAGE).buffer.i32[3]),
-      static_cast<i16>(COLLISION_TYPE_RECTANGLE_RECTANGLE)
+      final_damage, static_cast<i16>(COLLISION_TYPE_RECTANGLE_RECTANGLE)
     ));
   }
 }
@@ -161,8 +161,7 @@ void render_ability_codex(ability *const abl) {
   if (not state->in_ingame_info->nearest_spawn or state->in_ingame_info->nearest_spawn == nullptr ) {
     return;
   }
-  for (size_t itr_000 = 0u; itr_000 < abl->projectiles.size(); ++itr_000) {
-    projectile& prj = abl->projectiles.at(itr_000);
+  for (projectile& prj : abl->projectiles) {
     spritesheet& sheet = prj.animations.at(prj.active_sprite);
     if (not prj.is_active or sheet.is_played) { continue; }
     Vector2 dim = Vector2 {sheet.current_frame_rect.width * abl->proj_sprite_scale, sheet.current_frame_rect.height * abl->proj_sprite_scale};
@@ -187,7 +186,6 @@ void render_ability_codex(ability *const abl) {
       dim.x, 
       distance
     };
-
     play_sprite_on_site_ex(__builtin_addressof(sheet), source, dest, origin, rotation, WHITE);
     event_fire(EVENT_CODE_PLAY_SOUND_GROUP, event_context(SOUNDGROUP_ID_ZAP, static_cast<i32>(true)));
   }
@@ -219,26 +217,23 @@ void refresh_ability_codex(ability *const abl) {
   abl->animation_ids.push_back(SHEET_ID_ABILITY_CODEX);
 
   for (size_t itr_000 = 0u; itr_000 < static_cast<size_t>(abl->proj_count); ++itr_000) {
-    projectile prj = projectile();
+    projectile& prj = abl->projectiles.emplace_back(projectile());
     prj.collision = Rectangle {0.f, 0.f, abl->proj_dim.x * abl->proj_collision_scale.x, abl->proj_dim.y * abl->proj_collision_scale.y};
     prj.PROJ_F32_COOLDOWN_F32 = PROJECTILE_COOLDOWN;
     prj.PROJ_F32_ACCUMULATOR_F32 = prj.PROJ_F32_COOLDOWN_F32;
     prj.damage = abl->base_damage;
     prj.is_active = true;
     prj.duration = abl->proj_duration;
-    for (size_t itr_111 = 0u; itr_111 < abl->animation_ids.size(); ++itr_111) {
-      if (abl->animation_ids.at(itr_111) <= SHEET_ID_SPRITESHEET_UNSPECIFIED or abl->animation_ids.at(itr_111) >= SHEET_ID_SPRITESHEET_TYPE_MAX) {
+    for (spritesheet_id sheet_id : abl->animation_ids) {
+      if (sheet_id <= SHEET_ID_SPRITESHEET_UNSPECIFIED or sheet_id >= SHEET_ID_SPRITESHEET_TYPE_MAX) {
         IWARN("ability::refresh_ability_codex()::Ability sprite not initialized or corrupted");
         return;
       }
-      spritesheet spr = spritesheet();
-      spr.sheet_id = abl->animation_ids.at(itr_111);
+      spritesheet& spr = prj.animations.emplace_back(spritesheet());
+      spr.sheet_id = sheet_id;
       set_sprite(__builtin_addressof(spr), false, false);
       spr.origin = VECTOR2( spr.coord.width * .5f,  spr.coord.height * .5f );
-
-      prj.animations.push_back(spr);
       prj.active_sprite = 0;
     }
-    abl->projectiles.push_back(prj);
   }
 }
