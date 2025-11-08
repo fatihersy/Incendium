@@ -3,12 +3,10 @@
 #include "core/fmemory.h"
 #include "core/logger.h"
 
-// --- OPENSSL HEADERS ---
 #include <openssl/aes.h>
 #include <openssl/rand.h>
 #include <openssl/hmac.h>
 #include <openssl/evp.h>
-// --- END OPENSSL HEADERS ---
 
 #include <array>
 #include <string>
@@ -18,8 +16,6 @@
 
 using json = nlohmann::json;
 
-// Configuration
-#define SAVE_SLOT_MAX 4 // Adjust as needed
 #define AES_KEY_SIZE_BYTES 16 // AES-128 (16 bytes)
 #define AES_BLOCK_SIZE 16 // AES block size
 #define AES_IV_SIZE 16 // CBC IV size (must be equal to AES_BLOCK_SIZE)
@@ -202,11 +198,11 @@ bool parse_or_create_save_data_from_file(save_slot_id slot, save_data default_sa
 }
 
 bool save_save_data(save_slot_id slot) {
-  if (!state) {
+  if (not state or state == nullptr) {
     IERROR("save_game::save_save_data()::Save game state is not valid");
     return false;
   }
-  if (slot < SAVE_SLOT_UNDEFINED || slot >= SAVE_SLOT_MAX) {
+  if (slot <= SAVE_SLOT_UNDEFINED or slot >= SAVE_SLOT_MAX) {
     IWARN("save_game::save_save_data()::Slot out of bound");
     return false;
   }
@@ -234,8 +230,8 @@ bool save_save_data(save_slot_id slot) {
   // Note: encrypted_data_and_iv is now resized inside encrypt_data to actual size.
   std::vector<uint8_t> tag = calculate_file_hmac(encrypted_data_and_iv);
   if (tag.empty()) {
-      IERROR("save_game::save_save_data()::HMAC tag calculation failed.");
-      return false;
+    IERROR("save_game::save_save_data()::HMAC tag calculation failed.");
+    return false;
   }
 
   // 3. Combine IV, Ciphertext, and HMAC Tag for final file output

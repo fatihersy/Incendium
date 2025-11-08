@@ -359,6 +359,14 @@ enum character_trait_type {
   CHARACTER_TRAIT_MAX,
 };
 
+enum ingame_chance {
+  INGAME_CHANCE_UNDEFINED,
+  INGAME_CHANCE_ITEM_DROP,
+  INGAME_CHANCE_CRITICLE,
+  INGAME_CHANCE_UPGRADE,
+  INGAME_CHANCE_MAX,
+};
+
 struct easing_accumulation_control {
   easing_type ease_type;
   f32 accumulator;
@@ -784,7 +792,7 @@ struct item_data {
   std::string display_name;
   
   data128 buffer;
-
+  
   item_data(void) {
     this->id = -1;
     this->type = ITEM_TYPE_UNDEFINED;

@@ -111,6 +111,8 @@ void gm_set_character_stat_trait_value(character_stat* stat, data128 value);
 void gm_set_game_rule_trait_value(game_rule* stat, data128 value);
 void reset_ingame_info(void);
 void gm_update_player(void);
+void set_static_player_state_stat(character_stat_id stat_id, i32 level);
+void gm_refresh_stat_by_level(character_stat* stat, i32 level);
 [[__nodiscard__]] bool player_state_rebuild(void);
 
 bool game_manager_initialize(const camera_metrics * in_camera_metrics, const app_settings * in_app_settings, tilemap ** const in_active_map_ptr) {
@@ -644,6 +646,10 @@ void gm_load_game(void) {
   }
   set_player_state(state->player_state_static);
 }
+void gm_refresh_save_slot(void) {
+  gm_save_game();
+  gm_load_game();
+}
 void gm_damage_spawn_if_collide(data128 coll_data, i32 damage, collision_type coll_check) {
   switch (coll_check) {
     case COLLISION_TYPE_RECTANGLE_RECTANGLE: {
@@ -845,10 +851,8 @@ void gm_add_to_inventory(item_type _item_type) {
     return;
   }
   std::vector<player_inventory_slot>& inventory = state->player_state_static.inventory;
-
-  auto find_or_create = [&inventory, &_item_type](item_type type, size_t start_with = 0) {
-    for (size_t itr_000 = start_with; itr_000 < inventory.size(); itr_000++) {
-      player_inventory_slot& slot = inventory.at(itr_000);
+  auto find_or_create = [&inventory, &_item_type](item_type type) {
+    for (player_inventory_slot& slot : inventory) {
       if (slot.item_type == type) {
         slot.amount++;
         return;
@@ -865,44 +869,36 @@ void gm_add_to_inventory(item_type _item_type) {
     case ITEM_TYPE_COIN: return;
     case ITEM_TYPE_HEALTH_FRAGMENT: return;
     case ITEM_TYPE_CHEST: return;
-    case ITEM_TYPE_SIGIL_DAMAGE_COMMON: {
-      find_or_create(_item_type);
-      return;
-    }
-    case ITEM_TYPE_SIGIL_DAMAGE_UNCOMMON: {
-      find_or_create(_item_type);
-      return;
-    }
-    case ITEM_TYPE_SIGIL_DAMAGE_RARE: {
-      find_or_create(_item_type);
-      return;
-    }
-    case ITEM_TYPE_SIGIL_DAMAGE_EPIC: {
-      find_or_create(_item_type);
-      return;
-    }
-    case ITEM_TYPE_SIGIL_RESISTANCE_COMMON: {
-      find_or_create(_item_type);
-      return;
-    }
-    case ITEM_TYPE_SIGIL_RESISTANCE_UNCOMMON: {
-      find_or_create(_item_type);
-      return;
-    }
-    case ITEM_TYPE_SIGIL_RESISTANCE_RARE: {
-      find_or_create(_item_type);
-      return;
-    }
-    case ITEM_TYPE_SIGIL_RESISTANCE_EPIC: {
-      find_or_create(_item_type);
-      return;
-    }
+    case ITEM_TYPE_SIGIL_DAMAGE_COMMON:      find_or_create(_item_type); return;
+    case ITEM_TYPE_SIGIL_DAMAGE_UNCOMMON:    find_or_create(_item_type); return;
+    case ITEM_TYPE_SIGIL_DAMAGE_RARE:        find_or_create(_item_type); return;
+    case ITEM_TYPE_SIGIL_DAMAGE_EPIC:        find_or_create(_item_type); return;
+    case ITEM_TYPE_SIGIL_RESISTANCE_COMMON:  find_or_create(_item_type); return;
+    case ITEM_TYPE_SIGIL_RESISTANCE_UNCOMMON:find_or_create(_item_type); return;
+    case ITEM_TYPE_SIGIL_RESISTANCE_RARE:    find_or_create(_item_type); return;
+    case ITEM_TYPE_SIGIL_RESISTANCE_EPIC:    find_or_create(_item_type); return;
     default: {
       IWARN("game_manager::gm_add_to_inventory()::Unsupported type");
       return;
     }
   }
-  IWARN("game_manager::gm_add_to_inventory()::Function ended unexpectedly");
+}
+void gm_remove_from_inventory(item_type _item_type, i32 amouth) {
+  if (_item_type > ITEM_TYPE_MAX or _item_type < ITEM_TYPE_UNDEFINED) {
+    IWARN("game_manager::gm_remove_from_inventory()::Item id is out of bounds");
+    return;
+  }
+  std::vector<player_inventory_slot>& inventory = state->player_state_static.inventory;
+
+  std::erase_if(inventory, [_item_type, amouth] (player_inventory_slot& slot) {
+    if (slot.item_type != _item_type) return false;
+      
+    if (slot.amount <= amouth) {
+      return true;
+    }
+    slot.amount -= amouth;
+    return false;
+  });
 }
 void gm_set_chosen_traits(std::vector<character_trait> traits) {
   if (not state or state == nullptr) {
@@ -1017,6 +1013,76 @@ const std::vector<character_trait>& gm_get_character_traits_all(void) {
 }
 const std::array<item_data, ITEM_TYPE_MAX>& gm_get_default_items(void) {
   return state->default_items;
+}
+f32 gm_get_ingame_chance(ingame_chance chance_type, data128 context) {
+  if (chance_type <= INGAME_CHANCE_UNDEFINED or chance_type >= INGAME_CHANCE_MAX) {
+    IWARN("game_manager::gm_get_ingame_chance()::chance type out of bound");
+    return -1.f;
+  }
+  if( chance_type == INGAME_CHANCE_ITEM_DROP) {
+    return -1.f;
+  }
+  else if( chance_type == INGAME_CHANCE_CRITICLE) {
+    return -1.f;
+  }
+  else if( chance_type == INGAME_CHANCE_UPGRADE) {
+    ::item_type item_type = static_cast<::item_type>(context.i32[0]);
+    switch (item_type) {
+      case ITEM_TYPE_SIGIL_DAMAGE_COMMON:       return 1.00f;
+      case ITEM_TYPE_SIGIL_DAMAGE_UNCOMMON:     return 0.50f;
+      case ITEM_TYPE_SIGIL_DAMAGE_RARE:         return 0.15f;
+      case ITEM_TYPE_SIGIL_RESISTANCE_COMMON:   return 1.00f;
+      case ITEM_TYPE_SIGIL_RESISTANCE_UNCOMMON: return 0.50f;
+      case ITEM_TYPE_SIGIL_RESISTANCE_RARE:     return 0.15f;
+      default: {
+        IWARN("game_manager::gm_get_ingame_chance()::INGAME_CHANCE_UPGRADE::Unsupported item type");
+        return -1.f;
+      }
+    }
+  }
+  IERROR("game_manager::gm_get_ingame_chance()::Function ended unexpectedly");
+  return -1.f;
+}
+
+bool gm_upgrade_item_by_slot_ref(const player_inventory_slot& slot) {
+  f32 upgrade_chance = gm_get_ingame_chance(INGAME_CHANCE_UPGRADE, data128(static_cast<i32>(slot.item_type)));
+
+  auto is_success = [&upgrade_chance](void) -> bool {
+    if (get_random_chance_ssl(upgrade_chance)) {
+      return true;
+    }
+    else return false;
+  };
+  switch (slot.item_type) {
+    case ITEM_TYPE_SIGIL_DAMAGE_COMMON: 
+      if(is_success()) { gm_add_to_inventory(ITEM_TYPE_SIGIL_DAMAGE_UNCOMMON); return true; }
+      else return false;
+
+    case ITEM_TYPE_SIGIL_DAMAGE_UNCOMMON: 
+      if(is_success()) { gm_add_to_inventory(ITEM_TYPE_SIGIL_DAMAGE_RARE); return true; }
+      else return false;
+
+    case ITEM_TYPE_SIGIL_DAMAGE_RARE: 
+      if(is_success()) { gm_add_to_inventory(ITEM_TYPE_SIGIL_DAMAGE_EPIC); return true; }
+      else return false;
+
+    case ITEM_TYPE_SIGIL_RESISTANCE_COMMON:  
+      if(is_success()) { gm_add_to_inventory(ITEM_TYPE_SIGIL_RESISTANCE_UNCOMMON); return true; }
+      else return false;
+
+    case ITEM_TYPE_SIGIL_RESISTANCE_UNCOMMON: 
+      if(is_success()) { gm_add_to_inventory(ITEM_TYPE_SIGIL_RESISTANCE_RARE); return true; }
+      else return false;
+
+    case ITEM_TYPE_SIGIL_RESISTANCE_RARE: 
+      if(is_success()) { gm_add_to_inventory(ITEM_TYPE_SIGIL_RESISTANCE_EPIC); return true; }
+      else return false;
+
+    default: {
+      IWARN("game_manager::gm_upgrade_item_by_slot_ref()::Item type is out of bound");
+      return false;
+    }
+  }
 }
 void gm_refresh_stat_by_level(character_stat* stat, i32 level) {
   if (not state or state == nullptr) {

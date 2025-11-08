@@ -2,6 +2,9 @@
 #include "raylib.h"
 #include "core/fmemory.h"
 
+#include <openssl/rand.h>
+#include <openssl/err.h>
+
 const u32 random_table[RANDOM_TABLE_NUMBER_COUNT] = {
    843, 5141, 4902,  309, 6743,   95, 7384, 8173, 3152, 8213,  375, 9200, 2725, 2151, 6530,  736,
   5462, 3940, 3193, 5436, 8707, 1550, 5675, 3300, 5115, 9668, 8666, 4327, 4688, 950,  4821, 5863,
@@ -89,14 +92,45 @@ void update_time(void) {
   }
 
   const i32 ind = (state->rand_start_index + state->rand_ind) % RANDOM_TABLE_NUMBER_COUNT;
-  if (ind < 0 || ind >= RANDOM_TABLE_NUMBER_COUNT) {
-    return INT32_MAX; // Invalid index
+  if (ind < 0 or ind >= RANDOM_TABLE_NUMBER_COUNT) {
+    return INT32_MAX;
   }
 
   i32 rnd = random_table[ind];
   rnd = (rnd % (max - min + 1)) + min;
 
   return rnd;
+}
+
+[[__nodiscard__]] i32 get_random_ssl(i32 min, i32 max) {
+  if (min > max) {
+    return INT32_MAX;
+  }
+  u64 range = static_cast<u64>(max) - static_cast<u64>(min) + 1;
+  
+  if (range == 0 or range > static_cast<u64>(INT32_MAX)) {
+    return INT32_MAX;
+  }
+  u64 randomValue;
+  if (RAND_bytes(reinterpret_cast<unsigned char*>(&randomValue), sizeof(randomValue)) != 1) {
+    return get_random(min, max); 
+  }
+  u64 result = randomValue % range;
+  
+  return static_cast<i32>(result + min);
+}
+
+[[__nodiscard__]] bool get_random_chance_ssl(f32 chance) {
+  if (chance < 0.0f) return false;
+  if (chance >= 1.0f) return true;
+
+  u64 randomValue;
+  if (RAND_bytes(reinterpret_cast<unsigned char*>(&randomValue), sizeof(randomValue)) != 1) {
+    i32 _chance = static_cast<i32>(chance * 100.f);
+    return _chance > get_random(0, 100); 
+  }
+  f64 generatedChance = static_cast<f64>(randomValue) / static_cast<f64>(std::numeric_limits<u64>::max());
+  return generatedChance < static_cast<f64>(chance);
 }
 
 void set_ingame_delta_time_multiplier(f32 val) {
@@ -112,5 +146,3 @@ f32 delta_time_ingame(void) {
   }
   return GetFrameTime() * state->ingame_delta_time_multiplier;
 }
-
-
