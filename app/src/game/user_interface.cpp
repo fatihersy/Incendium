@@ -1,4 +1,5 @@
 #include "user_interface.h"
+#include <numbers>
 #include <algorithm>
 #include <cmath>
 #include <reasings.h>
@@ -2222,7 +2223,86 @@ void gui_draw_spritesheet_id(spritesheet_id _id, Color _tint, Vector2 pos, Vecto
     return; 
   }
   draw_sprite_on_site_by_id(_id, _tint, pos, scale, frame);
-}
+}  
+void draw_triangle_strip_star(Vector2 center, float insideRadius, float outsideRadius, int segments, bool outline, const std::vector<Color>& palette, float palette_phase) {
+  if (segments < 3) { return; }
+  constexpr float PI_F = std::numbers::pi_v<float>;
+  const float angleStep = (2.0f * PI_F) / static_cast<float>(segments);
+
+  std::vector<Vector2> points(static_cast<size_t>(segments * 2 + 2));
+  for (int i = 0, i2 = 0; i < segments; ++i, i2 += 2) {
+    const float angle1 = static_cast<float>(i) * angleStep;
+    points[static_cast<size_t>(i2)]     = Vector2{ center.x + std::cos(angle1) * insideRadius,  center.y + std::sin(angle1) * insideRadius };
+    const float angle2 = angle1 + angleStep * 0.5f;
+    points[static_cast<size_t>(i2 + 1)] = Vector2{ center.x + std::cos(angle2) * outsideRadius, center.y + std::sin(angle2) * outsideRadius };
+  }
+  points[static_cast<size_t>(segments * 2)]     = points[0];
+  points[static_cast<size_t>(segments * 2 + 1)] = points[1];
+
+  const bool use_palette = !palette.empty();
+  const size_t psize = use_palette ? palette.size() : 0u;
+  unsigned int sumR = 0u, sumG = 0u, sumB = 0u, sumA = 0u;
+  if (use_palette) {
+    for (const Color& c : palette) { sumR += c.r; sumG += c.g; sumB += c.b; sumA += c.a; }
+  }
+  const Color avg_color = use_palette
+    ? Color{ static_cast<unsigned char>(sumR / psize), static_cast<unsigned char>(sumG / psize), static_cast<unsigned char>(sumB / psize), static_cast<unsigned char>(sumA / psize) }
+    : ColorFromHSV(0.0f, 0.0f, 0.85f);
+  auto lerp = [](float a, float b, float t) { return a + (b - a) * t; };
+  auto lerpChan = [](unsigned char a, unsigned char b, float t) -> unsigned char {
+    return static_cast<unsigned char>(std::round(a + (static_cast<float>(b) - static_cast<float>(a)) * t));
+  };
+  const float blend_to_avg = 0.70f;
+
+  for (int i = 0; i < segments; ++i) {
+    const float angle1 = static_cast<float>(i) * angleStep;
+    const float deg1   = angle1 * (180.0f / PI_F);
+
+    const Vector2 a = points[static_cast<size_t>(i * 2)];
+    const Vector2 b = points[static_cast<size_t>(i * 2 + 1)];
+    const Vector2 c = points[static_cast<size_t>(i * 2 + 2)];
+    const Vector2 d = points[static_cast<size_t>(i * 2 + 3)];
+
+    Color seg_color;
+    if (use_palette) {
+      const float poffsetf = std::fmod(palette_phase, 1.0f) * static_cast<float>(psize);
+      const float idxf = static_cast<float>(i) + poffsetf;
+      const float base = std::floor(idxf);
+      const size_t idx0 = static_cast<size_t>(base) % psize;
+      const size_t idx1 = (idx0 + 1u) % psize;
+      const float frac = idxf - base;
+      const Color c0 = palette[idx0];
+      const Color c1 = palette[idx1];
+      const Color blended = Color{
+        lerpChan(c0.r, c1.r, frac),
+        lerpChan(c0.g, c1.g, frac),
+        lerpChan(c0.b, c1.b, frac),
+        lerpChan(c0.a, c1.a, frac)
+      };
+      seg_color = Color{
+        lerpChan(blended.r, avg_color.r, blend_to_avg),
+        lerpChan(blended.g, avg_color.g, blend_to_avg),
+        lerpChan(blended.b, avg_color.b, blend_to_avg),
+        lerpChan(blended.a, avg_color.a, 0.30f)
+      };
+    } else {
+      const Color base_col = ColorFromHSV(deg1, 0.25f, 0.95f);
+      seg_color = Color{
+        static_cast<unsigned char>(std::round(lerp(static_cast<float>(base_col.r), static_cast<float>(avg_color.r), blend_to_avg))),
+        static_cast<unsigned char>(std::round(lerp(static_cast<float>(base_col.g), static_cast<float>(avg_color.g), blend_to_avg))),
+        static_cast<unsigned char>(std::round(lerp(static_cast<float>(base_col.b), static_cast<float>(avg_color.b), blend_to_avg))),
+        static_cast<unsigned char>(std::round(lerp(static_cast<float>(base_col.a), static_cast<float>(avg_color.a), 0.30f)))
+      };
+    }
+    DrawTriangle(c, b, a, seg_color);
+    DrawTriangle(d, b, c, seg_color);
+
+    if (outline) {
+      DrawTriangleLines(a, b, c, BLACK);
+      DrawTriangleLines(c, b, d, BLACK);
+    }
+  }
+};
 void gui_draw_texture_id_pro(texture_id _id, Rectangle src, Rectangle dest, Color tint, Vector2 origin, i32 texture_wrap) {
   if (_id >= TEX_ID_MAX or _id <= TEX_ID_UNSPECIFIED) {
     IWARN("user_interface::gui_draw_texture_id_pro()::Texture id is out of bound"); 

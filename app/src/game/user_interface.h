@@ -484,6 +484,7 @@ void gui_draw_atlas_texture_id_pro_grid(atlas_texture_id _id, Rectangle src, Rec
 void gui_draw_texture_id_pro(texture_id _id, Rectangle src, Rectangle dest, Color tint = WHITE, Vector2 origin = ZEROVEC2, i32 texture_wrap = TEXTURE_WRAP_REPEAT);
 void gui_draw_texture_id(const texture_id _id, const Rectangle dest, const Vector2 origin, i32 texture_wrap = TEXTURE_WRAP_REPEAT);
 void gui_draw_spritesheet_id(spritesheet_id _id, Color _tint, Vector2 pos, Vector2 scale, u16 frame);
+void draw_triangle_strip_star(Vector2 center, float insideRadius, float outsideRadius, int segments, bool outline, const std::vector<Color>& palette, float palette_phase);
 void draw_atlas_texture_stretch(atlas_texture_id tex_id, Rectangle stretch_part, Rectangle dest, bool should_center, Color tint = WHITE);
 atlas_texture_id draw_scrolling_textures(
   const std::vector<atlas_texture_id>& item_tex_ids, f32 _offset, f32 draw_width, Rectangle center_unit, bool use_dest_dim, f32 unit_gap, Color item_tint, f32 source_scale = 1.f, 

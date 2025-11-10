@@ -1,4 +1,7 @@
 #include "scene_main_menu.h"
+
+#include <cmath>   // For std::cos, std::sin
+
 #include <reasings.h>
 #include <steam/steam_api.h>
 #include <loc_types.h>
@@ -628,10 +631,6 @@ void draw_main_menu_character_panel(void) {
     state->mainmenu_scene_character_subscene = MAIN_MENU_SCENE_CHARACTER_GAME_RULE;
   }
 }
-void draw_main_menu_character_subscene_upgrade_panel(Rectangle parent_dest, f32 padding) {
-  draw_main_menu_character_subscene_upgrade_upgrade_panel(parent_dest, padding);
-  draw_main_menu_character_subscene_upgrade_item_list_panel(parent_dest, padding);
-}
 void draw_main_menu_character_subscene_upgrade_upgrade_panel(Rectangle parent_dest, [[__maybe_unused__]] f32 padding) {
   mms_character_upgrade_context& scene_ctx = state->mms_character_upgrade;
   scene_ctx.upgrade_parent_panel.dest = Rectangle { parent_dest.x, parent_dest.y, (parent_dest.width * .75f), parent_dest.height};
@@ -813,15 +812,60 @@ void draw_main_menu_character_subscene_upgrade_item_list_panel(Rectangle parent_
     index++;
   }
 }
-void draw_main_menu_character_subscene_inventory_panel(Rectangle parent_dest, f32 padding) {
-  draw_main_menu_character_subscene_inventory_slots_panel(parent_dest, padding);
-  draw_main_menu_character_subscene_inventory_item_list_panel(parent_dest, padding);
-}
 void draw_main_menu_character_subscene_inventory_slots_panel(Rectangle parent_dest, [[__maybe_unused__]] f32 padding) {
-  mms_character_inventory_context& scene_state = state->mms_character_inventory;
-  scene_state.inventory_slots_panel.dest = Rectangle { parent_dest.x, parent_dest.y, (parent_dest.width * .75f), parent_dest.height};
+  mms_character_inventory_context& scene_ctx = state->mms_character_inventory;
+  scene_ctx.inventory_slots_panel.dest = Rectangle { parent_dest.x, parent_dest.y, (parent_dest.width * .75f), parent_dest.height};
+  std::vector<Color> slot_palette = {
+    Color{ 190u, 30u, 80u, 190u },  // Deep Ruby/Magenta
+    Color{ 200u, 80u, 40u, 190u },  // Rich Amber/Orange
+    Color{ 180u, 160u, 45u, 190u }, // Gold/Yellow
+    Color{ 40u, 150u, 70u, 190u },  // Emerald Green
+    Color{ 50u, 80u, 190u, 190u }   // Sapphire Blue
+  };
+  const Color slot_bg_color = Color{ 22, 18, 28, 168 };
+  const panel_draw_result this_parent = gui_panel(scene_ctx.inventory_slots_panel, scene_ctx.inventory_slots_panel.dest, false);
 
-  gui_panel(scene_state.inventory_slots_panel, scene_state.inventory_slots_panel.dest, false);
+  const f32 head_radius   = this_parent.draw_dest.height * .12f;
+  const f32 arch_radius   = this_parent.draw_dest.height * .100f;
+  const f32 common_radius = this_parent.draw_dest.height * .08f;
+
+  const Vector2 head_slot_pos = Vector2{ this_parent.draw_dest.x + (this_parent.draw_dest.width * .5f), this_parent.draw_dest.y + (this_parent.draw_dest.height * .17f) };
+
+  const f32 first_column_x  = this_parent.draw_dest.x + (this_parent.draw_dest.width  * .2f);
+  const f32 second_column_x = this_parent.draw_dest.x + (this_parent.draw_dest.width  * .4f);
+  const f32 third_column_x  = this_parent.draw_dest.x + (this_parent.draw_dest.width  * .6f);
+  const f32 forth_column_x  = this_parent.draw_dest.x + (this_parent.draw_dest.width  * .8f);
+  
+  const f32 arch_slot_height   = this_parent.draw_dest.y + (this_parent.draw_dest.height * .38f); 
+  const f32 common_set1_height = this_parent.draw_dest.y + (this_parent.draw_dest.height * .60f);
+  const f32 common_set2_height = this_parent.draw_dest.y + (this_parent.draw_dest.height * .78f);
+
+  auto draw_slot = [&slot_palette](Vector2 center, f32 inner_radius, f32 outer_radius, i32 sides, Color fill, bool animate) {
+    if (sides < 3) { return; }
+    DrawPoly(center, sides, inner_radius, 0.f, fill);
+    draw_triangle_strip_star( center, inner_radius, outer_radius, sides, false, slot_palette, animate ? GetTime() : 0.f);
+  };
+
+  draw_slot( head_slot_pos, head_radius * 0.9f, head_radius, 14, slot_bg_color, false);
+  {
+    const i32 sides = 10;
+    draw_slot(Vector2{ first_column_x,  arch_slot_height }, arch_radius * .9f, arch_radius, sides, slot_bg_color, false);
+    draw_slot(Vector2{ second_column_x, arch_slot_height }, arch_radius * .9f, arch_radius, sides, slot_bg_color, false);
+    draw_slot(Vector2{ third_column_x,  arch_slot_height }, arch_radius * .9f, arch_radius, sides, slot_bg_color, false);
+    draw_slot(Vector2{ forth_column_x,  arch_slot_height }, arch_radius * .9f, arch_radius, sides, slot_bg_color, false);
+  }
+  {
+    const i32 sides = 6;
+    draw_slot(Vector2{ first_column_x,  common_set1_height }, common_radius * .9f, common_radius, sides, slot_bg_color, false);
+    draw_slot(Vector2{ second_column_x, common_set1_height }, common_radius * .9f, common_radius, sides, slot_bg_color, false);
+    draw_slot(Vector2{ third_column_x,  common_set1_height }, common_radius * .9f, common_radius, sides, slot_bg_color, false);
+    draw_slot(Vector2{ forth_column_x,  common_set1_height }, common_radius * .9f, common_radius, sides, slot_bg_color, false);
+
+    draw_slot(Vector2{ first_column_x,  common_set2_height }, common_radius * .9f, common_radius, sides, slot_bg_color, false);
+    draw_slot(Vector2{ second_column_x, common_set2_height }, common_radius * .9f, common_radius, sides, slot_bg_color, false);
+    draw_slot(Vector2{ third_column_x,  common_set2_height }, common_radius * .9f, common_radius, sides, slot_bg_color, false);
+    draw_slot(Vector2{ forth_column_x,  common_set2_height }, common_radius * .9f, common_radius, sides, slot_bg_color, false);
+  }
 }
 void draw_main_menu_character_subscene_inventory_item_list_panel(Rectangle parent_dest, f32 padding) {
   mms_character_inventory_context& scene_ctx = state->mms_character_inventory;
@@ -863,10 +907,6 @@ void draw_main_menu_character_subscene_inventory_item_list_panel(Rectangle paren
 
     gui_label_box_format(FONT_TYPE_LIGHT, 1, local_panel_dest, WHITE, TEXT_ALIGN_BOTTOM_RIGHT, "%d", slot.amount);
   }
-}
-void draw_main_menu_character_subscene_game_rule_panel(Rectangle parent_dest, f32 padding) {
-  draw_main_menu_character_subscene_game_rule_list_panel(parent_dest, padding);
-  draw_main_menu_character_subscene_game_rule_details_panel(parent_dest, padding);
 }
 void draw_main_menu_character_subscene_game_rule_list_panel(Rectangle parent_dest, [[__maybe_unused__]] f32 padding) {
   const font_type panel_font_type = FONT_TYPE_REGULAR;
