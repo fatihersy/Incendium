@@ -4,6 +4,9 @@
 
 #include "game_types.h"
 
+#define UI_DEFAULT_BACKGROUND_PANEL_DEST(in_app_settings) \
+  Rectangle { in_app_settings->render_width * .025f, in_app_settings->render_height * .075f, in_app_settings->render_width * .95f, in_app_settings->render_height * .85f}
+
 enum button_state {
   BTN_STATE_UNDEFINED,
   BTN_STATE_UP,
@@ -427,10 +430,26 @@ struct ui_error_display_control_system {
   }
 };
 
-struct panel_draw_result {
-  Rectangle bound_dest;
-  Rectangle draw_dest;
-  bool signal;
+struct inactive_panel_draw_result {
+  Rectangle bound_dest {};
+  Rectangle draw_dest {};
+  bool is_signaling {};
+  bool is_hover {};
+  bool is_success {};
+};
+struct active_panel_draw_result {
+  Rectangle draw_dest {};
+  bool is_signaling {};
+  bool is_hover {};
+  bool is_success {};
+};
+
+inline constexpr std::array G_PALETTE = {
+  Color{ 190u, 30u, 80u, 190u },   // Deep Ruby/Magenta
+  Color{ 200u, 80u, 40u, 190u },   // Rich Amber/Orange
+  Color{ 180u, 160u, 45u, 190u },  // Gold/Yellow
+  Color{  40u, 150u, 70u, 190u },   // Emerald Green
+  Color{  50u, 80u, 190u, 190u }    // Sapphire Blue
 };
 
 [[__nodiscard__]] bool user_interface_system_initialize(const camera_metrics * in_camera_metrics);
@@ -469,8 +488,8 @@ void gui_checkbox_grid(checkbox_id _id, Vector2 grid, Vector2 grid_location);
 void gui_slider(slider_id _id, Vector2 pos, Vector2 grid);
 void gui_draw_spritesheet_to_background(spritesheet_id _id, Color _tint);
 void gui_progress_bar(progress_bar_id bar_id, Rectangle dest, bool _should_center, Color tint = BLANK, Color outside_tint = WHITE);
-panel_draw_result gui_panel(panel pan, Rectangle dest, bool _should_center);
-bool gui_panel_active(panel *const panel, Rectangle dest, bool _should_center);
+inactive_panel_draw_result gui_panel(panel pan, Rectangle dest, bool _should_center);
+active_panel_draw_result gui_panel_active(panel *const panel, Rectangle dest, bool _should_center);
 void gui_label_box(const char* text, font_type type, i32 font_size, Rectangle dest, Color tint, text_alignment alignment);
 void gui_label(const char* text, font_type type, i32 font_size, Vector2 position, Color tint, bool _center_h, bool _center_v);
 void gui_label_shader(const char* text, shader_id sdr_id, font_type type, i32 font_size, Vector2 position, Color tint, bool _center_h, bool _center_v);
@@ -482,7 +501,7 @@ void gui_draw_atlas_texture_id(atlas_texture_id _id, Rectangle dest, Vector2 ori
 void gui_draw_atlas_texture_id_scale(atlas_texture_id _id, Vector2 position, f32 scale, Color tint, bool should_center); 
 void gui_draw_atlas_texture_id_pro_grid(atlas_texture_id _id, Rectangle src, Rectangle dest, bool relative);
 void gui_draw_texture_id_pro(texture_id _id, Rectangle src, Rectangle dest, Color tint = WHITE, Vector2 origin = ZEROVEC2, i32 texture_wrap = TEXTURE_WRAP_REPEAT);
-void gui_draw_texture_id(const texture_id _id, const Rectangle dest, const Vector2 origin, i32 texture_wrap = TEXTURE_WRAP_REPEAT);
+void gui_draw_texture_id(const texture_id _id, const Rectangle dest, const Vector2 origin, Color tint, i32 texture_wrap = TEXTURE_WRAP_REPEAT);
 void gui_draw_spritesheet_id(spritesheet_id _id, Color _tint, Vector2 pos, Vector2 scale, u16 frame);
 void draw_triangle_strip_star(Vector2 center, float insideRadius, float outsideRadius, int segments, bool outline, const std::vector<Color>& palette, float palette_phase);
 void draw_atlas_texture_stretch(atlas_texture_id tex_id, Rectangle stretch_part, Rectangle dest, bool should_center, Color tint = WHITE);

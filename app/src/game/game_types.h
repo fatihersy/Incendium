@@ -268,18 +268,51 @@ enum item_type {
   ITEM_TYPE_UNDEFINED,
   ITEM_TYPE_EXPERIENCE,
   ITEM_TYPE_COIN,
+  ITEM_TYPE_SOUL,
   ITEM_TYPE_HEALTH_FRAGMENT,
   ITEM_TYPE_CHEST,
-  ITEM_TYPE_SIGIL_DAMAGE_COMMON,
-  ITEM_TYPE_SIGIL_DAMAGE_UNCOMMON,
-  ITEM_TYPE_SIGIL_DAMAGE_RARE,
-  ITEM_TYPE_SIGIL_DAMAGE_EPIC,
-  ITEM_TYPE_SIGIL_RESISTANCE_COMMON,
-  ITEM_TYPE_SIGIL_RESISTANCE_UNCOMMON,
-  ITEM_TYPE_SIGIL_RESISTANCE_RARE,
-  ITEM_TYPE_SIGIL_RESISTANCE_EPIC,
+  ITEM_TYPE_SIGIL_HEAD,
+  ITEM_TYPE_SIGIL_ARCH_MICHAEL,
+  ITEM_TYPE_SIGIL_ARCH_GABRIEL,
+  ITEM_TYPE_SIGIL_ARCH_RAPHAEL,
+  ITEM_TYPE_SIGIL_ARCH_URIEL,
+  ITEM_TYPE_SIGIL_ARCH_SAMAEL,
+  ITEM_TYPE_SIGIL_ARCH_ZADKIEL,
+  ITEM_TYPE_SIGIL_ARCH_THAVAEL,
+  ITEM_TYPE_SIGIL_ARCH_AZRAEL,
+  ITEM_TYPE_SIGIL_ARCH_CAMAEL,
+  ITEM_TYPE_SIGIL_ARCH_JOPHIEL,
+  ITEM_TYPE_SIGIL_COMMON_HEALTH,
+  ITEM_TYPE_SIGIL_COMMON_STAMINA,
+  ITEM_TYPE_SIGIL_COMMON_MANA,
+  ITEM_TYPE_SIGIL_COMMON_HP_REGEN,
+  ITEM_TYPE_SIGIL_COMMON_STAMINA_REGEN,
+  ITEM_TYPE_SIGIL_COMMON_MANA_REGEN,
+  ITEM_TYPE_SIGIL_COMMON_MOVE_SPEED,
+  ITEM_TYPE_SIGIL_COMMON_AOE,
+  ITEM_TYPE_SIGIL_COMMON_OVERALL_DAMAGE,
+  ITEM_TYPE_SIGIL_COMMON_ABILITY_CD,
+  ITEM_TYPE_SIGIL_COMMON_PROJECTILE_AMOUNT,
+  ITEM_TYPE_SIGIL_COMMON_EXP_GAIN,
+  ITEM_TYPE_SIGIL_COMMON_TOTAL_TRAIT_POINTS,
+  ITEM_TYPE_SIGIL_COMMON_BASIC_ATTACK_DAMAGE,
+  ITEM_TYPE_SIGIL_COMMON_BASIC_ATTACK_SPEED,
+  ITEM_TYPE_SIGIL_COMMON_CRITICAL_CHANCE,
+  ITEM_TYPE_SIGIL_COMMON_CRITICAL_DAMAGE,
+  ITEM_TYPE_SIGIL_COMMON_OVERALL_LUCK,
+  ITEM_TYPE_SIGIL_COMMON_DAMAGE_REDUCTION,
+  ITEM_TYPE_SIGIL_COMMON_CONDITION_DURATION,
+  ITEM_TYPE_SIGIL_COMMON_DAMAGE_OVER_TIME,
+  ITEM_TYPE_SIGIL_COMMON_DAMAGE_DEFERRAL,
+  ITEM_TYPE_SIGIL_COMMON_SIGIL_EFFECTIVENESS,
+  ITEM_TYPE_SIGIL_COMMON_VITAL_SIGIL_EFFECTIVENESS,
+  ITEM_TYPE_SIGIL_COMMON_LETAL_SIGIL_EFFECTIVENESS,
+  ITEM_TYPE_SIGIL_COMMON_DROP_RATE,
+  ITEM_TYPE_SIGIL_COMMON_REWARD_MODIFIER,
   ITEM_TYPE_MAX
 };
+#define M_ITEM_TYPE_SIGIL_START ITEM_TYPE_SIGIL_HEAD
+#define M_ITEM_TYPE_SIGIL_END ITEM_TYPE_SIGIL_COMMON_REWARD_MODIFIER
 
 enum sigil_slot_id {
   SIGIL_SLOT_UNDEFINED,
@@ -804,27 +837,45 @@ struct loot_item {
 };
 
 struct item_data {
-  i32 id;
+  i32 id{};
   item_type type;
-  atlas_texture_id tex_id;
-  std::string display_name;
-  
+  i32 tex_id{};
+  i32 loc_tex_id{};
+  i32 level {};
+  bool from_atlas{};
+
   data128 buffer;
   
   item_data(void) {
     this->id = -1;
     this->type = ITEM_TYPE_UNDEFINED;
-    this->tex_id = ATLAS_TEX_ID_UNSPECIFIED;
-    this->buffer = data128();
-    this->display_name = std::string();
   }
-  item_data(item_type _type, const char* _display_name, data128 _buffer, atlas_texture_id _tex_id) : item_data() {
+  item_data(item_type _type, i32 loc_tex_id, data128 _buffer, i32 _tex_id, bool _from_atlas) : item_data() {
     this->type = _type;
     this->tex_id = _tex_id;
     this->buffer = _buffer;
-    this->display_name = _display_name;
+    this->loc_tex_id = loc_tex_id;
+    this->from_atlas = _from_atlas;
   }
 };
+
+struct sigil_slot {
+  sigil_slot_id id;
+  item_data sigil;
+  data128 ui_buffer;
+  bool filled {};
+  bool draw_item {};
+  sigil_slot(void) {
+    this->id = SIGIL_SLOT_UNDEFINED;
+  }
+  sigil_slot(sigil_slot_id id, item_type sigil_type, data128 ig_buffer) {
+    this->id = id;
+    this->sigil.type = sigil_type;
+    this->sigil.buffer = ig_buffer;
+    this->filled = true;
+  }
+};
+
 
 struct combat_feedback_floating_text {
   i32 id;
@@ -1179,16 +1230,14 @@ struct character_trait {
 };
 
 struct player_inventory_slot {
-  i32 slot_id;
+  i32 slot_id{};
   ::item_type item_type;
-  i32 amount;
-  std::string display_name;
+  i32 loc_txt_id{};
   data128 ui_buffer;
+  data128 ig_buffer;
 
   player_inventory_slot(void) {
-    this->slot_id = 0;
     this->item_type = ITEM_TYPE_UNDEFINED;
-    this->amount = 0;
     this->ui_buffer = data128();
   }
   player_inventory_slot(::item_type _type) : player_inventory_slot() {

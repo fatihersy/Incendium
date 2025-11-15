@@ -165,7 +165,7 @@ void sig_change_ingame_state(sig_ingame_state state);
 void sig_init_chest_sequence(chest_opening_sequence sequence, data128 vec_ex, data128 mm_ex);
 void sig_update_chest_sequence(void);
 void sig_render_chest_sequence(void);
-item_type sig_atlas_tex_id_to_item_type(atlas_texture_id tex_id);
+item_type sig_atlas_tex_id_to_item_type(i32 tex_id);
 
 [[__nodiscard__]] bool start_game(void);
 
@@ -441,7 +441,7 @@ void render_interface_in_game(void) {
                 panel *const pnl = __builtin_addressof(state->ability_upg_panels.at(itr_000));
                 dest.x = dest_x_buffer + ((dest.width + SCREEN_OFFSET.x) * itr_000);
               
-                if(gui_panel_active(pnl, dest, true)) {
+                if(gui_panel_active(pnl, dest, true).is_signaling) {
                   end_ability_upgrade_state(itr_000);
                   break;
                 }
@@ -1251,7 +1251,8 @@ void sig_render_chest_sequence(void) {
           seq.mm_ex.f32[3] = static_cast<f32>(true);
         }
         if (gui_menu_button(lc_txt(LOC_TEXT_INGAME_STATE_RESULT_ACCEPT), BTN_ID_IN_GAME_BUTTON_CHEST_OPENING_ACCEPT, {0.f, 45.f}, SIG_BASE_RENDER_DIV2, true)) {
-          gm_add_to_inventory(sig_atlas_tex_id_to_item_type(sigil_texture_id));
+          const item_type _item_type = sig_atlas_tex_id_to_item_type(sigil_texture_id);
+          gm_add_to_inventory(_item_type, gm_get_default_items()[_item_type].buffer);
           sig_change_ingame_state(SCENE_INGAME_STATE_PLAY);
         }
       }
@@ -1264,20 +1265,39 @@ void sig_render_chest_sequence(void) {
     }
   }
 }
-item_type sig_atlas_tex_id_to_item_type(atlas_texture_id tex_id) {
+item_type sig_atlas_tex_id_to_item_type(i32 tex_id) {
   if (tex_id < ATLAS_TEX_ID_UNSPECIFIED or tex_id > ATLAS_TEX_ID_MAX) {
     IWARN("scene_in_game::sig_atlas_tex_id_to_item_type()::Texture id is out of bound");
     return ITEM_TYPE_UNDEFINED;
   }
   switch (tex_id) {
-    case ATLAS_TEX_ID_SIGIL_DAMAGE_COMMON:      { return ITEM_TYPE_SIGIL_DAMAGE_COMMON; }
-    case ATLAS_TEX_ID_SIGIL_DAMAGE_UNCOMMON:    { return ITEM_TYPE_SIGIL_DAMAGE_UNCOMMON; }
-    case ATLAS_TEX_ID_SIGIL_DAMAGE_RARE:        { return ITEM_TYPE_SIGIL_DAMAGE_RARE; }
-    case ATLAS_TEX_ID_SIGIL_DAMAGE_EPIC:        { return ITEM_TYPE_SIGIL_DAMAGE_EPIC; }
-    case ATLAS_TEX_ID_SIGIL_RESISTANCE_COMMON:  { return ITEM_TYPE_SIGIL_RESISTANCE_COMMON; }
-    case ATLAS_TEX_ID_SIGIL_RESISTANCE_UNCOMMON:{ return ITEM_TYPE_SIGIL_RESISTANCE_UNCOMMON; }
-    case ATLAS_TEX_ID_SIGIL_RESISTANCE_RARE:    { return ITEM_TYPE_SIGIL_RESISTANCE_RARE; }
-    case ATLAS_TEX_ID_SIGIL_RESISTANCE_EPIC:    { return ITEM_TYPE_SIGIL_RESISTANCE_EPIC; }
+    case TEX_ID_SIGIL_HEALTH:              { return ITEM_TYPE_SIGIL_COMMON_HEALTH; }
+    case TEX_ID_SIGIL_STAMINA:             { return ITEM_TYPE_SIGIL_COMMON_STAMINA; }
+    case TEX_ID_SIGIL_MANA:                { return ITEM_TYPE_SIGIL_COMMON_MANA; }
+    case TEX_ID_SIGIL_HP_REGEN:            { return ITEM_TYPE_SIGIL_COMMON_HP_REGEN; }
+    case TEX_ID_SIGIL_STAMINA_REGEN:       { return ITEM_TYPE_SIGIL_COMMON_STAMINA_REGEN; }
+    case TEX_ID_SIGIL_MANA_REGEN:          { return ITEM_TYPE_SIGIL_COMMON_MANA_REGEN; }
+    case TEX_ID_SIGIL_MOVE_SPEED:          { return ITEM_TYPE_SIGIL_COMMON_MOVE_SPEED; }
+    case TEX_ID_SIGIL_AOE:                 { return ITEM_TYPE_SIGIL_COMMON_AOE; }
+    case TEX_ID_SIGIL_OVERALL_DAMAGE:      { return ITEM_TYPE_SIGIL_COMMON_OVERALL_DAMAGE; }
+    case TEX_ID_SIGIL_ABILITY_CD:          { return ITEM_TYPE_SIGIL_COMMON_ABILITY_CD; }
+    case TEX_ID_SIGIL_PROJECTILE_AMOUTH:   { return ITEM_TYPE_SIGIL_COMMON_PROJECTILE_AMOUNT; }
+    case TEX_ID_SIGIL_EXP_GAIN:            { return ITEM_TYPE_SIGIL_COMMON_EXP_GAIN; }
+    case TEX_ID_SIGIL_TOTAL_TRAIT_POINT:   { return ITEM_TYPE_SIGIL_COMMON_TOTAL_TRAIT_POINTS; }
+    case TEX_ID_SIGIL_BASIC_ATTACK_DAMAGE: { return ITEM_TYPE_SIGIL_COMMON_BASIC_ATTACK_DAMAGE; }
+    case TEX_ID_SIGIL_BASIC_ATTACK_SPEED:  { return ITEM_TYPE_SIGIL_COMMON_BASIC_ATTACK_SPEED; }
+    case TEX_ID_SIGIL_CRITICAL_CHANCE:     { return ITEM_TYPE_SIGIL_COMMON_CRITICAL_CHANCE; }
+    case TEX_ID_SIGIL_CRITICAL_DAMAGE:     { return ITEM_TYPE_SIGIL_COMMON_CRITICAL_DAMAGE; }
+    case TEX_ID_SIGIL_OVERALL_LUCK:        { return ITEM_TYPE_SIGIL_COMMON_OVERALL_LUCK; }
+    case TEX_ID_SIGIL_DAMAGE_REDUCTION:    { return ITEM_TYPE_SIGIL_COMMON_DAMAGE_REDUCTION; }
+    case TEX_ID_SIGIL_CONDITION_DURATION:  { return ITEM_TYPE_SIGIL_COMMON_CONDITION_DURATION; }
+    case TEX_ID_SIGIL_DAMAGE_OVER_TIME:    { return ITEM_TYPE_SIGIL_COMMON_DAMAGE_OVER_TIME; }
+    case TEX_ID_SIGIL_DAMAGE_DEFERRAL:     { return ITEM_TYPE_SIGIL_COMMON_DAMAGE_DEFERRAL; }
+    case TEX_ID_SIGIL_SIGIL_EFFECTIVENESS: { return ITEM_TYPE_SIGIL_COMMON_SIGIL_EFFECTIVENESS; }
+    case TEX_ID_SIGIL_VITAL_SIGIL_EFFECTIVENESS:    { return ITEM_TYPE_SIGIL_COMMON_VITAL_SIGIL_EFFECTIVENESS; }
+    case TEX_ID_SIGIL_LETHAL_SIGIL_EFFECTIVENESS:      { return ITEM_TYPE_SIGIL_COMMON_LETAL_SIGIL_EFFECTIVENESS; }
+    case TEX_ID_SIGIL_DROP_RATE:    { return ITEM_TYPE_SIGIL_COMMON_DROP_RATE; }
+    case TEX_ID_SIGIL_REWARD_MODIFIER:        { return ITEM_TYPE_SIGIL_COMMON_REWARD_MODIFIER; }
     default: {
       IWARN("scene_in_game::sig_atlas_tex_id_to_item_type()::Unsupported texture id");
       return ITEM_TYPE_UNDEFINED;

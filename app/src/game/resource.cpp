@@ -80,6 +80,34 @@ bool resource_system_initialize(void) {
   load_texture_pak(PAK_FILE_ASSET1, PAK_FILE_ASSET1_BLACK_BACKGROUND_IMAGE2, false, VECTOR2(0.f, 0.f), TEX_ID_BLACK_BACKGROUND_IMG2);
   load_texture_pak(PAK_FILE_ASSET1, PAK_FILE_ASSET1_SPRITESHEET_ZAP, false, VECTOR2(0.f, 0.f), TEX_ID_ZAP);
   load_texture_pak(PAK_FILE_ASSET1, PAK_FILE_ASSET1_SPIN_RESULT_STAR_105_105, false, VECTOR2(0.f, 0.f), TEX_ID_SPIN_RESULT_STAR_105_105);
+
+  load_texture_pak(PAK_FILE_ASSET1, PAK_FILE_SIGIL_ABILITY_CD,                 false, VECTOR2(0.f, 0.f), TEX_ID_SIGIL_ABILITY_CD,);
+  load_texture_pak(PAK_FILE_ASSET1, PAK_FILE_SIGIL_AOE,                        false, VECTOR2(0.f, 0.f), TEX_ID_SIGIL_AOE,);
+  load_texture_pak(PAK_FILE_ASSET1, PAK_FILE_SIGIL_BASIC_ATTACK_DAMAGE,        false, VECTOR2(0.f, 0.f), TEX_ID_SIGIL_BASIC_ATTACK_DAMAGE,);
+  load_texture_pak(PAK_FILE_ASSET1, PAK_FILE_SIGIL_BASIC_ATTACK_SPEED,         false, VECTOR2(0.f, 0.f), TEX_ID_SIGIL_BASIC_ATTACK_SPEED,);
+  load_texture_pak(PAK_FILE_ASSET1, PAK_FILE_SIGIL_CONDITION_DURATION,         false, VECTOR2(0.f, 0.f), TEX_ID_SIGIL_CONDITION_DURATION,);
+  load_texture_pak(PAK_FILE_ASSET1, PAK_FILE_SIGIL_CRITICAL_CHANCE,            false, VECTOR2(0.f, 0.f), TEX_ID_SIGIL_CRITICAL_CHANCE,);
+  load_texture_pak(PAK_FILE_ASSET1, PAK_FILE_SIGIL_CRITICAL_DAMAGE,            false, VECTOR2(0.f, 0.f), TEX_ID_SIGIL_CRITICAL_DAMAGE,);
+  load_texture_pak(PAK_FILE_ASSET1, PAK_FILE_SIGIL_DAMAGE_DEFERRAL,            false, VECTOR2(0.f, 0.f), TEX_ID_SIGIL_DAMAGE_DEFERRAL,);
+  load_texture_pak(PAK_FILE_ASSET1, PAK_FILE_SIGIL_DAMAGE_OVER_TIME,           false, VECTOR2(0.f, 0.f), TEX_ID_SIGIL_DAMAGE_OVER_TIME,);
+  load_texture_pak(PAK_FILE_ASSET1, PAK_FILE_SIGIL_DAMAGE_REDUCTION,           false, VECTOR2(0.f, 0.f), TEX_ID_SIGIL_DAMAGE_REDUCTION,);
+  load_texture_pak(PAK_FILE_ASSET1, PAK_FILE_SIGIL_DROP_RATE,                  false, VECTOR2(0.f, 0.f), TEX_ID_SIGIL_DROP_RATE,);
+  load_texture_pak(PAK_FILE_ASSET1, PAK_FILE_SIGIL_EXP_GAIN,                   false, VECTOR2(0.f, 0.f), TEX_ID_SIGIL_EXP_GAIN,);
+  load_texture_pak(PAK_FILE_ASSET1, PAK_FILE_SIGIL_HEALTH,                     false, VECTOR2(0.f, 0.f), TEX_ID_SIGIL_HEALTH,);
+  load_texture_pak(PAK_FILE_ASSET1, PAK_FILE_SIGIL_HP_REGEN,                   false, VECTOR2(0.f, 0.f), TEX_ID_SIGIL_HP_REGEN,);
+  load_texture_pak(PAK_FILE_ASSET1, PAK_FILE_SIGIL_LETHAL_SIGIL_EFFECTIVENESS, false, VECTOR2(0.f, 0.f), TEX_ID_SIGIL_LETHAL_SIGIL_EFFECTIVENESS,);
+  load_texture_pak(PAK_FILE_ASSET1, PAK_FILE_SIGIL_MANA,                       false, VECTOR2(0.f, 0.f), TEX_ID_SIGIL_MANA,);
+  load_texture_pak(PAK_FILE_ASSET1, PAK_FILE_SIGIL_MANA_REGEN,                 false, VECTOR2(0.f, 0.f), TEX_ID_SIGIL_MANA_REGEN,);
+  load_texture_pak(PAK_FILE_ASSET1, PAK_FILE_SIGIL_MOVE_SPEED,                 false, VECTOR2(0.f, 0.f), TEX_ID_SIGIL_MOVE_SPEED,);
+  load_texture_pak(PAK_FILE_ASSET1, PAK_FILE_SIGIL_OVERALL_DAMAGE,             false, VECTOR2(0.f, 0.f), TEX_ID_SIGIL_OVERALL_DAMAGE,);
+  load_texture_pak(PAK_FILE_ASSET1, PAK_FILE_SIGIL_OVERALL_LUCK,               false, VECTOR2(0.f, 0.f), TEX_ID_SIGIL_OVERALL_LUCK,);
+  load_texture_pak(PAK_FILE_ASSET1, PAK_FILE_SIGIL_PROJECTILE_AMOUTH,          false, VECTOR2(0.f, 0.f), TEX_ID_SIGIL_PROJECTILE_AMOUTH,);
+  load_texture_pak(PAK_FILE_ASSET1, PAK_FILE_SIGIL_REWARD_MODIFIER,            false, VECTOR2(0.f, 0.f), TEX_ID_SIGIL_REWARD_MODIFIER,);
+  load_texture_pak(PAK_FILE_ASSET1, PAK_FILE_SIGIL_SIGIL_EFFECTIVENESS,        false, VECTOR2(0.f, 0.f), TEX_ID_SIGIL_SIGIL_EFFECTIVENESS,);
+  load_texture_pak(PAK_FILE_ASSET1, PAK_FILE_SIGIL_STAMINA_REGEN,              false, VECTOR2(0.f, 0.f), TEX_ID_SIGIL_STAMINA_REGEN,);
+  load_texture_pak(PAK_FILE_ASSET1, PAK_FILE_SIGIL_STAMINA,                    false, VECTOR2(0.f, 0.f), TEX_ID_SIGIL_STAMINA,);
+  load_texture_pak(PAK_FILE_ASSET1, PAK_FILE_SIGIL_TOTAL_TRAIT_POINT,          false, VECTOR2(0.f, 0.f), TEX_ID_SIGIL_TOTAL_TRAIT_POINT,);
+  load_texture_pak(PAK_FILE_ASSET1, PAK_FILE_SIGIL_VITAL_SIGIL_EFFECTIVENESS,  false, VECTOR2(0.f, 0.f), TEX_ID_SIGIL_VITAL_SIGIL_EFFECTIVENESS,);
   #else
     load_texture_disk("atlas.png", false, VECTOR2(0.f, 0.f), TEX_ID_ASSET_ATLAS);
     load_texture_disk("worldmap_wo_clouds.png", false, VECTOR2(0.f, 0.f), TEX_ID_WORLDMAP_WO_CLOUDS);
@@ -87,6 +115,34 @@ bool resource_system_initialize(void) {
     load_texture_disk("black_background_2.png", false, VECTOR2(0.f, 0.f), TEX_ID_BLACK_BACKGROUND_IMG2);
     load_texture_disk("zap.png", false, VECTOR2(0.f, 0.f), TEX_ID_ZAP);
     load_texture_disk("spin_result_star_105x105.png", false, VECTOR2(0.f, 0.f), TEX_ID_SPIN_RESULT_STAR_105_105);
+
+    load_texture_disk("sigils/ability_cd_clear-modified.png",                false, VECTOR2(0.f, 0.f), TEX_ID_SIGIL_ABILITY_CD);
+    load_texture_disk("sigils/aoe_clear-modified.png",                       false, VECTOR2(0.f, 0.f), TEX_ID_SIGIL_AOE);
+    load_texture_disk("sigils/basic_attack_damage_clear-modified.png",       false, VECTOR2(0.f, 0.f), TEX_ID_SIGIL_BASIC_ATTACK_DAMAGE);
+    load_texture_disk("sigils/basic_attack_speed_clear-modified.png",        false, VECTOR2(0.f, 0.f), TEX_ID_SIGIL_BASIC_ATTACK_SPEED);
+    load_texture_disk("sigils/condition_duration_clear-modified.png",        false, VECTOR2(0.f, 0.f), TEX_ID_SIGIL_CONDITION_DURATION);
+    load_texture_disk("sigils/critical_chance_clear-modified.png",           false, VECTOR2(0.f, 0.f), TEX_ID_SIGIL_CRITICAL_CHANCE);
+    load_texture_disk("sigils/critical_damage_clear-modified.png",           false, VECTOR2(0.f, 0.f), TEX_ID_SIGIL_CRITICAL_DAMAGE);
+    load_texture_disk("sigils/damage_deferral_clear-modified.png",           false, VECTOR2(0.f, 0.f), TEX_ID_SIGIL_DAMAGE_DEFERRAL);
+    load_texture_disk("sigils/damage_over_time_clear-modified.png",          false, VECTOR2(0.f, 0.f), TEX_ID_SIGIL_DAMAGE_OVER_TIME);
+    load_texture_disk("sigils/damage_reduction_clear-modified.png",          false, VECTOR2(0.f, 0.f), TEX_ID_SIGIL_DAMAGE_REDUCTION);
+    load_texture_disk("sigils/drop_rate_clear-modified.png",                 false, VECTOR2(0.f, 0.f), TEX_ID_SIGIL_DROP_RATE);
+    load_texture_disk("sigils/exp_gain_clear-modified.png",                  false, VECTOR2(0.f, 0.f), TEX_ID_SIGIL_EXP_GAIN);
+    load_texture_disk("sigils/health_sigil_clear-modified.png",              false, VECTOR2(0.f, 0.f), TEX_ID_SIGIL_HEALTH);
+    load_texture_disk("sigils/hp_regen_clear-modified.png",                  false, VECTOR2(0.f, 0.f), TEX_ID_SIGIL_HP_REGEN);
+    load_texture_disk("sigils/letal_sigil_effectiveness_clear-modified.png", false, VECTOR2(0.f, 0.f), TEX_ID_SIGIL_LETHAL_SIGIL_EFFECTIVENESS);
+    load_texture_disk("sigils/mana_clear-modified.png",                      false, VECTOR2(0.f, 0.f), TEX_ID_SIGIL_MANA);
+    load_texture_disk("sigils/mana_regen_clear-modified.png",                false, VECTOR2(0.f, 0.f), TEX_ID_SIGIL_MANA_REGEN);
+    load_texture_disk("sigils/move_speed_clear-modified.png",                false, VECTOR2(0.f, 0.f), TEX_ID_SIGIL_MOVE_SPEED);
+    load_texture_disk("sigils/overall_damage_clear-modified.png",            false, VECTOR2(0.f, 0.f), TEX_ID_SIGIL_OVERALL_DAMAGE);
+    load_texture_disk("sigils/overall_luck_clear-modified.png",              false, VECTOR2(0.f, 0.f), TEX_ID_SIGIL_OVERALL_LUCK);
+    load_texture_disk("sigils/projectile_amouth_clear-modified.png",         false, VECTOR2(0.f, 0.f), TEX_ID_SIGIL_PROJECTILE_AMOUTH);
+    load_texture_disk("sigils/reward_modifier_clear-modified.png",           false, VECTOR2(0.f, 0.f), TEX_ID_SIGIL_REWARD_MODIFIER);
+    load_texture_disk("sigils/sigil_effectiveness_clear-modified.png",       false, VECTOR2(0.f, 0.f), TEX_ID_SIGIL_SIGIL_EFFECTIVENESS);
+    load_texture_disk("sigils/stamina_regen_clear-modified.png",             false, VECTOR2(0.f, 0.f), TEX_ID_SIGIL_STAMINA_REGEN);
+    load_texture_disk("sigils/stamina_sigil_clear-modified.png",             false, VECTOR2(0.f, 0.f), TEX_ID_SIGIL_STAMINA);
+    load_texture_disk("sigils/total_trait_points_clear-modified.png",        false, VECTOR2(0.f, 0.f), TEX_ID_SIGIL_TOTAL_TRAIT_POINT);
+    load_texture_disk("sigils/vital_sigil_effectiveness_clear-modified.png", false, VECTOR2(0.f, 0.f), TEX_ID_SIGIL_VITAL_SIGIL_EFFECTIVENESS);
   #endif
 
   load_texture_from_atlas(ATLAS_TEX_ID_MAP_TILESET_TEXTURE,                  Rectangle{    0,    0, 1568, 2016 });

@@ -1154,7 +1154,7 @@ void draw_slider_body(const slider *const sdr) {
     break;
   }
 }
-panel_draw_result gui_panel(panel pan, Rectangle dest, bool _should_center) {
+inactive_panel_draw_result gui_panel(panel pan, Rectangle dest, bool _should_center) {
   Rectangle bg_dest = dest;
   Vector2 bg_origin = ZEROVEC2;
   if (_should_center) {
@@ -1184,26 +1184,30 @@ panel_draw_result gui_panel(panel pan, Rectangle dest, bool _should_center) {
   return {
     .bound_dest = dest,
     .draw_dest = bg_dest,
-    .signal = false,
+    .is_signaling = false,
+    .is_success = true
   };
 }
-bool gui_panel_active(panel *const pan, Rectangle dest, bool _should_center) {
-  IF_NOT_STATE("gui_panel_active", return false; );
+active_panel_draw_result gui_panel_active(panel *const pan, Rectangle dest, bool _should_center) {
+  IF_NOT_STATE("gui_panel_active", return {}; );
 
   if (not pan or pan == nullptr) {
     IWARN("user_interface::gui_panel_active()::Panel is invalid");
-    return false;
+    return {};
   }
   if (pan->signal_state == BTN_STATE_UNDEFINED) {
     IWARN("user_interface::gui_panel_active()::Panel was not meant to be active");
-    return false;
+    return {};
   }
+
   if (_should_center) {
     dest.x -= dest.width / 2.f;
     dest.y -= dest.height / 2.f;
   }
 
+  bool is_hover = false;
   if (CheckCollisionPointRec(state->mouse_pos_screen, dest)) {
+    is_hover = true;
     if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
       pan->current_state = BTN_STATE_PRESSED;
     } else {
@@ -1231,7 +1235,12 @@ bool gui_panel_active(panel *const pan, Rectangle dest, bool _should_center) {
 
   draw_atlas_texture_npatch(pan->frame_tex_id, dest, pan->offsets, false);
 
-  return pan->current_state == pan->signal_state;
+  return {
+    .draw_dest = dest,
+    .is_signaling = pan->current_state == pan->signal_state,
+    .is_hover = is_hover,
+    .is_success = true
+  };
 }
 void gui_label_box(const char* text, font_type type, i32 font_size, Rectangle dest, Color tint, text_alignment alignment) {
   if (not text or text == nullptr) {
@@ -1539,7 +1548,7 @@ Rectangle gui_draw_default_background_panel(void) {
   DrawRectangleRec(header_loc, Color{0, 0, 0, 50});
   DrawRectangleRec(footer_loc, Color{0, 0, 0, 50});
 
-  state->default_background_panel.dest = Rectangle{ UI_BASE_RENDER_WIDTH * .025f, UI_BASE_RENDER_HEIGHT * .075f, UI_BASE_RENDER_WIDTH * .95f, UI_BASE_RENDER_HEIGHT * .85f};
+  state->default_background_panel.dest = UI_DEFAULT_BACKGROUND_PANEL_DEST(state->in_app_settings);
   gui_panel(state->default_background_panel, state->default_background_panel.dest, false);
   return state->default_background_panel.dest;
 }
@@ -2316,7 +2325,7 @@ void gui_draw_texture_id_pro(texture_id _id, Rectangle src, Rectangle dest, Colo
   SetTextureWrap( (*tex), texture_wrap);
   DrawTexturePro( (*tex), src, dest, origin, 0.f, tint);
 }
-void gui_draw_texture_id(const texture_id _id, const Rectangle dest, const Vector2 origin, i32 texture_wrap) {
+void gui_draw_texture_id(const texture_id _id, const Rectangle dest, const Vector2 origin, Color tint, i32 texture_wrap) {
   if (_id >= TEX_ID_MAX or _id <= TEX_ID_UNSPECIFIED) {
     IWARN("user_interface::gui_draw_texture_id()::Texture id is out of bound"); 
     return; 
@@ -2327,7 +2336,7 @@ void gui_draw_texture_id(const texture_id _id, const Rectangle dest, const Vecto
     return; 
   }
   SetTextureWrap( (*tex), texture_wrap);
-  DrawTexturePro( (*tex), Rectangle{0.f, 0.f, (f32) tex->width, (f32) tex->height}, dest, origin, 0.f, WHITE);
+  DrawTexturePro( (*tex), Rectangle{0.f, 0.f, (f32) tex->width, (f32) tex->height}, dest, origin, 0.f, tint);
 }
 void gui_draw_atlas_texture_id_scale(atlas_texture_id _id, Vector2 position, f32 scale, Color tint, bool should_center) {
   if (_id >= ATLAS_TEX_ID_MAX or _id <= ATLAS_TEX_ID_UNSPECIFIED) {

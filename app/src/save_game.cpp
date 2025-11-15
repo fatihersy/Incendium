@@ -27,7 +27,11 @@ using json = nlohmann::json;
 #define JSON_SAVE_DATA_MAP_PLAYER_DATA "player_data"
 #define JSON_SAVE_DATA_MAP_PLAYER_DATA_INVENTORY "inventory"
 #define JSON_SAVE_DATA_MAP_PLAYER_DATA_INVENTORY_ITEM_TYPE "item_type"
-#define JSON_SAVE_DATA_MAP_PLAYER_DATA_INVENTORY_AMOUTH "amouth"
+#define JSON_SAVE_DATA_MAP_PLAYER_DATA_INVENTORY_IG_BUFFER "ig_buffer"
+
+#define JSON_SAVE_DATA_MAP_SIGIL_SLOTS "sigil_slot"
+#define JSON_SAVE_DATA_MAP_PLAYER_DATA_SIGIL_SLOTS_ITEM_TYPE "item_type"
+#define JSON_SAVE_DATA_MAP_PLAYER_DATA_SIGIL_SLOTS_IG_BUFFER "ig_buffer"
 
 #define JSON_SAVE_DATA_MAP_GAME_RULE "game_rule"
 #define JSON_SAVE_DATA_MAP_GAME_RULE_SPAWN_MULTIPLIER "spawn_multiplier"
@@ -448,11 +452,19 @@ json serialize_save_data_v051125(const save_data& data) {
   for (const player_inventory_slot& slot : data.player_data.inventory) {
     inventory.push_back({
       { JSON_SAVE_DATA_MAP_PLAYER_DATA_INVENTORY_ITEM_TYPE, static_cast<i32>(slot.item_type) },
-      { JSON_SAVE_DATA_MAP_PLAYER_DATA_INVENTORY_AMOUTH,    slot.amount }
+      { JSON_SAVE_DATA_MAP_PLAYER_DATA_INVENTORY_IG_BUFFER, slot.ig_buffer.f32[1]},
     });
   }
   j[JSON_SAVE_DATA_MAP_PLAYER_DATA][JSON_SAVE_DATA_MAP_PLAYER_DATA_INVENTORY] = inventory;
-  
+
+  json sigil_slots;
+  for (const sigil_slot& slot : data.sigil_slots) {
+    sigil_slots.push_back({
+      { JSON_SAVE_DATA_MAP_PLAYER_DATA_SIGIL_SLOTS_ITEM_TYPE, static_cast<i32>(slot.sigil.type) },
+      { JSON_SAVE_DATA_MAP_PLAYER_DATA_SIGIL_SLOTS_IG_BUFFER, slot.sigil.buffer.f32[1]}
+    });
+  }
+  j[JSON_SAVE_DATA_MAP_SIGIL_SLOTS] = sigil_slots;
   return j;
 }
 
@@ -480,7 +492,16 @@ void deserialize_save_data_v051125(const json& j, save_data& data) {
     for (const auto& raw_slot : inventory) {
       player_inventory_slot& slot = data.player_data.inventory.emplace_back(player_inventory_slot());
       slot.item_type = static_cast<item_type>(raw_slot.value(JSON_SAVE_DATA_MAP_PLAYER_DATA_INVENTORY_ITEM_TYPE, static_cast<i32>(ITEM_TYPE_UNDEFINED)));
-      slot.amount = raw_slot.value(JSON_SAVE_DATA_MAP_PLAYER_DATA_INVENTORY_AMOUTH, -1);
+      slot.ig_buffer.f32[1] = raw_slot.value(JSON_SAVE_DATA_MAP_PLAYER_DATA_INVENTORY_IG_BUFFER, -1.f);
+    }
+  }
+  if (j.contains(JSON_SAVE_DATA_MAP_SIGIL_SLOTS)) {
+    const auto& sigil_slots = j[JSON_SAVE_DATA_MAP_SIGIL_SLOTS];
+
+    for (size_t itr_000 = 0u; itr_000 < data.sigil_slots.size(); ++itr_000) {
+      sigil_slot slot = sigil_slot();
+      slot.sigil.type = static_cast<item_type>(sigil_slots[itr_000].value(JSON_SAVE_DATA_MAP_PLAYER_DATA_SIGIL_SLOTS_ITEM_TYPE, static_cast<i32>(ITEM_TYPE_UNDEFINED)));
+      slot.sigil.buffer.f32[1] = sigil_slots[itr_000].value(JSON_SAVE_DATA_MAP_PLAYER_DATA_SIGIL_SLOTS_IG_BUFFER, -1.f);
     }
   }
 }

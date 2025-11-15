@@ -29,6 +29,8 @@ typedef struct save_data {
   i32 currency_coins_player_have;
   player_state player_data;
   std::array<game_rule, GAME_RULE_MAX> game_rules;
+  std::array<sigil_slot, SIGIL_SLOT_MAX> sigil_slots;
+
   bool is_success;
   save_data(void) {
     this->id = SAVE_SLOT_UNDEFINED;

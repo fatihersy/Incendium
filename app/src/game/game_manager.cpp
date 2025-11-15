@@ -16,6 +16,8 @@
 #include "game/collectible_manager.h"
 #include "game/player.h"
 #include "game/spawn.h"
+#include "game/user_interface.h"
+#include "game/resource.h"
 
 struct game_manager_system_state {
   tilemap ** in_active_map;
@@ -27,19 +29,19 @@ struct game_manager_system_state {
   ingame_play_phases ingame_phase;
   player_state player_state_static;
   ingame_info game_info;
-  Vector2 mouse_pos_world;
-  Vector2 mouse_pos_screen;
+  Vector2 mouse_pos_world {};
+  Vector2 mouse_pos_screen {};
   std::vector<character_trait> traits;
   std::vector<character_trait> chosen_traits;
   std::array<game_rule, GAME_RULE_MAX> game_rules;
-  i32 collected_coins;
-  i32 total_spawn_count;
-  i32 total_boss_count;
-  i32 total_boss_spawned;
-  f32 total_play_time;
-  f32 play_time;
-  f32 delta_time;
-  bool is_win;
+  i32 collected_coins {};
+  i32 total_spawn_count {};
+  i32 total_boss_count {};
+  i32 total_boss_spawned {};
+  f32 total_play_time {};
+  f32 play_time {};
+  f32 delta_time {};
+  bool is_win {};
   i32 stage_boss_id;
   ability_id starter_ability;
   
@@ -47,7 +49,9 @@ struct game_manager_system_state {
   
   std::array<game_rule, GAME_RULE_MAX> default_game_rules;
   std::array<item_data, ITEM_TYPE_MAX> default_items;
-  i32 next_inventory_slot_id;
+  std::array<sigil_slot, SIGIL_SLOT_MAX> sigil_slots;
+
+  i32 next_inventory_slot_id {};
 
   bool game_manager_initialized;
 
@@ -56,32 +60,9 @@ struct game_manager_system_state {
     this->game_progression_data = nullptr;
     this->in_camera_metrics = nullptr;
     this->in_app_settings = nullptr;
-
-    this->stage = worldmap_stage();
     this->ingame_phase = INGAME_PLAY_PHASE_UNDEFINED;
-    this->player_state_static = player_state();
-    this->game_info = ingame_info();
-    this->mouse_pos_world = ZEROVEC2;
-    this->mouse_pos_screen = ZEROVEC2;
-    this->traits.clear();
-    this->chosen_traits = std::vector<character_trait>();
-    this->game_rules.fill(game_rule());
-    this->collected_coins = 0;
-    this->total_spawn_count = 0;
-    this->total_boss_count = 0;
-    this->total_boss_spawned = 0;
-    this->total_play_time = 0.f;
-    this->play_time = 0.f;
-    this->is_win = false;
     this->stage_boss_id = INVALID_IDI32;
     this->starter_ability = ABILITY_ID_UNDEFINED;
-
-    this->playlist = playlist_control_system_state();
-    
-    this->default_game_rules = std::array<game_rule, GAME_RULE_MAX>();
-    this->default_items = std::array<item_data, ITEM_TYPE_MAX>();
-    this->next_inventory_slot_id = 0;
-
     this->game_manager_initialized = false;
   }
 };
@@ -114,6 +95,7 @@ void gm_update_player(void);
 void set_static_player_state_stat(character_stat_id stat_id, i32 level);
 void gm_refresh_stat_by_level(character_stat* stat, i32 level);
 [[__nodiscard__]] bool player_state_rebuild(void);
+i32 gm_get_sigil_upgrade_soul_requirement(i32 level);
 
 bool game_manager_initialize(const camera_metrics * in_camera_metrics, const app_settings * in_app_settings, tilemap ** const in_active_map_ptr) {
   if (state and state != nullptr) {
@@ -296,14 +278,47 @@ bool game_manager_initialize(const camera_metrics * in_camera_metrics, const app
 
   // Sigils
   {
-    state->default_items.at(ITEM_TYPE_SIGIL_DAMAGE_COMMON)       = item_data(ITEM_TYPE_SIGIL_DAMAGE_COMMON,       "Damage common",      data128(3.f), ATLAS_TEX_ID_SIGIL_DAMAGE_COMMON);
-    state->default_items.at(ITEM_TYPE_SIGIL_DAMAGE_UNCOMMON)     = item_data(ITEM_TYPE_SIGIL_DAMAGE_UNCOMMON,     "Damage uncommon",    data128(8.f), ATLAS_TEX_ID_SIGIL_DAMAGE_UNCOMMON);
-    state->default_items.at(ITEM_TYPE_SIGIL_DAMAGE_RARE)         = item_data(ITEM_TYPE_SIGIL_DAMAGE_RARE,         "Damage rare",        data128(5.f), ATLAS_TEX_ID_SIGIL_DAMAGE_RARE);
-    state->default_items.at(ITEM_TYPE_SIGIL_DAMAGE_EPIC)         = item_data(ITEM_TYPE_SIGIL_DAMAGE_EPIC,         "Damage epic",        data128(5.f), ATLAS_TEX_ID_SIGIL_DAMAGE_EPIC);
-    state->default_items.at(ITEM_TYPE_SIGIL_RESISTANCE_COMMON)   = item_data(ITEM_TYPE_SIGIL_RESISTANCE_COMMON,   "Resistance common",  data128(3.f), ATLAS_TEX_ID_SIGIL_RESISTANCE_COMMON);
-    state->default_items.at(ITEM_TYPE_SIGIL_RESISTANCE_UNCOMMON) = item_data(ITEM_TYPE_SIGIL_RESISTANCE_UNCOMMON, "Resistance uncommon",data128(8.f), ATLAS_TEX_ID_SIGIL_RESISTANCE_UNCOMMON);
-    state->default_items.at(ITEM_TYPE_SIGIL_RESISTANCE_RARE)     = item_data(ITEM_TYPE_SIGIL_RESISTANCE_RARE,     "Resistance rare",    data128(5.f), ATLAS_TEX_ID_SIGIL_RESISTANCE_RARE);
-    state->default_items.at(ITEM_TYPE_SIGIL_RESISTANCE_EPIC)     = item_data(ITEM_TYPE_SIGIL_RESISTANCE_EPIC,     "Resistance epic",    data128(5.f), ATLAS_TEX_ID_SIGIL_RESISTANCE_EPIC);
+    auto set_sigil = [](item_type _item_type, loc_text_id loc_id, data128 data, i32 tex_id) {
+      state->default_items.at(_item_type) = item_data(_item_type, static_cast<i32>(loc_id), data, tex_id, false);
+    };
+    set_sigil(ITEM_TYPE_SIGIL_HEAD,                             LOC_TEXT_SIGIL_NAME_HEAD,         data128(), TEX_ID_UNSPECIFIED);
+    set_sigil(ITEM_TYPE_SIGIL_ARCH_MICHAEL,                     LOC_TEXT_SIGIL_NAME_ARCH_MICHAEL, data128(), TEX_ID_UNSPECIFIED);
+    set_sigil(ITEM_TYPE_SIGIL_ARCH_GABRIEL,                     LOC_TEXT_SIGIL_NAME_ARCH_GABRIEL, data128(), TEX_ID_UNSPECIFIED);
+    set_sigil(ITEM_TYPE_SIGIL_ARCH_RAPHAEL,                     LOC_TEXT_SIGIL_NAME_ARCH_RAPHAEL, data128(), TEX_ID_UNSPECIFIED);
+    set_sigil(ITEM_TYPE_SIGIL_ARCH_URIEL,                       LOC_TEXT_SIGIL_NAME_ARCH_URIEL,   data128(), TEX_ID_UNSPECIFIED);
+    set_sigil(ITEM_TYPE_SIGIL_ARCH_SAMAEL,                      LOC_TEXT_SIGIL_NAME_ARCH_SAMAEL,  data128(), TEX_ID_UNSPECIFIED);
+    set_sigil(ITEM_TYPE_SIGIL_ARCH_ZADKIEL,                     LOC_TEXT_SIGIL_NAME_ARCH_ZADKIEL, data128(), TEX_ID_UNSPECIFIED);
+    set_sigil(ITEM_TYPE_SIGIL_ARCH_THAVAEL,                     LOC_TEXT_SIGIL_NAME_ARCH_THAVAEL, data128(), TEX_ID_UNSPECIFIED);
+    set_sigil(ITEM_TYPE_SIGIL_ARCH_AZRAEL,                      LOC_TEXT_SIGIL_NAME_ARCH_AZRAEL,  data128(), TEX_ID_UNSPECIFIED);
+    set_sigil(ITEM_TYPE_SIGIL_ARCH_CAMAEL,                      LOC_TEXT_SIGIL_NAME_ARCH_CAMAEL,  data128(), TEX_ID_UNSPECIFIED);
+    set_sigil(ITEM_TYPE_SIGIL_ARCH_JOPHIEL,                     LOC_TEXT_SIGIL_NAME_ARCH_JOPHIEL, data128(), TEX_ID_UNSPECIFIED);
+    set_sigil(ITEM_TYPE_SIGIL_COMMON_HEALTH,                    LOC_TEXT_SIGIL_INTENT_COMMON_HEALTH,                    data128(), TEX_ID_SIGIL_HEALTH);
+    set_sigil(ITEM_TYPE_SIGIL_COMMON_STAMINA,                   LOC_TEXT_SIGIL_INTENT_COMMON_STAMINA,                   data128(), TEX_ID_SIGIL_STAMINA);
+    set_sigil(ITEM_TYPE_SIGIL_COMMON_MANA,                      LOC_TEXT_SIGIL_INTENT_COMMON_MANA,                      data128(), TEX_ID_SIGIL_MANA);
+    set_sigil(ITEM_TYPE_SIGIL_COMMON_HP_REGEN,                  LOC_TEXT_SIGIL_INTENT_COMMON_HP_REGEN,                  data128(), TEX_ID_SIGIL_HP_REGEN);
+    set_sigil(ITEM_TYPE_SIGIL_COMMON_STAMINA_REGEN,             LOC_TEXT_SIGIL_INTENT_COMMON_STAMINA_REGEN,             data128(), TEX_ID_SIGIL_STAMINA_REGEN);
+    set_sigil(ITEM_TYPE_SIGIL_COMMON_MANA_REGEN,                LOC_TEXT_SIGIL_INTENT_COMMON_MANA_REGEN,                data128(), TEX_ID_SIGIL_MANA_REGEN);
+    set_sigil(ITEM_TYPE_SIGIL_COMMON_MOVE_SPEED,                LOC_TEXT_SIGIL_INTENT_COMMON_MOVE_SPEED,                data128(), TEX_ID_SIGIL_MOVE_SPEED);
+    set_sigil(ITEM_TYPE_SIGIL_COMMON_AOE,                       LOC_TEXT_SIGIL_INTENT_COMMON_AOE,                       data128(), TEX_ID_SIGIL_AOE);
+    set_sigil(ITEM_TYPE_SIGIL_COMMON_OVERALL_DAMAGE,            LOC_TEXT_SIGIL_INTENT_COMMON_OVERALL_DAMAGE,            data128(), TEX_ID_SIGIL_OVERALL_DAMAGE);
+    set_sigil(ITEM_TYPE_SIGIL_COMMON_ABILITY_CD,                LOC_TEXT_SIGIL_INTENT_COMMON_ABILITY_CD,                data128(), TEX_ID_SIGIL_ABILITY_CD);
+    set_sigil(ITEM_TYPE_SIGIL_COMMON_PROJECTILE_AMOUNT,         LOC_TEXT_SIGIL_INTENT_COMMON_PROJECTILE_AMOUTH,         data128(), TEX_ID_SIGIL_PROJECTILE_AMOUTH);
+    set_sigil(ITEM_TYPE_SIGIL_COMMON_EXP_GAIN,                  LOC_TEXT_SIGIL_INTENT_COMMON_EXP_GAIN,                  data128(), TEX_ID_SIGIL_EXP_GAIN);
+    set_sigil(ITEM_TYPE_SIGIL_COMMON_TOTAL_TRAIT_POINTS,        LOC_TEXT_SIGIL_INTENT_COMMON_TOTAL_TRAIT_POINTS,        data128(), TEX_ID_SIGIL_TOTAL_TRAIT_POINT);
+    set_sigil(ITEM_TYPE_SIGIL_COMMON_BASIC_ATTACK_DAMAGE,       LOC_TEXT_SIGIL_INTENT_COMMON_BASIC_ATTACK_DAMAGE,       data128(), TEX_ID_SIGIL_BASIC_ATTACK_DAMAGE);
+    set_sigil(ITEM_TYPE_SIGIL_COMMON_BASIC_ATTACK_SPEED,        LOC_TEXT_SIGIL_INTENT_COMMON_BASIC_ATTACK_SPEED,        data128(), TEX_ID_SIGIL_BASIC_ATTACK_SPEED);
+    set_sigil(ITEM_TYPE_SIGIL_COMMON_CRITICAL_CHANCE,           LOC_TEXT_SIGIL_INTENT_COMMON_CRITICAL_CHANCE,           data128(), TEX_ID_SIGIL_CRITICAL_CHANCE);
+    set_sigil(ITEM_TYPE_SIGIL_COMMON_CRITICAL_DAMAGE,           LOC_TEXT_SIGIL_INTENT_COMMON_CRITICAL_DAMAGE,           data128(), TEX_ID_SIGIL_CRITICAL_DAMAGE);
+    set_sigil(ITEM_TYPE_SIGIL_COMMON_OVERALL_LUCK,              LOC_TEXT_SIGIL_INTENT_COMMON_OVERALL_LUCK,              data128(), TEX_ID_SIGIL_OVERALL_LUCK);
+    set_sigil(ITEM_TYPE_SIGIL_COMMON_DAMAGE_REDUCTION,          LOC_TEXT_SIGIL_INTENT_COMMON_DAMAGE_REDUCTION,          data128(), TEX_ID_SIGIL_DAMAGE_REDUCTION);
+    set_sigil(ITEM_TYPE_SIGIL_COMMON_CONDITION_DURATION,        LOC_TEXT_SIGIL_INTENT_COMMON_CONDITION_DURATION,        data128(), TEX_ID_SIGIL_CONDITION_DURATION);
+    set_sigil(ITEM_TYPE_SIGIL_COMMON_DAMAGE_OVER_TIME,          LOC_TEXT_SIGIL_INTENT_COMMON_DAMAGE_OVER_TIME,          data128(), TEX_ID_SIGIL_DAMAGE_OVER_TIME);
+    set_sigil(ITEM_TYPE_SIGIL_COMMON_DAMAGE_DEFERRAL,           LOC_TEXT_SIGIL_INTENT_COMMON_DAMAGE_DEFERRAL,           data128(), TEX_ID_SIGIL_DAMAGE_DEFERRAL);
+    set_sigil(ITEM_TYPE_SIGIL_COMMON_SIGIL_EFFECTIVENESS,       LOC_TEXT_SIGIL_INTENT_COMMON_SIGIL_EFFECTIVENESS,       data128(), TEX_ID_SIGIL_SIGIL_EFFECTIVENESS);
+    set_sigil(ITEM_TYPE_SIGIL_COMMON_VITAL_SIGIL_EFFECTIVENESS, LOC_TEXT_SIGIL_INTENT_COMMON_VITAL_SIGIL_EFFECTIVENESS, data128(), TEX_ID_SIGIL_VITAL_SIGIL_EFFECTIVENESS);
+    set_sigil(ITEM_TYPE_SIGIL_COMMON_LETAL_SIGIL_EFFECTIVENESS, LOC_TEXT_SIGIL_INTENT_COMMON_LETHAL_SIGIL_EFFECTIVENESS,data128(), TEX_ID_SIGIL_LETHAL_SIGIL_EFFECTIVENESS);
+    set_sigil(ITEM_TYPE_SIGIL_COMMON_DROP_RATE,                 LOC_TEXT_SIGIL_INTENT_COMMON_DROP_RATE,                 data128(), TEX_ID_SIGIL_DROP_RATE);
+    set_sigil(ITEM_TYPE_SIGIL_COMMON_REWARD_MODIFIER,           LOC_TEXT_SIGIL_INTENT_COMMON_REWARD_MODIFIER,           data128(), TEX_ID_SIGIL_REWARD_MODIFIER);
   }
   // Sigils
 
@@ -529,6 +544,38 @@ void render_game(void) {
   gm_end_game(false);
   event_fire(EVENT_CODE_SCENE_MAIN_MENU, event_context());
 }
+void gm_draw_sigil(item_type type, Vector2 position, bool should_center) {
+  if (type <= M_ITEM_TYPE_SIGIL_START or type >= M_ITEM_TYPE_SIGIL_END) {
+    return;
+  }
+  const item_data& _sigil = state->default_items[type];
+  const f32 sigil_rad = state->in_app_settings->render_height * UI_SIGIL_COMMON_RAD_SCALE_BY_VIEWPORT_SIZE;
+  const Rectangle dest = {
+    position.x,
+    position.y,
+    sigil_rad * 2.f,
+    sigil_rad * 2.f
+  };
+  Vector2 origin = ZEROVEC2;
+  if (should_center) {
+    origin.x = dest.width * .5f;
+    origin.y = dest.height * .5f;
+  }
+  const Vector2 backing_position = {
+    should_center ? dest.x : dest.x + dest.width * .5f,
+    should_center ? dest.y : dest.y + dest.height * .5f 
+  };
+  DrawCircle(backing_position.x, backing_position.y, sigil_rad, BLACK);
+
+  if (_sigil.from_atlas) {
+    gui_draw_atlas_texture_id(static_cast<atlas_texture_id>(_sigil.tex_id), dest, origin, 0.f, RED);
+  }
+  else {
+    const Texture2D * const tex = get_texture_by_enum(static_cast<texture_id>(_sigil.tex_id));
+    const Rectangle source = Rectangle {0.f, 0.f, static_cast<f32>(tex->width), static_cast<f32>(tex->height)};
+    gui_draw_texture_id_pro(static_cast<texture_id>(_sigil.tex_id), source, dest, RED, origin);
+  }
+}
 
 // OPS
 /**
@@ -642,7 +689,13 @@ void gm_load_game(void) {
   for (player_inventory_slot& slot : state->player_state_static.inventory) {
     const item_data& item = state->default_items.at(slot.item_type);
     slot.slot_id = state->next_inventory_slot_id++;
-    slot.display_name = item.display_name;
+    slot.loc_txt_id = item.loc_tex_id;
+  }
+  for (sigil_slot& slot : state->game_progression_data->sigil_slots) {
+    if (slot.sigil.type <= ITEM_TYPE_UNDEFINED or slot.sigil.type >= ITEM_TYPE_MAX) {
+      continue;
+    }
+    gm_set_sigil_slot(sigil_slot(slot.id, slot.sigil.type, slot.sigil.buffer));
   }
   set_player_state(state->player_state_static);
 }
@@ -845,60 +898,101 @@ void gm_update_player(void) {
     }
   }
 }
-void gm_add_to_inventory(item_type _item_type) {
-  if (_item_type > ITEM_TYPE_MAX or _item_type < ITEM_TYPE_UNDEFINED) {
+void gm_add_to_inventory(item_type _item_type, data128 ig_buffer, data128 ui_buffer) {
+  if (_item_type >= ITEM_TYPE_MAX or _item_type <= ITEM_TYPE_UNDEFINED) {
     IWARN("game_manager::gm_add_to_inventory()::Item id is out of bounds");
     return;
   }
-  std::vector<player_inventory_slot>& inventory = state->player_state_static.inventory;
-  auto find_or_create = [&inventory, &_item_type](item_type type) {
-    for (player_inventory_slot& slot : inventory) {
-      if (slot.item_type == type) {
-        slot.amount++;
-        return;
-      }
-    }
-    player_inventory_slot& slot = inventory.emplace_back(player_inventory_slot());
+  std::vector<player_inventory_slot>& static_inventory = state->player_state_static.inventory;
+  std::vector<player_inventory_slot>& dynamic_inventory = get_player_state()->inventory;
+  auto push_to_inventories = [&](void) {
+    player_inventory_slot slot = player_inventory_slot();
     slot.slot_id = state->next_inventory_slot_id++;
     slot.item_type = _item_type;
-    slot.display_name = state->default_items.at(_item_type).display_name.c_str();
-    slot.amount++;
+    slot.loc_txt_id = state->default_items[_item_type].loc_tex_id;
+    slot.ig_buffer = ig_buffer;
+    slot.ui_buffer = ui_buffer;
+    static_inventory.push_back(slot);
+    dynamic_inventory.push_back(slot);
   };
-  switch (_item_type) {
-    case ITEM_TYPE_EXPERIENCE: return;
-    case ITEM_TYPE_COIN: return;
-    case ITEM_TYPE_HEALTH_FRAGMENT: return;
-    case ITEM_TYPE_CHEST: return;
-    case ITEM_TYPE_SIGIL_DAMAGE_COMMON:      find_or_create(_item_type); return;
-    case ITEM_TYPE_SIGIL_DAMAGE_UNCOMMON:    find_or_create(_item_type); return;
-    case ITEM_TYPE_SIGIL_DAMAGE_RARE:        find_or_create(_item_type); return;
-    case ITEM_TYPE_SIGIL_DAMAGE_EPIC:        find_or_create(_item_type); return;
-    case ITEM_TYPE_SIGIL_RESISTANCE_COMMON:  find_or_create(_item_type); return;
-    case ITEM_TYPE_SIGIL_RESISTANCE_UNCOMMON:find_or_create(_item_type); return;
-    case ITEM_TYPE_SIGIL_RESISTANCE_RARE:    find_or_create(_item_type); return;
-    case ITEM_TYPE_SIGIL_RESISTANCE_EPIC:    find_or_create(_item_type); return;
-    default: {
-      IWARN("game_manager::gm_add_to_inventory()::Unsupported type");
-      return;
-    }
+  if (_item_type >= M_ITEM_TYPE_SIGIL_START and _item_type <= M_ITEM_TYPE_SIGIL_END) {
+    push_to_inventories();
   }
-}
-void gm_remove_from_inventory(item_type _item_type, i32 amouth) {
-  if (_item_type > ITEM_TYPE_MAX or _item_type < ITEM_TYPE_UNDEFINED) {
-    IWARN("game_manager::gm_remove_from_inventory()::Item id is out of bounds");
+  else {
     return;
   }
-  std::vector<player_inventory_slot>& inventory = state->player_state_static.inventory;
+}
+void gm_set_sigil_slot(sigil_slot slot) {
+  if (slot.sigil.type <= M_ITEM_TYPE_SIGIL_START or slot.sigil.type >= M_ITEM_TYPE_SIGIL_END) {
+    return;
+  }
+  if (slot.id <= SIGIL_SLOT_UNDEFINED or slot.id >= SIGIL_SLOT_MAX) {
+    return;
+  }
+  const data128 _ig_buffer = slot.sigil.buffer;
+  const data128 _ui_buffer = state->sigil_slots[slot.id].ui_buffer;
+  const item_data& sigil = state->default_items[slot.sigil.type];
 
-  std::erase_if(inventory, [_item_type, amouth] (player_inventory_slot& slot) {
-    if (slot.item_type != _item_type) return false;
-      
-    if (slot.amount <= amouth) {
-      return true;
-    }
-    slot.amount -= amouth;
-    return false;
+  slot.sigil = sigil;
+  slot.sigil.buffer = _ig_buffer;
+
+  state->sigil_slots[slot.id] = slot;
+  state->sigil_slots[slot.id].ui_buffer = _ui_buffer;
+  state->sigil_slots[slot.id].filled = true;
+  state->sigil_slots[slot.id].draw_item = true;
+
+  gm_refresh_sigil(&state->sigil_slots[slot.id].sigil);
+}
+void gm_clear_sigil_slot(sigil_slot_id id) {
+  if (id <= SIGIL_SLOT_UNDEFINED or id >= SIGIL_SLOT_MAX) {
+    return;
+  }
+  sigil_slot& slot = state->sigil_slots[id];
+  slot.sigil = item_data();
+  slot.filled = false;
+  slot.draw_item = false;
+}
+void gm_set_sigil_ui_context(sigil_slot_id id, data128 ui_buffer, bool draw_item) {
+  if (id <= SIGIL_SLOT_UNDEFINED or id >= SIGIL_SLOT_MAX) {
+    return;
+  }
+  state->sigil_slots[id].ui_buffer = ui_buffer;
+  state->sigil_slots[id].draw_item = draw_item;
+}
+void gm_remove_from_inventory_by_id(i32 id) {
+  std::vector<player_inventory_slot>& static_inventory = state->player_state_static.inventory;
+  std::vector<player_inventory_slot>& dynamic_inventory = get_player_state()->inventory;
+
+  std::erase_if(static_inventory, [id] (player_inventory_slot& slot) {
+    if (slot.slot_id != id) return false;
+    return true;
   });
+  std::erase_if(dynamic_inventory, [id] (player_inventory_slot& slot) {
+    if (slot.slot_id != id) return false;
+    return true;
+  });
+}
+void gm_update_inventory_item_by_id(item_data data, i32 id) {
+  std::vector<player_inventory_slot>& static_inventory = state->player_state_static.inventory;
+  std::vector<player_inventory_slot>& dynamic_inventory = get_player_state()->inventory;
+
+  size_t index = 0u;
+  for (player_inventory_slot& slot : static_inventory) {
+    if (slot.slot_id == id) {
+      slot.ig_buffer = data.buffer;
+    }
+    index++;
+  }
+  if (dynamic_inventory.size() < index and dynamic_inventory[index].slot_id == id) {
+    dynamic_inventory[index].ig_buffer = data.buffer;
+  }
+  else {
+    for (player_inventory_slot& slot : dynamic_inventory) {
+      if (slot.slot_id == id) {
+        slot.ig_buffer = data.buffer;
+      }
+    }
+  }
 }
 void gm_set_chosen_traits(std::vector<character_trait> traits) {
   if (not state or state == nullptr) {
@@ -1014,7 +1108,10 @@ const std::vector<character_trait>& gm_get_character_traits_all(void) {
 const std::array<item_data, ITEM_TYPE_MAX>& gm_get_default_items(void) {
   return state->default_items;
 }
-f32 gm_get_ingame_chance(ingame_chance chance_type, data128 context) {
+const std::array<sigil_slot, SIGIL_SLOT_MAX>& gm_get_sigil_slots(void) {
+  return state->sigil_slots;
+}
+f32 gm_get_ingame_chance(ingame_chance chance_type, [[__maybe_unused__]] data128 context) {
   if (chance_type <= INGAME_CHANCE_UNDEFINED or chance_type >= INGAME_CHANCE_MAX) {
     IWARN("game_manager::gm_get_ingame_chance()::chance type out of bound");
     return -1.f;
@@ -1026,62 +1123,70 @@ f32 gm_get_ingame_chance(ingame_chance chance_type, data128 context) {
     return -1.f;
   }
   else if( chance_type == INGAME_CHANCE_UPGRADE) {
-    ::item_type item_type = static_cast<::item_type>(context.i32[0]);
-    switch (item_type) {
-      case ITEM_TYPE_SIGIL_DAMAGE_COMMON:       return 1.00f;
-      case ITEM_TYPE_SIGIL_DAMAGE_UNCOMMON:     return 0.50f;
-      case ITEM_TYPE_SIGIL_DAMAGE_RARE:         return 0.15f;
-      case ITEM_TYPE_SIGIL_RESISTANCE_COMMON:   return 1.00f;
-      case ITEM_TYPE_SIGIL_RESISTANCE_UNCOMMON: return 0.50f;
-      case ITEM_TYPE_SIGIL_RESISTANCE_RARE:     return 0.15f;
-      default: {
-        IWARN("game_manager::gm_get_ingame_chance()::INGAME_CHANCE_UPGRADE::Unsupported item type");
-        return -1.f;
-      }
-    }
   }
   IERROR("game_manager::gm_get_ingame_chance()::Function ended unexpectedly");
   return -1.f;
 }
 
-bool gm_upgrade_item_by_slot_ref(const player_inventory_slot& slot) {
-  f32 upgrade_chance = gm_get_ingame_chance(INGAME_CHANCE_UPGRADE, data128(static_cast<i32>(slot.item_type)));
 
-  auto is_success = [&upgrade_chance](void) -> bool {
-    if (get_random_chance_ssl(upgrade_chance)) {
-      return true;
+i32 gm_get_sigil_upgrade_soul_requirement(i32 level) {
+  if (level < 0 or level > MAX_PLAYER_LEVEL) {
+    return I32_MAX;
+  }
+  return level_curve[level] / 10.f;
+}
+/**
+ * @brief Left hand should be sigil and right hand should be same of soul type
+ */
+sigil_upgrade_result gm_get_sigil_upgrade_requirements(item_data& lhs, item_data& rhs) {
+  using result = sigil_upgrade_result;
+  if (lhs.type < M_ITEM_TYPE_SIGIL_START or lhs.type > M_ITEM_TYPE_SIGIL_END) {
+    return result::ERROR_LHS_TYPE_MISMATCH;
+  }
+  if (lhs.type == rhs.type) {
+    return result::SUCCESS;
+  }
+  else if (rhs.type == ITEM_TYPE_SOUL) {
+    if (lhs.level < 0 or lhs.level > MAX_PLAYER_LEVEL) {
+      return result::ERROR_LHS_LEVEL_OUT_OF_BOUND;
     }
-    else return false;
-  };
-  switch (slot.item_type) {
-    case ITEM_TYPE_SIGIL_DAMAGE_COMMON: 
-      if(is_success()) { gm_add_to_inventory(ITEM_TYPE_SIGIL_DAMAGE_UNCOMMON); return true; }
-      else return false;
+    const i32 soul_req = gm_get_sigil_upgrade_soul_requirement(lhs.level);
 
-    case ITEM_TYPE_SIGIL_DAMAGE_UNCOMMON: 
-      if(is_success()) { gm_add_to_inventory(ITEM_TYPE_SIGIL_DAMAGE_RARE); return true; }
-      else return false;
-
-    case ITEM_TYPE_SIGIL_DAMAGE_RARE: 
-      if(is_success()) { gm_add_to_inventory(ITEM_TYPE_SIGIL_DAMAGE_EPIC); return true; }
-      else return false;
-
-    case ITEM_TYPE_SIGIL_RESISTANCE_COMMON:  
-      if(is_success()) { gm_add_to_inventory(ITEM_TYPE_SIGIL_RESISTANCE_UNCOMMON); return true; }
-      else return false;
-
-    case ITEM_TYPE_SIGIL_RESISTANCE_UNCOMMON: 
-      if(is_success()) { gm_add_to_inventory(ITEM_TYPE_SIGIL_RESISTANCE_RARE); return true; }
-      else return false;
-
-    case ITEM_TYPE_SIGIL_RESISTANCE_RARE: 
-      if(is_success()) { gm_add_to_inventory(ITEM_TYPE_SIGIL_RESISTANCE_EPIC); return true; }
-      else return false;
-
-    default: {
-      IWARN("game_manager::gm_upgrade_item_by_slot_ref()::Item type is out of bound");
-      return false;
+    if (rhs.buffer.i32[0] < soul_req) {
+      return result(result::ERROR_INSUFFICIENT, soul_req);
     }
+
+    return result(result::SUCCESS, soul_req);
+  }
+  else {
+    return result::ERROR_RHS_TYPE_UNCOMPATIBLE;
+  }
+}
+sigil_upgrade_result gm_upgrade_sigil(item_data& lhs, item_data& rhs) {
+  using result = sigil_upgrade_result;
+  if (lhs.type < M_ITEM_TYPE_SIGIL_START or lhs.type > M_ITEM_TYPE_SIGIL_END) {
+    return result::ERROR_LHS_TYPE_MISMATCH;
+  }
+  if (lhs.type == rhs.type) {
+    lhs.buffer.f32[3] += rhs.buffer.f32[3];
+    return result::SUCCESS;
+  }
+  else if (rhs.type == ITEM_TYPE_SOUL) {
+    if (lhs.level < 0 or lhs.level > MAX_PLAYER_LEVEL) {
+      return result::ERROR_LHS_LEVEL_OUT_OF_BOUND;
+    }
+    result result = gm_get_sigil_upgrade_soul_requirement(lhs.level);
+
+    if (rhs.buffer.i32[0] < result.soul_requirement) {
+      return result::ERROR_INSUFFICIENT;
+    }
+    rhs.buffer.i32[0] -= result.soul_requirement;
+
+    lhs.buffer.f32[3] += (lhs.buffer.f32[0] * (result.soul_requirement / 10.f)) + lhs.buffer.f32[0];
+    return result::SUCCESS;
+  }
+  else {
+    return result::ERROR_RHS_TYPE_UNCOMPATIBLE;
   }
 }
 void gm_refresh_stat_by_level(character_stat* stat, i32 level) {
@@ -1214,6 +1319,16 @@ bool gm_refresh_game_rule_by_level(game_rule* rule, i32 level) {
   }
   IERROR("game_manager::gm_refresh_game_rule_by_level()::Function ended unexpectedly");
   return false;
+}
+bool gm_refresh_sigil(item_data * sigil) {
+  if (not sigil or sigil == nullptr) {
+    return false;
+  }
+  if (sigil->type <= M_ITEM_TYPE_SIGIL_START or sigil->type >= M_ITEM_TYPE_SIGIL_END) {
+    return false;
+  }
+  sigil->buffer.f32[3] = sigil->buffer.f32[0] + sigil->buffer.f32[1] + sigil->buffer.f32[2];
+  return true;
 }
 
 void gm_set_character_stat_trait_value(character_stat* stat, data128 value) {
@@ -1370,7 +1485,8 @@ bool game_manager_on_event(i32 code, event_context context) {
       return true;
     }
     case EVENT_CODE_ADD_TO_INVENTORY: {
-      gm_add_to_inventory(static_cast<item_type>(context.data.i32[0]));
+      item_type _item_type = static_cast<item_type>(context.data.i32[0]);
+      gm_add_to_inventory(_item_type, state->default_items[_item_type].buffer);
     }
     default: {
       IWARN("game_manager::game_manager_on_event()::Unsuppported code.");

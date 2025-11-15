@@ -9,7 +9,7 @@
 #define HEADER_SYMBOL_END "__END__"
 #define HEADER_SYMBOL_END_LENGTH 7
 
-#define ASSET1_FILE_SIZE 146122975u
+#define ASSET1_FILE_SIZE 146835169u
 #define ASSET2_FILE_SIZE 3016472u // WARN: This is not exact number of asset2 pak file byte size 
 #define MAP_FILE_SIZE 3624970u
 
@@ -160,6 +160,35 @@ bool pak_parser_system_initialize(void) {
       file_buffer(PAK_FILE_ASSET1,    PAK_FILE_ASSET1_SPIN_RESULT_STAR_105_105,".png"),
       file_buffer(PAK_FILE_ASSET1,    PAK_FILE_ASSET1_SPIN_SFX,                ".wav"),
       file_buffer(PAK_FILE_ASSET1,    PAK_FILE_ASSET1_SPIN_RESULT,             ".wav"),
+
+      file_buffer(PAK_FILE_ASSET1,    PAK_FILE_SIGIL_ABILITY_CD,                 ".png"),
+      file_buffer(PAK_FILE_ASSET1,    PAK_FILE_SIGIL_AOE,                        ".png"),
+      file_buffer(PAK_FILE_ASSET1,    PAK_FILE_SIGIL_BASIC_ATTACK_DAMAGE,        ".png"),
+      file_buffer(PAK_FILE_ASSET1,    PAK_FILE_SIGIL_BASIC_ATTACK_SPEED,         ".png"),
+      file_buffer(PAK_FILE_ASSET1,    PAK_FILE_SIGIL_CONDITION_DURATION,         ".png"),
+      file_buffer(PAK_FILE_ASSET1,    PAK_FILE_SIGIL_CRITICAL_CHANCE,            ".png"),
+      file_buffer(PAK_FILE_ASSET1,    PAK_FILE_SIGIL_CRITICAL_DAMAGE,            ".png"),
+      file_buffer(PAK_FILE_ASSET1,    PAK_FILE_SIGIL_DAMAGE_DEFERRAL,            ".png"),
+      file_buffer(PAK_FILE_ASSET1,    PAK_FILE_SIGIL_DAMAGE_OVER_TIME,           ".png"),
+      file_buffer(PAK_FILE_ASSET1,    PAK_FILE_SIGIL_DAMAGE_REDUCTION,           ".png"),
+      file_buffer(PAK_FILE_ASSET1,    PAK_FILE_SIGIL_DROP_RATE,                  ".png"),
+      file_buffer(PAK_FILE_ASSET1,    PAK_FILE_SIGIL_EXP_GAIN,                   ".png"),
+      file_buffer(PAK_FILE_ASSET1,    PAK_FILE_SIGIL_HEALTH,                     ".png"),
+      file_buffer(PAK_FILE_ASSET1,    PAK_FILE_SIGIL_HP_REGEN,                   ".png"),
+      file_buffer(PAK_FILE_ASSET1,    PAK_FILE_SIGIL_LETHAL_SIGIL_EFFECTIVENESS, ".png"),
+      file_buffer(PAK_FILE_ASSET1,    PAK_FILE_SIGIL_MANA,                       ".png"),
+      file_buffer(PAK_FILE_ASSET1,    PAK_FILE_SIGIL_MANA_REGEN,                 ".png"),
+      file_buffer(PAK_FILE_ASSET1,    PAK_FILE_SIGIL_MOVE_SPEED,                 ".png"),
+      file_buffer(PAK_FILE_ASSET1,    PAK_FILE_SIGIL_OVERALL_DAMAGE,             ".png"),
+      file_buffer(PAK_FILE_ASSET1,    PAK_FILE_SIGIL_OVERALL_LUCK,               ".png"),
+      file_buffer(PAK_FILE_ASSET1,    PAK_FILE_SIGIL_PROJECTILE_AMOUTH,          ".png"),
+      file_buffer(PAK_FILE_ASSET1,    PAK_FILE_SIGIL_REWARD_MODIFIER,            ".png"),
+      file_buffer(PAK_FILE_ASSET1,    PAK_FILE_SIGIL_SIGIL_EFFECTIVENESS,        ".png"),
+      file_buffer(PAK_FILE_ASSET1,    PAK_FILE_SIGIL_STAMINA_REGEN,              ".png"),
+      file_buffer(PAK_FILE_ASSET1,    PAK_FILE_SIGIL_STAMINA,                    ".png"),
+      file_buffer(PAK_FILE_ASSET1,    PAK_FILE_SIGIL_TOTAL_TRAIT_POINT,          ".png"),
+      file_buffer(PAK_FILE_ASSET1,    PAK_FILE_SIGIL_VITAL_SIGIL_EFFECTIVENESS,  ".png"),
+
       file_buffer(PAK_FILE_UNDEFINED, PAK_FILE_ASSET1_MAX, ""),
     })
   );
