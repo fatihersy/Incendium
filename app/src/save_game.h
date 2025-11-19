@@ -27,6 +27,7 @@ typedef struct save_data {
   save_slot_id id;
   std::string file_name;
   i32 currency_coins_player_have;
+  i32 currency_souls_player_have;
   player_state player_data;
   std::array<game_rule, GAME_RULE_MAX> game_rules;
   std::array<sigil_slot, SIGIL_SLOT_MAX> sigil_slots;

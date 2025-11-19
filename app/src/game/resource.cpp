@@ -166,9 +166,8 @@ bool resource_system_initialize(void) {
   load_texture_from_atlas(ATLAS_TEX_ID_ZOMBIES_SPRITESHEET,                  Rectangle{ 2224,    0,  256,  480 });
   load_texture_from_atlas(ATLAS_TEX_ID_CRIMSON_FANTASY_SHOWCASE,             Rectangle{ 1568, 1088,   68,   68 });
   load_texture_from_atlas(ATLAS_TEX_ID_PASSIVE_UPGRADE_TIER_STAR,            Rectangle{ 1648, 1088,   28,   28 });
-  load_texture_from_atlas(ATLAS_TEX_ID_CURRENCY_COIN_ICON_5000,              Rectangle{ 1888,  736,   32,   32 });
-  load_texture_from_atlas(ATLAS_TEX_ID_CURRENCY_COIN_ICON_15000,             Rectangle{ 1920,  736,   32,   32 });
-  load_texture_from_atlas(ATLAS_TEX_ID_CURRENCY_COIN_ICON_45000,             Rectangle{ 1952,  736,   32,   32 });
+  load_texture_from_atlas(ATLAS_TEX_ID_CURRENCY_SOUL_ICON,                   Rectangle{ 1888,  736,   32,   32 });
+  load_texture_from_atlas(ATLAS_TEX_ID_CURRENCY_COIN_ICON,                   Rectangle{ 1920,  736,   32,   32 });
   load_texture_from_atlas(ATLAS_TEX_ID_FOG,                                  Rectangle{ 1152, 3296,  400,   64 });
   load_texture_from_atlas(ATLAS_TEX_ID_HEADER,                               Rectangle{ 1824,   64,  192,   32 });
   load_texture_from_atlas(ATLAS_TEX_ID_LITTLE_SHOWCASE,                      Rectangle{ 1504,  128,   88,   16 });

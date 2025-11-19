@@ -13,7 +13,6 @@
 #include "core/logger.h"
 #include "core/ftime.h"
 
-
 #include "game_types.h"
 #include "game/spritesheet.h"
 #include "game/fshader.h"
@@ -34,38 +33,19 @@ typedef struct user_interface_system_state {
 
   panel default_background_panel;
   spritesheet ss_to_draw_bg;
-  Vector2 mouse_pos_screen;
+  Vector2 mouse_pos_screen {};
   std::array<localization_package, LANGUAGE_INDEX_MAX> localization_info;
   std::vector<ui_error_display_control_system> errors_on_play;
   floating_text_display_system_state cfft_display_state;
-  Vector2 error_text_start_position; // TODO: Put the error location and timer variables inside the error display system
-  f32 error_text_end_height;
-  f32 error_text_duration_stay_on_screen;
-  f32 error_text_duration_in_and_out;
+  Vector2 error_text_start_position {}; // TODO: Put the error location and timer variables inside the error display system
+  f32 error_text_end_height {};
+  f32 error_text_duration_stay_on_screen {};
+  f32 error_text_duration_in_and_out {};
 
   user_interface_system_state(void) {
     this->in_app_settings = nullptr;
     this->display_language = nullptr;
-
-    this->checkboxes.fill(checkbox());
-    this->checkbox_types.fill(checkbox_type());
-    this->buttons.fill(button());
-    this->button_types.fill(button_type());
-    this->sliders.fill(slider());
-    this->slider_types.fill(slider_type());
-    this->prg_bars.fill(progress_bar());
-    this->prg_bar_types.fill(progress_bar_type());
-    
-    this->default_background_panel = panel();
-    this->ss_to_draw_bg = spritesheet();
-    this->mouse_pos_screen = ZEROVEC2;
-    this->localization_info.fill(localization_package());
-    this->errors_on_play = std::vector<ui_error_display_control_system>();
-    this->cfft_display_state = floating_text_display_system_state();
-    this->error_text_start_position = ZEROVEC2;
-    this->error_text_end_height = 0.f;
-    this->error_text_duration_stay_on_screen = 0.f; // in seconds
-    this->error_text_duration_in_and_out = 0.f; // in seconds
+    this->in_camera_metrics = nullptr;
   }
 } user_interface_system_state;
 
@@ -133,6 +113,13 @@ static user_interface_system_state * state = nullptr;
   IERROR("user_interface::" FUNCTION "::State is invalid");\
   RETURN\
 } } while(0);
+
+#define SCROLLBAR_WIDTH = (UI_BASE_RENDER_HEIGHT * 0.02f)  
+#define SCROLLBAR_HANDLE_MIN_HEIGHT = (UI_BASE_RENDER_HEIGHT * 0.1f) 
+#define SCROLLBAR_PADDING (UI_BASE_RENDER_HEIGHT * 0.01f)
+#define UI_SCROLL_HANDLE_HEIGHT state->in_app_settings->render_height * .05f
+constexpr f32 SCROLL_HANDLE_WIDTH_RATIO = 1.0f; // 16px / 16px
+constexpr f32 SCROLL_HEADER_HEIGHT = 11.0f;
 
 bool user_interface_on_event(i32 code, event_context context);
  
@@ -1515,7 +1502,9 @@ void gui_draw_pause_screen(bool in_game_play_state) {
 }
 void gui_fire_display_error(int loc_text_id) {
   IF_NOT_STATE("gui_fire_display_error", return; );
-
+  if(loc_text_id <= LOC_TEXT_EMPTY or loc_text_id >= LOC_TEXT_MAX) {
+    return;
+  }
   if (not state->errors_on_play.empty() and state->errors_on_play.back().error_text == lc_txt(loc_text_id)) {
     return;
   }
@@ -1551,6 +1540,59 @@ Rectangle gui_draw_default_background_panel(void) {
   state->default_background_panel.dest = UI_DEFAULT_BACKGROUND_PANEL_DEST(state->in_app_settings);
   gui_panel(state->default_background_panel, state->default_background_panel.dest, false);
   return state->default_background_panel.dest;
+}
+scrollbar_update_result update_scrollbar(Rectangle view_bounds, float content_height, float padding, float& in_out_scroll_handle_y, bool& in_out_is_dragging) {
+  scrollbar_update_result result = {};
+
+  if (content_height <= (view_bounds.height - (padding * 2.0f))) {
+    return result; 
+  }
+  result.is_active = true;
+
+  const float track_top_y = view_bounds.y + padding + SCROLL_HEADER_HEIGHT;
+  const float track_bottom_y = view_bounds.y + view_bounds.height - padding - SCROLL_HEADER_HEIGHT;
+  const float track_height = track_bottom_y - track_top_y;
+  const float handle_height = UI_SCROLL_HANDLE_HEIGHT;
+  const float scrollable_range = track_height - handle_height;
+
+  if (in_out_is_dragging) {
+    in_out_scroll_handle_y = state->mouse_pos_screen.y - (handle_height * 0.5f);
+    if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT)) {
+      in_out_is_dragging = false;
+    }
+  } else {
+    if (CheckCollisionPointRec(state->mouse_pos_screen, view_bounds)) {
+      f32 wheel = GetMouseWheelMove();
+      if (wheel != 0.0f) {
+        in_out_scroll_handle_y -= wheel * 20.0f;
+      }
+    }
+  }
+
+  in_out_scroll_handle_y = std::clamp(in_out_scroll_handle_y, track_top_y, track_top_y + scrollable_range);
+
+  const float scroll_width = handle_height * SCROLL_HANDLE_WIDTH_RATIO;
+  const float scroll_x = view_bounds.x + view_bounds.width - padding - (scroll_width * 0.5f);
+  
+  result.handle_dest = Rectangle{ scroll_x, in_out_scroll_handle_y, scroll_width, handle_height };
+
+  if (IsMouseButtonDown(MOUSE_BUTTON_LEFT) and not in_out_is_dragging) {
+    if (CheckCollisionPointRec(state->mouse_pos_screen, result.handle_dest)) {
+      in_out_is_dragging = true;
+    }
+  }
+  const float overflow = content_height - (view_bounds.height - (padding * 2.0f));
+  if (scrollable_range > 0.001f) {
+    float ratio = (in_out_scroll_handle_y - track_top_y) / scrollable_range;
+    result.view_offset_y = -(overflow * ratio);
+  }
+
+  return result;
+}
+void draw_scrollbar(const scrollbar_update_result& result) {
+  if (!result.is_active) return;
+
+  gui_draw_atlas_texture_id_pro(ATLAS_TEX_ID_PANEL_SCROLL_HANDLE, Rectangle{0.f, 0.f, 16.f, 16.f}, result.handle_dest, false);
 }
 void combat_feedback_spawn_floating_text(const char* _text, combat_feedback_floating_text_type type, Vector2 start_position) {
   IF_NOT_STATE("combat_feedback_spawn_floating_text", return; );

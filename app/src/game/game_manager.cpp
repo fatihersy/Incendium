@@ -28,6 +28,7 @@ struct game_manager_system_state {
   worldmap_stage stage;
   ingame_play_phases ingame_phase;
   player_state player_state_static;
+  std::vector<player_inventory_slot> player_inventory;
   ingame_info game_info;
   Vector2 mouse_pos_world {};
   Vector2 mouse_pos_screen {};
@@ -52,6 +53,7 @@ struct game_manager_system_state {
   std::array<sigil_slot, SIGIL_SLOT_MAX> sigil_slots;
 
   i32 next_inventory_slot_id {};
+  i32 next_item_id {};
 
   bool game_manager_initialized;
 
@@ -279,7 +281,7 @@ bool game_manager_initialize(const camera_metrics * in_camera_metrics, const app
   // Sigils
   {
     auto set_sigil = [](item_type _item_type, loc_text_id loc_id, data128 data, i32 tex_id) {
-      state->default_items.at(_item_type) = item_data(_item_type, static_cast<i32>(loc_id), data, tex_id, false);
+      state->default_items.at(_item_type) = item_data(_item_type, static_cast<i32>(loc_id), data, tex_id, false, false);
     };
     set_sigil(ITEM_TYPE_SIGIL_HEAD,                             LOC_TEXT_SIGIL_NAME_HEAD,         data128(), TEX_ID_UNSPECIFIED);
     set_sigil(ITEM_TYPE_SIGIL_ARCH_MICHAEL,                     LOC_TEXT_SIGIL_NAME_ARCH_MICHAEL, data128(), TEX_ID_UNSPECIFIED);
@@ -380,6 +382,16 @@ bool game_manager_initialize(const camera_metrics * in_camera_metrics, const app
     }
   }
   // Rules
+
+  // Items
+  {
+    auto set_default_item = [](item_type _item_type, loc_text_id loc_id, data128 data, i32 tex_id, bool from_atlas) {
+      state->default_items.at(_item_type) = item_data(_item_type, static_cast<i32>(loc_id), data, tex_id, 1, from_atlas);
+    };
+    set_default_item(ITEM_TYPE_EMPTY, LOC_TEXT_EMPTY, data128(), ATLAS_TEX_ID_DARK_FANTASY_PANEL_BG, true);
+    set_default_item(ITEM_TYPE_SOUL,  LOC_TEXT_ITEM_DISPLAY_NAME_SOULS, data128(), ATLAS_TEX_ID_CURRENCY_SOUL_ICON, true);
+  }
+  // Items
 
   state->playlist = create_playlist(PLAYLIST_PRESET_INGAME_PLAY_LIST);
   
@@ -645,7 +657,7 @@ void gm_start_game() {
 
   event_fire(EVENT_CODE_SET_SPAWN_FOLLOW_DISTANCE, event_context(state->game_rules[GAME_RULE_ZOMBIE_FOLLOW_DISTANCE].mm_ex.f32[3]));
   set_ingame_delta_time_multiplier(state->game_rules.at(GAME_RULE_DELTA_TIME_MULTIPLIER).mm_ex.f32[3]);
-  
+
   return true;
 }
 
@@ -687,10 +699,25 @@ void gm_load_game(void) {
   }
   state->player_state_static.inventory = state->game_progression_data->player_data.inventory;
   for (player_inventory_slot& slot : state->player_state_static.inventory) {
-    const item_data& item = state->default_items.at(slot.item_type);
+    const item_data& default_item = state->default_items.at(slot.item.type);
+    item_data saved_item = slot.item;
+    slot.item = default_item;
+    slot.item.buffer.f32[1] = saved_item.buffer.f32[1];
+    slot.item.level = saved_item.level;
     slot.slot_id = state->next_inventory_slot_id++;
-    slot.loc_txt_id = item.loc_tex_id;
+    slot.item.id = state->next_item_id++;
   }
+  state->player_inventory = state->game_progression_data->player_data.inventory;
+  for (player_inventory_slot& slot : state->player_inventory) {
+    const item_data& default_item = state->default_items.at(slot.item.type);
+    item_data saved_item = slot.item;
+    slot.item = default_item;
+    slot.item.buffer.f32[1] = saved_item.buffer.f32[1];
+    slot.item.level = saved_item.level;
+    slot.slot_id = state->next_inventory_slot_id++;
+    slot.item.id = state->next_item_id++;
+  }
+
   for (sigil_slot& slot : state->game_progression_data->sigil_slots) {
     if (slot.sigil.type <= ITEM_TYPE_UNDEFINED or slot.sigil.type >= ITEM_TYPE_MAX) {
       continue;
@@ -898,29 +925,42 @@ void gm_update_player(void) {
     }
   }
 }
-void gm_add_to_inventory(item_type _item_type, data128 ig_buffer, data128 ui_buffer) {
+void gm_add_to_inventory(item_type _item_type, data128 ig_buffer, data128 ui_buffer, i32 amouth, i32 level) {
   if (_item_type >= ITEM_TYPE_MAX or _item_type <= ITEM_TYPE_UNDEFINED) {
     IWARN("game_manager::gm_add_to_inventory()::Item id is out of bounds");
     return;
   }
-  std::vector<player_inventory_slot>& static_inventory = state->player_state_static.inventory;
-  std::vector<player_inventory_slot>& dynamic_inventory = get_player_state()->inventory;
-  auto push_to_inventories = [&](void) {
-    player_inventory_slot slot = player_inventory_slot();
-    slot.slot_id = state->next_inventory_slot_id++;
-    slot.item_type = _item_type;
-    slot.loc_txt_id = state->default_items[_item_type].loc_tex_id;
-    slot.ig_buffer = ig_buffer;
-    slot.ui_buffer = ui_buffer;
-    static_inventory.push_back(slot);
-    dynamic_inventory.push_back(slot);
-  };
-  if (_item_type >= M_ITEM_TYPE_SIGIL_START and _item_type <= M_ITEM_TYPE_SIGIL_END) {
-    push_to_inventories();
-  }
-  else {
+  if (_item_type == ITEM_TYPE_EMPTY) {
     return;
   }
+  std::vector<player_inventory_slot>& inventory = state->player_inventory;
+  auto create_slot = [&](void) -> player_inventory_slot {
+    player_inventory_slot slot = player_inventory_slot();
+    slot.slot_id = state->next_inventory_slot_id++;
+    
+    const item_data& _default = state->default_items[_item_type];
+    slot.item = _default;
+    slot.item.buffer = ig_buffer;
+    slot.item.buffer.f32[0] = _default.buffer.f32[0];
+    slot.item.id = state->next_item_id++;
+    slot.item.level = level;
+    slot.amouth = amouth;
+    slot.ui_buffer = ui_buffer;
+    gm_refresh_item(slot.item);
+    return slot;
+  };
+  item_data& _default = state->default_items[_item_type];
+  if (_default.stackable) {
+    for (player_inventory_slot& slot : inventory) {
+      if (slot.item.type == _item_type){
+        slot.amouth += amouth;
+        return;
+      }
+    }
+    state->player_inventory.push_back(create_slot());
+    return;
+  }
+  state->player_inventory.push_back(create_slot());
 }
 void gm_set_sigil_slot(sigil_slot slot) {
   if (slot.sigil.type <= M_ITEM_TYPE_SIGIL_START or slot.sigil.type >= M_ITEM_TYPE_SIGIL_END) {
@@ -960,37 +1000,34 @@ void gm_set_sigil_ui_context(sigil_slot_id id, data128 ui_buffer, bool draw_item
   state->sigil_slots[id].draw_item = draw_item;
 }
 void gm_remove_from_inventory_by_id(i32 id) {
-  std::vector<player_inventory_slot>& static_inventory = state->player_state_static.inventory;
-  std::vector<player_inventory_slot>& dynamic_inventory = get_player_state()->inventory;
+  std::vector<player_inventory_slot>& inventory = state->player_inventory;
 
-  std::erase_if(static_inventory, [id] (player_inventory_slot& slot) {
-    if (slot.slot_id != id) return false;
-    return true;
+  std::erase_if(inventory, [id] (player_inventory_slot& slot) {
+    return slot.slot_id == id;
   });
-  std::erase_if(dynamic_inventory, [id] (player_inventory_slot& slot) {
+
+}
+inventory_remove_amouth_result gm_remove_from_inventory_by_amouth(i32 id, i32 amouth) {
+  std::vector<player_inventory_slot>& inventory = state->player_inventory;
+  inventory_remove_amouth_result result {};
+
+  std::erase_if(inventory, [&result, id, amouth] (player_inventory_slot& slot) {
     if (slot.slot_id != id) return false;
-    return true;
+    slot.amouth -= amouth;
+    result.found = true;
+    result.remaining_amouth = slot.amouth;
+
+    return slot.amouth <= 0;
   });
+
+  return result;
 }
 void gm_update_inventory_item_by_id(item_data data, i32 id) {
-  std::vector<player_inventory_slot>& static_inventory = state->player_state_static.inventory;
-  std::vector<player_inventory_slot>& dynamic_inventory = get_player_state()->inventory;
+  std::vector<player_inventory_slot>& inventory = state->player_inventory;
 
-  size_t index = 0u;
-  for (player_inventory_slot& slot : static_inventory) {
+  for (player_inventory_slot& slot : inventory) {
     if (slot.slot_id == id) {
-      slot.ig_buffer = data.buffer;
-    }
-    index++;
-  }
-  if (dynamic_inventory.size() < index and dynamic_inventory[index].slot_id == id) {
-    dynamic_inventory[index].ig_buffer = data.buffer;
-  }
-  else {
-    for (player_inventory_slot& slot : dynamic_inventory) {
-      if (slot.slot_id == id) {
-        slot.ig_buffer = data.buffer;
-      }
+      slot.item.buffer = data.buffer;
     }
   }
 }
@@ -1042,7 +1079,7 @@ bool upgrade_ability_by_id(ability_id abl_id) {
   return true;
 }
 bool set_inventory_ui_ex(i32 slot_id, data128 data) {
-  for (player_inventory_slot& slot : get_player_state()->inventory) {
+  for (player_inventory_slot& slot : state->player_inventory) {
     if (slot_id == slot.slot_id) {
       slot.ui_buffer = data;
       return true;
@@ -1140,8 +1177,11 @@ i32 gm_get_sigil_upgrade_soul_requirement(i32 level) {
  */
 sigil_upgrade_result gm_get_sigil_upgrade_requirements(item_data& lhs, item_data& rhs) {
   using result = sigil_upgrade_result;
+  if (lhs.type == ITEM_TYPE_EMPTY or rhs.type == ITEM_TYPE_EMPTY) {
+    return result::IDLE;
+  }
   if (lhs.type < M_ITEM_TYPE_SIGIL_START or lhs.type > M_ITEM_TYPE_SIGIL_END) {
-    return result::ERROR_LHS_TYPE_MISMATCH;
+    return result::ERROR_LHS_TYPE_INCOMPATIBLE;
   }
   if (lhs.type == rhs.type) {
     return result::SUCCESS;
@@ -1159,35 +1199,28 @@ sigil_upgrade_result gm_get_sigil_upgrade_requirements(item_data& lhs, item_data
     return result(result::SUCCESS, soul_req);
   }
   else {
-    return result::ERROR_RHS_TYPE_UNCOMPATIBLE;
+    return result::ERROR_RHS_TYPE_INCOMPATIBLE;
   }
 }
 sigil_upgrade_result gm_upgrade_sigil(item_data& lhs, item_data& rhs) {
   using result = sigil_upgrade_result;
-  if (lhs.type < M_ITEM_TYPE_SIGIL_START or lhs.type > M_ITEM_TYPE_SIGIL_END) {
-    return result::ERROR_LHS_TYPE_MISMATCH;
+  result _result = gm_get_sigil_upgrade_requirements(lhs, rhs);
+  if (not _result.success) {
+    return _result;
   }
   if (lhs.type == rhs.type) {
     lhs.buffer.f32[3] += rhs.buffer.f32[3];
     return result::SUCCESS;
   }
   else if (rhs.type == ITEM_TYPE_SOUL) {
-    if (lhs.level < 0 or lhs.level > MAX_PLAYER_LEVEL) {
-      return result::ERROR_LHS_LEVEL_OUT_OF_BOUND;
-    }
-    result result = gm_get_sigil_upgrade_soul_requirement(lhs.level);
+    rhs.buffer.i32[0] -= _result.soul_requirement;
 
-    if (rhs.buffer.i32[0] < result.soul_requirement) {
-      return result::ERROR_INSUFFICIENT;
-    }
-    rhs.buffer.i32[0] -= result.soul_requirement;
+    lhs.level++;
+    gm_refresh_sigil(&lhs);
+    return sigil_upgrade_result(result::SUCCESS, _result.soul_requirement);
+  }
 
-    lhs.buffer.f32[3] += (lhs.buffer.f32[0] * (result.soul_requirement / 10.f)) + lhs.buffer.f32[0];
-    return result::SUCCESS;
-  }
-  else {
-    return result::ERROR_RHS_TYPE_UNCOMPATIBLE;
-  }
+  return _result;
 }
 void gm_refresh_stat_by_level(character_stat* stat, i32 level) {
   if (not state or state == nullptr) {
@@ -1327,8 +1360,34 @@ bool gm_refresh_sigil(item_data * sigil) {
   if (sigil->type <= M_ITEM_TYPE_SIGIL_START or sigil->type >= M_ITEM_TYPE_SIGIL_END) {
     return false;
   }
-  sigil->buffer.f32[3] = sigil->buffer.f32[0] + sigil->buffer.f32[1] + sigil->buffer.f32[2];
+  sigil->buffer.f32[3] = (sigil->buffer.f32[0] * (sigil->buffer.f32[1] / 1000.f)) + sigil->buffer.f32[0];
   return true;
+}
+void gm_refresh_item(item_data& item) {
+  if (item.type <= ITEM_TYPE_UNDEFINED or item.type >= ITEM_TYPE_MAX) {
+    item = item_data();
+    return;
+  }
+  if (item.level > MAX_PLAYER_LEVEL or item.level < 0) {
+    item.level = 1;
+  }
+  if (item.type >= M_ITEM_TYPE_SIGIL_START and item.type <= M_ITEM_TYPE_SIGIL_END) {
+    gm_refresh_sigil(&item);
+    return;
+  }
+  data128 _buffer = item.buffer;
+  i32 _id = item.id;
+  i32 _level = item.level;
+
+  const item_data& _default = gm_get_default_items()[item.type];
+  item = _default;
+
+  item.buffer = _buffer;
+  item.buffer.f32[0] = _default.buffer.f32[0];
+  item.id = _id;
+  item.level = _level;
+
+  _buffer.f32[3] = _buffer.f32[0] + _buffer.f32[1] + _buffer.f32[2];
 }
 
 void gm_set_character_stat_trait_value(character_stat* stat, data128 value) {
@@ -1415,6 +1474,9 @@ const Character2D * _get_spawn_by_id(i32 _id) {
 }
 const player_state * gm_get_player_state(void) {
   return get_player_state();
+}
+const std::vector<player_inventory_slot>& gm_get_inventory(void) {
+  return state->player_inventory;
 }
 bool _add_ability(ability_id _id) {
   if (_id <= ABILITY_ID_UNDEFINED or _id >= ABILITY_ID_MAX) {

@@ -225,7 +225,6 @@ const loot_item * get_loot_by_id(i32 id) {
     IWARN("collectible_manager::get_loot_by_id()::Id is out of bound");
 		return nullptr;
 	}
-
 	for (const loot_item& item  : state->loots_on_the_map) {
 		if (item.id == id) {
 			return __builtin_addressof(item);

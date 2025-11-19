@@ -266,6 +266,7 @@ enum player_animation_state {
 
 enum item_type {
   ITEM_TYPE_UNDEFINED,
+  ITEM_TYPE_EMPTY,
   ITEM_TYPE_EXPERIENCE,
   ITEM_TYPE_COIN,
   ITEM_TYPE_SOUL,
@@ -843,6 +844,7 @@ struct item_data {
   i32 loc_tex_id{};
   i32 level {};
   bool from_atlas{};
+  bool stackable {};
 
   data128 buffer;
   
@@ -850,12 +852,13 @@ struct item_data {
     this->id = -1;
     this->type = ITEM_TYPE_UNDEFINED;
   }
-  item_data(item_type _type, i32 loc_tex_id, data128 _buffer, i32 _tex_id, bool _from_atlas) : item_data() {
+  item_data(item_type _type, i32 loc_tex_id, data128 _buffer, i32 _tex_id, bool stackable, bool _from_atlas) : item_data() {
     this->type = _type;
     this->tex_id = _tex_id;
     this->buffer = _buffer;
     this->loc_tex_id = loc_tex_id;
     this->from_atlas = _from_atlas;
+    this->stackable = stackable;
   }
 };
 
@@ -1231,17 +1234,14 @@ struct character_trait {
 
 struct player_inventory_slot {
   i32 slot_id{};
-  ::item_type item_type;
-  i32 loc_txt_id{};
+  i32 amouth {};
   data128 ui_buffer;
-  data128 ig_buffer;
+  item_data item;
+  bool visible {};
 
-  player_inventory_slot(void) {
-    this->item_type = ITEM_TYPE_UNDEFINED;
-    this->ui_buffer = data128();
-  }
-  player_inventory_slot(::item_type _type) : player_inventory_slot() {
-    this->item_type = _type;
+  player_inventory_slot(void) {}
+  player_inventory_slot(::item_type _type) {
+    this->item.type = _type;
   }
 };
 

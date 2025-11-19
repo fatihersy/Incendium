@@ -94,22 +94,22 @@ struct mms_character_inventory_context {
   }
 };
 
-#warning "LABEL: upgrade state"
 struct mms_character_upgrade_context {
   enum {
-    LEFT_PANEL_INDEX = 0,
-    RIGHT_PANEL_INDEX = 1,
-    SIGIL_SLOT_INDEX_MAX = 2
+    LEFT_PANEL_INDEX,
+    RIGHT_PANEL_INDEX,
+    RESULT_PANEL_INDEX,
+    SIGIL_SLOT_INDEX_MAX
   };
   panel item_list_panel;
   panel upgrade_parent_panel;
   panel left_item_panel;
   panel right_item_panel;
   panel result_item_panel;
-  size_t grabbed_slot;  
+  size_t grabbed_slot;
   size_t hovered_slot;
   const item_data * default_item;
-  std::array<sigil_slot, SIGIL_SLOT_INDEX_MAX> slots;
+  std::array<player_inventory_slot, SIGIL_SLOT_INDEX_MAX> slots;
 
   enum moving_item_direction {
     DIRECTION_UNDEFINED,
@@ -120,10 +120,11 @@ struct mms_character_upgrade_context {
   enum character_upgrade_scene_state {
     UPGRADE_UNDEFINED,
     UPGRADE_IDLE,
-    UPGRADE_MERGE,
-    UPGRADE_IMBUE,
-    UPGRADE_ERROR_UNSUFFICENT,
-    UPGRADE_ERROR_UNCOMPATIBLE,
+    UPGRADE_ERROR_LHS_UNCOMPATIBLE,
+    UPGRADE_ERROR_RHS_UNCOMPATIBLE,
+    UPGRADE_ERROR_INSUFFICENT,
+    UPGRADE_ERROR_OUT_OF_BOUND,
+    UPGRADE_SUCCESS,
     UPGRADE_MAX,
   } upgrade_state;
 
@@ -232,7 +233,7 @@ void draw_main_menu_character_subscene_game_rule_list_panel(void);
 void draw_main_menu_character_subscene_game_rule_details_panel(void);
 void draw_trait_selection_panel(void);
 void trait_selection_panel_list_traits(panel* const pnl, const Rectangle rect, std::vector<character_trait>& traits, void (*trait_button_on_click_pfn)(i32 index));
-void trait_selection_panel_list_ability_selection_panel(panel* const pnl, const Rectangle rect, Vector2 border_gap);
+void trait_selection_panel_list_ability_selection_panel(panel* const pnl, const Rectangle padding, Vector2 border_gap);
 void smm_update_mouse_bindings(void);
 void smm_update_keyboard_bindings(void);
 void smm_update_bindings(void);
@@ -355,6 +356,12 @@ void chosen_trait_button_on_click(i32 index);
   if (fade_in) {
     smm_begin_fadein(data128(static_cast<i32>(MAIN_MENU_SCENE_DEFAULT)), fade_on_complete_change_main_menu_type);
   }
+
+  gm_add_to_inventory(ITEM_TYPE_SOUL, gm_get_default_items()[ITEM_TYPE_SOUL].buffer, data128(), 300);
+  gm_add_to_inventory(ITEM_TYPE_SIGIL_COMMON_CRITICAL_CHANCE, gm_get_default_items()[ITEM_TYPE_SIGIL_COMMON_CRITICAL_CHANCE].buffer);
+  gm_add_to_inventory(ITEM_TYPE_SIGIL_COMMON_ABILITY_CD, gm_get_default_items()[ITEM_TYPE_SIGIL_COMMON_ABILITY_CD].buffer);
+  gm_add_to_inventory(ITEM_TYPE_SIGIL_COMMON_AOE, gm_get_default_items()[ITEM_TYPE_SIGIL_COMMON_AOE].buffer);
+  gm_add_to_inventory(ITEM_TYPE_SIGIL_COMMON_ABILITY_CD, gm_get_default_items()[ITEM_TYPE_SIGIL_COMMON_ABILITY_CD].buffer);
   
   return true;
 }
@@ -641,6 +648,17 @@ void render_interface_main_menu(void) {
 void draw_main_menu_character_panel(void) {
   gui_draw_default_background_panel();
   Rectangle base_area = UI_DEFAULT_BACKGROUND_PANEL_DEST(state->in_app_settings);
+  auto draw_item = [](const item_data * item, Rectangle dest, Vector2 origin, f32 rot, Color tint) {
+    if (item->type >= M_ITEM_TYPE_SIGIL_START and item->type <= M_ITEM_TYPE_SIGIL_END) {
+      gm_draw_sigil(item->type, Vector2 {dest.x, dest.y}, true);
+    }
+    else if (item->from_atlas) {
+      gui_draw_atlas_texture_id(static_cast<atlas_texture_id>(item->tex_id), dest, origin, rot, tint);
+    }
+    else {
+      gui_draw_texture_id(static_cast<texture_id>(item->tex_id), dest, origin, RED);
+    }
+  };
 
   switch (state->mainmenu_scene_character_subscene) {
     case MAIN_MENU_SCENE_CHARACTER_UPGRADE: {
@@ -651,20 +669,23 @@ void draw_main_menu_character_panel(void) {
       
       if(scene_ctx.item_move_direction > scene_ctx.DIRECTION_UNDEFINED and scene_ctx.item_move_direction < scene_ctx.DIRECTION_MAX) {
         if (IsMouseButtonDown(MOUSE_BUTTON_LEFT) and CheckCollisionPointRec((*state->mouse_pos_screen), base_area)) {
-          Vector2 center = {state->mouse_pos_screen->x, state->mouse_pos_screen->y};
+          const Vector2 center = {state->mouse_pos_screen->x, state->mouse_pos_screen->y};
+          const f32 item_dim = SMM_BASE_RENDER_HEIGHT * UI_SIGIL_COMMON_RAD_SCALE_BY_VIEWPORT_SIZE;
+          const Rectangle dest = Rectangle { center.x, center.y,  item_dim, item_dim};
+          const Vector2 origin = Vector2 { item_dim * .5f, item_dim * .5f};
           if (scene_ctx.item_move_direction == scene_ctx.DIRECTION_FROM_SLOT) {
-            const sigil_slot& _sigil_slot = scene_ctx.slots[scene_ctx.grabbed_slot];
-            gm_draw_sigil(_sigil_slot.sigil.type, center, true);
+            const player_inventory_slot& slot = scene_ctx.slots[scene_ctx.grabbed_slot];
+            draw_item(&slot.item, dest, origin, 0.f, WHITE);
           }
           if (scene_ctx.item_move_direction == scene_ctx.DIRECTION_FROM_INVENTORY) {
-            const player_inventory_slot& slot = gm_get_player_state()->inventory[scene_ctx.grabbed_slot];
-            gm_draw_sigil(slot.item_type, center, true);
+            const player_inventory_slot& slot = gm_get_inventory()[scene_ctx.grabbed_slot];
+            draw_item(&slot.item, dest, origin, 0.f, WHITE);
           }
         } else {
           // INFO: See also slots panel
           if (scene_ctx.item_move_direction == scene_ctx.DIRECTION_FROM_INVENTORY) {}
           else if (scene_ctx.item_move_direction == scene_ctx.DIRECTION_FROM_SLOT) {
-            scene_ctx.slots[scene_ctx.grabbed_slot].draw_item = true;
+            scene_ctx.slots[scene_ctx.grabbed_slot].visible = true;
           }
           scene_ctx.grabbed_slot = I32_MAX;
           scene_ctx.default_item = nullptr;
@@ -687,8 +708,8 @@ void draw_main_menu_character_panel(void) {
             gm_draw_sigil(_sigil_slot.sigil.type, center, true);
           }
           if (scene_ctx.item_move_direction == scene_ctx.MOVE_ITEM_DIRECTION_FROM_INVENTORY) {
-            const player_inventory_slot& slot = gm_get_player_state()->inventory[scene_ctx.grabbed_slot];
-            gm_draw_sigil(slot.item_type, center, true);
+            const player_inventory_slot& slot = gm_get_inventory()[scene_ctx.grabbed_slot];
+            gm_draw_sigil(slot.item.type, center, true);
           }
         } else {
           // INFO: See also slots panel
@@ -727,20 +748,25 @@ void draw_main_menu_character_panel(void) {
   }
 }
 
-#warning "LABEL: draw upgrade"
 void draw_main_menu_character_subscene_upgrade_upgrade_panel(void) {
-  mms_character_upgrade_context& scene_ctx = state->mms_character.upgrade;
+  using context = mms_character_upgrade_context;
+  context& scene_ctx = state->mms_character.upgrade;
   const inactive_panel_draw_result this_parent = gui_panel(scene_ctx.upgrade_parent_panel, scene_ctx.upgrade_parent_panel.dest, false);
 
-  auto draw_item = [](const item_data * item, Rectangle dest, Vector2 origin, f32 rot, Color tint) {
-    if (item->type >= M_ITEM_TYPE_SIGIL_START and item->type <= M_ITEM_TYPE_SIGIL_END) {
-      gm_draw_sigil(item->type, Vector2 {dest.x + dest.width * .5f, dest.y + dest.height * .5f}, true);
-    }
-    else if (item->from_atlas) {
-      gui_draw_atlas_texture_id(static_cast<atlas_texture_id>(item->tex_id), dest, origin, rot, tint);
+  auto draw_slot_item = [](const player_inventory_slot& slot, Rectangle dest, Vector2 origin, f32 rot, Color tint) {
+    if (slot.item.type >= M_ITEM_TYPE_SIGIL_START and slot.item.type <= M_ITEM_TYPE_SIGIL_END) {
+      gm_draw_sigil(slot.item.type, Vector2 {dest.x + dest.width * .5f, dest.y + dest.height * .5f}, true);
     }
     else {
-      gui_draw_texture_id(static_cast<texture_id>(item->tex_id), dest, origin, RED);
+      if (slot.item.from_atlas) {
+        gui_draw_atlas_texture_id(static_cast<atlas_texture_id>(slot.item.tex_id), dest, origin, rot, tint);
+      }
+      else {
+        gui_draw_texture_id(static_cast<texture_id>(slot.item.tex_id), dest, origin, RED);
+      }
+    }
+    if (slot.amouth != 1) {
+      gui_label_box_format(FONT_TYPE_REGULAR, 1, dest, G_PALETTE[1], TEXT_ALIGN_TOP_RIGHT, "%d", slot.amouth);
     }
   };
   inactive_panel_draw_result left_panel_result = {};
@@ -792,104 +818,189 @@ void draw_main_menu_character_subscene_upgrade_upgrade_panel(void) {
   if (scene_ctx.upgrade_state <= scene_ctx.UPGRADE_UNDEFINED or scene_ctx.upgrade_state >= scene_ctx.UPGRADE_MAX) {
     return;
   }
-  sigil_slot& lhs = scene_ctx.slots[scene_ctx.LEFT_PANEL_INDEX];
-  sigil_slot& rhs = scene_ctx.slots[scene_ctx.RIGHT_PANEL_INDEX];
+  player_inventory_slot& lhs = scene_ctx.slots[scene_ctx.LEFT_PANEL_INDEX];
+  player_inventory_slot& rhs = scene_ctx.slots[scene_ctx.RIGHT_PANEL_INDEX];
+  player_inventory_slot& result_slot = scene_ctx.slots[scene_ctx.RESULT_PANEL_INDEX];
+  if (lhs.visible) draw_slot_item(lhs, left_panel_result.draw_dest, ZEROVEC2, 0.f, WHITE);
+  if (rhs.visible) draw_slot_item(rhs, right_panel_result.draw_dest, ZEROVEC2, 0.f, WHITE);
+  if (result_slot.visible) draw_slot_item(result_slot, result_panel_result.draw_dest, ZEROVEC2, 0.f, WHITE);
 
-  if (scene_ctx.upgrade_state == scene_ctx.UPGRADE_IDLE) {
-    if (lhs.draw_item) draw_item(&lhs.sigil, left_panel_result.draw_dest, ZEROVEC2, 0.f, WHITE);
-    if (rhs.draw_item) draw_item(&rhs.sigil, right_panel_result.draw_dest, ZEROVEC2, 0.f, WHITE);
-    return;
-  }
-  if (scene_ctx.upgrade_state == scene_ctx.UPGRADE_MERGE) {
-    if (lhs.draw_item) draw_item(&lhs.sigil, left_panel_result.draw_dest, ZEROVEC2, 0.f, WHITE);
-    if (rhs.draw_item) draw_item(&rhs.sigil, right_panel_result.draw_dest, ZEROVEC2, 0.f, WHITE);
+  const Vector2 label_dest = {this_parent.draw_dest.x + this_parent.draw_dest.width * .5f, this_parent.draw_dest.y + this_parent.draw_dest.height * .95f};
+  const Vector2 upgrade_button_dest = {this_parent.draw_dest.x + this_parent.draw_dest.width * .5f, this_parent.draw_dest.y + this_parent.draw_dest.height * .575f};
 
-    Vector2 upgrade_button_dest = {this_parent.draw_dest.x + this_parent.draw_dest.width * .5f, this_parent.draw_dest.y + this_parent.draw_dest.height * .8f};
+  auto draw_info_label = [&label_dest](const char * text, Color color) { gui_label(text, FONT_TYPE_REGULAR, 1, label_dest, color, true, true); };
 
-    if(gui_menu_button(
-      lc_txt(LOC_TEXT_MMS_CHARACTER_UPGRADE_SUBSCENE_UPGRADE_BTN), 
-      BTN_ID_MAINMENU_STATE_CHARACTER_TAB_UPGRADE_UPGRADE, ZEROVEC2, upgrade_button_dest, true
-    )) {
-      sigil_upgrade_result upg_res = gm_upgrade_sigil(lhs.sigil, rhs.sigil);
-      if (upg_res.success) {
-        gm_remove_from_inventory_by_id(rhs.id);
-        gm_update_inventory_item_by_id(lhs.sigil, lhs.sigil.id);
-      } else {
-        switch (upg_res.type) {
-          case sigil_upgrade_result::ERROR_LHS_TYPE_MISMATCH: scene_ctx.upgrade_state = scene_ctx.UPGRADE_ERROR_UNCOMPATIBLE;
-          case sigil_upgrade_result::ERROR_RHS_TYPE_UNCOMPATIBLE: scene_ctx.upgrade_state = scene_ctx.UPGRADE_ERROR_UNCOMPATIBLE;
-          case sigil_upgrade_result::ERROR_LHS_LEVEL_OUT_OF_BOUND: gui_fire_display_error(LOC_TEXT_DISPLAY_ERROR_TEXT_STARTER_ABILITY_NOT_SELECTED);
-          case sigil_upgrade_result::ERROR_INSUFFICIENT: scene_ctx.upgrade_state = scene_ctx.UPGRADE_ERROR_UNSUFFICENT;
-          default: {
-          break;
-        }
-        }
+  auto draw_upgrade_button = [&upgrade_button_dest](void) -> bool { 
+    return gui_menu_button( lc_txt(LOC_TEXT_MMS_CHARACTER_UPGRADE_SUBSCENE_UPGRADE_BTN), BTN_ID_MAINMENU_STATE_CHARACTER_TAB_UPGRADE_UPGRADE, 
+      ZEROVEC2, upgrade_button_dest, true
+    );
+  };
+  auto set_slot = [](player_inventory_slot& slot, item_type type, i32 id, i32 level, i32 amouth, data128 buffer) { 
+    slot.item = gm_get_default_items()[type];
+    slot.visible = type != ITEM_TYPE_EMPTY;
+    slot.item.type = type;
+    slot.item.id = id;
+    slot.item.level = level;
+    slot.amouth = amouth;
+    slot.item.buffer = buffer;
+  };
+  auto process_success = [&rhs, &lhs, &result_slot, &set_slot](void) {
+    if (rhs.item.type == ITEM_TYPE_SOUL) {
+      if(rhs.item.buffer.i32[0] <= 0) set_slot(rhs, ITEM_TYPE_EMPTY, 0, 0, 0, data128());
+      else rhs.amouth = rhs.item.buffer.i32[0];
+    }
+    else {
+      set_slot(rhs, ITEM_TYPE_EMPTY, 0, 0, 0, data128());
+    }
+    set_slot(result_slot, lhs.item.type, lhs.item.id, lhs.item.level, lhs.amouth, lhs.item.buffer);
+    set_slot(lhs, ITEM_TYPE_EMPTY, 0, 0, 0, data128());
+  };
+  auto result_error_to_loc_text = [](i32 res_err) -> loc_text_id {
+    switch (res_err) {
+      case sigil_upgrade_result::ERROR_INSUFFICIENT: {
+        return LOC_TEXT_LABEL_ERROR_TEXT_UPGRADE_PANEL_INSUFFICENT;
+      }
+      case sigil_upgrade_result::ERROR_LHS_TYPE_INCOMPATIBLE: {
+        return LOC_TEXT_LABEL_ERROR_TEXT_UPGRADE_PANEL_LHS_INCOMPATIBLE;
+      }
+      case sigil_upgrade_result::ERROR_RHS_TYPE_INCOMPATIBLE: {
+        return LOC_TEXT_LABEL_ERROR_TEXT_UPGRADE_PANEL_RHS_INCOMPATIBLE;
       }
     }
-  }
-  if (scene_ctx.upgrade_state == scene_ctx.UPGRADE_ERROR_UNCOMPATIBLE) {
-    if (lhs.draw_item) draw_item(&lhs.sigil, left_panel_result.draw_dest, ZEROVEC2, 0.f, WHITE);
-    if (rhs.draw_item) draw_item(&rhs.sigil, right_panel_result.draw_dest, ZEROVEC2, 0.f, WHITE);
+    return LOC_TEXT_EMPTY;
+  };
+  switch (scene_ctx.upgrade_state) {
 
-    Vector2 error_label_dest = {this_parent.draw_dest.x + this_parent.draw_dest.width * .5f, this_parent.draw_dest.y + this_parent.draw_dest.height * .8f};
+    case context::UPGRADE_IDLE: {
+      if(draw_upgrade_button()) {
+        sigil_upgrade_result result = gm_upgrade_sigil(lhs.item, rhs.item);
+        if (result.success) process_success();
+        else gui_fire_display_error(result_error_to_loc_text(result.type));
+      }
+      return;
+    }
+    case context::UPGRADE_ERROR_LHS_UNCOMPATIBLE: {
+      if(draw_upgrade_button()) {
+        sigil_upgrade_result result = gm_upgrade_sigil(lhs.item, rhs.item);
+        if (result.success) process_success();
+        else gui_fire_display_error(result_error_to_loc_text(result.type));
+      }
+      draw_info_label(lc_txt(LOC_TEXT_LABEL_ERROR_TEXT_UPGRADE_PANEL_LHS_INCOMPATIBLE), RED);
+      return;
+    }
+    case context::UPGRADE_ERROR_RHS_UNCOMPATIBLE: {
+      if(draw_upgrade_button()) {
+        sigil_upgrade_result result = gm_upgrade_sigil(lhs.item, rhs.item);
+        if (result.success) process_success();
+        else gui_fire_display_error(result_error_to_loc_text(result.type));
+      }
+      draw_info_label(lc_txt(LOC_TEXT_LABEL_ERROR_TEXT_UPGRADE_PANEL_RHS_INCOMPATIBLE), RED);
+      return;
+    }
+    case context::UPGRADE_ERROR_INSUFFICENT: {
+      if(draw_upgrade_button()) {
+        sigil_upgrade_result result = gm_upgrade_sigil(lhs.item, rhs.item);
+        if (result.success) process_success();
+        else gui_fire_display_error(result_error_to_loc_text(result.type));
+      }
+      draw_info_label(lc_txt(LOC_TEXT_LABEL_ERROR_TEXT_UPGRADE_PANEL_INSUFFICENT), RED);
+      return;
+    }
+    case context::UPGRADE_ERROR_OUT_OF_BOUND: {
 
-    gui_label("Two sigil must be the same type", FONT_TYPE_REGULAR, 1, error_label_dest, RED, true, true);
-  }
-  if (scene_ctx.upgrade_state == scene_ctx.UPGRADE_ERROR_UNSUFFICENT) {
-    if (lhs.draw_item) draw_item(&lhs.sigil, left_panel_result.draw_dest, ZEROVEC2, 0.f, WHITE);
-    if (rhs.draw_item) draw_item(&rhs.sigil, right_panel_result.draw_dest, ZEROVEC2, 0.f, WHITE);
-
-    Vector2 error_label_dest = {this_parent.draw_dest.x + this_parent.draw_dest.width * .5f, this_parent.draw_dest.y + this_parent.draw_dest.height * .8f};
-
-    gui_label("Insufficent Souls", FONT_TYPE_REGULAR, 1, error_label_dest, RED, true, true);
+      return;
+    }
+    case context::UPGRADE_SUCCESS: {
+      if(draw_upgrade_button()) {
+        sigil_upgrade_result result = gm_upgrade_sigil(lhs.item, rhs.item);
+        if (result.success) process_success();
+        else gui_fire_display_error(result_error_to_loc_text(result.type));
+      }
+      draw_info_label("SUCCESS!", GREEN);
+      return;
+    }
+    default: {
+      smm_refresh_character_context();
+      return;
+    }
   }
 }
 void draw_main_menu_character_subscene_upgrade_item_list_panel(void) {
   mms_character_upgrade_context& scene_ctx = state->mms_character.upgrade;
   const Rectangle& slots_panel_dest = scene_ctx.upgrade_parent_panel.dest;
-
+  panel& this_pnl = scene_ctx.item_list_panel;
   const f32 _padding = state->mms_character.parent_panel_dest.height * state->mms_character.symmetrical_pad_percent;
-  scene_ctx.item_list_panel.dest = Rectangle{
+  this_pnl.dest = Rectangle{
     slots_panel_dest.x + slots_panel_dest.width + _padding,
     slots_panel_dest.y,
     state->mms_character.parent_panel_dest.width - slots_panel_dest.width - _padding,
     slots_panel_dest.height
   };
-  Rectangle& this_dest = scene_ctx.item_list_panel.dest;
-  gui_panel(scene_ctx.item_list_panel, scene_ctx.item_list_panel.dest, false);
+  Rectangle& this_dest = this_pnl.dest;
+  gui_panel(this_pnl, this_pnl.dest, false);
 
-  f32 height_buffer = 0.f;
   i32 index = 0;
-  for (const player_inventory_slot& slot : gm_get_player_state()->inventory) {
+  scene_ctx.hovered_slot = I32_MAX;
+
+  auto draw_item = [](const item_data * item, Rectangle dest, Vector2 origin, f32 rot, Color tint) {
+    if (item->type >= M_ITEM_TYPE_SIGIL_START and item->type <= M_ITEM_TYPE_SIGIL_END) {
+      gm_draw_sigil(item->type, Vector2 {dest.x + dest.width * .5f, dest.y + dest.height * .5f}, true);
+    }
+    else {
+      const f32 _item_dim = SMM_BASE_RENDER_HEIGHT * UI_SIGIL_COMMON_RAD_SCALE_BY_VIEWPORT_SIZE;
+      const Rectangle _dest = Rectangle { dest.x + dest.width * .5f, dest.y + dest.height * .5f,  _item_dim, _item_dim};
+      const Vector2 _origin = Vector2 { _item_dim * .5f, _item_dim * .5f};
+      if (item->from_atlas) {
+        gui_draw_atlas_texture_id(static_cast<atlas_texture_id>(item->tex_id), _dest, _origin, rot, tint);
+      }
+      else {
+        gui_draw_texture_id(static_cast<texture_id>(item->tex_id), _dest, origin, RED);
+      }
+    }
+  };
+
+  Rectangle _pnl_dest = Rectangle {
+    this_dest.x + _padding,
+    this_dest.y + _padding,
+    this_dest.width - (_padding * 2.f),
+    (this_dest.height * .2f) - (_padding * 2.f)
+  };
+  auto draw_inventory_slot = [&draw_item, &_pnl_dest, &scene_ctx, &index](panel * _pnl, const player_inventory_slot& slot) {
+    const Vector2 slot_center_pos = Vector2 {_pnl_dest.x + _pnl_dest.width * .5f, _pnl_dest.y + _pnl_dest.height * .5f};
+
+    draw_item(&slot.item, _pnl_dest, Vector2 { _pnl->dest.width * .5f, _pnl->dest.height * .5f}, 0.f, WHITE);
+
+    if (gui_panel_active(_pnl, _pnl_dest, false).is_hover) scene_ctx.hovered_slot = index;
+    
+    gui_label(lc_txt(slot.item.loc_tex_id), FONT_TYPE_REGULAR, 1, slot_center_pos, G_PALETTE[1], true, true);
+
+    if (slot.amouth != 1) {
+      gui_label_box_format(FONT_TYPE_REGULAR, 1, _pnl_dest, G_PALETTE[1], TEXT_ALIGN_TOP_RIGHT, "%d", slot.amouth);
+    }
+  };
+  const scrollbar_update_result scroll_res = update_scrollbar(this_dest, this_pnl.buffer.f32[0], _padding, this_pnl.scroll_handle.y, this_pnl.is_dragging_scroll);
+  _pnl_dest.y += scroll_res.view_offset_y;
+
+  f32 total_content_height = 0.f;
+  const std::vector<player_inventory_slot>& _inventory = gm_get_inventory();
+  BeginScissorMode(static_cast<i32>(this_dest.x), static_cast<i32>(this_dest.y),static_cast<i32>(this_dest.width), static_cast<i32>(this_dest.height));
+  for (const player_inventory_slot& slot : _inventory) {
     panel * _local_panel = smm_get_local_panel(slot.ui_buffer.i32[0]);
     if (not _local_panel or _local_panel == nullptr) {
       state->mainmenu_scene_character_subscene = MAIN_MENU_SCENE_CHARACTER_GAME_RULE;
       begin_scene_change(MAIN_MENU_SCENE_DEFAULT);
     }
-    const Rectangle local_panel_dest = Rectangle {
-      this_dest.x + _padding,
-      this_dest.y + _padding + height_buffer,
-      this_dest.width - (_padding * 2.f),
-      (this_dest.height * .2f) - (_padding * 2.f)
-    };
-    height_buffer += local_panel_dest.height + _padding;
+    draw_inventory_slot(_local_panel, slot);
 
-    BeginScissorMode(
-      static_cast<i32>(local_panel_dest.x), static_cast<i32>(local_panel_dest.y),
-      static_cast<i32>(local_panel_dest.width), static_cast<i32>(local_panel_dest.height)
-    );
-    gm_draw_sigil(slot.item_type, Vector2 {local_panel_dest.x + local_panel_dest.width * .5f,  local_panel_dest.y + local_panel_dest.height * .5f}, true);
-
-    if (gui_panel_active(_local_panel, local_panel_dest, false).is_hover) {
-      scene_ctx.hovered_slot = index;
-    }
-    EndScissorMode();
-
-    gui_label(lc_txt(slot.loc_txt_id), FONT_TYPE_REGULAR, 1, Vector2 {local_panel_dest.x + local_panel_dest.width * .5f, local_panel_dest.y + local_panel_dest.height * .5f}, 
-      G_PALETTE[1], true, true
-    );
+    const f32 slot_height = _pnl_dest.height + _padding;
+    total_content_height += slot_height;
+    _pnl_dest.y += slot_height;
     index++;
   }
+  EndScissorMode();
+
+  this_pnl.buffer.f32[0] = total_content_height;
+  draw_scrollbar(scroll_res);
 }
 
 void draw_main_menu_character_subscene_inventory_slots_panel(void) {
@@ -949,7 +1060,7 @@ void draw_main_menu_character_subscene_inventory_item_list_panel(void) {
 
   f32 height_buffer = 0.f;
   size_t index = I32_MAX;
-  for (const player_inventory_slot& slot : gm_get_player_state()->inventory) {
+  for (const player_inventory_slot& slot : gm_get_inventory()) {
     panel * _local_panel = smm_get_local_panel(slot.ui_buffer.i32[0]);
     if (not _local_panel or _local_panel == nullptr) {
       state->mainmenu_scene_character_subscene = MAIN_MENU_SCENE_CHARACTER_GAME_RULE;
@@ -967,7 +1078,7 @@ void draw_main_menu_character_subscene_inventory_item_list_panel(void) {
       static_cast<i32>(local_panel_dest.x), static_cast<i32>(local_panel_dest.y),
       static_cast<i32>(local_panel_dest.width), static_cast<i32>(local_panel_dest.height)
     );
-    gm_draw_sigil(slot.item_type, Vector2 {local_panel_dest.x + local_panel_dest.width * .5f,  local_panel_dest.y + local_panel_dest.height * .5f}, true);
+    gm_draw_sigil(slot.item.type, Vector2 {local_panel_dest.x + local_panel_dest.width * .5f,  local_panel_dest.y + local_panel_dest.height * .5f}, true);
 
     if (gui_panel_active(_local_panel, local_panel_dest, false).is_hover) {
       scene_ctx.hovered_slot = index;
@@ -975,7 +1086,7 @@ void draw_main_menu_character_subscene_inventory_item_list_panel(void) {
     EndScissorMode();
 
     gui_label(
-      lc_txt(slot.loc_txt_id), FONT_TYPE_REGULAR, 1, 
+      lc_txt(slot.item.loc_tex_id), FONT_TYPE_REGULAR, 1, 
       Vector2 {local_panel_dest.x + local_panel_dest.width * .5f, local_panel_dest.y + local_panel_dest.height * .5f}, 
       G_PALETTE[1], true, true
     );
@@ -1061,7 +1172,7 @@ void draw_main_menu_character_subscene_game_rule_list_panel(void) {
       gui_label(lc_txt(rule->display_name_loc_id), panel_font_type, panel_font_size, title_pos, WHITE, true, true);
     }
   }
-  atlas_texture_id icon_tex_id = ATLAS_TEX_ID_CURRENCY_COIN_ICON_5000;
+  atlas_texture_id icon_tex_id = ATLAS_TEX_ID_CURRENCY_COIN_ICON;
   const char * total_stock_text = TextFormat("%d", get_currency_coins_total());
   const char * total_stock_desc_text = lc_txt(LOC_TEXT_MMS_CHARACTER_TAB_STATS_CURRENCY_TEXT_TOTAL);
   Vector2 total_stock_desc_text_measure = ui_measure_text(total_stock_desc_text, panel_font_type, panel_font_size);
@@ -1192,7 +1303,7 @@ void draw_main_menu_character_subscene_game_rule_details_panel(void) {
       return;
     }
   }
-  atlas_texture_id icon_tex_id = ATLAS_TEX_ID_CURRENCY_COIN_ICON_5000;
+  atlas_texture_id icon_tex_id = ATLAS_TEX_ID_CURRENCY_COIN_ICON;
   Rectangle cost_icon_dest = Rectangle(
     this_panel.dest.x + this_panel.dest.width * .425f,
     this_panel.dest.y + this_panel.dest.height * .85f,
@@ -1445,7 +1556,7 @@ void trait_selection_panel_list_traits(panel* const pnl, const Rectangle rect, s
   }
   EndScissorMode();
 }
-void trait_selection_panel_list_ability_selection_panel(panel* const pnl, const Rectangle rect, Vector2 border_gap) {
+void trait_selection_panel_list_ability_selection_panel(panel* const pnl, const Rectangle padding, Vector2 border_gap) {
   if (not pnl or pnl == nullptr) {
     IWARN("scene_main_menu::trait_selection_panel_list_ability_selection_panel()::Panel is invalid");
     return;
@@ -1460,18 +1571,18 @@ void trait_selection_panel_list_ability_selection_panel(panel* const pnl, const 
   const f32 scroll_background_width = scroll_background_height * scroll_background_texture_w_ratio;
   const f32 scroll_background_sample_width = ((scroll_background_width / scroll_backgroud_src_width));
 
-  const f32 panel_scroll_bg_x = rect.x + rect.width - (scroll_background_width * .5f) + scroll_background_sample_width;
+  const f32 panel_scroll_bg_x = padding.x + padding.width - (scroll_background_width * .5f) + scroll_background_sample_width;
   const Rectangle panel_scroll_bg_head_src  = Rectangle { 0.f, 0.f, 16.f, 11.f };
   const f32 panel_scroll_bg_head_src_scale = panel_scroll_bg_head_src.height / panel_scroll_bg_head_src.width;
   const Rectangle panel_scroll_bg_head_dest = Rectangle { 
-    panel_scroll_bg_x, rect.y, 
+    panel_scroll_bg_x, padding.y, 
     scroll_background_width, scroll_background_width * panel_scroll_bg_head_src_scale
   };
 
   const Rectangle panel_scroll_bg_bottom_src  = Rectangle { 0.f, 36.f, 16.f, 11.f };
   const f32 panel_scroll_bg_bottom_src_scale = panel_scroll_bg_bottom_src.height / panel_scroll_bg_bottom_src.width;
   const Rectangle panel_scroll_bg_bottom_dest = Rectangle {
-    panel_scroll_bg_x, rect.y + rect.height - (scroll_background_width * panel_scroll_bg_bottom_src_scale), 
+    panel_scroll_bg_x, padding.y + padding.height - (scroll_background_width * panel_scroll_bg_bottom_src_scale), 
     scroll_background_width, (scroll_background_width * panel_scroll_bg_bottom_src_scale)
   };
   const Rectangle panel_scroll_bg_body_src  = Rectangle { 0.f, 16.f, 16.f, 16.f };
@@ -1482,9 +1593,9 @@ void trait_selection_panel_list_ability_selection_panel(panel* const pnl, const 
     
   f32 ability_list_height_buffer = 0.f;
   Vector2 text_measure = ZEROVEC2;
-  const f32 _lc_pnl_height = rect.height * .15f;
-  const Vector2 _lc_pnl_dim = VECTOR2(rect.width * .95f, _lc_pnl_height);
-  BeginScissorMode(rect.x, rect.y, rect.width, rect.height);
+  const f32 _lc_pnl_height = padding.height * .15f;
+  const Vector2 _lc_pnl_dim = VECTOR2(padding.width * .95f, _lc_pnl_height);
+  BeginScissorMode(padding.x, padding.y, padding.width, padding.height);
   {
     for (size_t itr_000 = 0; itr_000 < ABILITY_ID_MAX; ++itr_000) {
       const ability& _abl = state->mms_trait_choice.abilities.at(itr_000);
@@ -1494,15 +1605,15 @@ void trait_selection_panel_list_ability_selection_panel(panel* const pnl, const 
       panel * _lc_pnl = smm_get_local_panel(_abl.ui_use.i32[0]);
       text_measure = ui_measure_text(lc_txt(_abl.display_name_loc_text_id), FONT_TYPE_REGULAR, 1);
       Vector2 _lc_pnl_pos = VECTOR2(
-        rect.x + (rect.width * .5f) - (_lc_pnl_dim.x * .5f), 
-        rect.y + ability_list_height_buffer + (pnl->buffer.f32[0] * pnl->scroll)
+        padding.x + (padding.width * .5f) - (_lc_pnl_dim.x * .5f), 
+        padding.y + ability_list_height_buffer + (pnl->buffer.f32[0] * pnl->scroll)
       );
       Rectangle _lc_pnl_dest = Rectangle {_lc_pnl_pos.x, _lc_pnl_pos.y, _lc_pnl_dim.x, _lc_pnl_dim.y};
       if ( (*state->in_ingame_info->starter_ability) == _abl.id) {
         _lc_pnl->bg_tex_id = ATLAS_TEX_ID_CRIMSON_FANTASY_PANEL_BG;
       }
       if (gui_panel_active(_lc_pnl, _lc_pnl_dest, false).is_signaling) {
-        if (ability_list_height_buffer + (pnl->buffer.f32[0] * pnl->scroll) < rect.height && (*state->in_ingame_info->starter_ability) != _abl.id) {
+        if (ability_list_height_buffer + (pnl->buffer.f32[0] * pnl->scroll) < padding.height && (*state->in_ingame_info->starter_ability) != _abl.id) {
           const ability& _prev_starter_abl = state->mms_trait_choice.abilities.at( static_cast<size_t>( (*state->in_ingame_info->starter_ability)) );
           panel * const _prev_starter_abls_lc_panel = smm_get_local_panel(_prev_starter_abl.ui_use.i32[0]);
 
@@ -1521,12 +1632,10 @@ void trait_selection_panel_list_ability_selection_panel(panel* const pnl, const 
       const Rectangle ability_icon_dest = Rectangle { _lc_pnl_dest.x,  _lc_pnl_dest.y, ability_icon_width,  ability_icon_height};
       gui_draw_texture_id_pro(TEX_ID_ASSET_ATLAS, _abl.icon_src, ability_icon_dest);
 
-      // � Return here
       gui_label(lc_txt(_abl.display_name_loc_text_id), FONT_TYPE_REGULAR, 1, 
         VECTOR2(_lc_pnl_dest.x + ((_lc_pnl_dest.width + ability_icon_width) * .5f), _lc_pnl_dest.y + _lc_pnl_dest.height * .5f), 
         WHITE, true, true
       );
-
       switch (_lc_pnl->current_state) {
         case BTN_STATE_UP:{
           
@@ -1547,16 +1656,16 @@ void trait_selection_panel_list_ability_selection_panel(panel* const pnl, const 
   }
   EndScissorMode();
 
-  pnl->buffer.f32[0] = ability_list_height_buffer - rect.height - (text_measure.y * .2f);
+  pnl->buffer.f32[0] = ability_list_height_buffer - padding.height - (text_measure.y * .2f);
   pnl->scroll_handle.x = panel_scroll_bg_x;
   pnl->scroll_handle.width = scroll_handle_width;
   pnl->scroll_handle.height = SMM_SCROLL_HANDLE_HEIGHT;
-  pnl->scroll_handle.y = std::max(pnl->scroll_handle.y, rect.y + panel_scroll_bg_head_dest.height);
-  pnl->scroll_handle.y = std::min(pnl->scroll_handle.y, rect.y + rect.height - panel_scroll_bg_bottom_dest.height - pnl->scroll_handle.height);
+  pnl->scroll_handle.y = std::max(pnl->scroll_handle.y, padding.y + panel_scroll_bg_head_dest.height);
+  pnl->scroll_handle.y = std::min(pnl->scroll_handle.y, padding.y + padding.height - panel_scroll_bg_bottom_dest.height - pnl->scroll_handle.height);
   pnl->scroll = 
-    (pnl->scroll_handle.y - rect.y - panel_scroll_bg_head_dest.height) / 
-    (rect.height - pnl->scroll_handle.height - panel_scroll_bg_bottom_dest.height - panel_scroll_bg_head_dest.height) * -1;
-  if (ability_list_height_buffer > rect.height) {
+    (pnl->scroll_handle.y - padding.y - panel_scroll_bg_head_dest.height) / 
+    (padding.height - pnl->scroll_handle.height - panel_scroll_bg_bottom_dest.height - panel_scroll_bg_head_dest.height) * -1;
+  if (ability_list_height_buffer > padding.height) {
     gui_draw_atlas_texture_id_pro(ATLAS_TEX_ID_PANEL_SCROLL, panel_scroll_bg_head_src, panel_scroll_bg_head_dest, false);
     gui_draw_atlas_texture_id_pro(ATLAS_TEX_ID_PANEL_SCROLL, panel_scroll_bg_body_src, panel_scroll_bg_body_dest, false, TEXTURE_WRAP_CLAMP);
     gui_draw_atlas_texture_id_pro(ATLAS_TEX_ID_PANEL_SCROLL, panel_scroll_bg_bottom_src, panel_scroll_bg_bottom_dest, false);
@@ -1573,50 +1682,58 @@ void update_main_menu_character_subscene_upgrade(void) {
   mms_character_upgrade_context& scene_ctx = state->mms_character.upgrade;
   const Rectangle& slots_dest = scene_ctx.upgrade_parent_panel.dest;
   const Rectangle& item_list_dest = scene_ctx.item_list_panel.dest;
-
-  if (CheckCollisionPointRec((*state->mouse_pos_screen), item_list_dest)) {
-    auto clear_selection = [&scene_ctx](void) {
-      scene_ctx.grabbed_slot = I32_MAX;
-      scene_ctx.default_item = nullptr;
-      scene_ctx.item_move_direction = scene_ctx.DIRECTION_UNDEFINED;
-    };
+  auto clear_selection = [&scene_ctx](void) {
+    scene_ctx.grabbed_slot = I32_MAX;
+    scene_ctx.default_item = nullptr;
+    scene_ctx.item_move_direction = scene_ctx.DIRECTION_UNDEFINED;
+  };
+  auto update_item_list = [&clear_selection, &scene_ctx](void) {
     if (scene_ctx.item_move_direction > scene_ctx.DIRECTION_UNDEFINED and scene_ctx.item_move_direction < scene_ctx.DIRECTION_MAX) {
       if (not IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
         item_type _item_type = ITEM_TYPE_UNDEFINED;
         data128 _ig_buffer;
+        //i32 id = -1; // INFO: Game manager provides a new ID when adding
+        i32 level = -1;
+        i32 amouth = -1;
         if (scene_ctx.item_move_direction == scene_ctx.DIRECTION_FROM_SLOT) {
-          sigil_slot& _sigil_slot = scene_ctx.slots[scene_ctx.grabbed_slot];
+          player_inventory_slot& _sigil_slot = scene_ctx.slots[scene_ctx.grabbed_slot];
           _item_type = scene_ctx.default_item->type;
-          _ig_buffer = _sigil_slot.sigil.buffer;
-          _sigil_slot.sigil = item_data();
-          _sigil_slot.draw_item = false;
-          _sigil_slot.filled = false;
+          _ig_buffer = _sigil_slot.item.buffer;
+          //id = _sigil_slot.item.id;
+          level = _sigil_slot.item.level;
+          amouth = _sigil_slot.amouth;
+          _sigil_slot.item = gm_get_default_items()[ITEM_TYPE_EMPTY];
+          _sigil_slot.visible = false;
+          _sigil_slot.item.id = -1;
+          _sigil_slot.amouth = -1;
         }
         if (scene_ctx.item_move_direction == scene_ctx.DIRECTION_FROM_INVENTORY) {
           return;
         }
         panel * _pnl = smm_add_local_panel(state->next_local_panel_id, state->smm_default_panels.panel_dark_fantasy_item_list_default);
         _pnl->signal_state = BTN_STATE_PRESSED;
-        gm_add_to_inventory(_item_type, _ig_buffer, data128(state->next_local_panel_id++));
+        gm_add_to_inventory(_item_type, _ig_buffer, data128(state->next_local_panel_id++), amouth, level);
         clear_selection();
       }
     }
     else if (IsMouseButtonDown(MOUSE_BUTTON_LEFT) and scene_ctx.item_move_direction == scene_ctx.DIRECTION_UNDEFINED) {
-      bool is_hovering = scene_ctx.hovered_slot < gm_get_player_state()->inventory.size();
-      const std::vector<player_inventory_slot>& inventory =  gm_get_player_state()->inventory;
-      if (is_hovering and inventory[scene_ctx.hovered_slot].item_type > ITEM_TYPE_UNDEFINED and inventory[scene_ctx.hovered_slot].item_type < ITEM_TYPE_MAX) {
-        const player_inventory_slot& slot = gm_get_player_state()->inventory[scene_ctx.hovered_slot];
+      bool is_hovering = scene_ctx.hovered_slot < gm_get_inventory().size();
+      const std::vector<player_inventory_slot>& inventory =  gm_get_inventory();
+      if (is_hovering and inventory[scene_ctx.hovered_slot].item.type > ITEM_TYPE_EMPTY and inventory[scene_ctx.hovered_slot].item.type < ITEM_TYPE_MAX) {
+        const player_inventory_slot& slot = gm_get_inventory()[scene_ctx.hovered_slot];
         scene_ctx.grabbed_slot = scene_ctx.hovered_slot;
-        scene_ctx.default_item = &gm_get_default_items()[slot.item_type];
+        scene_ctx.default_item = &gm_get_default_items()[slot.item.type];
         scene_ctx.item_move_direction = scene_ctx.DIRECTION_FROM_INVENTORY;
       }
     }
-    return;
-  }
-
-  if (CheckCollisionPointRec((*state->mouse_pos_screen), slots_dest)) {
+  };
+  auto update_update_slots = [&clear_selection, &scene_ctx](void) {
     i32 hover_index = I32_MAX;
     bool is_hovering = false;
+    if (CheckCollisionPointRec( (*state->mouse_pos_screen), scene_ctx.result_item_panel.dest)) {
+      hover_index = scene_ctx.RESULT_PANEL_INDEX;
+      is_hovering = true;
+    }
     if (CheckCollisionPointRec( (*state->mouse_pos_screen), scene_ctx.left_item_panel.dest)) {
       hover_index = scene_ctx.LEFT_PANEL_INDEX;
       is_hovering = true;
@@ -1625,75 +1742,112 @@ void update_main_menu_character_subscene_upgrade(void) {
       hover_index = scene_ctx.RIGHT_PANEL_INDEX;
       is_hovering = true;
     }
-    auto clear_selection = [&scene_ctx](void) {
-      scene_ctx.grabbed_slot = I32_MAX;
-      scene_ctx.default_item = nullptr;
-      scene_ctx.item_move_direction = scene_ctx.DIRECTION_UNDEFINED;
-    };
     auto abort_selection = [&scene_ctx, &clear_selection](void) {
       if (scene_ctx.item_move_direction == scene_ctx.DIRECTION_FROM_INVENTORY) {}
       else if (scene_ctx.item_move_direction == scene_ctx.DIRECTION_FROM_SLOT) {
-        sigil_slot& _sigil_slot = scene_ctx.slots[scene_ctx.grabbed_slot];
-        _sigil_slot.draw_item = true;
+        player_inventory_slot& _sigil_slot = scene_ctx.slots[scene_ctx.grabbed_slot];
+        _sigil_slot.visible = true;
       }
       clear_selection();
     };
-    if(scene_ctx.item_move_direction > scene_ctx.DIRECTION_UNDEFINED and scene_ctx.item_move_direction < scene_ctx.DIRECTION_MAX) {
+    if(scene_ctx.item_move_direction > scene_ctx.DIRECTION_UNDEFINED and scene_ctx.item_move_direction < scene_ctx.DIRECTION_MAX and hover_index != scene_ctx.RESULT_PANEL_INDEX) {
       if(not IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
         if (not is_hovering) {
           abort_selection();
         }
-        else if(scene_ctx.slots[hover_index].sigil.type > ITEM_TYPE_UNDEFINED and scene_ctx.slots[hover_index].sigil.type < ITEM_TYPE_MAX) {
+        else if(scene_ctx.slots[hover_index].item.type > ITEM_TYPE_EMPTY and scene_ctx.slots[hover_index].item.type < ITEM_TYPE_MAX) {
           abort_selection();
         }
         else {
           item_type _item_type = ITEM_TYPE_UNDEFINED;
           data128 _ig_buffer;
+          i32 id = -1;
+          i32 level = -1;
+          i32 amouth = -1;
           if (scene_ctx.item_move_direction == scene_ctx.DIRECTION_FROM_SLOT) {
-            sigil_slot& _sigil_slot = scene_ctx.slots[scene_ctx.grabbed_slot];
+            player_inventory_slot& _sigil_slot = scene_ctx.slots[scene_ctx.grabbed_slot];
             if(scene_ctx.default_item and scene_ctx.default_item != nullptr) _item_type = scene_ctx.default_item->type;
-            else _item_type = _sigil_slot.sigil.type;
-            _ig_buffer = _sigil_slot.sigil.buffer;
-            _sigil_slot.sigil = item_data();
-            _sigil_slot.draw_item = false;
-            _sigil_slot.filled = false;
+            else _item_type = _sigil_slot.item.type;
+            _ig_buffer = _sigil_slot.item.buffer;
+            id = _sigil_slot.item.id;
+            level = _sigil_slot.item.level;
+            amouth = _sigil_slot.amouth;
+            _sigil_slot.item = gm_get_default_items()[ITEM_TYPE_EMPTY];
+            _sigil_slot.visible = false;
+            _sigil_slot.item.id = id;
           }
           if (scene_ctx.item_move_direction == scene_ctx.DIRECTION_FROM_INVENTORY) {
-            const player_inventory_slot& slot = gm_get_player_state()->inventory[scene_ctx.grabbed_slot];
-            _item_type = slot.item_type;
-            _ig_buffer = slot.ig_buffer;
+            const player_inventory_slot& slot = gm_get_inventory()[scene_ctx.grabbed_slot];
+            _item_type = slot.item.type;
+            _ig_buffer = slot.item.buffer;
+            id = slot.item.id;
+            level = slot.item.level;
+            amouth = slot.amouth;
             gm_remove_from_inventory_by_id(slot.slot_id);
           }
-          scene_ctx.slots[hover_index].sigil = gm_get_default_items()[_item_type];
-          scene_ctx.slots[hover_index].sigil.buffer = _ig_buffer;
-          scene_ctx.slots[hover_index].draw_item = true;
-          scene_ctx.slots[hover_index].filled = true;
+          scene_ctx.slots[hover_index].item = gm_get_default_items()[_item_type];
+          scene_ctx.slots[hover_index].item.buffer = _ig_buffer;
+          scene_ctx.slots[hover_index].item.id = id;
+          scene_ctx.slots[hover_index].item.level = level;
+          scene_ctx.slots[hover_index].amouth = amouth;
+          scene_ctx.slots[hover_index].visible = true;
+          if (_item_type == ITEM_TYPE_SOUL) {
+            scene_ctx.slots[hover_index].item.buffer.i32[0] = amouth;
+          }
           clear_selection();
-
-          item_data& lhs = scene_ctx.slots[scene_ctx.LEFT_PANEL_INDEX].sigil;
-          item_data& rhs = scene_ctx.slots[scene_ctx.RIGHT_PANEL_INDEX].sigil;
-          if (lhs.type != ITEM_TYPE_UNDEFINED and (lhs.type < M_ITEM_TYPE_SIGIL_START or lhs.type > M_ITEM_TYPE_SIGIL_END)) {
-            scene_ctx.upgrade_state = scene_ctx.UPGRADE_ERROR_UNCOMPATIBLE;
-            return;
-          }
-          if (rhs.type != ITEM_TYPE_UNDEFINED and (rhs.type < M_ITEM_TYPE_SIGIL_START or rhs.type > M_ITEM_TYPE_SIGIL_END)) {
-          
-          }
-          scene_ctx.upgrade_state = scene_ctx.UPGRADE_IDLE;
         }
       }
     }
-    else if(IsMouseButtonDown(MOUSE_BUTTON_LEFT) and scene_ctx.item_move_direction == scene_ctx.DIRECTION_UNDEFINED) {
-      if (is_hovering and scene_ctx.slots[hover_index].sigil.type > ITEM_TYPE_UNDEFINED and scene_ctx.slots[hover_index].sigil.type < ITEM_TYPE_MAX) {
-        sigil_slot& _sigil_slot = scene_ctx.slots[hover_index];
+    else if(IsMouseButtonDown(MOUSE_BUTTON_LEFT) and scene_ctx.item_move_direction == scene_ctx.DIRECTION_UNDEFINED and static_cast<size_t>(hover_index) < scene_ctx.slots.size()) {
+      const item_type& _item_type = scene_ctx.slots[hover_index].item.type;
+      const bool grab_allowed = _item_type > ITEM_TYPE_EMPTY and _item_type < ITEM_TYPE_MAX;
+      if (is_hovering and grab_allowed) {
+        player_inventory_slot& _sigil_slot = scene_ctx.slots[hover_index];
         scene_ctx.grabbed_slot = hover_index;
-        scene_ctx.default_item = &gm_get_default_items()[_sigil_slot.sigil.type];
+        scene_ctx.default_item = &gm_get_default_items()[_sigil_slot.item.type];
         scene_ctx.item_move_direction = scene_ctx.DIRECTION_FROM_SLOT;
-
-        _sigil_slot.draw_item = false;
+        _sigil_slot.visible = false;
       }
     }
-    return;
+  };
+  if(CheckCollisionPointRec((*state->mouse_pos_screen), item_list_dest))  update_item_list();
+  if(CheckCollisionPointRec((*state->mouse_pos_screen), slots_dest))      update_update_slots();
+  
+  item_data& lhs = scene_ctx.slots[scene_ctx.LEFT_PANEL_INDEX].item;
+  item_data& rhs = scene_ctx.slots[scene_ctx.RIGHT_PANEL_INDEX].item;
+  sigil_upgrade_result result = gm_get_sigil_upgrade_requirements(lhs, rhs);
+  switch (result.type) {
+    case sigil_upgrade_result::IDLE: {
+      scene_ctx.upgrade_state = scene_ctx.UPGRADE_IDLE;
+      return;
+    }
+    case sigil_upgrade_result::ERROR_LHS_TYPE_INCOMPATIBLE: {
+      scene_ctx.upgrade_state = scene_ctx.UPGRADE_ERROR_LHS_UNCOMPATIBLE;
+      return;
+    }
+    case sigil_upgrade_result::ERROR_RHS_TYPE_INCOMPATIBLE: {
+      scene_ctx.upgrade_state = scene_ctx.UPGRADE_ERROR_RHS_UNCOMPATIBLE;
+      return;
+    }
+    case sigil_upgrade_result::ERROR_LHS_LEVEL_OUT_OF_BOUND: {
+      IWARN("scene_main_menu::update_main_menu_character_subscene_upgrade()::Lhs out of bound");
+      gm_refresh_item(lhs);
+      scene_ctx.upgrade_state = scene_ctx.UPGRADE_IDLE;
+      return;
+    }
+    case sigil_upgrade_result::ERROR_INSUFFICIENT: {
+      scene_ctx.upgrade_state = scene_ctx.UPGRADE_ERROR_INSUFFICENT;
+      return;
+    }
+    case sigil_upgrade_result::SUCCESS: {
+      scene_ctx.upgrade_state = scene_ctx.UPGRADE_IDLE;
+      return;
+    }
+    default: {
+      IWARN("scene_main_menu::update_main_menu_character_subscene_upgrade()::Unsupported result type");
+      smm_refresh_character_context();
+      return;
+    }
   }
 }
 void update_main_menu_character_subscene_inventory(void) {
@@ -1727,12 +1881,12 @@ void update_main_menu_character_subscene_inventory(void) {
       }
     }
     else if (IsMouseButtonDown(MOUSE_BUTTON_LEFT) and scene_ctx.item_move_direction == scene_ctx.MOVE_ITEM_DIRECTION_UNDEFINED) {
-      const bool is_hovering = scene_ctx.hovered_slot < gm_get_player_state()->inventory.size();
-      const std::vector<player_inventory_slot>& inventory =  gm_get_player_state()->inventory;
-      if (is_hovering and inventory[scene_ctx.hovered_slot].item_type > ITEM_TYPE_UNDEFINED and inventory[scene_ctx.hovered_slot].item_type < ITEM_TYPE_MAX) {
-        const player_inventory_slot& slot = gm_get_player_state()->inventory[scene_ctx.hovered_slot];
+      const bool is_hovering = scene_ctx.hovered_slot < gm_get_inventory().size();
+      const std::vector<player_inventory_slot>& inventory =  gm_get_inventory();
+      if (is_hovering and inventory[scene_ctx.hovered_slot].item.type > ITEM_TYPE_EMPTY and inventory[scene_ctx.hovered_slot].item.type < ITEM_TYPE_MAX) {
+        const player_inventory_slot& slot = gm_get_inventory()[scene_ctx.hovered_slot];
         scene_ctx.grabbed_slot = scene_ctx.hovered_slot;
-        scene_ctx.default_item = &gm_get_default_items()[slot.item_type];
+        scene_ctx.default_item = &gm_get_default_items()[slot.item.type];
         scene_ctx.item_move_direction = scene_ctx.MOVE_ITEM_DIRECTION_FROM_INVENTORY;
       }
     }
@@ -1759,7 +1913,7 @@ void update_main_menu_character_subscene_inventory(void) {
         if (is_hovered) {
           abort_selection();
         }
-        else if(gm_get_sigil_slots()[scene_ctx.hovered_slot].sigil.type > ITEM_TYPE_UNDEFINED and gm_get_sigil_slots()[scene_ctx.hovered_slot].sigil.type < ITEM_TYPE_MAX) {
+        else if(gm_get_sigil_slots()[scene_ctx.hovered_slot].sigil.type > ITEM_TYPE_EMPTY and gm_get_sigil_slots()[scene_ctx.hovered_slot].sigil.type < ITEM_TYPE_MAX) {
           abort_selection();
         }
         else {
@@ -1772,9 +1926,9 @@ void update_main_menu_character_subscene_inventory(void) {
             gm_clear_sigil_slot(_sigil_slot.id);
           }
           if (scene_ctx.item_move_direction == scene_ctx.MOVE_ITEM_DIRECTION_FROM_INVENTORY) {
-            const player_inventory_slot& slot = gm_get_player_state()->inventory[scene_ctx.grabbed_slot];
-            _item_type = slot.item_type;
-            _ig_buffer = slot.ig_buffer;
+            const player_inventory_slot& slot = gm_get_inventory()[scene_ctx.grabbed_slot];
+            _item_type = slot.item.type;
+            _ig_buffer = slot.item.buffer;
             gm_remove_from_inventory_by_id(slot.slot_id);
           }
           gm_set_sigil_slot(sigil_slot(static_cast<sigil_slot_id>(scene_ctx.hovered_slot), _item_type, _ig_buffer));
@@ -1785,7 +1939,7 @@ void update_main_menu_character_subscene_inventory(void) {
     else if(IsMouseButtonDown(MOUSE_BUTTON_LEFT) and scene_ctx.item_move_direction == scene_ctx.MOVE_ITEM_DIRECTION_UNDEFINED) {
       const bool is_hover_valid = scene_ctx.hovered_slot > SIGIL_SLOT_UNDEFINED and scene_ctx.hovered_slot < SIGIL_SLOT_MAX;
       const std::array<sigil_slot, SIGIL_SLOT_MAX>& sigil_slots = gm_get_sigil_slots();
-      if (is_hover_valid and sigil_slots[scene_ctx.hovered_slot].sigil.type > ITEM_TYPE_UNDEFINED and sigil_slots[scene_ctx.hovered_slot].sigil.type < ITEM_TYPE_MAX) {
+      if (is_hover_valid and sigil_slots[scene_ctx.hovered_slot].sigil.type > ITEM_TYPE_EMPTY and sigil_slots[scene_ctx.hovered_slot].sigil.type < ITEM_TYPE_MAX) {
         const sigil_slot& _sigil_slot = gm_get_sigil_slots()[scene_ctx.hovered_slot];
         scene_ctx.grabbed_slot = scene_ctx.hovered_slot;
         scene_ctx.default_item = &gm_get_default_items()[_sigil_slot.sigil.type];
@@ -1797,6 +1951,7 @@ void update_main_menu_character_subscene_inventory(void) {
     return;
   }
 }
+
 void smm_update_mouse_bindings(void) {
   switch (state->mainmenu_state) {
     case MAIN_MENU_SCENE_DEFAULT: {
@@ -1945,6 +2100,22 @@ void smm_update_mouse_bindings(void) {
       break;
     }
     case MAIN_MENU_SCENE_CHARACTER: {
+      if (state->mainmenu_scene_character_subscene == MAIN_MENU_SCENE_CHARACTER_UPGRADE) {
+        if (CheckCollisionPointRec( (*state->mouse_pos_screen), state->mms_trait_choice.positive_traits_selection_panel.dest)) {
+          panel& pnl = state->mms_character.upgrade.item_list_panel;
+
+          if (pnl.is_scrolling_active) {
+            pnl.scroll_handle.y += GetMouseWheelMove() * -10.f;
+          }
+          if (pnl.is_scrolling_active && IsMouseButtonDown(MOUSE_LEFT_BUTTON)) {
+            if (!state->is_any_button_down && !state->is_dragging_scroll && CheckCollisionPointRec( (*state->mouse_pos_screen), pnl.scroll_handle)) {
+              pnl.is_dragging_scroll = true;
+              state->is_dragging_scroll = true;
+            }
+          }
+        }
+      }
+
       break;
     }
     default: {
@@ -2127,10 +2298,26 @@ void smm_clean_character_context(void) {
   mms_ctx.upgrade_state = mms_ctx.UPGRADE_UNDEFINED;
 }
 void smm_refresh_character_context(void) {
+  // Upgrade
+  {
+    mms_character_upgrade_context& scene_ctx = state->mms_character.upgrade;
+    auto reset_sigil_slot = [](player_inventory_slot& slot) {
+      if(slot.item.type > ITEM_TYPE_EMPTY and slot.item.type < ITEM_TYPE_MAX){
+        gm_add_to_inventory(slot.item.type, slot.item.buffer, data128(state->next_local_panel_id++));
+        slot.item = gm_get_default_items()[ITEM_TYPE_EMPTY];
+        slot.visible = false;
+      }
+    };
+    for (player_inventory_slot& slot : scene_ctx.slots) {
+      reset_sigil_slot(slot);
+    }
+  }
+  // Upgrade
+
   smm_clean_character_context();
   state->general_purpose_panels.clear();
-
-  for (const player_inventory_slot& slot : gm_get_player_state()->inventory) {
+  
+  for (const player_inventory_slot& slot : gm_get_inventory()) {
     panel * _pnl = smm_add_local_panel(state->next_local_panel_id, state->smm_default_panels.panel_dark_fantasy_item_list_default);
     _pnl->signal_state = BTN_STATE_PRESSED;
     set_inventory_ui_ex(slot.slot_id, data128(state->next_local_panel_id++));
@@ -2214,6 +2401,10 @@ void smm_refresh_character_context(void) {
       (state->mms_character.parent_panel_dest.width * .75f), 
       state->mms_character.parent_panel_dest.height
     };
+    for (player_inventory_slot& slot : scene_ctx.slots) {
+      slot.item = gm_get_default_items()[ITEM_TYPE_EMPTY];
+      slot.visible = false;
+    }
 
     const f32 panel_size      = slots_dest.height * .2f;
     const f32 panel_half_size = panel_size * 0.5f;
@@ -2272,17 +2463,7 @@ void begin_scene_change(main_menu_scene_type mms, [[__maybe_unused__]] event_con
     case MAIN_MENU_SCENE_DEFAULT: { break; }
     case MAIN_MENU_SCENE_SETTINGS: { break; }
     case MAIN_MENU_SCENE_CHARACTER: { 
-      mms_character_upgrade_context& scene_ctx = state->mms_character.upgrade;
-      auto reset_sigil_slot = [](sigil_slot& slot) {
-        if(slot.filled){
-          gm_add_to_inventory(slot.sigil.type, slot.sigil.buffer, data128(state->next_local_panel_id++));
-          slot.sigil = item_data();
-          slot.draw_item = false;
-          slot.filled = false;
-        }
-      };
-      reset_sigil_slot(scene_ctx.slots[scene_ctx.LEFT_PANEL_INDEX]);
-      reset_sigil_slot(scene_ctx.slots[scene_ctx.RIGHT_PANEL_INDEX]);
+      smm_refresh_character_context();
       break;
     }
     case MAIN_MENU_SCENE_EXTRAS: { break; }

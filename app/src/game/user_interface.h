@@ -443,6 +443,11 @@ struct active_panel_draw_result {
   bool is_hover {};
   bool is_success {};
 };
+struct scrollbar_update_result {
+  float view_offset_y;
+  Rectangle handle_dest;
+  bool is_active;
+};
 
 inline constexpr std::array G_PALETTE = {
   Color{ 190u, 30u, 80u, 190u },   // Deep Ruby/Magenta
@@ -513,6 +518,8 @@ void gui_draw_settings_screen(void);
 void gui_draw_pause_screen(bool in_game_play_state);
 void gui_fire_display_error(int loc_text_id);
 Rectangle gui_draw_default_background_panel(void);
+scrollbar_update_result update_scrollbar(Rectangle view_bounds, float total_content_height, float padding, float& in_out_scroll_handle_y, bool& in_out_is_dragging);
+void draw_scrollbar(const scrollbar_update_result& result);
 
 void combat_feedback_spawn_floating_text(const char* _text, combat_feedback_floating_text_type type, Vector2 start_position);
  
@@ -524,6 +531,7 @@ void ui_set_sprite(spritesheet *sheet, bool _play_looped, bool _play_once);
 const spritesheet * ui_get_spritesheet_by_id(spritesheet_id type);
 void ui_update_sprite(spritesheet *sheet, f32 delta_time);
 Vector2 ui_align_text(Rectangle in_dest, Vector2 in_text_measure, text_alignment align_to);
+// Exposed
 
 #define gui_label_box_format(FONT, FONT_SIZE, RECT, COLOR, ALIGN, TEXT, ...) gui_label_box(TextFormat(TEXT, __VA_ARGS__), FONT, FONT_SIZE, RECT, COLOR, ALIGN)
 #define gui_label_format(FONT, FONT_SIZE, X,Y, COLOR, CENTER_H, CENTER_V, TEXT, ...) gui_label(TextFormat(TEXT, __VA_ARGS__), FONT, FONT_SIZE, Vector2{X,Y}, COLOR, CENTER_H, CENTER_V)
