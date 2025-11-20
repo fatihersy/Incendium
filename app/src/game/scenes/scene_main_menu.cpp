@@ -357,12 +357,6 @@ void chosen_trait_button_on_click(i32 index);
     smm_begin_fadein(data128(static_cast<i32>(MAIN_MENU_SCENE_DEFAULT)), fade_on_complete_change_main_menu_type);
   }
 
-  gm_add_to_inventory(ITEM_TYPE_SOUL, gm_get_default_items()[ITEM_TYPE_SOUL].buffer, data128(), 300);
-  gm_add_to_inventory(ITEM_TYPE_SIGIL_COMMON_CRITICAL_CHANCE, gm_get_default_items()[ITEM_TYPE_SIGIL_COMMON_CRITICAL_CHANCE].buffer);
-  gm_add_to_inventory(ITEM_TYPE_SIGIL_COMMON_ABILITY_CD, gm_get_default_items()[ITEM_TYPE_SIGIL_COMMON_ABILITY_CD].buffer);
-  gm_add_to_inventory(ITEM_TYPE_SIGIL_COMMON_AOE, gm_get_default_items()[ITEM_TYPE_SIGIL_COMMON_AOE].buffer);
-  gm_add_to_inventory(ITEM_TYPE_SIGIL_COMMON_ABILITY_CD, gm_get_default_items()[ITEM_TYPE_SIGIL_COMMON_ABILITY_CD].buffer);
-  
   return true;
 }
 void end_scene_main_menu(void) {
@@ -670,7 +664,7 @@ void draw_main_menu_character_panel(void) {
       if(scene_ctx.item_move_direction > scene_ctx.DIRECTION_UNDEFINED and scene_ctx.item_move_direction < scene_ctx.DIRECTION_MAX) {
         if (IsMouseButtonDown(MOUSE_BUTTON_LEFT) and CheckCollisionPointRec((*state->mouse_pos_screen), base_area)) {
           const Vector2 center = {state->mouse_pos_screen->x, state->mouse_pos_screen->y};
-          const f32 item_dim = SMM_BASE_RENDER_HEIGHT * UI_SIGIL_COMMON_RAD_SCALE_BY_VIEWPORT_SIZE;
+          const f32 item_dim = SMM_BASE_RENDER_HEIGHT * GM_SIGIL_COMMON_RAD_SCALE_BY_VIEWPORT_SIZE;
           const Rectangle dest = Rectangle { center.x, center.y,  item_dim, item_dim};
           const Vector2 origin = Vector2 { item_dim * .5f, item_dim * .5f};
           if (scene_ctx.item_move_direction == scene_ctx.DIRECTION_FROM_SLOT) {
@@ -947,7 +941,7 @@ void draw_main_menu_character_subscene_upgrade_item_list_panel(void) {
       gm_draw_sigil(item->type, Vector2 {dest.x + dest.width * .5f, dest.y + dest.height * .5f}, true);
     }
     else {
-      const f32 _item_dim = SMM_BASE_RENDER_HEIGHT * UI_SIGIL_COMMON_RAD_SCALE_BY_VIEWPORT_SIZE;
+      const f32 _item_dim = SMM_BASE_RENDER_HEIGHT * GM_SIGIL_COMMON_RAD_SCALE_BY_VIEWPORT_SIZE;
       const Rectangle _dest = Rectangle { dest.x + dest.width * .5f, dest.y + dest.height * .5f,  _item_dim, _item_dim};
       const Vector2 _origin = Vector2 { _item_dim * .5f, _item_dim * .5f};
       if (item->from_atlas) {
@@ -2354,9 +2348,9 @@ void smm_refresh_character_context(void) {
       (state->mms_character.parent_panel_dest.width * .75f), 
       state->mms_character.parent_panel_dest.height
     };
-    const f32 head_radius = SMM_BASE_RENDER_HEIGHT * UI_SIGIL_HEAD_RAD_SCALE_BY_VIEWPORT_SIZE     * 1.2f;
-    const f32 arch_radius = SMM_BASE_RENDER_HEIGHT * UI_SIGIL_ARCH_RAD_SCALE_BY_VIEWPORT_SIZE     * 1.2f;
-    const f32 common_radius = SMM_BASE_RENDER_HEIGHT * UI_SIGIL_COMMON_RAD_SCALE_BY_VIEWPORT_SIZE * 1.2f;
+    const f32 head_radius = SMM_BASE_RENDER_HEIGHT * GM_SIGIL_HEAD_RAD_SCALE_BY_VIEWPORT_SIZE     * 1.2f;
+    const f32 arch_radius = SMM_BASE_RENDER_HEIGHT * GM_SIGIL_ARCH_RAD_SCALE_BY_VIEWPORT_SIZE     * 1.2f;
+    const f32 common_radius = SMM_BASE_RENDER_HEIGHT * GM_SIGIL_COMMON_RAD_SCALE_BY_VIEWPORT_SIZE * 1.2f;
     const f32 slot_outer_scale = 1.1f;
     
     const Vector2 head_slot_position = {slots_panel_dest.x + (slots_panel_dest.width * .5f), slots_panel_dest.y + (slots_panel_dest.height * .17f)};

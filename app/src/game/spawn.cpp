@@ -251,17 +251,17 @@ damage_deal_result damage_spawn_by_collision(Rectangle rect, i32 damage, collisi
       for (Character2D* neighbor : it->second) {
         if (coll_type == COLLISION_TYPE_RECTANGLE_RECTANGLE) {
           if (CheckCollisionRecs(neighbor->collision, rect)) {
-            return damage_spawn(neighbor->character_id, damage);
+            damage_spawn(neighbor->character_id, damage);
           }
         } else { 
           if (CheckCollisionCircleRec(Vector2{rect.x, rect.y}, rect.width, neighbor->collision)) {
-            return damage_spawn(neighbor->character_id, damage);
+            damage_spawn(neighbor->character_id, damage);
           }
         }
       } // end for neighbors
     } // end for y
   } // end for x
-  return DAMAGE_DEAL_RESULT_ERROR; 
+  return DAMAGE_DEAL_RESULT_SUCCESS; 
 }
 
 i32 spawn_character(Character2D _character) {

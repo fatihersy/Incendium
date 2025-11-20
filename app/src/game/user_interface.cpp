@@ -17,6 +17,10 @@
 #include "game/spritesheet.h"
 #include "game/fshader.h"
 
+#define UI_SIGIL_HEAD_RAD_SCALE_BY_VIEWPORT_SIZE 0.0816f
+#define UI_SIGIL_ARCH_RAD_SCALE_BY_VIEWPORT_SIZE 0.06885f
+#define UI_SIGIL_COMMON_RAD_SCALE_BY_VIEWPORT_SIZE 0.0595f
+
 typedef struct user_interface_system_state {
   const app_settings * in_app_settings;
   const camera_metrics * in_camera_metrics;
@@ -101,9 +105,9 @@ static user_interface_system_state * state = nullptr;
   static_cast<f32>(state->in_app_settings->render_height * SCALE))
 #define UI_BASE_RENDER_DIV2 VECTOR2(static_cast<f32>(state->in_app_settings->render_width_div2), static_cast<f32>(state->in_app_settings->render_height_div2))
 #define UI_BASE_RENDER_RES_VEC VECTOR2(static_cast<f32>(state->in_app_settings->render_width), static_cast<f32>(state->in_app_settings->render_height))
-
 #define UI_BASE_RENDER_WIDTH state->in_app_settings->render_width
 #define UI_BASE_RENDER_HEIGHT state->in_app_settings->render_height
+
 #define COMBAT_FEEDBACK_FLOATING_TEXT_MIN_DURATION 0.8f
 #define COMBAT_FEEDBACK_FLOATING_TEXT_MAX_DURATION 0.8f
 #define COMBAT_FEEDBACK_FLOATING_TEXT_MIN_SCALE 1.8f
@@ -920,107 +924,90 @@ void draw_atlas_texture_stretch(atlas_texture_id tex_id, Rectangle stretch_part,
   gui_draw_atlas_texture_id_pro(tex_id, right_source, right_dest, false, TEXTURE_WRAP_CLAMP, tint);
 }
 
-atlas_texture_id draw_scrolling_textures(
-  const std::vector<atlas_texture_id>& item_tex_ids, f32 _offset, f32 draw_width, Rectangle center_unit, bool use_dest_dim, f32 unit_gap, Color item_tint, f32 source_scale,
-  f32* out_distance_to_center
+item_type draw_scrolling_textures(
+    const std::vector<item_type>& item_tex_ids, f32 _offset, f32 draw_width, Rectangle center_unit, f32 unit_gap, 
+    void (*drawing_function)(item_type type, Vector2 position, bool should_center), f32* out_distance_to_center
 ) {
-  if (item_tex_ids.empty()) {
-    return ATLAS_TEX_ID_UNSPECIFIED;
-  }
-  auto wrap_index = [](i32 index, i32 size) -> i32 {
-    return (index % size + size) % size;
-  };
-
-  const i32 texture_array_size = static_cast<i32>(item_tex_ids.size());
-  const Rectangle _center_rect = center_unit;
-  const f32 true_center = _center_rect.x + _center_rect.width * .5f;
-  const f32 unit_width_with_gap = center_unit.width + unit_gap;
-
-  // Calculate total number of units needed to fill the screen plus a buffer on each side
-  const f32 unit_count_f = std::ceil((draw_width + unit_width_with_gap * 2.f) / unit_width_with_gap);
-  const i32 unit_count = static_cast<i32>(unit_count_f);
-
-  // --- Fixed Scrolling Logic ---
-  // 1. Get the integer number of units scrolled
-  const i32 tex_id_scroll = std::floor(_offset / unit_width_with_gap);
-  
-  // 2. Get the remainder, which is always positive and consistent with floor
-  const f32 scroll_remainder = _offset - (static_cast<f32>(tex_id_scroll) * unit_width_with_gap);
-
-  // 3. Apply the remainder (subtract for natural scroll direction)
-  center_unit.x -= scroll_remainder;
-  // -----------------------------
-
-  // Lambda helper to avoid repeating draw logic
-  auto draw_unit = [&](atlas_texture_id tex_id, Rectangle dest) {
-    Vector2 origin = {dest.width * .5f, dest.height * .5f};
-    if (not use_dest_dim) {
-      const atlas_texture* const tex = ss_get_atlas_texture_by_enum(tex_id);
-      if (tex) { // Safety check
-        dest.width = tex->source.width * source_scale;
-        dest.height = tex->source.height * source_scale;
-        origin = {dest.width * .5f, dest.height * .5f};
-      }
+    if (item_tex_ids.empty() || !drawing_function) {
+        if (out_distance_to_center) *out_distance_to_center = 0.f;  
+        return ITEM_TYPE_UNDEFINED;
     }
-    gui_draw_atlas_texture_id(tex_id, dest, origin, 0.f, item_tint);
-  };
+    
+    auto wrap_index = [](i32 index, i32 size) -> i32 { 
+        return (index % size + size) % size; 
+    };
 
-  // Calculate the texture index for the base unit
-  const i32 base_center_index = std::floor(unit_count_f * .5f) + tex_id_scroll;
-  const i32 center_unit_index = wrap_index(base_center_index, texture_array_size);
+    const i32 item_array_size = static_cast<i32>(item_tex_ids.size());
+    const Rectangle _center_rect = center_unit;
+    const f32 true_center = _center_rect.x + _center_rect.width * .5f;
+    const f32 unit_width_with_gap = center_unit.width + unit_gap;
+    
+    // FIXED: More accurate unit count calculation
+    const f32 visible_units_needed = (draw_width * 0.5f) / unit_width_with_gap;
+    const i32 units_each_side = static_cast<i32>(std::ceil(visible_units_needed)) + 1; // +1 for buffer
 
-  // Draw the center unit
-  Rectangle _center_unit = center_unit;
-  draw_unit(item_tex_ids.at(center_unit_index), _center_unit);
+    const i32 tex_id_scroll = static_cast<i32>(std::floor(_offset / unit_width_with_gap));
+    const f32 scroll_remainder = _offset - (static_cast<f32>(tex_id_scroll) * unit_width_with_gap);
 
-  // Loop outwards from the center, drawing two items per loop
-  for (i32 i = 1; i <= (unit_count / 2) + 1; i++) {
-    // --- LEFT ITEM ---
-    const f32 leftmost_x = center_unit.x - (i * unit_width_with_gap);
-    Rectangle leftmost_dest = {leftmost_x, center_unit.y, center_unit.width, center_unit.height};
-    // Fixed: Index is also minus
-    const size_t leftmost_tex_id = static_cast<size_t>(wrap_index(center_unit_index - i, texture_array_size));
-    draw_unit(item_tex_ids.at(leftmost_tex_id), leftmost_dest);
+    // Apply scroll remainder
+    center_unit.x -= scroll_remainder;
 
-    // --- RIGHT ITEM ---
-    const f32 rightmost_x = center_unit.x + (i * unit_width_with_gap);
-    Rectangle rightmost_dest = {rightmost_x, center_unit.y, center_unit.width, center_unit.height};
-    // Fixed: Index is also plus
-    const size_t rightmost_tex_id = static_cast<size_t>(wrap_index(center_unit_index + i, texture_array_size));
-    draw_unit(item_tex_ids.at(rightmost_tex_id), rightmost_dest);
-  }
-  
-  // --- Logic for finding the "most central" item ---
-  atlas_texture_id most_center = ATLAS_TEX_ID_UNSPECIFIED;
-  f32 distance_to_center = 0.f;
-  const bool units_moving_right = _offset >= 0;
+    const i32 center_unit_index = wrap_index(tex_id_scroll, item_array_size);
 
-  if (units_moving_right) {
-    const bool center_unit_is_on_center = ((true_center + (unit_gap * .5f)) - center_unit.x) >= 0;
-    if (center_unit_is_on_center) {
-      most_center = item_tex_ids.at(center_unit_index);
-      distance_to_center = _center_rect.x - center_unit.x;
+    auto pfn_draw = [&drawing_function, &item_tex_ids](size_t index, Vector2 position) {
+        // Draw backing circle
+        DrawCircle(position.x, position.y, UI_BASE_RENDER_HEIGHT * UI_SIGIL_COMMON_RAD_SCALE_BY_VIEWPORT_SIZE * 1.3f, G_PALETTE[0]);
+        // Draw the item
+        drawing_function(item_tex_ids.at(index), position, true);
+    };
+    
+    // Draw center unit
+    pfn_draw(static_cast<size_t>(center_unit_index), Vector2{center_unit.x, center_unit.y});
+
+    // FIXED: Consistent loop bounds - draw exactly the same number left and right
+    for (i32 i = 1; i <= units_each_side; i++) {
+        // Left item
+        const f32 leftmost_x = center_unit.x - (i * unit_width_with_gap);
+        const Vector2 leftmost_pos = {leftmost_x, center_unit.y};
+        const size_t leftmost_tex_id = static_cast<size_t>(wrap_index(center_unit_index - i, item_array_size));
+        pfn_draw(leftmost_tex_id, leftmost_pos);
+
+        // Right item
+        const f32 rightmost_x = center_unit.x + (i * unit_width_with_gap);
+        const Vector2 rightmost_pos = {rightmost_x, center_unit.y};
+        const size_t rightmost_tex_id = static_cast<size_t>(wrap_index(center_unit_index + i, item_array_size));
+        pfn_draw(rightmost_tex_id, rightmost_pos);
+    }
+    
+    // Keep the proven distance calculation
+    item_type most_center = ITEM_TYPE_UNDEFINED;
+    f32 distance_to_center = 0.f;
+    const bool units_moving_right = _offset >= 0;
+
+    if (units_moving_right) {
+        const bool center_unit_is_on_center = ((true_center + (unit_gap * .5f)) - center_unit.x) >= 0;
+        if (center_unit_is_on_center) {
+            most_center = item_tex_ids.at(center_unit_index);
+            distance_to_center = _center_rect.x - center_unit.x;
+        } else {
+            most_center = item_tex_ids.at(static_cast<size_t>(wrap_index(center_unit_index + 1, item_array_size)));
+            distance_to_center = _center_rect.x + _center_rect.width + unit_gap - center_unit.x;
+        }
     } else {
-      most_center = item_tex_ids.at(static_cast<size_t>(wrap_index(center_unit_index + 1, texture_array_size)));
-      distance_to_center = _center_rect.x + _center_rect.width + unit_gap - center_unit.x;
+        const bool center_unit_is_on_center = ((center_unit.x + center_unit.width + unit_gap * .5f) - true_center) >= 0;
+        if (center_unit_is_on_center) {
+            most_center = item_tex_ids.at(center_unit_index);
+            distance_to_center = center_unit.x - _center_rect.x;
+        } else {
+            most_center = item_tex_ids.at(static_cast<size_t>(wrap_index(center_unit_index - 1, item_array_size)));
+            distance_to_center = _center_rect.x - _center_rect.width - unit_gap + center_unit.x;
+        }
     }
-  } else {
-    const bool center_unit_is_on_center = ((center_unit.x + center_unit.width + unit_gap * .5f) - true_center) >= 0;
-    if (center_unit_is_on_center) {
-      most_center = item_tex_ids.at(center_unit_index);
-      distance_to_center = center_unit.x - _center_rect.x;
-    } else {
-      most_center = item_tex_ids.at(static_cast<size_t>(wrap_index(center_unit_index - 1, texture_array_size)));
-      distance_to_center = _center_rect.x - _center_rect.width - unit_gap + center_unit.x;
-    }
-  }
 
-  // Cleaner pointer check
-  if (out_distance_to_center) {
-    *out_distance_to_center = distance_to_center;
-  }
-  
-  return most_center;
+    if (out_distance_to_center) {
+        *out_distance_to_center = distance_to_center;
+    }
+    return most_center;
 }
 
 void gui_slider(slider_id _id, Vector2 pos, Vector2 grid) {

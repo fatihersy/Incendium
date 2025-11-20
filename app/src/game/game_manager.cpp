@@ -90,8 +90,8 @@ bool game_manager_reinit(void);
 void populate_map_with_spawns(i32 min_count);
 i32 spawn_boss(void);
 void generate_in_game_info(void);
-void gm_set_character_stat_trait_value(character_stat* stat, data128 value);
-void gm_set_game_rule_trait_value(game_rule* stat, data128 value);
+void gm_set_character_stat_trait_value(character_stat& stat, data128 value);
+void gm_set_game_rule_trait_value(game_rule& stat, data128 value);
 void reset_ingame_info(void);
 void gm_update_player(void);
 void set_static_player_state_stat(character_stat_id stat_id, i32 level);
@@ -561,7 +561,7 @@ void gm_draw_sigil(item_type type, Vector2 position, bool should_center) {
     return;
   }
   const item_data& _sigil = state->default_items[type];
-  const f32 sigil_rad = state->in_app_settings->render_height * UI_SIGIL_COMMON_RAD_SCALE_BY_VIEWPORT_SIZE;
+  const f32 sigil_rad = state->in_app_settings->render_height * GM_SIGIL_COMMON_RAD_SCALE_BY_VIEWPORT_SIZE;
   const Rectangle dest = {
     position.x,
     position.y,
@@ -584,6 +584,9 @@ void gm_draw_sigil(item_type type, Vector2 position, bool should_center) {
   }
   else {
     const Texture2D * const tex = get_texture_by_enum(static_cast<texture_id>(_sigil.tex_id));
+    if (not tex or tex == nullptr) {
+      return;
+    }
     const Rectangle source = Rectangle {0.f, 0.f, static_cast<f32>(tex->width), static_cast<f32>(tex->height)};
     gui_draw_texture_id_pro(static_cast<texture_id>(_sigil.tex_id), source, dest, RED, origin);
   }
@@ -623,20 +626,19 @@ void gm_start_game() {
     return false;
   }
   for (character_trait& trait : state->chosen_traits) {
-    i32 _trait_type = 0;
-    if (trait.type == character_trait_type::CHARACTER_TRAIT_CHARACTER_STAT) {
-      if (_trait_type <= CHARACTER_STATS_UNDEFINED or _trait_type >= CHARACTER_STATS_MAX) {
+    if (trait.affected_context == character_trait_type::CHARACTER_TRAIT_CHARACTER_STAT) {
+      if (trait.context_id <= CHARACTER_STATS_UNDEFINED or trait.context_id >= CHARACTER_STATS_MAX) {
         IWARN("game_manager::gm_start_game()::Trait type is out of bound");
         continue;
       }
-      gm_set_character_stat_trait_value(&_player->stats[trait.type], trait.ingame_ops);
+      gm_set_character_stat_trait_value(_player->stats[trait.context_id], trait.ingame_ops);
     }
-    else if (trait.type == character_trait_type::CHARACTER_TRAIT_GAME_RULE) {
-      if (_trait_type <= GAME_RULE_UNDEFINED or _trait_type >= GAME_RULE_MAX) {
+    else if (trait.affected_context == character_trait_type::CHARACTER_TRAIT_GAME_RULE) {
+      if (trait.context_id <= GAME_RULE_UNDEFINED or trait.context_id >= GAME_RULE_MAX) {
         IWARN("game_manager::gm_start_game()::Rule type is out of bound");
         continue;
       }
-      gm_set_game_rule_trait_value(&state->game_rules[trait.type], trait.ingame_ops);
+      gm_set_game_rule_trait_value(state->game_rules[trait.context_id], trait.ingame_ops);
     }
   }
   state->stage = stage;
@@ -1390,24 +1392,20 @@ void gm_refresh_item(item_data& item) {
   _buffer.f32[3] = _buffer.f32[0] + _buffer.f32[1] + _buffer.f32[2];
 }
 
-void gm_set_character_stat_trait_value(character_stat* stat, data128 value) {
+void gm_set_character_stat_trait_value(character_stat& stat, data128 value) {
   if (not state or state == nullptr) {
     IERROR("game_manager::gm_set_character_stat_trait_value()::State is not valid");
     return;
   }
-  if (not stat or stat == nullptr) {
-    IWARN("game_manager::gm_set_character_stat_trait_value()::stat is not valid");
-    return;
-  }
-  auto set_stat_value_int = [stat, &value](void) {
-    stat->buffer.i32[2] = value.i32[0];
-    stat->buffer.i32[3] = stat->buffer.i32[0] + stat->buffer.i32[1] + stat->buffer.i32[2];
+  auto set_stat_value_int = [&stat, &value](void) {
+    stat.buffer.i32[2] = value.i32[0];
+    stat.buffer.i32[3] = stat.buffer.i32[0] + stat.buffer.i32[1] + stat.buffer.i32[2];
   };
-  auto set_stat_value_f32 = [stat, &value](void) {
-    stat->buffer.f32[2] = value.f32[0];
-    stat->buffer.f32[3] = stat->buffer.f32[0] + stat->buffer.f32[1] + stat->buffer.f32[2];
+  auto set_stat_value_f32 = [&stat, &value](void) {
+    stat.buffer.f32[2] = value.f32[0];
+    stat.buffer.f32[3] = stat.buffer.f32[0] + stat.buffer.f32[1] + stat.buffer.f32[2];
   };
-  switch (stat->data_type) {
+  switch (stat.data_type) {
     case DATA_TYPE_I32:{
       set_stat_value_int();
       return;
@@ -1423,24 +1421,20 @@ void gm_set_character_stat_trait_value(character_stat* stat, data128 value) {
   }
   IERROR("game_manager::gm_set_character_stat_trait_value()::Function ended unexpectedly");
 }
-void gm_set_game_rule_trait_value(game_rule* rule, data128 value) {
+void gm_set_game_rule_trait_value(game_rule& rule, data128 value) {
   if (not state or state == nullptr) {
     IERROR("game_manager::gm_set_game_rule_trait_value()::State is not valid");
     return;
   }
-  if (not rule or rule == nullptr) {
-    IWARN("game_manager::gm_set_game_rule_trait_value()::stat is not valid");
-    return;
-  }
-  auto set_rule_value_int = [rule, &value](void) {
-    rule->mm_ex.i32[2] = value.i32[0];
-    rule->mm_ex.i32[3] = rule->mm_ex.i32[0] + rule->mm_ex.i32[1] + rule->mm_ex.i32[2];
+  auto set_rule_value_int = [&rule, &value](void) {
+    rule.mm_ex.i32[2] = value.i32[0];
+    rule.mm_ex.i32[3] = rule.mm_ex.i32[0] + rule.mm_ex.i32[1] + rule.mm_ex.i32[2];
   };
-  auto set_rule_value_f32 = [rule, &value](void) {
-    rule->mm_ex.f32[2] = value.f32[0];
-    rule->mm_ex.f32[3] = rule->mm_ex.f32[0] + rule->mm_ex.f32[1] + rule->mm_ex.f32[2];
+  auto set_rule_value_f32 = [&rule, &value](void) {
+    rule.mm_ex.f32[2] = value.f32[0];
+    rule.mm_ex.f32[3] = rule.mm_ex.f32[0] + rule.mm_ex.f32[1] + rule.mm_ex.f32[2];
   };
-  switch (rule->data_type) {
+  switch (rule.data_type) {
     case DATA_TYPE_I32:{
       set_rule_value_int();
       return;

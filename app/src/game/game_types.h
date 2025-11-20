@@ -313,6 +313,8 @@ enum item_type {
   ITEM_TYPE_MAX
 };
 #define M_ITEM_TYPE_SIGIL_START ITEM_TYPE_SIGIL_HEAD
+#define M_ITEM_TYPE_COMMON_SIGIL_START ITEM_TYPE_SIGIL_COMMON_HEALTH
+
 #define M_ITEM_TYPE_SIGIL_END ITEM_TYPE_SIGIL_COMMON_REWARD_MODIFIER
 
 enum sigil_slot_id {
@@ -1202,8 +1204,8 @@ struct character_stat {
 };
 
 struct character_trait {
-  i32 id;
-  character_trait_type type;
+  i32 unique_id;
+  character_trait_type affected_context;
   i32 context_id; // INFO: Game rule or character stat
   i32 loc_title;
   i32 loc_description;
@@ -1213,8 +1215,8 @@ struct character_trait {
   data128 ui_ops;
 
   character_trait(void) {
-    this->id = 0;
-    this->type = CHARACTER_TRAIT_UNDEFINED;
+    this->unique_id = 0;
+    this->affected_context = CHARACTER_TRAIT_UNDEFINED;
     this->loc_title = 0;
     this->loc_description = 0;
     this->ingame_ops = data128();
@@ -1222,8 +1224,8 @@ struct character_trait {
     this->point = 0;
   }
   character_trait(i32 _id, character_trait_type _type, i32 _context_id, i32 _title, i32 _description, i32 _point, data128 buffer) : character_trait() {
-    this->id = _id;
-    this->type = _type;
+    this->unique_id = _id;
+    this->affected_context = _type;
     this->context_id = _context_id;
     this->loc_title = _title;
     this->loc_description = _description;

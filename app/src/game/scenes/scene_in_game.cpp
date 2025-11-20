@@ -37,24 +37,17 @@ enum chest_opening_sequence {
 
 struct chest_opening_sequence_intro_animation_control {
   chest_opening_sequence sequence;
-  f32 accumulator;
-  f32 duration;
+  f32 accumulator {};
+  f32 duration {};
 
   spritesheet sheet_chest;
   std::vector<spritesheet> sheets_background;
-  std::vector<atlas_texture_id> item_ids_to_scroll;
+  std::vector<item_type> item_ids_to_scroll;
 
   data128 mm_ex;
   data128 vec_ex;
   chest_opening_sequence_intro_animation_control(void) {
     this->sequence = CHEST_OPENING_SEQUENCE_UNDEFINED;
-    this->accumulator = 0.f;
-    this->duration = 0.f;
-    this->sheet_chest = spritesheet();
-    this->sheets_background = std::vector<spritesheet>();
-    this->item_ids_to_scroll = std::vector<atlas_texture_id>();
-    this->mm_ex = data128();
-    this->vec_ex = data128();
   }
 };
 
@@ -165,7 +158,7 @@ void sig_change_ingame_state(sig_ingame_state state);
 void sig_init_chest_sequence(chest_opening_sequence sequence, data128 vec_ex, data128 mm_ex);
 void sig_update_chest_sequence(void);
 void sig_render_chest_sequence(void);
-item_type sig_atlas_tex_id_to_item_type(i32 tex_id);
+void sig_populate_the_chest_for_chest_seq(std::vector<item_type>& item_tex_to_scroll);
 
 [[__nodiscard__]] bool start_game(void);
 
@@ -1034,23 +1027,7 @@ void sig_init_chest_sequence(chest_opening_sequence sequence, data128 vec_ex = d
       seq.mm_ex = data128();
       seq.duration = CHEST_OPENING_SEQ_READY_DURATION;
 
-      #warning "Replace this block with random fill"
-      seq.item_ids_to_scroll.push_back(ATLAS_TEX_ID_SIGIL_DAMAGE_COMMON);
-      seq.item_ids_to_scroll.push_back(ATLAS_TEX_ID_SIGIL_DAMAGE_UNCOMMON);
-      seq.item_ids_to_scroll.push_back(ATLAS_TEX_ID_SIGIL_DAMAGE_RARE);
-      seq.item_ids_to_scroll.push_back(ATLAS_TEX_ID_SIGIL_DAMAGE_EPIC);
-      seq.item_ids_to_scroll.push_back(ATLAS_TEX_ID_SIGIL_RESISTANCE_COMMON);
-      seq.item_ids_to_scroll.push_back(ATLAS_TEX_ID_SIGIL_RESISTANCE_UNCOMMON);
-      seq.item_ids_to_scroll.push_back(ATLAS_TEX_ID_SIGIL_RESISTANCE_RARE);
-      seq.item_ids_to_scroll.push_back(ATLAS_TEX_ID_SIGIL_RESISTANCE_EPIC);
-      seq.item_ids_to_scroll.push_back(ATLAS_TEX_ID_SIGIL_DAMAGE_COMMON);
-      seq.item_ids_to_scroll.push_back(ATLAS_TEX_ID_SIGIL_DAMAGE_UNCOMMON);
-      seq.item_ids_to_scroll.push_back(ATLAS_TEX_ID_SIGIL_DAMAGE_RARE);
-      seq.item_ids_to_scroll.push_back(ATLAS_TEX_ID_SIGIL_DAMAGE_EPIC);
-      seq.item_ids_to_scroll.push_back(ATLAS_TEX_ID_SIGIL_RESISTANCE_COMMON);
-      seq.item_ids_to_scroll.push_back(ATLAS_TEX_ID_SIGIL_RESISTANCE_UNCOMMON);
-      seq.item_ids_to_scroll.push_back(ATLAS_TEX_ID_SIGIL_RESISTANCE_RARE);
-      seq.item_ids_to_scroll.push_back(ATLAS_TEX_ID_SIGIL_RESISTANCE_EPIC);
+      sig_populate_the_chest_for_chest_seq(seq.item_ids_to_scroll);
       return;
     }
     case CHEST_OPENING_SEQUENCE_SPIN: {
@@ -1167,21 +1144,20 @@ void sig_render_chest_sequence(void) {
   chest_opening_sequence_intro_animation_control& seq = state->chest_intro_ctrl;
   Rectangle background_layer_dest = {0.f, 0.f,static_cast<f32>(state->in_app_settings->render_width),static_cast<f32>(state->in_app_settings->render_height)};
   u8 bg_layer_opacity = static_cast<u8>(CHEST_OPENING_SEQ_BG_MAX_OPACITY_SCALE * 255);
-  Color bg_layer_color = {255u, 255u, 255u, bg_layer_opacity};
-  Color light_color = {255u, 255u, 255u, 115u};
-  Color circle_color = {53u, 59u, 72u, 155u};
+  const Color bg_layer_color = {255u, 255u, 255u, bg_layer_opacity};
+  const Color light_color = {255u, 255u, 255u, 115u};
+  const Color circle_color = {53u, 59u, 72u, 155u};
   const Rectangle& chest_dest = seq.sheet_chest.coord;
-  f32 item_band_width = SIG_BASE_RENDER_HEIGHT_F;
+  const f32 item_band_width = SIG_BASE_RENDER_HEIGHT_F;
   const f32 item_band_unit_gap = CHEST_OPENING_SPIN_UNIT_GAP;
-  Rectangle center_item_dest = {CHEST_OPENING_SPIN_LOCATION.x, CHEST_OPENING_SPIN_LOCATION.y, CHEST_OPENING_SPIN_UNIT_SIZE.x, CHEST_OPENING_SPIN_UNIT_SIZE.y};
+  const Rectangle center_item_dest = {CHEST_OPENING_SPIN_LOCATION.x, CHEST_OPENING_SPIN_LOCATION.y, CHEST_OPENING_SPIN_UNIT_SIZE.x, CHEST_OPENING_SPIN_UNIT_SIZE.y};
   const f32 accumulator = seq.accumulator / seq.duration;
-  const f32 item_scale = 3.f;
 
-  auto draw_common_background = [&](Color bg_tint) {
+  auto draw_common_background = [&background_layer_dest, &circle_color](Color bg_tint) {
     gui_draw_atlas_texture_id(ATLAS_TEX_ID_BG_BLACK, background_layer_dest, ZEROVEC2, 0.f, bg_tint);
     DrawCircle(SIG_BASE_RENDER_DIV2.x, SIG_BASE_RENDER_DIV2.y, state->in_app_settings->render_height_div2, circle_color);
   };
-  auto draw_chest_part = [&](atlas_texture_id part_id) {
+  auto draw_chest_part = [&seq](atlas_texture_id part_id) {
     gui_draw_atlas_texture_id(part_id, seq.sheet_chest.coord, seq.sheet_chest.origin, seq.sheet_chest.rotation, seq.sheet_chest.tint);
   };
   switch (seq.sequence) {
@@ -1201,10 +1177,8 @@ void sig_render_chest_sequence(void) {
       DrawTriangle({chest_dest.x, chest_dest.y + chest_dest.height * 0.5f}, {SIG_BASE_RENDER_WIDTH_F * accumulator, 0.f}, {SIG_BASE_RENDER_WIDTH_F * (1.f - accumulator), 0.f}, light_color);
       draw_chest_part(ATLAS_TEX_ID_CHEST_BASE);
       if (accumulator >= 1.f) {
-        draw_scrolling_textures( std::vector<atlas_texture_id>({ATLAS_TEX_ID_DARK_FANTASY_PANEL_BG}), 
-          0.f, item_band_width, center_item_dest, true, item_band_unit_gap, WHITE
-        );
-        draw_scrolling_textures( seq.item_ids_to_scroll, 0.f, item_band_width, center_item_dest, false, item_band_unit_gap, WHITE, item_scale);
+        draw_scrolling_textures(seq.item_ids_to_scroll, 0.f, item_band_width, center_item_dest, item_band_unit_gap, gm_draw_sigil);
+
         gui_draw_atlas_texture_id(ATLAS_TEX_ID_DARK_FANTASY_PANEL_SELECTED, center_item_dest, Vector2 {center_item_dest.width * .5f, center_item_dest.height * .5f}, 0.f, WHITE);
 
         gui_label_shader(lc_txt(LOC_TEXT_INGAME_STATE_CHEST_OPENING_SPIN),
@@ -1220,14 +1194,14 @@ void sig_render_chest_sequence(void) {
       DrawTriangle({chest_dest.x, chest_dest.y + chest_dest.height * 0.5f}, {SIG_BASE_RENDER_WIDTH_F, 0.f}, ZEROVEC2, light_color);
       draw_chest_part(ATLAS_TEX_ID_CHEST_BASE);
       
-      draw_scrolling_textures( std::vector<atlas_texture_id>({ATLAS_TEX_ID_DARK_FANTASY_PANEL_BG}), seq.mm_ex.f32[0], item_band_width, center_item_dest, true, item_band_unit_gap, WHITE);
-      atlas_texture_id center_tex_id = draw_scrolling_textures( seq.item_ids_to_scroll, seq.mm_ex.f32[0], item_band_width, center_item_dest, false, item_band_unit_gap, WHITE, item_scale, __builtin_addressof(seq.mm_ex.f32[2]));
+      item_type _item_type = draw_scrolling_textures(seq.item_ids_to_scroll, seq.mm_ex.f32[0], item_band_width, center_item_dest, item_band_unit_gap, gm_draw_sigil, __builtin_addressof(seq.mm_ex.f32[2]));
+      
       gui_draw_atlas_texture_id(ATLAS_TEX_ID_DARK_FANTASY_PANEL_SELECTED, center_item_dest, Vector2 {center_item_dest.width * .5f, center_item_dest.height * .5f}, 0.f, WHITE);
 
-      if (center_tex_id != static_cast<atlas_texture_id>(seq.mm_ex.f32[3])) {
+      if (_item_type != static_cast<item_type>(seq.mm_ex.f32[3])) {
         event_fire(EVENT_CODE_PLAY_SOUND, event_context(static_cast<i32>(SOUND_ID_SPIN_SFX), 0));
         
-        seq.mm_ex.f32[3] = static_cast<f32>(center_tex_id);
+        seq.mm_ex.f32[3] = static_cast<f32>(_item_type);
       }
 
       DrawLine(center_item_dest.x, center_item_dest.y - center_item_dest.height * .5f, center_item_dest.x, center_item_dest.y + center_item_dest.height * .5f, WHITE);
@@ -1239,8 +1213,7 @@ void sig_render_chest_sequence(void) {
       DrawTriangle({chest_dest.x, chest_dest.y + chest_dest.height * 0.5f}, {SIG_BASE_RENDER_WIDTH_F, 0.f}, ZEROVEC2, light_color);
       draw_chest_part(ATLAS_TEX_ID_CHEST_BASE);
 
-      draw_scrolling_textures( std::vector<atlas_texture_id>({ATLAS_TEX_ID_DARK_FANTASY_PANEL_BG}), seq.mm_ex.f32[1], item_band_width, center_item_dest, true, item_band_unit_gap, WHITE);
-      atlas_texture_id sigil_texture_id = draw_scrolling_textures( seq.item_ids_to_scroll, seq.mm_ex.f32[1], item_band_width, center_item_dest, false, item_band_unit_gap, WHITE, item_scale);
+      item_type _item_type = draw_scrolling_textures(seq.item_ids_to_scroll, seq.mm_ex.f32[1], item_band_width, center_item_dest, item_band_unit_gap, gm_draw_sigil);
       gui_draw_atlas_texture_id(ATLAS_TEX_ID_DARK_FANTASY_PANEL, center_item_dest, Vector2 {center_item_dest.width * .5f, center_item_dest.height * .5f}, 0.f, WHITE);
 
       ui_play_sprite_on_site(__builtin_addressof(seq.sheets_background.at(0)), WHITE, center_item_dest);
@@ -1251,7 +1224,6 @@ void sig_render_chest_sequence(void) {
           seq.mm_ex.f32[3] = static_cast<f32>(true);
         }
         if (gui_menu_button(lc_txt(LOC_TEXT_INGAME_STATE_RESULT_ACCEPT), BTN_ID_IN_GAME_BUTTON_CHEST_OPENING_ACCEPT, {0.f, 45.f}, SIG_BASE_RENDER_DIV2, true)) {
-          const item_type _item_type = sig_atlas_tex_id_to_item_type(sigil_texture_id);
           gm_add_to_inventory(_item_type, gm_get_default_items()[_item_type].buffer);
           sig_change_ingame_state(SCENE_INGAME_STATE_PLAY);
         }
@@ -1265,46 +1237,14 @@ void sig_render_chest_sequence(void) {
     }
   }
 }
-item_type sig_atlas_tex_id_to_item_type(i32 tex_id) {
-  if (tex_id < ATLAS_TEX_ID_UNSPECIFIED or tex_id > ATLAS_TEX_ID_MAX) {
-    IWARN("scene_in_game::sig_atlas_tex_id_to_item_type()::Texture id is out of bound");
-    return ITEM_TYPE_UNDEFINED;
+void sig_populate_the_chest_for_chest_seq(std::vector<item_type>& item_tex_to_scroll) {
+  std::vector<item_type>&                      texs     = item_tex_to_scroll;
+  //const std::array<item_data, ITEM_TYPE_MAX>& _defaults = gm_get_default_items(); 
+
+  for (i32 itr_000 = 0; itr_000 < GM_ITEM_COUNT_CHESTS_SCROLL ; itr_000++) {
+    size_t rand = get_random_ssl(M_ITEM_TYPE_COMMON_SIGIL_START, M_ITEM_TYPE_SIGIL_END);
+    texs.push_back(static_cast<item_type>(rand));
   }
-  switch (tex_id) {
-    case TEX_ID_SIGIL_HEALTH:              { return ITEM_TYPE_SIGIL_COMMON_HEALTH; }
-    case TEX_ID_SIGIL_STAMINA:             { return ITEM_TYPE_SIGIL_COMMON_STAMINA; }
-    case TEX_ID_SIGIL_MANA:                { return ITEM_TYPE_SIGIL_COMMON_MANA; }
-    case TEX_ID_SIGIL_HP_REGEN:            { return ITEM_TYPE_SIGIL_COMMON_HP_REGEN; }
-    case TEX_ID_SIGIL_STAMINA_REGEN:       { return ITEM_TYPE_SIGIL_COMMON_STAMINA_REGEN; }
-    case TEX_ID_SIGIL_MANA_REGEN:          { return ITEM_TYPE_SIGIL_COMMON_MANA_REGEN; }
-    case TEX_ID_SIGIL_MOVE_SPEED:          { return ITEM_TYPE_SIGIL_COMMON_MOVE_SPEED; }
-    case TEX_ID_SIGIL_AOE:                 { return ITEM_TYPE_SIGIL_COMMON_AOE; }
-    case TEX_ID_SIGIL_OVERALL_DAMAGE:      { return ITEM_TYPE_SIGIL_COMMON_OVERALL_DAMAGE; }
-    case TEX_ID_SIGIL_ABILITY_CD:          { return ITEM_TYPE_SIGIL_COMMON_ABILITY_CD; }
-    case TEX_ID_SIGIL_PROJECTILE_AMOUTH:   { return ITEM_TYPE_SIGIL_COMMON_PROJECTILE_AMOUNT; }
-    case TEX_ID_SIGIL_EXP_GAIN:            { return ITEM_TYPE_SIGIL_COMMON_EXP_GAIN; }
-    case TEX_ID_SIGIL_TOTAL_TRAIT_POINT:   { return ITEM_TYPE_SIGIL_COMMON_TOTAL_TRAIT_POINTS; }
-    case TEX_ID_SIGIL_BASIC_ATTACK_DAMAGE: { return ITEM_TYPE_SIGIL_COMMON_BASIC_ATTACK_DAMAGE; }
-    case TEX_ID_SIGIL_BASIC_ATTACK_SPEED:  { return ITEM_TYPE_SIGIL_COMMON_BASIC_ATTACK_SPEED; }
-    case TEX_ID_SIGIL_CRITICAL_CHANCE:     { return ITEM_TYPE_SIGIL_COMMON_CRITICAL_CHANCE; }
-    case TEX_ID_SIGIL_CRITICAL_DAMAGE:     { return ITEM_TYPE_SIGIL_COMMON_CRITICAL_DAMAGE; }
-    case TEX_ID_SIGIL_OVERALL_LUCK:        { return ITEM_TYPE_SIGIL_COMMON_OVERALL_LUCK; }
-    case TEX_ID_SIGIL_DAMAGE_REDUCTION:    { return ITEM_TYPE_SIGIL_COMMON_DAMAGE_REDUCTION; }
-    case TEX_ID_SIGIL_CONDITION_DURATION:  { return ITEM_TYPE_SIGIL_COMMON_CONDITION_DURATION; }
-    case TEX_ID_SIGIL_DAMAGE_OVER_TIME:    { return ITEM_TYPE_SIGIL_COMMON_DAMAGE_OVER_TIME; }
-    case TEX_ID_SIGIL_DAMAGE_DEFERRAL:     { return ITEM_TYPE_SIGIL_COMMON_DAMAGE_DEFERRAL; }
-    case TEX_ID_SIGIL_SIGIL_EFFECTIVENESS: { return ITEM_TYPE_SIGIL_COMMON_SIGIL_EFFECTIVENESS; }
-    case TEX_ID_SIGIL_VITAL_SIGIL_EFFECTIVENESS:    { return ITEM_TYPE_SIGIL_COMMON_VITAL_SIGIL_EFFECTIVENESS; }
-    case TEX_ID_SIGIL_LETHAL_SIGIL_EFFECTIVENESS:      { return ITEM_TYPE_SIGIL_COMMON_LETAL_SIGIL_EFFECTIVENESS; }
-    case TEX_ID_SIGIL_DROP_RATE:    { return ITEM_TYPE_SIGIL_COMMON_DROP_RATE; }
-    case TEX_ID_SIGIL_REWARD_MODIFIER:        { return ITEM_TYPE_SIGIL_COMMON_REWARD_MODIFIER; }
-    default: {
-      IWARN("scene_in_game::sig_atlas_tex_id_to_item_type()::Unsupported texture id");
-      return ITEM_TYPE_UNDEFINED;
-    }
-  }
-  IERROR("scene_in_game::sig_atlas_tex_id_to_item_type()::Function ended unexpectedly");
-  return ITEM_TYPE_UNDEFINED;
 }
 
 bool scene_in_game_on_event(i32 code, [[maybe_unused]] event_context context) {
