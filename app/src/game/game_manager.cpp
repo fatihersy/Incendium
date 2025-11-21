@@ -1469,6 +1469,9 @@ const Character2D * _get_spawn_by_id(i32 _id) {
 const player_state * gm_get_player_state(void) {
   return get_player_state();
 }
+f32 gm_get_player_sprite_scale(void) {
+  return PLAYER_PLAYER_SCALE;
+}
 const std::vector<player_inventory_slot>& gm_get_inventory(void) {
   return state->player_inventory;
 }

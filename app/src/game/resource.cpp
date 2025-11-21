@@ -81,6 +81,16 @@ bool resource_system_initialize(void) {
   load_texture_pak(PAK_FILE_ASSET1, PAK_FILE_ASSET1_SPRITESHEET_ZAP, false, VECTOR2(0.f, 0.f), TEX_ID_ZAP);
   load_texture_pak(PAK_FILE_ASSET1, PAK_FILE_ASSET1_SPIN_RESULT_STAR_105_105, false, VECTOR2(0.f, 0.f), TEX_ID_SPIN_RESULT_STAR_105_105);
 
+  load_texture_pak(PAK_FILE_ASSET1, PAK_FILE_ASSET1_ENTRANCE1_160x280, false, VECTOR2(0.f, 0.f), TEX_ID_ENTRANCE1_160x280);
+  load_texture_pak(PAK_FILE_ASSET1, PAK_FILE_ASSET1_ENTRANCE2_160x280, false, VECTOR2(0.f, 0.f), TEX_ID_ENTRANCE2_160x280);
+  load_texture_pak(PAK_FILE_ASSET1, PAK_FILE_ASSET1_ENTRANCE3_160x280, false, VECTOR2(0.f, 0.f), TEX_ID_ENTRANCE3_160x280);
+  load_texture_pak(PAK_FILE_ASSET1, PAK_FILE_ASSET1_ENTRANCE4_160x280, false, VECTOR2(0.f, 0.f), TEX_ID_ENTRANCE4_160x280);
+  load_texture_pak(PAK_FILE_ASSET1, PAK_FILE_ASSET1_ENTRANCE5_160x280, false, VECTOR2(0.f, 0.f), TEX_ID_ENTRANCE5_160x280);
+  load_texture_pak(PAK_FILE_ASSET1, PAK_FILE_ASSET1_ENTRANCE6_160x280, false, VECTOR2(0.f, 0.f), TEX_ID_ENTRANCE6_160x280);
+  load_texture_pak(PAK_FILE_ASSET1, PAK_FILE_ASSET1_ENTRANCE7_160x280, false, VECTOR2(0.f, 0.f), TEX_ID_ENTRANCE7_160x280);
+  load_texture_pak(PAK_FILE_ASSET1, PAK_FILE_ASSET1_ENTRANCE8_160x280, false, VECTOR2(0.f, 0.f), TEX_ID_ENTRANCE8_160x280);
+  load_texture_pak(PAK_FILE_ASSET1, PAK_FILE_ASSET1_ENTRANCE9_160x280, false, VECTOR2(0.f, 0.f), TEX_ID_ENTRANCE9_160x280);
+
   load_texture_pak(PAK_FILE_ASSET1, PAK_FILE_SIGIL_ABILITY_CD,                 false, VECTOR2(0.f, 0.f), TEX_ID_SIGIL_ABILITY_CD,);
   load_texture_pak(PAK_FILE_ASSET1, PAK_FILE_SIGIL_AOE,                        false, VECTOR2(0.f, 0.f), TEX_ID_SIGIL_AOE,);
   load_texture_pak(PAK_FILE_ASSET1, PAK_FILE_SIGIL_BASIC_ATTACK_DAMAGE,        false, VECTOR2(0.f, 0.f), TEX_ID_SIGIL_BASIC_ATTACK_DAMAGE,);
@@ -115,6 +125,16 @@ bool resource_system_initialize(void) {
     load_texture_disk("black_background_2.png", false, VECTOR2(0.f, 0.f), TEX_ID_BLACK_BACKGROUND_IMG2);
     load_texture_disk("zap.png", false, VECTOR2(0.f, 0.f), TEX_ID_ZAP);
     load_texture_disk("spin_result_star_105x105.png", false, VECTOR2(0.f, 0.f), TEX_ID_SPIN_RESULT_STAR_105_105);
+
+    load_texture_disk("entrance1_160x280.png", false, VECTOR2(0.f, 0.f), TEX_ID_ENTRANCE1_160x280);
+    load_texture_disk("entrance2_160x280.png", false, VECTOR2(0.f, 0.f), TEX_ID_ENTRANCE2_160x280);
+    load_texture_disk("entrance3_160x280.png", false, VECTOR2(0.f, 0.f), TEX_ID_ENTRANCE3_160x280);
+    load_texture_disk("entrance4_160x280.png", false, VECTOR2(0.f, 0.f), TEX_ID_ENTRANCE4_160x280);
+    load_texture_disk("entrance5_160x280.png", false, VECTOR2(0.f, 0.f), TEX_ID_ENTRANCE5_160x280);
+    load_texture_disk("entrance6_160x280.png", false, VECTOR2(0.f, 0.f), TEX_ID_ENTRANCE6_160x280);
+    load_texture_disk("entrance7_160x280.png", false, VECTOR2(0.f, 0.f), TEX_ID_ENTRANCE7_160x280);
+    load_texture_disk("entrance8_160x280.png", false, VECTOR2(0.f, 0.f), TEX_ID_ENTRANCE8_160x280);
+    load_texture_disk("entrance9_160x280.png", false, VECTOR2(0.f, 0.f), TEX_ID_ENTRANCE9_160x280);
 
     load_texture_disk("sigils/ability_cd_clear-modified.png",                false, VECTOR2(0.f, 0.f), TEX_ID_SIGIL_ABILITY_CD);
     load_texture_disk("sigils/aoe_clear-modified.png",                       false, VECTOR2(0.f, 0.f), TEX_ID_SIGIL_AOE);
@@ -195,6 +215,19 @@ bool resource_system_initialize(void) {
   load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_PLAYER_ANIMATION_ATTACK_UP,         VECTOR2(1568, 2016), 12,  144,  64, 1,  5);
   load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_PLAYER_ANIMATION_ROLL,              VECTOR2(1568, 1824), 11,  144,  64, 1,  6);
   load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_PLAYER_ANIMATION_DASH,              VECTOR2(1568, 1888), 10,  144,  64, 1,  7);
+
+
+  load_spritesheet(TEX_ID_ENTRANCE1_160x280, SHEET_ID_ENTRANCE1_ANIMATION,          VECTOR2(   0.f,   0.f), 22,160, 280, 1, 16);
+  load_spritesheet(TEX_ID_ENTRANCE2_160x280, SHEET_ID_ENTRANCE2_ANIMATION,          VECTOR2(   0.f,   0.f), 22,160, 280, 1, 16);
+  load_spritesheet(TEX_ID_ENTRANCE3_160x280, SHEET_ID_ENTRANCE3_ANIMATION,          VECTOR2(   0.f,   0.f), 22,160, 280, 1, 16);
+  load_spritesheet(TEX_ID_ENTRANCE4_160x280, SHEET_ID_ENTRANCE4_ANIMATION,          VECTOR2(   0.f,   0.f), 22,160, 280, 1, 16);
+  load_spritesheet(TEX_ID_ENTRANCE5_160x280, SHEET_ID_ENTRANCE5_ANIMATION,          VECTOR2(   0.f,   0.f), 22,160, 280, 1, 16);
+  load_spritesheet(TEX_ID_ENTRANCE6_160x280, SHEET_ID_ENTRANCE6_ANIMATION,          VECTOR2(   0.f,   0.f), 22,160, 280, 1, 16);
+  load_spritesheet(TEX_ID_ENTRANCE7_160x280, SHEET_ID_ENTRANCE7_ANIMATION,          VECTOR2(   0.f,   0.f), 22,160, 280, 1, 16);
+  load_spritesheet(TEX_ID_ENTRANCE8_160x280, SHEET_ID_ENTRANCE8_ANIMATION,          VECTOR2(   0.f,   0.f), 22,160, 280, 1, 16);
+  load_spritesheet(TEX_ID_ENTRANCE9_160x280, SHEET_ID_ENTRANCE9_ANIMATION,          VECTOR2(   0.f,   0.f), 22,160, 280, 1, 16);
+
+  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_PORTAL,                             VECTOR2(1568.f,1312.f), 12, 32,  32, 1,  6);
 
   load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_SPAWN_BROWN_ZOMBIE_ANIMATION_MOVE_LEFT,          VECTOR2(2032,  16),  8,   32,  40, 1,  8);
   load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_SPAWN_BROWN_ZOMBIE_ANIMATION_MOVE_RIGHT,         VECTOR2(2032, 176),  8,   32,  40, 1,  8);

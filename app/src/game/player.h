@@ -5,6 +5,8 @@
 
 #include "game_types.h"
 
+#define PLAYER_PLAYER_SCALE 3
+
 typedef struct player_update_results {
   Vector2 move_request;
   bool is_success;

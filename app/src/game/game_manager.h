@@ -91,6 +91,7 @@ const ability * _get_ability(ability_id _id);
 const std::array<ability, ABILITY_ID_MAX> * _get_all_abilities(void);
 const Character2D * _get_spawn_by_id(i32 _id);
 const player_state * gm_get_player_state(void);
+f32 gm_get_player_sprite_scale(void);
 const std::vector<player_inventory_slot>& gm_get_inventory(void);
 
 void render_game(void);

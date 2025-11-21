@@ -103,7 +103,9 @@ void play_sprite_on_site(spritesheet *const sheet, Color _tint, const Rectangle 
     IWARN("spritesheet::play_sprite_on_site()::Sheet is not valid");
     return;
   }
-  if (sheet->play_once and sheet->is_played and not sheet->is_started) { return; }
+  if (sheet->play_once and sheet->is_played and not sheet->is_started) { 
+    return; 
+  }
 
   sheet->is_started = true;
   sheet->tint = _tint;

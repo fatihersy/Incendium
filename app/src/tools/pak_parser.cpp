@@ -9,7 +9,7 @@
 #define HEADER_SYMBOL_END "__END__"
 #define HEADER_SYMBOL_END_LENGTH 7
 
-#define ASSET1_FILE_SIZE 146835169u
+#define ASSET1_FILE_SIZE 146960646u
 #define ASSET2_FILE_SIZE 3016472u // WARN: This is not exact number of asset2 pak file byte size 
 #define MAP_FILE_SIZE 3624970u
 
@@ -161,6 +161,16 @@ bool pak_parser_system_initialize(void) {
       file_buffer(PAK_FILE_ASSET1,    PAK_FILE_ASSET1_SPIN_SFX,                ".wav"),
       file_buffer(PAK_FILE_ASSET1,    PAK_FILE_ASSET1_SPIN_RESULT,             ".wav"),
 
+      file_buffer(PAK_FILE_ASSET1,    PAK_FILE_ASSET1_ENTRANCE1_160x280,       ".png"),
+      file_buffer(PAK_FILE_ASSET1,    PAK_FILE_ASSET1_ENTRANCE2_160x280,       ".png"),
+      file_buffer(PAK_FILE_ASSET1,    PAK_FILE_ASSET1_ENTRANCE3_160x280,       ".png"),
+      file_buffer(PAK_FILE_ASSET1,    PAK_FILE_ASSET1_ENTRANCE4_160x280,       ".png"),
+      file_buffer(PAK_FILE_ASSET1,    PAK_FILE_ASSET1_ENTRANCE5_160x280,       ".png"),
+      file_buffer(PAK_FILE_ASSET1,    PAK_FILE_ASSET1_ENTRANCE6_160x280,       ".png"),
+      file_buffer(PAK_FILE_ASSET1,    PAK_FILE_ASSET1_ENTRANCE7_160x280,       ".png"),
+      file_buffer(PAK_FILE_ASSET1,    PAK_FILE_ASSET1_ENTRANCE8_160x280,       ".png"),
+      file_buffer(PAK_FILE_ASSET1,    PAK_FILE_ASSET1_ENTRANCE9_160x280,       ".png"),
+      
       file_buffer(PAK_FILE_ASSET1,    PAK_FILE_SIGIL_ABILITY_CD,                 ".png"),
       file_buffer(PAK_FILE_ASSET1,    PAK_FILE_SIGIL_AOE,                        ".png"),
       file_buffer(PAK_FILE_ASSET1,    PAK_FILE_SIGIL_BASIC_ATTACK_DAMAGE,        ".png"),

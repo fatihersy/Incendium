@@ -2593,8 +2593,8 @@ Vector2 ui_align_text(Rectangle in_dest, Vector2 in_text_measure, text_alignment
   }
 }
 // EXPOSED
-void ui_play_sprite_on_site(spritesheet *sheet, Color _tint, Rectangle dest) {
-  play_sprite_on_site(sheet, _tint, dest);
+void ui_play_sprite_on_site(spritesheet *sheet, Rectangle dest, Vector2 origin, f32 rotation, Color _tint) {
+  play_sprite_on_site_pro(sheet, dest, origin, rotation, _tint);
 }
 void ui_draw_sprite_on_site(spritesheet *const sheet, Color _tint, i32 frame) {
   draw_sprite_on_site(sheet, _tint, frame);

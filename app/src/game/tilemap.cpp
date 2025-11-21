@@ -1,4 +1,5 @@
 #include "tilemap.h"
+#include <algorithm>
 #include "core/fmemory.h"
 #include "core/logger.h"
 
@@ -125,10 +126,23 @@ void render_tilemap(const tilemap *const _tilemap, Rectangle camera_view) {
     return;
   }
 
-  i32 start_x = (i32)((camera_view.x - _tilemap->position.x) / _tilemap->tile_size);
-  i32 start_y = (i32)((camera_view.y - _tilemap->position.y) / _tilemap->tile_size);
-  i32 end_x = (i32)((camera_view.x + camera_view.width - _tilemap->position.x) / _tilemap->tile_size) + 1;
-  i32 end_y = (i32)((camera_view.y + camera_view.height - _tilemap->position.y) / _tilemap->tile_size) + 1;
+  f32 f32_start_x = ((camera_view.x - _tilemap->position.x) / _tilemap->tile_size);
+  f32 f32_start_y = ((camera_view.y - _tilemap->position.y) / _tilemap->tile_size);
+  f32 f32_end_x   = ((camera_view.x + camera_view.width - _tilemap->position.x) / _tilemap->tile_size) + 1;
+  f32 f32_end_y   = ((camera_view.y + camera_view.height - _tilemap->position.y) / _tilemap->tile_size) + 1;
+
+  i32 start_x = static_cast<i32>(
+    std::clamp(f32_start_x, static_cast<f32>(std::numeric_limits<i32>::min()), static_cast<f32>(std::numeric_limits<i32>::max()))
+  );
+  i32 start_y = static_cast<i32>(
+    std::clamp(f32_start_y, static_cast<f32>(std::numeric_limits<i32>::min()), static_cast<f32>(std::numeric_limits<i32>::max()))
+  );
+  i32 end_x = static_cast<i32>(
+    std::clamp(f32_end_x, static_cast<f32>(std::numeric_limits<i32>::min()), static_cast<f32>(std::numeric_limits<i32>::max()))
+  );
+  i32 end_y = static_cast<i32>(
+    std::clamp(f32_end_y, static_cast<f32>(std::numeric_limits<i32>::min()), static_cast<f32>(std::numeric_limits<i32>::max()))
+  );
   
   start_x = start_x < 0 ? 0 : (start_x >= _tilemap->map_dim ? _tilemap->map_dim - 1 : start_x);
   start_y = start_y < 0 ? 0 : (start_y >= _tilemap->map_dim ? _tilemap->map_dim - 1 : start_y);

@@ -524,7 +524,7 @@ void draw_scrollbar(const scrollbar_update_result& result);
 void combat_feedback_spawn_floating_text(const char* _text, combat_feedback_floating_text_type type, Vector2 start_position);
  
 // Exposed
-void ui_play_sprite_on_site(spritesheet *sheet, Color _tint, Rectangle dest);
+void ui_play_sprite_on_site(spritesheet *sheet, Rectangle dest, Vector2 origin = {}, f32 rotation = {}, Color _tint = WHITE);
 void ui_draw_sprite_on_site(spritesheet *const sheet, Color _tint, i32 frame);
 void ui_draw_sprite_on_site_by_id(spritesheet_id _id, Color _tint, Vector2 pos, Vector2 scale, i32 frame);
 void ui_set_sprite(spritesheet *sheet, bool _play_looped, bool _play_once);

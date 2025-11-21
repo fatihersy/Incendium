@@ -25,18 +25,28 @@ enum sig_ingame_state {
   SCENE_INGAME_STATE_MAX,
 };
 
-enum chest_opening_sequence {
-  CHEST_OPENING_SEQUENCE_UNDEFINED,
-  CHEST_OPENING_SEQUENCE_CHEST_IN,
-  CHEST_OPENING_SEQUENCE_CHEST_OPEN,
-  CHEST_OPENING_SEQUENCE_READY,
-  CHEST_OPENING_SEQUENCE_SPIN,
-  CHEST_OPENING_SEQUENCE_RESULT,
-  CHEST_OPENING_SEQUENCE_MAX
+struct entrance_sequence_control {
+  f32 accumulator {};
+  f32 duration {};
+
+  std::vector<std::tuple<f32, f32, Vector2, Vector2, easing_type, spritesheet>> elems; // Begin, end and the sheet
+
+  data128 mm_ex;
+  data128 vec_ex;
+  bool play {};
+  entrance_sequence_control(void) {}
 };
 
-struct chest_opening_sequence_intro_animation_control {
-  chest_opening_sequence sequence;
+struct chest_opening_sequence_control {
+  enum chest_opening_sequence {
+    CHEST_OPENING_SEQUENCE_UNDEFINED,
+    CHEST_OPENING_SEQUENCE_CHEST_IN,
+    CHEST_OPENING_SEQUENCE_CHEST_OPEN,
+    CHEST_OPENING_SEQUENCE_READY,
+    CHEST_OPENING_SEQUENCE_SPIN,
+    CHEST_OPENING_SEQUENCE_RESULT,
+    CHEST_OPENING_SEQUENCE_MAX
+  } sequence;
   f32 accumulator {};
   f32 duration {};
 
@@ -46,7 +56,7 @@ struct chest_opening_sequence_intro_animation_control {
 
   data128 mm_ex;
   data128 vec_ex;
-  chest_opening_sequence_intro_animation_control(void) {
+  chest_opening_sequence_control(void) {
     this->sequence = CHEST_OPENING_SEQUENCE_UNDEFINED;
   }
 };
@@ -68,17 +78,12 @@ struct scene_in_game_state {
   ability_id hovered_ability;
   i32 hovered_projectile;
   ui_fade_control_system sig_fade;
-  bool is_upgrade_choices_ready;
-  chest_opening_sequence_intro_animation_control chest_intro_ctrl;
-  Rectangle cam_bounds;
+  bool is_upgrade_choices_ready{};
+  chest_opening_sequence_control chest_intro_ctrl;
+  entrance_sequence_control entrance_seq_ctrl;
+  Rectangle cam_bounds {};
 
   scene_in_game_state(void) {
-    this->worldmap_locations.fill(worldmap_stage());
-    this->ability_upg_panels.fill(panel());
-    this->ability_upgrade_choices.fill(ability());
-    this->default_panel = panel();
-    this->debug_info_panel = panel();
-
     this->in_camera_metrics = nullptr;
     this->in_app_settings = nullptr;
     this->in_ingame_info = nullptr;
@@ -88,10 +93,6 @@ struct scene_in_game_state {
     this->hovered_spawn = I32_MAX;
     this->hovered_ability = ABILITY_ID_UNDEFINED;
     this->hovered_projectile = I32_MAX;
-    this->sig_fade = ui_fade_control_system();
-    this->is_upgrade_choices_ready = false;
-    this->chest_intro_ctrl = chest_opening_sequence_intro_animation_control();
-    this->cam_bounds = ZERORECT;
   }
 };
 
@@ -138,6 +139,8 @@ if (UPG->level == 1) {\
 #define CHEST_OPENING_SPIN_UNIT_SIZE VECTOR2(SIG_BASE_RENDER_HEIGHT_F * .2f, SIG_BASE_RENDER_HEIGHT_F * .2f)
 #define CHEST_OPENING_SPIN_UNIT_GAP (CHEST_OPENING_SPIN_UNIT_SIZE.x * 0.09)
 
+#define ENTRANCE_SEQUENCE_DURATION 3.f
+
 [[__nodiscard__]] bool begin_scene_in_game(bool fade_in);
 
 bool scene_in_game_on_event(i32 code, event_context context);
@@ -155,12 +158,12 @@ void prepare_ability_upgrade_state(void);
 void end_ability_upgrade_state(u16 which_panel_chosen);
 void sig_begin_fade(void);
 void sig_change_ingame_state(sig_ingame_state state);
-void sig_init_chest_sequence(chest_opening_sequence sequence, data128 vec_ex, data128 mm_ex);
+void sig_init_chest_sequence(chest_opening_sequence_control::chest_opening_sequence sequence, data128 vec_ex, data128 mm_ex);
 void sig_update_chest_sequence(void);
 void sig_render_chest_sequence(void);
 void sig_populate_the_chest_for_chest_seq(std::vector<item_type>& item_tex_to_scroll);
 
-[[__nodiscard__]] bool start_game(void);
+void start_game(void);
 
 /**
  * @brief Requires world system, world init moved to app, as well as its loading time
@@ -230,19 +233,48 @@ void sig_populate_the_chest_for_chest_seq(std::vector<item_type>& item_tex_to_sc
 
   event_fire(EVENT_CODE_CAMERA_SET_ZOOM, event_context(static_cast<f32>(0.85f)));
 
+  {
+    auto push_entrance_sprite = [&](f32 begin_t, f32 end_t, Vector2 begin_p, Vector2 end_p, f32 scale, easing_type ease_type, spritesheet_id sheet_id, bool play_looped, bool play_once) 
+    { 
+      const spritesheet* src_sheet = ui_get_spritesheet_by_id(sheet_id);
+      if (!src_sheet) return;
+      spritesheet sheet = *src_sheet;
+      ui_set_sprite(&sheet, play_looped, play_once);
+
+      const f32 sequence_duration = state->entrance_seq_ctrl.duration;
+      const f32 sprite_life_duration = (end_t - begin_t) * sequence_duration;
+
+      if (!play_looped and sprite_life_duration > std::numeric_limits<f32>::epsilon()) {
+        sheet.fps = static_cast<f32>(sheet.frame_total) / sprite_life_duration;
+      }
+    
+      sheet.coord = Rectangle {0.f, 0.f, sheet.current_frame_rect.width * scale, sheet.current_frame_rect.height * scale};
+      sheet.origin = Vector2 { sheet.coord.width * .5f, sheet.coord.height * .5f};
+      state->entrance_seq_ctrl.elems.emplace_back(begin_t, end_t, begin_p, end_p, ease_type, sheet);
+    };
+
+    state->entrance_seq_ctrl = entrance_sequence_control();
+    state->entrance_seq_ctrl.accumulator = 0.f;
+    state->entrance_seq_ctrl.duration = 1.5f; //ENTRANCE_SEQUENCE_DURATION;
+
+    constexpr Vector2 portal_begin_position = {0.f, -175.f};
+    const     Vector2 portal_end_position   = portal_begin_position;
+    const     Vector2 player_begin_position = portal_begin_position;
+    constexpr Vector2 player_end_position   = {0.f,   0.f};
+    constexpr easing_type _ease = EASING_TYPE_QUAD_OUT;
+
+    push_entrance_sprite(0.f, 1.f, portal_begin_position, portal_end_position, 8.f,                          _ease, SHEET_ID_PORTAL,                true, false);
+    push_entrance_sprite(0.f, 1.f, player_begin_position, player_end_position, gm_get_player_sprite_scale(), _ease, SHEET_ID_PLAYER_ANIMATION_ROLL, false, false);
+  }
+
   sig_change_ingame_state(SCENE_INGAME_STATE_IDLE);
   if (fade_in) {
     sig_begin_fade();
   }
   return true;
 }
-bool start_game(void) {
-  if (not state or state == nullptr) {
-    IERROR("scene_in_game::start_game()::State is not valid");
-    return false;
-  }
+void start_game(void) {
   gm_start_game();
-  sig_change_ingame_state(SCENE_INGAME_STATE_PLAY);
 
   state->cam_bounds = Rectangle { 
     state->in_ingame_info->current_map_info->level_bound.x,
@@ -250,7 +282,6 @@ bool start_game(void) {
     state->in_ingame_info->current_map_info->level_bound.x + state->in_ingame_info->current_map_info->level_bound.width,
     state->in_ingame_info->current_map_info->level_bound.y + state->in_ingame_info->current_map_info->level_bound.height,
   };
-  return true;
 }
 void end_scene_in_game(void) {
   if (not state or state == nullptr ) {
@@ -267,18 +298,43 @@ void update_scene_in_game(void) {
   STATE_ASSERT("update_scene_in_game", {
     return;
   });
-
   update_camera(delta_time_ingame());
   in_game_update_bindings();
   update_user_interface(delta_time_ingame());
   
-  if(state->sig_fade.fade_animation_playing){
+  if(state->sig_fade.fade_animation_playing) {
     process_fade_effect(__builtin_addressof(state->sig_fade));
   }
-
   switch (state->ingame_state) {
-    case SCENE_INGAME_STATE_IDLE: { break; }
-    case SCENE_INGAME_STATE_PAUSE: { break; }
+    case SCENE_INGAME_STATE_IDLE: {
+      entrance_sequence_control& seq = state->entrance_seq_ctrl;
+      if (seq.play) {
+        const f32 alpha = seq.accumulator / seq.duration;
+        for (auto& elem : seq.elems) {
+          auto& [begin_t, end_t, begin_p, end_p, ease_type, sheet] = elem;
+          if (alpha >= begin_t && alpha <= end_t) {
+            const f32 sheet_duration = end_t - begin_t;
+            const f32 sheet_progress = (alpha - begin_t) / sheet_duration;
+            sheet.coord.x = math_easing(sheet_progress, begin_p.x, end_p.x - begin_p.x, 1.0f, ease_type);
+            sheet.coord.y = math_easing(sheet_progress, begin_p.y, end_p.y - begin_p.y, 1.0f, ease_type);
+            ui_update_sprite(&sheet, delta_time_ingame());
+          }
+        }
+        if (alpha < 1.0f) seq.accumulator += delta_time_ingame();
+        else {
+          start_game();
+          sig_change_ingame_state(SCENE_INGAME_STATE_PLAY);
+        }
+      }
+      else {
+        spritesheet& sheet = std::get<5>(seq.elems.at(0));
+        ui_update_sprite(&sheet, delta_time_ingame());
+      }
+      break;
+    }
+    case SCENE_INGAME_STATE_PAUSE: { 
+      break; 
+    }
     case SCENE_INGAME_STATE_PLAY: {
       switch ( (*state->in_ingame_info->ingame_phase) ) {
         case INGAME_PLAY_PHASE_IDLE: { 
@@ -336,72 +392,76 @@ void render_scene_in_game(void) {
 
   BeginMode2D(get_in_game_camera()->handle);
 
-  switch (state->ingame_state) {
-    case SCENE_INGAME_STATE_IDLE: {  
-      render_map(); 
-      //render_game();
-      break; 
-    }
-    case SCENE_INGAME_STATE_PAUSE: { 
-      render_map(); 
-      render_game();
-      break; 
-    }
-    case SCENE_INGAME_STATE_PLAY: {
-      render_map();
-      i32 bottom_of_the_screen = state->in_camera_metrics->frustum.y + state->in_camera_metrics->frustum.height;
-      i32 top_of_the_screen = state->in_camera_metrics->frustum.y;
-      i32 player_texture_begin = state->in_ingame_info->player_state_dynamic->collision.y + state->in_ingame_info->player_state_dynamic->collision.height;
-      
-      _render_props_y_based(top_of_the_screen, player_texture_begin);
-      render_game();
-      _render_props_y_based(player_texture_begin, bottom_of_the_screen);
+  auto lfn_render_game = [](void){
+    render_map();
+    const f32 f32_bottom_of_the_screen = state->in_camera_metrics->frustum.y + state->in_camera_metrics->frustum.height;
+    const f32 f32_top_of_the_screen    = state->in_camera_metrics->frustum.y;
+    const f32 f32_player_texture_begin = state->in_ingame_info->player_state_dynamic->collision.y + state->in_ingame_info->player_state_dynamic->collision.height;
 
-      switch ( (*state->in_ingame_info->ingame_phase) ) {
-        case INGAME_PLAY_PHASE_IDLE: { break; }
-        case INGAME_PLAY_PHASE_CLEAR_ZOMBIES: { break; }
-        case INGAME_PLAY_PHASE_RESULTS: { break; }
-        default: {
-          IWARN("scene_in_game::render_scene_in_game()::INGAME_STATE_PLAY::Unknown in-game phase");
-          game_manager_cleanup_state();
-          event_fire(EVENT_CODE_SCENE_MAIN_MENU, event_context());
-          break;
+    const i32 bottom_of_the_screen = static_cast<i32>(
+      std::clamp(f32_bottom_of_the_screen, static_cast<f32>(std::numeric_limits<i32>::min()), static_cast<f32>(std::numeric_limits<i32>::max()))
+    );
+    const i32 top_of_the_screen    = static_cast<i32>(
+      std::clamp(f32_top_of_the_screen, static_cast<f32>(std::numeric_limits<i32>::min()), static_cast<f32>(std::numeric_limits<i32>::max()))
+    );
+    const i32 player_texture_begin = static_cast<i32>(
+      std::clamp(f32_player_texture_begin, static_cast<f32>(std::numeric_limits<i32>::min()), static_cast<f32>(std::numeric_limits<i32>::max()))
+    );
+    
+    _render_props_y_based(top_of_the_screen, player_texture_begin);
+    render_game();
+    _render_props_y_based(player_texture_begin, bottom_of_the_screen);
+
+    switch ( (*state->in_ingame_info->ingame_phase) ) {
+      case INGAME_PLAY_PHASE_IDLE: { break; }
+      case INGAME_PLAY_PHASE_CLEAR_ZOMBIES: { break; }
+      case INGAME_PLAY_PHASE_RESULTS: { break; }
+      default: {
+        IWARN("scene_in_game::render_scene_in_game()::INGAME_STATE_PLAY::Unknown in-game phase");
+        game_manager_cleanup_state();
+        event_fire(EVENT_CODE_SCENE_MAIN_MENU, event_context());
+        break;
+      }
+    }
+  };
+
+  switch (state->ingame_state) {
+    case SCENE_INGAME_STATE_IDLE: {
+      entrance_sequence_control& seq = state->entrance_seq_ctrl;
+      lfn_render_game();
+
+      if (seq.play) {
+        const f32 alpha = seq.accumulator / seq.duration; 
+        for (auto& elem : seq.elems) {
+          auto& [ begin_t, end_t, begin_p, end_p, ease_type, sheet ] = elem;
+          if (alpha >= begin_t and alpha <= end_t) {
+            ui_play_sprite_on_site(&sheet, sheet.coord, sheet.origin, sheet.rotation, sheet.tint);
+          }
         }
       }
+      else {
+        spritesheet& sheet = std::get<5>(seq.elems.at(0));
+        ui_play_sprite_on_site(&sheet, sheet.coord, sheet.origin, sheet.rotation, sheet.tint);
+      }
+      break;
+    }
+    case SCENE_INGAME_STATE_PAUSE: {
+      lfn_render_game();
+      break;
+    }
+    case SCENE_INGAME_STATE_PLAY: {
+      lfn_render_game();
       break;
     }
     case SCENE_INGAME_STATE_CHEST_OPENING: { 
-      render_map();
-      i32 bottom_of_the_screen = state->in_camera_metrics->frustum.y + state->in_camera_metrics->frustum.height;
-      i32 top_of_the_screen = state->in_camera_metrics->frustum.y;
-      i32 player_texture_begin = state->in_ingame_info->player_state_dynamic->collision.y + state->in_ingame_info->player_state_dynamic->collision.height;
-      
-      _render_props_y_based(top_of_the_screen, player_texture_begin);
-      render_game();
-      _render_props_y_based(player_texture_begin, bottom_of_the_screen);
-
-      switch ( (*state->in_ingame_info->ingame_phase) ) {
-        case INGAME_PLAY_PHASE_IDLE: { break; }
-        case INGAME_PLAY_PHASE_CLEAR_ZOMBIES: { break; }
-        case INGAME_PLAY_PHASE_RESULTS: { break; }
-        default: {
-          IWARN("scene_in_game::render_scene_in_game()::INGAME_STATE_PLAY::Unknown in-game phase");
-          game_manager_cleanup_state();
-          event_fire(EVENT_CODE_SCENE_MAIN_MENU, event_context());
-          break;
-        }
-      }
+      lfn_render_game();
       break; 
     }
     case SCENE_INGAME_STATE_PLAY_DEBUG: {
-      render_map();
-      render_game();
+      lfn_render_game();
       break;
     }
-    default: {
-      IWARN("scene_in_game::render_scene_in_game()::Unsupported stage");
-      break;
-    }
+    default: break;
   }
 
   EndMode2D();
@@ -412,7 +472,8 @@ void render_interface_in_game(void) {
   });
   
   switch (state->ingame_state) {
-    case SCENE_INGAME_STATE_IDLE: { 
+    case SCENE_INGAME_STATE_IDLE: {
+
       gui_label(lc_txt(LOC_TEXT_INGAME_LABEL_PRESS_SPACE), FONT_TYPE_REGULAR, 1, Vector2 {SIG_BASE_RENDER_WIDTH * .5f, SIG_BASE_RENDER_HEIGHT * .75f}, WHITE, true, true);
       render_user_interface();
       return; 
@@ -646,17 +707,12 @@ void in_game_update_mouse_bindings(void) {
 }
 void in_game_update_keyboard_bindings(void) {
   switch (state->ingame_state) {
-    case SCENE_INGAME_STATE_IDLE: { 
+    case SCENE_INGAME_STATE_IDLE: {
       if (IsKeyReleased(KEY_ESCAPE)) {
         sig_change_ingame_state(SCENE_INGAME_STATE_PAUSE);
       }
-      else if (IsKeyPressed(KEY_SPACE)) {
-        if (not start_game()) {
-          game_manager_cleanup_state();
-          event_fire(EVENT_CODE_SCENE_MAIN_MENU, event_context());
-          return;
-        }
-        sig_change_ingame_state(SCENE_INGAME_STATE_PLAY);
+      if (IsKeyReleased(KEY_SPACE)) {
+        state->entrance_seq_ctrl.play = true;
       }
       break; 
     }
@@ -996,11 +1052,11 @@ void sig_change_ingame_state(sig_ingame_state sig_state) {
   state->ingame_state_prev = state->ingame_state;
   state->ingame_state = sig_state;
 }
-void sig_init_chest_sequence(chest_opening_sequence sequence, data128 vec_ex = data128(), data128 mm_ex = data128()) {
-  chest_opening_sequence_intro_animation_control& seq = state->chest_intro_ctrl;
+void sig_init_chest_sequence(chest_opening_sequence_control::chest_opening_sequence sequence, data128 vec_ex = data128(), data128 mm_ex = data128()) {
+  chest_opening_sequence_control& seq = state->chest_intro_ctrl;
   switch (sequence) {
-    case CHEST_OPENING_SEQUENCE_CHEST_IN: {
-      seq = chest_opening_sequence_intro_animation_control();
+    case seq.CHEST_OPENING_SEQUENCE_CHEST_IN: {
+      seq = chest_opening_sequence_control();
       seq.sequence = sequence;
       seq.vec_ex = vec_ex;
       seq.mm_ex = mm_ex;
@@ -1013,14 +1069,14 @@ void sig_init_chest_sequence(chest_opening_sequence sequence, data128 vec_ex = d
       seq.vec_ex.f32[3] = static_cast<f32>(state->in_app_settings->render_height * .65f);
       return;
     }
-    case CHEST_OPENING_SEQUENCE_CHEST_OPEN: {
+    case seq.CHEST_OPENING_SEQUENCE_CHEST_OPEN: {
       seq.sequence = sequence;
       seq.accumulator = 0.f;
       seq.vec_ex = data128();
       seq.mm_ex = data128();
       return;
     }
-    case CHEST_OPENING_SEQUENCE_READY: {
+    case seq.CHEST_OPENING_SEQUENCE_READY: {
       seq.sequence = sequence;
       seq.accumulator = 0.f;
       seq.vec_ex = data128();
@@ -1030,7 +1086,7 @@ void sig_init_chest_sequence(chest_opening_sequence sequence, data128 vec_ex = d
       sig_populate_the_chest_for_chest_seq(seq.item_ids_to_scroll);
       return;
     }
-    case CHEST_OPENING_SEQUENCE_SPIN: {
+    case seq.CHEST_OPENING_SEQUENCE_SPIN: {
       seq.sequence = sequence;
       seq.duration = CHEST_OPENING_SPIN_ACCELERATION_DURATION;
       seq.vec_ex = data128();
@@ -1038,7 +1094,7 @@ void sig_init_chest_sequence(chest_opening_sequence sequence, data128 vec_ex = d
       seq.accumulator = 0.f;
       return;
     }
-    case CHEST_OPENING_SEQUENCE_RESULT: {
+    case seq.CHEST_OPENING_SEQUENCE_RESULT: {
       seq.sequence = sequence;
       seq.accumulator = 0.f;
       seq.duration = CHEST_OPENING_SPIN_ACCELERATION_DURATION;
@@ -1055,18 +1111,18 @@ void sig_init_chest_sequence(chest_opening_sequence sequence, data128 vec_ex = d
       return;
     }
     default: {
-      seq = chest_opening_sequence_intro_animation_control();
+      seq = chest_opening_sequence_control();
       return;
     }
   }
   IERROR("game_manager::gm_init_chest_sequence()::Function ended unexpectedly");
 }
 void sig_update_chest_sequence(void) {
-  chest_opening_sequence_intro_animation_control& seq = state->chest_intro_ctrl;
+  chest_opening_sequence_control& seq = state->chest_intro_ctrl;
   switch (seq.sequence) {
-    case CHEST_OPENING_SEQUENCE_CHEST_IN: {
+    case seq.CHEST_OPENING_SEQUENCE_CHEST_IN: {
       if (seq.accumulator >= seq.duration) {
-        sig_init_chest_sequence(CHEST_OPENING_SEQUENCE_CHEST_OPEN);
+        sig_init_chest_sequence(seq.CHEST_OPENING_SEQUENCE_CHEST_OPEN);
         return;
       }
       seq.accumulator += (*state->in_ingame_info->delta_time);
@@ -1082,27 +1138,27 @@ void sig_update_chest_sequence(void) {
       seq.sheet_chest.coord.y = EaseBackIn(seq.accumulator, seq.vec_ex.f32[1], seq.vec_ex.f32[3] - seq.vec_ex.f32[1], seq.duration);
       return;
     }
-    case CHEST_OPENING_SEQUENCE_CHEST_OPEN: {
+    case seq.CHEST_OPENING_SEQUENCE_CHEST_OPEN: {
       if (not seq.sheet_chest.is_played) {
         ui_update_sprite(__builtin_addressof(seq.sheet_chest), (*state->in_ingame_info->delta_time) );
         return;
       }
       else {
-        sig_init_chest_sequence(CHEST_OPENING_SEQUENCE_READY);
+        sig_init_chest_sequence(seq.CHEST_OPENING_SEQUENCE_READY);
         return;
       }
     }
-    case CHEST_OPENING_SEQUENCE_READY: {
+    case seq.CHEST_OPENING_SEQUENCE_READY: {
       if(seq.accumulator < seq.duration) {
         seq.accumulator += (*state->in_ingame_info->delta_time );
         return;
       }
       if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT)) {
-        sig_init_chest_sequence(CHEST_OPENING_SEQUENCE_SPIN);
+        sig_init_chest_sequence(seq.CHEST_OPENING_SEQUENCE_SPIN);
       }
       return;
     }
-    case CHEST_OPENING_SEQUENCE_SPIN: {
+    case seq.CHEST_OPENING_SEQUENCE_SPIN: {
       if(seq.accumulator < seq.duration) {
         seq.accumulator += (*state->in_ingame_info->delta_time);
       }
@@ -1110,7 +1166,7 @@ void sig_update_chest_sequence(void) {
         seq.accumulator = seq.duration;
       }
       if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT)) {
-        sig_init_chest_sequence(CHEST_OPENING_SEQUENCE_RESULT);
+        sig_init_chest_sequence(seq.CHEST_OPENING_SEQUENCE_RESULT);
       }
       seq.mm_ex.f32[0] += EaseSineInOut(
         seq.accumulator, 
@@ -1120,7 +1176,7 @@ void sig_update_chest_sequence(void) {
       );
       return;
     }
-    case CHEST_OPENING_SEQUENCE_RESULT: {
+    case seq.CHEST_OPENING_SEQUENCE_RESULT: {
       if(seq.accumulator < seq.duration) {
         seq.accumulator += (*state->in_ingame_info->delta_time);
       }
@@ -1132,7 +1188,7 @@ void sig_update_chest_sequence(void) {
       return;
     }
     default: {
-      seq = chest_opening_sequence_intro_animation_control();
+      seq = chest_opening_sequence_control();
       sig_change_ingame_state(state->ingame_state_prev);
       return;
     }
@@ -1141,7 +1197,7 @@ void sig_update_chest_sequence(void) {
 }
 
 void sig_render_chest_sequence(void) {
-  chest_opening_sequence_intro_animation_control& seq = state->chest_intro_ctrl;
+  chest_opening_sequence_control& seq = state->chest_intro_ctrl;
   Rectangle background_layer_dest = {0.f, 0.f,static_cast<f32>(state->in_app_settings->render_width),static_cast<f32>(state->in_app_settings->render_height)};
   u8 bg_layer_opacity = static_cast<u8>(CHEST_OPENING_SEQ_BG_MAX_OPACITY_SCALE * 255);
   const Color bg_layer_color = {255u, 255u, 255u, bg_layer_opacity};
@@ -1161,17 +1217,17 @@ void sig_render_chest_sequence(void) {
     gui_draw_atlas_texture_id(part_id, seq.sheet_chest.coord, seq.sheet_chest.origin, seq.sheet_chest.rotation, seq.sheet_chest.tint);
   };
   switch (seq.sequence) {
-    case CHEST_OPENING_SEQUENCE_CHEST_IN: {
+    case seq.CHEST_OPENING_SEQUENCE_CHEST_IN: {
       draw_common_background( {bg_layer_color.r, bg_layer_color.g, bg_layer_color.b, static_cast<u8>(bg_layer_opacity * accumulator)});
       ui_draw_sprite_on_site(&seq.sheet_chest, WHITE, 0);
       return;
     }
-    case CHEST_OPENING_SEQUENCE_CHEST_OPEN: {
+    case seq.CHEST_OPENING_SEQUENCE_CHEST_OPEN: {
       draw_common_background(bg_layer_color);
-      ui_play_sprite_on_site(&seq.sheet_chest, WHITE, seq.sheet_chest.coord);
+      ui_play_sprite_on_site(&seq.sheet_chest, seq.sheet_chest.coord);
       return;
     }
-    case CHEST_OPENING_SEQUENCE_READY: {
+    case seq.CHEST_OPENING_SEQUENCE_READY: {
       draw_common_background(bg_layer_color);
       draw_chest_part(ATLAS_TEX_ID_CHEST_LID);
       DrawTriangle({chest_dest.x, chest_dest.y + chest_dest.height * 0.5f}, {SIG_BASE_RENDER_WIDTH_F * accumulator, 0.f}, {SIG_BASE_RENDER_WIDTH_F * (1.f - accumulator), 0.f}, light_color);
@@ -1188,7 +1244,7 @@ void sig_render_chest_sequence(void) {
       }
       return;
     }
-    case CHEST_OPENING_SEQUENCE_SPIN: {
+    case seq.CHEST_OPENING_SEQUENCE_SPIN: {
       draw_common_background(bg_layer_color);
       draw_chest_part(ATLAS_TEX_ID_CHEST_LID);
       DrawTriangle({chest_dest.x, chest_dest.y + chest_dest.height * 0.5f}, {SIG_BASE_RENDER_WIDTH_F, 0.f}, ZEROVEC2, light_color);
@@ -1207,7 +1263,7 @@ void sig_render_chest_sequence(void) {
       DrawLine(center_item_dest.x, center_item_dest.y - center_item_dest.height * .5f, center_item_dest.x, center_item_dest.y + center_item_dest.height * .5f, WHITE);
       return;
     }
-    case CHEST_OPENING_SEQUENCE_RESULT: {
+    case seq.CHEST_OPENING_SEQUENCE_RESULT: {
       draw_common_background(bg_layer_color);
       draw_chest_part(ATLAS_TEX_ID_CHEST_LID);
       DrawTriangle({chest_dest.x, chest_dest.y + chest_dest.height * 0.5f}, {SIG_BASE_RENDER_WIDTH_F, 0.f}, ZEROVEC2, light_color);
@@ -1216,7 +1272,7 @@ void sig_render_chest_sequence(void) {
       item_type _item_type = draw_scrolling_textures(seq.item_ids_to_scroll, seq.mm_ex.f32[1], item_band_width, center_item_dest, item_band_unit_gap, gm_draw_sigil);
       gui_draw_atlas_texture_id(ATLAS_TEX_ID_DARK_FANTASY_PANEL, center_item_dest, Vector2 {center_item_dest.width * .5f, center_item_dest.height * .5f}, 0.f, WHITE);
 
-      ui_play_sprite_on_site(__builtin_addressof(seq.sheets_background.at(0)), WHITE, center_item_dest);
+      ui_play_sprite_on_site(__builtin_addressof(seq.sheets_background.at(0)), center_item_dest);
 
       if (accumulator >= 1.f) {
         if (seq.mm_ex.f32[3] == static_cast<f32>(false)) {
@@ -1231,7 +1287,7 @@ void sig_render_chest_sequence(void) {
       return;
     }
     default: {
-      seq = chest_opening_sequence_intro_animation_control();
+      seq = chest_opening_sequence_control();
       IERROR("game_manager::sig_render_chest_sequence::Invalid sequence state");
       return;
     }
@@ -1268,7 +1324,7 @@ bool scene_in_game_on_event(i32 code, [[maybe_unused]] event_context context) {
     }
     case EVENT_CODE_BEGIN_CHEST_OPENING_SEQUENCE: {
       sig_change_ingame_state(SCENE_INGAME_STATE_CHEST_OPENING);
-      sig_init_chest_sequence(CHEST_OPENING_SEQUENCE_CHEST_IN, data128(context.data.f32[0], context.data.f32[1]), data128(context.data.f32[2], context.data.f32[2]));
+      sig_init_chest_sequence(chest_opening_sequence_control::CHEST_OPENING_SEQUENCE_CHEST_IN, data128(context.data.f32[0], context.data.f32[1]), data128(context.data.f32[2], context.data.f32[2]));
       return true;
     }
     case EVENT_CODE_SPAWN_COMBAT_FEEDBACK_FLOATING_TEXT: {

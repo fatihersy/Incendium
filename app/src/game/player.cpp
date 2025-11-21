@@ -12,7 +12,6 @@
 
 // To avoid dublicate symbol errors. Implementation in defines.h
 extern const i32 level_curve[MAX_PLAYER_LEVEL+1];
-#define PLAYER_SCALE 3
 #define PLAYER_DAMAGE_BREAK_TIME .5f
 #define PLAYER_COMBO_TIMEOUT 0.85f
 #define PLAYER_ROLL_DURATION 0.45f
@@ -140,8 +139,8 @@ bool player_system_initialize(const camera_metrics* in_camera_metrics,const app_
     set_character_stat(CHARACTER_STATS_REWARD_MODIFIER,           DATA_TYPE_F32, data128());
   }
 
-  state->defualt_player.collision.width  = (state->defualt_player.idle_right_sprite.coord.width  * .9f) * PLAYER_SCALE; // INFO: player collision scales with idle spritesheet
-  state->defualt_player.collision.height = (state->defualt_player.idle_right_sprite.coord.height * .9f) * PLAYER_SCALE;
+  state->defualt_player.collision.width  = (state->defualt_player.idle_right_sprite.coord.width  * .9f) * PLAYER_PLAYER_SCALE; // INFO: player collision scales with idle spritesheet
+  state->defualt_player.collision.height = (state->defualt_player.idle_right_sprite.coord.height * .9f) * PLAYER_PLAYER_SCALE;
   state->defualt_player.position = ZEROVEC2;
   state->defualt_player.is_dead = false;
   state->defualt_player.w_direction = WORLD_DIRECTION_LEFT;
@@ -222,12 +221,14 @@ bool render_player(void) {
   spritesheet& _sheet = state->dynamic_player.current_anim_to_play;
   const Rectangle& frame_rect = state->dynamic_player.current_anim_to_play.current_frame_rect;
   
-  play_sprite_on_site_ex(__builtin_addressof(_sheet), Rectangle {frame_rect.x + _sheet.offset.x, frame_rect.y + _sheet.offset.y, frame_rect.width, frame_rect.height}, 
-    state->dynamic_player.current_anim_to_play.coord, 
-    state->dynamic_player.current_anim_to_play.origin, 
-    state->dynamic_player.current_anim_to_play.rotation, 
-    WHITE
-  );
+  if(_sheet.sheet_id > SHEET_ID_SPRITESHEET_UNSPECIFIED and _sheet.sheet_id < SHEET_ID_SPRITESHEET_TYPE_MAX) {
+    play_sprite_on_site_ex(__builtin_addressof(_sheet), Rectangle {frame_rect.x + _sheet.offset.x, frame_rect.y + _sheet.offset.y, frame_rect.width, frame_rect.height}, 
+      state->dynamic_player.current_anim_to_play.coord, 
+      state->dynamic_player.current_anim_to_play.origin, 
+      state->dynamic_player.current_anim_to_play.rotation, 
+      WHITE
+    ); 
+  }
   #if DEBUG_COLLISIONS
     DrawRectangleLines(
       static_cast<i32>(state->dynamic_player.collision.x), static_cast<i32>(state->dynamic_player.collision.y),
@@ -369,7 +370,7 @@ void player_update_sprite(void) {
   }
   _sheet.coord = Rectangle { 
     _player.position.x, _player.position.y,
-    std::abs(_sheet.current_frame_rect.width) * PLAYER_SCALE, std::abs(_sheet.current_frame_rect.height) * PLAYER_SCALE
+    std::abs(_sheet.current_frame_rect.width) * PLAYER_PLAYER_SCALE, std::abs(_sheet.current_frame_rect.height) * PLAYER_PLAYER_SCALE
   };
   _sheet.origin = Vector2 { _sheet.coord.width * .5f, _sheet.coord.height * .5f};
   
