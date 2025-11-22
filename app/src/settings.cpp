@@ -11,7 +11,7 @@
 typedef struct app_settings_system_state {
   app_settings settings;
   app_settings initializer;
-  u16 offset;
+  u16 offset {};
   std::vector<std::pair<i32, i32>> all_supported_resolutions;
 
   std::vector<std::pair<i32, i32>> ratio_3_2_resolutions;
@@ -30,26 +30,7 @@ typedef struct app_settings_system_state {
 
   std::pair<i32, i32> minimum_resolution;
 
-  app_settings_system_state(void) {
-    this->settings = app_settings();
-    this->initializer = app_settings();
-    this->offset = 0u;
-    this->all_supported_resolutions = std::vector<std::pair<i32, i32>>();
-    this->ratio_3_2_resolutions = std::vector<std::pair<i32, i32>>();
-    this->ratio_4_3_resolutions = std::vector<std::pair<i32, i32>>();
-    this->ratio_5_3_resolutions = std::vector<std::pair<i32, i32>>();
-    this->ratio_5_4_resolutions = std::vector<std::pair<i32, i32>>();
-    this->ratio_8_5_resolutions = std::vector<std::pair<i32, i32>>();
-    this->ratio_16_9_resolutions = std::vector<std::pair<i32, i32>>();
-    this->ratio_16_10_resolutions = std::vector<std::pair<i32, i32>>();
-    this->ratio_21_9_resolutions = std::vector<std::pair<i32, i32>>();
-    this->ratio_32_9_resolutions = std::vector<std::pair<i32, i32>>();
-    this->ratio_37_27_resolutions = std::vector<std::pair<i32, i32>>();
-    this->ratio_43_18_resolutions = std::vector<std::pair<i32, i32>>();
-    this->ratio_64_27_resolutions = std::vector<std::pair<i32, i32>>();
-    this->ratio_custom_resolutions = std::vector<std::pair<i32, i32>>();
-    this->minimum_resolution = std::pair<i32, i32>(0, 0);
-  }
+  app_settings_system_state(void) {}
 } app_settings_system_state;
 
 static app_settings_system_state * state = nullptr;

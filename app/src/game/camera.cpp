@@ -33,18 +33,18 @@
 
 #define ZOOM_CAMERA_DEFAULT 1.f
 
-typedef struct camera_shake_control_system {
+struct camera_shake_control_system {
   Image perlin_noise_img;
   Color* noise_data;
 
-  Vector2 direction;
-  u16 seed;
-  f32 speed;
-  f32 max_magnitude;
-  f32 noise_magnitude;
-  f32 duration;
-  f32 accumulator;
-  bool is_active;
+  Vector2 direction {};
+  u16 seed {};
+  f32 speed {};
+  f32 max_magnitude {};
+  f32 noise_magnitude {};
+  f32 duration {};
+  f32 accumulator {};
+  bool is_active {};
   camera_shake_control_system(void) {
     this->perlin_noise_img = ZERO_IMAGE;
     this->noise_data = nullptr;
@@ -55,61 +55,41 @@ typedef struct camera_shake_control_system {
     this->max_magnitude = CAMERA_SHAKE_MAX_MAGNITUDE;
     this->noise_magnitude = CAMERA_SHAKE_NOISE_MAGNITUDE;
     this->duration = CAMERA_SHAKE_DURATION; 
-    this->accumulator = 0.f;
-    this->is_active = false;
   }
-} camera_shake_control_system;
+};
 
-typedef struct camera_zoom_control_system {
-  Vector2 target_initial;
-  Vector2 target_final;
-  f32 accumulator;
-  f32 camera_old_zoom;
-  f32 camera_target_zoom;
-  bool is_active;
-  bool track_target;
+struct camera_zoom_control_system {
+  Vector2 target_initial {};
+  Vector2 target_final {};
+  f32 accumulator {};
+  f32 camera_old_zoom {};
+  f32 camera_target_zoom {};
+  bool is_active {};
+  bool track_target {};
 
-  camera_zoom_control_system(void) {
-    this->target_initial = ZEROVEC2;
-    this->target_final = ZEROVEC2;
-    this->accumulator = 0.f;
-    this->camera_old_zoom = 0.f;
-    this->camera_target_zoom = 0.f;
-    this->is_active = false;
-    this->track_target = false;
-  }
+  camera_zoom_control_system(void) {}
   camera_zoom_control_system(f32 old_zoom, f32 new_zoom) : camera_zoom_control_system() {
     this->camera_target_zoom = new_zoom;
     this->camera_old_zoom = old_zoom;
     this->is_active = true;
   }
-} camera_zoom_control_system;
+};
 
-typedef struct camera_system_state {
+struct camera_system_state {
   camera_metrics cam_met;
 
-  Vector2 offset;
-  Vector2 drawing_extent;
-  Vector2 position;
+  Vector2 offset {};
+  Vector2 drawing_extent {};
+  Vector2 position {};
   
-  f32 camera_min_speed;
-  f32 camera_min_effect_lenght;
-  f32 camera_fraction_speed;
+  f32 camera_min_speed {};
+  f32 camera_min_effect_lenght {};
+  f32 camera_fraction_speed {};
   camera_shake_control_system shake_ctrl;
   camera_zoom_control_system zoom_ctrl;
 
-  camera_system_state(void) {
-    this->cam_met = camera_metrics();
-    this->offset = ZEROVEC2;
-    this->drawing_extent = ZEROVEC2;
-    this->position = ZEROVEC2;
-    this->camera_min_speed = 0.f;
-    this->camera_min_effect_lenght = 0.f;
-    this->camera_fraction_speed = 0.f;
-    this->shake_ctrl = camera_shake_control_system();
-    this->zoom_ctrl = camera_zoom_control_system();
-  }
-} camera_system_state;
+  camera_system_state(void) {}
+};
 
 static camera_system_state * state = nullptr;
 
@@ -156,6 +136,7 @@ bool recreate_camera(i32 width, i32 height, i32 render_width, i32 render_height)
   state->cam_met.handle.target = Vector2 {static_cast<f32>(width), static_cast<f32>(height)};
   state->cam_met.handle.rotation = 0;
   state->cam_met.handle.zoom = 1.0f;
+  state->zoom_ctrl = camera_zoom_control_system();
   state->zoom_ctrl.camera_target_zoom = 1.f;
   state->camera_min_speed = 30;
   state->camera_min_effect_lenght = 10;
@@ -164,7 +145,6 @@ bool recreate_camera(i32 width, i32 height, i32 render_width, i32 render_height)
   state->drawing_extent.y = render_height;
   state->offset.x = render_width * .5f;
   state->offset.y = render_height * .5f;
-
   return true;
 }
 
@@ -305,6 +285,7 @@ bool camera_on_event(i32 code, event_context context) {
     }
     case EVENT_CODE_CAMERA_SET_ZOOM: {
       set_camera_zoom(context.data.f32[0]);
+      state->zoom_ctrl = camera_zoom_control_system();
       return true;
     }
     case EVENT_CODE_CAMERA_SET_ZOOM_TARGET: {

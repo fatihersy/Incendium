@@ -6,6 +6,7 @@
 [[nodiscard]] bool spawn_system_initialize(const camera_metrics* _camera_metrics, const ingame_info* _ingame_info);
 
 bool update_spawns(Vector2 player_position);
+void update_spawns_animation_only(void);
 bool render_spawns(void);
 
 std::vector<Character2D>* get_spawns(void);

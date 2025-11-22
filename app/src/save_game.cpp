@@ -55,10 +55,7 @@ struct save_game_system_state {
   std::array<save_data, SAVE_SLOT_MAX> save_slots;
   std::array<std::string, SAVE_SLOT_MAX> slot_filenames;
 
-  save_game_system_state() {
-    save_slots.fill(save_data());
-    slot_filenames.fill("");
-  }
+  save_game_system_state(void) {}
 };
 
 static save_game_system_state* state = nullptr;

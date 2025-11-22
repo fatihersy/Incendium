@@ -53,15 +53,6 @@ typedef struct sound_system_state {
   playlist_control_system_state * current_playlist;
 
   sound_system_state(void) {
-    this->sounds.fill(sound_data());
-    this->musics.fill(music_data());
-    this->sound_groups.fill(soundgroup());
-
-    #if not USE_PAK_FORMAT
-      this->sound_datas.fill(file_buffer()); 
-      this->music_datas.fill(file_buffer()); 
-    #endif
-
     this->current_playlist = nullptr;
   }
 }sound_system_state;

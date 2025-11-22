@@ -25,17 +25,12 @@ typedef struct player_system_state {
   player_state dynamic_player;
   player_state defualt_player;
 
-  f32 combo_timeout_accumulator;
+  f32 combo_timeout_accumulator {};
 
   player_system_state(void) {
     this->in_camera_metrics = nullptr;
     this->in_app_settings = nullptr;
     this->in_ingame_info = nullptr;
-
-    this->dynamic_player = player_state();
-    this->defualt_player = player_state();
-
-    this->combo_timeout_accumulator = 0.f;
   }
 } player_system_state;
 

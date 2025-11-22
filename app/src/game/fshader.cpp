@@ -13,10 +13,7 @@ typedef struct shader_system_state {
   std::array<fshader, SHADER_ID_MAX> shaders;
   file_buffer null_file;
 
-  shader_system_state(void) {
-    this->shaders.fill(fshader());
-    this->null_file = file_buffer();
-  }
+  shader_system_state(void) {}
 } shader_system_state;
 
 static shader_system_state *state = nullptr;

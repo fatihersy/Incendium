@@ -29,10 +29,29 @@ struct entrance_sequence_control {
   f32 accumulator {};
   f32 duration {};
 
-  std::vector<std::tuple<f32, f32, Vector2, Vector2, easing_type, spritesheet>> elems; // Begin, end and the sheet
+  // 0.f, 1.f, player_begin_position, player_end_position, gm_get_player_sprite_scale(), _ease, SHEET_ID_PLAYER_ANIMATION_ROLL, false, false
+  struct S_timeline_context {
+    f32 begin_t_norm {};
+    f32 end_t_norm {};
+    f32 begin_scale {};
+    f32 end_scale {};
+    Vector2 begin_pos {};
+    Vector2 end_pos {};
+    easing_type ease {};
+    spritesheet sheet;
+    S_timeline_context(void) {}
+    S_timeline_context(
+      f32 begin_t, f32 end_t, Vector2 player_begin_pos, Vector2 player_end_position, f32 _begin_scale, f32 _end_scale, easing_type _ease, spritesheet_id sheet_id, 
+      bool play_looped, bool play_once) 
+      : begin_t_norm(begin_t), end_t_norm(end_t), begin_scale(_begin_scale), end_scale(_end_scale), begin_pos(player_begin_pos), end_pos(player_end_position), ease(_ease)  
+    {
+      this->sheet.sheet_id = sheet_id;
+      this->sheet.play_looped = play_looped;
+      this->sheet.play_once = play_once;
+    };
+  } timeline_context;
+  std::vector<S_timeline_context> elems;
 
-  data128 mm_ex;
-  data128 vec_ex;
   bool play {};
   entrance_sequence_control(void) {}
 };
@@ -139,7 +158,7 @@ if (UPG->level == 1) {\
 #define CHEST_OPENING_SPIN_UNIT_SIZE VECTOR2(SIG_BASE_RENDER_HEIGHT_F * .2f, SIG_BASE_RENDER_HEIGHT_F * .2f)
 #define CHEST_OPENING_SPIN_UNIT_GAP (CHEST_OPENING_SPIN_UNIT_SIZE.x * 0.09)
 
-#define ENTRANCE_SEQUENCE_DURATION 3.f
+#define ENTRANCE_SEQUENCE_DURATION 0.928f
 
 [[__nodiscard__]] bool begin_scene_in_game(bool fade_in);
 
@@ -208,16 +227,8 @@ void start_game(void);
   event_register(EVENT_CODE_SPAWN_COMBAT_FEEDBACK_FLOATING_TEXT, scene_in_game_on_event);
   event_register(EVENT_CODE_BEGIN_CHEST_OPENING_SEQUENCE, scene_in_game_on_event);
 
-  return begin_scene_in_game(fade_in);
-}
-[[__nodiscard__]] bool begin_scene_in_game(bool fade_in) {
-  if (not state or state == nullptr) {
-    IERROR("scene_in_game::begin_scene_in_game()::State is not valid");
-    return false;
-  }
   state->default_panel = panel(BTN_STATE_UNDEFINED, ATLAS_TEX_ID_DARK_FANTASY_PANEL_BG, ATLAS_TEX_ID_DARK_FANTASY_PANEL_SELECTED, Vector4 {6.f, 6.f, 6.f, 6.f}, Color { 30, 39, 46, 128});
   state->worldmap_locations = get_worldmap_locations();
-  _set_player_position(ZEROVEC2);
   
   for (size_t itr_000 = 0u; itr_000 < MAX_UPDATE_ABILITY_PANEL_COUNT; ++itr_000) {
     state->ability_upg_panels.at(itr_000) = panel(BTN_STATE_UNDEFINED, ATLAS_TEX_ID_CRIMSON_FANTASY_PANEL_BG, ATLAS_TEX_ID_DARK_FANTASY_PANEL_SELECTED, 
@@ -227,47 +238,56 @@ void start_game(void);
   }
   state->debug_info_panel = state->default_panel;
 
+  {
+    using sequencer = entrance_sequence_control;
+    using S_tm_ctx = entrance_sequence_control::S_timeline_context;
+
+    auto push_entrance_sprite = [&](sequencer::S_timeline_context tm_ctx) { 
+      const spritesheet* src_sheet = ui_get_spritesheet_by_id(tm_ctx.sheet.sheet_id);
+      if (!src_sheet) return;
+      const bool play_looped = tm_ctx.sheet.play_looped;
+      const bool play_once = tm_ctx.sheet.play_once;
+      tm_ctx.sheet = *src_sheet;
+      ui_set_sprite(&tm_ctx.sheet, play_looped, play_once);
+
+      const f32 sequence_duration = state->entrance_seq_ctrl.duration;
+      const f32 sprite_life_duration = (tm_ctx.end_t_norm - tm_ctx.begin_t_norm) * sequence_duration;
+
+      if (!play_looped and sprite_life_duration > std::numeric_limits<f32>::epsilon()) {
+        tm_ctx.sheet.fps = static_cast<f32>(tm_ctx.sheet.frame_total) / sprite_life_duration;
+      }
+      tm_ctx.sheet.coord = Rectangle {0.f, 0.f, tm_ctx.sheet.current_frame_rect.width * tm_ctx.begin_scale, tm_ctx.sheet.current_frame_rect.height * tm_ctx.begin_scale};
+      tm_ctx.sheet.origin = Vector2 { tm_ctx.sheet.coord.width * .5f, tm_ctx.sheet.coord.height * .5f};
+      state->entrance_seq_ctrl.elems.emplace_back(tm_ctx);
+    };
+
+    state->entrance_seq_ctrl = entrance_sequence_control();
+    state->entrance_seq_ctrl.duration = ENTRANCE_SEQUENCE_DURATION;
+
+    constexpr Vector2 portal_begin_position = {0.f, 0.f};
+    const     Vector2 portal_end_position   = portal_begin_position;
+    const     Vector2 player_begin_position = {0.f, 0.f};
+    constexpr Vector2 player_end_position   = {0.f, 0.f};
+    constexpr easing_type _ease = EASING_TYPE_QUAD_OUT;
+
+    push_entrance_sprite(S_tm_ctx(0.f, 1.f, portal_begin_position, portal_end_position, 8.f, 8.f, _ease, SHEET_ID_PORTAL, true, false));
+    push_entrance_sprite(S_tm_ctx(0.f, 1.f, player_begin_position, player_end_position, 0.f, gm_get_player_sprite_scale(), _ease, SHEET_ID_PLAYER_ANIMATION_ROLL, false, false));
+  }
+
+  return begin_scene_in_game(fade_in);
+}
+[[__nodiscard__]] bool begin_scene_in_game(bool fade_in) {
+
+  _set_player_position(ZEROVEC2);
+
   state->hovered_spawn = I32_MAX;
   state->hovered_ability = ABILITY_ID_MAX;
   state->hovered_projectile = I32_MAX;
 
   event_fire(EVENT_CODE_CAMERA_SET_ZOOM, event_context(static_cast<f32>(0.85f)));
 
-  {
-    auto push_entrance_sprite = [&](f32 begin_t, f32 end_t, Vector2 begin_p, Vector2 end_p, f32 scale, easing_type ease_type, spritesheet_id sheet_id, bool play_looped, bool play_once) 
-    { 
-      const spritesheet* src_sheet = ui_get_spritesheet_by_id(sheet_id);
-      if (!src_sheet) return;
-      spritesheet sheet = *src_sheet;
-      ui_set_sprite(&sheet, play_looped, play_once);
-
-      const f32 sequence_duration = state->entrance_seq_ctrl.duration;
-      const f32 sprite_life_duration = (end_t - begin_t) * sequence_duration;
-
-      if (!play_looped and sprite_life_duration > std::numeric_limits<f32>::epsilon()) {
-        sheet.fps = static_cast<f32>(sheet.frame_total) / sprite_life_duration;
-      }
-    
-      sheet.coord = Rectangle {0.f, 0.f, sheet.current_frame_rect.width * scale, sheet.current_frame_rect.height * scale};
-      sheet.origin = Vector2 { sheet.coord.width * .5f, sheet.coord.height * .5f};
-      state->entrance_seq_ctrl.elems.emplace_back(begin_t, end_t, begin_p, end_p, ease_type, sheet);
-    };
-
-    state->entrance_seq_ctrl = entrance_sequence_control();
-    state->entrance_seq_ctrl.accumulator = 0.f;
-    state->entrance_seq_ctrl.duration = 1.5f; //ENTRANCE_SEQUENCE_DURATION;
-
-    constexpr Vector2 portal_begin_position = {0.f, -175.f};
-    const     Vector2 portal_end_position   = portal_begin_position;
-    const     Vector2 player_begin_position = portal_begin_position;
-    constexpr Vector2 player_end_position   = {0.f,   0.f};
-    constexpr easing_type _ease = EASING_TYPE_QUAD_OUT;
-
-    push_entrance_sprite(0.f, 1.f, portal_begin_position, portal_end_position, 8.f,                          _ease, SHEET_ID_PORTAL,                true, false);
-    push_entrance_sprite(0.f, 1.f, player_begin_position, player_end_position, gm_get_player_sprite_scale(), _ease, SHEET_ID_PLAYER_ANIMATION_ROLL, false, false);
-  }
-
   sig_change_ingame_state(SCENE_INGAME_STATE_IDLE);
+
   if (fade_in) {
     sig_begin_fade();
   }
@@ -276,7 +296,7 @@ void start_game(void);
 void start_game(void) {
   gm_start_game();
 
-  state->cam_bounds = Rectangle { 
+  state->cam_bounds = Rectangle {
     state->in_ingame_info->current_map_info->level_bound.x,
     state->in_ingame_info->current_map_info->level_bound.y,
     state->in_ingame_info->current_map_info->level_bound.x + state->in_ingame_info->current_map_info->level_bound.width,
@@ -311,24 +331,34 @@ void update_scene_in_game(void) {
       if (seq.play) {
         const f32 alpha = seq.accumulator / seq.duration;
         for (auto& elem : seq.elems) {
-          auto& [begin_t, end_t, begin_p, end_p, ease_type, sheet] = elem;
-          if (alpha >= begin_t && alpha <= end_t) {
-            const f32 sheet_duration = end_t - begin_t;
-            const f32 sheet_progress = (alpha - begin_t) / sheet_duration;
-            sheet.coord.x = math_easing(sheet_progress, begin_p.x, end_p.x - begin_p.x, 1.0f, ease_type);
-            sheet.coord.y = math_easing(sheet_progress, begin_p.y, end_p.y - begin_p.y, 1.0f, ease_type);
-            ui_update_sprite(&sheet, delta_time_ingame());
+          if (alpha >= elem.begin_t_norm && alpha <= elem.end_t_norm) {
+            const f32 sheet_duration = elem.end_t_norm - elem.begin_t_norm;
+            const f32 sheet_progress = (alpha - elem.begin_t_norm) / sheet_duration;
+            elem.sheet.coord.x = math_easing(sheet_progress, elem.begin_pos.x, elem.end_pos.x - elem.begin_pos.x, 1.0f, elem.ease);
+            elem.sheet.coord.y = math_easing(sheet_progress, elem.begin_pos.y, elem.end_pos.y - elem.begin_pos.y, 1.0f, elem.ease);
+            
+            const f32 scale_t = math_easing(sheet_progress, elem.begin_scale, elem.end_scale - elem.begin_scale, 1.0f, elem.ease);
+            elem.sheet.coord.width  = elem.sheet.current_frame_rect.width * scale_t;
+            elem.sheet.coord.height = elem.sheet.current_frame_rect.height * scale_t;
+
+            elem.sheet.origin.x = elem.sheet.coord.width * .5f;
+            elem.sheet.origin.y = elem.sheet.coord.height * .5f;
+            
+            ui_update_sprite(&elem.sheet, delta_time_ingame());
           }
         }
-        if (alpha < 1.0f) seq.accumulator += delta_time_ingame();
+        if (alpha < 1.0f) {
+          seq.accumulator += delta_time_ingame();
+          update_game_manager();
+        }
         else {
           start_game();
           sig_change_ingame_state(SCENE_INGAME_STATE_PLAY);
         }
       }
       else {
-        spritesheet& sheet = std::get<5>(seq.elems.at(0));
-        ui_update_sprite(&sheet, delta_time_ingame());
+        ui_update_sprite(&seq.elems.at(0).sheet, delta_time_ingame());
+        update_game_manager();
       }
       break;
     }
@@ -433,14 +463,13 @@ void render_scene_in_game(void) {
       if (seq.play) {
         const f32 alpha = seq.accumulator / seq.duration; 
         for (auto& elem : seq.elems) {
-          auto& [ begin_t, end_t, begin_p, end_p, ease_type, sheet ] = elem;
-          if (alpha >= begin_t and alpha <= end_t) {
-            ui_play_sprite_on_site(&sheet, sheet.coord, sheet.origin, sheet.rotation, sheet.tint);
+          if (alpha >= elem.begin_t_norm and alpha <= elem.end_t_norm) {
+            ui_play_sprite_on_site(&elem.sheet, elem.sheet.coord, elem.sheet.origin, elem.sheet.rotation, elem.sheet.tint);
           }
         }
       }
       else {
-        spritesheet& sheet = std::get<5>(seq.elems.at(0));
+        spritesheet& sheet = seq.elems.at(0).sheet;
         ui_play_sprite_on_site(&sheet, sheet.coord, sheet.origin, sheet.rotation, sheet.tint);
       }
       break;
@@ -473,9 +502,11 @@ void render_interface_in_game(void) {
   
   switch (state->ingame_state) {
     case SCENE_INGAME_STATE_IDLE: {
-
-      gui_label(lc_txt(LOC_TEXT_INGAME_LABEL_PRESS_SPACE), FONT_TYPE_REGULAR, 1, Vector2 {SIG_BASE_RENDER_WIDTH * .5f, SIG_BASE_RENDER_HEIGHT * .75f}, WHITE, true, true);
-      render_user_interface();
+      entrance_sequence_control& seq = state->entrance_seq_ctrl;
+      if (not seq.play) {
+        gui_label(lc_txt(LOC_TEXT_INGAME_LABEL_PRESS_SPACE), FONT_TYPE_REGULAR, 1, Vector2 {SIG_BASE_RENDER_WIDTH * .5f, SIG_BASE_RENDER_HEIGHT * .75f}, WHITE, true, true);
+        render_user_interface();
+      }
       return; 
     }
     case SCENE_INGAME_STATE_PAUSE: {
@@ -1051,6 +1082,32 @@ void sig_change_ingame_state(sig_ingame_state sig_state) {
   }
   state->ingame_state_prev = state->ingame_state;
   state->ingame_state = sig_state;
+
+  switch (sig_state) {
+    case SCENE_INGAME_STATE_IDLE: {
+      state->entrance_seq_ctrl.accumulator = 0.f;
+      state->entrance_seq_ctrl.play = false;
+      return;
+    }
+    case SCENE_INGAME_STATE_PAUSE: {
+
+      return;
+    }
+    case SCENE_INGAME_STATE_PLAY: {
+
+      return;
+    }
+    case SCENE_INGAME_STATE_CHEST_OPENING: {
+
+      return;
+    }
+    case SCENE_INGAME_STATE_PLAY_DEBUG: {
+
+      return;
+    }
+
+    default:  break;
+  }
 }
 void sig_init_chest_sequence(chest_opening_sequence_control::chest_opening_sequence sequence, data128 vec_ex = data128(), data128 mm_ex = data128()) {
   chest_opening_sequence_control& seq = state->chest_intro_ctrl;

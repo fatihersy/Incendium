@@ -18,14 +18,13 @@
 #include "game/fshader.h"
 
 typedef struct app_system_state {
-  bool app_running;
+  bool app_running {};
   app_settings* settings;
   RenderTexture2D drawing_target;
   Camera2D screen_space_camera;
   const fshader* post_process_shader;
   app_system_state(void) {
     this->settings = nullptr;
-    this->app_running = false;
     this->drawing_target = RenderTexture2D { 0u, ZERO_TEXTURE, ZERO_TEXTURE};
     this->screen_space_camera = Camera2D {ZEROVEC2, ZEROVEC2, 0.f, 0.f};
     this->post_process_shader = nullptr;

@@ -15,16 +15,13 @@ typedef struct collectible_manager_system_state {
   const ingame_info * in_ingame_info;
 
   std::vector<loot_item> loots_on_the_map;
-  i32 next_item_id;
+  i32 next_item_id {};
 
   collectible_manager_system_state(void) {
 		this->in_camera_metrics = nullptr;
 		this->in_app_settings = nullptr;
 		this->in_active_map = nullptr;
     this->in_ingame_info = nullptr;
-
-    this->loots_on_the_map = std::vector<loot_item>();
-    this->next_item_id = 0;
   }
 } collectible_manager_system_state;
 

@@ -55,7 +55,7 @@ struct game_manager_system_state {
   i32 next_inventory_slot_id {};
   i32 next_item_id {};
 
-  bool game_manager_initialized;
+  bool game_manager_initialized {};
 
   game_manager_system_state(void) {
     this->in_active_map = nullptr;
@@ -65,7 +65,6 @@ struct game_manager_system_state {
     this->ingame_phase = INGAME_PLAY_PHASE_UNDEFINED;
     this->stage_boss_id = INVALID_IDI32;
     this->starter_ability = ABILITY_ID_UNDEFINED;
-    this->game_manager_initialized = false;
   }
 };
 
@@ -457,7 +456,8 @@ void update_game_manager(void) {
   update_sound_system();
 
   switch (state->ingame_phase) {
-    case INGAME_PLAY_PHASE_IDLE: { 
+    case INGAME_PLAY_PHASE_IDLE: {
+      update_spawns_animation_only();
       break; 
     }
     case INGAME_PLAY_PHASE_CLEAR_ZOMBIES: {
@@ -521,6 +521,7 @@ void render_game(void) {
   }
   switch (state->ingame_phase) {
     case INGAME_PLAY_PHASE_IDLE: {
+      render_spawns();
       return;
     }
     case INGAME_PLAY_PHASE_CLEAR_ZOMBIES: {
@@ -659,6 +660,9 @@ void gm_start_game() {
 
   event_fire(EVENT_CODE_SET_SPAWN_FOLLOW_DISTANCE, event_context(state->game_rules[GAME_RULE_ZOMBIE_FOLLOW_DISTANCE].mm_ex.f32[3]));
   set_ingame_delta_time_multiplier(state->game_rules.at(GAME_RULE_DELTA_TIME_MULTIPLIER).mm_ex.f32[3]);
+  event_fire(EVENT_CODE_CAMERA_SET_ZOOM_TARGET, 
+    event_context(state->game_rules[GAME_RULE_INGAME_ZOOM].mm_ex.f32[3])
+  );
 
   return true;
 }
@@ -1448,7 +1452,6 @@ void gm_set_game_rule_trait_value(game_rule& rule, data128 value) {
       return;
     }
   }
-  IERROR("game_manager::gm_set_game_rule_trait_value()::Function ended unexpectedly");
 }
 // GET / SET
 

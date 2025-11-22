@@ -18,7 +18,7 @@ typedef struct world_system_state {
   const camera_metrics * in_camera_metrics;
   const app_settings * in_app_settings;
   tilemap * active_map;
-} world_system_state;
+} world_system_state; // WARN: This state is HUGE... Do NOT define a constructor for this struct! Trying to put this state in stack causes stack overflow.
 
 static world_system_state * state = nullptr;
 

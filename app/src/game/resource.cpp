@@ -25,27 +25,10 @@ typedef struct resource_system_state {
   std::vector<tilemap_prop_static> tilemap_props_buildings;
   std::vector<tilemap_prop_sprite> tilemap_props_sprite;
 
-  i32 next_prop_id;
+  i32 next_prop_id {};
   resource_system_state(void) {
     this->textures.fill(Texture2D {0u, 0, 0, 0, 0});
-    this->atlas_textures.fill(atlas_texture());
-    this->sprites.fill(spritesheet());
     this->images.fill(Image {nullptr, 0, 0, 0, 0});
-    this->tilesheets.fill(tilesheet());
-
-    this->tilemap_props_trees = std::vector<tilemap_prop_static>();
-    this->tilemap_props_tombstones = std::vector<tilemap_prop_static>();
-    this->tilemap_props_stones = std::vector<tilemap_prop_static>();
-    this->tilemap_props_spikes = std::vector<tilemap_prop_static>();
-    this->tilemap_props_skulls = std::vector<tilemap_prop_static>();
-    this->tilemap_props_pillars = std::vector<tilemap_prop_static>();
-    this->tilemap_props_lamps = std::vector<tilemap_prop_static>();
-    this->tilemap_props_fence = std::vector<tilemap_prop_static>();
-    this->tilemap_props_details = std::vector<tilemap_prop_static>();
-    this->tilemap_props_candles = std::vector<tilemap_prop_static>();
-    this->tilemap_props_buildings = std::vector<tilemap_prop_static>();
-    this->tilemap_props_sprite = std::vector<tilemap_prop_sprite>();
-    this->next_prop_id = 0;
   }
 } resource_system_state;
 

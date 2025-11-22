@@ -37,18 +37,14 @@ typedef struct spawn_system_state {
   std::vector<Character2D> spawns; // NOTE: See also clean-up function
   const camera_metrics * in_camera_metrics;
   const ingame_info * in_ingame_info;
-  i32 next_spawn_id;
-  f32 spawn_follow_distance;
+  i32 next_spawn_id {};
+  f32 spawn_follow_distance {};
   SpatialHash spatial_grid;
   std::unordered_map<i32, size_t> spawn_id_to_index_map;
 
   spawn_system_state(void) {
-    this->spawns = std::vector<Character2D>();
     this->in_camera_metrics = nullptr;
     this->in_ingame_info = nullptr;
-    this->next_spawn_id = 0;
-    this->spawn_follow_distance = 0.f;
-    this->spatial_grid = SpatialHash();
   }
 } spawn_system_state;
 
@@ -58,7 +54,7 @@ static spawn_system_state * state = nullptr;
 
 #define DEATH_EFFECT_HEIGHT_SCALE 0.115f
 #define SPAWN_FOLLOW_DISTANCE 1000.f;
-#define CELL_SIZE 256.0f
+#define CELL_SIZE 728.0f
 
 #define CHECK_pSPAWN_COLLISION(REC1, SPAWN, NEW_POS) \
 CheckCollisionRecs(REC1, \
@@ -253,11 +249,12 @@ damage_deal_result damage_spawn_by_collision(Rectangle rect, i32 damage, collisi
           if (CheckCollisionRecs(neighbor->collision, rect)) {
             damage_spawn(neighbor->character_id, damage);
           }
-        } else { 
+        } 
+        if (coll_type == COLLISION_TYPE_CIRCLE_RECTANGLE) {
           if (CheckCollisionCircleRec(Vector2{rect.x, rect.y}, rect.width, neighbor->collision)) {
             damage_spawn(neighbor->character_id, damage);
           }
-        }
+        } 
       } // end for neighbors
     } // end for y
   } // end for x
@@ -478,6 +475,14 @@ bool update_spawns(Vector2 player_position) {
   }
   return true;
 }
+void update_spawns_animation_only(void) {
+
+  for (auto& character : state->spawns) {
+    update_spawn_animation(character);
+  }
+
+}
+
 bool render_spawns(void) {
   if (not state or state == nullptr) {
     IERROR("spawn::render_spawns()::State is not valid");
@@ -512,7 +517,6 @@ bool render_spawns(void) {
             ? spawn_play_anim(_character, SPAWN_ZOMBIE_ANIMATION_TAKE_DAMAGE_LEFT)
             : spawn_play_anim(_character, SPAWN_ZOMBIE_ANIMATION_TAKE_DAMAGE_RIGHT);
         }
-        
         EndShaderMode();
       } 
       else 
