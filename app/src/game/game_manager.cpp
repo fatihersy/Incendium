@@ -467,7 +467,7 @@ void update_game_manager(void) {
 
         update_spawns(state->game_info.player_state_dynamic->position);
         generate_in_game_info();
-        update_abilities(__builtin_addressof(get_player_state()->ability_system));
+        update_abilities(get_player_state()->ability_system);
 
         const Character2D * const boss = get_spawn_by_id(state->stage_boss_id);
         if (boss) {
@@ -528,7 +528,7 @@ void render_game(void) {
       if (not state->game_info.player_state_dynamic->is_dead) {
         render_player();
         render_collectible_manager();
-        render_abilities(__builtin_addressof(get_player_state()->ability_system));
+        render_abilities(get_player_state()->ability_system);
         render_spawns();
       
         //for (size_t itr_000 = 0; itr_000 < (*state->in_active_map)->collisions.size() ; ++itr_000) {
@@ -654,9 +654,8 @@ void gm_start_game() {
     return false;
   }
   _add_ability(state->starter_ability);
-  ability *const player_starter_ability = __builtin_addressof(_player->ability_system.abilities.at(state->starter_ability));
-  upgrade_ability(player_starter_ability);
-  refresh_ability(player_starter_ability);
+  upgrade_ability(_player->ability_system.abilities.at(state->starter_ability));
+  refresh_ability(_player->ability_system.abilities.at(state->starter_ability));
 
   event_fire(EVENT_CODE_SET_SPAWN_FOLLOW_DISTANCE, event_context(state->game_rules[GAME_RULE_ZOMBIE_FOLLOW_DISTANCE].mm_ex.f32[3]));
   set_ingame_delta_time_multiplier(state->game_rules.at(GAME_RULE_DELTA_TIME_MULTIPLIER).mm_ex.f32[3]);
@@ -1080,8 +1079,8 @@ bool upgrade_ability_by_id(ability_id abl_id) {
     IWARN("game_manager::upgrade_ability_by_id::Ability id is out of bound");
     return false;
   }
-  upgrade_ability(&get_player_state()->ability_system.abilities[abl_id]);
-  refresh_ability(&get_player_state()->ability_system.abilities[abl_id]);
+  upgrade_ability(get_player_state()->ability_system.abilities[abl_id]);
+  refresh_ability(get_player_state()->ability_system.abilities[abl_id]);
   return true;
 }
 bool set_inventory_ui_ex(i32 slot_id, data128 data) {
@@ -1456,14 +1455,10 @@ void gm_set_game_rule_trait_value(game_rule& rule, data128 value) {
 // GET / SET
 
 // Exposed functions
-const ability * _get_ability(ability_id _id) {
-  if (_id <= ABILITY_ID_UNDEFINED or _id >= ABILITY_ID_MAX) {
-    IWARN("game_manager::_get_ability()::Ability id is out of bound");
-    return nullptr;
-  }
+const ability& _get_ability(ability_id _id) {
   return get_ability(_id);
 }
-const std::array<ability, ABILITY_ID_MAX> * _get_all_abilities(void) {
+const std::array<ability, ABILITY_ID_MAX>& _get_all_abilities(void) {
   return get_all_abilities();
 }
 const Character2D * _get_spawn_by_id(i32 _id) {
@@ -1483,23 +1478,19 @@ bool _add_ability(ability_id _id) {
     IWARN("game_manager::_add_ability()::Ability id is out of bound");
     return false;
   }
-  ability abl = (*get_ability(_id));
+  ability abl = get_ability(_id);
   ability_play_system& system = get_player_state()->ability_system;
 
   abl.p_owner = get_player_state();
   abl.is_initialized = true;
   abl.proj_count += state->game_info.player_state_dynamic->stats.at(CHARACTER_STATS_PROJECTILE_AMOUNT).buffer.i32[3];
   abl.is_active = true;
-  refresh_ability(__builtin_addressof(abl));
+  refresh_ability(abl);
   system.abilities.at(_id) = abl;
   return true;
 }
-ability _get_next_level(ability abl) {
-  if (not abl.is_initialized or abl.id <= ABILITY_ID_UNDEFINED or abl.id >= ABILITY_ID_MAX) {
-    IWARN("game_manager::_get_next_level()::Recieved ability has not initialized yet");
-    return ability();
-  }
-  return get_next_level(abl);
+void _get_next_level(ability& abl) {
+  get_next_level(abl);
 }
 void _set_player_position(Vector2 position) {
   get_player_state()->position = position;

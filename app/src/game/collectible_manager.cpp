@@ -102,7 +102,7 @@ bool update_collectible_manager(void) {
     }
 
 		if (CheckCollisionRecs(item->world_collision, state->in_camera_metrics->frustum)) {
-      update_sprite(__builtin_addressof(item->sheet), (*state->in_ingame_info->delta_time));
+      update_sprite(item->sheet, (*state->in_ingame_info->delta_time));
 			item->is_on_screen = true;
       if (item->drop_control.play_animation) {
 
@@ -189,22 +189,22 @@ bool render_collectible_manager(void) {
 		if (item.is_on_screen) {
       switch (item.type) {
         case ITEM_TYPE_EXPERIENCE: {
-          play_sprite_on_site(__builtin_addressof(item.sheet), WHITE, item.world_collision);
+          play_sprite_on_site(item.sheet, WHITE, item.world_collision);
           item.is_on_screen = false;
           continue;
         }
         case ITEM_TYPE_COIN: {
-          play_sprite_on_site(__builtin_addressof(item.sheet), WHITE, item.world_collision);
+          play_sprite_on_site(item.sheet, WHITE, item.world_collision);
           item.is_on_screen = false;
           continue;
         }
         case ITEM_TYPE_HEALTH_FRAGMENT: {
-          play_sprite_on_site(__builtin_addressof(item.sheet), WHITE, item.world_collision);
+          play_sprite_on_site(item.sheet, WHITE, item.world_collision);
           item.is_on_screen = false;
           continue;
         }
         case ITEM_TYPE_CHEST: {
-          draw_sprite_on_site(__builtin_addressof(item.sheet), WHITE, 0);
+          draw_sprite_on_site(item.sheet, WHITE, 0);
           item.is_on_screen = false;
           continue;
         }
@@ -281,7 +281,7 @@ loot_item * create_loot_item(item_type type, Vector2 position, data128 context) 
   switch (type) {
     case ITEM_TYPE_EXPERIENCE: {
       sheet.sheet_id = SHEET_ID_LOOT_ITEM_EXPERIENCE;
-      set_sprite(__builtin_addressof(sheet), true, false);
+      set_sprite(sheet, true, false);
 
       loot_item item = loot_item(type, state->next_item_id++, sheet, 
         loot_drop_animation_control_system(LOOT_DROP_ANIMATION_ELASTIC_OUT, LOOT_DROP_ANIMATION_DURATION, static_cast<f32>(context.i16[0]), static_cast<f32>(context.i16[1])), 
@@ -304,7 +304,7 @@ loot_item * create_loot_item(item_type type, Vector2 position, data128 context) 
     }
     case ITEM_TYPE_COIN: {
       sheet.sheet_id = SHEET_ID_LOOT_ITEM_COIN;
-      set_sprite(__builtin_addressof(sheet), true, false);
+      set_sprite(sheet, true, false);
 
       loot_item item = loot_item(type, state->next_item_id++, sheet, 
         loot_drop_animation_control_system(LOOT_DROP_ANIMATION_ELASTIC_OUT, LOOT_DROP_ANIMATION_DURATION, static_cast<f32>(context.i16[0]), static_cast<f32>(context.i16[1])), 
@@ -327,7 +327,7 @@ loot_item * create_loot_item(item_type type, Vector2 position, data128 context) 
     }
     case ITEM_TYPE_HEALTH_FRAGMENT: {
       sheet.sheet_id = SHEET_ID_LOOT_ITEM_HEALTH;
-      set_sprite(__builtin_addressof(sheet), true, false);
+      set_sprite(sheet, true, false);
 
       loot_item item = loot_item(type, state->next_item_id++, sheet, 
         loot_drop_animation_control_system(LOOT_DROP_ANIMATION_ELASTIC_OUT, LOOT_DROP_ANIMATION_DURATION, static_cast<f32>(context.i16[0]), static_cast<f32>(context.i16[1])), 
@@ -350,7 +350,7 @@ loot_item * create_loot_item(item_type type, Vector2 position, data128 context) 
     }
     case ITEM_TYPE_CHEST: {
       sheet.sheet_id = SHEET_ID_LOOT_ITEM_CHEST;
-      set_sprite(__builtin_addressof(sheet), true, false);
+      set_sprite(sheet, true, false);
 
       loot_item item = loot_item(type, state->next_item_id++, sheet, 
         loot_drop_animation_control_system(LOOT_DROP_ANIMATION_ELASTIC_OUT, LOOT_DROP_ANIMATION_DURATION, static_cast<f32>(context.i16[0]), static_cast<f32>(context.i16[1])), 

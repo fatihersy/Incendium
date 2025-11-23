@@ -8,10 +8,10 @@
 
 ability get_ability_firetrail(void);
 ability get_ability_firetrail_next_level(ability abl);
-void upgrade_ability_firetrail(ability *const abl);
-void refresh_ability_firetrail(ability *const abl);
+void upgrade_ability_firetrail(ability& abl);
+void refresh_ability_firetrail(ability& abl);
 
-void update_ability_firetrail(ability *const system);
-void render_ability_firetrail(ability *const system);
+void update_ability_firetrail(ability& system);
+void render_ability_firetrail(ability& system);
 
 #endif

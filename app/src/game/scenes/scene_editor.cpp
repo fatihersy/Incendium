@@ -437,13 +437,12 @@ void update_scene_editor(void) {
 
   if (state->b_prop_selection_screen_update_prop_sprites) {
     for (size_t itr_000 = 0u; itr_000 < state->tilemap_props_sprite->size(); itr_000++) {
-      spritesheet *const sprite = __builtin_addressof(state->tilemap_props_sprite->at(itr_000).sprite);
-      ui_update_sprite(sprite, GetFrameTime());
+      ui_update_sprite(state->tilemap_props_sprite->at(itr_000).sprite, GetFrameTime());
     }
     state->b_prop_selection_screen_update_prop_sprites = false;
   }
   if (state->selected_prop_sprite_panel_selection_copy.is_initialized and state->selection_type == SLC_TYPE_DROP_PROP_SPRITE) {
-    ui_update_sprite(__builtin_addressof(state->selected_prop_sprite_panel_selection_copy.sprite), GetFrameTime());
+    ui_update_sprite(state->selected_prop_sprite_panel_selection_copy.sprite, GetFrameTime());
   }
   update_user_interface(GetFrameTime());
 }
@@ -519,7 +518,7 @@ void render_interface_editor(void) {
           Rectangle dest = prop.sprite.coord;
           dest.x = 0.f;
           dest.y = (pnl->scroll * pnl->buffer.f32[0]) + prop_height_count;
-          ui_play_sprite_on_site(__builtin_addressof(prop.sprite), dest, ZEROVEC2, 0.f, prop.sprite.tint);
+          ui_play_sprite_on_site(prop.sprite, dest, ZEROVEC2, 0.f, prop.sprite.tint);
           prop_height_count += dest.height;
         }
       } else {
@@ -617,7 +616,7 @@ void render_interface_editor(void) {
         return;
       }
       tilemap_prop_sprite& slc_prop_sprite = state->selected_prop_sprite_panel_selection_copy;
-      ui_play_sprite_on_site(__builtin_addressof(slc_prop_sprite.sprite), 
+      ui_play_sprite_on_site((slc_prop_sprite.sprite), 
         Rectangle { 
           state->mouse_pos_screen.x, state->mouse_pos_screen.y,
           slc_prop_sprite.sprite.coord.width, slc_prop_sprite.sprite.coord.width

@@ -1870,10 +1870,10 @@ void gui_draw_spritesheet_to_background(spritesheet_id _id, Color _tint) {
   }
   if (state->ss_to_draw_bg.sheet_id != _id) {
     state->ss_to_draw_bg = *ss_get_spritesheet_by_enum(_id);
-    set_sprite(__builtin_addressof(state->ss_to_draw_bg), true, false);
+    set_sprite(state->ss_to_draw_bg, true, false);
   }
   Rectangle dest = Rectangle {0.f, 0.f, static_cast<f32>(UI_BASE_RENDER_WIDTH), static_cast<f32>(UI_BASE_RENDER_HEIGHT)};
-  play_sprite_on_site(__builtin_addressof(state->ss_to_draw_bg), _tint, dest);
+  play_sprite_on_site(state->ss_to_draw_bg, _tint, dest);
 }
 /**
  * @note  function, returns "Rectangle {}" if texture type returns null pointer
@@ -2587,22 +2587,22 @@ Vector2 ui_align_text(Rectangle in_dest, Vector2 in_text_measure, text_alignment
   }
 }
 // EXPOSED
-void ui_play_sprite_on_site(spritesheet *sheet, Rectangle dest, Vector2 origin, f32 rotation, Color _tint) {
+void ui_play_sprite_on_site(spritesheet& sheet, Rectangle dest, Vector2 origin, f32 rotation, Color _tint) {
   play_sprite_on_site_pro(sheet, dest, origin, rotation, _tint);
 }
-void ui_draw_sprite_on_site(spritesheet *const sheet, Color _tint, i32 frame) {
+void ui_draw_sprite_on_site(spritesheet& sheet, Color _tint, i32 frame) {
   draw_sprite_on_site(sheet, _tint, frame);
 }
 void ui_draw_sprite_on_site_by_id(spritesheet_id _id, Color _tint, Vector2 pos, Vector2 scale, i32 frame) {
   draw_sprite_on_site_by_id(_id, _tint, pos, scale, frame);
 }
-void ui_set_sprite(spritesheet *sheet, bool _play_looped, bool _play_once) {
+void ui_set_sprite(spritesheet& sheet, bool _play_looped, bool _play_once) {
   set_sprite(sheet, _play_looped, _play_once);
 }
 const spritesheet * ui_get_spritesheet_by_id(spritesheet_id type) {
   return ss_get_spritesheet_by_enum(type);
 }
-void ui_update_sprite(spritesheet *sheet, f32 delta_time) {
+void ui_update_sprite(spritesheet& sheet, f32 delta_time) {
   update_sprite(sheet, delta_time);
 }
 // EXPOSED

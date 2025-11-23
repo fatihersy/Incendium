@@ -86,9 +86,9 @@ bool set_inventory_ui_ex(i32 slot_id, data128 data);
 
 bool    _add_ability(ability_id _type);
 void    _set_player_position(Vector2 position);
-ability _get_next_level(ability abl);
-const ability * _get_ability(ability_id _id);
-const std::array<ability, ABILITY_ID_MAX> * _get_all_abilities(void);
+void    _get_next_level(ability& abl);
+const ability& _get_ability(ability_id _id);
+const std::array<ability, ABILITY_ID_MAX>& _get_all_abilities(void);
 const Character2D * _get_spawn_by_id(i32 _id);
 const player_state * gm_get_player_state(void);
 f32 gm_get_player_sprite_scale(void);

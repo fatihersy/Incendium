@@ -37,25 +37,21 @@ bool ability_fireball_initialize(const camera_metrics *const _camera_metrics, co
   return true;
 }
 
-void upgrade_ability_fireball(ability *const abl) {
-  if (not abl or abl == nullptr) {
-    IWARN("ability::upgrade_ability_fireball()::Ability is invalid");
-    return;
-  }
-  if (abl->id <= ABILITY_ID_UNDEFINED or abl->id >= ABILITY_ID_MAX) {
+void upgrade_ability_fireball(ability& abl) {
+  if (abl.id <= ABILITY_ID_UNDEFINED or abl.id >= ABILITY_ID_MAX) {
     IWARN("ability::upgrade_ability_fireball()::Ability is not initialized");
     return;
   }
-  ++abl->level;
+  ++abl.level;
 
   for (size_t itr_000 = 0u; itr_000 < ABILITY_UPG_MAX; ++itr_000) {
-    switch (abl->upgradables.at(itr_000)) {
+    switch (abl.upgradables.at(itr_000)) {
       case ABILITY_UPG_DAMAGE: {
-        abl->base_damage += abl->level * 2;
+        abl.base_damage += abl.level * 2;
         break;
       }
       case ABILITY_UPG_AMOUNT: { 
-        abl->proj_count++;
+        abl.proj_count++;
         break;
       }
       case ABILITY_UPG_HITBOX: { break; } // TODO: projectile hitbox upgrade
@@ -76,40 +72,36 @@ ability get_ability_fireball(void) {
   );
 }
 ability get_ability_fireball_next_level(ability abl) {
-  upgrade_ability_fireball(__builtin_addressof(abl));
+  upgrade_ability_fireball(abl);
   return abl;
 }
 
-void update_ability_fireball(ability *const abl) {
-  if (not abl or abl == nullptr) {
-    IWARN("ability::update_ability_fireball()::Ability is not valid");
+void update_ability_fireball(ability& abl) {
+  if (abl.id != ABILITY_ID_FIREBALL) {
+    IWARN("ability::update_ability_fireball()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_ID_FIREBALL, abl.id);
     return;
   }
-  if (abl->id != ABILITY_ID_FIREBALL) {
-    IWARN("ability::update_ability_fireball()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_ID_FIREBALL, abl->id);
-    return;
-  }
-  if (not abl->is_active or not abl->is_initialized) {
+  if (not abl.is_active or not abl.is_initialized) {
     IWARN("ability::update_ability_fireball()::Ability is not active or not initialized");
     return;
   }
-  if (abl->p_owner == nullptr) {
+  if (abl.p_owner == nullptr) {
     return;
   }
-  const player_state *const player = reinterpret_cast<player_state*>(abl->p_owner);
-  abl->position = player->position;
-  abl->rotation += abl->proj_speed;
+  const player_state *const player = reinterpret_cast<player_state*>(abl.p_owner);
+  abl.position = player->position;
+  abl.rotation += abl.proj_speed;
   const f32& aoe_scale = player->stats.at(CHARACTER_STATS_AOE).buffer.f32[3];
 
-  if (abl->rotation > 360.f) abl->rotation = 0.f;
+  if (abl.rotation > 360.f) abl.rotation = 0.f;
 
-  for (size_t itr_000 = 0u; itr_000 < abl->projectiles.size(); itr_000++) {
-    projectile& prj = abl->projectiles[itr_000];
+  for (size_t itr_000 = 0u; itr_000 < abl.projectiles.size(); itr_000++) {
+    projectile& prj = abl.projectiles[itr_000];
     if (not prj.is_active) { continue; }
 
-    i16 angle = (i32)(((360.f / abl->projectiles.size()) * itr_000) + abl->rotation) % 360;
+    i16 angle = (i32)(((360.f / abl.projectiles.size()) * itr_000) + abl.rotation) % 360;
 
-    prj.position = get_a_point_of_a_circle( abl->position, (abl->level * 3.f) + player->collision.height + 15, angle);
+    prj.position = get_a_point_of_a_circle( abl.position, (abl.level * 3.f) + player->collision.height + 15, angle);
     prj.collision.x = prj.position.x - (prj.collision.width * .5f);
     prj.collision.y = prj.position.y - (prj.collision.width * .5f);
     
@@ -127,45 +119,37 @@ void update_ability_fireball(ability *const abl) {
       static_cast<i16>(prj_collision.x), static_cast<i16>(prj_collision.y), static_cast<i16>(prj_collision.width), static_cast<i16>(prj_collision.height),
       final_damage, static_cast<i16>(COLLISION_TYPE_RECTANGLE_RECTANGLE)
     ));
-    update_sprite(__builtin_addressof(prj.animations.at(0)), (*state->in_ingame_info->delta_time) );
+    update_sprite(prj.animations.at(0), (*state->in_ingame_info->delta_time) );
   }
 }
 
-void render_ability_fireball(ability *const abl){
-  if (not abl or abl == nullptr) {
-    IWARN("ability::render_ability_fireball()::Ability is not valid");
+void render_ability_fireball(ability& abl){
+  if (abl.id != ABILITY_ID_FIREBALL) {
+    IWARN("ability::render_ability_fireball()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_ID_FIREBALL, abl.id);
     return;
   }
-  if (abl->id != ABILITY_ID_FIREBALL) {
-    IWARN("ability::render_ability_fireball()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_ID_FIREBALL, abl->id);
-    return;
-  }
-  if (not abl->is_active or not abl->is_initialized) {
+  if (not abl.is_active or not abl.is_initialized) {
     IWARN("ability::render_ability_fireball()::Ability is not active or not initialized");
     return;
   }
   const f32& aoe_scale = state->in_ingame_info->player_state_dynamic->stats.at(CHARACTER_STATS_AOE).buffer.f32[3];
 
-  for (projectile& prj : abl->projectiles) {
+  for (projectile& prj : abl.projectiles) {
     if (not prj.is_active) { continue; }
     Vector2 dim = Vector2 {
-      prj.animations.at(prj.active_sprite).current_frame_rect.width  * abl->proj_sprite_scale,
-      prj.animations.at(prj.active_sprite).current_frame_rect.height * abl->proj_sprite_scale
+      prj.animations.at(prj.active_sprite).current_frame_rect.width  * abl.proj_sprite_scale,
+      prj.animations.at(prj.active_sprite).current_frame_rect.height * abl.proj_sprite_scale
     };
     dim.x += (dim.x * aoe_scale * .5f);
     dim.y += (dim.y * aoe_scale * .5f);
     prj.animations.at(prj.active_sprite).origin.x = dim.x / 2.f;
     prj.animations.at(prj.active_sprite).origin.y = dim.y / 2.f;
 
-    play_sprite_on_site(__builtin_addressof(prj.animations.at(prj.active_sprite)), WHITE, Rectangle { prj.position.x, prj.position.y, dim.x, dim.y });
+    play_sprite_on_site(prj.animations.at(prj.active_sprite), WHITE, Rectangle { prj.position.x, prj.position.y, dim.x, dim.y });
   }
 }
 
-void refresh_ability_fireball(ability *const abl) {
-  if (not abl or abl == nullptr) {
-    IWARN("ability::refresh_ability_fireball()::Ability is invalid");
-    return;
-  }
+void refresh_ability_fireball(ability& abl) {
   if (not state->in_ingame_info or state->in_ingame_info == nullptr) {
     IWARN("ability::refresh_ability_fireball()::In-game info is invalid");
     return;
@@ -174,29 +158,29 @@ void refresh_ability_fireball(ability *const abl) {
     IWARN("ability::refresh_ability_fireball()::Player is invalid");
     return;
   }
-  if (abl->id != ABILITY_ID_FIREBALL) {
-    IWARN("ability::refresh_ability_fireball()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_ID_FIREBALL, abl->id);
+  if (abl.id != ABILITY_ID_FIREBALL) {
+    IWARN("ability::refresh_ability_fireball()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_ID_FIREBALL, abl.id);
     return;
   }
-  if (abl->proj_count > MAX_ABILITY_PROJECTILE_COUNT) {
+  if (abl.proj_count > MAX_ABILITY_PROJECTILE_COUNT) {
     IWARN("ability::refresh_ability_fireball()::Ability projectile count exceed");
     return;
   }
-  abl->projectiles.clear();
-  abl->projectiles.reserve(abl->proj_count);
-  abl->animation_ids.clear();
-  abl->animation_ids.push_back(SHEET_ID_FLAME_ENERGY_ANIMATION);
+  abl.projectiles.clear();
+  abl.projectiles.reserve(abl.proj_count);
+  abl.animation_ids.clear();
+  abl.animation_ids.push_back(SHEET_ID_FLAME_ENERGY_ANIMATION);
 
-  for (i32 itr_000 = 0; itr_000 < abl->proj_count; ++itr_000) {
-    projectile& prj = abl->projectiles.emplace_back(projectile());
-    prj.collision = Rectangle {0.f, 0.f, abl->proj_dim.x * abl->proj_collision_scale.x, abl->proj_dim.y * abl->proj_collision_scale.y};
-    prj.damage = abl->base_damage;
+  for (i32 itr_000 = 0; itr_000 < abl.proj_count; ++itr_000) {
+    projectile& prj = abl.projectiles.emplace_back(projectile());
+    prj.collision = Rectangle {0.f, 0.f, abl.proj_dim.x * abl.proj_collision_scale.x, abl.proj_dim.y * abl.proj_collision_scale.y};
+    prj.damage = abl.base_damage;
     prj.is_active = true;
-    prj.duration = abl->proj_duration;
-    for (spritesheet_id& sheet_id : abl->animation_ids) {
+    prj.duration = abl.proj_duration;
+    for (spritesheet_id& sheet_id : abl.animation_ids) {
       spritesheet& spr = prj.animations.emplace_back(spritesheet());
       spr.sheet_id = sheet_id;
-      set_sprite(__builtin_addressof(spr), true, false);
+      set_sprite(spr, true, false);
       spr.origin = VECTOR2( spr.coord.width * .5f,  spr.coord.height * .5f );
       prj.active_sprite = 0;
     }

@@ -8,10 +8,10 @@
 
 ability get_ability_comet(void);
 ability get_ability_comet_next_level(ability abl);
-void upgrade_ability_comet(ability *const abl);
-void refresh_ability_comet(ability *const abl);
+void upgrade_ability_comet(ability& abl);
+void refresh_ability_comet(ability& abl);
  
-void update_ability_comet(ability *const system);
-void render_ability_comet(ability *const system);
+void update_ability_comet(ability& system);
+void render_ability_comet(ability& system);
 
 #endif

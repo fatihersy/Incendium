@@ -1,4 +1,4 @@
-#include "ability_bullet.h"
+#include "ability_harvester.h"
 #include <reasings.h>
 #include <loc_types.h>
 
@@ -8,27 +8,27 @@
 
 #include "game/spritesheet.h"
 
-typedef struct ability_bullet_state {
+struct ability_harvester {
   const camera_metrics* in_camera_metrics;
   const app_settings* in_settings;
   const ingame_info* in_ingame_info; 
-  ability_bullet_state(void) {
+  ability_harvester(void) {
     this->in_camera_metrics = nullptr;
     this->in_settings = nullptr;
     this->in_ingame_info = nullptr; 
   }
-} ability_bullet_state;
+};
 
-static ability_bullet_state * state = nullptr;
+static ability_harvester * state = nullptr;
 
-bool ability_bullet_initialize(const camera_metrics *const _camera_metrics, const app_settings *const _settings, const ingame_info *const _ingame_info) {
+bool ability_harvester_initialize(const camera_metrics *const _camera_metrics, const app_settings *const _settings, const ingame_info *const _ingame_info) {
   if (state and state != nullptr) {
-    IWARN("ability::ability_bullet_initialize()::Initialize called multiple times");
+    IWARN("ability::ability_harvester()::Initialize called multiple times");
     return false;
   }
-  state = (ability_bullet_state*)allocate_memory_linear(sizeof(ability_bullet_state), true);
+  state = (ability_harvester*)allocate_memory_linear(sizeof(ability_harvester), true);
   if (not state or state == nullptr) {
-    IERROR("ability::ability_bullet_initialize()::Failed to allocate state");
+    IERROR("ability::ability_harvester()::Failed to allocate state");
     return false;
   }
   state->in_settings = _settings;
@@ -37,15 +37,15 @@ bool ability_bullet_initialize(const camera_metrics *const _camera_metrics, cons
   return true;
 }
 
-void upgrade_ability_bullet(ability& abl) {
+void upgrade_ability_harvester(ability& abl) {
   if (abl.id <= ABILITY_ID_UNDEFINED or abl.id >= ABILITY_ID_MAX) {
-    IWARN("ability::upgrade_ability()::Ability is not initialized");
+    IWARN("ability::upgrade_ability_harvester()::Ability is not initialized");
     return;
   }
   ++abl.level;
 
-  for (size_t itr_000 = 0u; itr_000 < ABILITY_UPG_MAX; ++itr_000) {
-    switch (abl.upgradables.at(itr_000)) {
+  for (ability_upgradables& upg : abl.upgradables) {
+    switch (upg) {
       case ABILITY_UPG_DAMAGE: {
         abl.base_damage += abl.level * 2;
         break;
@@ -60,69 +60,39 @@ void upgrade_ability_bullet(ability& abl) {
     }
   }
 }
-ability get_ability_bullet(void) {
+ability get_ability_harvester(void) {
   if (not state or state == nullptr) {
     return ability();
   }
-  std::array<ability_upgradables, ABILITY_UPG_MAX> bullet_upgr = {ABILITY_UPG_DAMAGE, ABILITY_UPG_HITBOX, ABILITY_UPG_AMOUNT, ABILITY_UPG_UNDEFINED, ABILITY_UPG_UNDEFINED};
-  return ability(static_cast<i32>(LOC_TEXT_PLAYER_ABILITY_NAME_BULLET), ABILITY_ID_BULLET,
-    bullet_upgr,
+  std::array<ability_upgradables, ABILITY_UPG_MAX> harvester_upgr = {ABILITY_UPG_DAMAGE, ABILITY_UPG_HITBOX, ABILITY_UPG_AMOUNT, ABILITY_UPG_UNDEFINED, ABILITY_UPG_UNDEFINED};
+  return ability(static_cast<i32>(LOC_TEXT_EMPTY), ABILITY_ID_HARVESTER,
+    harvester_upgr,
     0.f, 1.f, Vector2 {1.f, 1.f}, 0, 800.f, 1.75f, 15,
     Vector2{30.f, 30.f}, Rectangle{2368, 736, 32, 32}
   );
 }
-ability get_ability_bullet_next_level(ability abl) {
-  upgrade_ability_bullet(abl);
+ability get_ability_harvester_next_level(ability abl) {
+  upgrade_ability_harvester(abl);
   return abl;
 }
 
-void update_ability_bullet(ability& abl) {
-  if (abl.id != ABILITY_ID_BULLET) {
-    IWARN("ability::update_bullet()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_ID_BULLET, abl.id);
+void update_ability_harvester(ability& abl) {
+  if (abl.id != ABILITY_ID_HARVESTER) {
+    IWARN("ability::update_ability_harvester()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_ID_HARVESTER, abl.id);
     return;
   }
   if (not abl.is_active or not abl.is_initialized) {
-    IWARN("ability::update_bullet()::Ability is not active or not initialized");
+    IWARN("ability::update_ability_harvester()::Ability is not active or not initialized");
     return;
   }
   if (abl.p_owner == nullptr) {
     return;
   }
   const player_state *const player = reinterpret_cast<player_state*>(abl.p_owner);
-  abl.position = player->position;
-  //const f32& aoe_scale = player->stats.at(CHARACTER_STATS_AOE).buffer.f32[3];
 
-  bool refresh_prj = false;
-  if (abl.mm_ex.f32[0] > abl.proj_duration) {
-    refresh_prj = true;
-    abl.mm_ex.f32[0] = 0.f;
-  } else {
-    abl.mm_ex.f32[0] += (*state->in_ingame_info->delta_time);
-  }
-
-  i32 index = 0;
+  //i32 index = 0;
   for (projectile& prj : abl.projectiles) {
     if (not prj.is_active) { continue; }
-
-    if (refresh_prj) {
-      prj.position = player->position;
-    }
-    const f32 angle_step = 360.0f / static_cast<f32>(abl.projectiles.size());
-
-    const f32 current_angle_deg = angle_step * static_cast<f32>(index);
-    const f32 current_angle_rad = current_angle_deg * DEG2RAD;
-
-    const f32 move_dist = static_cast<f32>(abl.proj_speed) * (*state->in_ingame_info->delta_time);
-
-    Vector2 direction = {
-      cosf(current_angle_rad) * move_dist,
-      sinf(current_angle_rad) * move_dist
-    };
-    prj.position.x += direction.x;
-    prj.position.y += direction.y;
-
-    prj.collision.x = prj.position.x - prj.collision.width  * .5f;
-    prj.collision.y = prj.position.y - prj.collision.height * .5f;
 
     event_fire(EVENT_CODE_DAMAGE_ANY_SPAWN_IF_COLLIDE, event_context(
       static_cast<i16>(prj.collision.x), static_cast<i16>(prj.collision.y), static_cast<i16>(prj.collision.width), static_cast<i16>(prj.collision.height),
@@ -130,16 +100,16 @@ void update_ability_bullet(ability& abl) {
       static_cast<i16>(COLLISION_TYPE_RECTANGLE_RECTANGLE)
     ));
     update_sprite(prj.animations.at(0), (*state->in_ingame_info->delta_time) );
-    index++;
+    //index++;
   }
 }
-void render_ability_bullet(ability& abl){
-  if (abl.id != ABILITY_ID_BULLET) {
-    IWARN("ability::render_bullet()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_ID_BULLET, abl.id);
+void render_ability_harvester(ability& abl){
+  if (abl.id != ABILITY_ID_HARVESTER) {
+    IWARN("ability::render_ability_harvester()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_ID_HARVESTER, abl.id);
     return;
   }
   if (not abl.is_active or not abl.is_initialized) {
-    IWARN("ability::render_bullet()::Ability is not active or not initialized");
+    IWARN("ability::render_ability_harvester()::Ability is not active or not initialized");
     return;
   }
   const f32& aoe_scale = state->in_ingame_info->player_state_dynamic->stats.at(CHARACTER_STATS_AOE).buffer.f32[3];
@@ -154,22 +124,22 @@ void render_ability_bullet(ability& abl){
     };
     dim.x += (dim.x * aoe_scale);
     dim.y += (dim.y * aoe_scale);
-    prj.animations.at(prj.active_sprite).origin.x = dim.x / 2.f;
-    prj.animations.at(prj.active_sprite).origin.y = dim.y / 2.f;
+    prj.animations.at(prj.active_sprite).origin.x = dim.x * .5f;
+    prj.animations.at(prj.active_sprite).origin.y = dim.y * .5f;
     play_sprite_on_site(prj.animations.at(prj.active_sprite), WHITE, Rectangle { prj.position.x, prj.position.y, dim.x, dim.y });
   }
 }
-void refresh_ability_bullet(ability& abl) { 
-  if (abl.id != ABILITY_ID_BULLET) {
-    IWARN("ability::refresh_ability_bullet()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_ID_BULLET, abl.id);
+void refresh_ability_harvester(ability& abl) { 
+  if (abl.id != ABILITY_ID_HARVESTER) {
+    IWARN("ability::refresh_ability_harvester()::Ability type is incorrect. Expected: %d, Recieved:%d", ABILITY_ID_HARVESTER, abl.id);
     return;
   }
   if (not abl.is_active or not abl.is_initialized) {
-    IWARN("ability::refresh_ability_bullet()::Ability is not initialized or activated");
+    IWARN("ability::refresh_ability_harvester()::Ability is not initialized or activated");
     return;
   }
   if (abl.proj_count > MAX_ABILITY_PROJECTILE_COUNT) {
-    IWARN("ability::refresh_ability_bullet()::Ability projectile count exceed");
+    IWARN("ability::refresh_ability_harvester()::Ability projectile count exceed");
     return;
   }
   abl.projectiles.clear();
@@ -185,7 +155,7 @@ void refresh_ability_bullet(ability& abl) {
     prj.duration = abl.proj_duration;
     for (size_t itr_111 = 0u; itr_111 < abl.animation_ids.size(); ++itr_111) {
       if (abl.animation_ids.at(itr_111) <= SHEET_ID_SPRITESHEET_UNSPECIFIED or abl.animation_ids.at(itr_111) >= SHEET_ID_SPRITESHEET_TYPE_MAX) {
-        IWARN("ability::refresh_ability_bullet()::Ability sprite is not initialized or corrupted");
+        IWARN("ability::refresh_ability_harvester()::Ability sprite is not initialized or corrupted");
         return;
       }
       spritesheet& spr = prj.animations.emplace_back(spritesheet()); 

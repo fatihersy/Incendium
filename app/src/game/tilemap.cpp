@@ -107,7 +107,7 @@ void create_tilesheet(tilesheet_type _type, i32 _dest_tile_size, f32 _offset, ti
 void update_tilemap(tilemap *const _tilemap, f32 delta_time) {
   if (_tilemap and _tilemap != nullptr) {
     for (size_t itr_000 = 0u; itr_000 < _tilemap->sprite_props.size(); ++itr_000) {
-      update_sprite(__builtin_addressof(_tilemap->sprite_props.at(itr_000).sprite), delta_time);
+      update_sprite(_tilemap->sprite_props.at(itr_000).sprite, delta_time);
     }
   }
 }
@@ -178,7 +178,7 @@ void render_tilemap(const tilemap *const _tilemap, Rectangle camera_view) {
 
         if (not CheckCollisionRecs(camera_view, map_prop_ptr->sprite.coord)) { continue; }
 
-        play_sprite_on_site(__builtin_addressof(map_prop_ptr->sprite), map_prop_ptr->sprite.tint, map_prop_ptr->sprite.coord);
+        play_sprite_on_site(map_prop_ptr->sprite, map_prop_ptr->sprite.tint, map_prop_ptr->sprite.coord);
         continue;
       }
       if (_queue_prop_ptr->type != TILEMAP_PROP_TYPE_SPRITE) {
@@ -249,7 +249,7 @@ void render_props_y_based_all(const tilemap *const _tilemap, Rectangle camera_vi
           break;
         }
 
-        play_sprite_on_site(__builtin_addressof(map_prop_ptr->sprite), map_prop_ptr->sprite.tint, map_prop_ptr->sprite.coord);
+        play_sprite_on_site(map_prop_ptr->sprite, map_prop_ptr->sprite.tint, map_prop_ptr->sprite.coord);
         continue;
       }
       else
@@ -320,7 +320,7 @@ void render_props_y_based_by_zindex(const tilemap *const _tilemap, size_t index,
       else if (map_prop_ptr->sprite.coord.y > end_y) {
         break;
       }
-      play_sprite_on_site(&map_prop_ptr->sprite, map_prop_ptr->sprite.tint, map_prop_ptr->sprite.coord);
+      play_sprite_on_site(map_prop_ptr->sprite, map_prop_ptr->sprite.tint, map_prop_ptr->sprite.coord);
       continue;
     }
     else
@@ -436,7 +436,7 @@ void render_mainmenu(const tilemap *const _tilemap, Rectangle camera_view, const
 
         if (not CheckCollisionRecs(camera_view, coord)) { continue; }
 
-        play_sprite_on_site_pro(__builtin_addressof(map_prop_ptr->sprite), coord, origin, map_prop_ptr->sprite.rotation, map_prop_ptr->sprite.tint);
+        play_sprite_on_site_pro(map_prop_ptr->sprite, coord, origin, map_prop_ptr->sprite.rotation, map_prop_ptr->sprite.tint);
         continue;
       }
       if (_queue_prop_ptr->type != TILEMAP_PROP_TYPE_SPRITE) {
@@ -730,7 +730,7 @@ void str_to_map(tilemap *const map, tilemap_stringtify_package *const out_packag
       prop.map_id = map->next_map_id++;
       prop.prop_id = TextToInteger(str_par_prop_member.buffer.at(0).c_str());
       prop.sprite.sheet_id = static_cast<spritesheet_id>(TextToInteger(str_par_prop_member.buffer.at(1).c_str()) + SHEET_ENUM_MAP_SPRITE_START);
-      set_sprite(__builtin_addressof(prop.sprite), true, false);
+      set_sprite(prop.sprite, true, false);
 
       prop.prop_type = type;
       prop.sprite.rotation = TextToFloat(str_par_prop_member.buffer.at(3).c_str());

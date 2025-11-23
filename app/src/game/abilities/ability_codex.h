@@ -8,10 +8,10 @@
 
 ability get_ability_codex(void);
 ability get_ability_codex_next_level(ability abl);
-void upgrade_ability_codex(ability *const abl);
-void refresh_ability_codex(ability *const abl);
+void upgrade_ability_codex(ability& abl);
+void refresh_ability_codex(ability& abl);
 
-void update_ability_codex(ability *const system);
-void render_ability_codex(ability *const system);
+void update_ability_codex(ability& system);
+void render_ability_codex(ability& system);
 
 #endif

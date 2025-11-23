@@ -4,6 +4,7 @@
 #include "core/logger.h"
 
 #include "ability_bullet.h"
+#include "ability_harvester.h"
 #include "ability_codex.h"
 #include "ability_comet.h"
 #include "ability_fireball.h"
@@ -12,12 +13,12 @@
 
 typedef struct ability_system_state {
   std::array<ability, ABILITY_ID_MAX> abilities;
+  ability empty_ability;
 
   const camera_metrics* in_camera_metrics;
   const app_settings* in_settings;
   const ingame_info* in_ingame_info;
   ability_system_state(void) {
-    this->abilities.fill(ability());
     this->in_camera_metrics = nullptr;
     this->in_settings = nullptr;
     this->in_ingame_info = nullptr;
@@ -60,6 +61,12 @@ bool ability_system_initialize(const camera_metrics *const _camera_metrics, cons
   else {
     IERROR("ability_manager::ability_system_initialize()::Failed to initialize ability bullet");
   }
+  if(ability_harvester_initialize(_camera_metrics, _settings, _ingame_info)) {
+    register_ability(get_ability_harvester());
+  }
+  else {
+    IERROR("ability_manager::ability_system_initialize()::Failed to initialize ability harvester");
+  }
 
   if(ability_codex_initialize(_camera_metrics, _settings, _ingame_info)) {
     register_ability(get_ability_codex());
@@ -98,21 +105,18 @@ bool ability_system_initialize(const camera_metrics *const _camera_metrics, cons
   return true;
 }
 
-void upgrade_ability(ability* abl) {
-  if (not abl or abl == nullptr) {
-    IWARN("ability_manager::upgrade_ability()::Ability is not valid");
-    return;
-  }
-  if (not abl->is_active or not abl->is_initialized) {
+void upgrade_ability(ability& abl) {
+  if (not abl.is_active or not abl.is_initialized) {
     IWARN("ability_manager::upgrade_ability()::Ability is not initialized or activated");
     return;
   }
-  if (abl->proj_count >= MAX_ABILITY_PROJECTILE_COUNT-1) {
+  if (abl.proj_count >= MAX_ABILITY_PROJECTILE_COUNT-1) {
     IWARN("ability_manager::upgrade_ability()::Ability projectile count exceed");
     return;
   }
-  switch (abl->id) {
+  switch (abl.id) {
     case ABILITY_ID_FIREBALL:  upgrade_ability_fireball(abl); break;
+    case ABILITY_ID_HARVESTER: upgrade_ability_harvester(abl); break;
     case ABILITY_ID_BULLET:    upgrade_ability_bullet(abl); break;
     case ABILITY_ID_COMET:     upgrade_ability_comet(abl); break;
     case ABILITY_ID_CODEX:     upgrade_ability_codex(abl); break;
@@ -124,22 +128,19 @@ void upgrade_ability(ability* abl) {
     }
   }
 }
-void refresh_ability(ability *const abl) {
-  if (not abl or abl == nullptr) {
-    IWARN("ability_manager::refresh_ability()::Ability is not valid");
-    return;
-  }
-  if (not abl->is_active or not abl->is_initialized) {
+void refresh_ability(ability& abl) {
+  if (not abl.is_active or not abl.is_initialized) {
     IWARN("ability_manager::refresh_ability()::Ability is not initialized or activated");
     return;
   }
-  if (abl->proj_count > MAX_ABILITY_PROJECTILE_COUNT) {
+  if (abl.proj_count > MAX_ABILITY_PROJECTILE_COUNT) {
     IWARN("ability_manager::refresh_ability()::Ability projectile count exceed");
     return;
   }
-  switch (abl->id) {
+  switch (abl.id) {
     case ABILITY_ID_FIREBALL:  refresh_ability_fireball(abl); break;
     case ABILITY_ID_BULLET:    refresh_ability_bullet(abl); break;
+    case ABILITY_ID_HARVESTER: refresh_ability_harvester(abl); break;
     case ABILITY_ID_COMET:     refresh_ability_comet(abl); break;
     case ABILITY_ID_CODEX:     refresh_ability_codex(abl); break;
     case ABILITY_ID_RADIANCE:  refresh_ability_radience(abl); break;
@@ -150,19 +151,14 @@ void refresh_ability(ability *const abl) {
     }
   }
 }
-void update_abilities(ability_play_system *const system) {
-  if (not system or system == nullptr) {
-    IWARN("ability_manager::update_abilities()::Ability system is not valid");
-    return;
-  }
-  for (size_t itr_000 = 1u; itr_000 < ABILITY_ID_MAX; ++itr_000) {
-    ability *const abl = __builtin_addressof(system->abilities.at(itr_000));
-    if (abl == nullptr) { return; }
-    if (not abl->is_active or not abl->is_initialized) continue;
+void update_abilities(ability_play_system& system) {
+  for (ability& abl : system.abilities) {
+    if (not abl.is_active or not abl.is_initialized) continue;
 
-    switch (abl->id) {
+    switch (abl.id) {
       case ABILITY_ID_FIREBALL:  update_ability_fireball(abl); break;
       case ABILITY_ID_BULLET:    update_ability_bullet(abl); break;
+      case ABILITY_ID_HARVESTER: update_ability_harvester(abl); break;
       case ABILITY_ID_COMET:     update_ability_comet(abl); break;
       case ABILITY_ID_CODEX:     update_ability_codex(abl); break;
       case ABILITY_ID_RADIANCE:  update_ability_radience(abl); break;
@@ -172,14 +168,14 @@ void update_abilities(ability_play_system *const system) {
     }
   }
 }
-void render_abilities(ability_play_system *const system) {
-  for (size_t itr_000 = 1u; itr_000 < ABILITY_ID_MAX; ++itr_000) {
-    ability *const abl = __builtin_addressof(system->abilities.at(itr_000));
-    if (abl == nullptr or system == nullptr or not abl->is_active or not abl->is_initialized) { continue; }
+void render_abilities(ability_play_system& system) {
+  for (ability& abl : system.abilities) {
+    if (not abl.is_active or not abl.is_initialized) { continue; }
 
-    switch (abl->id) {
+    switch (abl.id) {
       case ABILITY_ID_FIREBALL:  render_ability_fireball(abl); break;
       case ABILITY_ID_BULLET:    render_ability_bullet(abl);   break;
+      case ABILITY_ID_HARVESTER: render_ability_harvester(abl);   break;
       case ABILITY_ID_COMET:     render_ability_comet(abl);    break;
       case ABILITY_ID_CODEX:     render_ability_codex(abl);    break;
       case ABILITY_ID_RADIANCE:  render_ability_radience(abl); break;
@@ -190,41 +186,32 @@ void render_abilities(ability_play_system *const system) {
   }
 }
 
-const ability* get_ability(ability_id _id) {
-  if (not state or state == nullptr) {
-    IERROR("ability_manager::get_ability()::State is not valid");
-    return nullptr;
-  }
+const ability& get_ability(ability_id _id) {
   if (_id <= ABILITY_ID_UNDEFINED or _id >= ABILITY_ID_MAX) {
-    IWARN("ability_manager::get_ability()::Ability type is out of bound");
-    return nullptr;
+    IWARN("ability_manager::get_ability()::Ability is not active or not initialized");
+    return state->empty_ability;
   }
-  return __builtin_addressof(state->abilities.at(_id));
+  return state->abilities[_id];
 }
-const std::array<ability, ABILITY_ID_MAX> * get_all_abilities(void) {
-  if (not state or state == nullptr) {
-    IWARN("ability_manager::get_all_abilities()::State is not valid");
-    return nullptr;
-  }
-  return __builtin_addressof(state->abilities);
+const std::array<ability, ABILITY_ID_MAX>& get_all_abilities(void) {
+  return state->abilities;
 }
 
-ability get_next_level(ability abl) {
+void get_next_level(ability& abl) {
   if (not abl.is_active or not abl.is_initialized) {
     IWARN("ability_manager::get_next_level()::Ability is not active or not initialized");
-    return ability();
+    return;
   }
   switch (abl.id) {
-    case ABILITY_ID_FIREBALL:  return get_ability_fireball_next_level(abl); break;
-    case ABILITY_ID_BULLET:    return get_ability_bullet_next_level(abl); break;
-    case ABILITY_ID_COMET:     return get_ability_comet_next_level(abl); break;
-    case ABILITY_ID_CODEX:     return get_ability_codex_next_level(abl); break;
-    case ABILITY_ID_RADIANCE:  return get_ability_radience_next_level(abl); break;
-    case ABILITY_ID_FIRETRAIL: return get_ability_firetrail_next_level(abl); break;
+    case ABILITY_ID_FIREBALL:  abl = get_ability_fireball_next_level(abl); break;
+    case ABILITY_ID_HARVESTER: abl = get_ability_harvester_next_level(abl); break;
+    case ABILITY_ID_BULLET:    abl = get_ability_bullet_next_level(abl); break;
+    case ABILITY_ID_COMET:     abl = get_ability_comet_next_level(abl); break;
+    case ABILITY_ID_CODEX:     abl = get_ability_codex_next_level(abl); break;
+    case ABILITY_ID_RADIANCE:  abl = get_ability_radience_next_level(abl); break;
+    case ABILITY_ID_FIRETRAIL: abl = get_ability_firetrail_next_level(abl); break;
     default: {
       IWARN("ability_manager::get_next_level()::Unsuppported ability type");
-      return ability();
     }
   }
-  return ability();
 }

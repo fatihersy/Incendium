@@ -2505,7 +2505,7 @@ void begin_scene_change(main_menu_scene_type mms, [[__maybe_unused__]] event_con
       state->mms_trait_choice.chosen_traits.clear();
       state->mms_trait_choice.positive_traits.clear();
       state->mms_trait_choice.negative_traits.clear();
-      state->mms_trait_choice.abilities = (*_get_all_abilities());
+      state->mms_trait_choice.abilities = _get_all_abilities();
 
       const std::vector<character_trait>& gm_traits = gm_get_character_traits_all();
 

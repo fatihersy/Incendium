@@ -103,6 +103,7 @@ enum ability_id {
   ABILITY_ID_UNDEFINED,
   ABILITY_ID_FIREBALL,
   ABILITY_ID_BULLET,
+  ABILITY_ID_HARVESTER,
   ABILITY_ID_RADIANCE,
   ABILITY_ID_COMET,
   ABILITY_ID_CODEX,
@@ -1040,60 +1041,52 @@ struct Character2D {
  * @brief mm_ex buffer  summary: {u16[0]} = {counter, }
  */
 struct projectile {
-  i32 id;
+  i32 id {};
   std::vector<spritesheet> animations;
-  i32 active_sprite;
-  Vector2 position;
-  Rectangle collision;
+  i32 active_sprite {};
+  Vector2 position {};
+  Rectangle collision {};
   world_direction direction;
 
   // 128 byte buffer
   data256 vec_ex;
   data256 mm_ex;
 
-  i32 damage;
-  f32 duration;
-  bool is_active;
+  i32 damage {};
+  f32 accumulator {};
+  f32 duration {};
+  bool is_active {};
 
   projectile(void) {
-    this->id = 0;
-    this->animations.clear();
     this->active_sprite = -1;
-    this->position = ZEROVEC2;
-    this->collision = ZERORECT;
     this->direction = WORLD_DIRECTION_UNDEFINED;
-    this->vec_ex = data256();
-    this->mm_ex = data256();
-    this->damage = 0;
-    this->duration = 0.f;
-    this->is_active = false;
   }
 };
 
 struct ability {
-  ability_id id;
-  i32 display_name_loc_text_id;
+  ability_id id {};
+  i32 display_name_loc_text_id {};
   std::vector<projectile> projectiles;
   std::vector<spritesheet_id> animation_ids;
   void* p_owner;
   std::array<ability_upgradables, ABILITY_UPG_MAX> upgradables;
   
-  Vector2 proj_dim;
-  Vector2 position;
-  f32 ability_cooldown_duration;
-  f32 ability_cooldown_accumulator;
-  f32 ability_play_time;
-  f32 proj_sprite_scale;
-  Vector2 proj_collision_scale;
-  f32 proj_duration;
-  i32 proj_count;
-  i32 proj_speed;
-  i32 level;
-  i32 base_damage;
-  i32 rotation;
-  Rectangle icon_src;
-  bool is_active;
-  bool is_initialized;
+  Vector2 proj_dim {};
+  Vector2 position {};
+  f32 ability_cooldown_duration {};
+  f32 ability_cooldown_accumulator {};
+  f32 ability_play_time {};
+  f32 proj_sprite_scale {};
+  Vector2 proj_collision_scale {};
+  f32 proj_duration {};
+  i32 proj_count {};
+  i32 proj_speed {};
+  i32 level {};
+  i32 base_damage {};
+  i32 rotation {};
+  Rectangle icon_src {};
+  bool is_active {};
+  bool is_initialized {};
 
   data128 ui_use;
   data128 mm_ex;
@@ -1101,32 +1094,8 @@ struct ability {
 
   ability(void) {
     this->id = ABILITY_ID_UNDEFINED;
-    this->display_name_loc_text_id = 0;
-    this->projectiles = std::vector<projectile>();
-    this->animation_ids = std::vector<spritesheet_id>();
     this->p_owner = nullptr;
     this->upgradables.fill(ABILITY_UPG_UNDEFINED);
-
-    this->proj_dim = ZEROVEC2;
-    this->position = ZEROVEC2;
-    this->ability_cooldown_duration = 0.f;
-    this->ability_cooldown_accumulator = 0.f;
-    this->ability_play_time = 0.f;
-    this->proj_sprite_scale = 1.f;
-    this->proj_collision_scale = Vector2 { 1.f, 1.f };
-    this->proj_duration = 0.f;
-    this->proj_count = 0;
-    this->proj_speed = 0;
-    this->level = 0;
-    this->base_damage = 0;
-    this->rotation = 0;
-    this->icon_src = ZERORECT;
-    this->is_active = false;
-    this->is_initialized = false;
-
-    this->ui_use = data128();
-    this->mm_ex = data128();
-    this->vec_ex = data256();
   };
   ability(
     i32 loc_text_id, ability_id id, 
@@ -1146,7 +1115,6 @@ struct ability {
     this->base_damage = base_damage;
     this->proj_dim = proj_dim;
     this->icon_src = icon_src;
-    this->level = 0;
   }
 };
 

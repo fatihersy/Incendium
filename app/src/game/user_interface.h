@@ -524,12 +524,12 @@ void draw_scrollbar(const scrollbar_update_result& result);
 void combat_feedback_spawn_floating_text(const char* _text, combat_feedback_floating_text_type type, Vector2 start_position);
  
 // Exposed
-void ui_play_sprite_on_site(spritesheet *sheet, Rectangle dest, Vector2 origin = {}, f32 rotation = {}, Color _tint = WHITE);
-void ui_draw_sprite_on_site(spritesheet *const sheet, Color _tint, i32 frame);
+void ui_play_sprite_on_site(spritesheet& sheet, Rectangle dest, Vector2 origin = {}, f32 rotation = {}, Color _tint = WHITE);
+void ui_draw_sprite_on_site(spritesheet& sheet, Color _tint, i32 frame);
 void ui_draw_sprite_on_site_by_id(spritesheet_id _id, Color _tint, Vector2 pos, Vector2 scale, i32 frame);
-void ui_set_sprite(spritesheet *sheet, bool _play_looped, bool _play_once);
+void ui_set_sprite(spritesheet& sheet, bool _play_looped, bool _play_once);
 const spritesheet * ui_get_spritesheet_by_id(spritesheet_id type);
-void ui_update_sprite(spritesheet *sheet, f32 delta_time);
+void ui_update_sprite(spritesheet& sheet, f32 delta_time);
 Vector2 ui_align_text(Rectangle in_dest, Vector2 in_text_measure, text_alignment align_to);
 // Exposed
 

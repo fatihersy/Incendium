@@ -1029,7 +1029,7 @@ constexpr void add_prop(tilemap_prop_types type, spritesheet_id sprite_id, f32 s
   prop.sprite.sheet_id = sprite_id;
   prop.sprite.tint = tint;
   
-  set_sprite(&prop.sprite, true, false);
+  set_sprite(prop.sprite, true, false);
 
   prop.is_initialized = true;
 

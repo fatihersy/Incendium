@@ -8,10 +8,10 @@
 
 ability get_ability_radience(void);
 ability get_ability_radience_next_level(ability abl);
-void upgrade_ability_radience(ability *const abl);
-void refresh_ability_radience(ability *const abl);
+void upgrade_ability_radience(ability& abl);
+void refresh_ability_radience(ability& abl);
 
-void update_ability_radience(ability *const system);
-void render_ability_radience(ability *const system);
+void update_ability_radience(ability& system);
+void render_ability_radience(ability& system);
 
 #endif

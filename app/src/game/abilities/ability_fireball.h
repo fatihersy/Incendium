@@ -8,10 +8,10 @@
 
 ability get_ability_fireball(void);
 ability get_ability_fireball_next_level(ability abl);
-void upgrade_ability_fireball(ability *const abl);
-void refresh_ability_fireball(ability *const abl);
+void upgrade_ability_fireball(ability& abl);
+void refresh_ability_fireball(ability& abl);
 
-void update_ability_fireball(ability *const system);
-void render_ability_fireball(ability *const system);
+void update_ability_fireball(ability& system);
+void render_ability_fireball(ability& system);
 
 #endif

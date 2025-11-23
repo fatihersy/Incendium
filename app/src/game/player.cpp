@@ -89,17 +89,17 @@ bool player_system_initialize(const camera_metrics* in_camera_metrics,const app_
   state->defualt_player.attack_up_sprite.sheet_id = SHEET_ID_PLAYER_ANIMATION_ATTACK_UP;
   state->defualt_player.roll_sprite.sheet_id = SHEET_ID_PLAYER_ANIMATION_ROLL;
   state->defualt_player.dash_sprite.sheet_id = SHEET_ID_PLAYER_ANIMATION_DASH;
-  set_sprite(&state->defualt_player.move_right_sprite,        true, false);
-  set_sprite(&state->defualt_player.idle_right_sprite,        true, false);
-  set_sprite(&state->defualt_player.take_damage_right_sprite, true, false);
-  set_sprite(&state->defualt_player.wreck_right_sprite,       false, false);
-  set_sprite(&state->defualt_player.attack_1_sprite,          false, false);
-  set_sprite(&state->defualt_player.attack_2_sprite,          false, false);
-  set_sprite(&state->defualt_player.attack_3_sprite,          false, false);
-  set_sprite(&state->defualt_player.attack_down_sprite,       false, false);
-  set_sprite(&state->defualt_player.attack_up_sprite,         false, false);
-  set_sprite(&state->defualt_player.roll_sprite,              false, false);
-  set_sprite(&state->defualt_player.dash_sprite,              false, false);
+  set_sprite(state->defualt_player.move_right_sprite,        true, false);
+  set_sprite(state->defualt_player.idle_right_sprite,        true, false);
+  set_sprite(state->defualt_player.take_damage_right_sprite, true, false);
+  set_sprite(state->defualt_player.wreck_right_sprite,       false, false);
+  set_sprite(state->defualt_player.attack_1_sprite,          false, false);
+  set_sprite(state->defualt_player.attack_2_sprite,          false, false);
+  set_sprite(state->defualt_player.attack_3_sprite,          false, false);
+  set_sprite(state->defualt_player.attack_down_sprite,       false, false);
+  set_sprite(state->defualt_player.attack_up_sprite,         false, false);
+  set_sprite(state->defualt_player.roll_sprite,              false, false);
+  set_sprite(state->defualt_player.dash_sprite,              false, false);
 
   {
     auto set_character_stat = [](character_stat_id id, ::data_type _data_type, data128 default_value){
@@ -217,7 +217,7 @@ bool render_player(void) {
   const Rectangle& frame_rect = state->dynamic_player.current_anim_to_play.current_frame_rect;
   
   if(_sheet.sheet_id > SHEET_ID_SPRITESHEET_UNSPECIFIED and _sheet.sheet_id < SHEET_ID_SPRITESHEET_TYPE_MAX) {
-    play_sprite_on_site_ex(__builtin_addressof(_sheet), Rectangle {frame_rect.x + _sheet.offset.x, frame_rect.y + _sheet.offset.y, frame_rect.width, frame_rect.height}, 
+    play_sprite_on_site_ex(_sheet, Rectangle {frame_rect.x + _sheet.offset.x, frame_rect.y + _sheet.offset.y, frame_rect.width, frame_rect.height}, 
       state->dynamic_player.current_anim_to_play.coord, 
       state->dynamic_player.current_anim_to_play.origin, 
       state->dynamic_player.current_anim_to_play.rotation, 
@@ -369,7 +369,7 @@ void player_update_sprite(void) {
   };
   _sheet.origin = Vector2 { _sheet.coord.width * .5f, _sheet.coord.height * .5f};
   
-  update_sprite(__builtin_addressof(_sheet), (*state->in_ingame_info->delta_time));
+  update_sprite(_sheet, (*state->in_ingame_info->delta_time));
 }
 void player_update_attack(void) {
   if (not state or state == nullptr) { return; }
@@ -464,13 +464,13 @@ void player_attack_reset(bool _retrospective) {
   state->dynamic_player.anim_state = PL_ANIM_STATE_IDLE;
 
   switch (state->dynamic_player.combo_type) {
-    case CHARACTER_ATTACK_COMBO_1: { reset_sprite(&state->dynamic_player.attack_1_sprite, true); return; }
-    case CHARACTER_ATTACK_COMBO_2: { reset_sprite(&state->dynamic_player.attack_2_sprite, true); return; }
-    case CHARACTER_ATTACK_COMBO_3: { reset_sprite(&state->dynamic_player.attack_3_sprite, true); return; }
+    case CHARACTER_ATTACK_COMBO_1: { reset_sprite(state->dynamic_player.attack_1_sprite, true); return; }
+    case CHARACTER_ATTACK_COMBO_2: { reset_sprite(state->dynamic_player.attack_2_sprite, true); return; }
+    case CHARACTER_ATTACK_COMBO_3: { reset_sprite(state->dynamic_player.attack_3_sprite, true); return; }
     default: {
-      reset_sprite(&state->dynamic_player.attack_1_sprite, true);
-      reset_sprite(&state->dynamic_player.attack_2_sprite, true);
-      reset_sprite(&state->dynamic_player.attack_3_sprite, true);
+      reset_sprite(state->dynamic_player.attack_1_sprite, true);
+      reset_sprite(state->dynamic_player.attack_2_sprite, true);
+      reset_sprite(state->dynamic_player.attack_3_sprite, true);
       state->dynamic_player.combo_type = CHARACTER_ATTACK_COMBO_UNDEFINED;
       state->combo_timeout_accumulator = 0.f;
       return;

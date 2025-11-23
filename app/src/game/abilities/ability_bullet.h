@@ -8,10 +8,10 @@
 
 ability get_ability_bullet(void);
 ability get_ability_bullet_next_level(ability abl);
-void upgrade_ability_bullet(ability *const abl);
-void refresh_ability_bullet(ability *const abl);
+void upgrade_ability_bullet(ability& abl);
+void refresh_ability_bullet(ability& abl);
 
-void update_ability_bullet(ability *const system);
-void render_ability_bullet(ability *const system);
+void update_ability_bullet(ability& system);
+void render_ability_bullet(ability& system);
 
 #endif

@@ -248,7 +248,7 @@ void start_game(void);
       const bool play_looped = tm_ctx.sheet.play_looped;
       const bool play_once = tm_ctx.sheet.play_once;
       tm_ctx.sheet = *src_sheet;
-      ui_set_sprite(&tm_ctx.sheet, play_looped, play_once);
+      ui_set_sprite(tm_ctx.sheet, play_looped, play_once);
 
       const f32 sequence_duration = state->entrance_seq_ctrl.duration;
       const f32 sprite_life_duration = (tm_ctx.end_t_norm - tm_ctx.begin_t_norm) * sequence_duration;
@@ -344,7 +344,7 @@ void update_scene_in_game(void) {
             elem.sheet.origin.x = elem.sheet.coord.width * .5f;
             elem.sheet.origin.y = elem.sheet.coord.height * .5f;
             
-            ui_update_sprite(&elem.sheet, delta_time_ingame());
+            ui_update_sprite(elem.sheet, delta_time_ingame());
           }
         }
         if (alpha < 1.0f) {
@@ -357,7 +357,7 @@ void update_scene_in_game(void) {
         }
       }
       else {
-        ui_update_sprite(&seq.elems.at(0).sheet, delta_time_ingame());
+        ui_update_sprite(seq.elems.at(0).sheet, delta_time_ingame());
         update_game_manager();
       }
       break;
@@ -464,13 +464,13 @@ void render_scene_in_game(void) {
         const f32 alpha = seq.accumulator / seq.duration; 
         for (auto& elem : seq.elems) {
           if (alpha >= elem.begin_t_norm and alpha <= elem.end_t_norm) {
-            ui_play_sprite_on_site(&elem.sheet, elem.sheet.coord, elem.sheet.origin, elem.sheet.rotation, elem.sheet.tint);
+            ui_play_sprite_on_site(elem.sheet, elem.sheet.coord, elem.sheet.origin, elem.sheet.rotation, elem.sheet.tint);
           }
         }
       }
       else {
         spritesheet& sheet = seq.elems.at(0).sheet;
-        ui_play_sprite_on_site(&sheet, sheet.coord, sheet.origin, sheet.rotation, sheet.tint);
+        ui_play_sprite_on_site(sheet, sheet.coord, sheet.origin, sheet.rotation, sheet.tint);
       }
       break;
     }
@@ -1029,23 +1029,24 @@ void draw_ingame_state_play_ui_defeat_boss(void) {
 }
 void prepare_ability_upgrade_state(void) {
   for (size_t itr_000 = 0u; itr_000 < MAX_UPDATE_ABILITY_PANEL_COUNT; ++itr_000) {
-    panel *const pnl = __builtin_addressof(state->ability_upg_panels.at(itr_000));
-    ability *const pnl_slot = __builtin_addressof(state->ability_upgrade_choices.at(itr_000));
-    if(pnl->buffer.u16[0] <= 0 or pnl->buffer.u16[0] >= ABILITY_ID_MAX) {
-      pnl->buffer.u16[0] = get_random(ABILITY_ID_UNDEFINED + 1, ABILITY_ID_MAX - 1);
+    panel& pnl = state->ability_upg_panels.at(itr_000);
+    if(pnl.buffer.u16[0] <= 0 or pnl.buffer.u16[0] >= ABILITY_ID_MAX) {
+      pnl.buffer.u16[0] = get_random(ABILITY_ID_UNDEFINED + 1, ABILITY_ID_MAX - 1);
     }
-    if (pnl->buffer.u16[0] < 0 or pnl->buffer.u16[0] >= state->in_ingame_info->player_state_dynamic->ability_system.abilities.size()) {
+    if (pnl.buffer.u16[0] < 0 or pnl.buffer.u16[0] >= state->in_ingame_info->player_state_dynamic->ability_system.abilities.size()) {
       continue;
     }
-    const ability *const player_ability = GET_PLAYER_DYNAMIC_ABILITY(gm_get_player_state(), static_cast<ability_id>(pnl->buffer.u16[0])); // INFO: do we need upgrade the ability player already have
-    if (player_ability->id <= ABILITY_ID_UNDEFINED or player_ability->id >= ABILITY_ID_MAX) {
-      *pnl_slot = (*_get_ability(static_cast<ability_id>(pnl->buffer.u16[0])));
+    ability& _upg_choice = state->ability_upgrade_choices.at(itr_000);
+    _upg_choice = (*GET_PLAYER_DYNAMIC_ABILITY(gm_get_player_state(), static_cast<ability_id>(pnl.buffer.u16[0])));
+
+    if (_upg_choice.id <= ABILITY_ID_UNDEFINED or _upg_choice.id >= ABILITY_ID_MAX) { // INFO: If player didn't have the ability yet
+      state->ability_upgrade_choices.at(itr_000) = _get_ability(static_cast<ability_id>(pnl.buffer.u16[0]));
     }
     else {
-      *pnl_slot = _get_next_level( (*player_ability));
+      _get_next_level(_upg_choice);
     }
-    if (pnl_slot->id <= ABILITY_ID_UNDEFINED or pnl_slot->id >= ABILITY_ID_MAX) {
-      IWARN("scene_in_game::make_passive_selection_panel_ready()::Ability didn't registered yet"); 
+    if (_upg_choice.id <= ABILITY_ID_UNDEFINED or _upg_choice.id >= ABILITY_ID_MAX) {
+      IWARN("scene_in_game::prepare_ability_upgrade_state()::Ability didn't registered yet"); 
       continue;
     }
   }
@@ -1119,7 +1120,7 @@ void sig_init_chest_sequence(chest_opening_sequence_control::chest_opening_seque
       seq.mm_ex = mm_ex;
       state->chest_intro_ctrl.duration = CHEST_OPENING_SEQ_INTRO_DURATION;
       seq.sheet_chest.sheet_id = SHEET_ID_LOOT_ITEM_CHEST;
-      ui_set_sprite(__builtin_addressof(seq.sheet_chest), false, true);
+      ui_set_sprite(seq.sheet_chest, false, true);
       seq.sheet_chest.reset_after_finish = false;
 
       seq.vec_ex.f32[2] = static_cast<f32>(state->in_app_settings->render_width_div2);
@@ -1160,7 +1161,7 @@ void sig_init_chest_sequence(chest_opening_sequence_control::chest_opening_seque
 
       spritesheet& result_vfx = seq.sheets_background.emplace_back(spritesheet());
       result_vfx.sheet_id = SHEET_ID_SPIN_RESULT_STAR_105_105;
-      ui_set_sprite(__builtin_addressof(result_vfx), true, false);
+      ui_set_sprite(result_vfx, true, false);
       result_vfx.origin = Vector2 {
         CHEST_OPENING_SPIN_UNIT_SIZE.x * .5f,
         CHEST_OPENING_SPIN_UNIT_SIZE.y * .5f
@@ -1207,7 +1208,7 @@ void sig_update_chest_sequence(void) {
     }
     case seq.CHEST_OPENING_SEQUENCE_CHEST_OPEN: {
       if (not seq.sheet_chest.is_played) {
-        ui_update_sprite(__builtin_addressof(seq.sheet_chest), (*state->in_ingame_info->delta_time) );
+        ui_update_sprite(seq.sheet_chest, (*state->in_ingame_info->delta_time) );
         return;
       }
       else {
@@ -1251,7 +1252,7 @@ void sig_update_chest_sequence(void) {
         seq.accumulator = seq.duration;
       }
       seq.mm_ex.f32[1] = EaseSineInOut(seq.accumulator, seq.mm_ex.f32[0], -seq.mm_ex.f32[2], seq.duration);
-      ui_update_sprite(__builtin_addressof(seq.sheets_background.at(0)), (*state->in_ingame_info->delta_time) );
+      ui_update_sprite(seq.sheets_background.at(0), (*state->in_ingame_info->delta_time) );
       return;
     }
     default: {
@@ -1286,12 +1287,12 @@ void sig_render_chest_sequence(void) {
   switch (seq.sequence) {
     case seq.CHEST_OPENING_SEQUENCE_CHEST_IN: {
       draw_common_background( {bg_layer_color.r, bg_layer_color.g, bg_layer_color.b, static_cast<u8>(bg_layer_opacity * accumulator)});
-      ui_draw_sprite_on_site(&seq.sheet_chest, WHITE, 0);
+      ui_draw_sprite_on_site(seq.sheet_chest, WHITE, 0);
       return;
     }
     case seq.CHEST_OPENING_SEQUENCE_CHEST_OPEN: {
       draw_common_background(bg_layer_color);
-      ui_play_sprite_on_site(&seq.sheet_chest, seq.sheet_chest.coord, seq.sheet_chest.origin);
+      ui_play_sprite_on_site(seq.sheet_chest, seq.sheet_chest.coord, seq.sheet_chest.origin);
       return;
     }
     case seq.CHEST_OPENING_SEQUENCE_READY: {
@@ -1339,7 +1340,7 @@ void sig_render_chest_sequence(void) {
       item_type _item_type = draw_scrolling_textures(seq.item_ids_to_scroll, seq.mm_ex.f32[1], item_band_width, center_item_dest, item_band_unit_gap, gm_draw_sigil);
       gui_draw_atlas_texture_id(ATLAS_TEX_ID_DARK_FANTASY_PANEL, center_item_dest, Vector2 {center_item_dest.width * .5f, center_item_dest.height * .5f}, 0.f, WHITE);
 
-      ui_play_sprite_on_site(__builtin_addressof(seq.sheets_background.at(0)), center_item_dest, Vector2 {center_item_dest.width * .5f, center_item_dest.height * .5f}, 0.f, WHITE);
+      ui_play_sprite_on_site(seq.sheets_background.at(0), center_item_dest, Vector2 {center_item_dest.width * .5f, center_item_dest.height * .5f}, 0.f, WHITE);
 
       if (accumulator >= 1.f) {
         if (seq.mm_ex.f32[3] == static_cast<f32>(false)) {
