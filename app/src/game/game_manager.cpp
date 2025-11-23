@@ -558,7 +558,7 @@ void render_game(void) {
   event_fire(EVENT_CODE_SCENE_MAIN_MENU, event_context());
 }
 void gm_draw_sigil(item_type type, Vector2 position, bool should_center) {
-  if (type <= M_ITEM_TYPE_SIGIL_START or type >= M_ITEM_TYPE_SIGIL_END) {
+  if (type < M_ITEM_TYPE_SIGIL_START or type > M_ITEM_TYPE_SIGIL_END) {
     return;
   }
   const item_data& _sigil = state->default_items[type];

@@ -149,27 +149,24 @@ void render_tilemap(const tilemap *const _tilemap, Rectangle camera_view) {
   end_x = end_x < 0 ? 0 : (end_x > _tilemap->map_dim ? _tilemap->map_dim : end_x);
   end_y = end_y < 0 ? 0 : (end_y > _tilemap->map_dim ? _tilemap->map_dim : end_y);
 
-  
-
   for (i32 y = start_y; y < end_y; ++y) {
     for (i32 x = start_x; x < end_x; ++x) {
-      if (x < 0 or x >= MAX_TILEMAP_TILESLOT_X or y < 0 or y >= MAX_TILEMAP_TILESLOT_Y) {
-        IERROR("tilemap::render_tilemap()::Calculated tile's x or y out of bound");
-        continue;
-      }
-      i16 x_pos = _tilemap->position.x + x * _tilemap->tile_size;
-      i16 y_pos = _tilemap->position.y + y * _tilemap->tile_size;
+      const i16 x_pos = _tilemap->position.x + x * _tilemap->tile_size;
+      const i16 y_pos = _tilemap->position.y + y * _tilemap->tile_size;
+      const Rectangle tile_dest = Rectangle { (f32) x_pos, (f32) y_pos, (f32) _tilemap->tile_size, (f32) _tilemap->tile_size};
       
-      for (i32 layer = 0; layer < MAX_TILEMAP_LAYERS; ++layer) {
-        render_tile(__builtin_addressof(_tilemap->tiles[layer][x][y]), Rectangle { (f32) x_pos, (f32) y_pos, (f32) _tilemap->tile_size, (f32) _tilemap->tile_size}, sheet);
-      }
+      render_tile(_tilemap->tiles[0][x][y], tile_dest, sheet);
+      render_tile(_tilemap->tiles[1][x][y], tile_dest, sheet);
+      render_tile(_tilemap->tiles[2][x][y], tile_dest, sheet);
+      render_tile(_tilemap->tiles[3][x][y], tile_dest, sheet);
+      render_tile(_tilemap->tiles[4][x][y], tile_dest, sheet);
     }
   }
 
   for (size_t itr_000 = 0; itr_000 < _tilemap->render_z_index_queue.size(); ++itr_000) {
-    for (size_t itr_111 = 0; itr_111 < _tilemap->render_z_index_queue.at(itr_000).size(); ++itr_111) 
+    for (size_t itr_111 = 0; itr_111 < _tilemap->render_z_index_queue[itr_000].size(); ++itr_111) 
     {
-      const tilemap_prop_address *const _queue_prop_ptr = __builtin_addressof(_tilemap->render_z_index_queue.at(itr_000).at(itr_111));
+      const tilemap_prop_address *const _queue_prop_ptr = __builtin_addressof(_tilemap->render_z_index_queue[itr_000][itr_111]);
       if (_queue_prop_ptr->type <= TILEMAP_PROP_TYPE_UNDEFINED or _queue_prop_ptr->type >= TILEMAP_PROP_TYPE_MAX) {
         continue;
       }
@@ -408,7 +405,7 @@ void render_mainmenu(const tilemap *const _tilemap, Rectangle camera_view, const
       const i32 y_pos = map_position.y + y * dynamic_tile_size;
       
       for (i32 itr_000 = 0; itr_000 < MAX_TILEMAP_LAYERS; ++itr_000) {
-        render_tile(__builtin_addressof(_tilemap->tiles[itr_000][x][y]), Rectangle { 
+        render_tile(_tilemap->tiles[itr_000][x][y], Rectangle { 
           static_cast<f32>(x_pos), static_cast<f32>(y_pos), 
           static_cast<f32>(dynamic_tile_size), static_cast<f32>(dynamic_tile_size)}, 
           sheet
@@ -486,7 +483,7 @@ void render_tilesheet(const tilesheet *const sheet, f32 zoom) {
     i16 y_pos    = sheet->offset     + sheet->position.y + dest_y; 
     tile_symbol _tile = tile_symbol(x + TILEMAP_TILE_START_SYMBOL, y + TILEMAP_TILE_START_SYMBOL);
 
-    render_tile( __builtin_addressof(_tile), Rectangle { 
+    render_tile(_tile, Rectangle { 
         static_cast<f32>(x_pos), 
         static_cast<f32>(y_pos), 
         static_cast<f32>(sheet->dest_tile_size) * zoom, 
@@ -496,16 +493,13 @@ void render_tilesheet(const tilesheet *const sheet, f32 zoom) {
   }
 }
 
- void render_tile(const tile_symbol *const symbol,const Rectangle dest, const tilesheet *const sheet) {
-  if (not symbol or symbol == nullptr or not sheet or sheet == nullptr) {
-    return;
-  }
-  i32 c0    = symbol->c[0];
-  i32 c1    = symbol->c[1];
-  i32 x     = c0 - TILEMAP_TILE_START_SYMBOL;
-  i32 y     = c1 - TILEMAP_TILE_START_SYMBOL;
-  i32 x_pos = x * sheet->tile_size;
-  i32 y_pos = y * sheet->tile_size;
+void render_tile(const tile_symbol& symbol, const Rectangle& dest, const tilesheet *const sheet) {
+  const i32 c0    = symbol.c[0];
+  const i32 c1    = symbol.c[1];
+  const i32 x     = c0 - TILEMAP_TILE_START_SYMBOL;
+  const i32 y     = c1 - TILEMAP_TILE_START_SYMBOL;
+  const i32 x_pos = x * sheet->tile_size;
+  const i32 y_pos = y * sheet->tile_size;
 
   DrawTexturePro( (*sheet->atlas_handle), Rectangle {
     static_cast<f32>(x_pos), 

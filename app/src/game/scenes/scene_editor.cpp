@@ -593,7 +593,7 @@ void render_interface_editor(void) {
       }
       const tilesheet *const default_sheet = get_tilesheet_by_enum(state->default_sheet);
       if (default_sheet and default_sheet != nullptr) {
-        _render_tile_on_pos(__builtin_addressof(state->selected_tile), state->mouse_pos_screen, default_sheet);
+        _render_tile_on_pos(state->selected_tile, state->mouse_pos_screen, default_sheet);
       }
       break;
     }

@@ -1178,12 +1178,10 @@ void sig_update_chest_sequence(void) {
   chest_opening_sequence_control& seq = state->chest_intro_ctrl;
   switch (seq.sequence) {
     case seq.CHEST_OPENING_SEQUENCE_CHEST_IN: {
-      if (seq.accumulator >= seq.duration) {
-        sig_init_chest_sequence(seq.CHEST_OPENING_SEQUENCE_CHEST_OPEN);
-        return;
-      }
       seq.accumulator += (*state->in_ingame_info->delta_time);
-      seq.accumulator = std::clamp(seq.accumulator, 0.f, seq.duration);
+      if (seq.accumulator > seq.duration) {
+        seq.accumulator = seq.duration;
+      }
 
       seq.mm_ex.f32[0] = EaseBackOut(seq.accumulator, seq.mm_ex.f32[1], CHEST_OPENING_SEQ_CHEST_SCALE - seq.mm_ex.f32[1], seq.duration);
       state->chest_intro_ctrl.sheet_chest.coord.width  = state->chest_intro_ctrl.sheet_chest.current_frame_rect.width  * seq.mm_ex.f32[0];
@@ -1193,6 +1191,18 @@ void sig_update_chest_sequence(void) {
 
       seq.sheet_chest.coord.x = EaseBackIn(seq.accumulator, seq.vec_ex.f32[0], seq.vec_ex.f32[2] - seq.vec_ex.f32[0], seq.duration);
       seq.sheet_chest.coord.y = EaseBackIn(seq.accumulator, seq.vec_ex.f32[1], seq.vec_ex.f32[3] - seq.vec_ex.f32[1], seq.duration);
+
+      if (seq.accumulator >= seq.duration) {
+        seq.sheet_chest.coord.x = seq.vec_ex.f32[2];
+        seq.sheet_chest.coord.y = seq.vec_ex.f32[3];
+        seq.mm_ex.f32[0] = CHEST_OPENING_SEQ_CHEST_SCALE;
+        seq.sheet_chest.coord.width  = seq.sheet_chest.current_frame_rect.width  * seq.mm_ex.f32[0];
+        seq.sheet_chest.coord.height = seq.sheet_chest.current_frame_rect.height * seq.mm_ex.f32[0];
+        seq.sheet_chest.origin.x = seq.sheet_chest.coord.width  * .5f;
+        seq.sheet_chest.origin.y = seq.sheet_chest.coord.height * .5f;
+        sig_init_chest_sequence(seq.CHEST_OPENING_SEQUENCE_CHEST_OPEN);
+        return;
+      }
       return;
     }
     case seq.CHEST_OPENING_SEQUENCE_CHEST_OPEN: {
@@ -1281,7 +1291,7 @@ void sig_render_chest_sequence(void) {
     }
     case seq.CHEST_OPENING_SEQUENCE_CHEST_OPEN: {
       draw_common_background(bg_layer_color);
-      ui_play_sprite_on_site(&seq.sheet_chest, seq.sheet_chest.coord);
+      ui_play_sprite_on_site(&seq.sheet_chest, seq.sheet_chest.coord, seq.sheet_chest.origin);
       return;
     }
     case seq.CHEST_OPENING_SEQUENCE_READY: {
@@ -1329,7 +1339,7 @@ void sig_render_chest_sequence(void) {
       item_type _item_type = draw_scrolling_textures(seq.item_ids_to_scroll, seq.mm_ex.f32[1], item_band_width, center_item_dest, item_band_unit_gap, gm_draw_sigil);
       gui_draw_atlas_texture_id(ATLAS_TEX_ID_DARK_FANTASY_PANEL, center_item_dest, Vector2 {center_item_dest.width * .5f, center_item_dest.height * .5f}, 0.f, WHITE);
 
-      ui_play_sprite_on_site(__builtin_addressof(seq.sheets_background.at(0)), center_item_dest);
+      ui_play_sprite_on_site(__builtin_addressof(seq.sheets_background.at(0)), center_item_dest, Vector2 {center_item_dest.width * .5f, center_item_dest.height * .5f}, 0.f, WHITE);
 
       if (accumulator >= 1.f) {
         if (seq.mm_ex.f32[3] == static_cast<f32>(false)) {
@@ -1341,6 +1351,7 @@ void sig_render_chest_sequence(void) {
           sig_change_ingame_state(SCENE_INGAME_STATE_PLAY);
         }
       }
+      DrawLine(center_item_dest.x, center_item_dest.y - center_item_dest.height * .5f, center_item_dest.x, center_item_dest.y + center_item_dest.height * .5f, WHITE);
       return;
     }
     default: {
@@ -1355,8 +1366,9 @@ void sig_populate_the_chest_for_chest_seq(std::vector<item_type>& item_tex_to_sc
   //const std::array<item_data, ITEM_TYPE_MAX>& _defaults = gm_get_default_items(); 
 
   for (i32 itr_000 = 0; itr_000 < GM_ITEM_COUNT_CHESTS_SCROLL ; itr_000++) {
-    size_t rand = get_random_ssl(M_ITEM_TYPE_COMMON_SIGIL_START, M_ITEM_TYPE_SIGIL_END);
-    texs.push_back(static_cast<item_type>(rand));
+    i32 rand_index = static_cast<i32>(get_random_ssl(M_ITEM_TYPE_COMMON_SIGIL_START, M_ITEM_TYPE_SIGIL_END));
+    rand_index = std::clamp(rand_index, static_cast<i32>(M_ITEM_TYPE_COMMON_SIGIL_START), static_cast<i32>(M_ITEM_TYPE_SIGIL_END));
+    texs.push_back(static_cast<item_type>(rand_index));
   }
 }
 

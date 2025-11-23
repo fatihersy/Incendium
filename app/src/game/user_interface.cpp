@@ -939,7 +939,7 @@ item_type draw_scrolling_textures(
 
     const i32 item_array_size = static_cast<i32>(item_tex_ids.size());
     const Rectangle _center_rect = center_unit;
-    const f32 true_center = _center_rect.x + _center_rect.width * .5f;
+    const f32 true_center = _center_rect.x;
     const f32 unit_width_with_gap = center_unit.width + unit_gap;
     
     // FIXED: More accurate unit count calculation
@@ -979,30 +979,24 @@ item_type draw_scrolling_textures(
         pfn_draw(rightmost_tex_id, rightmost_pos);
     }
     
-    // Keep the proven distance calculation
     item_type most_center = ITEM_TYPE_UNDEFINED;
     f32 distance_to_center = 0.f;
-    const bool units_moving_right = _offset >= 0;
+    const f32 half_width = center_unit.width * 0.5f;
+    const f32 next_enter_x = (center_unit.x + unit_width_with_gap) - half_width;
+    const f32 prev_enter_x = (center_unit.x - unit_width_with_gap) + half_width;
+    i32 selected_index = center_unit_index;
+    f32 selected_center_x = center_unit.x;
 
-    if (units_moving_right) {
-        const bool center_unit_is_on_center = ((true_center + (unit_gap * .5f)) - center_unit.x) >= 0;
-        if (center_unit_is_on_center) {
-            most_center = item_tex_ids.at(center_unit_index);
-            distance_to_center = _center_rect.x - center_unit.x;
-        } else {
-            most_center = item_tex_ids.at(static_cast<size_t>(wrap_index(center_unit_index + 1, item_array_size)));
-            distance_to_center = _center_rect.x + _center_rect.width + unit_gap - center_unit.x;
-        }
-    } else {
-        const bool center_unit_is_on_center = ((center_unit.x + center_unit.width + unit_gap * .5f) - true_center) >= 0;
-        if (center_unit_is_on_center) {
-            most_center = item_tex_ids.at(center_unit_index);
-            distance_to_center = center_unit.x - _center_rect.x;
-        } else {
-            most_center = item_tex_ids.at(static_cast<size_t>(wrap_index(center_unit_index - 1, item_array_size)));
-            distance_to_center = _center_rect.x - _center_rect.width - unit_gap + center_unit.x;
-        }
+    if (true_center >= next_enter_x) {
+        selected_index = wrap_index(center_unit_index + 1, item_array_size);
+        selected_center_x = center_unit.x + unit_width_with_gap;
+    } else if (true_center <= prev_enter_x) {
+        selected_index = wrap_index(center_unit_index - 1, item_array_size);
+        selected_center_x = center_unit.x - unit_width_with_gap;
     }
+
+    most_center = item_tex_ids.at(static_cast<size_t>(selected_index));
+    distance_to_center = true_center - selected_center_x;
 
     if (out_distance_to_center) {
         *out_distance_to_center = distance_to_center;

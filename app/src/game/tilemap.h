@@ -12,7 +12,7 @@ void render_tilemap(const tilemap *const _tilemap, Rectangle camera_view);
 void render_props_y_based_all(const tilemap *const _tilemap, Rectangle camera_view, i32 start_y, i32 end_y);
 void render_props_y_based_by_zindex(const tilemap *const _tilemap, size_t index, Rectangle camera_view, i32 start_y, i32 end_y);
 void render_tilesheet(const tilesheet *const sheet, f32 zoom);
-void render_tile(const tile_symbol *const symbol, const Rectangle dest, const tilesheet *const sheet);
+void render_tile(const tile_symbol& symbol, const Rectangle& dest, const tilesheet *const sheet);
 void render_mainmenu(const tilemap *const _tilemap, Rectangle camera_view, const app_settings *const in_settings);
 
 Vector2 get_tilesheet_dim(const tilesheet *const sheet);

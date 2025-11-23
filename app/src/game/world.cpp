@@ -520,11 +520,7 @@ tile _get_tile_from_map_by_mouse_pos(i32 from_layer, Vector2 _mouse_pos) {
   }
   return get_tile_from_map_by_mouse_pos(state->active_map, GetScreenToWorld2D(_mouse_pos, state->in_camera_metrics->handle), from_layer);
 }
-void _render_tile_on_pos(const tile *const _tile, Vector2 pos, const tilesheet *const sheet) {
-  if (not _tile or not _tile->is_initialized or not sheet) {
-    IWARN("world::_render_tile()::Pointer(s) is/are invalid");
-    return;
-  }
-  render_tile(__builtin_addressof(_tile->symbol), Rectangle {pos.x, pos.y, (f32) state->active_map->tile_size, (f32) state->active_map->tile_size }, sheet);
+void _render_tile_on_pos(const tile& _tile, Vector2 pos, const tilesheet *const sheet) {
+  render_tile(_tile.symbol, Rectangle {pos.x, pos.y, (f32) state->active_map->tile_size, (f32) state->active_map->tile_size }, sheet);
 }
 // EXPOSED

@@ -35,7 +35,7 @@ bool remove_prop_cur_map_by_id(i32 map_id, tilemap_prop_types type);
 bool remove_map_collision_by_id(i32 coll_id);
 void update_map(f32 delta_time);
 void drag_tilesheet(Vector2 vec);
-void _render_tile_on_pos(const tile *const _tile, Vector2 pos, const tilesheet *const sheet);
+void _render_tile_on_pos(const tile& _tile, Vector2 pos, const tilesheet *const sheet);
 void render_map(void);
 void render_map_palette(f32 zoom);
 void refresh_render_queue(i32 id);

@@ -50,7 +50,7 @@ void upgrade_ability_bullet(ability *const abl) {
         abl->base_damage += abl->level * 2;
         break;
       }
-      case ABILITY_UPG_AMOUNT: { 
+      case ABILITY_UPG_AMOUNT: {
         abl->proj_count++;
         break;
       }
