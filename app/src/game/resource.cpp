@@ -74,6 +74,10 @@ bool resource_system_initialize(void) {
   load_texture_pak(PAK_FILE_ASSET1, PAK_FILE_ASSET1_ENTRANCE8_160x280, false, VECTOR2(0.f, 0.f), TEX_ID_ENTRANCE8_160x280);
   load_texture_pak(PAK_FILE_ASSET1, PAK_FILE_ASSET1_ENTRANCE9_160x280, false, VECTOR2(0.f, 0.f), TEX_ID_ENTRANCE9_160x280);
 
+  load_texture_pak(PAK_FILE_ASSET1, PAK_FILE_ASSET1_HARVESTER_EFFECT_517x517, false, VECTOR2(0.f, 0.f), TEX_ID_HARVESTER_EFFECT_517x517);
+  load_texture_pak(PAK_FILE_ASSET1, PAK_FILE_ASSET1_HARVESTER_HEAD_455x451,   false, VECTOR2(0.f, 0.f), TEX_ID_HARVESTER_HEAD_455x451);
+  load_texture_pak(PAK_FILE_ASSET1, PAK_FILE_ASSET1_HARVESTER_TRAIL_393x497,  false, VECTOR2(0.f, 0.f), TEX_ID_HARVESTER_TRAIL_393x497);
+
   load_texture_pak(PAK_FILE_ASSET1, PAK_FILE_SIGIL_ABILITY_CD,                 false, VECTOR2(0.f, 0.f), TEX_ID_SIGIL_ABILITY_CD,);
   load_texture_pak(PAK_FILE_ASSET1, PAK_FILE_SIGIL_AOE,                        false, VECTOR2(0.f, 0.f), TEX_ID_SIGIL_AOE,);
   load_texture_pak(PAK_FILE_ASSET1, PAK_FILE_SIGIL_BASIC_ATTACK_DAMAGE,        false, VECTOR2(0.f, 0.f), TEX_ID_SIGIL_BASIC_ATTACK_DAMAGE,);
@@ -101,7 +105,9 @@ bool resource_system_initialize(void) {
   load_texture_pak(PAK_FILE_ASSET1, PAK_FILE_SIGIL_STAMINA,                    false, VECTOR2(0.f, 0.f), TEX_ID_SIGIL_STAMINA,);
   load_texture_pak(PAK_FILE_ASSET1, PAK_FILE_SIGIL_TOTAL_TRAIT_POINT,          false, VECTOR2(0.f, 0.f), TEX_ID_SIGIL_TOTAL_TRAIT_POINT,);
   load_texture_pak(PAK_FILE_ASSET1, PAK_FILE_SIGIL_VITAL_SIGIL_EFFECTIVENESS,  false, VECTOR2(0.f, 0.f), TEX_ID_SIGIL_VITAL_SIGIL_EFFECTIVENESS,);
+
   #else
+
     load_texture_disk("atlas.png", false, VECTOR2(0.f, 0.f), TEX_ID_ASSET_ATLAS);
     load_texture_disk("worldmap_wo_clouds.png", false, VECTOR2(0.f, 0.f), TEX_ID_WORLDMAP_WO_CLOUDS);
     load_texture_disk("black_background_1.png", false, VECTOR2(0.f, 0.f), TEX_ID_BLACK_BACKGROUND_IMG1);
@@ -118,6 +124,10 @@ bool resource_system_initialize(void) {
     load_texture_disk("entrance7_160x280.png", false, VECTOR2(0.f, 0.f), TEX_ID_ENTRANCE7_160x280);
     load_texture_disk("entrance8_160x280.png", false, VECTOR2(0.f, 0.f), TEX_ID_ENTRANCE8_160x280);
     load_texture_disk("entrance9_160x280.png", false, VECTOR2(0.f, 0.f), TEX_ID_ENTRANCE9_160x280);
+
+    load_texture_disk("harvester_effect_517x517.png", false, VECTOR2(0.f, 0.f), TEX_ID_HARVESTER_EFFECT_517x517);
+    load_texture_disk("harvester_head_455x451.png",   false, VECTOR2(0.f, 0.f), TEX_ID_HARVESTER_HEAD_455x451);
+    load_texture_disk("harvester_trail_393x497.png",  false, VECTOR2(0.f, 0.f), TEX_ID_HARVESTER_TRAIL_393x497);
 
     load_texture_disk("sigils/ability_cd_clear-modified.png",                false, VECTOR2(0.f, 0.f), TEX_ID_SIGIL_ABILITY_CD);
     load_texture_disk("sigils/aoe_clear-modified.png",                       false, VECTOR2(0.f, 0.f), TEX_ID_SIGIL_AOE);
@@ -200,15 +210,19 @@ bool resource_system_initialize(void) {
   load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_PLAYER_ANIMATION_DASH,              VECTOR2(1568, 1888), 10,  144,  64, 1,  7);
 
 
-  load_spritesheet(TEX_ID_ENTRANCE1_160x280, SHEET_ID_ENTRANCE1_ANIMATION,          VECTOR2(   0.f,   0.f), 22,160, 280, 1, 16);
-  load_spritesheet(TEX_ID_ENTRANCE2_160x280, SHEET_ID_ENTRANCE2_ANIMATION,          VECTOR2(   0.f,   0.f), 22,160, 280, 1, 16);
-  load_spritesheet(TEX_ID_ENTRANCE3_160x280, SHEET_ID_ENTRANCE3_ANIMATION,          VECTOR2(   0.f,   0.f), 22,160, 280, 1, 16);
-  load_spritesheet(TEX_ID_ENTRANCE4_160x280, SHEET_ID_ENTRANCE4_ANIMATION,          VECTOR2(   0.f,   0.f), 22,160, 280, 1, 16);
-  load_spritesheet(TEX_ID_ENTRANCE5_160x280, SHEET_ID_ENTRANCE5_ANIMATION,          VECTOR2(   0.f,   0.f), 22,160, 280, 1, 16);
-  load_spritesheet(TEX_ID_ENTRANCE6_160x280, SHEET_ID_ENTRANCE6_ANIMATION,          VECTOR2(   0.f,   0.f), 22,160, 280, 1, 16);
-  load_spritesheet(TEX_ID_ENTRANCE7_160x280, SHEET_ID_ENTRANCE7_ANIMATION,          VECTOR2(   0.f,   0.f), 22,160, 280, 1, 16);
-  load_spritesheet(TEX_ID_ENTRANCE8_160x280, SHEET_ID_ENTRANCE8_ANIMATION,          VECTOR2(   0.f,   0.f), 22,160, 280, 1, 16);
-  load_spritesheet(TEX_ID_ENTRANCE9_160x280, SHEET_ID_ENTRANCE9_ANIMATION,          VECTOR2(   0.f,   0.f), 22,160, 280, 1, 16);
+  load_spritesheet(TEX_ID_ENTRANCE1_160x280, SHEET_ID_ENTRANCE1_ANIMATION,          VECTOR2(   0.f,   0.f), 22, 160, 280, 1, 16);
+  load_spritesheet(TEX_ID_ENTRANCE2_160x280, SHEET_ID_ENTRANCE2_ANIMATION,          VECTOR2(   0.f,   0.f), 22, 160, 280, 1, 16);
+  load_spritesheet(TEX_ID_ENTRANCE3_160x280, SHEET_ID_ENTRANCE3_ANIMATION,          VECTOR2(   0.f,   0.f), 22, 160, 280, 1, 16);
+  load_spritesheet(TEX_ID_ENTRANCE4_160x280, SHEET_ID_ENTRANCE4_ANIMATION,          VECTOR2(   0.f,   0.f), 22, 160, 280, 1, 16);
+  load_spritesheet(TEX_ID_ENTRANCE5_160x280, SHEET_ID_ENTRANCE5_ANIMATION,          VECTOR2(   0.f,   0.f), 22, 160, 280, 1, 16);
+  load_spritesheet(TEX_ID_ENTRANCE6_160x280, SHEET_ID_ENTRANCE6_ANIMATION,          VECTOR2(   0.f,   0.f), 22, 160, 280, 1, 16);
+  load_spritesheet(TEX_ID_ENTRANCE7_160x280, SHEET_ID_ENTRANCE7_ANIMATION,          VECTOR2(   0.f,   0.f), 22, 160, 280, 1, 16);
+  load_spritesheet(TEX_ID_ENTRANCE8_160x280, SHEET_ID_ENTRANCE8_ANIMATION,          VECTOR2(   0.f,   0.f), 22, 160, 280, 1, 16);
+  load_spritesheet(TEX_ID_ENTRANCE9_160x280, SHEET_ID_ENTRANCE9_ANIMATION,          VECTOR2(   0.f,   0.f), 22, 160, 280, 1, 16);
+
+  load_spritesheet(TEX_ID_HARVESTER_EFFECT_517x517, SHEET_ID_HARVESTER_EFFECT,      VECTOR2(   0.f,   0.f),240, 517, 517, 7, 9);
+  load_spritesheet(TEX_ID_HARVESTER_HEAD_455x451,   SHEET_ID_HARVESTER_HEAD,        VECTOR2(   0.f,   0.f),180, 455, 451, 5, 6);
+  load_spritesheet(TEX_ID_HARVESTER_TRAIL_393x497,  SHEET_ID_HARVESTER_TRAIL,       VECTOR2(   0.f,   0.f),240, 393, 497, 7, 9);
 
   load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_PORTAL,                             VECTOR2(1568.f,1312.f), 12, 32,  32, 1,  6);
 

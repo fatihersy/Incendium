@@ -33,6 +33,8 @@ namespace std {
 }
 using SpatialHash = std::unordered_map<grid_cell_id, std::vector<Character2D*>>;
 
+constexpr i32 SPAWN_ID_NEXT_START = 1;
+
 typedef struct spawn_system_state {
   std::vector<Character2D> spawns; // NOTE: See also clean-up function
   const camera_metrics * in_camera_metrics;
@@ -42,14 +44,16 @@ typedef struct spawn_system_state {
   SpatialHash spatial_grid;
   std::unordered_map<i32, size_t> spawn_id_to_index_map;
 
+  element_handle nearest_spawn_handle;
+  element_handle first_spawn_on_screen_handle;
+
   spawn_system_state(void) {
     this->in_camera_metrics = nullptr;
     this->in_ingame_info = nullptr;
+    this->next_spawn_id = SPAWN_ID_NEXT_START;
   }
 } spawn_system_state;
 
-// To avoid dublicate symbol errors. Implementation in defines.h
-extern const i32 level_curve[MAX_PLAYER_LEVEL + 1];
 static spawn_system_state * state = nullptr;
 
 #define DEATH_EFFECT_HEIGHT_SCALE 0.115f
@@ -75,8 +79,8 @@ CheckCollisionRecs(REC1, \
 #define SPAWN_BASE_SPEED 50
 #define SPAWN_SPEED_CURVE(LEVEL, SCALE, TYPE) (SPAWN_BASE_SPEED + ((SPAWN_BASE_SPEED * (LEVEL + (LEVEL * 0.2f)) + (TYPE + (TYPE * 0.25f))) / SCALE))
 
-#define GET_SPW_EXP(CHARACTER)  level_curve[CHARACTER->genp.i32[1]] * (static_cast<f32>(CHARACTER->type) / static_cast<f32>(SPAWN_TYPE_MAX)) * (CHARACTER->scale / SPAWN_RND_SCALE_MAX)
-#define GET_SPW_COIN(CHARACTER) level_curve[CHARACTER->genp.i32[1]] * (static_cast<f32>(CHARACTER->type) / static_cast<f32>(SPAWN_TYPE_MAX)) * (CHARACTER->scale / SPAWN_RND_SCALE_MAX)
+#define GET_SPW_EXP(CHARACTER)  level_curve[CHARACTER->buffer.i32[1]] * (static_cast<f32>(CHARACTER->type) / static_cast<f32>(SPAWN_TYPE_MAX)) * (CHARACTER->scale / SPAWN_RND_SCALE_MAX)
+#define GET_SPW_COIN(CHARACTER) level_curve[CHARACTER->buffer.i32[1]] * (static_cast<f32>(CHARACTER->type) / static_cast<f32>(SPAWN_TYPE_MAX)) * (CHARACTER->scale / SPAWN_RND_SCALE_MAX)
 
 void spawn_play_anim(Character2D& spawn, spawn_movement_animations sheet);
 void remove_spawn(i32 index);
@@ -119,7 +123,9 @@ bool spawn_system_initialize(const camera_metrics* _camera_metrics, const ingame
   state->in_ingame_info = _ingame_info;
 
   event_register(EVENT_CODE_SET_SPAWN_FOLLOW_DISTANCE, spawn_on_event);
-
+  event_register(EVENT_CODE_SET_SPAWN_TINT, spawn_on_event);
+  event_register(EVENT_CODE_HALT_SPAWN_MOVEMENT, spawn_on_event);
+  event_register(EVENT_CODE_DAMAGE_SPAWN_BY_ID, spawn_on_event);
   return true;
 }
 
@@ -265,12 +271,12 @@ i32 spawn_character(Character2D _character) {
   if (_character.type <= SPAWN_TYPE_UNDEFINED or _character.type >= SPAWN_TYPE_MAX) {
     return -1;
   }
-  _character.scale =  SPAWN_RND_SCALE_MIN + (SPAWN_RND_SCALE_MAX * _character.genp.i32[2] / 100.f);
-  _character.scale += SPAWN_SCALE_INCREASE_BY_LEVEL(_character.genp.i32[1]);
+  _character.scale =  SPAWN_RND_SCALE_MIN + (SPAWN_RND_SCALE_MAX * _character.buffer.i32[2] / 100.f);
+  _character.scale += SPAWN_SCALE_INCREASE_BY_LEVEL(_character.buffer.i32[1]);
 
-  _character.health_max = SPAWN_HEALTH_CURVE(_character.genp.i32[1], _character.scale, static_cast<f32>(_character.type));
-  _character.damage = SPAWN_DAMAGE_CURVE(_character.genp.i32[1], _character.scale, static_cast<f32>(_character.type));
-  _character.speed =  SPAWN_SPEED_CURVE(_character.genp.i32[1], _character.scale, static_cast<f32>(_character.type));
+  _character.health_max = SPAWN_HEALTH_CURVE(_character.buffer.i32[1], _character.scale, static_cast<f32>(_character.type));
+  _character.damage = SPAWN_DAMAGE_CURVE(_character.buffer.i32[1], _character.scale, static_cast<f32>(_character.type));
+  _character.speed =  SPAWN_SPEED_CURVE(_character.buffer.i32[1], _character.scale, static_cast<f32>(_character.type));
   
   _character.health_current = _character.health_max;
 
@@ -290,6 +296,7 @@ i32 spawn_character(Character2D _character) {
   _character.death_effect_animation.sheet_id = SHEET_ID_SPAWN_EXPLOSION;
   set_sprite(_character.death_effect_animation, false, true);
 
+  _character.tint = WHITE;
   _character.w_direction = WORLD_DIRECTION_RIGHT;
   _character.last_played_animation = SPAWN_ZOMBIE_ANIMATION_MOVE_RIGHT;
   _character.character_id = state->next_spawn_id++;
@@ -327,41 +334,47 @@ bool update_spawns(Vector2 player_position) {
     IERROR("spawn::update_spawns()::State is not valid");
     return false; 
   }
+  f32 max_spawn_distance = static_cast<f32>(std::numeric_limits<i32>::max());
+  
+  state->first_spawn_on_screen_handle.id = 0;
+  state->first_spawn_on_screen_handle.index = std::numeric_limits<i32>::max();
+  state->nearest_spawn_handle.id = 0;
+  state->nearest_spawn_handle.index = std::numeric_limits<i32>::max();
 
-  for (auto& character : state->spawns) {
-    if (not character.initialized) { 
+  for (size_t spw_index = 0; spw_index < state->spawns.size(); spw_index++) {
+    Character2D& spw = state->spawns[spw_index];
+    if (not spw.initialized) { 
       continue; 
     }
-    if (not character.is_damagable) {
-      if (character.damage_break_time >= 0) {
-        character.damage_break_time -= (*state->in_ingame_info->delta_time);
+    if (not spw.is_damagable) {
+      if (spw.damage_break_time >= 0) {
+        spw.damage_break_time -= (*state->in_ingame_info->delta_time);
       }
       else {
-        character.is_damagable = true;
-        reset_sprite(character.take_damage_left_animation, true);
-        reset_sprite(character.take_damage_right_animation, true);
+        spw.is_damagable = true;
+        reset_sprite(spw.take_damage_left_animation, true);
+        reset_sprite(spw.take_damage_right_animation, true);
       }
     }
-    character.is_on_screen = CheckCollisionRecs(character.collision, state->in_camera_metrics->frustum);
 
-    if (character.is_dead) {
-      if (character.is_on_screen) {
-        update_sprite(character.death_effect_animation, (*state->in_ingame_info->delta_time) );
-        update_spawn_animation(character);
+    if (spw.is_dead ) {
+      if (spw.is_on_screen) {
+        update_sprite(spw.death_effect_animation, (*state->in_ingame_info->delta_time) );
+        update_spawn_animation(spw);
       }
       else {
-        character.initialized = false; // INFO: Forcing to remove
+        spw.initialized = false; // INFO: Forcing to remove
       }
       continue; 
     }
-    f32 distance = vec2_distance(character.position, player_position);
-    if (distance < state->spawn_follow_distance) {
-      grid_cell_id old_cell = get_cell_id(character.position);
-      Vector2 new_position = move_towards(character.position, player_position, character.speed * (*state->in_ingame_info->delta_time) );
+    f32 distance = vec2_distance(spw.position, player_position);
+    if (distance < state->spawn_follow_distance and not spw.cond_halt_move.is_active) {
+      grid_cell_id old_cell = get_cell_id(spw.position);
+      Vector2 new_position = move_towards(spw.position, player_position, spw.speed * (*state->in_ingame_info->delta_time) );
       bool x0_collide = false;
       bool y0_collide = false;
 
-      grid_cell_id current_cell = get_cell_id(character.position);
+      grid_cell_id current_cell = get_cell_id(spw.position);
 
       for (int x = current_cell.x - 1; x <= current_cell.x + 1; ++x) { 
         for (int y = current_cell.y - 1; y <= current_cell.y + 1; ++y) {
@@ -371,10 +384,10 @@ bool update_spawns(Vector2 player_position) {
             continue;
           }
           for (Character2D* neighbor : it->second) {
-            if (neighbor->character_id == character.character_id) {
+            if (neighbor->character_id == spw.character_id) {
               continue;
             }
-            const Rectangle spw_col = character.collision;
+            const Rectangle spw_col = spw.collision;
             const Rectangle x0 = {spw_col.x, new_position.y, spw_col.width, spw_col.height};
             const Rectangle y0 = {new_position.x, spw_col.y, spw_col.width, spw_col.height};
             if (CheckCollisionRecs(neighbor->collision, x0)) {
@@ -387,40 +400,59 @@ bool update_spawns(Vector2 player_position) {
         }
       }
       if (not x0_collide) {
-        character.position.y = new_position.y;
-        character.collision.y = character.position.y;
+        spw.position.y = new_position.y;
+        spw.collision.y = spw.position.y;
       }
       if (not y0_collide) {
-        if (character.position.x - new_position.x > 0) {
-          character.w_direction = WORLD_DIRECTION_LEFT;
+        if (spw.position.x - new_position.x > 0) {
+          spw.w_direction = WORLD_DIRECTION_LEFT;
         } else {
-          character.w_direction = WORLD_DIRECTION_RIGHT;
+          spw.w_direction = WORLD_DIRECTION_RIGHT;
         }
-        character.position.x = new_position.x;
-        character.collision.x = character.position.x;
+        spw.position.x = new_position.x;
+        spw.collision.x = spw.position.x;
       }
-      grid_cell_id new_cell = get_cell_id(character.position);
+      grid_cell_id new_cell = get_cell_id(spw.position);
       if (new_cell.x != old_cell.x or new_cell.y != old_cell.y) {
         auto it = state->spatial_grid.find(old_cell);
         if (it != state->spatial_grid.end()) {
-          std::erase(it->second, &character);
+          std::erase(it->second, &spw);
         }
-        state->spatial_grid[new_cell].push_back(&character);
+        state->spatial_grid[new_cell].push_back(&spw);
       }
     }
+    if (spw.cond_halt_move.is_active) {
+      if (spw.cond_halt_move.accumulator > spw.cond_halt_move.duration) {
+        spw.cond_halt_move.accumulator = 0.f;
+        spw.cond_halt_move.duration = 0.f;
+        spw.cond_halt_move.is_active = false;
+      }
+      else spw.cond_halt_move.accumulator += (*state->in_ingame_info->delta_time);
+    }
 
-    update_spawn_animation(character);
+    update_spawn_animation(spw);
 
     // WARN: This event fires 'clean_up_spawn_state()' function if player die from damage
     event_fire(EVENT_CODE_DAMAGE_PLAYER_IF_COLLIDE, event_context(
-      static_cast<i16>(character.collision.x), static_cast<i16>(character.collision.y), static_cast<i16>(character.collision.width), static_cast<i16>(character.collision.height),
-      static_cast<i16>(character.damage),
+      static_cast<i16>(spw.collision.x), static_cast<i16>(spw.collision.y), static_cast<i16>(spw.collision.width), static_cast<i16>(spw.collision.height),
+      static_cast<i16>(spw.damage),
       static_cast<i16>(COLLISION_TYPE_RECTANGLE_RECTANGLE)
     ));
     // WARN: This event fires 'clean_up_spawn_state()' function if player die from damage
 
     if (state->spawns.empty()) {
       break;
+    }
+    spw.is_on_screen = CheckCollisionRecs(spw.collision, state->in_camera_metrics->frustum);
+
+    if (spw.is_on_screen and state->first_spawn_on_screen_handle.id < SPAWN_ID_NEXT_START) {
+      state->first_spawn_on_screen_handle.id = spw.character_id;
+      state->first_spawn_on_screen_handle.index = spw_index;
+    }
+    if (distance < max_spawn_distance) {
+      state->nearest_spawn_handle.id = spw.character_id;
+      state->nearest_spawn_handle.index = spw_index;
+      max_spawn_distance = distance;
     }
   }
   for (size_t itr_000 = state->spawns.size(); itr_000-- > 0;) {
@@ -429,7 +461,7 @@ bool update_spawns(Vector2 player_position) {
     if (not spw.initialized) {
       should_be_deleted = true;
     }
-    if (spw.is_dead or (spw.health_current <= 0) or spw.health_current > MAX_SPAWN_HEALTH) {
+    if (spw.is_dead) {
       if (spw.take_damage_left_animation.is_played or spw.take_damage_right_animation.is_played) {
         should_be_deleted = spw.death_effect_animation.is_played;  
       }
@@ -575,6 +607,12 @@ const Character2D * get_spawn_by_id(i32 _id) {
 
   return __builtin_addressof(state->spawns.at(index));;
 }
+const element_handle * get_nearest_spawn(void) {
+  return &state->nearest_spawn_handle;
+}
+const element_handle * get_first_spawn_on_screen(void) {
+  return &state->first_spawn_on_screen_handle;
+}
 
 void clean_up_spawn_state(void) {
   for (Character2D& spw : state->spawns) {
@@ -585,7 +623,7 @@ void clean_up_spawn_state(void) {
 
   state->spatial_grid.clear();
   state->spawn_id_to_index_map.clear();
-  state->next_spawn_id = 0;
+  state->next_spawn_id = SPAWN_ID_NEXT_START;
 }
 
 void spawn_play_anim(Character2D& spawn, spawn_movement_animations movement) {
@@ -593,22 +631,22 @@ void spawn_play_anim(Character2D& spawn, spawn_movement_animations movement) {
 
   switch (movement) {
     case SPAWN_ZOMBIE_ANIMATION_MOVE_LEFT: {
-      play_sprite_on_site(spawn.move_left_animation, WHITE, dest);
+      play_sprite_on_site(spawn.move_left_animation, spawn.tint, dest);
       spawn.last_played_animation = SPAWN_ZOMBIE_ANIMATION_MOVE_LEFT;
       break;
     }
     case SPAWN_ZOMBIE_ANIMATION_MOVE_RIGHT: {
-      play_sprite_on_site(spawn.move_right_animation, WHITE, dest);
+      play_sprite_on_site(spawn.move_right_animation, spawn.tint, dest);
       spawn.last_played_animation = SPAWN_ZOMBIE_ANIMATION_MOVE_RIGHT;
       break;
     }
     case SPAWN_ZOMBIE_ANIMATION_TAKE_DAMAGE_LEFT:  {
-      play_sprite_on_site(spawn.take_damage_left_animation, WHITE, dest);
+      play_sprite_on_site(spawn.take_damage_left_animation, spawn.tint, dest);
       spawn.last_played_animation = SPAWN_ZOMBIE_ANIMATION_TAKE_DAMAGE_LEFT;
       break;
     }
     case SPAWN_ZOMBIE_ANIMATION_TAKE_DAMAGE_RIGHT:  {
-      play_sprite_on_site(spawn.take_damage_right_animation, WHITE, dest);
+      play_sprite_on_site(spawn.take_damage_right_animation, spawn.tint, dest);
       spawn.last_played_animation = SPAWN_ZOMBIE_ANIMATION_TAKE_DAMAGE_RIGHT;
       break;
     }
@@ -819,6 +857,39 @@ bool spawn_on_event(i32 code, event_context context) {
     case EVENT_CODE_SET_SPAWN_FOLLOW_DISTANCE: {
       //state->spawn_follow_distance = (*state->in_ingame_info->game_rules)[GAME_RULE_ZOMBIE_FOLLOW_DISTANCE].mm_ex.f32[3];
       state->spawn_follow_distance = context.data.f32[0];
+      return true;
+    }
+    case EVENT_CODE_SET_SPAWN_TINT: {
+      const i16& spw_id = context.data.i16[0];
+      const i16& spw_index = context.data.i16[1];
+      if (static_cast<size_t>(spw_index) >= state->spawns.size() or state->spawns[spw_index].character_id != spw_id) {
+        return false;
+      }
+      state->spawns[spw_index].tint = Color { 
+        static_cast<u8>(context.data.i16[2]), 
+        static_cast<u8>(context.data.i16[3]), 
+        static_cast<u8>(context.data.i16[4]), 
+        static_cast<u8>(context.data.i16[5])
+      };
+      return true;
+    }
+    case EVENT_CODE_HALT_SPAWN_MOVEMENT: {
+      const i32 spw_id = static_cast<i32>(context.data.f32[0]);
+      const i32 spw_index = static_cast<i32>(context.data.f32[1]);
+      const f32 duration = context.data.f32[2];
+      if (spw_index < 0 or static_cast<size_t>(spw_index) >= state->spawns.size()) {
+        return false;
+      }
+      if (state->spawns[spw_index].character_id != spw_id) {
+        return false;
+      }
+      state->spawns[spw_index].cond_halt_move.is_active = true;
+      state->spawns[spw_index].cond_halt_move.duration = duration;
+      state->spawns[spw_index].cond_halt_move.accumulator = 0.f;
+      return true;
+    }
+    case EVENT_CODE_DAMAGE_SPAWN_BY_ID: {
+      damage_spawn(context.data.i32[0], context.data.i32[1]);
       return true;
     }
     default: {

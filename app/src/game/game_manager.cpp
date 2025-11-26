@@ -9,7 +9,6 @@
 #include "core/ftime.h"
 #include "core/event.h"
 #include "core/fmemory.h"
-#include "core/fmath.h"
 #include "core/logger.h"
 
 #include "game/abilities/ability_manager.h"
@@ -67,11 +66,7 @@ struct game_manager_system_state {
     this->starter_ability = ABILITY_ID_UNDEFINED;
   }
 };
-
 static game_manager_system_state * state = nullptr;
-
-// INFO: To avoid dublicate symbol errors. Implementation in defines.h
-extern const i32 level_curve[MAX_PLAYER_LEVEL+1];
 
 #define SPAWN_TRYING_LIMIT 15
 #define GET_BOSS_LEVEL(STAGE_LEVEL, VAL) (STAGE_LEVEL + (STAGE_LEVEL * state->stage.boss_scale))
@@ -146,27 +141,29 @@ bool game_manager_initialize(const camera_metrics * in_camera_metrics, const app
     return false;
   }
 
-  state->player_state_static = (*get_default_player());
-  state->game_info.player_state_dynamic = get_player_state();
-  state->game_info.player_state_static  = __builtin_addressof(state->player_state_static);
-  state->game_info.in_spawns            = get_spawns();
-  state->game_info.mouse_pos_world      = __builtin_addressof(state->mouse_pos_world);
-  state->game_info.mouse_pos_screen     = __builtin_addressof(state->mouse_pos_screen);
-  state->game_info.ingame_phase         = __builtin_addressof(state->ingame_phase);
-  state->game_info.chosen_traits        = __builtin_addressof(state->chosen_traits);
-  state->game_info.loots_on_the_map     = get_loots_pointer();
-  state->game_info.current_map_info     = __builtin_addressof(state->stage);
-  state->game_info.game_rules           = __builtin_addressof(state->game_rules);
-  state->game_info.collected_coins      = __builtin_addressof(state->collected_coins);
-  state->game_info.total_spawn_count    = __builtin_addressof(state->total_spawn_count);
-  state->game_info.total_boss_count     = __builtin_addressof(state->total_boss_count);
-  state->game_info.total_boss_spawned   = __builtin_addressof(state->total_boss_spawned);
-  state->game_info.total_play_time      = __builtin_addressof(state->total_play_time);
-  state->game_info.play_time            = __builtin_addressof(state->play_time);
-  state->game_info.delta_time           = __builtin_addressof(state->delta_time);
-  state->game_info.is_win               = __builtin_addressof(state->is_win);
-  state->game_info.stage_boss_id        = __builtin_addressof(state->stage_boss_id);
-  state->game_info.starter_ability      = __builtin_addressof(state->starter_ability);
+  state->player_state_static                    = (*get_default_player());
+  state->game_info.player_state_dynamic         = get_player_state();
+  state->game_info.player_state_static          = __builtin_addressof(state->player_state_static);
+  state->game_info.in_spawns                    = get_spawns();
+  state->game_info.mouse_pos_world              = __builtin_addressof(state->mouse_pos_world);
+  state->game_info.mouse_pos_screen             = __builtin_addressof(state->mouse_pos_screen);
+  state->game_info.ingame_phase                 = __builtin_addressof(state->ingame_phase);
+  state->game_info.chosen_traits                = __builtin_addressof(state->chosen_traits);
+  state->game_info.loots_on_the_map             = get_loots_pointer();
+  state->game_info.current_map_info             = __builtin_addressof(state->stage);
+  state->game_info.game_rules                   = __builtin_addressof(state->game_rules);
+  state->game_info.collected_coins              = __builtin_addressof(state->collected_coins);
+  state->game_info.total_spawn_count            = __builtin_addressof(state->total_spawn_count);
+  state->game_info.total_boss_count             = __builtin_addressof(state->total_boss_count);
+  state->game_info.total_boss_spawned           = __builtin_addressof(state->total_boss_spawned);
+  state->game_info.total_play_time              = __builtin_addressof(state->total_play_time);
+  state->game_info.play_time                    = __builtin_addressof(state->play_time);
+  state->game_info.delta_time                   = __builtin_addressof(state->delta_time);
+  state->game_info.is_win                       = __builtin_addressof(state->is_win);
+  state->game_info.stage_boss_id                = __builtin_addressof(state->stage_boss_id);
+  state->game_info.starter_ability              = __builtin_addressof(state->starter_ability);
+  state->game_info.nearest_spawn_handle         = get_nearest_spawn();
+  state->game_info.first_spawn_on_screen_handle = get_first_spawn_on_screen();
 
   event_register(EVENT_CODE_END_GAME, game_manager_on_event);
   event_register(EVENT_CODE_DAMAGE_PLAYER_IF_COLLIDE, game_manager_on_event);
@@ -335,7 +332,7 @@ bool game_manager_initialize(const camera_metrics * in_camera_metrics, const app
       Rectangle {1792, 640, 32, 32}, 6, DATA_TYPE_F32, data128()
     );
     add_game_rule_upgradable(GAME_RULE_DELTA_TIME_MULTIPLIER, LOC_TEXT_INGAME_GAME_RULE_DELTA_TIME_MULTIPLIER, LOC_TEXT_INGAME_GAME_RULE_DELTA_TIME_MULTIPLIER_DESCRIPTION,
-      Rectangle {1696, 672, 32, 32}, 6, DATA_TYPE_F32, data128(static_cast<f32>(.2f))
+      Rectangle {1696, 672, 32, 32}, 6, DATA_TYPE_F32, data128(static_cast<f32>(1.0f))
     );
     add_game_rule_upgradable(GAME_RULE_BOSS_MODIFIER, LOC_TEXT_INGAME_GAME_RULE_BOSS_MODIFIER, LOC_TEXT_INGAME_GAME_RULE_BOSS_MODIFIER_DESCRIPTION, 
       Rectangle {1728, 800, 32, 32}, 1, DATA_TYPE_I32, data128()
@@ -852,20 +849,6 @@ void generate_in_game_info(void) {
     IWARN("game_manager::generate_in_game_info()::Spawn list is invalid");
     return;
   }
-  Vector2 player_position = state->game_info.player_state_dynamic->position;
-  const Character2D * spw_nearest = nullptr;
-
-  f32 dist_cache = F32_MAX;
-  for (const Character2D& spw : (*state->game_info.in_spawns)) {
-    
-    f32 dist = vec2_distance(player_position, spw.position);
-    if (dist < dist_cache and dist < MAX_NEAREST_SPAWN_DISTANCE) {
-      spw_nearest = __builtin_addressof(spw);
-      dist_cache = dist;
-    }
-  }
-
-  state->game_info.nearest_spawn = spw_nearest;
   state->play_time -= state->delta_time;
 }
 void reset_ingame_info(void) {

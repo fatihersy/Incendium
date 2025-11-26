@@ -10,8 +10,6 @@
 
 #include "game/spritesheet.h"
 
-// To avoid dublicate symbol errors. Implementation in defines.h
-extern const i32 level_curve[MAX_PLAYER_LEVEL+1];
 #define PLAYER_DAMAGE_BREAK_TIME .5f
 #define PLAYER_COMBO_TIMEOUT 0.85f
 #define PLAYER_ROLL_DURATION 0.45f
@@ -153,6 +151,8 @@ bool player_system_initialize(const camera_metrics* in_camera_metrics,const app_
   event_register(EVENT_CODE_PLAYER_ADD_EXP, player_system_on_event);
   event_register(EVENT_CODE_PLAYER_SET_POSITION, player_system_on_event);
   event_register(EVENT_CODE_PLAYER_TAKE_DAMAGE, player_system_on_event);
+  event_register(EVENT_CODE_PLAYER_CONSUME_MANA, player_system_on_event);
+  event_register(EVENT_CODE_PLAYER_RESTORE_MANA, player_system_on_event);
 
   player_system_reinit();
 
@@ -328,6 +328,24 @@ void player_heal_player(i32 amouth){
     state->dynamic_player.health_current = state->dynamic_player.stats.at(CHARACTER_STATS_HEALTH).buffer.i32[3];
   }
   state->dynamic_player.health_perc = static_cast<f32>(state->dynamic_player.health_current) / static_cast<f32>(state->dynamic_player.stats.at(CHARACTER_STATS_HEALTH).buffer.i32[3]);
+}
+void player_consume_mana(i32 cost) {
+  if (not state or state == nullptr) { return; }
+  if (state->dynamic_player.is_dead) return;
+  i32& cur = state->dynamic_player.mana_current;
+  const i32 maxv = state->dynamic_player.stats.at(CHARACTER_STATS_MANA).buffer.i32[3];
+  cur = (cur - cost) < 0 ? 0 : (cur - cost);
+  state->dynamic_player.mana_perc = maxv > 0 ? static_cast<f32>(cur) / static_cast<f32>(maxv) : 0.f;
+  event_fire(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, event_context((f32)PRG_BAR_ID_PLAYER_MANA, (f32)state->dynamic_player.mana_perc));
+}
+void player_restore_mana(i32 amount) {
+  if (not state or state == nullptr) { return; }
+  if (state->dynamic_player.is_dead) return;
+  i32& cur = state->dynamic_player.mana_current;
+  const i32 maxv = state->dynamic_player.stats.at(CHARACTER_STATS_MANA).buffer.i32[3];
+  cur = (cur + amount) > maxv ? maxv : (cur + amount);
+  state->dynamic_player.mana_perc = maxv > 0 ? static_cast<f32>(cur) / static_cast<f32>(maxv) : 0.f;
+  event_fire(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, event_context((f32)PRG_BAR_ID_PLAYER_MANA, (f32)state->dynamic_player.mana_perc));
 }
 void player_update_sprite(void) {
   if (not state or state == nullptr) { return; }
@@ -631,6 +649,14 @@ bool player_system_on_event(i32 code, event_context context) {
         }
         case EVENT_CODE_PLAYER_HEAL: {
           player_heal_player(context.data.i32[0]);
+          return true;
+        }
+        case EVENT_CODE_PLAYER_CONSUME_MANA: {
+          player_consume_mana(context.data.i32[0]);
+          return true;
+        }
+        case EVENT_CODE_PLAYER_RESTORE_MANA: {
+          player_restore_mana(context.data.i32[0]);
           return true;
         }
         default: return false; // TODO: Warn

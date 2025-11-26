@@ -964,19 +964,31 @@ struct floating_text_display_system_state {
   }
 };
 
+struct element_handle {
+  i32 id {};
+  size_t index {};
+  element_handle(void) {};
+};
+
+struct condition_halt_movement {
+  f32 accumulator {};
+  f32 duration {};
+  bool is_active {};
+};
+
 /**
  * @param buffer.i32[0] = SPAWN_TYPE
  * @param buffer.i32[1] = SPAWN_LEVEL
  * @param buffer.i32[2] = SPAWN_RND_SCALE
  */
 struct Character2D {
-  i32 character_id;
-  i32 health_max;
-  i32 health_current;
-  i32 damage;
-  f32 speed;
+  i32 character_id {};
+  i32 health_max {};
+  i32 health_current {};
+  i32 damage {};
+  f32 speed {};
   spawn_type type;
-  Rectangle collision;
+  Rectangle collision {};
   world_direction w_direction;
   spritesheet move_right_animation;
   spritesheet move_left_animation;
@@ -984,48 +996,30 @@ struct Character2D {
   spritesheet take_damage_left_animation;
   spritesheet death_effect_animation;
   spawn_movement_animations last_played_animation;
-  Vector2 position;
-  f32 rotation;
-  f32 scale;
-  f32 damage_break_time;
-  bool is_dead;
-  bool is_damagable;
-  bool is_on_screen;
-  bool is_invisible;
-  bool initialized;
+  Color tint {};
+  Vector2 position {};
+  f32 rotation {};
+  f32 scale {};
+  f32 damage_break_time {};
+  bool is_dead {};
+  bool is_damagable {};
+  bool is_on_screen {};
+  bool is_invisible {};
+  bool initialized {};
 
-  data128 genp;
+  condition_halt_movement cond_halt_move {};
+
+  data128 buffer;
 
   Character2D(void) {
-    this->character_id = I32_MAX;
-    this->health_max = 0;
-    this->health_current = 0;
-    this->damage = 0;
-    this->speed = 0.f;
     this->type = SPAWN_TYPE_UNDEFINED;
-    this->collision = ZERORECT;
     this->w_direction = WORLD_DIRECTION_UNDEFINED;
-    this->move_right_animation = spritesheet();
-    this->move_left_animation = spritesheet();
-    this->take_damage_right_animation = spritesheet();
-    this->take_damage_left_animation = spritesheet();
-    this->death_effect_animation = spritesheet();
     this->last_played_animation = SPAWN_ZOMBIE_ANIMATION_UNDEFINED;
-    this->position = ZEROVEC2;
-    this->rotation = 0.f;
-    this->scale = 0.f;
-    this->damage_break_time = 0.f;
-    this->is_dead = false;
-    this->is_damagable = false;
-    this->is_on_screen = false;
-    this->is_invisible = false;
-    this->initialized = false;
-    this->genp = data128();
   }
   Character2D(spawn_type _type, i32 player_level, i32 rnd_scale, Vector2 position) : Character2D() {
     this->type = _type;
-    this->genp.i32[1] = player_level;
-    this->genp.i32[2] = rnd_scale;
+    this->buffer.i32[1] = player_level;
+    this->buffer.i32[2] = rnd_scale;
     this->position = position;
     this->is_damagable = true;
   }
@@ -1346,7 +1340,6 @@ struct ingame_info {
   const player_state * player_state_dynamic;
   const player_state * player_state_static;
   const std::vector<Character2D>* in_spawns;
-  const Character2D* nearest_spawn;
   const Vector2* mouse_pos_world;
   const Vector2* mouse_pos_screen;
   const ingame_play_phases* ingame_phase;
@@ -1364,12 +1357,13 @@ struct ingame_info {
   const bool * is_win;
   const i32 * stage_boss_id;
   const ability_id * starter_ability;
+  const element_handle * nearest_spawn_handle;
+  const element_handle * first_spawn_on_screen_handle;
 
   ingame_info(void) {
     this->player_state_dynamic = nullptr;
     this->player_state_static = nullptr;
     this->in_spawns = nullptr;
-    this->nearest_spawn = nullptr;
     this->mouse_pos_world = nullptr;
     this->mouse_pos_screen = nullptr;
     this->ingame_phase = nullptr;
@@ -1387,6 +1381,8 @@ struct ingame_info {
     this->is_win = nullptr;
     this->stage_boss_id = nullptr;
     this->starter_ability = nullptr;
+    this->nearest_spawn_handle = nullptr;
+    this->first_spawn_on_screen_handle = nullptr;
   }
 };
 
@@ -1448,7 +1444,7 @@ struct text_spec {
   }
 };
 
-static const i32 level_curve[MAX_PLAYER_LEVEL + 1] = {
+inline const i32 level_curve[MAX_PLAYER_LEVEL + 1] = {
   0, //	0
   300,         800,        1500,       2500,       4300,
   7200,        11000,      17000,      24000,

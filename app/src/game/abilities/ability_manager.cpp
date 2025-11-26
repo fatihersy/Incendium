@@ -106,14 +106,6 @@ bool ability_system_initialize(const camera_metrics *const _camera_metrics, cons
 }
 
 void upgrade_ability(ability& abl) {
-  if (not abl.is_active or not abl.is_initialized) {
-    IWARN("ability_manager::upgrade_ability()::Ability is not initialized or activated");
-    return;
-  }
-  if (abl.proj_count >= MAX_ABILITY_PROJECTILE_COUNT-1) {
-    IWARN("ability_manager::upgrade_ability()::Ability projectile count exceed");
-    return;
-  }
   switch (abl.id) {
     case ABILITY_ID_FIREBALL:  upgrade_ability_fireball(abl); break;
     case ABILITY_ID_HARVESTER: upgrade_ability_harvester(abl); break;
@@ -129,14 +121,6 @@ void upgrade_ability(ability& abl) {
   }
 }
 void refresh_ability(ability& abl) {
-  if (not abl.is_active or not abl.is_initialized) {
-    IWARN("ability_manager::refresh_ability()::Ability is not initialized or activated");
-    return;
-  }
-  if (abl.proj_count > MAX_ABILITY_PROJECTILE_COUNT) {
-    IWARN("ability_manager::refresh_ability()::Ability projectile count exceed");
-    return;
-  }
   switch (abl.id) {
     case ABILITY_ID_FIREBALL:  refresh_ability_fireball(abl); break;
     case ABILITY_ID_BULLET:    refresh_ability_bullet(abl); break;
@@ -153,8 +137,6 @@ void refresh_ability(ability& abl) {
 }
 void update_abilities(ability_play_system& system) {
   for (ability& abl : system.abilities) {
-    if (not abl.is_active or not abl.is_initialized) continue;
-
     switch (abl.id) {
       case ABILITY_ID_FIREBALL:  update_ability_fireball(abl); break;
       case ABILITY_ID_BULLET:    update_ability_bullet(abl); break;
@@ -170,8 +152,6 @@ void update_abilities(ability_play_system& system) {
 }
 void render_abilities(ability_play_system& system) {
   for (ability& abl : system.abilities) {
-    if (not abl.is_active or not abl.is_initialized) { continue; }
-
     switch (abl.id) {
       case ABILITY_ID_FIREBALL:  render_ability_fireball(abl); break;
       case ABILITY_ID_BULLET:    render_ability_bullet(abl);   break;
@@ -198,10 +178,6 @@ const std::array<ability, ABILITY_ID_MAX>& get_all_abilities(void) {
 }
 
 void get_next_level(ability& abl) {
-  if (not abl.is_active or not abl.is_initialized) {
-    IWARN("ability_manager::get_next_level()::Ability is not active or not initialized");
-    return;
-  }
   switch (abl.id) {
     case ABILITY_ID_FIREBALL:  abl = get_ability_fireball_next_level(abl); break;
     case ABILITY_ID_HARVESTER: abl = get_ability_harvester_next_level(abl); break;

@@ -9,7 +9,7 @@
 #define HEADER_SYMBOL_END "__END__"
 #define HEADER_SYMBOL_END_LENGTH 7
 
-#define ASSET1_FILE_SIZE 146960646u
+#define ASSET1_FILE_SIZE 165628521u
 #define ASSET2_FILE_SIZE 3016472u // WARN: This is not exact number of asset2 pak file byte size 
 #define MAP_FILE_SIZE 3624970u
 
@@ -170,6 +170,10 @@ bool pak_parser_system_initialize(void) {
       file_buffer(PAK_FILE_ASSET1,    PAK_FILE_ASSET1_ENTRANCE7_160x280,       ".png"),
       file_buffer(PAK_FILE_ASSET1,    PAK_FILE_ASSET1_ENTRANCE8_160x280,       ".png"),
       file_buffer(PAK_FILE_ASSET1,    PAK_FILE_ASSET1_ENTRANCE9_160x280,       ".png"),
+
+      file_buffer(PAK_FILE_ASSET1,    PAK_FILE_ASSET1_HARVESTER_EFFECT_517x517,".png"),
+      file_buffer(PAK_FILE_ASSET1,    PAK_FILE_ASSET1_HARVESTER_HEAD_455x451,  ".png"),
+      file_buffer(PAK_FILE_ASSET1,    PAK_FILE_ASSET1_HARVESTER_TRAIL_393x497, ".png"),
       
       file_buffer(PAK_FILE_ASSET1,    PAK_FILE_SIGIL_ABILITY_CD,                 ".png"),
       file_buffer(PAK_FILE_ASSET1,    PAK_FILE_SIGIL_AOE,                        ".png"),

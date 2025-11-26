@@ -11,6 +11,8 @@ bool render_spawns(void);
 
 std::vector<Character2D>* get_spawns(void);
 const Character2D * get_spawn_by_id(i32 _id);
+const element_handle * get_nearest_spawn(void);
+const element_handle * get_first_spawn_on_screen(void);
 
 i32 spawn_character(Character2D _character);
 damage_deal_result damage_spawn(i32 _id, i32 damage);

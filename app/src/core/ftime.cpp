@@ -137,12 +137,28 @@ void set_ingame_delta_time_multiplier(f32 val) {
   if (not state or state == nullptr) {
     return;
   }
-  state->ingame_delta_time_multiplier = val;
+  f32 v = val;
+  if (v < 0.1f) { v = 0.1f; }
+  if (v > 1.0f) { v = 1.0f; }
+  state->ingame_delta_time_multiplier = v;
 }
 
 f32 delta_time_ingame(void) {
   if (not state or state == nullptr) {
     return 0.f;
   }
-  return GetFrameTime() * state->ingame_delta_time_multiplier;
+
+  #ifdef _DEBUG 
+    const f32 delta = GetFrameTime() * state->ingame_delta_time_multiplier;
+    constexpr f32 max_framerate = 75.f;
+    constexpr f32 max_delta = 1 / max_framerate;
+
+    if (delta > max_delta) {
+      return max_delta;
+    }
+    else return delta;
+    
+  #else
+    return GetFrameTime() * state->ingame_delta_time_multiplier;
+  #endif
 }
