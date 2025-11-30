@@ -1,6 +1,5 @@
 #include "spawn.h"
 #include <unordered_map>
-#include <functional>
 
 #include "core/event.h"
 #include "core/fmath.h"
@@ -9,31 +8,87 @@
 #include "core/ftime.h"
 
 #include "spritesheet.h"
-
 #include "fshader.h"
 
-struct grid_cell_id {
-  i32 x;
-  i32 y;
+constexpr i32 SPAWN_ID_NEXT_START = 1;
+constexpr f32 DEATH_EFFECT_HEIGHT_SCALE = 0.115f;
+constexpr f32 CELL_SIZE = 512.0f;
+constexpr f32 SPAWN_RND_SCALE_MIN = 1.f;
+constexpr f32 SPAWN_RND_SCALE_MAX = 1.5f;
+constexpr i32 SPAWN_BASE_HEALTH = 32;
+constexpr i32 SPAWN_BASE_DAMAGE = 32;
+constexpr i32 SPAWN_BASE_SPEED = 50;
 
-  bool operator==(const grid_cell_id& other) const {
-    return x == other.x && y == other.y;
+const f32 MAP_MIN_X = -3000.0f;
+const f32 MAP_MIN_Y = -3000.0f; // Assuming square bounds
+const f32 MAP_WIDTH = 6000.0f;  // Total width (-3000 to 3000)
+const f32 MAP_HEIGHT = 6000.0f; 
+
+#define SPAWN_SCALE_INCREASE_BY_LEVEL(LEVEL) LEVEL * .1
+
+#define SPAWN_HEALTH_CURVE(LEVEL, SCALE, TYPE) (SPAWN_BASE_HEALTH + (SPAWN_BASE_HEALTH * ((SCALE * 0.4f) + (LEVEL * 0.6f) + (TYPE * 0.3f)) * level_curve[LEVEL] * 0.002f))
+#define SPAWN_DAMAGE_CURVE(LEVEL, SCALE, TYPE) (SPAWN_BASE_DAMAGE + (SPAWN_BASE_DAMAGE * ((SCALE * 0.45f) + (LEVEL * 0.55f) + (TYPE * 0.35f)) * level_curve[LEVEL] * 0.002f))
+#define SPAWN_SPEED_CURVE(LEVEL, SCALE, TYPE)  (SPAWN_BASE_SPEED + ((SPAWN_BASE_SPEED * (LEVEL + (LEVEL * 0.2f)) + (TYPE + (TYPE * 0.25f))) / SCALE))
+
+#define GET_SPW_EXP(CHARACTER)  level_curve[CHARACTER->buffer.i32[1]] * (static_cast<f32>(CHARACTER->type) / static_cast<f32>(SPAWN_TYPE_MAX)) * (CHARACTER->scale / SPAWN_RND_SCALE_MAX)
+#define GET_SPW_COIN(CHARACTER) level_curve[CHARACTER->buffer.i32[1]] * (static_cast<f32>(CHARACTER->type) / static_cast<f32>(SPAWN_TYPE_MAX)) * (CHARACTER->scale / SPAWN_RND_SCALE_MAX)
+
+struct SpatialGrid1D {
+  i32 cols;
+  i32 rows;
+  f32 cell_size;
+  Vector2 world_origin;
+  std::vector<std::vector<Character2D*>> cells;
+
+  SpatialGrid1D(i32 width, i32 height, f32 size, Vector2 origin) : cols(width), rows(height), cell_size(size), world_origin(origin) {
+    cells.resize(cols * rows);
+  }
+  inline i32 get_index(Vector2 pos) const {
+    i32 x = static_cast<i32>((pos.x - world_origin.x) / cell_size);
+    i32 y = static_cast<i32>((pos.y - world_origin.y) / cell_size);
+    
+    x = std::max(0, std::min(x, cols - 1));
+    y = std::max(0, std::min(y, rows - 1));
+
+    return (y * cols) + x;
+  }
+  void insert(Character2D* unit) {
+    i32 idx = get_index(unit->position);
+    cells[idx].push_back(unit);
+  }
+  void remove(Character2D* unit, Vector2 current_pos) {
+    i32 idx = get_index(current_pos);
+    std::vector<Character2D*>& bucket = cells[idx];
+    
+    for (size_t i = 0; i < bucket.size(); ++i) {
+      if (bucket[i] == unit) {
+        bucket[i] = bucket.back();
+        bucket.pop_back();
+        return;
+      }
+    }
+  }
+  void update(Character2D* unit, Vector2 old_pos) {
+    i32 old_idx = get_index(old_pos);
+    i32 new_idx = get_index(unit->position);
+    if (old_idx != new_idx) {
+      std::vector<Character2D*>& old_bucket = cells[old_idx];
+      for (size_t i = 0; i < old_bucket.size(); ++i) {
+        if (old_bucket[i] == unit) {
+          old_bucket[i] = old_bucket.back();
+          old_bucket.pop_back();
+          break;
+        }
+      }
+      cells[new_idx].push_back(unit);
+    }
+  }
+  void clear() {
+    for (auto& bucket : cells) {
+      bucket.clear(); 
+    }
   }
 };
-namespace std {
-  template <>
-  struct hash<grid_cell_id> {
-    std::size_t operator()(const grid_cell_id& cell) const {
-
-      std::size_t h1 = std::hash<i32>{}(cell.x);
-      std::size_t h2 = std::hash<i32>{}(cell.y);
-      return h1 ^ (h2 << 1);
-    }
-  };
-}
-using SpatialHash = std::unordered_map<grid_cell_id, std::vector<Character2D*>>;
-
-constexpr i32 SPAWN_ID_NEXT_START = 1;
 
 typedef struct spawn_system_state {
   std::vector<Character2D> spawns; // NOTE: See also clean-up function
@@ -41,13 +96,13 @@ typedef struct spawn_system_state {
   const ingame_info * in_ingame_info;
   i32 next_spawn_id {};
   f32 spawn_follow_distance {};
-  SpatialHash spatial_grid;
+  SpatialGrid1D spatial_grid;
   std::unordered_map<i32, size_t> spawn_id_to_index_map;
 
   element_handle nearest_spawn_handle;
   element_handle first_spawn_on_screen_handle;
 
-  spawn_system_state(void) {
+  spawn_system_state(void) : spatial_grid(MAP_WIDTH, MAP_HEIGHT, CELL_SIZE, Vector2 { MAP_MIN_X, MAP_MIN_Y }) {
     this->in_camera_metrics = nullptr;
     this->in_ingame_info = nullptr;
     this->next_spawn_id = SPAWN_ID_NEXT_START;
@@ -56,32 +111,6 @@ typedef struct spawn_system_state {
 
 static spawn_system_state * state = nullptr;
 
-#define DEATH_EFFECT_HEIGHT_SCALE 0.115f
-#define SPAWN_FOLLOW_DISTANCE 1000.f;
-#define CELL_SIZE 728.0f
-
-#define CHECK_pSPAWN_COLLISION(REC1, SPAWN, NEW_POS) \
-CheckCollisionRecs(REC1, \
-  (Rectangle) { \
-    NEW_POS.x, NEW_POS.y, \
-    SPAWN->collision.width, SPAWN->collision.height\
-})
-#define SPAWN_RND_SCALE_MIN 1.5f
-#define SPAWN_RND_SCALE_MAX 2.5f
-#define SPAWN_SCALE_INCREASE_BY_LEVEL(LEVEL) LEVEL * .1
-
-#define SPAWN_BASE_HEALTH 32
-#define SPAWN_HEALTH_CURVE(LEVEL, SCALE, TYPE) (SPAWN_BASE_HEALTH + (SPAWN_BASE_HEALTH * ((SCALE * 0.4f) + (LEVEL * 0.6f) + (TYPE * 0.3f)) * level_curve[LEVEL] * 0.002f))
-
-#define SPAWN_BASE_DAMAGE 16
-#define SPAWN_DAMAGE_CURVE(LEVEL, SCALE, TYPE) (SPAWN_BASE_DAMAGE + (SPAWN_BASE_DAMAGE * ((SCALE * 0.45f) + (LEVEL * 0.55f) + (TYPE * 0.35f)) * level_curve[LEVEL] * 0.002f))
-
-#define SPAWN_BASE_SPEED 50
-#define SPAWN_SPEED_CURVE(LEVEL, SCALE, TYPE) (SPAWN_BASE_SPEED + ((SPAWN_BASE_SPEED * (LEVEL + (LEVEL * 0.2f)) + (TYPE + (TYPE * 0.25f))) / SCALE))
-
-#define GET_SPW_EXP(CHARACTER)  level_curve[CHARACTER->buffer.i32[1]] * (static_cast<f32>(CHARACTER->type) / static_cast<f32>(SPAWN_TYPE_MAX)) * (CHARACTER->scale / SPAWN_RND_SCALE_MAX)
-#define GET_SPW_COIN(CHARACTER) level_curve[CHARACTER->buffer.i32[1]] * (static_cast<f32>(CHARACTER->type) / static_cast<f32>(SPAWN_TYPE_MAX)) * (CHARACTER->scale / SPAWN_RND_SCALE_MAX)
-
 void spawn_play_anim(Character2D& spawn, spawn_movement_animations sheet);
 void remove_spawn(i32 index);
 void register_spawn_animation(Character2D& spawn, spawn_movement_animations movement);
@@ -89,24 +118,6 @@ void update_spawn_animation(Character2D& spawn);
 void spawn_item(std::vector<std::tuple<item_type, i32, data128>> items, data128 context);
 
 bool spawn_on_event(i32 code, event_context context);
-
-grid_cell_id get_cell_id(Vector2 position) {
-  return {
-    static_cast<int>(position.x / CELL_SIZE),
-    static_cast<int>(position.y / CELL_SIZE)
-  };
-}
-void populate_grid(SpatialHash& grid, std::vector<Character2D>& spawns) {
-  grid.clear();
-
-  for (auto& spawn : spawns) {
-    if (spawn.is_dead or not spawn.initialized) {
-      continue; 
-    }
-    grid_cell_id cell = get_cell_id(spawn.position);
-    grid[cell].push_back(&spawn);
-  }
-}
 
 bool spawn_system_initialize(const camera_metrics* _camera_metrics, const ingame_info* _ingame_info) {
   if (state and state != nullptr) {
@@ -126,6 +137,8 @@ bool spawn_system_initialize(const camera_metrics* _camera_metrics, const ingame
   event_register(EVENT_CODE_SET_SPAWN_TINT, spawn_on_event);
   event_register(EVENT_CODE_HALT_SPAWN_MOVEMENT, spawn_on_event);
   event_register(EVENT_CODE_DAMAGE_SPAWN_BY_ID, spawn_on_event);
+
+  state->spawns.reserve(MAX_SPAWN_COUNT);
   return true;
 }
 
@@ -168,10 +181,10 @@ damage_deal_result damage_spawn(i32 _id, i32 damage) {
   event_fire(EVENT_CODE_PLAY_SOUND_GROUP, event_context(SOUNDGROUP_ID_ZOMBIE_DIE, static_cast<i32>(true)));
 
   data128 context = data128(
-      static_cast<i16>(character->collision.x + character->collision.width  * .5f), // INFO: Position x
-      static_cast<i16>(character->collision.y + character->collision.height * .5f), // INFO: Position y
-      static_cast<i16>(character->collision.y + character->collision.height * .5f), // INFO: Loot drop animation position y begin
-      static_cast<i16>(character->collision.height * .5f) // INFO: Loot drop animation position y change
+    static_cast<i16>(character->collision.x + character->collision.width  * .5f), // INFO: Position x
+    static_cast<i16>(character->collision.y + character->collision.height * .5f), // INFO: Position y
+    static_cast<i16>(character->collision.y + character->collision.height * .5f), // INFO: Loot drop animation position y begin
+    static_cast<i16>(character->collision.height * .5f) // INFO: Loot drop animation position y change
   );
   switch (character->type) {
     case SPAWN_TYPE_BROWN: {
@@ -241,30 +254,76 @@ damage_deal_result damage_spawn_by_collision(Rectangle rect, i32 damage, collisi
       return DAMAGE_DEAL_RESULT_ERROR;
     }
   }
-  grid_cell_id min_cell = get_cell_id(min_pos);
-  grid_cell_id max_cell = get_cell_id(max_pos);
 
-  for (i32 x = min_cell.x; x <= max_cell.x; ++x) {
-    for (i32 y = min_cell.y; y <= max_cell.y; ++y) {
-      auto it = state->spatial_grid.find({x, y});
-      if (it == state->spatial_grid.end()) {
-        continue;
-      }
-      for (Character2D* neighbor : it->second) {
+  SpatialGrid1D& grid = state->spatial_grid;
+
+  i32 start_x = static_cast<i32>((min_pos.x - grid.world_origin.x) / grid.cell_size);
+  i32 start_y = static_cast<i32>((min_pos.y - grid.world_origin.y) / grid.cell_size);
+  i32 end_x   = static_cast<i32>((max_pos.x - grid.world_origin.x) / grid.cell_size);
+  i32 end_y   = static_cast<i32>((max_pos.y - grid.world_origin.y) / grid.cell_size);
+
+  start_x = std::max(0, start_x);
+  start_y = std::max(0, start_y);
+  end_x   = std::min(grid.cols - 1, end_x);
+  end_y   = std::min(grid.rows - 1, end_y);
+
+  for (i32 y = start_y; y <= end_y; ++y) {
+    i32 row_offset = y * grid.cols;
+    for (i32 x = start_x; x <= end_x; ++x) {
+      i32 cell_index = row_offset + x;
+      
+      const std::vector<Character2D*>& bucket = grid.cells[cell_index];
+      for (Character2D* neighbor : bucket) {
+            
         if (coll_type == COLLISION_TYPE_RECTANGLE_RECTANGLE) {
           if (CheckCollisionRecs(neighbor->collision, rect)) {
             damage_spawn(neighbor->character_id, damage);
           }
         } 
-        if (coll_type == COLLISION_TYPE_CIRCLE_RECTANGLE) {
+        else if (coll_type == COLLISION_TYPE_CIRCLE_RECTANGLE) {
           if (CheckCollisionCircleRec(Vector2{rect.x, rect.y}, rect.width, neighbor->collision)) {
             damage_spawn(neighbor->character_id, damage);
           }
-        } 
-      } // end for neighbors
-    } // end for y
-  } // end for x
+        }
+      }
+    }
+  }
   return DAMAGE_DEAL_RESULT_SUCCESS; 
+}
+
+damage_deal_result damage_spawn_rotated_rect(Rectangle rect, i32 damage, f32 rotation, Vector2 origin) {
+  Rectangle search_aabb = get_rotated_rect_aabb(rect, rotation, origin);
+  Vector2 min_pos = Vector2{ search_aabb.x, search_aabb.y };
+  Vector2 max_pos = Vector2{ search_aabb.x + search_aabb.width, search_aabb.y + search_aabb.height };
+
+  SpatialGrid1D& grid = state->spatial_grid;
+
+  i32 start_x = static_cast<i32>((min_pos.x - grid.world_origin.x) / grid.cell_size);
+  i32 start_y = static_cast<i32>((min_pos.y - grid.world_origin.y) / grid.cell_size);
+  i32 end_x   = static_cast<i32>((max_pos.x - grid.world_origin.x) / grid.cell_size);
+  i32 end_y   = static_cast<i32>((max_pos.y - grid.world_origin.y) / grid.cell_size);
+
+  start_x = std::max(0, start_x);
+  start_y = std::max(0, start_y);
+  end_x   = std::min(grid.cols - 1, end_x);
+  end_y   = std::min(grid.rows - 1, end_y);
+
+  for (i32 y = start_y; y <= end_y; ++y) {
+    i32 row_offset = y * grid.cols;
+    for (i32 x = start_x; x <= end_x; ++x) {
+      i32 cell_index = row_offset + x;
+      const std::vector<Character2D*>& bucket = grid.cells[cell_index];
+      for (Character2D* neighbor : bucket) {
+        if (!CheckCollisionRecs(search_aabb, neighbor->collision)) {
+          continue;
+        }
+        if (check_collision_sat(rect, rotation, origin, neighbor->collision)) {
+          damage_spawn(neighbor->character_id, damage);
+        }
+      }
+    }
+  }
+  return DAMAGE_DEAL_RESULT_SUCCESS;
 }
 
 i32 spawn_character(Character2D _character) {
@@ -302,28 +361,33 @@ i32 spawn_character(Character2D _character) {
   _character.character_id = state->next_spawn_id++;
   _character.initialized = true;
 
-  grid_cell_id cell = get_cell_id(_character.position);
-  for (i32 x = cell.x - 1; x <= cell.x + 1; ++x) {
-    for (i32 y = cell.y - 1; y <= cell.y + 1; ++y) {
-      auto it = state->spatial_grid.find({x, y});
-      if (it == state->spatial_grid.end()) {
-        continue;
-      }
-      for (Character2D* neighbor : it->second) {
+  i32 center_x = static_cast<i32>((_character.position.x - state->spatial_grid.world_origin.x) / state->spatial_grid.cell_size);
+  i32 center_y = static_cast<i32>((_character.position.y - state->spatial_grid.world_origin.y) / state->spatial_grid.cell_size);
+
+  for (i32 y = center_y - 1; y <= center_y + 1; ++y) {
+    if (y < 0 or y >= state->spatial_grid.rows) continue;
+
+    for (i32 x = center_x - 1; x <= center_x + 1; ++x) {
+      if (x < 0 or x >= state->spatial_grid.cols) continue;
+
+      i32 cell_index = (y * state->spatial_grid.cols) + x;
+      const std::vector<Character2D*>& bucket = state->spatial_grid.cells[cell_index];
+
+      for (const Character2D* neighbor : bucket) {
         if (CheckCollisionRecs(neighbor->collision, _character.collision)) {
-            return -1;
+          return -1;
         }
       }
     }
   }
-  size_t old_capacity = state->spawns.capacity();
   state->spawns.push_back(_character);
-  size_t character_index = state->spawns.size() - 1u;
-  state->spawn_id_to_index_map[_character.character_id] = character_index;
-  if (state->spawns.capacity() != old_capacity) {
-    populate_grid(state->spatial_grid, state->spawns);
-  } else {
-    state->spatial_grid[cell].push_back(&state->spawns[character_index]);
+  SpatialGrid1D& grid = state->spatial_grid;
+
+  Character2D* new_spawn_ptr = &state->spawns.back();
+  grid.insert(new_spawn_ptr);
+
+  if (_character.collision.width >= CELL_SIZE or _character.collision.height >= CELL_SIZE) {
+    IWARN("spawn::spawn_character::Character size is bigger than cell size");
   }
 
   return _character.character_id;
@@ -367,60 +431,68 @@ bool update_spawns(Vector2 player_position) {
       }
       continue; 
     }
-    f32 distance = vec2_distance(spw.position, player_position);
-    if (distance < state->spawn_follow_distance and not spw.cond_halt_move.is_active) {
-      grid_cell_id old_cell = get_cell_id(spw.position);
-      Vector2 new_position = move_towards(spw.position, player_position, spw.speed * (*state->in_ingame_info->delta_time) );
+
+    f32 distance = vec2_distance_sq(spw.position, player_position);
+    f32 follow_dist = state->spawn_follow_distance * state->spawn_follow_distance;
+    
+    if (distance < follow_dist && !spw.cond_halt_move.is_active) {
+      const f32 dt = *state->in_ingame_info->delta_time;
+      SpatialGrid1D& grid = state->spatial_grid;
+      Vector2 old_position = spw.position;
+
+      Vector2 new_position = move_towards(spw.position, player_position, spw.speed * dt);
+
       bool x0_collide = false;
       bool y0_collide = false;
+  
+      const Rectangle spw_col = spw.collision;
+      const Rectangle x0 = {spw_col.x, new_position.y, spw_col.width, spw_col.height};
+      const Rectangle y0 = {new_position.x, spw_col.y, spw_col.width, spw_col.height};
+  
+    
+      i32 center_x = static_cast<i32>((spw.position.x - grid.world_origin.x) / grid.cell_size);
+      i32 center_y = static_cast<i32>((spw.position.y - grid.world_origin.y) / grid.cell_size);
 
-      grid_cell_id current_cell = get_cell_id(spw.position);
+      for (i32 y = center_y - 1; y <= center_y + 1; ++y) {
+        if (y < 0 or y >= grid.rows) continue;
 
-      for (int x = current_cell.x - 1; x <= current_cell.x + 1; ++x) { 
-        for (int y = current_cell.y - 1; y <= current_cell.y + 1; ++y) {
+        for (i32 x = center_x - 1; x <= center_x + 1; ++x) {
+          if (x < 0 or x >= grid.cols) continue;
+          i32 cell_index = (y * grid.cols) + x;
 
-          auto it = state->spatial_grid.find({x, y});
-          if (it == state->spatial_grid.end()) {
-            continue;
-          }
-          for (Character2D* neighbor : it->second) {
-            if (neighbor->character_id == spw.character_id) {
-              continue;
+          const std::vector<Character2D*>& bucket = grid.cells[cell_index];
+
+          for (const Character2D* neighbor : bucket) {
+            if (neighbor == &spw) { 
+              continue; 
             }
-            const Rectangle spw_col = spw.collision;
-            const Rectangle x0 = {spw_col.x, new_position.y, spw_col.width, spw_col.height};
-            const Rectangle y0 = {new_position.x, spw_col.y, spw_col.width, spw_col.height};
-            if (CheckCollisionRecs(neighbor->collision, x0)) {
+
+            if (!x0_collide && CheckCollisionRecs(neighbor->collision, x0)) {
               x0_collide = true;
             }
-            if (CheckCollisionRecs(neighbor->collision, y0)) {
+            if (!y0_collide && CheckCollisionRecs(neighbor->collision, y0)) {
               y0_collide = true;
             }
+
+            if (x0_collide && y0_collide) goto collision_resolution;
           }
         }
       }
-      if (not x0_collide) {
+      collision_resolution:; 
+      
+      if (!x0_collide) {
         spw.position.y = new_position.y;
         spw.collision.y = spw.position.y;
       }
-      if (not y0_collide) {
-        if (spw.position.x - new_position.x > 0) {
-          spw.w_direction = WORLD_DIRECTION_LEFT;
-        } else {
-          spw.w_direction = WORLD_DIRECTION_RIGHT;
-        }
+      if (!y0_collide) {
+        spw.w_direction = (spw.position.x > new_position.x) ? WORLD_DIRECTION_LEFT : WORLD_DIRECTION_RIGHT;
         spw.position.x = new_position.x;
         spw.collision.x = spw.position.x;
       }
-      grid_cell_id new_cell = get_cell_id(spw.position);
-      if (new_cell.x != old_cell.x or new_cell.y != old_cell.y) {
-        auto it = state->spatial_grid.find(old_cell);
-        if (it != state->spatial_grid.end()) {
-          std::erase(it->second, &spw);
-        }
-        state->spatial_grid[new_cell].push_back(&spw);
-      }
+
+      state->spatial_grid.update(&spw, old_position);
     }
+
     if (spw.cond_halt_move.is_active) {
       if (spw.cond_halt_move.accumulator > spw.cond_halt_move.duration) {
         spw.cond_halt_move.accumulator = 0.f;
@@ -473,32 +545,41 @@ bool update_spawns(Vector2 player_position) {
       continue;
     }
 
-    i32 dead_spawn_id = state->spawns[itr_000].character_id;
-    grid_cell_id dead_cell = get_cell_id(spw.position);
-    auto it_dead = state->spatial_grid.find(dead_cell);
-    if (it_dead != state->spatial_grid.end()) {
-      std::erase(it_dead->second, &spw);
-    }
+    Character2D* ptr_to_remove = &state->spawns[itr_000];
+    state->spatial_grid.remove(ptr_to_remove, ptr_to_remove->position);
 
     if (itr_000 != state->spawns.size() - 1u) {
-      // Compute the cell for the last element before swap
-      grid_cell_id last_cell = get_cell_id(state->spawns.back().position);
-      auto it_last = state->spatial_grid.find(last_cell);
-      if (it_last != state->spatial_grid.end()) {
-          std::erase(it_last->second, &state->spawns.back());
+
+      Character2D& moved_spawn = state->spawns.back();
+
+      SpatialGrid1D& grid = state->spatial_grid;
+      i32 last_spawn_grid_idx = grid.get_index(moved_spawn.position);
+
+      if (last_spawn_grid_idx != -1) {
+        std::vector<Character2D*>& bucket = grid.cells[last_spawn_grid_idx];
+
+        for (size_t k = 0u; k < bucket.size(); ++k) {
+          if (bucket[k] == &moved_spawn) {
+            bucket[k] = bucket.back();
+            bucket.pop_back();
+            break; 
+          }
+        }
       }
-    
-      // Proceed with swap
-      i32 last_spawn_id = state->spawns.back().character_id;
+
       std::swap(state->spawns[itr_000], state->spawns.back());
-      state->spawn_id_to_index_map[last_spawn_id] = itr_000;
-    
-      // After swap, re-add the (now moved) live element's new pointer to its cell
-      // (cell hasn't changed since position is part of the swapped data)
-      state->spatial_grid[last_cell].push_back(&state->spawns[itr_000]);
+
+      i32 moved_id = state->spawns[itr_000].character_id;
+      state->spawn_id_to_index_map[moved_id] = itr_000;
+
+      if (last_spawn_grid_idx != -1) {
+        grid.cells[last_spawn_grid_idx].push_back(&state->spawns[itr_000]);
+      }
     }
-    state->spawns.pop_back();
+
+    i32 dead_spawn_id = state->spawns.back().character_id;
     state->spawn_id_to_index_map.erase(dead_spawn_id);
+    state->spawns.pop_back();
   }
 
   state->spawn_id_to_index_map.clear();
@@ -615,12 +696,7 @@ const element_handle * get_first_spawn_on_screen(void) {
 }
 
 void clean_up_spawn_state(void) {
-  for (Character2D& spw : state->spawns) {
-    spw = Character2D();
-  }
-  state->spawns.clear();
-  state->spawns.shrink_to_fit();
-
+  state->spawns.clear(); 
   state->spatial_grid.clear();
   state->spawn_id_to_index_map.clear();
   state->next_spawn_id = SPAWN_ID_NEXT_START;
@@ -692,17 +768,25 @@ void spawn_item(std::vector<std::tuple<item_type, i32, data128>> items, data128 
     }
   }
 }
- 
+
 void remove_spawn(i32 index) {
-  if (not state or state == nullptr) {
-    IERROR("spawn::remove_spawn()::State is invalid"); 
-    return; 
+  if (index < 0 or static_cast<size_t>(index) >= state->spawns.size()) {
+    IWARN("spawn::remove_spawn()::Index is out of bounds");
+    return;
   }
-  if (static_cast<size_t>(index) >= state->spawns.size() or index < 0) {
-    IWARN("spawn::remove_spawn()::Index is out of bounds"); 
-    return; 
+  Character2D& victim = state->spawns[index];
+
+  state->spatial_grid.remove(&victim, victim.position);
+  state->spawn_id_to_index_map.erase(victim.character_id);
+
+  if (static_cast<size_t>(index) != state->spawns.size() - 1) {
+    Character2D& moved_spawn = state->spawns.back();
+    state->spatial_grid.remove(&moved_spawn, moved_spawn.position);
+    std::swap(state->spawns[index], state->spawns.back());
+    state->spawn_id_to_index_map[moved_spawn.character_id] = index;
+    state->spatial_grid.insert(&state->spawns[index]);
   }
-  state->spawns.erase(state->spawns.begin() + index);
+  state->spawns.pop_back();
 }
 
 void register_spawn_animation(Character2D& spawn, spawn_movement_animations movement) {
@@ -892,6 +976,22 @@ bool spawn_on_event(i32 code, event_context context) {
       damage_spawn(context.data.i32[0], context.data.i32[1]);
       return true;
     }
+    case EVENT_CODE_DAMAGE_SPAWN_ROTATED_RECT: {
+      const Rectangle rect = {
+        static_cast<f32>(context.data.i16[0]), 
+        static_cast<f32>(context.data.i16[1]), 
+        static_cast<f32>(context.data.i16[2]), 
+        static_cast<f32>(context.data.i16[3])
+      };
+      const i32 damage = static_cast<i32>(context.data.i16[4]);
+      const f32 rotation = static_cast<i32>(context.data.i16[5]);
+      const Vector2 origin = {
+        static_cast<f32>(context.data.i16[6]), 
+        static_cast<f32>(context.data.i16[7])
+      };
+      damage_spawn_rotated_rect(rect, damage, rotation, origin);
+      return true;
+    }
     default: {
       IWARN("spawn::spawn_on_event()::Unsuppported code.");
       return false;
@@ -904,7 +1004,6 @@ bool spawn_on_event(i32 code, event_context context) {
 #undef DEATH_EFFECT_HEIGHT_SCALE
 #undef SPAWN_FOLLOW_DISTANCE
 #undef CELL_SIZE
-#undef CHECK_pSPAWN_COLLISION
 #undef SPAWN_RND_SCALE_MIN
 #undef SPAWN_RND_SCALE_MAX
 #undef SPAWN_SCALE_INCREASE_BY_LEVEL

@@ -28,4 +28,13 @@ f64 fast_sin(f64 x);
 
 f32 math_easing(f32 accumulator, f32 begin, f32 change, f32 duration, easing_type easing_function);
 
+bool check_collision_sat(Rectangle r1, f32 rot1, Vector2 origin1, Rectangle r2_aabb);
+Rectangle get_rotated_rect_aabb(Rectangle rect, f32 rotation, Vector2 origin);
+
+static inline f32 vec2_distance_sq(Vector2 v1, Vector2 v2) {
+    f32 dx = v1.x - v2.x;
+    f32 dy = v1.y - v2.y;
+    return (dx * dx) + (dy * dy);
+}
+
 #endif

@@ -646,6 +646,9 @@ void gm_start_game() {
   state->total_boss_count  = state->stage.total_boss_count + state->game_rules.at(GAME_RULE_BOSS_MODIFIER).mm_ex.i32[3];
   state->play_time = (*state->game_info.total_play_time);
 
+  if (stage.total_spawn_count > MAX_SPAWN_COUNT) {
+    return false;
+  }
   populate_map_with_spawns(stage.total_spawn_count);
   if (state->game_info.in_spawns->size() <= 0) {
     return false;

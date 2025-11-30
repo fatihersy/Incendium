@@ -17,6 +17,7 @@ const element_handle * get_first_spawn_on_screen(void);
 i32 spawn_character(Character2D _character);
 damage_deal_result damage_spawn(i32 _id, i32 damage);
 damage_deal_result damage_spawn_by_collision(Rectangle rect, i32 damage, collision_type coll_type);
+damage_deal_result damage_spawn_rotated_rect(Rectangle rect, i32 damage, f32 rotation, Vector2 origin);
 
 void clean_up_spawn_state(void);
 

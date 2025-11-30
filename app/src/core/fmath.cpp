@@ -4,6 +4,27 @@
 
 #include "raymath.h"
 
+static inline Vector2 rotate_point(Vector2 p, Vector2 pivot, f32 angle_deg) {
+  const f32 rad = angle_deg * DEG2RAD;
+  const f32 s = sinf(rad);
+  const f32 c = cosf(rad);
+  const f32 tx = p.x - pivot.x;
+  const f32 ty = p.y - pivot.y;
+  return Vector2{ pivot.x + (tx * c - ty * s), pivot.y + (tx * s + ty * c) };
+}
+static inline void project_points_on_axis(const Vector2* pts, int count, Vector2 axis, f32* out_min, f32* out_max) {
+  const Vector2 n = Vector2Normalize(axis);
+  f32 min_v = F32_MAX;
+  f32 max_v = -F32_MAX;
+  for (int i = 0; i < count; ++i) {
+    const f32 d = Vector2DotProduct(pts[i], n);
+    if (d < min_v) min_v = d;
+    if (d > max_v) max_v = d;
+  }
+  *out_min = min_v;
+  *out_max = max_v;
+}
+
 Vector2 get_a_point_of_a_circle(Vector2 position, i16 radius, i16 angle) {
   return {
     position.x + (radius * cos(angle * 3.1415f / 180.f)),
@@ -32,16 +53,16 @@ Vector2 vec2_clamp(Vector2 v, Vector2 min, Vector2 max) {
  Vector2 vec2_add(Vector2 v1, Vector2 v2) {
   return Vector2Add(v1, v2);
 }
- Vector2 vec2_scale(Vector2 v1, float f1) {
+ Vector2 vec2_scale(Vector2 v1, f32 f1) {
   return Vector2Scale(v1, f1);
 }
 Vector2 vec2_normalize(Vector2 v1) {
   return Vector2Normalize(v1);
 }
-float vec2_distance(Vector2 v1, Vector2 v2) {
+f32 vec2_distance(Vector2 v1, Vector2 v2) {
   return Vector2Distance(v1, v2);
 }
- float vec2_lenght(Vector2 v1) { 
+f32 vec2_lenght(Vector2 v1) { 
   return Vector2Length(v1); 
 }
 /**
@@ -116,5 +137,59 @@ f32 math_easing(f32 accumulator, f32 begin, f32 change, f32 duration, easing_typ
       return F32_MAX;
     }
   }
+}
+
+bool check_collision_sat(Rectangle r1, f32 rot1, Vector2 origin1, Rectangle r2_aabb) {
+  const Vector2 pivot = Vector2{ r1.x + origin1.x, r1.y + origin1.y };
+  Vector2 r1_pts[4] = {
+    rotate_point(Vector2{ r1.x,               r1.y               }, pivot, rot1),
+    rotate_point(Vector2{ r1.x + r1.width,    r1.y               }, pivot, rot1),
+    rotate_point(Vector2{ r1.x + r1.width,    r1.y + r1.height   }, pivot, rot1),
+    rotate_point(Vector2{ r1.x,               r1.y + r1.height   }, pivot, rot1)
+  };
+
+  Vector2 r2_pts[4] = {
+    Vector2{ r2_aabb.x,                 r2_aabb.y },
+    Vector2{ r2_aabb.x + r2_aabb.width, r2_aabb.y },
+    Vector2{ r2_aabb.x + r2_aabb.width, r2_aabb.y + r2_aabb.height },
+    Vector2{ r2_aabb.x,                 r2_aabb.y + r2_aabb.height }
+  };
+
+  Vector2 axes[4] = {
+    Vector2Subtract(r1_pts[1], r1_pts[0]),
+    Vector2Subtract(r1_pts[3], r1_pts[0]),
+    Vector2{ 1.f, 0.f },
+    Vector2{ 0.f, 1.f }
+  };
+
+  for (int i = 0; i < 4; ++i) {
+    const Vector2 axis = axes[i];
+    if (Vector2Length(axis) <= 0.00001f) continue;
+    f32 min1, max1, min2, max2;
+    project_points_on_axis(r1_pts, 4, axis, &min1, &max1);
+    project_points_on_axis(r2_pts, 4, axis, &min2, &max2);
+    if (max1 < min2 || max2 < min1) {
+      return false;
+    }
+  }
+  return true;
+}
+
+Rectangle get_rotated_rect_aabb(Rectangle rect, f32 rotation, Vector2 origin) {
+  const Vector2 pivot = Vector2{ rect.x + origin.x, rect.y + origin.y };
+  Vector2 pts[4] = {
+    rotate_point(Vector2{ rect.x,               rect.y               }, pivot, rotation),
+    rotate_point(Vector2{ rect.x + rect.width,  rect.y               }, pivot, rotation),
+    rotate_point(Vector2{ rect.x + rect.width,  rect.y + rect.height }, pivot, rotation),
+    rotate_point(Vector2{ rect.x,               rect.y + rect.height }, pivot, rotation)
+  };
+  f32 min_x = F32_MAX, min_y = F32_MAX, max_x = -F32_MAX, max_y = -F32_MAX;
+  for (int i = 0; i < 4; ++i) {
+    if (pts[i].x < min_x) min_x = pts[i].x;
+    if (pts[i].y < min_y) min_y = pts[i].y;
+    if (pts[i].x > max_x) max_x = pts[i].x;
+    if (pts[i].y > max_y) max_y = pts[i].y;
+  }
+  return Rectangle{ min_x, min_y, (max_x - min_x), (max_y - min_y) };
 }
 

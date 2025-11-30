@@ -43,7 +43,7 @@
 #define MAX_UPDATE_PASSIVE_PANEL_COUNT 3
 
 #define MAX_PLAYER_LEVEL 90
-#define MAX_SPAWN_COUNT 100
+#define MAX_SPAWN_COUNT 10000
 #define MAX_SPAWN_HEALTH 100000
 #define MAX_SPAWN_COLLISIONS 1
 
@@ -108,6 +108,7 @@ enum ability_id {
   ABILITY_ID_COMET,
   ABILITY_ID_CODEX,
   ABILITY_ID_FIRETRAIL,
+  ABILITY_ID_PENDULUM,
   ABILITY_ID_MAX,
 };
 
@@ -462,52 +463,33 @@ struct spritesheet {
   spritesheet_id sheet_id;
   texture_id tex_id;
   Texture2D* tex_handle;
-  Vector2 offset;
-  Vector2 origin;
-  i32 col_total;
-  i32 row_total;
-  i32 frame_total;
-  i32 current_col;
-  i32 current_row;
-  i32 current_frame;
-  Rectangle current_frame_rect;
-  Rectangle coord;
+  Vector2 offset {};
+  Vector2 origin {};
+  i32 col_total {};
+  i32 row_total {};
+  i32 frame_total {};
+  i32 current_col {};
+  i32 current_row {};
+  i32 current_frame {};
+  Rectangle current_frame_rect {};
+  Rectangle coord {};
 
-  Color tint;
-  f32 rotation;
-  f32 fps;
-  f32 time_accumulator;
+  Color tint {};
+  f32 rotation {};
+  f32 fps {};
+  f32 time_accumulator {};
   world_direction w_direction;
-  bool is_started;
-  bool is_played;
-  bool play_looped;
-  bool play_once;
-  bool reset_after_finish;
+  bool is_started {};
+  bool is_played {};
+  bool play_looped {};
+  bool play_once {};
+  bool reset_after_finish {};
 
   spritesheet(void) {
     this->sheet_id = SHEET_ID_SPRITESHEET_UNSPECIFIED;
     this->tex_id = TEX_ID_UNSPECIFIED;
     this->tex_handle = nullptr;
-    this->offset = ZEROVEC2;
-    this->origin = ZEROVEC2;
-    this->col_total = 0;
-    this->row_total = 0;
-    this->frame_total = 0;
-    this->current_col = 0;
-    this->current_row = 0;
-    this->current_frame = 0;
-    this->current_frame_rect = ZERORECT;
-    this->coord = ZERORECT;
-    this->tint = WHITE;
-    this->rotation = 0.f;
-    this->fps = 0.f;
-    this->time_accumulator = 0.f;
     this->w_direction = WORLD_DIRECTION_UNDEFINED;
-    this->is_started = false;
-    this->is_played = false;
-    this->play_looped = false;
-    this->play_once = false;
-    this->reset_after_finish = false;
   }
 };
 
