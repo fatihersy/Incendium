@@ -137,6 +137,7 @@ bool spawn_system_initialize(const camera_metrics* _camera_metrics, const ingame
   event_register(EVENT_CODE_SET_SPAWN_TINT, spawn_on_event);
   event_register(EVENT_CODE_HALT_SPAWN_MOVEMENT, spawn_on_event);
   event_register(EVENT_CODE_DAMAGE_SPAWN_BY_ID, spawn_on_event);
+  event_register(EVENT_CODE_DAMAGE_SPAWN_ROTATED_RECT, spawn_on_event);
 
   state->spawns.reserve(MAX_SPAWN_COUNT);
   return true;
