@@ -75,6 +75,7 @@ static game_manager_system_state * state = nullptr;
 #define ZOOM_CAMERA_GAME_RESULTS 1.5f
 #define MAX_NEAREST_SPAWN_DISTANCE 512.f
 #define MAX_GAME_RULE_LEVEL 5
+#define PLAYER_BASE_ATTACK_DURATION 0.8f
 
 #define FIRST_UPGRADABLE_GAME_RULE GAME_RULE_SPAWN_MULTIPLIER
 #define LAST_UPGRADABLE_GAME_RULE GAME_RULE_RESERVED_FOR_FUTURE_USE
@@ -1034,7 +1035,7 @@ bool player_state_rebuild(void) {
     IERROR("player::player_state_rebuild()::State is invalid");
     return false;
   }
-  player_state _player = state->player_state_static; 
+  player_state& _player = state->player_state_static; 
 
   for (size_t itr_000 = 1u; itr_000 < _player.stats.size() - 1u; itr_000++) {
     character_stat& stat = _player.stats[itr_000];
@@ -1050,14 +1051,14 @@ bool player_state_rebuild(void) {
   _player.mana_current = _player.stats[CHARACTER_STATS_MANA].buffer.i32[3];
   _player.mana_perc = 1.f;
   
-  _player.attack_1_sprite.fps = _player.attack_1_sprite.frame_total / _player.stats[CHARACTER_STATS_BASIC_ATTACK_SPEED].buffer.f32[3];
-  _player.attack_2_sprite.fps = _player.attack_2_sprite.frame_total / _player.stats[CHARACTER_STATS_BASIC_ATTACK_SPEED].buffer.f32[3];
-  _player.attack_3_sprite.fps = _player.attack_3_sprite.frame_total / _player.stats[CHARACTER_STATS_BASIC_ATTACK_SPEED].buffer.f32[3];
+  const f32& fps_multiplier = _player.stats[CHARACTER_STATS_BASIC_ATTACK_SPEED].buffer.f32[3];
+  _player.attack_1_sprite.fps = (_player.attack_1_sprite.frame_total / PLAYER_BASE_ATTACK_DURATION) * fps_multiplier;
+  _player.attack_2_sprite.fps = (_player.attack_2_sprite.frame_total / PLAYER_BASE_ATTACK_DURATION) * fps_multiplier;
+  _player.attack_3_sprite.fps = (_player.attack_3_sprite.frame_total / PLAYER_BASE_ATTACK_DURATION) * fps_multiplier;
 
   if (not std::isfinite(_player.attack_1_sprite.fps) or not std::isfinite(_player.attack_2_sprite.fps) or not std::isfinite(_player.attack_3_sprite.fps)) {
     return false;
   }
-  state->player_state_static = _player;
   return true;
 }
 bool upgrade_ability_by_id(ability_id abl_id) {

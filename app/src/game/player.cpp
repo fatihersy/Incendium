@@ -117,7 +117,7 @@ bool player_system_initialize(const camera_metrics* in_camera_metrics,const app_
     set_character_stat(CHARACTER_STATS_EXP_GAIN,                  DATA_TYPE_F32, data128());
     set_character_stat(CHARACTER_STATS_TOTAL_TRAIT_POINTS,        DATA_TYPE_I32, data128(7));
     set_character_stat(CHARACTER_STATS_BASIC_ATTACK_DAMAGE,       DATA_TYPE_I32, data128(40));
-    set_character_stat(CHARACTER_STATS_BASIC_ATTACK_SPEED,        DATA_TYPE_F32, data128(.6f));
+    set_character_stat(CHARACTER_STATS_BASIC_ATTACK_SPEED,        DATA_TYPE_F32, data128(0.0001f));
     set_character_stat(CHARACTER_STATS_CRITICAL_CHANCE,           DATA_TYPE_F32, data128());
     set_character_stat(CHARACTER_STATS_CRITICAL_DAMAGE,           DATA_TYPE_F32, data128());
     set_character_stat(CHARACTER_STATS_OVERALL_LUCK,              DATA_TYPE_F32, data128());

@@ -196,6 +196,7 @@ bool resource_system_initialize(void) {
   load_texture_from_atlas(ATLAS_TEX_ID_SIGIL_RESISTANCE_UNCOMMON,            Rectangle{ 1920,  848,   32,   32 });
   load_texture_from_atlas(ATLAS_TEX_ID_SIGIL_RESISTANCE_RARE,                Rectangle{ 1952,  848,   32,   32 });
   load_texture_from_atlas(ATLAS_TEX_ID_SIGIL_RESISTANCE_EPIC,                Rectangle{ 1984,  848,   32,   32 });
+  load_texture_from_atlas(ATLAS_TEX_ID_SCISSER_BLADE,                        Rectangle{ 1776, 1216,   16,  144 });
 
   load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_PLAYER_ANIMATION_IDLE_RIGHT,        VECTOR2(1584,  224), 10,   22,  32, 1,  4);
   load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_PLAYER_ANIMATION_MOVE_RIGHT,        VECTOR2(1584,  160), 10,   22,  32, 1,  6);
@@ -203,7 +204,7 @@ bool resource_system_initialize(void) {
   load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_PLAYER_ANIMATION_WRECK_RIGHT,       VECTOR2(1632,   96),  9,   90, 110, 1,  7);
   load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_PLAYER_ANIMATION_ATTACK_1,          VECTOR2(1568, 1632), 15,  144,  64, 1,  4);
   load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_PLAYER_ANIMATION_ATTACK_2,          VECTOR2(1568, 1696), 15,  144,  64, 1,  4);
-  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_PLAYER_ANIMATION_ATTACK_3,          VECTOR2(1568, 1760), 10,  144,  64, 1,  7);
+  load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_PLAYER_ANIMATION_ATTACK_3,          VECTOR2(1568, 1760), 15,  144,  64, 1,  7);
   load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_PLAYER_ANIMATION_ATTACK_DOWN,       VECTOR2(1568, 1952), 12,  144,  64, 1,  5);
   load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_PLAYER_ANIMATION_ATTACK_UP,         VECTOR2(1568, 2016), 12,  144,  64, 1,  5);
   load_spritesheet(TEX_ID_ASSET_ATLAS, SHEET_ID_PLAYER_ANIMATION_ROLL,              VECTOR2(1568, 1824), 11,  144,  64, 1,  6);
