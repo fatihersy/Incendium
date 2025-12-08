@@ -655,7 +655,7 @@ void gm_start_game() {
     return false;
   }
   _add_ability(state->starter_ability);
-  upgrade_ability(_player->ability_system.abilities.at(state->starter_ability));
+  //upgrade_ability(_player->ability_system.abilities.at(state->starter_ability));
   refresh_ability(_player->ability_system.abilities.at(state->starter_ability));
 
   event_fire(EVENT_CODE_SET_SPAWN_FOLLOW_DISTANCE, event_context(state->game_rules[GAME_RULE_ZOMBIE_FOLLOW_DISTANCE].mm_ex.f32[3]));

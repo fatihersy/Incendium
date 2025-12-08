@@ -12,6 +12,7 @@
 #include "ability_radience.h"
 #include "ability_pendulum.h"
 #include "ability_scissor.h"
+#include "ability_mosaic.h"
 
 typedef struct ability_system_state {
   std::array<ability, ABILITY_ID_MAX> abilities;
@@ -116,6 +117,12 @@ bool ability_system_initialize(const camera_metrics *const _camera_metrics, cons
   else {
     IERROR("ability_manager::ability_system_initialize()::Failed to initialize ability scissor");
   }
+  if(ability_mosaic_initialize(_camera_metrics, _settings, _ingame_info)) {
+    register_ability(get_ability_mosaic());
+  } 
+  else {
+    IERROR("ability_manager::ability_system_initialize()::Failed to initialize ability mosaic");
+  }
   return true;
 }
 
@@ -130,6 +137,7 @@ void upgrade_ability(ability& abl) {
     case ABILITY_ID_FIRETRAIL: upgrade_ability_firetrail(abl); break;
     case ABILITY_ID_PENDULUM:  upgrade_ability_pendulum(abl); break;
     case ABILITY_ID_SCISSOR:   upgrade_ability_scissor(abl); break;
+    case ABILITY_ID_SHATTERED_MOSAIC: upgrade_ability_mosaic(abl); break;
 
     default: {
       IWARN("ability_manager::upgrade_ability()::Unsuppported ability type");
@@ -148,6 +156,7 @@ void refresh_ability(ability& abl) {
     case ABILITY_ID_FIRETRAIL: refresh_ability_firetrail(abl); break;
     case ABILITY_ID_PENDULUM:  refresh_ability_pendulum(abl); break;
     case ABILITY_ID_SCISSOR:   refresh_ability_scissor(abl); break;
+    case ABILITY_ID_SHATTERED_MOSAIC: refresh_ability_mosaic(abl); break;
     default: {
       IWARN("ability_manager::refresh_ability()::Unsuppported ability type");
       break;
@@ -166,6 +175,7 @@ void update_abilities(ability_play_system& system) {
       case ABILITY_ID_FIRETRAIL: update_ability_firetrail(abl); break;
       case ABILITY_ID_PENDULUM:  update_ability_pendulum(abl); break;
       case ABILITY_ID_SCISSOR:   update_ability_scissor(abl); break;
+      case ABILITY_ID_SHATTERED_MOSAIC: update_ability_mosaic(abl); break;
 
       default: { break; }
     }
@@ -183,6 +193,7 @@ void render_abilities(ability_play_system& system) {
       case ABILITY_ID_FIRETRAIL: render_ability_firetrail(abl); break;
       case ABILITY_ID_PENDULUM:  render_ability_pendulum(abl); break;
       case ABILITY_ID_SCISSOR:   render_ability_scissor(abl); break;
+      case ABILITY_ID_SHATTERED_MOSAIC: render_ability_mosaic(abl); break;
 
       default: { break; }
     }
@@ -211,6 +222,7 @@ void get_next_level(ability& abl) {
     case ABILITY_ID_FIRETRAIL: abl = get_ability_firetrail_next_level(abl); break;
     case ABILITY_ID_PENDULUM:  abl = get_ability_pendulum_next_level(abl); break;
     case ABILITY_ID_SCISSOR:   abl = get_ability_scissor_next_level(abl); break;
+    case ABILITY_ID_SHATTERED_MOSAIC: abl = get_ability_mosaic_next_level(abl); break;
     default: {
       IWARN("ability_manager::get_next_level()::Unsuppported ability type");
     }

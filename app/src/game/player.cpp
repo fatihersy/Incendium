@@ -103,7 +103,7 @@ bool player_system_initialize(const camera_metrics* in_camera_metrics,const app_
     auto set_character_stat = [](character_stat_id id, ::data_type _data_type, data128 default_value){
       state->defualt_player.stats[id] = character_stat(id, 0, 0, ZERORECT, 1, 100, _data_type, default_value);
     };
-    set_character_stat(CHARACTER_STATS_HEALTH,                    DATA_TYPE_I32, data128(999999));
+    set_character_stat(CHARACTER_STATS_HEALTH,                    DATA_TYPE_I32, data128(300));
     set_character_stat(CHARACTER_STATS_STAMINA,                   DATA_TYPE_I32, data128(100));
     set_character_stat(CHARACTER_STATS_MANA,                      DATA_TYPE_I32, data128(100));
     set_character_stat(CHARACTER_STATS_HP_REGEN,                  DATA_TYPE_I32, data128());
