@@ -16,39 +16,40 @@
 
 using json = nlohmann::json;
 
-#define AES_KEY_SIZE_BYTES 16 // AES-128 (16 bytes)
-#define AES_BLOCK_SIZE 16 // AES block size
-#define AES_IV_SIZE 16 // CBC IV size (must be equal to AES_BLOCK_SIZE)
-#define HMAC_TAG_SIZE 32 // HMAC-SHA256 always produces 32 bytes
+constexpr i32 AES_KEY_SIZE_BYTES = 16; // AES-128 (16 bytes)
+//constexpr i32 AES_BLOCK_SIZE     = 16; // AES block size
+constexpr i32 AES_IV_SIZE        = 16; // CBC IV size (must be equal to AES_BLOCK_SIZE)
+constexpr i32 HMAC_TAG_SIZE      = 32; // HMAC-SHA256 always produces 32 bytes
 
-#define JSON_SAVE_DATA_MAP_CURRENCY_COINS "currency_coins_player_have"
-#define JSON_SAVE_DATA_VERSION "version"
+constexpr const char * JSON_SAVE_DATA_MAP_CURRENCY_COINS = "currency_coins_player_have";
+constexpr const char * JSON_SAVE_DATA_VERSION            = "version";
 
-#define JSON_SAVE_DATA_MAP_PLAYER_DATA "player_data"
-#define JSON_SAVE_DATA_MAP_PLAYER_DATA_INVENTORY "inventory"
-#define JSON_SAVE_DATA_MAP_PLAYER_DATA_INVENTORY_ITEM_TYPE "item_type"
-#define JSON_SAVE_DATA_MAP_PLAYER_DATA_INVENTORY_IG_BUFFER_F32_1 "ig_buffer_f32_1"
-#define JSON_SAVE_DATA_MAP_PLAYER_DATA_INVENTORY_LEVEL "level"
-#define JSON_SAVE_DATA_MAP_PLAYER_DATA_INVENTORY_AMOUTH "amouth"
+constexpr const char * JSON_SAVE_DATA_MAP_PLAYER_DATA                           = "player_data";
+constexpr const char * JSON_SAVE_DATA_MAP_PLAYER_DATA_INVENTORY                 = "inventory";
+constexpr const char * JSON_SAVE_DATA_MAP_PLAYER_DATA_INVENTORY_ITEM_TYPE       = "item_type";
+constexpr const char * JSON_SAVE_DATA_MAP_PLAYER_DATA_INVENTORY_IG_BUFFER_F32_1 = "ig_buffer_f32_1";
+constexpr const char * JSON_SAVE_DATA_MAP_PLAYER_DATA_INVENTORY_LEVEL           = "level";
+constexpr const char * JSON_SAVE_DATA_MAP_PLAYER_DATA_INVENTORY_AMOUTH          = "amouth";
 
-#define JSON_SAVE_DATA_MAP_SIGIL_SLOTS "sigil_slot"
-#define JSON_SAVE_DATA_MAP_PLAYER_DATA_SIGIL_SLOTS_ITEM_TYPE "item_type"
-#define JSON_SAVE_DATA_MAP_PLAYER_DATA_SIGIL_SLOTS_IG_BUFFER "ig_buffer"
+constexpr const char * JSON_SAVE_DATA_MAP_SIGIL_SLOTS                       = "sigil_slot";
+constexpr const char * JSON_SAVE_DATA_MAP_PLAYER_DATA_SIGIL_SLOTS_ITEM_TYPE = "item_type";
+constexpr const char * JSON_SAVE_DATA_MAP_PLAYER_DATA_SIGIL_SLOTS_IG_BUFFER = "ig_buffer";
 
-#define JSON_SAVE_DATA_MAP_GAME_RULE "game_rule"
-#define JSON_SAVE_DATA_MAP_GAME_RULE_SPAWN_MULTIPLIER "spawn_multiplier"
-#define JSON_SAVE_DATA_MAP_GAME_RULE_PLAY_TIME_MULTIPLIER "play_time_multiplier"
-#define JSON_SAVE_DATA_MAP_GAME_RULE_DELTA_TIME_MULTIPLIER "delta_time_multiplier"
-#define JSON_SAVE_DATA_MAP_GAME_RULE_BOSS_MODIFIER "boss_modifier"
-#define JSON_SAVE_DATA_MAP_GAME_RULE_AREA_UNLOCKER "area_unlocker"
-#define JSON_SAVE_DATA_MAP_GAME_RULE_TRAIT_POINT_MODIFIER "trait_point_modifier"
-#define JSON_SAVE_DATA_MAP_GAME_RULE_BONUS_RESULT_MULTIPLIER "bonus_result_multiplier"
-#define JSON_SAVE_DATA_MAP_GAME_RULE_ZOMBIE_LEVEL_MODIFIER "zombie_level_modifier"
-#define JSON_SAVE_DATA_MAP_GAME_RULE_RESERVED_FOR_FUTURE_USE "future_use"
+constexpr const char * JSON_SAVE_DATA_MAP_GAME_RULE                         = "game_rule";
+constexpr const char * JSON_SAVE_DATA_MAP_GAME_RULE_SPAWN_MULTIPLIER        = "spawn_multiplier";
+constexpr const char * JSON_SAVE_DATA_MAP_GAME_RULE_PLAY_TIME_MULTIPLIER    = "play_time_multiplier";
+constexpr const char * JSON_SAVE_DATA_MAP_GAME_RULE_DELTA_TIME_MULTIPLIER   = "delta_time_multiplier";
+constexpr const char * JSON_SAVE_DATA_MAP_GAME_RULE_BOSS_MODIFIER           = "boss_modifier";
+constexpr const char * JSON_SAVE_DATA_MAP_GAME_RULE_AREA_UNLOCKER           = "area_unlocker";
+constexpr const char * JSON_SAVE_DATA_MAP_GAME_RULE_TRAIT_POINT_MODIFIER    = "trait_point_modifier";
+constexpr const char * JSON_SAVE_DATA_MAP_GAME_RULE_BONUS_RESULT_MULTIPLIER = "bonus_result_multiplier";
+constexpr const char * JSON_SAVE_DATA_MAP_GAME_RULE_ZOMBIE_LEVEL_MODIFIER   = "zombie_level_modifier";
+constexpr const char * JSON_SAVE_DATA_MAP_GAME_RULE_RESERVED_FOR_FUTURE_USE = "future_use";
 
+constexpr i32 SAVE_FILE_VERSION_051125 = 051125;
+//constexpr i32 SAVE_FILE_CURRENT_VERSION = SAVE_FILE_VERSION_051125;
 
-#define SAVE_FILE_VERSION_051125 051125
-#define SAVE_FILE_CURRENT_VERSION SAVE_FILE_VERSION_051125
+constexpr const char * SAVE_FILE_PATH = "saves/";
 
 // Save system state
 struct save_game_system_state {
@@ -60,15 +61,11 @@ struct save_game_system_state {
 
 static save_game_system_state* state = nullptr;
 
-// --- CRYPTOGRAPHIC KEYS (MUST BE DIFFERENT) ---
-
-// 1. Encryption Key (16 bytes for AES-128)
 static const std::array<uint8_t, AES_KEY_SIZE_BYTES> aes_key = {
   0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6,
   0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c
 };
 
-// 2. Authentication Key (32 bytes)
 static const std::array<uint8_t, HMAC_TAG_SIZE> hmac_key = {
   0x6a, 0x9e, 0x3d, 0x77, 0x8b, 0x4f, 0x2c, 0x11,
   0x55, 0x01, 0xaf, 0xcc, 0xd0, 0x91, 0x3b, 0x7e,
@@ -141,61 +138,12 @@ bool parse_or_create_save_data_from_file(save_slot_id slot, save_data default_sa
     IWARN("save_game::parse_or_create_save_data_from_file()::Slot out of bound");
     return false;
   }
-  save_data& save = state->save_slots[slot];
-  save = default_save;
-  save.id = slot;
-  save.file_name = state->slot_filenames[slot];
 
-  if (not FileExists(save.file_name.c_str())) {
+  if (not FileExists(state->slot_filenames[slot].c_str())) {
     return save_save_data(slot);
   }
 
-  int32_t out_datasize = 0;
-  uint8_t* data = LoadFileData(save.file_name.c_str(), &out_datasize);
-  // Check minimum required size: IV + 1 Block (Ciphertext) + HMAC Tag
-  if (not data or out_datasize < (AES_IV_SIZE + AES_BLOCK_SIZE + HMAC_TAG_SIZE)) {
-    IERROR("save_game::parse_or_create_save_data_from_file()::File too small or failed to load");
-    UnloadFileData(data);
-    return false;
-  }
-
-  std::vector<uint8_t> file_data(data, data + out_datasize);
-  UnloadFileData(data);
-
-  // 1. Separate Encrypted Data (IV + Ciphertext) from HMAC Tag
-  size_t encrypted_data_size = file_data.size() - HMAC_TAG_SIZE;
-  
-  // Data to hash (IV + Ciphertext)
-  std::vector<uint8_t> encrypted_data_and_iv(file_data.begin(), file_data.begin() + encrypted_data_size);
-  // Stored HMAC tag
-  std::vector<uint8_t> stored_tag(file_data.begin() + encrypted_data_size, file_data.end());
-
-  // 2. Verify HMAC Tag (Integrity Check)
-  std::vector<uint8_t> calculated_tag = calculate_file_hmac(encrypted_data_and_iv);
-  
-  // Note: std::equal is safe for cryptographic comparison on modern architectures
-  if (calculated_tag.empty() || calculated_tag.size() != HMAC_TAG_SIZE || 
-      !std::equal(calculated_tag.begin(), calculated_tag.end(), stored_tag.begin())) {
-    IERROR("save_game::parse_or_create_save_data_from_file()::HMAC integrity check failed. File tampered or corrupted.");
-    return false;
-  }
-
-  // 3. Decrypt Data
-  std::string decrypted;
-  if (!decrypt_data(encrypted_data_and_iv, decrypted)) {
-    IERROR("save_game::parse_or_create_save_data_from_file()::Decryption failed");
-    return false;
-  }
-
-  // 4. Parse JSON
-  try {
-    json j = json::parse(decrypted);
-    deserialize_save_data(j, save);
-    save.is_success = true;
-  } catch (const json::exception& e) {
-    IERROR("save_game::parse_or_create_save_data_from_file()::JSON parse error: %s", e.what());
-    return false;
-  }
+  parse_save_data(slot, default_save);
 
   return true;
 }
@@ -242,6 +190,71 @@ bool save_save_data(save_slot_id slot) {
   final_file_data.insert(final_file_data.end(), tag.begin(), tag.end());
 
   return SaveFileData(state->slot_filenames[slot].c_str(), final_file_data.data(), final_file_data.size());
+}
+bool parse_save_data(save_slot_id slot, save_data default_save) {
+  if (not state or state == nullptr) {
+    IFATAL("save_game::parse_or_create_save_data_from_file()::Save game state is not valid");
+    return false;
+  }
+  if (slot <= SAVE_SLOT_UNDEFINED or slot >= SAVE_SLOT_MAX) {
+    IWARN("save_game::parse_or_create_save_data_from_file()::Slot out of bound");
+    return false;
+  }
+  save_data& save = state->save_slots[slot];
+
+  if (not FileExists(save.file_name.c_str())) {
+    return false;
+  }
+  save = default_save;
+  save.id = slot;
+  save.file_name = state->slot_filenames[slot];
+
+  int32_t out_datasize = 0;
+  uint8_t* data = LoadFileData(save.file_name.c_str(), &out_datasize);
+  // Check minimum required size: IV + 1 Block (Ciphertext) + HMAC Tag
+  if (not data or out_datasize < (AES_IV_SIZE + AES_BLOCK_SIZE + HMAC_TAG_SIZE)) {
+    IERROR("save_game::parse_or_create_save_data_from_file()::File too small or failed to load");
+    UnloadFileData(data);
+    return false;
+  }
+
+  std::vector<uint8_t> file_data(data, data + out_datasize);
+  UnloadFileData(data);
+
+  // 1. Separate Encrypted Data (IV + Ciphertext) from HMAC Tag
+  size_t encrypted_data_size = file_data.size() - HMAC_TAG_SIZE;
+  
+  // Data to hash (IV + Ciphertext)
+  std::vector<uint8_t> encrypted_data_and_iv(file_data.begin(), file_data.begin() + encrypted_data_size);
+  // Stored HMAC tag
+  std::vector<uint8_t> stored_tag(file_data.begin() + encrypted_data_size, file_data.end());
+
+  // 2. Verify HMAC Tag (Integrity Check)
+  std::vector<uint8_t> calculated_tag = calculate_file_hmac(encrypted_data_and_iv);
+  
+  // Note: std::equal is safe for cryptographic comparison on modern architectures
+  if (calculated_tag.empty() or calculated_tag.size() != HMAC_TAG_SIZE or !std::equal(calculated_tag.begin(), calculated_tag.end(), stored_tag.begin())) {
+    IERROR("save_game::parse_or_create_save_data_from_file()::HMAC integrity check failed. File tampered or corrupted.");
+    return false;
+  }
+
+  // 3. Decrypt Data
+  std::string decrypted;
+  if (not decrypt_data(encrypted_data_and_iv, decrypted)) {
+    IERROR("save_game::parse_or_create_save_data_from_file()::Decryption failed");
+    return false;
+  }
+
+  // 4. Parse JSON
+  try {
+    json j = json::parse(decrypted);
+    deserialize_save_data(j, save);
+  } catch (const json::exception& e) {
+    IERROR("save_game::parse_or_create_save_data_from_file()::JSON parse error: %s", e.what());
+    return false;
+  }
+
+  return save.is_success;
 }
 
 // ---------------------------------------------------
@@ -383,28 +396,16 @@ bool does_save_exist(save_slot_id slot) {
   return FileExists(state->slot_filenames[slot].c_str());
 }
 
-save_data* get_save_data(save_slot_id slot) {
-  if (!state) {
-    IERROR("save_game::get_save_data()::State is not valid");
-    return nullptr;
-  }
-  if (slot < SAVE_SLOT_UNDEFINED || slot >= SAVE_SLOT_MAX) {
-    IWARN("save_game::get_save_data()::Slot out of bound");
-    return nullptr;
-  }
-
-  return &state->save_slots[slot];
+save_data& get_save_data(save_slot_id slot) {
+  return state->save_slots[slot];
 }
 
 std::string get_save_filename(save_slot_id slot) {
-  if (slot < SAVE_SLOT_UNDEFINED || slot >= SAVE_SLOT_MAX) {
+  if (slot <= SAVE_SLOT_UNDEFINED or slot >= SAVE_SLOT_MAX) {
     IWARN("save_game::get_save_filename()::Slot out of bound");
     return "";
   }
-  if (slot == SAVE_SLOT_CURRENT_SESSION) {
-    return TextFormat("save_slot_current%s", SAVE_GAME_EXTENSION);
-  }
-  return TextFormat("save_slot%d%s", static_cast<int32_t>(slot) + 1, SAVE_GAME_EXTENSION);
+  return TextFormat("%s%d%s", SAVE_FILE_PATH, static_cast<int32_t>(slot) + 1, SAVE_GAME_EXTENSION);
 }
 
 json serialize_save_data(const save_data& data) {
@@ -508,4 +509,6 @@ void deserialize_save_data_v051125(const json& j, save_data& data) {
       slot.sigil.buffer.f32[1] = sigil_slots[itr_000].value(JSON_SAVE_DATA_MAP_PLAYER_DATA_SIGIL_SLOTS_IG_BUFFER, -1.f);
     }
   }
+
+  data.is_success = true;
 }

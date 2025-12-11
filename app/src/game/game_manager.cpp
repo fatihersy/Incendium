@@ -35,9 +35,12 @@ struct game_manager_system_state {
   std::vector<character_trait> chosen_traits;
   std::array<game_rule, GAME_RULE_MAX> game_rules;
   i32 collected_coins {};
-  i32 total_spawn_count {};
-  i32 total_boss_count {};
   i32 total_boss_spawned {};
+  i32 total_boss_count {};
+  i32 spawn_on_begin {};
+  i32 spawn_on_map_max {};
+  i32 spawn_spawn_count {};
+  f32 spawn_spawn_interval {};
   f32 total_play_time {};
   f32 play_time {};
   f32 delta_time {};
@@ -46,6 +49,8 @@ struct game_manager_system_state {
   ability_id starter_ability;
   
   playlist_control_system_state playlist;
+  spritesheet map_escape_sprite;
+  save_slot_id current_save_slot = SAVE_SLOT_UNDEFINED;
   
   std::array<game_rule, GAME_RULE_MAX> default_game_rules;
   std::array<item_data, ITEM_TYPE_MAX> default_items;
@@ -93,6 +98,18 @@ void set_static_player_state_stat(character_stat_id stat_id, i32 level);
 void gm_refresh_stat_by_level(character_stat* stat, i32 level);
 [[__nodiscard__]] bool player_state_rebuild(void);
 i32 gm_get_sigil_upgrade_soul_requirement(i32 level);
+
+static inline void set_map_escape_sprite([[__maybe_unused__]] spritesheet_id _sheet_id, Vector2 map_location, f32 scale) {
+  spritesheet& spr = state->map_escape_sprite;
+  
+  spr.sheet_id = SHEET_ID_ENTRANCE1_ANIMATION;
+  ui_set_sprite(spr, true, false);
+
+  spr.coord.width  = spr.current_frame_rect.width  * scale;
+  spr.coord.height = spr.current_frame_rect.height * scale;
+  spr.coord.x = map_location.x - spr.coord.width;
+  spr.coord.y = map_location.y - spr.coord.height;
+}
 
 bool game_manager_initialize(const camera_metrics * in_camera_metrics, const app_settings * in_app_settings, tilemap ** const in_active_map_ptr) {
   if (state and state != nullptr) {
@@ -154,7 +171,10 @@ bool game_manager_initialize(const camera_metrics * in_camera_metrics, const app
   state->game_info.current_map_info             = __builtin_addressof(state->stage);
   state->game_info.game_rules                   = __builtin_addressof(state->game_rules);
   state->game_info.collected_coins              = __builtin_addressof(state->collected_coins);
-  state->game_info.total_spawn_count            = __builtin_addressof(state->total_spawn_count);
+  state->game_info.spawn_on_begin               = __builtin_addressof(state->spawn_on_begin);
+  state->game_info.spawn_on_map_max             = __builtin_addressof(state->spawn_on_map_max);
+  state->game_info.spawn_spawn_count            = __builtin_addressof(state->spawn_spawn_count);
+  state->game_info.spawn_spawn_interval         = __builtin_addressof(state->spawn_spawn_interval);
   state->game_info.total_boss_count             = __builtin_addressof(state->total_boss_count);
   state->game_info.total_boss_spawned           = __builtin_addressof(state->total_boss_spawned);
   state->game_info.total_play_time              = __builtin_addressof(state->total_play_time);
@@ -165,6 +185,8 @@ bool game_manager_initialize(const camera_metrics * in_camera_metrics, const app
   state->game_info.starter_ability              = __builtin_addressof(state->starter_ability);
   state->game_info.nearest_spawn_handle         = get_nearest_spawn();
   state->game_info.first_spawn_on_screen_handle = get_first_spawn_on_screen();
+
+  set_map_escape_sprite(SHEET_ID_ENTRANCE1_ANIMATION, {0.f, 0.f}, 1.f);
 
   event_register(EVENT_CODE_END_GAME, game_manager_on_event);
   event_register(EVENT_CODE_DAMAGE_PLAYER_IF_COLLIDE, game_manager_on_event);
@@ -400,11 +422,13 @@ bool game_manager_initialize(const camera_metrics * in_camera_metrics, const app
     IERROR("game_manager::game_manager_reinit()::Player system initialization failed");
     return false;
   }
-  if (not parse_or_create_save_data_from_file(SAVE_SLOT_CURRENT_SESSION, save_data(SAVE_SLOT_CURRENT_SESSION, (*get_default_player()), state->default_game_rules, 0))) {
-    IERROR("game_manager::game_manager_reinit()::Save system failed to creating/parsing serialization data");
-    return false;
+  if(not parse_save_data(in_app_settings->active_slot, save_data(in_app_settings->active_slot, (*get_default_player()), state->default_game_rules, 0))) {
+    IERROR("game_manager::game_manager_reinit()::Save file cannot found");
   }
-  gm_load_game();
+
+  if(in_app_settings->active_slot > SAVE_SLOT_UNDEFINED and in_app_settings->active_slot < SAVE_SLOT_MAX) {
+    gm_load_game(in_app_settings->active_slot);
+  }
 
   state->game_manager_initialized = true;
 
@@ -432,9 +456,12 @@ void game_manager_cleanup_state(void) {
     state->ingame_phase = INGAME_PLAY_PHASE_UNDEFINED;
     state->chosen_traits.clear();
     state->collected_coins = 0;
-    state->total_spawn_count = 0;
     state->total_boss_count = 0;
     state->total_boss_spawned = 0;
+    state->spawn_on_begin = 0;
+    state->spawn_on_map_max = 0;
+    state->spawn_spawn_count = 0;
+    state->spawn_spawn_interval = 0.f;
     state->total_play_time = 0.f;
     state->play_time = 0.f;
     state->delta_time = 0.f;
@@ -459,6 +486,21 @@ void update_game_manager(void) {
       break; 
     }
     case INGAME_PLAY_PHASE_CLEAR_ZOMBIES: {
+      if (not state->game_info.player_state_dynamic->is_dead) {
+        gm_update_player();
+        update_collectible_manager();
+
+        update_spawns(state->game_info.player_state_dynamic->position);
+        generate_in_game_info();
+        update_abilities(get_player_state()->ability_system);
+      }
+      else {
+        gm_end_game(false);
+        return;
+      }
+      break;
+    }
+    case INGAME_PLAY_PHASE_ESCAPE: {
       if (not state->game_info.player_state_dynamic->is_dead) {
         gm_update_player();
         update_collectible_manager();
@@ -539,6 +581,22 @@ void render_game(void) {
       }
       return;
     }
+    case INGAME_PLAY_PHASE_ESCAPE: {
+      if (not state->game_info.player_state_dynamic->is_dead) {
+        spritesheet& esc_spr = state->map_escape_sprite;
+        ui_play_sprite_on_site(esc_spr, esc_spr.coord, esc_spr.origin, esc_spr.rotation, esc_spr.tint);
+
+        render_player();
+        render_collectible_manager();
+        render_abilities(get_player_state()->ability_system);
+        render_spawns();
+      }
+      else {
+        render_player();
+        render_spawns();
+      }
+      return;
+    }
     case INGAME_PLAY_PHASE_RESULTS: {
       
       return;
@@ -609,6 +667,9 @@ void gm_start_game() {
     IERROR("game_manager::gm_start_game()::State is invalid");
     return false;
   }
+  if (stage.spawn_on_begin > MAX_SPAWN_COUNT or stage.spawn_on_map_max > MAX_SPAWN_COUNT) {
+    return false;
+  }
   reset_ingame_info();
   state->chosen_traits = _chosen_traits;
   state->starter_ability = starter_ability;
@@ -642,16 +703,16 @@ void gm_start_game() {
   }
   state->stage = stage;
   state->ingame_phase = INGAME_PLAY_PHASE_IDLE;
-  state->total_spawn_count = state->stage.total_spawn_count * state->game_rules.at(GAME_RULE_SPAWN_MULTIPLIER).mm_ex.f32[3];
-  state->total_play_time   = state->stage.stage_duration * state->game_rules.at(GAME_RULE_PLAY_TIME_MULTIPLIER).mm_ex.f32[3];
-  state->total_boss_count  = state->stage.total_boss_count + state->game_rules.at(GAME_RULE_BOSS_MODIFIER).mm_ex.i32[3];
+  state->spawn_on_begin       = state->stage.spawn_on_begin * state->game_rules.at(GAME_RULE_SPAWN_MULTIPLIER).mm_ex.f32[3];
+  state->spawn_on_map_max     = state->stage.spawn_on_map_max * state->game_rules.at(GAME_RULE_SPAWN_MULTIPLIER).mm_ex.f32[3];
+  state->spawn_spawn_count    = state->stage.spawn_spawn_count;
+  state->spawn_spawn_interval = state->stage.spawn_spawn_interval;
+  state->total_play_time      = state->stage.stage_duration * state->game_rules.at(GAME_RULE_PLAY_TIME_MULTIPLIER).mm_ex.f32[3];
+  state->total_boss_count     = state->stage.total_boss_count + state->game_rules.at(GAME_RULE_BOSS_MODIFIER).mm_ex.i32[3];
   state->play_time = (*state->game_info.total_play_time);
 
-  if (stage.total_spawn_count > MAX_SPAWN_COUNT) {
-    return false;
-  }
-  populate_map_with_spawns(stage.total_spawn_count);
-  if (state->game_info.in_spawns->size() <= 0) {
+  populate_map_with_spawns(stage.spawn_on_begin);
+  if (state->game_info.in_spawns->empty()) {
     return false;
   }
   _add_ability(state->starter_ability);
@@ -679,11 +740,11 @@ void gm_end_game(bool is_win) {
 void gm_save_game(void) {
   state->game_progression_data->player_data = state->player_state_static;
   state->game_progression_data->game_rules = state->game_rules;
-  save_save_data(SAVE_SLOT_CURRENT_SESSION);
+  save_save_data(state->in_app_settings->active_slot);
 }
-void gm_load_game(void) {
+void gm_load_game(save_slot_id slot_id) {
   state->player_state_static = *(get_default_player());
-  state->game_progression_data = get_save_data(SAVE_SLOT_CURRENT_SESSION);
+  state->game_progression_data = &get_save_data(slot_id);
   state->game_rules = state->default_game_rules;
 
   for (size_t itr_000 = FIRST_UPGRADABLE_GAME_RULE; itr_000 < LAST_UPGRADABLE_GAME_RULE; ++itr_000) {
@@ -734,7 +795,7 @@ void gm_load_game(void) {
 }
 void gm_refresh_save_slot(void) {
   gm_save_game();
-  gm_load_game();
+  gm_load_game(state->in_app_settings->active_slot);
 }
 void gm_damage_spawn_if_collide(data128 coll_data, i32 damage, collision_type coll_check) {
   switch (coll_check) {
@@ -867,7 +928,10 @@ void reset_ingame_info(void) {
   state->stage = worldmap_stage();
   state->game_rules.fill(game_rule());
   state->collected_coins = 0;
-  state->total_spawn_count = 0;
+  state->spawn_on_begin = 0;
+  state->spawn_on_map_max = 0;
+  state->spawn_spawn_count = 0;
+  state->spawn_spawn_interval = 0.f;
   state->total_boss_count = 0;
   state->total_boss_spawned = 0;
   state->total_play_time = 0.f;
@@ -1459,6 +1523,9 @@ f32 gm_get_player_sprite_scale(void) {
 }
 const std::vector<player_inventory_slot>& gm_get_inventory(void) {
   return state->player_inventory;
+}
+const save_data& gm_get_save_data(save_slot_id id) {
+  return get_save_data(id);
 }
 bool _add_ability(ability_id _id) {
   if (_id <= ABILITY_ID_UNDEFINED or _id >= ABILITY_ID_MAX) {

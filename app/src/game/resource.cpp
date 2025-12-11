@@ -802,6 +802,7 @@ void load_texture_pak([[__maybe_unused__]] pak_file_id pak_id, [[__maybe_unused_
     ImageResize(&img, new_size.x, new_size.y);
   }
   tex = LoadTextureFromImage(img);
+  UnloadImage(img);
   
   state->textures.at(_id) = tex;
   #endif
@@ -821,7 +822,7 @@ bool load_image_pak(
     IERROR("resource::load_image_pak()::File:%d does not exist", file_id);
     return false;
   }
-  img = LoadImageFromMemory(file->file_extension.c_str(), reinterpret_cast<const u8 *>(file->content.size()), file->content.size());
+  img = LoadImageFromMemory(file->file_extension.c_str(), reinterpret_cast<const u8 *>(file->content.data()), file->content.size());
   if (resize) {
     ImageResize(&img, new_size.x, new_size.y);
   }
@@ -851,6 +852,7 @@ void load_texture_disk(
     Image img = LoadImage(path);
     ImageResize(&img, new_size.x, new_size.y);
     tex = LoadTextureFromImage(img);
+    UnloadImage(img);
   } else {
     tex = LoadTexture(path);
   }

@@ -542,6 +542,28 @@ void assign_pak_data_by_id(pak_file_id id) {
   IERROR("pak_parser::pak_id_to_file_name()::Function ended unexpectedly");
   return;
 }
+void pak_parser_drop_pak_data(pak_file_id id) {
+  if (not state or state == nullptr) {
+    return;
+  }
+  switch (id) {
+    case PAK_FILE_ASSET1: {
+      state->asset_pak_datas.at(id).pak_data.clear();
+      return;
+    }
+    case PAK_FILE_ASSET2: {
+      state->asset_pak_datas.at(id).pak_data.clear();
+      return;
+    }
+    default: return;
+  }
+}
+void pak_parser_drop_map_pak_data(void) {
+  if (not state or state == nullptr) {
+    return;
+  }
+  state->map_pak_data.clear();
+}
 void assign_file_data_by_id(pak_file_id id, i32 index, size_t file_offset_in_pak_data) {
   if (id >= PAK_FILE_MAX or id <= PAK_FILE_UNDEFINED) {
     IWARN("pak_parser::assign_file_data_by_id()::File id is out of bound");

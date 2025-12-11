@@ -96,6 +96,8 @@ bool app_initialize(i32 build_id) {
         Rectangle {0.f, 0.f, static_cast<f32>(GetScreenWidth()), static_cast<f32>(GetScreenHeight())}, ZEROVEC2, 0.f, WHITE
 		  );
       EndDrawing();
+      UnloadImage(loading_image);
+      UnloadTexture(loading_tex);
     }
 
 
@@ -108,11 +110,15 @@ bool app_initialize(i32 build_id) {
       {0, 0, (f32)loading_tex.width, (f32)loading_tex.height}, 
       {0, 0, (f32)GetScreenWidth(),  (f32)GetScreenHeight()}, Vector2{0.f, 0.f}, 0, WHITE);
     EndDrawing();
+    UnloadTexture(loading_tex);
   #endif
   
   parse_asset_pak(PAK_FILE_ASSET1);
   parse_asset_pak(PAK_FILE_ASSET2);
   parse_map_pak();
+  pak_parser_drop_pak_data(PAK_FILE_ASSET1);
+  pak_parser_drop_pak_data(PAK_FILE_ASSET2);
+  pak_parser_drop_map_pak_data();
 
   if (not loc_parser_system_initialize()) {
     IFATAL("app::app_initialize()::Localization system init failed");

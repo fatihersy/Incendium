@@ -394,7 +394,7 @@ struct ui_fade_control_system {
   bool is_fade_animation_played;
 
   data128 data;
-  void (*on_change_complete)(data128);
+  void (*on_change_complete)(ui_fade_type, data128);
 
   ui_fade_control_system(void) {
     this->fade_animation_duration = 0.f;

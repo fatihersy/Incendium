@@ -15,6 +15,7 @@ void set_resolution(i32 width, i32 height);
 void set_window_size(i32 width, i32 height);
 bool set_master_sound(i32 volume, bool save = false);
 void set_language(const char* lang);
+void set_active_save_slot(save_slot_id id);
 
 app_settings * get_app_settings(void);
 app_settings get_default_ini_file(void);

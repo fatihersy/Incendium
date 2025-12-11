@@ -96,9 +96,7 @@ static user_interface_system_state * state = nullptr;
 #define SDR_ASSERT_SET_CURR_VAL(EXPR, ID, INDEX) {\
   if(EXPR) state->sliders.at(ID).current_value = INDEX;\
 }
-#define SDR_ASSERT_SET_CURR_VAL_TO_LAST_ADDED(EXPR, ID) {\
-  if(EXPR) state->sliders.at(ID).current_value = state->sliders.at(ID).options.size() - 1;\
-}
+
 
 #define UI_BASE_RENDER_SCALE(SCALE) VECTOR2(\
   static_cast<f32>(state->in_app_settings->render_width * SCALE),\
@@ -122,8 +120,13 @@ static user_interface_system_state * state = nullptr;
 #define SCROLLBAR_HANDLE_MIN_HEIGHT = (UI_BASE_RENDER_HEIGHT * 0.1f) 
 #define SCROLLBAR_PADDING (UI_BASE_RENDER_HEIGHT * 0.01f)
 #define UI_SCROLL_HANDLE_HEIGHT state->in_app_settings->render_height * .05f
+
 constexpr f32 SCROLL_HANDLE_WIDTH_RATIO = 1.0f; // 16px / 16px
 constexpr f32 SCROLL_HEADER_HEIGHT = 11.0f;
+
+static inline void set_slider_last_element(slider_id id) {
+  state->sliders[id].current_value = state->sliders[id].options.size() - 1u;
+}
 
 bool user_interface_on_event(i32 code, event_context context);
  
@@ -156,9 +159,9 @@ void draw_text_ex(const char *text, Vector2 position, Font font, f32 _fontsize, 
 void DrawTextBoxed(Font font, const char *text, Rectangle rec, float fontSize, float spacing, bool wordWrap, Color tint);
 const char* wrap_text(const char* text, Font font, i32 font_size, Rectangle bounds, bool center_x);
 Font load_font(pak_file_id pak_id, i32 asset_id, i32 font_size, i32* _codepoints, i32 _codepoint_count);
-localization_package* load_localization(std::string language_name, i32 lang_index, std::string _codepoints, i32 font_size);
-localization_package* ui_get_localization_by_name(const char * language_name);
-localization_package* ui_get_localization_by_index(language_index index);
+bool load_localization(std::string language_name, i32 lang_index, std::string _codepoints, i32 font_size);
+localization_package& ui_get_localization_by_name(const char * language_name);
+localization_package& ui_get_localization_by_index(language_index index);
 
 bool ui_sound_slider_on_left_button_trigger(void);
 bool ui_sound_slider_on_right_button_trigger(void);
@@ -257,42 +260,40 @@ bool user_interface_system_initialize(const camera_metrics * in_camera_metrics) 
     COMBAT_FEEDBACK_FLOATING_TEXT_MAX_SCALE
   );
 
-  const std::array<loc_data, LANGUAGE_INDEX_MAX> *const langs = loc_parser_get_loc_langs();
-  if (not langs or langs == nullptr) {
-    IERROR("user_interface::user_interface_system_initialize()::Localization parse failed");
-    return false;
-  }
-  for (size_t itr_000 = 0u; itr_000 < langs->size(); ++itr_000) {
-    const loc_data *const data = __builtin_addressof(langs->at(itr_000));
-    if (data->index <= LANGUAGE_INDEX_UNDEFINED or data->index >= LANGUAGE_INDEX_MAX) {
+  const std::array<loc_data, LANGUAGE_INDEX_MAX>& langs = loc_parser_get_loc_langs();
+
+  for (const loc_data& data : langs) {
+    if (data.index <= LANGUAGE_INDEX_UNDEFINED or data.index >= LANGUAGE_INDEX_MAX) {
       continue;
     }
-    const localization_package *const _loc_data = load_localization(data->language_name, data->index, data->codepoints, 24);
-    if (not _loc_data or _loc_data == nullptr) {
-      IERROR("user_interface::user_interface_system_initialize()::Loading localization:%s is failed", data->language_name.c_str());
+    if (not load_localization(data.language_name, data.index, data.codepoints, 24)) {
+      IERROR("user_interface::user_interface_system_initialize()::Loading localization:%s is failed", data.language_name.c_str());
       continue;
     }
   }
-  const localization_package* settings_loc_lang = ui_get_localization_by_name(state->in_app_settings->language.c_str());
-  if (not settings_loc_lang or settings_loc_lang == nullptr) {
-    IERROR("user_interface::user_interface_system_initialize()::User interface state is corrupted or file parsing failed");
-    return false;
-  }
-  if (settings_loc_lang->index <= LANGUAGE_INDEX_UNDEFINED or settings_loc_lang->index >= LANGUAGE_INDEX_MAX) {
+  language_index lang_index = LANGUAGE_INDEX_UNDEFINED;
+  const localization_package& settings_loc_lang = ui_get_localization_by_name(state->in_app_settings->language.c_str());
+  if (not settings_loc_lang.is_valid or settings_loc_lang.index == LANGUAGE_INDEX_BUILTIN) {
     IWARN("user_interface::user_interface_system_initialize()::The language requested by config (%s) cannot loaded. Setting to builtin", state->in_app_settings->language.c_str());
-    if(not loc_parser_set_active_language_builtin()) {
-      return false;
-    }
-    settings_loc_lang = ui_get_localization_by_index(LANGUAGE_INDEX_BUILTIN);
+    lang_index = loc_parser_set_active_language_any();
+    set_language(loc_parser_lang_index_to_name(lang_index));
   }
-  if(loc_parser_set_active_language_by_index(settings_loc_lang->index)) {
+  else lang_index = settings_loc_lang.index;
+
+  if(loc_parser_set_active_language_by_index(lang_index)) {
     loc_data * _loc_data = loc_parser_get_active_language();
     if (not _loc_data or _loc_data == nullptr) {
       IERROR("user_interface::user_interface_system_initialize()::Language init failed");
       return false;
     }
-    state->display_language = ui_get_localization_by_index(_loc_data->index);
+    state->display_language = &ui_get_localization_by_index(_loc_data->index);
+  } else {
+    IWARN("user_interface::user_interface_system_initialize()::Setting the language any");
+    lang_index = loc_parser_set_active_language_any();
+    set_language(loc_parser_lang_index_to_name(lang_index));
+    state->display_language = &ui_get_localization_by_index(lang_index);
   }
+
   if(not initialize_shader_system()) {
     IERROR("user_interface::user_interface_system_initialize()::Shader system failed to initialize!");
     return false;
@@ -378,9 +379,11 @@ bool user_interface_system_initialize(const camera_metrics * in_camera_metrics) 
   // MAIN MENU
   {
     register_button(BTN_ID_MAINMENU_BUTTON_PLAY,                        BTN_TYPE_FLAT_BUTTON);
+    register_button(BTN_ID_MAINMENU_BUTTON_CHARACTER,                   BTN_TYPE_FLAT_BUTTON);
+    register_button(BTN_ID_MAINMENU_BUTTON_SAVE_GAME,                   BTN_TYPE_FLAT_BUTTON);
+    register_button(BTN_ID_MAINMENU_BUTTON_CREDITS,                     BTN_TYPE_FLAT_BUTTON);
     register_button(BTN_ID_MAINMENU_BUTTON_EDITOR,                      BTN_TYPE_FLAT_BUTTON);
     register_button(BTN_ID_MAINMENU_BUTTON_SETTINGS,                    BTN_TYPE_FLAT_BUTTON);
-    register_button(BTN_ID_MAINMENU_BUTTON_ENTER_STATE_CHARACTER,       BTN_TYPE_FLAT_BUTTON);
     register_button(BTN_ID_MAINMENU_BUTTON_EXIT,                        BTN_TYPE_FLAT_BUTTON);
     register_button(BTN_ID_MAINMENU_SETTINGS_CANCEL,                    BTN_TYPE_MENU_BUTTON);
     register_button(BTN_ID_MAINMENU_STATE_CHARACTER_BACK,               BTN_TYPE_MENU_BUTTON);
@@ -392,6 +395,8 @@ bool user_interface_system_initialize(const camera_metrics * in_camera_metrics) 
     register_button(BTN_ID_MAINMENU_MAP_CHOICE_BACK,                    BTN_TYPE_MENU_BUTTON);
     register_button(BTN_ID_MAINMENU_TRAIT_CHOICE_BACK,                  BTN_TYPE_MENU_BUTTON);
     register_button(BTN_ID_MAINMENU_TRAIT_CHOICE_ACCEPT,                BTN_TYPE_MENU_BUTTON);
+    register_button(BTN_ID_MAINMENU_SAVE_GAME_BACK,                     BTN_TYPE_MENU_BUTTON);
+    register_button(BTN_ID_MAINMENU_CREDITS_BACK,                       BTN_TYPE_MENU_BUTTON);
   }
   // MAIN MENU
 
@@ -431,27 +436,32 @@ bool user_interface_system_initialize(const camera_metrics * in_camera_metrics) 
 
   // SLIDER OPTIONS
   {
-    if (ui_get_localization_by_name(loc_parser_lang_index_to_name(LANGUAGE_INDEX_ENGLISH))) {
+    language_index& lang_index = state->display_language->index;
+
+    if (state->localization_info[LANGUAGE_INDEX_ENGLISH].is_valid) {
       gui_slider_add_option(SDR_ID_SETTINGS_LANGUAGE, data_pack(DATA_TYPE_I32, data128(LANGUAGE_INDEX_ENGLISH), 1), LOC_TEXT_SETTINGS_BUTTON_ENGLISH, "");
-      SDR_ASSERT_SET_CURR_VAL_TO_LAST_ADDED(state->display_language->index == LANGUAGE_INDEX_ENGLISH, SDR_ID_SETTINGS_LANGUAGE);
+      if (lang_index == LANGUAGE_INDEX_ENGLISH) set_slider_last_element(SDR_ID_SETTINGS_LANGUAGE);
     }
 
-    if (ui_get_localization_by_name(loc_parser_lang_index_to_name(LANGUAGE_INDEX_TURKISH))) {
+    if (state->localization_info[LANGUAGE_INDEX_TURKISH].is_valid) {
       gui_slider_add_option(SDR_ID_SETTINGS_LANGUAGE, data_pack(DATA_TYPE_I32, data128(LANGUAGE_INDEX_TURKISH), 1), LOC_TEXT_SETTINGS_BUTTON_TURKISH, "");
-      SDR_ASSERT_SET_CURR_VAL_TO_LAST_ADDED(state->display_language->index == LANGUAGE_INDEX_TURKISH, SDR_ID_SETTINGS_LANGUAGE);
+      if(lang_index == LANGUAGE_INDEX_TURKISH) set_slider_last_element(SDR_ID_SETTINGS_LANGUAGE);
     }
 
     if (state->sliders.at(SDR_ID_SETTINGS_LANGUAGE).options.empty()) {
       gui_slider_add_option(SDR_ID_SETTINGS_LANGUAGE, data_pack(DATA_TYPE_I32, data128(LANGUAGE_INDEX_BUILTIN), 1), LOC_TEXT_SETTINGS_BUTTON_ENGLISH, "");
-      SDR_ASSERT_SET_CURR_VAL_TO_LAST_ADDED(state->display_language->index == LANGUAGE_INDEX_BUILTIN, SDR_ID_SETTINGS_LANGUAGE);
+      set_slider_last_element(SDR_ID_SETTINGS_LANGUAGE);
+      loc_parser_set_active_language_builtin();
     }
 
     gui_slider_add_option(SDR_ID_SETTINGS_WIN_MODE_SLIDER, data_pack(DATA_TYPE_I32, data128(0), 1), LOC_TEXT_SETTINGS_SDR_WINDOW_MODE_WINDOWED,   "");
-    SDR_ASSERT_SET_CURR_VAL_TO_LAST_ADDED(state->in_app_settings->window_state == 0, SDR_ID_SETTINGS_WIN_MODE_SLIDER)
+    if (state->in_app_settings->window_state == 0) set_slider_last_element(SDR_ID_SETTINGS_WIN_MODE_SLIDER);
+    
     gui_slider_add_option(SDR_ID_SETTINGS_WIN_MODE_SLIDER, data_pack(DATA_TYPE_I32, data128(FLAG_BORDERLESS_WINDOWED_MODE), 1), LOC_TEXT_SETTINGS_SDR_WINDOW_MODE_BORDERLESS, "");
-    SDR_ASSERT_SET_CURR_VAL_TO_LAST_ADDED(state->in_app_settings->window_state == FLAG_BORDERLESS_WINDOWED_MODE, SDR_ID_SETTINGS_WIN_MODE_SLIDER)
+    if (state->in_app_settings->window_state == FLAG_BORDERLESS_WINDOWED_MODE) set_slider_last_element(SDR_ID_SETTINGS_WIN_MODE_SLIDER);
+    
     gui_slider_add_option(SDR_ID_SETTINGS_WIN_MODE_SLIDER, data_pack(DATA_TYPE_I32, data128(FLAG_FULLSCREEN_MODE), 1), LOC_TEXT_SETTINGS_SDR_WINDOW_MODE_FULLSCREEN, "");
-    SDR_ASSERT_SET_CURR_VAL_TO_LAST_ADDED(state->in_app_settings->window_state == FLAG_FULLSCREEN_MODE, SDR_ID_SETTINGS_WIN_MODE_SLIDER)
+    if (state->in_app_settings->window_state == FLAG_FULLSCREEN_MODE) set_slider_last_element(SDR_ID_SETTINGS_WIN_MODE_SLIDER);
   }
   // SLIDER OPTIONS
 
@@ -1157,14 +1167,7 @@ inactive_panel_draw_result gui_panel(panel pan, Rectangle dest, bool _should_cen
   };
 }
 active_panel_draw_result gui_panel_active(panel *const pan, Rectangle dest, bool _should_center) {
-  IF_NOT_STATE("gui_panel_active", return {}; );
-
-  if (not pan or pan == nullptr) {
-    IWARN("user_interface::gui_panel_active()::Panel is invalid");
-    return {};
-  }
-  if (pan->signal_state == BTN_STATE_UNDEFINED) {
-    IWARN("user_interface::gui_panel_active()::Panel was not meant to be active");
+  if (not pan or pan == nullptr or pan->signal_state == BTN_STATE_UNDEFINED) {
     return {};
   }
 
@@ -1376,7 +1379,7 @@ void gui_draw_settings_screen(void) { // TODO: Return to settings later
           IERROR("user_interface::gui_draw_settings_screen()::Failed to get active language");
         }
         else {
-          state->display_language = ui_get_localization_by_index(loc->index);
+          state->display_language = &ui_get_localization_by_index(loc->index);
           set_language(loc->language_name.c_str());
         }
       }
@@ -1394,17 +1397,18 @@ void ui_refresh_setting_sliders_to_default(void) {
     ressdr->options.clear();
     { // Getting resolutions based on aspect ratio
 	    const std::vector<std::pair<i32, i32>> *const supported_resolution_list = get_supported_render_resolutions();
-	    for (size_t itr_000 = 0u; itr_000 < supported_resolution_list->size(); ++itr_000) {
-	    	i32 _suppres_window_width  = supported_resolution_list->at(itr_000).first;
-	    	i32 _suppres_window_height = supported_resolution_list->at(itr_000).second;
-	    	gui_slider_add_option(SDR_ID_SETTINGS_RES_SLIDER, data_pack(DATA_TYPE_I32, 
-          data128(_suppres_window_width, _suppres_window_height), 2) , 0, TextFormat("%dx%d", _suppres_window_width, _suppres_window_height)
-        );
-	    	SDR_ASSERT_SET_CURR_VAL_TO_LAST_ADDED(
-          state->in_app_settings->window_width  == _suppres_window_width && 
-          state->in_app_settings->window_height == _suppres_window_height, SDR_ID_SETTINGS_RES_SLIDER
-        )
-	    }
+      if (supported_resolution_list) {
+      	for (size_t itr_000 = 0u; itr_000 < supported_resolution_list->size(); ++itr_000) {
+	    	  i32 _suppres_window_width  = supported_resolution_list->at(itr_000).first;
+	    	  i32 _suppres_window_height = supported_resolution_list->at(itr_000).second;
+	    	  gui_slider_add_option(SDR_ID_SETTINGS_RES_SLIDER, data_pack(DATA_TYPE_I32, 
+            data128(_suppres_window_width, _suppres_window_height), 2) , 0, TextFormat("%dx%d", _suppres_window_width, _suppres_window_height)
+          );
+          if(state->in_app_settings->window_width  == _suppres_window_width && state->in_app_settings->window_height == _suppres_window_height) {
+            set_slider_last_element(SDR_ID_SETTINGS_RES_SLIDER);
+          }
+	      }
+      }
     }
 
 	  { // Settings current resolution to corresponding slider index
@@ -1429,7 +1433,7 @@ void ui_refresh_setting_sliders_to_default(void) {
 	    	gui_slider_add_option(SDR_ID_SETTINGS_RES_SLIDER, data_pack(DATA_TYPE_I32, 
           data128(_noeqres_window_width, _noeqres_window_height), 2) , 0, TextFormat("%dx%d", _noeqres_window_width, _noeqres_window_height)
         );
-        SDR_ASSERT_SET_CURR_VAL_TO_LAST_ADDED(1, SDR_ID_SETTINGS_RES_SLIDER);
+        set_slider_last_element(SDR_ID_SETTINGS_RES_SLIDER);
       }
     }
   } else {
@@ -2498,16 +2502,16 @@ Font load_font(pak_file_id pak_id, i32 asset_id, i32 font_size, [[__maybe_unused
   }
   return font;
 }
-localization_package* load_localization(std::string language_name, i32 lang_index, std::string _codepoints, i32 font_size) {
-  IF_NOT_STATE("load_localization", return nullptr; );
-
+bool load_localization(std::string language_name, i32 lang_index, std::string _codepoints, i32 font_size) {
   localization_package loc_pack = localization_package();
+  if (lang_index <= LANGUAGE_INDEX_UNDEFINED or lang_index >= LANGUAGE_INDEX_MAX) {
+    return false;
+  }
 
   i32 codepoint_count = 1;
   i32* codepoints = LoadCodepoints(_codepoints.c_str(), __builtin_addressof(codepoint_count));
   if (not codepoints or codepoints == nullptr) {
-    IERROR("user_interface::load_localization()::Failed to load codepoints");
-    return nullptr;
+    return false;
   }
   loc_pack.index = static_cast<language_index>(lang_index);
   loc_pack.language_name = language_name;
@@ -2525,30 +2529,26 @@ localization_package* load_localization(std::string language_name, i32 lang_inde
   SetTextureFilter(loc_pack.bold_font .texture, TEXTURE_FILTER_ANISOTROPIC_16X);
   SetTextureFilter(loc_pack.mood.texture, TEXTURE_FILTER_ANISOTROPIC_16X);
 
-  state->localization_info.at(lang_index) = loc_pack;
+  state->localization_info[lang_index] = loc_pack;
+  state->localization_info[lang_index].is_valid = true;
 
-  return __builtin_addressof(state->localization_info.at(lang_index));
+  return true;
 }
-localization_package* ui_get_localization_by_name(const char * language_name) {
-  IF_NOT_STATE("ui_get_localization_by_name", return nullptr; );
-
+localization_package& ui_get_localization_by_name(const char * language_name) {
   language_index index = loc_parser_lang_name_to_index(language_name);
-  for (size_t iter = 0u; iter < state->localization_info.size(); iter++) {
-    if (state->localization_info.at(iter).index == index) {
-      return __builtin_addressof(state->localization_info.at(iter));
+  for (localization_package& pkg : state->localization_info) {
+    if (pkg.index == index) {
+      return pkg;
     }
   }
-  return nullptr;
+  return state->localization_info[LANGUAGE_INDEX_BUILTIN];
 }
-localization_package * ui_get_localization_by_index(language_index index) {
-  IF_NOT_STATE("ui_get_localization_by_index", return nullptr; );
-
+localization_package& ui_get_localization_by_index(language_index index) {
   if (index <= LANGUAGE_INDEX_UNDEFINED or index >= LANGUAGE_INDEX_MAX) {
     IERROR("user_interface::ui_get_localization_by_index()::Index is out of bound");
-    return __builtin_addressof(state->localization_info.at(LANGUAGE_INDEX_BUILTIN));
+    return state->localization_info[LANGUAGE_INDEX_BUILTIN];
   }
-
-  return __builtin_addressof(state->localization_info.at(index));
+  return state->localization_info[index];
 }
 Vector2 ui_align_text(Rectangle in_dest, Vector2 in_text_measure, text_alignment align_to) {
     switch (align_to) {
@@ -2619,44 +2619,3 @@ bool user_interface_on_event(i32 code, event_context context) {
 
   return false;
 }
-
-#undef BUTTON_TEXT_UP_COLOR
-#undef BUTTON_TEXT_HOVER_COLOR
-#undef BUTTON_TEXT_PRESSED_COLOR
-#undef TEXT_SHADOW_COLOR
-#undef TEXT_SHADOW_SIZE_MULTIPLY
-#undef MAX_UI_WORDWRAP_WORD_LENGTH
-#undef MAX_UI_WORDWRAP_SENTENCE_LENGTH
-#undef UI_LIGHT_FONT
-#undef UI_LIGHT_FONT_SIZE
-#undef UI_MEDIUM_FONT
-#undef UI_MEDIUM_FONT_SIZE
-#undef UI_BOLD_FONT
-#undef UI_BOLD_FONT_SIZE
-#undef UI_ITALIC_FONT
-#undef UI_ITALIC_FONT_SIZE
-#undef UI_ABRACADABRA_FONT
-#undef UI_ABRACADABRA_FONT_SIZE
-#undef MENU_BUTTON_FONT
-#undef MENU_BUTTON_FONT_SIZE_SCALE
-#undef MINI_BUTTON_FONT
-#undef MINI_BUTTON_FONT_SIZE_SCALE
-#undef LABEL_FONT
-#undef LABEL_FONT_SIZE_SCALE
-#undef DEFAULT_MENU_BUTTON_SCALE
-#undef SLIDER_FONT
-#undef DEFAULT_SLIDER_FONT_SIZE
-#undef DEFAULT_PERCENT_SLIDER_CIRCLE_AMOUTH
-#undef SDR_AT
-#undef SDR_CURR_OPT_VAL
-#undef SDR_ASSERT_SET_CURR_VAL
-#undef SDR_ASSERT_SET_CURR_VAL_TO_LAST_ADDED
-#undef UI_BASE_RENDER_SCALE
-#undef UI_BASE_RENDER_DIV2
-#undef UI_BASE_RENDER_RES_VEC
-#undef UI_BASE_RENDER_WIDTH
-#undef UI_BASE_RENDER_HEIGHT 
-#undef COMBAT_FEEDBACK_FLOATING_TEXT_MIN_DURATION
-#undef COMBAT_FEEDBACK_FLOATING_TEXT_MAX_DURATION
-#undef COMBAT_FEEDBACK_FLOATING_TEXT_MIN_SCALE
-#undef COMBAT_FEEDBACK_FLOATING_TEXT_MAX_SCALE

@@ -55,10 +55,7 @@ typedef struct loc_parser_system_state {
   
   std::vector<u8> file_buffer;
   loc_parser_system_state(void) {
-    this->default_language = std::string();
-    this->lang_data.fill(loc_data());
     this->active_loc = nullptr;
-    this->file_buffer = std::vector<u8>();
   }
 }loc_parser_system_state;
 
@@ -94,98 +91,266 @@ bool loc_parser_system_initialize(void) {
   {
     state->default_language = std::string
     (R"(
-      {
-        display_text = "Builtin",
-        codepoints = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890-><'.:!,/",
-        translates = {
-          "::NULL",
+{
+  display_text = "English",
+  codepoints = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890-><'.:!,/",
+  translates = {
+    "::NULL" Overided by application,
+	" ",
 
-          "Play"                          Main Menu,
-          "Character",
-          "Settings",
-          "Exit",
-          "Editor",
-          "Inventory",
-          "Stats",
-          "Back",
-          "Upgrade",
-          "Total",
-          "Resume",
-          "Exit to Main Menu",
-          "Exit to Desktop",
-          "Back",
-          "Traits",
-          "Chosen Traits",
-          "Starter Ability",
-          "Back",
-          "Accept",
-          "Remaining Points",
+    "Play"                          Main Menu,
+    "Character",
+    "Save Game",
+    "Credits",
+    "Editor",
+    "Settings",
+    "Exit",
+	
+	"Imbue" 						Character panel,
+	"Imbue",
+    "Inventory",
+    "Stats",
+    "Back",
+    "Upgrade",
+    "Total",
+    "Resume",
+    "Exit to Main Menu",
+    "Exit to Desktop",
+    "Back",
+    "Traits",
+    "Chosen Traits",
+    "Starter Ability",
+    "Back",
+    "Accept",
+    "Remaining Points",
+	"Back",
+	"Back",
 
-          "Windowed"                      Settings ,
-          "Borderless",
-          "Full Screen",
-          "Apply",
-          "Cancel",
-          "English",
-          "Turkish",
+    "Windowed"                      Settings,
+    "Borderless",
+    "Full Screen",
+    "Apply",
+    "Cancel",
+    "English",
+    "Turkish",
 
-          "TREE"                          Editor,
-          "TOMBSTONE",
-          "STONE",
-          "SPIKE",
-          "SKULL",
-          "PILLAR",
-          "LAMP",
-          "FENCE",
-          "DETAIL",
-          "CANDLE",
-          "BUILDING",
-          "SPRITE",
+    "TREE"                          Editor,
+    "TOMBSTONE",
+    "STONE",
+    "SPIKE",
+    "SKULL",
+    "PILLAR",
+    "LAMP",
+    "FENCE",
+    "DETAIL",
+    "CANDLE",
+    "BUILDING",
+    "SPRITE",
 
-          "Press Space To Start!"         In Game,
-          "NEW!",
-          "Damage:",
-          "Amouth:",
-          "Hitbox:",
-          "Speed:",
-          "Stage Cleared",
-          "Dead",
-          "Collected Coins:",
-          "Accept",
+    "Press Space To Start!"         In Game,
+    "NEW!",
+    "Damage:",
+    "Amouth:",
+    "Hitbox:",
+    "Speed:",
+    "Stage Cleared",
+    "Dead",
+    "Collected golds:",
+    "Accept",
+    "SPIN!",
+	"Curse",
+	"Pocket Watch",
+	"Hourglass",
+	"Shrine",
+	"Compass",
+	"Enlightened",
+	"Big Pouch",
+	"Totem",
+	"Reserved",
+	"Increases zombie count",
+	"Increases play time",
+	"Increases delta time",
+	"More bosses",
+	"Opens special areas",
+	"Increases trait points",
+	"Increases bonus gold",
+	"Increases zombie level",
+	"Place holder",
 
-          "Life Essence"                   Player,
-          "Essential",
-          "Bread",
-          "Keeps you fed",
-          "Cardinal Boots",
-          "Increases the speed",
-          "Blast Scroll",
-          "Increases the Hitbox",
-          "Heavy Cross",
-          "Increases Damage",
-          "Hourglass",
-          "Reduce cooldown",
-          "Second Hand",
-          "Increases projectile amouth",
-          "Seeing Eyes",
-          "Increases experience gain",
-          "Jack-Of-All-Traits",
-          "Increases your total trait points",
-          "Bullet",
-          "Arcane Codex",
-          "Comet",
-          "Fireball",
-          "Blazing Steps",
-          "Radience",
+    "Life Essence"                   Player,
+    "Essential",
+    "Bread",
+    "Keeps you fed",
+    "Cardinal Boots",
+    "Increases the speed",
+    "Blast Scroll",
+    "Increases the Hitbox",
+    "Heavy Cross",
+    "Increases Damage",
+    "Hourglass",
+    "Reduce cooldown",
+    "Second Hand",
+    "Increases projectile amouth",
+    "Seeing Eyes",
+    "Increases experience gain",
+    "Jack-Of-All-Traits",
+    "Increases your total trait points",
+    "Bullet",
+    "Arcane Codex",
+    "Comet",
+    "Fireball",
+    "Blazing Steps",
+    "Radience",
+    "Harvester",
+    "Pendulum",
+	"Scissor",
+	"The Shattered Mosaic",
+	
+	"Alacrity" Positive traits,
+	"Fortitude",
+	"Power",
+	"Fortune",
+	"Keen Edge",
+	"Serendipity",
+	"Vigor",
+	"Persistence",
+	"Affliction",
+	"Frenzy",
+	"Brutality",
+	"Devastator",
+	"Resilience",
+	"Amplitude",
+	"Expedition",
+	"Tribute",
+	"Stagger",
+	"Sigilic Synergy",
+	"Vitality Synergy",
+	"Lethal Synergy",
+	
+	"Exertion" 															Negative traits,
+	"Hobbled",
+	"Myopia",
+	"Hemophilia",
+	"Dread",
+	"Infection",
+	"Clumsy",
+	"Unstable",
+	"Obscured Vitals",
+	"Tunnel Vision",
+	"Jittery",
+	"Forgetful",
+	"Blood Scent",
+	"Apathy",
+	"Ignorance",
+	"Blunted",
+	"Encumbered",
+	
+	"Quicken your step, Advance to the next purge" 						Positive trait descs,
+	"Fortify your mortal vessel against the scourge.",
+	"Imbue your attacks and abilities with 5% more righteous damage",
+	"He is guiding your hand, tilting fate in your favor.",
+	"Smite the unholy with precision!",
+	"You've got a good eye for spotting stuff in all this muck",
+	"Your blood is resilient, slowly mending your wounds",
+	"Divine wrath sears deeper into the unholy souls.",
+	"Heaven's pyres burn brighter on the unholy flesh.",
+	"Swing faster, a moment's hesitation is a moment for heresy.",
+	"Every swing is an act of faith. More, faith",
+	"A well-placed blow is a fatal one.",
+	"Your faith is a shield. Suffer less from their pathetic attacks.",
+	"Unleash a wider swath of destruction.",
+	"Become the swift hand of righteousness.",
+	"The Inquisition's ledgers balance in thy favor.",
+	"Take the hit, bleed it out slow. Defy death",
+	"Your insight into the old sigils deepens.",
+	"Draw more vitality from your sigils.",
+	"Draw more lethality from your sigils.",
+	
+	"The beastly scourge wears on you. Your arms grow heavy" 						Negative trait descs,
+	"Your legs are shot. Jumping isn't as easy as it used to be.",
+	"The shadows cling to your vision, obscuring items just beyond your grasp.",
+	"Your blood is unrighteously thin. The bites of the unholy will cause you to bleed profusely.",
+	"A primal fear grips you. When the unholy are near.",
+	"Their blood is a plague. A single bite will infect you",
+	"Your focus is not on worldly trinkets. You can carry fewer items now.",
+	"Your righteous power is a tempest that does not distinguish friend from foe.",
+	"Your mortal wounds are beneath your notice.",
+	"The shadows close in. Your perception of the world is narrowed.",
+	"Too much adrenaline. You can't focus on the loot screen.",
+	"You can only recall a few of your techniques at once",
+	"You are soaked in the blood of the unholy. They can smell you from a great distance.",
+	"Time is convoluted in these cursed lands... or perhaps you've just stopped caring.",
+	"You'll know you're experienced when you're not dead.",
+	"Your projectiles are blunted by the scourge's unholy flesh.",
+	"You're too weighed down for all that rolling",
+	
+	"Souls",
+	
+	"Sigillum Dei",
+	
+	"Michael",
+	"Gabriel",
+	"Raphael",
+	"Uriel",
+	"Samael",
+	"Zadkiel",
+	"Thavael",
+	"Azrael",
+	"Camael",
+	"Jophiel",
+  
+	"Who is like God",
+	"Strength of God",
+	"God Heals",
+	"Light of God",
+	"Venom of God",
+	"Mercy of God",
+	"Grace of God",
+	"Whom God helps",
+	"Courage of God",
+	"Beauty of God",
 
-          "Work in progress!",
-          "See the light",
+	"My vitality is boundless.",
+	"My endurance is unbreakable.",
+	"My power is ever-present.",
+	"I recover and overcome all wounds.",
+	"My energy returns to me swiftly.",
+	"My magic flows without end.",
+	"I move with unmatched celerity.",
+	"My influence dominates the battlefield.",
+	"My might shatters all resistance.",
+	"My abilities are always ready.",
+	"My attacks are a legion.",
+	"I learn and adapt from every moment.",
+	"My potential for growth is infinite.",
+	"My simplest strike is a killing blow.",
+	"My blade is a blur of motion.",
+	"I find the weakness in every defense.",
+	"My decisive strike is devastating.",
+	"Fortune bends to my will.",
+	"I stand resolute against all harm.",
+	"My will extends the suffering of my foes.",
+	"My power corrodes and consumes.",
+	"I choose when to feel the pain.",
+	"My symbols resonate with profound power.",
+	"My sigils of life grant perfect protection.",
+	"My sigils of death are an inescapable doom.",
+	"The world yields its treasures to me.",
+	"My efforts are rewarded tenfold.",
 
-          "Please select a starter ability"           Display error,
-          "You need more coin!",
-          "This stage cannot playable right now",
-        }
-      }
+    "Work in progress!",
+    "See the light",
+    
+    "Please select a starter ability"       Display error,
+    "You need more souls!",
+    "This stage cannot playable right now",
+	
+	"You can only imbue sigils",
+	"To merge, you need two identical sigils",
+	"Insufficent Souls",
+  }
+}
+
       )"
     );
   }
@@ -553,8 +718,8 @@ const char * loc_parser_lang_index_to_name(language_index index) {
   }
 }
 
-const std::array<loc_data, LANGUAGE_INDEX_MAX> * loc_parser_get_loc_langs(void) {
-  return __builtin_addressof(state->lang_data);
+const std::array<loc_data, LANGUAGE_INDEX_MAX>& loc_parser_get_loc_langs(void) {
+  return state->lang_data;
 }
 
 bool loc_parser_set_active_language_by_name(std::string language_name) {
@@ -571,6 +736,16 @@ bool loc_parser_set_active_language_by_name(std::string language_name) {
   }
   return false;
 }
+language_index loc_parser_set_active_language_any(void) {
+  if (state->lang_data[LANGUAGE_INDEX_ENGLISH].is_success) {
+    loc_parser_set_active_language_by_index(LANGUAGE_INDEX_ENGLISH);
+    return LANGUAGE_INDEX_ENGLISH;
+  }
+  else {
+    loc_parser_set_active_language_by_index(LANGUAGE_INDEX_BUILTIN);
+    return LANGUAGE_INDEX_BUILTIN;
+  }
+}
 bool loc_parser_set_active_language_by_index(language_index _index) {
   if (not state or state == nullptr) {
     IERROR("loc_parser::loc_parser_set_active_language_by_index()::State is not valid");
@@ -580,7 +755,7 @@ bool loc_parser_set_active_language_by_index(language_index _index) {
     IERROR("loc_parser::loc_parser_set_active_language_by_index()::Language index is out of bound");
     return false;
   }
-  loc_data& loc = state->lang_data.at(_index);
+  loc_data& loc = state->lang_data[_index];
   if (loc.index > LANGUAGE_INDEX_UNDEFINED and loc.index < LANGUAGE_INDEX_MAX) {
     state->active_loc = __builtin_addressof(loc);
     return true;

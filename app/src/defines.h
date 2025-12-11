@@ -961,9 +961,11 @@ typedef enum button_id {
   BTN_ID_UNDEFINED,
 
   BTN_ID_MAINMENU_BUTTON_PLAY,
+  BTN_ID_MAINMENU_BUTTON_CHARACTER,
+  BTN_ID_MAINMENU_BUTTON_SAVE_GAME,
+  BTN_ID_MAINMENU_BUTTON_CREDITS,
   BTN_ID_MAINMENU_BUTTON_EDITOR,
   BTN_ID_MAINMENU_BUTTON_SETTINGS,
-  BTN_ID_MAINMENU_BUTTON_ENTER_STATE_CHARACTER,
   BTN_ID_MAINMENU_BUTTON_EXIT,
   BTN_ID_MAINMENU_SETTINGS_CANCEL,
   BTN_ID_MAINMENU_STATE_CHARACTER_TAB_UPGRADE_UPGRADE,
@@ -975,6 +977,8 @@ typedef enum button_id {
   BTN_ID_MAINMENU_MAP_CHOICE_BACK,
   BTN_ID_MAINMENU_TRAIT_CHOICE_BACK,
   BTN_ID_MAINMENU_TRAIT_CHOICE_ACCEPT,
+  BTN_ID_MAINMENU_SAVE_GAME_BACK,
+  BTN_ID_MAINMENU_CREDITS_BACK,
 
   BTN_ID_IN_GAME_BUTTON_RETURN_MENU,
   BTN_ID_IN_GAME_BUTTON_CHEST_OPENING_ACCEPT,
@@ -1066,31 +1070,31 @@ typedef enum slider_id {
   SDR_ID_MAX
 } slider_id;
 
+typedef enum save_slot_id {
+  SAVE_SLOT_UNDEFINED,
+  SAVE_SLOT_1,
+  SAVE_SLOT_2,
+  SAVE_SLOT_3,
+  SAVE_SLOT_4,
+  SAVE_SLOT_MAX,
+}save_slot_id;
+
 typedef struct app_settings {
   std::vector<f32> scale_ratio;
   aspect_ratio display_ratio;
-  i32 master_sound_volume;
-  i32 window_state;
-  i32 window_width;
-  i32 window_height;
-  i32 render_width;
-  i32 render_height;
-  i32 render_width_div2;
-  i32 render_height_div2;
+  save_slot_id active_slot = SAVE_SLOT_UNDEFINED;
+  i32 master_sound_volume {};
+  i32 window_state {};
+  i32 window_width {};
+  i32 window_height {};
+  i32 render_width {};
+  i32 render_height {};
+  i32 render_width_div2 {};
+  i32 render_height_div2 {};
   std::string language;
-  app_settings(void) {
-    this->scale_ratio = std::vector<f32>();
-    this->language = std::string();
-    this->master_sound_volume = 0;
-    this->window_state = 0;
-    this->window_width = 0;
-    this->window_height = 0;
-    this->render_width = 0;
-    this->render_height = 0;
-    this->render_width_div2 = 0;
-    this->render_height_div2 = 0;
-  }
-  app_settings(i32 window_state, i32 width, i32 height, i32 volume, std::string language) : app_settings() {
+  app_settings(void) {}
+  app_settings(save_slot_id _active_slot, i32 window_state, i32 width, i32 height, i32 volume, std::string language) : app_settings() {
+    this->active_slot        = _active_slot;
     this->window_width       = width;
     this->window_height      = height;
     this->render_width       = width;

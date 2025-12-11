@@ -14,9 +14,11 @@ typedef enum loc_text_id {
 
   LOC_TEXT_MAINMENU_BUTTON_TEXT_PLAY,
   LOC_TEXT_MAINMENU_BUTTON_TEXT_CHARACTER,
+  LOC_TEXT_MAINMENU_BUTTON_TEXT_SAVE_GAME,
+  LOC_TEXT_MAINMENU_BUTTON_TEXT_CREDITS,
+  LOC_TEXT_MAINMENU_BUTTON_TEXT_EDITOR,
   LOC_TEXT_MAINMENU_BUTTON_TEXT_SETTINGS,
   LOC_TEXT_MAINMENU_BUTTON_TEXT_EXIT,
-  LOC_TEXT_MAINMENU_BUTTON_TEXT_EDITOR,
   
   LOC_TEXT_MMS_CHARACTER_BUTTON_ENTER_TAB_UPGRADE,
   LOC_TEXT_MMS_CHARACTER_UPGRADE_SUBSCENE_UPGRADE_BTN,
@@ -35,6 +37,8 @@ typedef enum loc_text_id {
   LOC_TEXT_MAINMENU_TRAIT_CHOICE_BUTTON_BACK,
   LOC_TEXT_MAINMENU_TRAIT_CHOICE_BUTTON_ACCEPT,
   LOC_TEXT_MAINMENU_TRAIT_CHOICE_PANEL_REMANING_TRAIT_POINTS,
+  LOC_TEXT_MAINMENU_SAVE_GAME_BUTTON_BACK,
+  LOC_TEXT_MAINMENU_CREDITS_BUTTON_BACK,
 
   LOC_TEXT_SETTINGS_SDR_WINDOW_MODE_WINDOWED,
   LOC_TEXT_SETTINGS_SDR_WINDOW_MODE_BORDERLESS,
@@ -266,10 +270,8 @@ typedef struct loc_data {
   std::string codepoints;
   std::array<std::string, LOC_TEXT_MAX> content;
   language_index index;
+  bool is_success {};
   loc_data(void) {
-    this->language_name = std::string();
-    this->codepoints = std::string();
-    this->content.fill(std::string());
     this->index = LANGUAGE_INDEX_UNDEFINED;
   }
 } loc_data;
@@ -285,10 +287,11 @@ bool loc_parser_parse_localization_data(void);
 bool loc_parser_parse_builtin_localization_data(void);
 
 bool loc_parser_set_active_language_by_name(std::string language_name);
+language_index loc_parser_set_active_language_any(void);
 bool loc_parser_set_active_language_by_index(language_index _index);
 bool loc_parser_set_active_language_builtin(void);
 
-const std::array<loc_data, LANGUAGE_INDEX_MAX> * loc_parser_get_loc_langs(void);
+const std::array<loc_data, LANGUAGE_INDEX_MAX>& loc_parser_get_loc_langs(void);
 loc_data* loc_parser_get_active_language(void);
 const loc_data* loc_parser_get_language_by_index(language_index index);
 const loc_data* loc_parser_get_language_by_name(const char * name);

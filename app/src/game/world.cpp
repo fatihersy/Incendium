@@ -28,14 +28,6 @@ constexpr Rectangle get_position_view_rect(Camera2D camera, Vector2 pos, f32 zoo
 constexpr size_t get_renderqueue_prop_index_by_id(i16 zindex, i32 map_id);
 void sort_render_y_based_queue(i32 id);
 
-void create_worldmap_stage(i32 in_map_id, i32 in_title_txt_id, std::string filename, i32 in_stage_level, f32 duration,
-  i32 total_spawn_count, i32 total_boss_count, f32 spawn_scale, f32 boss_scale, Vector2 in_screen_location, Rectangle level_bounds, bool is_display_on_screen, bool is_active) 
-{
-  state->worldmap_locations.at(in_map_id) = worldmap_stage(
-    in_map_id, in_title_txt_id, filename, in_stage_level, duration, total_spawn_count, total_boss_count, spawn_scale, boss_scale, in_screen_location, level_bounds, true, is_display_on_screen, is_active
-  );
-}
-
 bool world_system_initialize(const app_settings *const _in_app_settings) {
   if (state and state != nullptr) {
     return true;
@@ -61,28 +53,406 @@ bool world_system_initialize(const app_settings *const _in_app_settings) {
 
   { // WORLD LOCATIONS
     i32 map_id_counter = 0;
-    create_worldmap_stage(map_id_counter++, static_cast<i32>(LOC_TEXT_UNDEFINED),          "stage1", 1, 300.f,   0, 0, 1, .5f, VECTOR2(   0,    0), ZERORECT, false, false); // main menu background
-    create_worldmap_stage(map_id_counter++, static_cast<i32>(LOC_TEXT_WORLD_STAGE_1_TITLE),"stage2", 1,  90.f, 1000, 1, 1, .5f, VECTOR2(1024, 1744), ZERORECT,  true,  true);
-    create_worldmap_stage(map_id_counter++, static_cast<i32>(LOC_TEXT_UNDEFINED),          "stage3", 1, 300.f,  75, 1, 1, .5f, VECTOR2(1467, 1755), ZERORECT,  true, false);
-    create_worldmap_stage(map_id_counter++, static_cast<i32>(LOC_TEXT_UNDEFINED),          "stage4", 1, 300.f,  75, 1, 1, .5f, VECTOR2(1674, 1727), ZERORECT,  true, false);
-    create_worldmap_stage(map_id_counter++, static_cast<i32>(LOC_TEXT_UNDEFINED),          "stage5", 1, 300.f,  75, 1, 1, .5f, VECTOR2(2179, 1623), ZERORECT,  true, false);
-    create_worldmap_stage(map_id_counter++, static_cast<i32>(LOC_TEXT_UNDEFINED),          "stage6", 1, 300.f,  75, 1, 1, .5f, VECTOR2(1811, 1230), ZERORECT,  true, false);
-    create_worldmap_stage(map_id_counter++, static_cast<i32>(LOC_TEXT_UNDEFINED),          "stage7", 1, 300.f,  75, 1, 1, .5f, VECTOR2(2233, 1240), ZERORECT,  true, false);
-    create_worldmap_stage(map_id_counter++, static_cast<i32>(LOC_TEXT_UNDEFINED),          "stage8", 1, 300.f,  75, 1, 1, .5f, VECTOR2(2658, 1202), ZERORECT,  true, false);
-    create_worldmap_stage(map_id_counter++, static_cast<i32>(LOC_TEXT_UNDEFINED),          "stage9", 1, 300.f,  75, 1, 1, .5f, VECTOR2(3009, 1511), ZERORECT,  true, false);
-    create_worldmap_stage(map_id_counter++, static_cast<i32>(LOC_TEXT_UNDEFINED),         "stage10", 1, 300.f,  75, 1, 1, .5f, VECTOR2(2767, 1972), ZERORECT,  true, false);
-    create_worldmap_stage(map_id_counter++, static_cast<i32>(LOC_TEXT_UNDEFINED),         "stage11", 1, 300.f,  75, 1, 1, .5f, VECTOR2(3188, 1415), ZERORECT,  true, false);
-    create_worldmap_stage(map_id_counter++, static_cast<i32>(LOC_TEXT_UNDEFINED),         "stage12", 1, 300.f,  75, 1, 1, .5f, VECTOR2(3449, 1773), ZERORECT,  true, false);
-    create_worldmap_stage(map_id_counter++, static_cast<i32>(LOC_TEXT_UNDEFINED),         "stage13", 1, 300.f,  75, 1, 1, .5f, VECTOR2(3073, 1146), ZERORECT,  true, false);
-    create_worldmap_stage(map_id_counter++, static_cast<i32>(LOC_TEXT_UNDEFINED),         "stage14", 1, 300.f,  75, 1, 1, .5f, VECTOR2(3574, 1291), ZERORECT,  true, false);
-    create_worldmap_stage(map_id_counter++, static_cast<i32>(LOC_TEXT_UNDEFINED),         "stage15", 1, 300.f,  75, 1, 1, .5f, VECTOR2(3462,  773), ZERORECT,  true, false);
-    create_worldmap_stage(map_id_counter++, static_cast<i32>(LOC_TEXT_UNDEFINED),         "stage16", 1, 300.f,  75, 1, 1, .5f, VECTOR2(2661,  951), ZERORECT,  true, false);
-    create_worldmap_stage(map_id_counter++, static_cast<i32>(LOC_TEXT_UNDEFINED),         "stage17", 1, 300.f,  75, 1, 1, .5f, VECTOR2(3548,  974), ZERORECT,  true, false);
-    create_worldmap_stage(map_id_counter++, static_cast<i32>(LOC_TEXT_UNDEFINED),         "stage18", 1, 300.f,  75, 1, 1, .5f, VECTOR2(2400,  596), ZERORECT,  true, false);
-    create_worldmap_stage(map_id_counter++, static_cast<i32>(LOC_TEXT_UNDEFINED),         "stage19", 1, 300.f,  75, 1, 1, .5f, VECTOR2(3290,  369), ZERORECT,  true, false);
-    create_worldmap_stage(map_id_counter++, static_cast<i32>(LOC_TEXT_UNDEFINED),         "stage20", 1, 300.f,  75, 1, 1, .5f, VECTOR2(3449,  224), ZERORECT,  true, false);
-    create_worldmap_stage(map_id_counter++, static_cast<i32>(LOC_TEXT_UNDEFINED),         "stage21", 1, 300.f,  75, 1, 1, .5f, VECTOR2(1977,  385), ZERORECT,  true, false);
-    create_worldmap_stage(map_id_counter++, static_cast<i32>(LOC_TEXT_UNDEFINED),         "stage22", 1, 300.f,  75, 1, 1, .5f, VECTOR2(1661,  410), ZERORECT,  true, false);
+
+    struct map_create_context {
+      loc_text_id in_title_txt_id = LOC_TEXT_EMPTY;
+      i32 in_stage_level {};
+      f32 duration {};
+      i32 total_boss_count {};
+      i32 spawn_on_begin {};
+      i32 spawn_on_map_max {};
+      i32 spawn_spawn_count {};
+      f32 spawn_spawn_interval {};
+      f32 spawn_scale {};
+      f32 boss_scale {};
+      Vector2 in_screen_location {};
+      Rectangle level_bounds {};
+      bool is_display_on_screen {};
+      bool is_active {};
+    };
+
+    auto create_map = [&map_id_counter](map_create_context ctx) {
+      state->worldmap_locations.at(map_id_counter) = worldmap_stage(map_id_counter, 
+        static_cast<i32>(ctx.in_title_txt_id), 
+        "stage" + std::to_string(map_id_counter + 1),
+        ctx.in_stage_level, 
+        ctx.duration, 
+        ctx.total_boss_count, 
+        ctx.spawn_on_begin,
+        ctx.spawn_on_map_max,
+        ctx.spawn_spawn_count,
+        ctx.spawn_spawn_interval,
+        ctx.spawn_scale, 
+        ctx.boss_scale, 
+        ctx.in_screen_location, 
+        ctx.level_bounds, 
+        true, 
+        ctx.is_display_on_screen, 
+        ctx.is_active
+      );
+      map_id_counter++;
+    };
+
+    // main menu background
+    create_map({LOC_TEXT_EMPTY, 0, 0.f, 0, 0, 0, 0, 0.f, 0.f, 0.f, ZEROVEC2, ZERORECT, false, false}); 
+
+    create_map(map_create_context {
+        .in_title_txt_id = LOC_TEXT_WORLD_STAGE_1_TITLE,
+        .in_stage_level = 1,
+        .duration = 90.f,
+        .total_boss_count = 1,
+        .spawn_on_begin = 1000,
+        .spawn_on_map_max = 1000,
+        .spawn_spawn_count = 10,
+        .spawn_spawn_interval = 3.f,
+        .spawn_scale = 1,
+        .boss_scale = .5f,
+        .in_screen_location = VECTOR2(1024, 1744),
+        .level_bounds = ZERORECT,
+        .is_display_on_screen = true,
+        .is_active = true
+      }
+    );
+    create_map(map_create_context {
+        .in_title_txt_id = LOC_TEXT_EMPTY,
+        .in_stage_level = 1,
+        .duration = 300.f,
+        .total_boss_count = 1,
+        .spawn_on_begin = 1000,
+        .spawn_on_map_max = 1000,
+        .spawn_spawn_count = 10,
+        .spawn_spawn_interval = 3.f,
+        .spawn_scale = 1,
+        .boss_scale = .5f,
+        .in_screen_location = Vector2 {1467.f, 1755.f },
+        .level_bounds = ZERORECT,
+        .is_display_on_screen = true,
+        .is_active = false
+      }
+    );
+    create_map(map_create_context {
+        .in_title_txt_id = LOC_TEXT_EMPTY,
+        .in_stage_level = 1,
+        .duration = 300.f,
+        .total_boss_count = 1,
+        .spawn_on_begin = 1000,
+        .spawn_on_map_max = 1000,
+        .spawn_spawn_count = 10,
+        .spawn_spawn_interval = 3.f,
+        .spawn_scale = 1,
+        .boss_scale = .5f,
+        .in_screen_location = Vector2 {1674.f, 1727.f},
+        .level_bounds = ZERORECT,
+        .is_display_on_screen = true,
+        .is_active = false
+      }
+    );
+    create_map(map_create_context {
+        .in_title_txt_id = LOC_TEXT_EMPTY,
+        .in_stage_level = 1,
+        .duration = 300.f,
+        .total_boss_count = 1,
+        .spawn_on_begin = 1000,
+        .spawn_on_map_max = 1000,
+        .spawn_spawn_count = 10,
+        .spawn_spawn_interval = 3.f,
+        .spawn_scale = 1,
+        .boss_scale = .5f,
+        .in_screen_location = Vector2 {2179.f, 1623.f},
+        .level_bounds = ZERORECT,
+        .is_display_on_screen = true,
+        .is_active = false
+      }
+    );
+    create_map(map_create_context {
+        .in_title_txt_id = LOC_TEXT_EMPTY,
+        .in_stage_level = 1,
+        .duration = 300.f,
+        .total_boss_count = 1,
+        .spawn_on_begin = 1000,
+        .spawn_on_map_max = 1000,
+        .spawn_spawn_count = 10,
+        .spawn_spawn_interval = 3.f,
+        .spawn_scale = 1,
+        .boss_scale = .5f,
+        .in_screen_location = Vector2 {1811.f, 1230.f},
+        .level_bounds = ZERORECT,
+        .is_display_on_screen = true,
+        .is_active = false
+      }
+    );
+    create_map(map_create_context {
+        .in_title_txt_id = LOC_TEXT_EMPTY,
+        .in_stage_level = 1,
+        .duration = 300.f,
+        .total_boss_count = 1,
+        .spawn_on_begin = 1000,
+        .spawn_on_map_max = 1000,
+        .spawn_spawn_count = 10,
+        .spawn_spawn_interval = 3.f,
+        .spawn_scale = 1,
+        .boss_scale = .5f,
+        .in_screen_location = Vector2 {2233.f, 1240.f},
+        .level_bounds = ZERORECT,
+        .is_display_on_screen = true,
+        .is_active = false
+      }
+    );
+    create_map(map_create_context {
+        .in_title_txt_id = LOC_TEXT_EMPTY,
+        .in_stage_level = 1,
+        .duration = 300.f,
+        .total_boss_count = 1,
+        .spawn_on_begin = 1000,
+        .spawn_on_map_max = 1000,
+        .spawn_spawn_count = 10,
+        .spawn_spawn_interval = 3.f,
+        .spawn_scale = 1,
+        .boss_scale = .5f,
+        .in_screen_location = Vector2 {2658.f, 1202.f},
+        .level_bounds = ZERORECT,
+        .is_display_on_screen = true,
+        .is_active = false
+      }
+    );
+    create_map(map_create_context {
+        .in_title_txt_id = LOC_TEXT_EMPTY,
+        .in_stage_level = 1,
+        .duration = 300.f,
+        .total_boss_count = 1,
+        .spawn_on_begin = 1000,
+        .spawn_on_map_max = 1000,
+        .spawn_spawn_count = 10,
+        .spawn_spawn_interval = 3.f,
+        .spawn_scale = 1,
+        .boss_scale = .5f,
+        .in_screen_location = Vector2 {3009.f, 1511.f},
+        .level_bounds = ZERORECT,
+        .is_display_on_screen = true,
+        .is_active = false
+      }
+    );
+    create_map(map_create_context {
+        .in_title_txt_id = LOC_TEXT_EMPTY,
+        .in_stage_level = 1,
+        .duration = 300.f,
+        .total_boss_count = 1,
+        .spawn_on_begin = 1000,
+        .spawn_on_map_max = 1000,
+        .spawn_spawn_count = 10,
+        .spawn_spawn_interval = 3.f,
+        .spawn_scale = 1,
+        .boss_scale = .5f,
+        .in_screen_location = Vector2 {2767.f, 1972.f},
+        .level_bounds = ZERORECT,
+        .is_display_on_screen = true,
+        .is_active = false
+      }
+    );
+    create_map(map_create_context {
+        .in_title_txt_id = LOC_TEXT_EMPTY,
+        .in_stage_level = 1,
+        .duration = 300.f,
+        .total_boss_count = 1,
+        .spawn_on_begin = 1000,
+        .spawn_on_map_max = 1000,
+        .spawn_spawn_count = 10,
+        .spawn_spawn_interval = 3.f,
+        .spawn_scale = 1,
+        .boss_scale = .5f,
+        .in_screen_location = Vector2 {3188.f, 1415.f},
+        .level_bounds = ZERORECT,
+        .is_display_on_screen = true,
+        .is_active = false
+      }
+    );
+    create_map(map_create_context {
+        .in_title_txt_id = LOC_TEXT_EMPTY,
+        .in_stage_level = 1,
+        .duration = 300.f,
+        .total_boss_count = 1,
+        .spawn_on_begin = 1000,
+        .spawn_on_map_max = 1000,
+        .spawn_spawn_count = 10,
+        .spawn_spawn_interval = 3.f,
+        .spawn_scale = 1,
+        .boss_scale = .5f,
+        .in_screen_location = Vector2 {3449.f, 1773.f},
+        .level_bounds = ZERORECT,
+        .is_display_on_screen = true,
+        .is_active = false
+      }
+    );
+    create_map(map_create_context {
+        .in_title_txt_id = LOC_TEXT_EMPTY,
+        .in_stage_level = 1,
+        .duration = 300.f,
+        .total_boss_count = 1,
+        .spawn_on_begin = 1000,
+        .spawn_on_map_max = 1000,
+        .spawn_spawn_count = 10,
+        .spawn_spawn_interval = 3.f,
+        .spawn_scale = 1,
+        .boss_scale = .5f,
+        .in_screen_location = Vector2 {3073.f, 1146.f},
+        .level_bounds = ZERORECT,
+        .is_display_on_screen = true,
+        .is_active = false
+      }
+    );
+    create_map(map_create_context {
+        .in_title_txt_id = LOC_TEXT_EMPTY,
+        .in_stage_level = 1,
+        .duration = 300.f,
+        .total_boss_count = 1,
+        .spawn_on_begin = 1000,
+        .spawn_on_map_max = 1000,
+        .spawn_spawn_count = 10,
+        .spawn_spawn_interval = 3.f,
+        .spawn_scale = 1,
+        .boss_scale = .5f,
+        .in_screen_location = Vector2 {3574.f, 1291.f},
+        .level_bounds = ZERORECT,
+        .is_display_on_screen = true,
+        .is_active = false
+      }
+    );
+    create_map(map_create_context {
+        .in_title_txt_id = LOC_TEXT_EMPTY,
+        .in_stage_level = 1,
+        .duration = 300.f,
+        .total_boss_count = 1,
+        .spawn_on_begin = 1000,
+        .spawn_on_map_max = 1000,
+        .spawn_spawn_count = 10,
+        .spawn_spawn_interval = 3.f,
+        .spawn_scale = 1,
+        .boss_scale = .5f,
+        .in_screen_location = Vector2 {3462.f, 773.f},
+        .level_bounds = ZERORECT,
+        .is_display_on_screen = true,
+        .is_active = false
+      }
+    );
+    create_map(map_create_context {
+        .in_title_txt_id = LOC_TEXT_EMPTY,
+        .in_stage_level = 1,
+        .duration = 300.f,
+        .total_boss_count = 1,
+        .spawn_on_begin = 1000,
+        .spawn_on_map_max = 1000,
+        .spawn_spawn_count = 10,
+        .spawn_spawn_interval = 3.f,
+        .spawn_scale = 1,
+        .boss_scale = .5f,
+        .in_screen_location = Vector2 {2661.f, 951.f},
+        .level_bounds = ZERORECT,
+        .is_display_on_screen = true,
+        .is_active = false
+      }
+    );
+    create_map(map_create_context {
+        .in_title_txt_id = LOC_TEXT_EMPTY,
+        .in_stage_level = 1,
+        .duration = 300.f,
+        .total_boss_count = 1,
+        .spawn_on_begin = 1000,
+        .spawn_on_map_max = 1000,
+        .spawn_spawn_count = 10,
+        .spawn_spawn_interval = 3.f,
+        .spawn_scale = 1,
+        .boss_scale = .5f,
+        .in_screen_location = Vector2 {3548.f, 974.f},
+        .level_bounds = ZERORECT,
+        .is_display_on_screen = true,
+        .is_active = false
+      }
+    );
+    create_map(map_create_context {
+        .in_title_txt_id = LOC_TEXT_EMPTY,
+        .in_stage_level = 1,
+        .duration = 300.f,
+        .total_boss_count = 1,
+        .spawn_on_begin = 1000,
+        .spawn_on_map_max = 1000,
+        .spawn_spawn_count = 10,
+        .spawn_spawn_interval = 3.f,
+        .spawn_scale = 1,
+        .boss_scale = .5f,
+        .in_screen_location = Vector2 {2400.f, 596.f},
+        .level_bounds = ZERORECT,
+        .is_display_on_screen = true,
+        .is_active = false
+      }
+    );
+    create_map(map_create_context {
+        .in_title_txt_id = LOC_TEXT_EMPTY,
+        .in_stage_level = 1,
+        .duration = 300.f,
+        .total_boss_count = 1,
+        .spawn_on_begin = 1000,
+        .spawn_on_map_max = 1000,
+        .spawn_spawn_count = 10,
+        .spawn_spawn_interval = 3.f,
+        .spawn_scale = 1,
+        .boss_scale = .5f,
+        .in_screen_location = Vector2 {3290.f, 369.f},
+        .level_bounds = ZERORECT,
+        .is_display_on_screen = true,
+        .is_active = false
+      }
+    );
+    create_map(map_create_context {
+        .in_title_txt_id = LOC_TEXT_EMPTY,
+        .in_stage_level = 1,
+        .duration = 300.f,
+        .total_boss_count = 1,
+        .spawn_on_begin = 1000,
+        .spawn_on_map_max = 1000,
+        .spawn_spawn_count = 10,
+        .spawn_spawn_interval = 3.f,
+        .spawn_scale = 1,
+        .boss_scale = .5f,
+        .in_screen_location = Vector2 {3449.f, 224.f},
+        .level_bounds = ZERORECT,
+        .is_display_on_screen = true,
+        .is_active = false
+      }
+    );
+    create_map(map_create_context {
+        .in_title_txt_id = LOC_TEXT_EMPTY,
+        .in_stage_level = 1,
+        .duration = 300.f,
+        .total_boss_count = 1,
+        .spawn_on_begin = 1000,
+        .spawn_on_map_max = 1000,
+        .spawn_spawn_count = 10,
+        .spawn_spawn_interval = 3.f,
+        .spawn_scale = 1,
+        .boss_scale = .5f,
+        .in_screen_location = Vector2 {1977.f, 385.f},
+        .level_bounds = ZERORECT,
+        .is_display_on_screen = true,
+        .is_active = false
+      }
+    );
+    create_map(map_create_context {
+        .in_title_txt_id = LOC_TEXT_EMPTY,
+        .in_stage_level = 1,
+        .duration = 300.f,
+        .total_boss_count = 1,
+        .spawn_on_begin = 1000,
+        .spawn_on_map_max = 1000,
+        .spawn_spawn_count = 10,
+        .spawn_spawn_interval = 3.f,
+        .spawn_scale = 1,
+        .boss_scale = .5f,
+        .in_screen_location = Vector2 {1661.f, 410.f},
+        .level_bounds = ZERORECT,
+        .is_display_on_screen = true,
+        .is_active = false
+      }
+    );
   }
   for (size_t itr_000 = 0u; itr_000 < MAX_WORLDMAP_LOCATIONS; ++itr_000) {
     for (size_t itr_111 = 0u; itr_111 < MAX_TILEMAP_LAYERS; ++itr_111) {

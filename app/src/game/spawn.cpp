@@ -9,6 +9,7 @@
 
 #include "spritesheet.h"
 #include "fshader.h"
+#include <cmath>
 
 constexpr i32 SPAWN_ID_NEXT_START = 1;
 constexpr f32 DEATH_EFFECT_HEIGHT_SCALE = 0.115f;
@@ -19,8 +20,8 @@ constexpr i32 SPAWN_BASE_HEALTH = 32;
 constexpr i32 SPAWN_BASE_DAMAGE = 32;
 constexpr i32 SPAWN_BASE_SPEED = 50;
 
-const f32 MAP_MIN_X = -3000.0f;
-const f32 MAP_MIN_Y = -3000.0f; // Assuming square bounds
+const f32 MAP_X = -3000.0f;
+const f32 MAP_Y = -3000.0f; // Assuming square bounds
 const f32 MAP_WIDTH = 6000.0f;  // Total width (-3000 to 3000)
 const f32 MAP_HEIGHT = 6000.0f; 
 
@@ -102,7 +103,12 @@ typedef struct spawn_system_state {
   element_handle nearest_spawn_handle;
   element_handle first_spawn_on_screen_handle;
 
-  spawn_system_state(void) : spatial_grid(MAP_WIDTH, MAP_HEIGHT, CELL_SIZE, Vector2 { MAP_MIN_X, MAP_MIN_Y }) {
+  spawn_system_state(void) : spatial_grid(
+    static_cast<i32>(std::ceil(MAP_WIDTH / CELL_SIZE)),
+    static_cast<i32>(std::ceil(MAP_HEIGHT / CELL_SIZE)),
+    CELL_SIZE,
+    Vector2 { MAP_X, MAP_Y }
+  ) {
     this->in_camera_metrics = nullptr;
     this->in_ingame_info = nullptr;
     this->next_spawn_id = SPAWN_ID_NEXT_START;

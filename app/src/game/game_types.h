@@ -57,6 +57,8 @@
 #define WORLDMAP_LOC_PIN_SIZE_DIV2 WORLDMAP_LOC_PIN_SIZE * .5f // Needed?
 #define WORLDMAP_MAINMENU_MAP 0
 
+constexpr i32 SAVE_SLOT_COUNT = 4;
+
 enum collision_type {
   COLLISION_TYPE_UNDEFINED,
   COLLISION_TYPE_RECTANGLE_RECTANGLE,
@@ -219,6 +221,7 @@ enum ingame_play_phases {
   INGAME_PLAY_PHASE_UNDEFINED,
   INGAME_PLAY_PHASE_IDLE,
   INGAME_PLAY_PHASE_CLEAR_ZOMBIES,
+  INGAME_PLAY_PHASE_ESCAPE,
   INGAME_PLAY_PHASE_RESULTS,
   INGAME_PLAY_PHASE_MAX,
 };
@@ -548,58 +551,62 @@ struct tilesheet {
   }
 };
 
-struct worldmap_stage {
-  i32 map_id;
-  i32 title_txt_id;
-  std::string filename;
-  std::array<Rectangle, MAX_SPAWN_COLLISIONS> spawning_areas;
-  Vector2 screen_location;
-  Rectangle level_bound;
+struct map_create_context {
+  i32 in_title_txt_id;
+  i32 in_stage_level;
+  f32 duration;
   i32 total_spawn_count;
   i32 total_boss_count;
-  i32 stage_level;
-  f32 stage_duration;
   f32 spawn_scale;
   f32 boss_scale;
-  bool is_centered;
-  bool display_on_screen;
-  bool is_playable;
-  worldmap_stage(void) {
-    this->map_id = INVALID_IDI32;
-    this->title_txt_id = 0;
-    this->filename = std::string();
-    this->spawning_areas.fill(ZERORECT);
-    this->screen_location = ZEROVEC2;
-    this->level_bound = ZERORECT;
-    this->total_spawn_count = 0;
-    this->total_boss_count = 0;
-    this->stage_level = 0;
-    this->stage_duration = 0.f;
-    this->spawn_scale = 0.f;
-    this->boss_scale = 0.f;
-    this->is_centered = false;
-    this->display_on_screen = false;
-    this->is_playable = false;
-  }
+  Vector2 in_screen_location;
+  Rectangle level_bounds;
+  bool is_display_on_screen;
+  bool is_active;
+};
+
+struct worldmap_stage {
+  i32 map_id {};
+  i32 title_txt_id {};
+  std::string filename;
+  std::array<Rectangle, MAX_SPAWN_COLLISIONS> spawning_areas {};
+  Vector2 screen_location {};
+  Rectangle level_bound {};
+  i32 total_boss_count {};
+  i32 spawn_on_begin {};
+  i32 spawn_on_map_max {};
+  i32 spawn_spawn_count {};
+  f32 spawn_spawn_interval {};
+  i32 stage_level {};
+  f32 stage_duration {};
+  f32 spawn_scale {};
+  f32 boss_scale {};
+  bool is_centered {};
+  bool display_on_screen {};
+  bool is_playable {};
+  worldmap_stage(void) {}
   worldmap_stage(
-    i32 in_id, i32 title_txt_id, std::string in_filename, i32 in_stage_level, f32 duration,
-    i32 in_spw_count, i32 in_boss_count, f32 in_spw_scale, f32 in_boss_scale, 
-    Vector2 in_screen_loc, Rectangle _level_bound, bool in_is_centered, bool in_display_on_screen, bool in_is_active) : worldmap_stage() 
+    i32 _id, i32 title_txt_id, std::string _filename, i32 _stage_level, f32 duration,
+    i32 _boss_count, i32 spw_on_begin, i32 spw_on_map_max, i32 spw_spawn_count, f32 spw_spawn_interval, f32 _spw_scale, f32 _boss_scale, 
+    Vector2 _screen_loc, Rectangle _level_bound, bool _is_centered, bool _display_on_screen, bool _is_active)
   {
-    this->map_id = in_id;
+    this->map_id = _id;
     this->title_txt_id = title_txt_id;
-    this->filename = in_filename;
-    this->screen_location = NORMALIZE_VEC2(in_screen_loc.x, in_screen_loc.y, 3840.f, 2160.f);
+    this->filename = _filename;
+    this->screen_location = NORMALIZE_VEC2(_screen_loc.x, _screen_loc.y, 3840.f, 2160.f);
     this->level_bound = _level_bound;
-    this->total_spawn_count = in_spw_count;
-    this->total_boss_count = in_boss_count;
-    this->stage_level = in_stage_level;
+    this->spawn_on_begin = spw_on_begin;
+    this->spawn_on_map_max = spw_on_map_max;
+    this->spawn_spawn_count = spw_spawn_count;
+    this->spawn_spawn_interval = spw_spawn_interval;
+    this->total_boss_count = _boss_count;
+    this->stage_level = _stage_level;
     this->stage_duration = duration;
-    this->spawn_scale = in_spw_scale;
-    this->boss_scale = in_boss_scale;
-    this->is_centered = in_is_centered;
-    this->display_on_screen = in_display_on_screen;
-    this->is_playable = in_is_active;
+    this->spawn_scale = _spw_scale;
+    this->boss_scale = _boss_scale;
+    this->is_centered = _is_centered;
+    this->display_on_screen = _display_on_screen;
+    this->is_playable = _is_active;
   }
 };
 
@@ -1332,9 +1339,12 @@ struct ingame_info {
   const worldmap_stage * current_map_info;
   const std::array<game_rule, GAME_RULE_MAX> * game_rules;
   const i32 * collected_coins;
-  const i32 * total_spawn_count;
   const i32 * total_boss_count;
   const i32 * total_boss_spawned;
+  const i32 * spawn_on_begin;
+  const i32 * spawn_on_map_max;
+  const i32 * spawn_spawn_count;
+  const f32 * spawn_spawn_interval;
   const f32 * total_play_time;
   const f32 * play_time;
   const f32 * delta_time;
@@ -1356,7 +1366,10 @@ struct ingame_info {
     this->current_map_info = nullptr;
     this->game_rules = nullptr;
     this->collected_coins = nullptr;
-    this->total_spawn_count = nullptr;
+    this->spawn_on_begin = nullptr;
+    this->spawn_on_map_max = nullptr;
+    this->spawn_spawn_count = nullptr;
+    this->spawn_spawn_interval = nullptr;
     this->total_boss_count = nullptr;
     this->total_boss_spawned = nullptr;
     this->total_play_time = nullptr;
@@ -1390,8 +1403,8 @@ struct localization_package {
   Font regular_font;
   Font bold_font;
   Font mood;
+  bool is_valid {};
   localization_package(void) {
-    this->language_name.clear();
     this->index = LANGUAGE_INDEX_UNDEFINED;
     this->codepoints = nullptr;
     this->italic_font = ZERO_FONT;
@@ -1427,6 +1440,30 @@ struct text_spec {
     this->language_index = _language_index;
   }
 };
+
+typedef struct save_data {
+  save_slot_id id;
+  std::string file_name;
+  i32 currency_coins_player_have {};
+  i32 currency_souls_player_have {};
+  player_state player_data;
+  std::array<game_rule, GAME_RULE_MAX> game_rules;
+  std::array<sigil_slot, SIGIL_SLOT_MAX> sigil_slots;
+
+  bool is_success {};
+  save_data(void) {
+    this->id = SAVE_SLOT_UNDEFINED;
+  }
+  save_data(std::string filename) : save_data() {
+    this->file_name = filename;
+  }
+  save_data(save_slot_id id, player_state in_player_state, std::array<game_rule, GAME_RULE_MAX>& _game_rules, i32 currency_coins) : save_data() {
+    this->id = id;
+    this->player_data = in_player_state;
+    this->game_rules = _game_rules;
+    this->currency_coins_player_have = currency_coins;
+  }
+} save_data;
 
 inline const i32 level_curve[MAX_PLAYER_LEVEL + 1] = {
   0, //	0

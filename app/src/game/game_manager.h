@@ -64,7 +64,7 @@ sigil_upgrade_result gm_upgrade_sigil(item_data& lhs, item_data& rhs);
 void gm_start_game(void);
 void gm_end_game(bool is_win);
 void gm_save_game(void);
-void gm_load_game(void);
+void gm_load_game(save_slot_id slot_id);
 void gm_refresh_save_slot(void);
 void gm_damage_spawn_if_collide(data128 coll_data, i32 damage, collision_type coll_check);
 void gm_damage_player_if_collide(data128 coll_data, i32 damage, collision_type coll_check);
@@ -93,6 +93,7 @@ const Character2D * _get_spawn_by_id(i32 _id);
 const player_state * gm_get_player_state(void);
 f32 gm_get_player_sprite_scale(void);
 const std::vector<player_inventory_slot>& gm_get_inventory(void);
+const save_data& gm_get_save_data(save_slot_id id);
 
 void render_game(void);
 void gm_draw_sigil(item_type type, Vector2 position, bool should_center);

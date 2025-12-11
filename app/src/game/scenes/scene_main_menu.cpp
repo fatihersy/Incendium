@@ -1,11 +1,10 @@
 #include "scene_main_menu.h"
-
-#include <cmath>   // For std::cos, std::sin
-
+#include <cmath> // For std::cos, std::sin
 #include <reasings.h>
 #include <steam/steam_api.h>
 #include <loc_types.h>
 #include <sound.h>
+#include "settings.h"
 
 #include "core/fmemory.h"
 #include "core/event.h"
@@ -18,9 +17,11 @@
 
 enum main_menu_scene_type {
   MAIN_MENU_SCENE_DEFAULT,
+  MAIN_MENU_SCENE_GREET,
   MAIN_MENU_SCENE_SETTINGS,
   MAIN_MENU_SCENE_CHARACTER,
-  MAIN_MENU_SCENE_EXTRAS,
+  MAIN_MENU_SCENE_SAVE_GAME,
+  MAIN_MENU_SCENE_CREDITS,
   MAIN_MENU_SCENE_TO_PLAY_MAP_CHOICE,
   MAIN_MENU_SCENE_TO_PLAY_TRAIT_CHOICE,
 };
@@ -62,8 +63,7 @@ struct mms_default_panels {
   panel panel_dark_fantasy_item_list_default;
   panel panel_active_dark_fantasy_default;
   panel panel_dark_fantasy_default;
-  mms_default_panels(void) {
-  }
+  mms_default_panels(void) {}
 };
 struct mms_character_game_rule_context {
   panel rule_list_panel;
@@ -93,7 +93,6 @@ struct mms_character_inventory_context {
     this->item_move_direction = MOVE_ITEM_DIRECTION_UNDEFINED;
   }
 };
-
 struct mms_character_upgrade_context {
   enum {
     LEFT_PANEL_INDEX,
@@ -136,7 +135,6 @@ struct mms_character_upgrade_context {
     this->upgrade_state = UPGRADE_UNDEFINED;
   }
 };
-
 struct mms_character_base_context {
   mms_character_inventory_context inventory;
   mms_character_upgrade_context   upgrade;
@@ -147,6 +145,18 @@ struct mms_character_base_context {
 
   }
 };
+struct mms_save_game_scene_context {
+  loc_text_id title;
+  panel save_slot_1_panel;
+  panel save_slot_2_panel;
+  panel save_slot_3_panel;
+  panel save_slot_4_panel;
+};
+struct mms_greet_scene_context {
+  loc_text_id header {};
+  loc_text_id comment {};
+  bool should_choose_save_slot {};
+};
 
 struct main_menu_scene_state {
   panel worldmap_selection_panel;
@@ -154,6 +164,9 @@ struct main_menu_scene_state {
   mms_default_panels smm_default_panels;
   mms_trait_ability_selection_context mms_trait_choice;
   mms_character_base_context mms_character;
+  mms_save_game_scene_context mms_save_game;
+  mms_greet_scene_context mms_greet;
+
   const camera_metrics * in_camera_metrics;
   const app_settings   * in_app_settings;
   const ingame_info * in_ingame_info;
@@ -161,20 +174,20 @@ struct main_menu_scene_state {
   std::array<worldmap_stage, MAX_WORLDMAP_LOCATIONS> worldmap_locations;
   
   const Vector2* mouse_pos_screen;
-  f32 deny_notify_timer;
-  f32 bg_scroll;
+  f32 deny_notify_timer {};
+  f32 bg_scroll {};
   main_menu_scene_type mainmenu_state;
   main_menu_scene_character_subscene_type mainmenu_scene_character_subscene;
-  bool is_dragging_scroll;
-  bool is_any_button_down;
-  bool is_changing_state;
+  bool is_dragging_scroll {};
+  bool is_any_button_down {};
+  bool is_changing_state {};
 
   play_scene_info ingame_scene_feed;
   ui_fade_control_system smm_fade;
   std::vector<local_button> general_purpose_buttons;
   std::vector<panel> general_purpose_panels;
-  i32 next_local_button_id;
-  i32 next_local_panel_id;
+  i32 next_local_button_id {};
+  i32 next_local_panel_id {};
 
   main_menu_scene_state(void) {
     this->in_camera_metrics = nullptr;
@@ -182,16 +195,8 @@ struct main_menu_scene_state {
     this->in_ingame_info = nullptr;
     
     this->mouse_pos_screen = nullptr;
-    this->deny_notify_timer = 0.f;
-    this->bg_scroll = 0.f;
     this->mainmenu_state = MAIN_MENU_SCENE_DEFAULT;
     this->mainmenu_scene_character_subscene = MAIN_MENU_SCENE_CHARACTER_GAME_RULE;
-    this->is_dragging_scroll = false;
-    this->is_any_button_down = false;
-    this->is_changing_state = false;
-
-    this->next_local_button_id = 0;
-    this->next_local_panel_id = 0;
   }
 };
 
@@ -225,29 +230,36 @@ void draw_main_menu_character_panel(void);
 void update_main_menu_character_subscene_upgrade(void);
 void update_main_menu_character_subscene_inventory(void);
 
+void draw_greet_scene(void);
+void draw_save_game_buttons(Rectangle drawing_area);
+void draw_credits_screen(void);
 void draw_main_menu_character_subscene_upgrade_upgrade_panel(void);
 void draw_main_menu_character_subscene_upgrade_item_list_panel(void);
 void draw_main_menu_character_subscene_inventory_item_list_panel(void);
 void draw_main_menu_character_subscene_inventory_slots_panel(void);
 void draw_main_menu_character_subscene_game_rule_list_panel(void);
 void draw_main_menu_character_subscene_game_rule_details_panel(void);
+
 void draw_trait_selection_panel(void);
 void trait_selection_panel_list_traits(panel* const pnl, const Rectangle rect, std::vector<character_trait>& traits, void (*trait_button_on_click_pfn)(i32 index));
 void trait_selection_panel_list_ability_selection_panel(panel* const pnl, const Rectangle padding, Vector2 border_gap);
+
 void smm_update_mouse_bindings(void);
 void smm_update_keyboard_bindings(void);
 void smm_update_bindings(void);
 void smm_update_local_buttons(void);
-void smm_begin_fadeout(data128 data, void(*on_change_complete)(data128));
-void smm_begin_fadein(data128 data, void(*on_change_complete)(data128));
+void smm_begin_fadeout(data128 data, void(*on_change_complete)(ui_fade_type, data128));
+void smm_begin_fadein(data128 data, void(*on_change_complete)(ui_fade_type, data128));
 void smm_clean_character_context(void);
 void smm_refresh_character_context(void);
+
 local_button* smm_add_local_button(i32 _id, button_type_id _btn_type_id, button_state signal_state);
 panel* smm_add_local_panel(i32 _id, panel pnl);
 local_button* smm_get_local_button(i32 _id);
 panel* smm_get_local_panel(i32 _id);
-void fade_on_complete_change_main_menu_type(data128 data);
-void fade_on_complete_change_scene(data128 data);
+
+void fade_on_complete_change_main_menu_type(ui_fade_type fade_type, data128 data);
+void fade_on_complete_change_scene(ui_fade_type fade_type, data128 data);
 
 void begin_scene_change(main_menu_scene_type mms, event_context context = event_context());
 void begin_scene_change(scene_id sid, event_context context = event_context());
@@ -311,7 +323,6 @@ void chosen_trait_button_on_click(i32 index);
   state->in_ingame_info = gm_get_ingame_info();
   state->worldmap_locations = get_worldmap_locations();
 
-  state->mainmenu_state = MAIN_MENU_SCENE_DEFAULT;
   Color bg_item_list_idle_black_tint = { 44, 58, 71, 158};
   Color bg_item_list_hover_black_tint = { 44, 58, 71, 196};
   Color bg_black_tint = { 44, 58, 71, 32};
@@ -353,10 +364,25 @@ void chosen_trait_button_on_click(i32 index);
   state->mms_character.upgrade.result_item_panel = panel(BTN_STATE_UNDEFINED, ATLAS_TEX_ID_CRIMSON_FANTASY_PANEL_BG, ATLAS_TEX_ID_CRIMSON_FANTASY_ORNATE_FRAME, 
     crimson_fantasy_ornate_frame_offsets, crimson_fantasy_bg_tint
   );
-  if (fade_in) {
-    smm_begin_fadein(data128(static_cast<i32>(MAIN_MENU_SCENE_DEFAULT)), fade_on_complete_change_main_menu_type);
+  state->mms_save_game.save_slot_1_panel = panel(BTN_STATE_RELEASED, ATLAS_TEX_ID_CRIMSON_FANTASY_PANEL_BG, ATLAS_TEX_ID_CRIMSON_FANTASY_PANEL, 
+    crimson_fantasy_frame_offsets, crimson_fantasy_bg_tint
+  );
+  state->mms_save_game.save_slot_2_panel = state->mms_save_game.save_slot_1_panel;
+  state->mms_save_game.save_slot_3_panel = state->mms_save_game.save_slot_1_panel;
+  state->mms_save_game.save_slot_4_panel = state->mms_save_game.save_slot_1_panel;
+
+  main_menu_scene_type scene_on_start = MAIN_MENU_SCENE_GREET;
+
+  if (state->in_app_settings->active_slot > SAVE_SLOT_UNDEFINED and state->in_app_settings->active_slot < SAVE_SLOT_MAX) {
+    scene_on_start = MAIN_MENU_SCENE_DEFAULT;
+  }
+  else {
+    state->mms_greet.should_choose_save_slot = true;
   }
 
+  if (fade_in) {
+    smm_begin_fadein(data128(static_cast<i32>(scene_on_start)), fade_on_complete_change_main_menu_type);
+  }
   return true;
 }
 void end_scene_main_menu(void) {
@@ -414,7 +440,10 @@ void update_scene_main_menu(void) {
     case MAIN_MENU_SCENE_SETTINGS: {
       break;
     }
-    case MAIN_MENU_SCENE_EXTRAS: {
+    case MAIN_MENU_SCENE_SAVE_GAME: {
+      break;
+    }
+    case MAIN_MENU_SCENE_CREDITS: {
       break;
     }
     case MAIN_MENU_SCENE_CHARACTER: {
@@ -431,7 +460,15 @@ void update_scene_main_menu(void) {
 
       break;
     }
+    case MAIN_MENU_SCENE_GREET: {
+      if (state->mms_greet.should_choose_save_slot and state->in_app_settings->active_slot > SAVE_SLOT_UNDEFINED and state->in_app_settings->active_slot < SAVE_SLOT_MAX) {
+        state->mms_greet.should_choose_save_slot = false;
+        smm_begin_fadeout(data128(static_cast<i32>(MAIN_MENU_SCENE_DEFAULT)), fade_on_complete_change_main_menu_type);
+      }
+      break;
+    }
     default: {
+      begin_scene_change(MAIN_MENU_SCENE_DEFAULT);
       break;
     }
   }
@@ -440,7 +477,7 @@ void update_scene_main_menu(void) {
     process_fade_effect(__builtin_addressof(state->smm_fade));
   }
   else if (state->smm_fade.is_fade_animation_played and state->smm_fade.on_change_complete != nullptr) {
-    state->smm_fade.on_change_complete(state->smm_fade.data);
+    state->smm_fade.on_change_complete(state->smm_fade.fade_type, state->smm_fade.data);
   }
 }
 void render_scene_main_menu(void) {
@@ -557,11 +594,20 @@ void render_scene_main_menu(void) {
       render_map();
       break;
     }
-    case MAIN_MENU_SCENE_EXTRAS: {
+    case MAIN_MENU_SCENE_SAVE_GAME: {
+      render_map();
+      break;
+    }
+    case MAIN_MENU_SCENE_CREDITS: {
+      render_map();
       break;
     }
     case MAIN_MENU_SCENE_CHARACTER: {
       render_map();
+      break;
+    }
+    case MAIN_MENU_SCENE_GREET: {
+
       break;
     }
     default: { break; }
@@ -570,73 +616,194 @@ void render_scene_main_menu(void) {
   EndMode2D();
 }
 void render_interface_main_menu(void) {
-  if (state->mainmenu_state == MAIN_MENU_SCENE_DEFAULT) {
-    Vector2 screen_location_acc = Vector2 {0.f, -21.f};
-    
-    gui_label_shader(GAME_TITLE, SHADER_ID_SDF_TEXT, FONT_TYPE_TITLE, 5, VECTOR2(SMM_BASE_RENDER_WIDTH * .5f, SMM_BASE_RENDER_HEIGHT * .25f), WHITE, true, true);
 
-    if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_PLAY), BTN_ID_MAINMENU_BUTTON_PLAY, screen_location_acc, SMM_BASE_RENDER_DIV2, true)) {
-      begin_scene_change(MAIN_MENU_SCENE_TO_PLAY_TRAIT_CHOICE);
-    }
-    screen_location_acc.y += 10.5f;
+  switch (state->mainmenu_state) {
+    case MAIN_MENU_SCENE_DEFAULT: {
+      Vector2 screen_location_acc = Vector2 {0.f, -21.f};
+      gui_label_shader(GAME_TITLE, SHADER_ID_SDF_TEXT, FONT_TYPE_TITLE, 5, VECTOR2(SMM_BASE_RENDER_WIDTH * .5f, SMM_BASE_RENDER_HEIGHT * .25f), WHITE, true, true);
 
-    if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_CHARACTER), BTN_ID_MAINMENU_BUTTON_ENTER_STATE_CHARACTER, screen_location_acc, SMM_BASE_RENDER_DIV2, true)) {
-      begin_scene_change(MAIN_MENU_SCENE_CHARACTER);
-    }
-    screen_location_acc.y += 10.5f;
+      auto draw_menu_button = [&screen_location_acc](button_id id, loc_text_id _lc_txt, auto&& on_click) {
+        if (gui_menu_button(lc_txt(_lc_txt), id, screen_location_acc, {SMM_BASE_RENDER_WIDTH * .5f, SMM_BASE_RENDER_HEIGHT * .45f}, true)) {
+          on_click();
+        }
+        screen_location_acc.y += 7.65f;
+      };
 
-    if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_SETTINGS), BTN_ID_MAINMENU_BUTTON_SETTINGS, screen_location_acc, SMM_BASE_RENDER_DIV2, true)) {
-      ui_refresh_setting_sliders_to_default();
-      begin_scene_change(MAIN_MENU_SCENE_SETTINGS);
-    }
-    screen_location_acc.y += 10.5f;
+      draw_menu_button(BTN_ID_MAINMENU_BUTTON_PLAY, LOC_TEXT_MAINMENU_BUTTON_TEXT_PLAY, []() {
+        begin_scene_change(MAIN_MENU_SCENE_TO_PLAY_TRAIT_CHOICE);
+      });
 
-    #ifndef _RELEASE
-      if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_EDITOR), BTN_ID_MAINMENU_BUTTON_EDITOR, screen_location_acc, SMM_BASE_RENDER_DIV2, true)) {
+      draw_menu_button(BTN_ID_MAINMENU_BUTTON_CHARACTER, LOC_TEXT_MAINMENU_BUTTON_TEXT_CHARACTER, []() {
+        begin_scene_change(MAIN_MENU_SCENE_CHARACTER);
+      });
+
+      draw_menu_button(BTN_ID_MAINMENU_BUTTON_SAVE_GAME, LOC_TEXT_MAINMENU_BUTTON_TEXT_SAVE_GAME, []() {
+        begin_scene_change(MAIN_MENU_SCENE_SAVE_GAME);
+      });
+
+      draw_menu_button(BTN_ID_MAINMENU_BUTTON_CREDITS, LOC_TEXT_MAINMENU_BUTTON_TEXT_CREDITS, []() {
+        begin_scene_change(MAIN_MENU_SCENE_CREDITS);
+      });
+
+      draw_menu_button(BTN_ID_MAINMENU_BUTTON_EDITOR, LOC_TEXT_MAINMENU_BUTTON_TEXT_EDITOR, []() {
         smm_begin_fadeout(data128(SCENE_TYPE_EDITOR, true), fade_on_complete_change_scene);
-      }
-      screen_location_acc.y += 10.5f;
-    #endif
+      });
 
-    if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_BUTTON_TEXT_EXIT), BTN_ID_MAINMENU_BUTTON_EXIT, screen_location_acc, SMM_BASE_RENDER_DIV2, true)) {
-      event_fire(EVENT_CODE_APPLICATION_QUIT, event_context());
+      draw_menu_button(BTN_ID_MAINMENU_BUTTON_SETTINGS, LOC_TEXT_MAINMENU_BUTTON_TEXT_SETTINGS, []() {
+        ui_refresh_setting_sliders_to_default();
+        begin_scene_change(MAIN_MENU_SCENE_SETTINGS);
+      });
+
+      draw_menu_button(BTN_ID_MAINMENU_BUTTON_EXIT, LOC_TEXT_MAINMENU_BUTTON_TEXT_EXIT, []() {
+        event_fire(EVENT_CODE_APPLICATION_QUIT, event_context());
+      });
+
+      break;
     }
-    screen_location_acc.y += 10.5f;
-  }
-  else if (state->mainmenu_state == MAIN_MENU_SCENE_SETTINGS) {
+    case MAIN_MENU_SCENE_SETTINGS: {
       gui_draw_settings_screen();
       if (gui_menu_button(lc_txt(LOC_TEXT_SETTINGS_BUTTON_CANCEL), BTN_ID_MAINMENU_SETTINGS_CANCEL, VECTOR2(-35.f, 66.5f), SMM_BASE_RENDER_DIV2, true)) {
         ui_refresh_setting_sliders_to_default();
         begin_scene_change(MAIN_MENU_SCENE_DEFAULT);
       }
-  }
-  else if (state->mainmenu_state == MAIN_MENU_SCENE_CHARACTER) {
+      break;
+    }
+    case MAIN_MENU_SCENE_CHARACTER: {
       draw_main_menu_character_panel();
       if (gui_menu_button(lc_txt(LOC_TEXT_MMS_CHARACTER_BUTTON_BACK), BTN_ID_MAINMENU_STATE_CHARACTER_BACK, VECTOR2(0.f, 66.5f), SMM_BASE_RENDER_DIV2, true)) {
         smm_clean_character_context();
         begin_scene_change(MAIN_MENU_SCENE_DEFAULT);
       }
-  }
-  else if (state->mainmenu_state == MAIN_MENU_SCENE_TO_PLAY_MAP_CHOICE) {
-  }
-  else if(state->mainmenu_state == MAIN_MENU_SCENE_TO_PLAY_TRAIT_CHOICE) {
-    draw_trait_selection_panel();
+      break;
+    }
+    case MAIN_MENU_SCENE_SAVE_GAME: {
+      gui_draw_default_background_panel();
+      Vector2 drawing_size = { SMM_BASE_RENDER_WIDTH * .5f, SMM_BASE_RENDER_HEIGHT * .5f};
+      draw_save_game_buttons(Rectangle {
+        SMM_BASE_RENDER_DIV2.x - (drawing_size.x * .5f),
+        SMM_BASE_RENDER_DIV2.y - (drawing_size.y * .5f),
+        drawing_size.x,
+        drawing_size.y,
+      });
+      if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_SAVE_GAME_BUTTON_BACK), BTN_ID_MAINMENU_SAVE_GAME_BACK, VECTOR2(0.f, 66.5f), SMM_BASE_RENDER_DIV2, true)) {
+        begin_scene_change(MAIN_MENU_SCENE_DEFAULT);
+      }
+      break;
+    }
+    case MAIN_MENU_SCENE_CREDITS: {
+      gui_draw_default_background_panel();
+      draw_credits_screen();
+      
+      if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_CREDITS_BUTTON_BACK), BTN_ID_MAINMENU_CREDITS_BACK, VECTOR2(0.f, 66.5f), SMM_BASE_RENDER_DIV2, true)) {
+        begin_scene_change(MAIN_MENU_SCENE_DEFAULT);
+      }
+      break;
+    }
+    case MAIN_MENU_SCENE_TO_PLAY_MAP_CHOICE: { break; }
+    case MAIN_MENU_SCENE_TO_PLAY_TRAIT_CHOICE: {
+      draw_trait_selection_panel();
 
-    if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_TRAIT_CHOICE_BUTTON_BACK), BTN_ID_MAINMENU_TRAIT_CHOICE_BACK, VECTOR2(-35.f, 66.5f), SMM_BASE_RENDER_DIV2, true)) {
-      begin_scene_change(MAIN_MENU_SCENE_DEFAULT);
-    }
-    if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_TRAIT_CHOICE_BUTTON_ACCEPT), BTN_ID_MAINMENU_TRAIT_CHOICE_ACCEPT, VECTOR2(35.f, 66.5f), SMM_BASE_RENDER_DIV2, true)) 
-    {
-      if ( state->mms_trait_choice.starter_ability <= ABILITY_ID_UNDEFINED or state->mms_trait_choice.starter_ability >= ABILITY_ID_MAX) 
-      {
-        gui_fire_display_error(LOC_TEXT_DISPLAY_ERROR_TEXT_STARTER_ABILITY_NOT_SELECTED);
+      if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_TRAIT_CHOICE_BUTTON_BACK), BTN_ID_MAINMENU_TRAIT_CHOICE_BACK, VECTOR2(-35.f, 66.5f), SMM_BASE_RENDER_DIV2, true)) {
+        begin_scene_change(MAIN_MENU_SCENE_DEFAULT);
       }
-      else {
-        begin_scene_change(MAIN_MENU_SCENE_TO_PLAY_MAP_CHOICE);
+      if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_TRAIT_CHOICE_BUTTON_ACCEPT), BTN_ID_MAINMENU_TRAIT_CHOICE_ACCEPT, VECTOR2(35.f, 66.5f), SMM_BASE_RENDER_DIV2, true)) {
+        if ( state->mms_trait_choice.starter_ability <= ABILITY_ID_UNDEFINED or state->mms_trait_choice.starter_ability >= ABILITY_ID_MAX) {
+          gui_fire_display_error(LOC_TEXT_DISPLAY_ERROR_TEXT_STARTER_ABILITY_NOT_SELECTED);
+        }
+        else {
+          begin_scene_change(MAIN_MENU_SCENE_TO_PLAY_MAP_CHOICE);
+        }
       }
+      break;
     }
+    case MAIN_MENU_SCENE_GREET: {
+      draw_greet_scene();
+      break;
+    }
+    default: {}
   }
+
   render_user_interface();
+}
+
+void draw_greet_scene(void) {
+  mms_greet_scene_context& ctx = state->mms_greet;
+
+  Vector2 header_pos = {SMM_BASE_RENDER_WIDTH * .5f, SMM_BASE_RENDER_HEIGHT * .2f};
+  Vector2 comment_pos = {header_pos.x, SMM_BASE_RENDER_HEIGHT * .3f};
+
+  //gui_label(lc_txt(ctx.header), FONT_TYPE_BOLD, 5, header_pos, WHITE, true, true);
+  //gui_label(lc_txt(ctx.comment), FONT_TYPE_REGULAR, 5, comment_pos, WHITE, true, true);
+
+  gui_label("Welcome", FONT_TYPE_BOLD, 2, header_pos, WHITE, true, true);
+  gui_label("Thank you for purchasing the game", FONT_TYPE_REGULAR, 1, comment_pos, WHITE, true, true);
+
+  if (ctx.should_choose_save_slot) {
+    Vector2 slots_area = { SMM_BASE_RENDER_WIDTH * .5f, SMM_BASE_RENDER_HEIGHT * .5f };
+    Rectangle drawing_area = {
+      SMM_BASE_RENDER_WIDTH * .5f   - slots_area.x * .5f, 
+      SMM_BASE_RENDER_HEIGHT * .65f - slots_area.y * .5f,
+      slots_area.x, 
+      slots_area.y
+    };
+    draw_save_game_buttons(drawing_area);
+  }
+}
+
+void draw_save_game_buttons(Rectangle drawing_area) {
+  f32 padding = drawing_area.height * .025f;
+  mms_save_game_scene_context& ctx = state->mms_save_game;
+  Vector2 slot_dim = { 
+    drawing_area.width - padding, 
+    (drawing_area.height / SAVE_SLOT_COUNT) - padding
+  };
+
+  ctx.save_slot_1_panel.dest = {
+    drawing_area.x + padding,
+    drawing_area.y + padding,
+    slot_dim.x,
+    slot_dim.y
+  };
+  ctx.save_slot_2_panel.dest = {
+    ctx.save_slot_1_panel.dest.x,
+    ctx.save_slot_1_panel.dest.y + ctx.save_slot_1_panel.dest.height + padding,
+    slot_dim.x,
+    slot_dim.y
+  };
+  ctx.save_slot_3_panel.dest = {
+    ctx.save_slot_2_panel.dest.x,
+    ctx.save_slot_2_panel.dest.y + ctx.save_slot_2_panel.dest.height + padding,
+    slot_dim.x, 
+    slot_dim.y
+  };
+  ctx.save_slot_4_panel.dest = {
+    ctx.save_slot_3_panel.dest.x,
+    ctx.save_slot_3_panel.dest.y + ctx.save_slot_3_panel.dest.height + padding,
+    slot_dim.x,
+    slot_dim.y
+  };
+
+  auto draw_slot = [](const save_data& slot, panel& pnl) {
+    if(gui_panel_active(&pnl, pnl.dest, false).is_signaling) {
+      set_active_save_slot(slot.id);
+    }
+    if (not slot.is_success) {
+      gui_label(
+        lc_txt(LOC_TEXT_EMPTY), FONT_TYPE_ITALIC, 1, {pnl.dest.x + pnl.dest.width * .5f, pnl.dest.y + pnl.dest.height * .5f},
+        WHITE, true, true
+      );
+      return;
+    }
+    return;
+  };
+
+  draw_slot(gm_get_save_data(SAVE_SLOT_1), ctx.save_slot_1_panel);
+  draw_slot(gm_get_save_data(SAVE_SLOT_2), ctx.save_slot_2_panel);
+  draw_slot(gm_get_save_data(SAVE_SLOT_3), ctx.save_slot_3_panel);
+  draw_slot(gm_get_save_data(SAVE_SLOT_4), ctx.save_slot_4_panel);
+}
+void draw_credits_screen(void) {
+
 }
 
 void draw_main_menu_character_panel(void) {
@@ -2090,7 +2257,10 @@ void smm_update_mouse_bindings(void) {
     case MAIN_MENU_SCENE_SETTINGS: {
       break;
     }
-    case MAIN_MENU_SCENE_EXTRAS: {
+    case MAIN_MENU_SCENE_SAVE_GAME: {
+      break;
+    }
+    case MAIN_MENU_SCENE_CREDITS: {
       break;
     }
     case MAIN_MENU_SCENE_CHARACTER: {
@@ -2112,8 +2282,11 @@ void smm_update_mouse_bindings(void) {
 
       break;
     }
+    case MAIN_MENU_SCENE_GREET: {
+
+      break;
+    }
     default: {
-      IWARN("scene_in_game::smm_update_mouse_bindings()::Unsupported stage");
       break;
     }
   }
@@ -2132,14 +2305,20 @@ void smm_update_keyboard_bindings(void) {
     case MAIN_MENU_SCENE_SETTINGS: {
       break;
     }
-    case MAIN_MENU_SCENE_EXTRAS: {
+    case MAIN_MENU_SCENE_SAVE_GAME: {
+      break;
+    }
+    case MAIN_MENU_SCENE_CREDITS: {
       break;
     }
     case MAIN_MENU_SCENE_CHARACTER: {
       break;
     }
+    case MAIN_MENU_SCENE_GREET: {
+
+      break;
+    }
     default: {
-      IWARN("scene_in_game::smm_update_keyboard_bindings()::Unsupported stage");
       break;
     }
   }
@@ -2184,7 +2363,7 @@ void smm_update_local_buttons(void) {
   }
 }
 
-void smm_begin_fadeout(data128 data, void(*on_change_complete)(data128)) {
+void smm_begin_fadeout(data128 data, void(*on_change_complete)(ui_fade_type, data128)) {
   if (not state or state == nullptr ) {
     IERROR("scene_main_menu::smm_begin_fadeout()::State is not valid");
     return;
@@ -2199,7 +2378,7 @@ void smm_begin_fadeout(data128 data, void(*on_change_complete)(data128)) {
   state->smm_fade.data = data;
   state->smm_fade.on_change_complete = on_change_complete;
 }
-void smm_begin_fadein(data128 data, void(*on_change_complete)(data128)) {
+void smm_begin_fadein(data128 data, void(*on_change_complete)(ui_fade_type, data128)) {
   if (not state or state == nullptr ) {
     IERROR("scene_main_menu::smm_begin_fadein()::State is not valid");
     return;
@@ -2433,22 +2612,32 @@ void smm_refresh_character_context(void) {
   }
 
 }
-void fade_on_complete_change_main_menu_type(data128 data) {
+void fade_on_complete_change_main_menu_type(ui_fade_type fade_type, data128 data) {
   if (not state or state == nullptr ) {
     IERROR("scene_main_menu::fade_on_complete_change_main_menu_type()::State is not valid");
     return;
   }
   main_menu_scene_type scene = static_cast<main_menu_scene_type>(data.i32[0]);
-  state->smm_fade = ui_fade_control_system();
+
   begin_scene_change(scene, event_context(data.i32[1] ,data.i32[2] ,data.i32[3]));
+
+  if (fade_type == FADE_TYPE_FADEOUT) {
+    smm_begin_fadein(data128(), nullptr);
+  }
+  else state->smm_fade = ui_fade_control_system();
 }
-void fade_on_complete_change_scene(data128 data) {
+void fade_on_complete_change_scene(ui_fade_type fade_type, data128 data) {
   if (not state or state == nullptr ) {
     IERROR("scene_main_menu::fade_on_complete_change_scene()::State is not valid");
     return;
   }
   scene_id scene = static_cast<scene_id>(data.i32[0]);
-  state->smm_fade = ui_fade_control_system();
+
+  if (fade_type == FADE_TYPE_FADEOUT) {
+    smm_begin_fadein(data128(), nullptr);
+  }
+  else state->smm_fade = ui_fade_control_system();
+
   begin_scene_change(scene, event_context(data.i32[1] ,data.i32[2] ,data.i32[3]));
 }
 
@@ -2460,10 +2649,11 @@ void begin_scene_change(main_menu_scene_type mms, [[__maybe_unused__]] event_con
       smm_refresh_character_context();
       break;
     }
-    case MAIN_MENU_SCENE_EXTRAS: { break; }
+    case MAIN_MENU_SCENE_SAVE_GAME: { break; }
+    case MAIN_MENU_SCENE_CREDITS: { break; }
     case MAIN_MENU_SCENE_TO_PLAY_MAP_CHOICE: { break; }
     case MAIN_MENU_SCENE_TO_PLAY_TRAIT_CHOICE: { break; }
-
+    case MAIN_MENU_SCENE_GREET: { break; }
     default:
   }
 
@@ -2490,8 +2680,12 @@ void begin_scene_change(main_menu_scene_type mms, [[__maybe_unused__]] event_con
       state->mainmenu_state = MAIN_MENU_SCENE_CHARACTER;
       break;
     }
-    case MAIN_MENU_SCENE_EXTRAS: {
-      state->mainmenu_state = MAIN_MENU_SCENE_EXTRAS;
+    case MAIN_MENU_SCENE_SAVE_GAME: {
+      state->mainmenu_state = MAIN_MENU_SCENE_SAVE_GAME;
+      break;
+    }
+    case MAIN_MENU_SCENE_CREDITS: {
+      state->mainmenu_state = MAIN_MENU_SCENE_CREDITS;
       break;
     }
     case MAIN_MENU_SCENE_TO_PLAY_MAP_CHOICE: {
@@ -2536,9 +2730,13 @@ void begin_scene_change(main_menu_scene_type mms, [[__maybe_unused__]] event_con
       }
       break;
     }
+    case MAIN_MENU_SCENE_GREET: {
+      state->mainmenu_state = MAIN_MENU_SCENE_GREET;
+      break;
+    }
     default: {
       IWARN("scene_main_menu::begin_scene_change()::Unsupported main menu scene type");
-      state->mainmenu_state = MAIN_MENU_SCENE_DEFAULT;
+      begin_scene_change(MAIN_MENU_SCENE_DEFAULT);
       break;
     }
   }
@@ -2623,19 +2821,3 @@ void chosen_trait_button_on_click(i32 index) {
   state->mms_trait_choice.available_trait_points -= trait.point;
   state->mms_trait_choice.chosen_traits.erase(state->mms_trait_choice.chosen_traits.begin() + index);
 }
-
-#undef DENY_NOTIFY_TIME
-#undef MAIN_MENU_FADE_DURATION
-#undef MAIN_MENU_UPGRADE_PANEL_COL
-#undef MAIN_MENU_UPGRADE_PANEL_ROW
-#undef SMM_BASE_RENDER_SCALE
-#undef SMM_BASE_RENDER_DIV2
-#undef SMM_BASE_RENDER_RES_VEC
-#undef SMM_BASE_RENDER_WIDTH
-#undef SMM_BASE_RENDER_HEIGHT
-#undef SMM_MAP_PIN_SOURCE_LOCATION_UP
-#undef SMM_MAP_PIN_SOURCE_LOCATION_HOVER
-#undef SMM_SCROLL_HANDLE_HEIGHT
-#undef ZOOM_CAMERA_MAP_ENTRY
-#undef UI_CHARACTER_TRAIT_DISPLAY
-#undef UI_CHARACTER_TRAIT_HIDDEN

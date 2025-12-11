@@ -196,11 +196,12 @@ void load_sound_pak([[__maybe_unused__]] pak_file_id pak_file, [[__maybe_unused_
     return;
   }
   
-  data.wav = wav;
+  data.wav = ZERO_WAV;
   data.file = file;
   data.id = id;
   data.handle = LoadSoundFromWave(wav);
   data.pitch_range = pitch_range;
+  UnloadWave(wav);
 
   state->sounds.at(id) = data;
   #endif

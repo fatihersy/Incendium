@@ -153,8 +153,8 @@ constexpr bool scene_editor_map_prop_type_slc_slider_on_left_button_trigger(void
 constexpr bool scene_editor_map_prop_type_slc_slider_on_right_button_trigger(void);
 
 constexpr bool scene_editor_is_map_prop_y_based_checkbox_on_change_trigger(void);
-void se_begin_fadeout(data128 data, void(*on_change_complete)(data128));
-void se_begin_fadein(data128 data, void(*on_change_complete)(data128));
+void se_begin_fadeout(data128 data, void(*on_change_complete)(ui_fade_type, data128));
+void se_begin_fadein(data128 data, void(*on_change_complete)(ui_fade_type, data128));
 
 #define SE_BASE_RENDER_WIDTH state->in_app_settings->render_width
 #define SE_BASE_RENDER_HEIGHT state->in_app_settings->render_height
@@ -422,7 +422,7 @@ void update_scene_editor(void) {
   else if (state->se_fade.is_fade_animation_played) {
     if (state->se_fade.fade_type == FADE_TYPE_FADEOUT) {
       if (state->se_fade.on_change_complete != nullptr) {
-        state->se_fade.on_change_complete(state->se_fade.data);
+        state->se_fade.on_change_complete(state->se_fade.fade_type, state->se_fade.data);
       }
       se_begin_fadein(data128(), nullptr);
     }
@@ -1418,7 +1418,7 @@ constexpr void scene_editor_selection_cleanup(void) {
   state->sel_map_coll_addr_from_map = nullptr;
   state->b_dragging_map_element = false;
 }
-void se_begin_fadeout(data128 data, void(*on_change_complete)(data128)) {
+void se_begin_fadeout(data128 data, void(*on_change_complete)(ui_fade_type, data128)) {
   if (not state or state == nullptr ) {
     IERROR("scene_editor::se_begin_fadeout()::State is not valid");
     return;
@@ -1431,7 +1431,7 @@ void se_begin_fadeout(data128 data, void(*on_change_complete)(data128)) {
   state->se_fade.data = data;
   state->se_fade.on_change_complete = on_change_complete;
 }
-void se_begin_fadein(data128 data, void(*on_change_complete)(data128)) {
+void se_begin_fadein(data128 data, void(*on_change_complete)(ui_fade_type, data128)) {
   if (not state or state == nullptr ) {
     IERROR("scene_editor::se_begin_fadein()::State is not valid");
     return;
@@ -1444,25 +1444,3 @@ void se_begin_fadein(data128 data, void(*on_change_complete)(data128)) {
   state->se_fade.data = data;
   state->se_fade.on_change_complete = on_change_complete;
 }
-
-#undef add_prop_tree
-#undef add_prop_tombstone
-#undef add_prop_stone
-#undef add_prop_spike
-#undef add_prop_skull
-#undef add_prop_pillar
-#undef add_prop_lamp
-#undef add_prop_fence
-#undef add_prop_detail
-#undef add_prop_candle
-#undef add_prop_building
-#undef add_prop_sprite
-#undef SE_BASE_RENDER_WIDTH 
-#undef SE_BASE_RENDER_HEIGHT
-#undef PROP_DRAG_HANDLE_DIM
-#undef PROP_DRAG_HANDLE_DIM_DIV2
-#undef PROP_PANEL_PROP_DRAW_STARTING_HEIGHT
-#undef MAP_COLLISION_DRAG_HANDLE_DIM
-#undef MAP_COLLISION_DRAG_HANDLE_DIM_DIV2
-#undef MAP_COLLISION_PANEL_COLLISION_DRAW_STARTING_HEIGHT
-#undef EDITOR_FADE_DURATION
