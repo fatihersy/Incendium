@@ -2,6 +2,7 @@
 #include "json.hpp"
 #include "core/fmemory.h"
 #include "core/logger.h"
+#include "core/ftime.h"
 
 #include <openssl/aes.h>
 #include <openssl/rand.h>
@@ -23,6 +24,8 @@ constexpr i32 HMAC_TAG_SIZE      = 32; // HMAC-SHA256 always produces 32 bytes
 
 constexpr const char * JSON_SAVE_DATA_MAP_CURRENCY_COINS = "currency_coins_player_have";
 constexpr const char * JSON_SAVE_DATA_VERSION            = "version";
+constexpr const char * JSON_SAVE_DATE                    = "save_date";
+constexpr const char * JSON_TIME_SPEND                   = "time_spend";
 
 constexpr const char * JSON_SAVE_DATA_MAP_PLAYER_DATA                           = "player_data";
 constexpr const char * JSON_SAVE_DATA_MAP_PLAYER_DATA_INVENTORY                 = "inventory";
@@ -49,7 +52,7 @@ constexpr const char * JSON_SAVE_DATA_MAP_GAME_RULE_RESERVED_FOR_FUTURE_USE = "f
 constexpr i32 SAVE_FILE_VERSION_051125 = 051125;
 //constexpr i32 SAVE_FILE_CURRENT_VERSION = SAVE_FILE_VERSION_051125;
 
-constexpr const char * SAVE_FILE_PATH = "saves/";
+constexpr const char * SAVE_FILE_PATH = "./saves";
 
 // Save system state
 struct save_game_system_state {
@@ -120,10 +123,13 @@ bool save_system_initialize() {
   }
   *state = save_game_system_state();
 
-  for (size_t i = 0; i < SAVE_SLOT_MAX; ++i) {
+  for (size_t i = SAVE_SLOT_1; i < SAVE_SLOT_MAX; ++i) {
     state->slot_filenames[i] = get_save_filename(static_cast<save_slot_id>(i));
     state->save_slots[i].id = static_cast<save_slot_id>(i);
     state->save_slots[i].file_name = state->slot_filenames[i];
+  }
+  if (not DirectoryExists(SAVE_FILE_PATH)) {
+    MakeDirectory(SAVE_FILE_PATH);
   }
 
   return true;
@@ -140,7 +146,7 @@ bool parse_or_create_save_data_from_file(save_slot_id slot, save_data default_sa
   }
 
   if (not FileExists(state->slot_filenames[slot].c_str())) {
-    return save_save_data(slot);
+    return save_save_data(slot, state->save_slots[slot]);
   }
 
   parse_save_data(slot, default_save);
@@ -148,7 +154,7 @@ bool parse_or_create_save_data_from_file(save_slot_id slot, save_data default_sa
   return true;
 }
 
-bool save_save_data(save_slot_id slot) {
+bool save_save_data(save_slot_id slot, save_data data) {
   if (not state or state == nullptr) {
     IERROR("save_game::save_save_data()::Save game state is not valid");
     return false;
@@ -157,9 +163,7 @@ bool save_save_data(save_slot_id slot) {
     IWARN("save_game::save_save_data()::Slot out of bound");
     return false;
   }
-
-  save_data* slot_data = &state->save_slots[slot];
-  json j = serialize_save_data(*slot_data);
+  json j = serialize_save_data(data);
   std::string serialized = j.dump();
 
   // The EVP API handles PKCS#7 padding automatically if not explicitly disabled.
@@ -189,15 +193,17 @@ bool save_save_data(save_slot_id slot) {
   std::vector<uint8_t> final_file_data = encrypted_data_and_iv;
   final_file_data.insert(final_file_data.end(), tag.begin(), tag.end());
 
-  return SaveFileData(state->slot_filenames[slot].c_str(), final_file_data.data(), final_file_data.size());
+  SaveFileData(state->slot_filenames[slot].c_str(), final_file_data.data(), final_file_data.size());
+
+  return FileExists(state->slot_filenames[slot].c_str());
 }
 bool parse_save_data(save_slot_id slot, save_data default_save) {
   if (not state or state == nullptr) {
-    IFATAL("save_game::parse_or_create_save_data_from_file()::Save game state is not valid");
+    IFATAL("save_game::parse_save_data()::Save game state is not valid");
     return false;
   }
   if (slot <= SAVE_SLOT_UNDEFINED or slot >= SAVE_SLOT_MAX) {
-    IWARN("save_game::parse_or_create_save_data_from_file()::Slot out of bound");
+    IWARN("save_game::parse_save_data()::Slot out of bound");
     return false;
   }
   save_data& save = state->save_slots[slot];
@@ -213,7 +219,7 @@ bool parse_save_data(save_slot_id slot, save_data default_save) {
   uint8_t* data = LoadFileData(save.file_name.c_str(), &out_datasize);
   // Check minimum required size: IV + 1 Block (Ciphertext) + HMAC Tag
   if (not data or out_datasize < (AES_IV_SIZE + AES_BLOCK_SIZE + HMAC_TAG_SIZE)) {
-    IERROR("save_game::parse_or_create_save_data_from_file()::File too small or failed to load");
+    IERROR("save_game::parse_save_data()::File too small or failed to load");
     UnloadFileData(data);
     return false;
   }
@@ -234,14 +240,14 @@ bool parse_save_data(save_slot_id slot, save_data default_save) {
   
   // Note: std::equal is safe for cryptographic comparison on modern architectures
   if (calculated_tag.empty() or calculated_tag.size() != HMAC_TAG_SIZE or !std::equal(calculated_tag.begin(), calculated_tag.end(), stored_tag.begin())) {
-    IERROR("save_game::parse_or_create_save_data_from_file()::HMAC integrity check failed. File tampered or corrupted.");
+    IERROR("save_game::parse_save_data()::HMAC integrity check failed. File tampered or corrupted.");
     return false;
   }
 
   // 3. Decrypt Data
   std::string decrypted;
   if (not decrypt_data(encrypted_data_and_iv, decrypted)) {
-    IERROR("save_game::parse_or_create_save_data_from_file()::Decryption failed");
+    IERROR("save_game::parse_save_data()::Decryption failed");
     return false;
   }
 
@@ -250,7 +256,7 @@ bool parse_save_data(save_slot_id slot, save_data default_save) {
     json j = json::parse(decrypted);
     deserialize_save_data(j, save);
   } catch (const json::exception& e) {
-    IERROR("save_game::parse_or_create_save_data_from_file()::JSON parse error: %s", e.what());
+    IERROR("save_game::parse_save_data()::JSON parse error: %s", e.what());
     return false;
   }
 
@@ -405,7 +411,7 @@ std::string get_save_filename(save_slot_id slot) {
     IWARN("save_game::get_save_filename()::Slot out of bound");
     return "";
   }
-  return TextFormat("%s%d%s", SAVE_FILE_PATH, static_cast<int32_t>(slot) + 1, SAVE_GAME_EXTENSION);
+  return TextFormat("%s/slot_%d%s", SAVE_FILE_PATH, static_cast<int32_t>(slot) + 1, SAVE_GAME_EXTENSION);
 }
 
 json serialize_save_data(const save_data& data) {
@@ -435,6 +441,8 @@ json serialize_save_data_v051125(const save_data& data) {
   json j;
   j[JSON_SAVE_DATA_MAP_CURRENCY_COINS] = data.currency_coins_player_have;
   j[JSON_SAVE_DATA_VERSION] = SAVE_FILE_VERSION_051125;
+  j[JSON_SAVE_DATE] = get_time_now("%d.%m.%Y");
+  j[JSON_TIME_SPEND] = data.time_spend + ftime_get_app_time();
 
   json rules;
   rules[JSON_SAVE_DATA_MAP_GAME_RULE_SPAWN_MULTIPLIER]            = data.game_rules.at(GAME_RULE_SPAWN_MULTIPLIER).level;

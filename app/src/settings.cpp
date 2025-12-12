@@ -14,6 +14,7 @@ using json = nlohmann::json;
 typedef struct app_settings_system_state {
   app_settings settings;
   app_settings initializer;
+  app_settings defaults;
   u16 offset {};
   std::vector<std::pair<i32, i32>> all_supported_resolutions;
 
@@ -42,12 +43,10 @@ static app_settings_system_state * state = nullptr;
 constexpr i32 MAX_SETTINGS_FILE_SIZE = 512;
 
 constexpr const char * SETTINGS_ACTIVE_SAVE_SLOT = "Active Save Slot";
-//constexpr const char * SETTINGS_RESOLUTION = "resolution";
 constexpr const char * SETTINGS_SOUND = "sound";
 constexpr const char * SETTINGS_WINDOW = "window";
 constexpr const char * SETTINGS_LOCALIZATION = "localization";
-//constexpr const char * SETTINGS_RESOLUTION_WIDTH  = "width";
-//constexpr const char * SETTINGS_RESOLUTION_HEIGHT = "heigth";
+
 constexpr const char * SETTINGS_SOUND_MASTER = "master";
 constexpr const char * SETTINGS_WINDOW_MODE = "mode";
 constexpr const char * SETTINGS_WINDOW_WIDTH  = "width";
@@ -60,8 +59,7 @@ constexpr const char * SETTINGS_WINDOW_MODE_FULLSCREEN = "fullscreen";
 
 constexpr f32 WINDOW_HEIGHT_OFFSET_SCALE = 0.0069444444444444f;
 
-bool write_ini_file(app_settings _ini);
-bool create_ini_file(i32 width, i32  height, i32 master_volume, i32 window_mode, const char * language);
+bool write_ini_file(app_settings& _ini);
 void deserialize_settings_data(json j);
 
 static inline const char * get_window_mode_string(i32 win_mode_int) {
@@ -107,20 +105,6 @@ bool settings_initialize(void) {
   }
   *state = app_settings_system_state();
 
-  state->initializer = app_settings();
-  state->initializer.active_slot = SAVE_SLOT_UNDEFINED;
-  state->initializer.master_sound_volume = 0;
-  state->initializer.window_state  = 0;
-  state->initializer.window_width  = 374;
-  state->initializer.window_height = 448;
-  state->initializer.render_width  = 374;
-  state->initializer.render_height = 448;
-  state->initializer.render_width_div2  = state->initializer.render_width  * .5f;
-  state->initializer.render_height_div2 = state->initializer.render_height * .5f;
-  state->initializer.scale_ratio.push_back(static_cast<f32>(state->settings.render_width)  / static_cast<f32>(state->settings.window_width));
-  state->initializer.scale_ratio.push_back(static_cast<f32>(state->settings.render_height) / static_cast<f32>(state->settings.window_height));
-  state->initializer.language = DEFAULT_SETTINGS_LANGUAGE; // Recieve from args
-  
   // Supported resolutions
   { 
     state->ratio_3_2_resolutions  .push_back(std::pair<i32, i32>(720,   480));
@@ -252,6 +236,26 @@ bool settings_initialize(void) {
 
   state->ratio_custom_resolutions.push_back(state->native_resolution);
 
+  // Default settings
+  {
+    app_settings& defaults = state->defaults;
+    defaults.active_save_slot = SAVE_SLOT_UNDEFINED;
+    defaults.window_width  = GetMonitorWidth(GetCurrentMonitor()),
+    defaults.window_height = GetMonitorHeight(GetCurrentMonitor()),
+    defaults.master_sound_volume = DEFAULT_SETTINGS_MASTER_VOLUME;
+    defaults.window_state  = FLAG_BORDERLESS_WINDOWED_MODE;
+    defaults.language = DEFAULT_SETTINGS_LANGUAGE;
+
+    defaults.render_width  = defaults.window_width;
+    defaults.render_height = defaults.window_height;
+    defaults.render_width_div2  = defaults.render_width  * .5f;
+    defaults.render_height_div2 = defaults.render_height * .5f;
+
+    defaults.scale_ratio.push_back(static_cast<f32>(defaults.render_width)  / static_cast<f32>(defaults.window_width));
+    defaults.scale_ratio.push_back(static_cast<f32>(defaults.render_height) / static_cast<f32>(defaults.window_height));
+    defaults.display_ratio = get_monitor_aspect_ratio();
+  }
+
   return true;
 }
 
@@ -265,7 +269,7 @@ bool set_settings_from_ini_file(const char * file_name) {
     return false;
   }
   if (not FileExists(file_name)) {
-    write_ini_file(get_default_ini_file());
+    write_ini_file(state->defaults);
   }
   try {
     i32 out_datasize = 0;
@@ -313,6 +317,13 @@ void set_window_size(i32 width, i32 height) {
   state->settings.window_height = height;
   state->settings.scale_ratio.push_back(static_cast<f32>(state->settings.render_width)  / static_cast<f32>(state->settings.window_width));
   state->settings.scale_ratio.push_back(static_cast<f32>(state->settings.render_height) / static_cast<f32>(state->settings.window_height));
+  write_ini_file(state->settings);
+}
+void set_window_mode(i32 mode) {
+  if (mode == 0 or mode == FLAG_BORDERLESS_WINDOWED_MODE or mode == FLAG_FULLSCREEN_MODE) {
+    state->settings.window_state = mode;
+  }
+  write_ini_file(state->settings);
 }
 
 void set_language(const char* lang) {
@@ -325,9 +336,11 @@ void set_language(const char* lang) {
     return;
   }
   state->settings.language = lang;
+  write_ini_file(state->settings);
 }
 void set_active_save_slot(save_slot_id id) {
-  state->settings.active_slot = id;
+  state->settings.active_save_slot = id;
+  write_ini_file(state->settings);
 }
 bool set_master_sound(i32 volume, bool save) {
   if (not state or state == nullptr) {
@@ -338,16 +351,13 @@ bool set_master_sound(i32 volume, bool save) {
   
   if (save) {
     state->settings.master_sound_volume = volume;
+    write_ini_file(state->settings);
   }
   SetMasterVolume(volume * .1f); // INFO: volume 10 is max, should be normalize
   return true;
 }
 app_settings * get_app_settings(void) {
-  if (not state or state == nullptr) {
-    IERROR("settings::get_app_settings()::State is invalid");
-    return nullptr;
-  }
-  return __builtin_addressof(state->settings);
+  return &state->settings;
 }
 i32 get_window_state(void) {
   if (not state or state == nullptr) {
@@ -357,51 +367,17 @@ i32 get_window_state(void) {
   return state->settings.window_state;
 }
 
-app_settings get_default_ini_file(void) {
-  if (not state or state == nullptr) {
-    IERROR("settings::get_default_ini_file()::State is not valid");
-    return app_settings();
-  }
-  app_settings _defaults = app_settings();
-  _defaults.active_slot = SAVE_SLOT_UNDEFINED;
-  _defaults.window_width  = GetMonitorWidth(GetCurrentMonitor()),
-  _defaults.window_height = GetMonitorHeight(GetCurrentMonitor()),
-  _defaults.master_sound_volume = DEFAULT_SETTINGS_MASTER_VOLUME;
-  _defaults.window_state  = FLAG_BORDERLESS_WINDOWED_MODE;
-  _defaults.language = DEFAULT_SETTINGS_LANGUAGE;
-
-  _defaults.render_width  = _defaults.window_width;
-  _defaults.render_height = _defaults.window_height;
-  _defaults.render_width_div2  = _defaults.render_width  * .5f;
-  _defaults.render_height_div2 = _defaults.render_height * .5f;
-
-  _defaults.scale_ratio.push_back(static_cast<f32>(state->settings.render_width)  / static_cast<f32>(state->settings.window_width));
-  _defaults.scale_ratio.push_back(static_cast<f32>(state->settings.render_height) / static_cast<f32>(state->settings.window_height));
-  _defaults.display_ratio = get_monitor_aspect_ratio();
-
-  return _defaults;
-}
-bool create_ini_file(save_slot_id active_slot_id, i32 width, i32  height, i32 master_volume, i32 window_mode, const char * language) {
-  if (not language or language == nullptr) {
-    IWARN("settings::create_ini_file()::Language name is invalid");
-    return false;
-  }
-  return write_ini_file(app_settings(active_slot_id, window_mode, width, height, master_volume, std::string(language)));
+const app_settings& get_default_ini_file(void) {
+  return state->defaults;
 }
 bool save_ini_file(void) {
-  return create_ini_file(
-    state->settings.active_slot,
-    state->settings.window_width, state->settings.window_height, 
-    state->settings.master_sound_volume, 
-    state->settings.window_state, 
-    state->settings.language.c_str()
-  );
+  return write_ini_file(state->settings);
 }
 
-bool write_ini_file(app_settings _settings) { 
-  i32 _save_slot = -1;
-  if (_settings.active_slot > SAVE_SLOT_UNDEFINED and _settings.active_slot < SAVE_SLOT_MAX) {
-    _save_slot = static_cast<i32>(_settings.active_slot);
+bool write_ini_file(app_settings& _settings) { 
+  i32 _save_slot = SAVE_SLOT_UNDEFINED;
+  if (_settings.active_save_slot > SAVE_SLOT_UNDEFINED and _settings.active_save_slot < SAVE_SLOT_MAX) {
+    _save_slot = static_cast<i32>(_settings.active_save_slot);
   }
 
   std::string _window_mode = "";
@@ -515,8 +491,23 @@ aspect_ratio get_aspect_ratio(i32 width, i32 height) {
   IERROR("settings::get_aspect_ratio()::Function ended unexpectedly");
   return ASPECT_RATIO_UNDEFINED;
 }
-const app_settings * get_initializer_settings(void) {
-  return __builtin_addressof(state->initializer);
+app_settings get_initializer_settings(void) {
+  app_settings _init_settings;
+  _init_settings = app_settings();
+  _init_settings.active_save_slot = SAVE_SLOT_UNDEFINED;
+  _init_settings.master_sound_volume = 0;
+  _init_settings.window_state  = 0;
+  _init_settings.window_width  = 374;
+  _init_settings.window_height = 448;
+  _init_settings.render_width  = 374;
+  _init_settings.render_height = 448;
+  _init_settings.render_width_div2  = _init_settings.render_width  * .5f;
+  _init_settings.render_height_div2 = _init_settings.render_height * .5f;
+  _init_settings.scale_ratio.push_back(static_cast<f32>(_init_settings.render_width)  / static_cast<f32>(_init_settings.window_width));
+  _init_settings.scale_ratio.push_back(static_cast<f32>(_init_settings.render_height) / static_cast<f32>(_init_settings.window_height));
+  _init_settings.language = DEFAULT_SETTINGS_LANGUAGE; // Recieve from args
+
+  return _init_settings;
 }
 std::pair<i32, i32> get_optimum_render_resolution(aspect_ratio ratio) {
   switch (ratio) {
@@ -593,7 +584,7 @@ const std::vector<std::pair<i32, i32>> * get_supported_render_resolutions(void) 
   return __builtin_addressof(state->ratio_custom_resolutions);
 }
 void deserialize_settings_data(json j) {
-  app_settings defaults = get_default_ini_file();
+  const app_settings& defaults = get_default_ini_file();
 
   std::pair<i32, i32> window_size = {GetMonitorWidth(GetCurrentMonitor()), GetMonitorHeight(GetCurrentMonitor())};
   
@@ -632,6 +623,8 @@ void deserialize_settings_data(json j) {
     state->settings.language = j[SETTINGS_LOCALIZATION].value(SETTINGS_LOCALIZATION_LANGUAGE, defaults.language);
   }
   else state->settings.language = defaults.language;
+
+  state->settings.active_save_slot = j.value(SETTINGS_ACTIVE_SAVE_SLOT, defaults.active_save_slot);
 
   state->offset = state->settings.window_height * WINDOW_HEIGHT_OFFSET_SCALE;
   write_ini_file(state->settings);

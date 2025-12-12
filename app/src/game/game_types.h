@@ -1450,6 +1450,9 @@ typedef struct save_data {
   std::array<game_rule, GAME_RULE_MAX> game_rules;
   std::array<sigil_slot, SIGIL_SLOT_MAX> sigil_slots;
 
+  u8 save_date[11] {};
+  f64 time_spend {};
+  
   bool is_success {};
   save_data(void) {
     this->id = SAVE_SLOT_UNDEFINED;

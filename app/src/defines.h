@@ -144,7 +144,7 @@ static_assert(sizeof(f64) == 8, "Expected float to be 8 bytes.");
 #define INVALID_IDU32 U32_MAX
 #define INVALID_IDU16 U16_MAX
 
-typedef enum easing_type {
+enum easing_type {
   EASING_TYPE_UNDEFINED,
   EASING_TYPE_LINEAR_NONE,
   EASING_TYPE_LINEAR_IN,
@@ -175,9 +175,9 @@ typedef enum easing_type {
   EASING_TYPE_ELASTIC_OUT,
   EASING_TYPE_ELASTIC_INOUT,
   EASING_TYPE_MAX,
-} easing_type;
+};
 
-typedef enum aspect_ratio {
+enum aspect_ratio {
   ASPECT_RATIO_UNDEFINED,
   ASPECT_RATIO_3_2,
   ASPECT_RATIO_4_3,
@@ -193,9 +193,9 @@ typedef enum aspect_ratio {
   ASPECT_RATIO_64_27,
   ASPECT_RATIO_CUSTOM,
   ASPECT_RATIO_MAX,
-} aspect_ratio;
+};
 
-typedef enum data_type {
+enum data_type {
   DATA_TYPE_UNDEFINED,
   DATA_TYPE_I64,
   DATA_TYPE_U64,
@@ -210,9 +210,9 @@ typedef enum data_type {
   DATA_TYPE_C,
   DATA_TYPE_SAMPLER2D,
   DATA_TYPE_MAX,
-}data_type;
+};
 
-typedef union data64 {
+union data64 {
   i64 i64;
   u64 u64;
   f64 f64;
@@ -314,9 +314,9 @@ typedef union data64 {
   data64(void* address1){
     this->address = address1;
   }
-} data64;
+};
 
-typedef union data128 {
+union data128 {
   i64 i64[2];
   u64 u64[2];
   f64 f64[2];
@@ -437,10 +437,10 @@ typedef union data128 {
     this->address[0] = address1;
     this->address[1] = address2;
   }
-} data128;
+};
 
   // 256 bytes
-typedef union data256 {
+union data256 {
   i64 i64[4];
   u64 u64[4];
   f64 f64[4];
@@ -563,23 +563,21 @@ typedef union data256 {
     this->address[2] = address3;
     this->address[3] = address4;
   }
-} data256;
+};
 
-typedef struct data_pack {
+struct data_pack {
   data_type type_flag;
-  i32 array_lenght;
+  i32 array_lenght {};
   data128 data;
   data_pack() {
     this->type_flag = DATA_TYPE_UNDEFINED;
-    this->array_lenght = 0;
-    this->data = data128();
   };
   data_pack(data_type type, data128 buffer, i32 len) : data_pack() {
     this->type_flag = type;
     this->array_lenght = len; 
     this->data = buffer;
   };
-} data_pack;
+};
 
 typedef enum language_index {
   LANGUAGE_INDEX_UNDEFINED,
@@ -1082,7 +1080,7 @@ typedef enum save_slot_id {
 typedef struct app_settings {
   std::vector<f32> scale_ratio;
   aspect_ratio display_ratio;
-  save_slot_id active_slot = SAVE_SLOT_UNDEFINED;
+  save_slot_id active_save_slot = SAVE_SLOT_UNDEFINED;
   i32 master_sound_volume {};
   i32 window_state {};
   i32 window_width {};
@@ -1093,8 +1091,8 @@ typedef struct app_settings {
   i32 render_height_div2 {};
   std::string language;
   app_settings(void) {}
-  app_settings(save_slot_id _active_slot, i32 window_state, i32 width, i32 height, i32 volume, std::string language) : app_settings() {
-    this->active_slot        = _active_slot;
+  app_settings(save_slot_id _active_save_slot, i32 window_state, i32 width, i32 height, i32 volume, std::string language) : app_settings() {
+    this->active_save_slot   = _active_save_slot;
     this->window_width       = width;
     this->window_height      = height;
     this->render_width       = width;
@@ -1111,19 +1109,15 @@ typedef struct app_settings {
 
 typedef struct file_buffer {
   pak_file_id pak_id;
-  i32 file_id;
+  i32 file_id {};
   std::string content;
   std::string file_extension;
-  size_t offset;
-  bool is_success;
+  size_t offset {};
+  bool is_success {};
 
   file_buffer(void) {
     this->pak_id = PAK_FILE_UNDEFINED;
     this->file_id = PAK_FILE_UNDEFINED;
-    this->content = std::string();
-    this->file_extension = std::string();
-    this->offset = 0u;
-    this->is_success = false;
   }
   file_buffer(pak_file_id pak_id, i32 file_id, std::string ext) : file_buffer() {
     this->pak_id = pak_id;
@@ -1133,20 +1127,13 @@ typedef struct file_buffer {
 } file_buffer;
 
 typedef struct worldmap_stage_file {
-  i32 stage_index;
+  i32 stage_index {};
   std::array<std::string, MAX_TILEMAP_LAYERS> layer_data;
   std::string file_collision;
   std::string file_prop;
-  size_t pak_offset;
-  bool is_success;
-  worldmap_stage_file(void) {
-    this->stage_index = 0;
-    this->layer_data.fill(std::string());
-    this->file_collision = std::string();
-    this->file_prop = std::string();
-    this->pak_offset = 0u;
-    this->is_success = false;
-  }
+  size_t pak_offset {};
+  bool is_success {};
+  worldmap_stage_file(void) {}
 } worldmap_stage_file;
 
 typedef struct asset_pak_file {
@@ -1154,15 +1141,9 @@ typedef struct asset_pak_file {
   std::string pak_file_name;
   std::string pak_data;
   std::vector<file_buffer> file_buffers;
-  bool is_initialized;
+  bool is_initialized {};
   
-  asset_pak_file(void) {
-    this->file_buffers = std::vector<file_buffer>();
-    this->path_to_resource = std::string();
-    this->pak_file_name = std::string();
-    this->pak_data = std::string();
-    this->is_initialized = false;
-  }
+  asset_pak_file(void) {}
   asset_pak_file(std::string pak_name, std::string path_to_res, std::vector<file_buffer> file_infos) : asset_pak_file() {
     this->pak_file_name = pak_name;
     this->path_to_resource = path_to_res;

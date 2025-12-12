@@ -16,5 +16,8 @@ void update_time(void);
 void set_ingame_delta_time_multiplier(f32 val);
 
 f32 delta_time_ingame(void);
+f64 ftime_get_app_time(void);
+
+std::string get_time_now(std::string format);
 
 #endif

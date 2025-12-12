@@ -17,9 +17,9 @@
 #include "game/world.h"
 #include "game/fshader.h"
 
-typedef struct app_system_state {
+struct app_system_state {
   bool app_running {};
-  app_settings* settings;
+  const app_settings * settings;
   RenderTexture2D drawing_target;
   Camera2D screen_space_camera;
   const fshader* post_process_shader;
@@ -29,7 +29,7 @@ typedef struct app_system_state {
     this->screen_space_camera = Camera2D {ZEROVEC2, ZEROVEC2, 0.f, 0.f};
     this->post_process_shader = nullptr;
   }
-} app_system_state;
+};
 
 static app_system_state* state = nullptr;
 
@@ -59,13 +59,18 @@ bool app_initialize(i32 build_id) {
   *state = app_system_state();
   
   // Platform    
+
+  // Not requires Raylib
+  app_settings initializer = get_initializer_settings();
+
+  SetConfigFlags(FLAG_VSYNC_HINT | FLAG_WINDOW_HIGHDPI | FLAG_WINDOW_UNDECORATED);
+  InitWindow(initializer.window_width ,initializer.window_height, GAME_TITLE);
+
+  // Requires Raylib
   if(not settings_initialize()) {
     alert("Settings state init failed", "Fatal");
     return false; // TODO: Set default settings instead
   }
-  const app_settings * initializer = get_initializer_settings();
-  SetConfigFlags(FLAG_VSYNC_HINT | FLAG_WINDOW_HIGHDPI | FLAG_WINDOW_UNDECORATED);
-  InitWindow(initializer->window_width ,initializer->window_height, GAME_TITLE);
 
   if(not logging_system_initialize(build_id)) { // INFO: Requires Raylib to file system operations
     alert("Logging system init failed", "Fatal");
@@ -182,10 +187,6 @@ bool window_should_close(void) {
 }
 
 bool app_update(void) {
-  if (not state or state == nullptr) {
-    IFATAL("app::app_update()::State is invalid");
-    return false;
-  }
   update_app_settings_state();
 
   if ((IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_W)) || (IsKeyDown(KEY_LEFT_ALT) && IsKeyPressed(KEY_F4))) {
@@ -263,7 +264,7 @@ constexpr void toggle_borderless(void) {
   SetWindowPosition(0, 0);
 
   ToggleBorderlessWindowed();
-  state->settings->window_state = FLAG_BORDERLESS_WINDOWED_MODE;
+  set_window_mode(FLAG_BORDERLESS_WINDOWED_MODE);
 }
 constexpr void toggle_fullscreen(void) {
   if (IsWindowState(FLAG_BORDERLESS_WINDOWED_MODE)) {
@@ -278,7 +279,7 @@ constexpr void toggle_fullscreen(void) {
   SetWindowPosition(0, 0);
 
   ToggleFullscreen();
-  state->settings->window_state = FLAG_FULLSCREEN_MODE;
+  set_window_mode(FLAG_FULLSCREEN_MODE);
 }
 constexpr void toggle_windowed(i32 width, i32 height) {
   if (state->settings->window_state == FLAG_BORDERLESS_WINDOWED_MODE) {
@@ -289,7 +290,7 @@ constexpr void toggle_windowed(i32 width, i32 height) {
   }
   std::pair<i32, i32> new_res = get_optimum_render_resolution(width, height);
 
-  state->settings->window_state = 0;
+  set_window_mode(0);
   set_resolution(new_res.first, new_res.second);  
   set_window_size(new_res.first, new_res.second);
   event_fire(EVENT_CODE_CAMERA_SET_DRAWING_EXTENT, event_context(state->settings->render_width, state->settings->render_height));

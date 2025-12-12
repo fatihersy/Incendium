@@ -1,5 +1,6 @@
 #include "scene_main_menu.h"
 #include <cmath> // For std::cos, std::sin
+#include <functional>
 #include <reasings.h>
 #include <steam/steam_api.h>
 #include <loc_types.h>
@@ -16,6 +17,7 @@
 #include "game/camera.h"
 
 enum main_menu_scene_type {
+  MAIN_MENU_SCENE_UNDEFINED,
   MAIN_MENU_SCENE_DEFAULT,
   MAIN_MENU_SCENE_GREET,
   MAIN_MENU_SCENE_SETTINGS,
@@ -24,6 +26,7 @@ enum main_menu_scene_type {
   MAIN_MENU_SCENE_CREDITS,
   MAIN_MENU_SCENE_TO_PLAY_MAP_CHOICE,
   MAIN_MENU_SCENE_TO_PLAY_TRAIT_CHOICE,
+  MAIN_MENU_SCENE_MAX,
 };
 enum main_menu_scene_character_subscene_type {
   MAIN_MENU_SCENE_CHARACTER_UNDEFINED,
@@ -195,8 +198,8 @@ struct main_menu_scene_state {
     this->in_ingame_info = nullptr;
     
     this->mouse_pos_screen = nullptr;
-    this->mainmenu_state = MAIN_MENU_SCENE_DEFAULT;
-    this->mainmenu_scene_character_subscene = MAIN_MENU_SCENE_CHARACTER_GAME_RULE;
+    this->mainmenu_state = MAIN_MENU_SCENE_UNDEFINED;
+    this->mainmenu_scene_character_subscene = MAIN_MENU_SCENE_CHARACTER_UNDEFINED;
   }
 };
 
@@ -231,7 +234,7 @@ void update_main_menu_character_subscene_upgrade(void);
 void update_main_menu_character_subscene_inventory(void);
 
 void draw_greet_scene(void);
-void draw_save_game_buttons(Rectangle drawing_area);
+void draw_save_game_buttons(Rectangle drawing_area, std::function<void(const save_data&)> on_click);
 void draw_credits_screen(void);
 void draw_main_menu_character_subscene_upgrade_upgrade_panel(void);
 void draw_main_menu_character_subscene_upgrade_item_list_panel(void);
@@ -311,7 +314,6 @@ void chosen_trait_button_on_click(i32 index);
     IERROR("scene_main_menu::begin_scene_main_menu()::User interface failed to initialize!");
     return false;
   }
-
   // NOTE: Worldmap index 0 is mainmenu background now
   // NOTE: Also game manager requires a valid active map pointer
   set_worldmap_location(WORLDMAP_MAINMENU_MAP); 
@@ -322,6 +324,7 @@ void chosen_trait_button_on_click(i32 index);
   }
   state->in_ingame_info = gm_get_ingame_info();
   state->worldmap_locations = get_worldmap_locations();
+
 
   Color bg_item_list_idle_black_tint = { 44, 58, 71, 158};
   Color bg_item_list_hover_black_tint = { 44, 58, 71, 196};
@@ -373,7 +376,7 @@ void chosen_trait_button_on_click(i32 index);
 
   main_menu_scene_type scene_on_start = MAIN_MENU_SCENE_GREET;
 
-  if (state->in_app_settings->active_slot > SAVE_SLOT_UNDEFINED and state->in_app_settings->active_slot < SAVE_SLOT_MAX) {
+  if (state->in_app_settings->active_save_slot > SAVE_SLOT_UNDEFINED and state->in_app_settings->active_save_slot < SAVE_SLOT_MAX) {
     scene_on_start = MAIN_MENU_SCENE_DEFAULT;
   }
   else {
@@ -461,23 +464,25 @@ void update_scene_main_menu(void) {
       break;
     }
     case MAIN_MENU_SCENE_GREET: {
-      if (state->mms_greet.should_choose_save_slot and state->in_app_settings->active_slot > SAVE_SLOT_UNDEFINED and state->in_app_settings->active_slot < SAVE_SLOT_MAX) {
+      if (state->mms_greet.should_choose_save_slot and state->in_app_settings->active_save_slot > SAVE_SLOT_UNDEFINED and state->in_app_settings->active_save_slot < SAVE_SLOT_MAX) {
         state->mms_greet.should_choose_save_slot = false;
         smm_begin_fadeout(data128(static_cast<i32>(MAIN_MENU_SCENE_DEFAULT)), fade_on_complete_change_main_menu_type);
       }
       break;
     }
     default: {
-      begin_scene_change(MAIN_MENU_SCENE_DEFAULT);
+      if (not state->smm_fade.fade_animation_playing) {
+        begin_scene_change(MAIN_MENU_SCENE_DEFAULT);
+      }
       break;
     }
   }
 
   if(state->smm_fade.fade_animation_playing){
     process_fade_effect(__builtin_addressof(state->smm_fade));
-  }
-  else if (state->smm_fade.is_fade_animation_played and state->smm_fade.on_change_complete != nullptr) {
-    state->smm_fade.on_change_complete(state->smm_fade.fade_type, state->smm_fade.data);
+    if(state->smm_fade.is_fade_animation_played and state->smm_fade.on_change_complete != nullptr) {
+      state->smm_fade.on_change_complete(state->smm_fade.fade_type, state->smm_fade.data);
+    }
   }
 }
 void render_scene_main_menu(void) {
@@ -679,11 +684,14 @@ void render_interface_main_menu(void) {
     case MAIN_MENU_SCENE_SAVE_GAME: {
       gui_draw_default_background_panel();
       Vector2 drawing_size = { SMM_BASE_RENDER_WIDTH * .5f, SMM_BASE_RENDER_HEIGHT * .5f};
-      draw_save_game_buttons(Rectangle {
+      Rectangle draw_area = {
         SMM_BASE_RENDER_DIV2.x - (drawing_size.x * .5f),
         SMM_BASE_RENDER_DIV2.y - (drawing_size.y * .5f),
         drawing_size.x,
         drawing_size.y,
+      };
+      draw_save_game_buttons(draw_area, [](const save_data& data) {
+        gm_save_to_slot(data.id);
       });
       if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_SAVE_GAME_BUTTON_BACK), BTN_ID_MAINMENU_SAVE_GAME_BACK, VECTOR2(0.f, 66.5f), SMM_BASE_RENDER_DIV2, true)) {
         begin_scene_change(MAIN_MENU_SCENE_DEFAULT);
@@ -735,8 +743,8 @@ void draw_greet_scene(void) {
   //gui_label(lc_txt(ctx.header), FONT_TYPE_BOLD, 5, header_pos, WHITE, true, true);
   //gui_label(lc_txt(ctx.comment), FONT_TYPE_REGULAR, 5, comment_pos, WHITE, true, true);
 
-  gui_label("Welcome", FONT_TYPE_BOLD, 2, header_pos, WHITE, true, true);
-  gui_label("Thank you for purchasing the game", FONT_TYPE_REGULAR, 1, comment_pos, WHITE, true, true);
+  gui_label("Welcome", FONT_TYPE_BOLD, 30, header_pos, WHITE, true, true);
+  gui_label("Thank you for purchasing the game", FONT_TYPE_REGULAR, 20, comment_pos, WHITE, true, true);
 
   if (ctx.should_choose_save_slot) {
     Vector2 slots_area = { SMM_BASE_RENDER_WIDTH * .5f, SMM_BASE_RENDER_HEIGHT * .5f };
@@ -746,11 +754,15 @@ void draw_greet_scene(void) {
       slots_area.x, 
       slots_area.y
     };
-    draw_save_game_buttons(drawing_area);
+    draw_save_game_buttons(drawing_area, [](const save_data& data) {
+      
+      set_active_save_slot(data.id);
+      gm_save_to_slot(data.id);
+    });
   }
 }
 
-void draw_save_game_buttons(Rectangle drawing_area) {
+void draw_save_game_buttons(Rectangle drawing_area, std::function<void(const save_data&)> on_click) {
   f32 padding = drawing_area.height * .025f;
   mms_save_game_scene_context& ctx = state->mms_save_game;
   Vector2 slot_dim = { 
@@ -783,24 +795,35 @@ void draw_save_game_buttons(Rectangle drawing_area) {
     slot_dim.y
   };
 
-  auto draw_slot = [](const save_data& slot, panel& pnl) {
+  auto draw_slot = [&on_click](const save_data& slot, panel& pnl, loc_text_id title) {
     if(gui_panel_active(&pnl, pnl.dest, false).is_signaling) {
-      set_active_save_slot(slot.id);
+      on_click(slot);
     }
     if (not slot.is_success) {
-      gui_label(
-        lc_txt(LOC_TEXT_EMPTY), FONT_TYPE_ITALIC, 1, {pnl.dest.x + pnl.dest.width * .5f, pnl.dest.y + pnl.dest.height * .5f},
-        WHITE, true, true
+      gui_label_box(lc_txt(title), FONT_TYPE_REGULAR, 30, pnl.dest, WHITE, TEXT_ALIGN_TOP_CENTER);
+
+      gui_label_box(lc_txt(LOC_TEXT_MAINMENU_GREET_PANEL_SAVE_SLOT_EMPTY), FONT_TYPE_ITALIC, 20, pnl.dest, WHITE, TEXT_ALIGN_BOTTOM_CENTER
       );
       return;
     }
-    return;
+    gui_label_box(lc_txt(title), FONT_TYPE_REGULAR, 2, pnl.dest, WHITE, TEXT_ALIGN_TOP_CENTER);
+
+    gui_label_box(TextFormat("%s", slot.save_date), FONT_TYPE_LIGHT, 1, pnl.dest, WHITE, TEXT_ALIGN_BOTTOM_RIGHT);
+
+    f64 hours = slot.time_spend / 3600.f;
+    f64 minutes = slot.time_spend / 60.f;
+    f64 seconds = fmod(slot.time_spend, 60.f);
+    gui_label_box(TextFormat("%.0f:%.0f:%.0f", hours, minutes, seconds), FONT_TYPE_LIGHT, 1, pnl.dest, WHITE, TEXT_ALIGN_BOTTOM_LEFT);
+
+    gui_label_box(TextFormat("%d", slot.currency_souls_player_have), FONT_TYPE_LIGHT, 1, pnl.dest, WHITE, TEXT_ALIGN_TOP_RIGHT);
+    
+    gui_label_box(TextFormat("%d", slot.currency_coins_player_have), FONT_TYPE_LIGHT, 1, pnl.dest, WHITE, TEXT_ALIGN_TOP_LEFT);
   };
 
-  draw_slot(gm_get_save_data(SAVE_SLOT_1), ctx.save_slot_1_panel);
-  draw_slot(gm_get_save_data(SAVE_SLOT_2), ctx.save_slot_2_panel);
-  draw_slot(gm_get_save_data(SAVE_SLOT_3), ctx.save_slot_3_panel);
-  draw_slot(gm_get_save_data(SAVE_SLOT_4), ctx.save_slot_4_panel);
+  draw_slot(gm_get_save_data(SAVE_SLOT_1), ctx.save_slot_1_panel, LOC_TEXT_MAINMENU_GREET_PANEL_SAVE_SLOT_1);
+  draw_slot(gm_get_save_data(SAVE_SLOT_2), ctx.save_slot_2_panel, LOC_TEXT_MAINMENU_GREET_PANEL_SAVE_SLOT_2);
+  draw_slot(gm_get_save_data(SAVE_SLOT_3), ctx.save_slot_3_panel, LOC_TEXT_MAINMENU_GREET_PANEL_SAVE_SLOT_3);
+  draw_slot(gm_get_save_data(SAVE_SLOT_4), ctx.save_slot_4_panel, LOC_TEXT_MAINMENU_GREET_PANEL_SAVE_SLOT_4);
 }
 void draw_credits_screen(void) {
 

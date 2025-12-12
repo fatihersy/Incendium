@@ -45,6 +45,7 @@ typedef struct time_system_state {
   u16 rand_ind;
 
   f32 ingame_delta_time_multiplier;
+  f64 app_time;
 
   time_system_state(void) {
     this->rand_start_index = 0u;
@@ -68,9 +69,7 @@ bool time_system_initialize(void) {
   return true;
 }
 void update_time(void) {
-  if(state == nullptr) {
-    return;
-  }
+  state->app_time += GetFrameTime();
 }
 
 [[__nodiscard__]] i32 get_random(i32 min, i32 max) {
@@ -161,4 +160,18 @@ f32 delta_time_ingame(void) {
   #else
     return GetFrameTime() * state->ingame_delta_time_multiplier;
   #endif
+}
+f64 ftime_get_app_time(void) {
+  return state->app_time;
+}
+
+std::string get_time_now(std::string format) {
+  if (format.size() >= 128) {
+    return std::string();
+  }
+  char timeStr[128] = {};
+  time_t now = time(NULL);
+  struct tm *tm_info = localtime(&now);
+  strftime(timeStr, sizeof(timeStr), format.c_str(), tm_info);
+  return std::string(timeStr);
 }

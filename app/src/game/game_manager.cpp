@@ -422,12 +422,15 @@ bool game_manager_initialize(const camera_metrics * in_camera_metrics, const app
     IERROR("game_manager::game_manager_reinit()::Player system initialization failed");
     return false;
   }
-  if(not parse_save_data(in_app_settings->active_slot, save_data(in_app_settings->active_slot, (*get_default_player()), state->default_game_rules, 0))) {
-    IERROR("game_manager::game_manager_reinit()::Save file cannot found");
+  if (in_app_settings->active_save_slot > SAVE_SLOT_UNDEFINED and in_app_settings->active_save_slot < SAVE_SLOT_MAX) {
+    if(not parse_or_create_save_data_from_file(in_app_settings->active_save_slot, save_data(in_app_settings->active_save_slot, (*get_default_player()), state->default_game_rules, 0))) {
+      IWARN("game_manager::game_manager_reinit()::Failed to parse save file");
+      return false;
+    }
   }
 
-  if(in_app_settings->active_slot > SAVE_SLOT_UNDEFINED and in_app_settings->active_slot < SAVE_SLOT_MAX) {
-    gm_load_game(in_app_settings->active_slot);
+  if(in_app_settings->active_save_slot > SAVE_SLOT_UNDEFINED and in_app_settings->active_save_slot < SAVE_SLOT_MAX) {
+    gm_load_game(in_app_settings->active_save_slot);
   }
 
   state->game_manager_initialized = true;
@@ -738,9 +741,12 @@ void gm_end_game(bool is_win) {
   gm_save_game();
 }
 void gm_save_game(void) {
+  if (not state->game_progression_data) {
+    return;
+  }
   state->game_progression_data->player_data = state->player_state_static;
   state->game_progression_data->game_rules = state->game_rules;
-  save_save_data(state->in_app_settings->active_slot);
+  save_save_data(state->in_app_settings->active_save_slot, (*state->game_progression_data) );
 }
 void gm_load_game(save_slot_id slot_id) {
   state->player_state_static = *(get_default_player());
@@ -795,7 +801,7 @@ void gm_load_game(save_slot_id slot_id) {
 }
 void gm_refresh_save_slot(void) {
   gm_save_game();
-  gm_load_game(state->in_app_settings->active_slot);
+  gm_load_game(state->in_app_settings->active_save_slot);
 }
 void gm_damage_spawn_if_collide(data128 coll_data, i32 damage, collision_type coll_check) {
   switch (coll_check) {
@@ -1526,6 +1532,19 @@ const std::vector<player_inventory_slot>& gm_get_inventory(void) {
 }
 const save_data& gm_get_save_data(save_slot_id id) {
   return get_save_data(id);
+}
+void gm_save_to_slot(save_slot_id id) {
+  if (not state->game_progression_data) {
+    state->game_progression_data = &get_save_data(state->in_app_settings->active_save_slot);
+    if (not state->game_progression_data) {
+      return;
+    }
+  }
+  save_data _data = (*state->game_progression_data);
+  _data.player_data = state->player_state_static;
+  _data.game_rules = state->game_rules;
+
+  save_save_data(id, _data);
 }
 bool _add_ability(ability_id _id) {
   if (_id <= ABILITY_ID_UNDEFINED or _id >= ABILITY_ID_MAX) {

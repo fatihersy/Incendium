@@ -820,7 +820,7 @@ const char* lc_txt(i32 txt_id) {
   if (txt_id >= LOC_TEXT_MAX or txt_id <= LOC_TEXT_UNDEFINED ) {
     return "::NULL";
   }
-  return state->active_loc->content.at(static_cast<size_t>(txt_id)).c_str();
+  return state->active_loc->content[static_cast<size_t>(txt_id)].c_str();
 }
 
 bool is_symbol_allowed(u8& c) {

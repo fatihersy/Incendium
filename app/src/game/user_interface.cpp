@@ -97,7 +97,6 @@ static user_interface_system_state * state = nullptr;
   if(EXPR) state->sliders.at(ID).current_value = INDEX;\
 }
 
-
 #define UI_BASE_RENDER_SCALE(SCALE) VECTOR2(\
   static_cast<f32>(state->in_app_settings->render_width * SCALE),\
   static_cast<f32>(state->in_app_settings->render_height * SCALE))
@@ -110,11 +109,6 @@ static user_interface_system_state * state = nullptr;
 #define COMBAT_FEEDBACK_FLOATING_TEXT_MAX_DURATION 0.8f
 #define COMBAT_FEEDBACK_FLOATING_TEXT_MIN_SCALE 1.8f
 #define COMBAT_FEEDBACK_FLOATING_TEXT_MAX_SCALE 2.8f
-
-#define IF_NOT_STATE(FUNCTION, RETURN) do { if (not state or state == nullptr) {\
-  IERROR("user_interface::" FUNCTION "::State is invalid");\
-  RETURN\
-} } while(0);
 
 #define SCROLLBAR_WIDTH = (UI_BASE_RENDER_HEIGHT * 0.02f)  
 #define SCROLLBAR_HANDLE_MIN_HEIGHT = (UI_BASE_RENDER_HEIGHT * 0.1f) 
@@ -166,7 +160,7 @@ localization_package& ui_get_localization_by_index(language_index index);
 bool ui_sound_slider_on_left_button_trigger(void);
 bool ui_sound_slider_on_right_button_trigger(void);
 
-constexpr Font font_type_to_font(font_type in_font_type) {
+static inline Font font_type_to_font(font_type in_font_type) {
   if (not state->display_language or state->display_language == nullptr) {
     return GetFontDefault();
   }
@@ -195,23 +189,23 @@ constexpr Font font_type_to_font(font_type in_font_type) {
   }
   return GetFontDefault();
 }
-constexpr void draw_text_simple(const char* text, Vector2 pos, font_type in_font_type, i32 fontsize, Color color) {
+static inline void draw_text_simple(const char* text, Vector2 pos, font_type in_font_type, i32 fontsize, Color color) {
   if (not text or text == nullptr) {
     return;
   }
   Font font = font_type_to_font(in_font_type);
   BeginShaderMode(get_shader_by_enum(SHADER_ID_SDF_TEXT)->handle);
-    DrawTextEx(font, text, pos, font.baseSize * fontsize, UI_FONT_SPACING, color);
+    DrawTextEx(font, text, pos, fontsize, UI_FONT_SPACING, color);
   EndShaderMode();
 }
-constexpr void draw_text(const char* text, Vector2 pos, font_type in_font_type, i32 fontsize, Color color, bool center_horizontal, bool center_vertical, bool use_grid_align = false, 
+static inline void draw_text(const char* text, Vector2 pos, font_type in_font_type, i32 fontsize, Color color, bool center_horizontal, bool center_vertical, bool use_grid_align = false, 
   Vector2 grid_coord = ZEROVEC2
 ) {
   if (not text or text == nullptr) {
     return;
   }
   Font font = font_type_to_font(in_font_type);
-  Vector2 text_measure = MeasureTextEx(font, text, font.baseSize * fontsize, UI_FONT_SPACING);
+  Vector2 text_measure = MeasureTextEx(font, text, fontsize, UI_FONT_SPACING);
   Vector2 text_position = pos;
   if (use_grid_align) {
     text_position = position_element_by_grid(text_position, grid_coord, SCREEN_OFFSET);
@@ -223,7 +217,7 @@ constexpr void draw_text(const char* text, Vector2 pos, font_type in_font_type, 
     text_position.y -= (text_measure.y * .5f);
   }
   BeginShaderMode(get_shader_by_enum(SHADER_ID_SDF_TEXT)->handle);
-    DrawTextEx(font, text, text_position, font.baseSize * fontsize, UI_FONT_SPACING, color);
+    DrawTextEx(font, text, text_position, fontsize, UI_FONT_SPACING, color);
   EndShaderMode();
 }
 inline void draw_text_ex(const char* text, Vector2 pos, ::font_type font_type, f32 fontsize, Color tint) {
@@ -245,7 +239,10 @@ bool user_interface_system_initialize(const camera_metrics * in_camera_metrics) 
     return false;
   }
   state = (user_interface_system_state *)allocate_memory_linear(sizeof(user_interface_system_state), true);
-  IF_NOT_STATE("user_interface_system_initialize", return false; );
+  if(not state) {
+    IERROR("user_interface::user_interface_system_initialize()::UI state init failed");
+    return false;
+  }
 
   *state = user_interface_system_state();
   
@@ -478,8 +475,6 @@ bool user_interface_system_initialize(const camera_metrics * in_camera_metrics) 
   return true;
 }
 void update_user_interface(f32 delta_time) {
-  IF_NOT_STATE("update_user_interface", return; );
-
   Vector2 mouse_pos_screen_unscaled = GetMousePosition();
   state->mouse_pos_screen.x = mouse_pos_screen_unscaled.x * state->in_app_settings->scale_ratio.at(0);
   state->mouse_pos_screen.y = mouse_pos_screen_unscaled.y * state->in_app_settings->scale_ratio.at(1);
@@ -663,8 +658,6 @@ void update_display_errors(f32 delta_time) {
   }
 }
 void render_user_interface(void) {
-  IF_NOT_STATE("render_user_interface", return; );
-
   render_display_errors();
   combat_feedback_render_floating_texts();
 }
@@ -829,8 +822,6 @@ void gui_checkbox(checkbox_id _id, Vector2 pos) {
   }
 }
 void gui_progress_bar(progress_bar_id bar_id, Rectangle dest, bool _should_center, Color inside_tint, Color outside_tint) {
-  IF_NOT_STATE("gui_progress_bar", return; );
-
   if (bar_id <= PRG_BAR_ID_UNDEFINED or bar_id >= PRG_BAR_ID_MAX) {
     IWARN("user_interface::gui_progress_bar()::Progress bar id is out of bound");
     return;
@@ -1015,8 +1006,6 @@ item_type draw_scrolling_textures(
 }
 
 void gui_slider(slider_id _id, Vector2 pos, Vector2 grid) {
-  IF_NOT_STATE("gui_slider", return; );
-
   if (_id >= SDR_ID_MAX or _id <= SDR_ID_UNDEFINED or not state or state == nullptr) {
     IWARN("user_interface::gui_slider()::One of recieved ids was out of bound");
     return;
@@ -1061,8 +1050,6 @@ void gui_slider(slider_id _id, Vector2 pos, Vector2 grid) {
   }
 }
 void draw_slider_body(const slider *const sdr) {
-  IF_NOT_STATE("draw_slider_body", return; );
-
   if (not sdr or sdr == nullptr ) {
     IERROR("user_interface::draw_slider_body()::Slider is invalid");
     return;
@@ -1486,7 +1473,6 @@ void gui_draw_pause_screen(bool in_game_play_state) {
   }
 }
 void gui_fire_display_error(int loc_text_id) {
-  IF_NOT_STATE("gui_fire_display_error", return; );
   if(loc_text_id <= LOC_TEXT_EMPTY or loc_text_id >= LOC_TEXT_MAX) {
     return;
   }
@@ -1580,8 +1566,6 @@ void draw_scrollbar(const scrollbar_update_result& result) {
   gui_draw_atlas_texture_id_pro(ATLAS_TEX_ID_PANEL_SCROLL_HANDLE, Rectangle{0.f, 0.f, 16.f, 16.f}, result.handle_dest, false);
 }
 void combat_feedback_spawn_floating_text(const char* _text, combat_feedback_floating_text_type type, Vector2 start_position) {
-  IF_NOT_STATE("combat_feedback_spawn_floating_text", return; );
-
   atlas_texture_id bg_tex_id = ATLAS_TEX_ID_UNSPECIFIED;
   f32 bg_tex_scale = 1.f;
   switch (type) {
@@ -1632,8 +1616,6 @@ void combat_feedback_spawn_floating_text(const char* _text, combat_feedback_floa
   ));
 }
 void combat_feedback_update_floating_texts(f32 delta_time) {
-  IF_NOT_STATE("combat_feedback_update_floating_texts", return; );
-
   floating_text_display_system_state& system = state->cfft_display_state;
 
   for (auto iterator = system.queue.begin(); iterator != system.queue.end();) {
@@ -1683,8 +1665,6 @@ void combat_feedback_update_floating_texts(f32 delta_time) {
   }
 }
 void combat_feedback_render_floating_texts(void) {
-  IF_NOT_STATE("combat_feedback_render_floating_texts", return; );
-
   floating_text_display_system_state& system = state->cfft_display_state;
 
   for (auto iterator = system.queue.begin(); iterator != system.queue.end(); iterator++) {
@@ -1713,8 +1693,6 @@ bool gui_slider_add_option(slider_id _id, data_pack content, i32 _localization_s
   }
 }
 void register_button_type(button_type_id _btn_type_id, spritesheet_id _ss_type, Vector2 frame_dim, f32 _scale, bool _should_center) {
-  IF_NOT_STATE("register_button_type", return; );
-
   if (_ss_type >= SHEET_ID_SPRITESHEET_TYPE_MAX or _ss_type <= SHEET_ID_SPRITESHEET_UNSPECIFIED or _btn_type_id >= BTN_TYPE_MAX or _btn_type_id <= BTN_TYPE_UNDEFINED) {
     IWARN("user_interface::register_button_type()::Recieved id was out of bound");
     return;
@@ -1737,8 +1715,6 @@ void register_button(button_id _btn_id, button_type_id _btn_type_id) {
   state->buttons.at(_btn_id) = btn;
 }
 void register_checkbox(checkbox_id _cb_id, checkbox_type_id _cb_type_id) {
-  IF_NOT_STATE("register_checkbox", return; );
-
   if (_cb_id >= CHECKBOX_ID_MAX or _cb_id <= CHECKBOX_ID_UNDEFINED or _cb_type_id >= CHECKBOX_TYPE_MAX or _cb_type_id <= CHECKBOX_TYPE_UNDEFINED) {
     IWARN("user_interface::register_checkbox()::One of recieved ids was out of bound");
     return;
@@ -1749,8 +1725,6 @@ void register_checkbox(checkbox_id _cb_id, checkbox_type_id _cb_type_id) {
   state->checkboxes.at(_cb_id) = cb;
 }
 void register_checkbox_type(checkbox_type_id _cb_type_id, spritesheet_id _ss_type, Vector2 frame_dim, f32 _scale, bool _should_center) {
-  IF_NOT_STATE("register_checkbox_type", return; );
-
   if (_ss_type >= SHEET_ID_SPRITESHEET_TYPE_MAX or _ss_type <= SHEET_ID_SPRITESHEET_UNSPECIFIED or _cb_type_id >= CHECKBOX_TYPE_MAX or _cb_type_id <= CHECKBOX_TYPE_UNDEFINED) {
     IWARN("user_interface::register_checkbox_type()::Recieved id was out of bound");
     return;
@@ -1759,8 +1733,6 @@ void register_checkbox_type(checkbox_type_id _cb_type_id, spritesheet_id _ss_typ
   state->checkbox_types.at(_cb_type_id) = cb_type;
 }
 void register_progress_bar(progress_bar_id _id, progress_bar_type_id _type_id) {
-  IF_NOT_STATE("register_progress_bar", return; );
-
   if (_id >= PRG_BAR_ID_MAX or _id <= PRG_BAR_ID_UNDEFINED or _type_id>= PRG_BAR_TYPE_ID_MAX or _type_id <= PRG_BAR_TYPE_ID_UNDEFINED) {
     IWARN("user_interface::register_progress_bar()::Recieved id was out of bound");
     return;
@@ -1774,8 +1746,6 @@ void register_progress_bar(progress_bar_id _id, progress_bar_type_id _type_id) {
   state->prg_bars.at(_id) = prg_bar;
 }
 void register_progress_bar_type(progress_bar_type prg_bar_type) {
-  IF_NOT_STATE("register_progress_bar_type", return; );
-
   if (prg_bar_type.id >= PRG_BAR_TYPE_ID_MAX or prg_bar_type.id <= PRG_BAR_TYPE_ID_UNDEFINED) {
     IWARN("user_interface::register_progress_bar_type()::Id(s) is/are out of bound");
     return;
@@ -1798,8 +1768,6 @@ void register_progress_bar_type(progress_bar_type prg_bar_type) {
 void register_slider_type(
   slider_type_id _sdr_type_id, spritesheet_id _ss_sdr_body_type, f32 _scale, i32 _width_multiply, button_type_id _left_btn_type_id, button_type_id _right_btn_type_id, i32 _char_limit) 
 {
-  IF_NOT_STATE("register_slider_type", return; );
-
   if (_ss_sdr_body_type >= SHEET_ID_SPRITESHEET_TYPE_MAX or _ss_sdr_body_type <= SHEET_ID_SPRITESHEET_UNSPECIFIED or _sdr_type_id >= SDR_TYPE_MAX or _sdr_type_id <= SDR_TYPE_UNDEFINED) {
     IWARN("WARNING::user_interface::register_slider_type()::Id(s) is/are out of bound");
     return;
@@ -1832,8 +1800,6 @@ void register_slider_type(
  * @param _is_clickable for SDR_TYPE_PERCENT type sliders. Does not affect others
  */
 void register_slider(slider_id _sdr_id, slider_type_id _sdr_type_id, button_id _left_btn_id, button_id _right_btn_id, bool _is_clickable, bool _localize_text) {
-  IF_NOT_STATE("register_slider", return; );
-
   if (_sdr_id >= SDR_ID_MAX or _sdr_id <= SDR_ID_UNDEFINED) {
     IWARN("user_interface::register_slider()::Id(s) is/are out of bound");
     return;
@@ -1866,8 +1832,6 @@ void gui_draw_atlas_texture_to_background(atlas_texture_id _id) {
   draw_atlas_texture_regular(_id, Rectangle {0.f, 0.f, static_cast<f32>(UI_BASE_RENDER_WIDTH), static_cast<f32>(UI_BASE_RENDER_HEIGHT)}, WHITE, false);
 }
 void gui_draw_spritesheet_to_background(spritesheet_id _id, Color _tint) {
-  IF_NOT_STATE("gui_draw_spritesheet_to_background", return; );
-
   if (_id >= SHEET_ID_SPRITESHEET_TYPE_MAX or _id <= SHEET_ID_SPRITESHEET_UNSPECIFIED) {
     IWARN("user_interface::gui_draw_spritesheet_to_background()::Sheet id out of bound");
     return;
@@ -1892,8 +1856,6 @@ const Rectangle * get_atlas_texture_source_rect(atlas_texture_id _id) {
   return __builtin_addressof(tex->source);
 }
 const std::array<button_type, BTN_TYPE_MAX>* get_button_types(void) {
-  IF_NOT_STATE("get_button_types", return nullptr; );
-
   return __builtin_addressof(state->button_types);
 }
 /**
@@ -2152,8 +2114,6 @@ void DrawTextBoxed(Font font, const char *text, Rectangle rec, float fontSize, f
   EndShaderMode();
 }
 void process_fade_effect(ui_fade_control_system *const fade) {
-  IF_NOT_STATE("process_fade_effect", return; );
-
   if (not fade->fade_animation_playing or fade->is_fade_animation_played) {
     return;
   }
@@ -2382,8 +2342,6 @@ void gui_draw_atlas_texture_id_scale(atlas_texture_id _id, Vector2 position, f32
   DrawTexturePro( (*tex->atlas_handle), tex->source, Rectangle {position.x, position.y, tex->source.width * scale, tex->source.height * scale}, ZEROVEC2, 0.f, tint);
 }
 Font ui_get_font(font_type font) {
-  IF_NOT_STATE("ui_get_font", return GetFontDefault(); );
-
   if (not state->display_language or state->display_language == nullptr) {
     return GetFontDefault();
   }
@@ -2398,13 +2356,9 @@ Font ui_get_font(font_type font) {
   return GetFontDefault();
 }
 const Vector2* ui_get_mouse_pos_screen(void) {
-  IF_NOT_STATE("ui_get_mouse_pos_screen", return nullptr; );
-
   return __builtin_addressof(state->mouse_pos_screen);
 }
 slider* get_slider_by_id(slider_id sdr_id) {
-  IF_NOT_STATE("get_slider_by_id", return nullptr; );
-
   if (sdr_id <= SDR_ID_UNDEFINED or sdr_id >= SDR_ID_MAX) {
     IWARN("user_interface::get_slider_by_id()::Slider id is invalid");
     return nullptr;
@@ -2412,8 +2366,6 @@ slider* get_slider_by_id(slider_id sdr_id) {
   return __builtin_addressof(state->sliders.at(sdr_id));
 }
 checkbox* get_checkbox_by_id(checkbox_id cb_id) {
-  IF_NOT_STATE("get_checkbox_by_id", return nullptr; );
-
   if (cb_id <= CHECKBOX_ID_UNDEFINED or cb_id >= CHECKBOX_ID_MAX) {
     IWARN("user_interface::get_checkbox_by_id()::Checkbox id is out of bound");
     return nullptr;
@@ -2421,8 +2373,6 @@ checkbox* get_checkbox_by_id(checkbox_id cb_id) {
   return __builtin_addressof(state->checkboxes.at(cb_id));
 }
 Vector2 ui_measure_text(const char* in_str, font_type in_font_type, f32 in_font_size) {
-  IF_NOT_STATE("ui_measure_text", return ZEROVEC2; );
-
   if (not in_str or in_str == nullptr) {
     return ZEROVEC2;
   }
@@ -2431,8 +2381,6 @@ Vector2 ui_measure_text(const char* in_str, font_type in_font_type, f32 in_font_
   return MeasureTextEx(_font, in_str, in_font_size * _font.baseSize, UI_FONT_SPACING);
 }
 bool ui_set_slider_current_index(slider_id id, i32 index) {
-  IF_NOT_STATE("ui_set_slider_current_index", return false; );
-
   if (id >= SDR_ID_MAX or id <= SDR_ID_UNDEFINED) {
     IWARN("user_interface::ui_set_slider_current_index()::Slider id is out of bound"); 
     return false;
@@ -2441,8 +2389,6 @@ bool ui_set_slider_current_index(slider_id id, i32 index) {
   return true;
 }
 bool ui_set_slider_current_value(slider_id id, slider_option value) {
-  IF_NOT_STATE("ui_set_slider_current_value", return false; );
-
   if (id >= SDR_ID_MAX or id <= SDR_ID_UNDEFINED) {
     IWARN("user_interface::ui_set_slider_current_value()::Slider id is out of bound"); 
     return false;
@@ -2453,8 +2399,6 @@ bool ui_set_slider_current_value(slider_id id, slider_option value) {
   return true;
 }
 bool ui_sound_slider_on_left_button_trigger(void) {
-  IF_NOT_STATE("ui_sound_slider_on_left_button_trigger", return false; );
-
   SDR_AT(SDR_ID_SETTINGS_SOUND_SLIDER).current_value--;
   if (SDR_AT(SDR_ID_SETTINGS_SOUND_SLIDER).current_value < 0) {
     SDR_AT(SDR_ID_SETTINGS_SOUND_SLIDER).current_value = 0;
@@ -2463,8 +2407,6 @@ bool ui_sound_slider_on_left_button_trigger(void) {
   return true;
 }
 bool ui_sound_slider_on_right_button_trigger(void) {  
-  IF_NOT_STATE("ui_sound_slider_on_right_button_trigger", return false; );
-
   SDR_AT(SDR_ID_SETTINGS_SOUND_SLIDER).current_value++;
   if (SDR_AT(SDR_ID_SETTINGS_SOUND_SLIDER).current_value > 10) {
     SDR_AT(SDR_ID_SETTINGS_SOUND_SLIDER).current_value = 10;
@@ -2473,8 +2415,6 @@ bool ui_sound_slider_on_right_button_trigger(void) {
   return true;
 }
 data_pack* get_slider_current_value(slider_id id) {
-  IF_NOT_STATE("get_slider_current_value", return nullptr; );
-
   if (id >= SDR_ID_MAX or id <= SDR_ID_UNDEFINED) {
     IWARN("user_interface::get_slider_current_value()::Slider id is out of bound"); 
     return nullptr;
@@ -2482,8 +2422,6 @@ data_pack* get_slider_current_value(slider_id id) {
   return __builtin_addressof(state->sliders.at(id).options.at(state->sliders.at(id).current_value).content);
 }
 Font load_font(pak_file_id pak_id, i32 asset_id, i32 font_size, [[__maybe_unused__]] i32* _codepoints,  [[__maybe_unused__]] i32 _codepoint_count) {
-  IF_NOT_STATE("load_font", return GetFontDefault(); );
-
   Font font = ZERO_FONT;
   font.baseSize = font_size;
  
