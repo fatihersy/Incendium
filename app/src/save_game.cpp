@@ -35,6 +35,7 @@ constexpr const char * JSON_SAVE_DATA_MAP_PLAYER_DATA_INVENTORY_LEVEL           
 constexpr const char * JSON_SAVE_DATA_MAP_PLAYER_DATA_INVENTORY_AMOUTH          = "amouth";
 
 constexpr const char * JSON_SAVE_DATA_MAP_SIGIL_SLOTS                       = "sigil_slot";
+constexpr const char * JSON_SAVE_DATA_MAP_PLAYER_DATA_SIGIL_SLOTS_SLOT_ID   = "slot_id";
 constexpr const char * JSON_SAVE_DATA_MAP_PLAYER_DATA_SIGIL_SLOTS_ITEM_TYPE = "item_type";
 constexpr const char * JSON_SAVE_DATA_MAP_PLAYER_DATA_SIGIL_SLOTS_IG_BUFFER = "ig_buffer";
 
@@ -131,7 +132,6 @@ bool save_system_initialize() {
   if (not DirectoryExists(SAVE_FILE_PATH)) {
     MakeDirectory(SAVE_FILE_PATH);
   }
-
   return true;
 }
 
@@ -195,7 +195,7 @@ bool save_save_data(save_slot_id slot, save_data data) {
 
   SaveFileData(state->slot_filenames[slot].c_str(), final_file_data.data(), final_file_data.size());
 
-  return FileExists(state->slot_filenames[slot].c_str());
+  return FileExists(state->slot_filenames[slot].c_str());;
 }
 bool parse_save_data(save_slot_id slot, save_data default_save) {
   if (not state or state == nullptr) {
@@ -411,7 +411,7 @@ std::string get_save_filename(save_slot_id slot) {
     IWARN("save_game::get_save_filename()::Slot out of bound");
     return "";
   }
-  return TextFormat("%s/slot_%d%s", SAVE_FILE_PATH, static_cast<int32_t>(slot) + 1, SAVE_GAME_EXTENSION);
+  return TextFormat("%s/slot_%d%s", SAVE_FILE_PATH, static_cast<i32>(slot), SAVE_GAME_EXTENSION);
 }
 
 json serialize_save_data(const save_data& data) {
@@ -458,22 +458,22 @@ json serialize_save_data_v051125(const save_data& data) {
 
   json inventory;
   for (const player_inventory_slot& slot : data.player_data.inventory) {
-    inventory.push_back({
-      { JSON_SAVE_DATA_MAP_PLAYER_DATA_INVENTORY_ITEM_TYPE, static_cast<i32>(slot.item.type) },
-      { JSON_SAVE_DATA_MAP_PLAYER_DATA_INVENTORY_IG_BUFFER_F32_1, slot.item.buffer.f32[1]},
-      { JSON_SAVE_DATA_MAP_PLAYER_DATA_INVENTORY_LEVEL,    slot.item.level},
-      { JSON_SAVE_DATA_MAP_PLAYER_DATA_INVENTORY_AMOUTH,    slot.amouth},
-      { }
-    });
+    json j_slot;
+    j_slot[JSON_SAVE_DATA_MAP_PLAYER_DATA_INVENTORY_ITEM_TYPE] = static_cast<i32>(slot.item.type);
+    j_slot[JSON_SAVE_DATA_MAP_PLAYER_DATA_INVENTORY_IG_BUFFER_F32_1] = slot.item.buffer.f32[1];
+    j_slot[JSON_SAVE_DATA_MAP_PLAYER_DATA_INVENTORY_LEVEL] = slot.item.level;
+    j_slot[JSON_SAVE_DATA_MAP_PLAYER_DATA_INVENTORY_AMOUTH] = slot.amouth;
+    inventory.push_back(j_slot);
   }
   j[JSON_SAVE_DATA_MAP_PLAYER_DATA][JSON_SAVE_DATA_MAP_PLAYER_DATA_INVENTORY] = inventory;
 
   json sigil_slots;
   for (const sigil_slot& slot : data.sigil_slots) {
-    sigil_slots.push_back({
-      { JSON_SAVE_DATA_MAP_PLAYER_DATA_SIGIL_SLOTS_ITEM_TYPE, static_cast<i32>(slot.sigil.type) },
-      { JSON_SAVE_DATA_MAP_PLAYER_DATA_SIGIL_SLOTS_IG_BUFFER, slot.sigil.buffer.f32[1]}
-    });
+    json j_sigil_slot;
+    j_sigil_slot[JSON_SAVE_DATA_MAP_PLAYER_DATA_SIGIL_SLOTS_SLOT_ID] = static_cast<i32>(slot.id);
+    j_sigil_slot[JSON_SAVE_DATA_MAP_PLAYER_DATA_SIGIL_SLOTS_ITEM_TYPE] = static_cast<i32>(slot.sigil.type);
+    j_sigil_slot[JSON_SAVE_DATA_MAP_PLAYER_DATA_SIGIL_SLOTS_IG_BUFFER] = slot.sigil.buffer.f32[1];
+    sigil_slots.push_back(j_sigil_slot);
   }
   j[JSON_SAVE_DATA_MAP_SIGIL_SLOTS] = sigil_slots;
   return j;
@@ -485,6 +485,13 @@ void deserialize_save_data_v051125(const json& j, save_data& data) {
   if (j.contains(JSON_SAVE_DATA_MAP_CURRENCY_COINS)) {
     data.currency_coins_player_have = j.value(JSON_SAVE_DATA_MAP_CURRENCY_COINS, -1);
   }
+  if (j.contains(JSON_SAVE_DATE)) {
+    data.save_date = j.value(JSON_SAVE_DATE, "-1.-1.-1");
+  }
+  if (j.contains(JSON_TIME_SPEND)) {
+    data.time_spend = j.value(JSON_TIME_SPEND, -1);
+  }
+
   if (j.contains(JSON_SAVE_DATA_MAP_GAME_RULE)) {
     const auto& rules = j[JSON_SAVE_DATA_MAP_GAME_RULE];
     data.game_rules.at(GAME_RULE_SPAWN_MULTIPLIER).level        = rules.value(JSON_SAVE_DATA_MAP_GAME_RULE_SPAWN_MULTIPLIER,       -1);
@@ -504,7 +511,7 @@ void deserialize_save_data_v051125(const json& j, save_data& data) {
       player_inventory_slot& slot = data.player_data.inventory.emplace_back(player_inventory_slot());
       slot.item.type = static_cast<item_type>(raw_slot.value(JSON_SAVE_DATA_MAP_PLAYER_DATA_INVENTORY_ITEM_TYPE, static_cast<i32>(ITEM_TYPE_UNDEFINED)));
       slot.item.buffer.f32[1] = raw_slot.value(JSON_SAVE_DATA_MAP_PLAYER_DATA_INVENTORY_IG_BUFFER_F32_1, -1.f);
-      slot.amouth = raw_slot.value(JSON_SAVE_DATA_MAP_PLAYER_DATA_INVENTORY_LEVEL, -1);
+      slot.item.level = raw_slot.value(JSON_SAVE_DATA_MAP_PLAYER_DATA_INVENTORY_LEVEL, -1);
       slot.amouth = raw_slot.value(JSON_SAVE_DATA_MAP_PLAYER_DATA_INVENTORY_AMOUTH, -1);
     }
   }
@@ -512,7 +519,8 @@ void deserialize_save_data_v051125(const json& j, save_data& data) {
     const auto& sigil_slots = j[JSON_SAVE_DATA_MAP_SIGIL_SLOTS];
 
     for (size_t itr_000 = 0u; itr_000 < data.sigil_slots.size(); ++itr_000) {
-      sigil_slot slot = sigil_slot();
+      sigil_slot& slot = data.sigil_slots[itr_000];
+      slot.id   = static_cast<sigil_slot_id>(sigil_slots[itr_000].value(JSON_SAVE_DATA_MAP_PLAYER_DATA_SIGIL_SLOTS_SLOT_ID, static_cast<i32>(SIGIL_SLOT_UNDEFINED)));
       slot.sigil.type = static_cast<item_type>(sigil_slots[itr_000].value(JSON_SAVE_DATA_MAP_PLAYER_DATA_SIGIL_SLOTS_ITEM_TYPE, static_cast<i32>(ITEM_TYPE_UNDEFINED)));
       slot.sigil.buffer.f32[1] = sigil_slots[itr_000].value(JSON_SAVE_DATA_MAP_PLAYER_DATA_SIGIL_SLOTS_IG_BUFFER, -1.f);
     }

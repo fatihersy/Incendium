@@ -149,11 +149,14 @@ struct mms_character_base_context {
   }
 };
 struct mms_save_game_scene_context {
-  loc_text_id title;
+  loc_text_id title = LOC_TEXT_UNDEFINED;
   panel save_slot_1_panel;
   panel save_slot_2_panel;
   panel save_slot_3_panel;
   panel save_slot_4_panel;
+  save_slot_id selected_save_slot = SAVE_SLOT_UNDEFINED;
+  atlas_texture_id selected_panel_tex_id;
+  atlas_texture_id unselected_panel_tex_id;
 };
 struct mms_greet_scene_context {
   loc_text_id header {};
@@ -236,6 +239,7 @@ void update_main_menu_character_subscene_inventory(void);
 void draw_greet_scene(void);
 void draw_save_game_buttons(Rectangle drawing_area, std::function<void(const save_data&)> on_click);
 void draw_credits_screen(void);
+void draw_save_game_screen(void);
 void draw_main_menu_character_subscene_upgrade_upgrade_panel(void);
 void draw_main_menu_character_subscene_upgrade_item_list_panel(void);
 void draw_main_menu_character_subscene_inventory_item_list_panel(void);
@@ -305,15 +309,17 @@ void chosen_trait_button_on_click(i32 index);
     IERROR("scene_main_menu::initialize_scene_main_menu()::Sound system init failed");
     return false;
   }
+  if (not user_interface_system_initialize(get_in_game_camera())) {
+    IERROR("scene_main_menu::begin_scene_main_menu()::User interface failed to initialize!");
+    return false;
+  }
+
   state->playlist = create_playlist(PLAYLIST_PRESET_MAINMENU_LIST);
 
   return begin_scene_main_menu(fade_in);
 }
 [[__nodiscard__]] bool begin_scene_main_menu(bool fade_in) {
-  if (not user_interface_system_initialize(get_in_game_camera())) {
-    IERROR("scene_main_menu::begin_scene_main_menu()::User interface failed to initialize!");
-    return false;
-  }
+
   // NOTE: Worldmap index 0 is mainmenu background now
   // NOTE: Also game manager requires a valid active map pointer
   set_worldmap_location(WORLDMAP_MAINMENU_MAP); 
@@ -367,9 +373,12 @@ void chosen_trait_button_on_click(i32 index);
   state->mms_character.upgrade.result_item_panel = panel(BTN_STATE_UNDEFINED, ATLAS_TEX_ID_CRIMSON_FANTASY_PANEL_BG, ATLAS_TEX_ID_CRIMSON_FANTASY_ORNATE_FRAME, 
     crimson_fantasy_ornate_frame_offsets, crimson_fantasy_bg_tint
   );
-  state->mms_save_game.save_slot_1_panel = panel(BTN_STATE_RELEASED, ATLAS_TEX_ID_CRIMSON_FANTASY_PANEL_BG, ATLAS_TEX_ID_CRIMSON_FANTASY_PANEL, 
-    crimson_fantasy_frame_offsets, crimson_fantasy_bg_tint
+  state->mms_save_game.save_slot_1_panel = panel(BTN_STATE_RELEASED, ATLAS_TEX_ID_BG_BLACK, ATLAS_TEX_ID_DARK_FANTASY_PANEL, 
+    dark_fantasy_frame_offsets, bg_black_tint, bg_black_tint_hover
   );
+  state->mms_save_game.selected_panel_tex_id = ATLAS_TEX_ID_DARK_FANTASY_PANEL_SELECTED;
+  state->mms_save_game.unselected_panel_tex_id = ATLAS_TEX_ID_DARK_FANTASY_PANEL;
+
   state->mms_save_game.save_slot_2_panel = state->mms_save_game.save_slot_1_panel;
   state->mms_save_game.save_slot_3_panel = state->mms_save_game.save_slot_1_panel;
   state->mms_save_game.save_slot_4_panel = state->mms_save_game.save_slot_1_panel;
@@ -377,12 +386,14 @@ void chosen_trait_button_on_click(i32 index);
   main_menu_scene_type scene_on_start = MAIN_MENU_SCENE_GREET;
 
   if (state->in_app_settings->active_save_slot > SAVE_SLOT_UNDEFINED and state->in_app_settings->active_save_slot < SAVE_SLOT_MAX) {
-    scene_on_start = MAIN_MENU_SCENE_DEFAULT;
+    const save_data& data = gm_get_save_data(state->in_app_settings->active_save_slot);
+    if (data.is_success) 
+      scene_on_start = MAIN_MENU_SCENE_DEFAULT;
+    else 
+      state->mms_greet.should_choose_save_slot = true;
   }
-  else {
-    state->mms_greet.should_choose_save_slot = true;
-  }
-
+  else state->mms_greet.should_choose_save_slot = true;
+  
   if (fade_in) {
     smm_begin_fadein(data128(static_cast<i32>(scene_on_start)), fade_on_complete_change_main_menu_type);
   }
@@ -465,8 +476,16 @@ void update_scene_main_menu(void) {
     }
     case MAIN_MENU_SCENE_GREET: {
       if (state->mms_greet.should_choose_save_slot and state->in_app_settings->active_save_slot > SAVE_SLOT_UNDEFINED and state->in_app_settings->active_save_slot < SAVE_SLOT_MAX) {
-        state->mms_greet.should_choose_save_slot = false;
-        smm_begin_fadeout(data128(static_cast<i32>(MAIN_MENU_SCENE_DEFAULT)), fade_on_complete_change_main_menu_type);
+        const save_data& data = gm_get_save_data(state->in_app_settings->active_save_slot);
+        if (data.is_success) {
+          gm_load_game(data.id);
+          state->mms_greet.should_choose_save_slot = false;
+          smm_begin_fadeout(data128(static_cast<i32>(MAIN_MENU_SCENE_DEFAULT)), fade_on_complete_change_main_menu_type);
+        }
+        else {
+          gui_fire_display_error(LOC_TEXT_DISPLAY_ERROR_TEXT_UNABLE_TO_LOAD_SAVE);
+          set_active_save_slot(SAVE_SLOT_UNDEFINED);
+        }
       }
       break;
     }
@@ -682,20 +701,7 @@ void render_interface_main_menu(void) {
       break;
     }
     case MAIN_MENU_SCENE_SAVE_GAME: {
-      gui_draw_default_background_panel();
-      Vector2 drawing_size = { SMM_BASE_RENDER_WIDTH * .5f, SMM_BASE_RENDER_HEIGHT * .5f};
-      Rectangle draw_area = {
-        SMM_BASE_RENDER_DIV2.x - (drawing_size.x * .5f),
-        SMM_BASE_RENDER_DIV2.y - (drawing_size.y * .5f),
-        drawing_size.x,
-        drawing_size.y,
-      };
-      draw_save_game_buttons(draw_area, [](const save_data& data) {
-        gm_save_to_slot(data.id);
-      });
-      if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_SAVE_GAME_BUTTON_BACK), BTN_ID_MAINMENU_SAVE_GAME_BACK, VECTOR2(0.f, 66.5f), SMM_BASE_RENDER_DIV2, true)) {
-        begin_scene_change(MAIN_MENU_SCENE_DEFAULT);
-      }
+      draw_save_game_screen();
       break;
     }
     case MAIN_MENU_SCENE_CREDITS: {
@@ -755,9 +761,9 @@ void draw_greet_scene(void) {
       slots_area.y
     };
     draw_save_game_buttons(drawing_area, [](const save_data& data) {
-      
       set_active_save_slot(data.id);
       gm_save_to_slot(data.id);
+      gm_parse_save_slot(data.id);
     });
   }
 }
@@ -795,29 +801,37 @@ void draw_save_game_buttons(Rectangle drawing_area, std::function<void(const sav
     slot_dim.y
   };
 
-  auto draw_slot = [&on_click](const save_data& slot, panel& pnl, loc_text_id title) {
+  auto draw_slot = [&on_click, padding](const save_data& slot, panel& pnl, loc_text_id title) {
     if(gui_panel_active(&pnl, pnl.dest, false).is_signaling) {
       on_click(slot);
     }
-    if (not slot.is_success) {
-      gui_label_box(lc_txt(title), FONT_TYPE_REGULAR, 30, pnl.dest, WHITE, TEXT_ALIGN_TOP_CENTER);
+    Rectangle pnl_dest = { pnl.dest.x + padding, pnl.dest.y + padding, pnl.dest.width - padding * 2.f, pnl.dest.height - padding * 2.f};
 
-      gui_label_box(lc_txt(LOC_TEXT_MAINMENU_GREET_PANEL_SAVE_SLOT_EMPTY), FONT_TYPE_ITALIC, 20, pnl.dest, WHITE, TEXT_ALIGN_BOTTOM_CENTER
+    if (not slot.is_success) {
+
+      gui_label_box(lc_txt(title), FONT_TYPE_REGULAR, 1, pnl_dest, WHITE, TEXT_ALIGN_TOP_CENTER);
+
+      gui_label_box(lc_txt(LOC_TEXT_MAINMENU_GREET_PANEL_SAVE_SLOT_EMPTY), FONT_TYPE_ITALIC, 15, pnl_dest, WHITE, TEXT_ALIGN_CENTER
       );
       return;
     }
-    gui_label_box(lc_txt(title), FONT_TYPE_REGULAR, 2, pnl.dest, WHITE, TEXT_ALIGN_TOP_CENTER);
+    
+    gui_label_box(lc_txt(title), FONT_TYPE_REGULAR, 2, pnl_dest, WHITE, TEXT_ALIGN_TOP_CENTER);
 
-    gui_label_box(TextFormat("%s", slot.save_date), FONT_TYPE_LIGHT, 1, pnl.dest, WHITE, TEXT_ALIGN_BOTTOM_RIGHT);
+    f32 quarter_height = pnl_dest.height * .5f;
+    pnl_dest.y += quarter_height;
+    pnl_dest.height -= quarter_height;
+
+    gui_label_box(TextFormat("%s", slot.save_date.c_str()), FONT_TYPE_LIGHT, 1, pnl_dest, WHITE, TEXT_ALIGN_BOTTOM_CENTER);
 
     f64 hours = slot.time_spend / 3600.f;
     f64 minutes = slot.time_spend / 60.f;
     f64 seconds = fmod(slot.time_spend, 60.f);
-    gui_label_box(TextFormat("%.0f:%.0f:%.0f", hours, minutes, seconds), FONT_TYPE_LIGHT, 1, pnl.dest, WHITE, TEXT_ALIGN_BOTTOM_LEFT);
+    gui_label_box(TextFormat("%.0f:%.0f:%.0f", hours, minutes, seconds), FONT_TYPE_LIGHT, 1, pnl_dest, WHITE, TEXT_ALIGN_TOP_CENTER);
 
-    gui_label_box(TextFormat("%d", slot.currency_souls_player_have), FONT_TYPE_LIGHT, 1, pnl.dest, WHITE, TEXT_ALIGN_TOP_RIGHT);
+    gui_label_box(TextFormat("%d", slot.currency_souls_player_have), FONT_TYPE_LIGHT, 1, pnl_dest, WHITE, TEXT_ALIGN_TOP_RIGHT);
     
-    gui_label_box(TextFormat("%d", slot.currency_coins_player_have), FONT_TYPE_LIGHT, 1, pnl.dest, WHITE, TEXT_ALIGN_TOP_LEFT);
+    gui_label_box(TextFormat("%d", slot.currency_coins_player_have), FONT_TYPE_LIGHT, 1, pnl_dest, WHITE, TEXT_ALIGN_TOP_LEFT);
   };
 
   draw_slot(gm_get_save_data(SAVE_SLOT_1), ctx.save_slot_1_panel, LOC_TEXT_MAINMENU_GREET_PANEL_SAVE_SLOT_1);
@@ -827,6 +841,55 @@ void draw_save_game_buttons(Rectangle drawing_area, std::function<void(const sav
 }
 void draw_credits_screen(void) {
 
+}
+void draw_save_game_screen(void) {
+  mms_save_game_scene_context& ctx = state->mms_save_game;
+  gui_draw_default_background_panel();
+
+  Vector2 drawing_size = { SMM_BASE_RENDER_WIDTH * .5f, SMM_BASE_RENDER_HEIGHT * .5f};
+  Rectangle draw_area = {
+    SMM_BASE_RENDER_DIV2.x - (drawing_size.x * .5f),
+    SMM_BASE_RENDER_DIV2.y - (drawing_size.y * .5f),
+    drawing_size.x,
+    drawing_size.y,
+  };
+
+  auto on_panel = [&ctx](save_slot_id id, std::function<void(panel& pnl)> _panel) {
+    switch (id) {
+      case SAVE_SLOT_1: _panel(ctx.save_slot_1_panel); break;
+      case SAVE_SLOT_2: _panel(ctx.save_slot_2_panel); break;
+      case SAVE_SLOT_3: _panel(ctx.save_slot_3_panel); break;
+      case SAVE_SLOT_4: _panel(ctx.save_slot_4_panel); break;
+      default: break; 
+    }
+  };
+
+  draw_save_game_buttons(draw_area, [&ctx, &on_panel](const save_data& data) {
+    on_panel(ctx.selected_save_slot, [&ctx](panel& pnl) {
+      pnl.frame_tex_id = ctx.unselected_panel_tex_id;
+    });
+    on_panel(data.id, [&ctx](panel& pnl) {
+      pnl.frame_tex_id = ctx.selected_panel_tex_id;
+    });
+
+    ctx.selected_save_slot = data.id;
+  });
+
+  if (gui_menu_button("Save", BTN_ID_MAINMENU_SAVE_GAME_SAVE, VECTOR2(-35.f, 55.5f), SMM_BASE_RENDER_DIV2, true)) {
+    gm_save_to_slot(ctx.selected_save_slot);
+    gm_parse_save_slot(ctx.selected_save_slot);
+  }
+  if (gui_menu_button("Load", BTN_ID_MAINMENU_SAVE_GAME_LOAD, VECTOR2(35.f, 55.5f), SMM_BASE_RENDER_DIV2, true)) {
+    if (ctx.selected_save_slot > SAVE_SLOT_UNDEFINED and ctx.selected_save_slot < SAVE_SLOT_MAX and gm_get_save_data(ctx.selected_save_slot).is_success) {
+      if (gm_parse_save_slot(ctx.selected_save_slot)) {
+        set_active_save_slot(ctx.selected_save_slot);
+        gm_load_game(ctx.selected_save_slot);
+      }
+    }
+  }
+  if (gui_menu_button(lc_txt(LOC_TEXT_MAINMENU_SAVE_GAME_BUTTON_BACK), BTN_ID_MAINMENU_SAVE_GAME_BACK, VECTOR2(0.f, 66.5f), SMM_BASE_RENDER_DIV2, true)) {
+    begin_scene_change(MAIN_MENU_SCENE_DEFAULT);
+  }
 }
 
 void draw_main_menu_character_panel(void) {
@@ -2704,6 +2767,10 @@ void begin_scene_change(main_menu_scene_type mms, [[__maybe_unused__]] event_con
       break;
     }
     case MAIN_MENU_SCENE_SAVE_GAME: {
+      gm_parse_save_slot(SAVE_SLOT_1);
+      gm_parse_save_slot(SAVE_SLOT_2);
+      gm_parse_save_slot(SAVE_SLOT_3);
+      gm_parse_save_slot(SAVE_SLOT_4);
       state->mainmenu_state = MAIN_MENU_SCENE_SAVE_GAME;
       break;
     }

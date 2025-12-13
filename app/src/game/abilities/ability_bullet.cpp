@@ -1,6 +1,8 @@
 #include "ability_bullet.h"
+#include <algorithm>
 #include <reasings.h>
 #include <loc_types.h>
+#include <cmath>
 
 #include "core/event.h"
 #include "core/fmemory.h"
@@ -124,9 +126,15 @@ void update_ability_bullet(ability& abl) {
     prj.collision.x = prj.position.x - prj.collision.width  * .5f;
     prj.collision.y = prj.position.y - prj.collision.height * .5f;
 
+    f32 overall_damage_multiplier = player->stats[CHARACTER_STATS_OVERALL_DAMAGE].buffer.f32[3];
+
+    f64 final_damage_f = std::round(static_cast<f64>(overall_damage_multiplier) * static_cast<f64>(prj.damage));
+
+    i16 final_damage = std::clamp(final_damage_f, -32768.0, 32767.0);
+
     event_fire(EVENT_CODE_DAMAGE_ANY_SPAWN_IF_COLLIDE, event_context(
       static_cast<i16>(prj.collision.x), static_cast<i16>(prj.collision.y), static_cast<i16>(prj.collision.width), static_cast<i16>(prj.collision.height),
-      static_cast<i16>(prj.damage + player->stats.at(CHARACTER_STATS_OVERALL_DAMAGE).buffer.i32[3]),
+      final_damage,
       static_cast<i16>(COLLISION_TYPE_RECTANGLE_RECTANGLE)
     ));
     update_sprite(prj.animations.at(0), (*state->in_ingame_info->delta_time) );

@@ -75,9 +75,9 @@ static user_interface_system_state * state = nullptr;
 #define UI_TITLE_FONT state->display_language->mood
 #define UI_TITLE_FONT_SIZE state->display_language->mood.baseSize
 
-#define MENU_BUTTON_FONT UI_BOLD_FONT
+#define MENU_BUTTON_FONT FONT_TYPE_REGULAR
 #define MENU_BUTTON_FONT_SIZE_SCALE 1
-#define MINI_BUTTON_FONT UI_REGULAR_FONT
+#define MINI_BUTTON_FONT FONT_TYPE_LIGHT
 #define MINI_BUTTON_FONT_SIZE_SCALE 1
 #define LABEL_FONT UI_REGULAR_FONT
 #define LABEL_FONT_SIZE_SCALE 1
@@ -86,7 +86,7 @@ static user_interface_system_state * state = nullptr;
 #define DEFAULT_SLIDER_FONT_SIZE 1
 #define DEFAULT_PERCENT_SLIDER_CIRCLE_AMOUTH 10
 #define DEFAULT_ERROR_FONT_TYPE FONT_TYPE_REGULAR
-#define DEFAULT_ERROR_FONT_SIZE 2
+#define DEFAULT_ERROR_FONT_SIZE 20
 
 #define ERROR_TEXT_DURATION_STAY_ON_SCREEN 2.1f
 #define ERROR_TEXT_DURATION_IN_AND_OUT .5f
@@ -117,6 +117,7 @@ static user_interface_system_state * state = nullptr;
 
 constexpr f32 SCROLL_HANDLE_WIDTH_RATIO = 1.0f; // 16px / 16px
 constexpr f32 SCROLL_HEADER_HEIGHT = 11.0f;
+constexpr f64 BASE_TEXT_SIZE = 0.0175f;
 
 static inline void set_slider_last_element(slider_id id) {
   state->sliders[id].current_value = state->sliders[id].options.size() - 1u;
@@ -136,7 +137,7 @@ void draw_slider_body(const slider *const sdr);
 void draw_atlas_texture_regular(atlas_texture_id _id, Rectangle dest, Color tint, bool should_center);
 void draw_atlas_texture_npatch(atlas_texture_id _id, Rectangle dest, Vector4 offsets, bool should_center);
 void gui_draw_settings_screen(void);
-bool gui_button(const char* text, button_id _id, Font font, i32 font_size_scale, Vector2 pos, bool play_on_click_sound);
+bool gui_button(const char* text, button_id _id, ::font_type font_type, i32 font_size_scale, Vector2 pos, bool play_on_click_sound);
 void gui_checkbox(checkbox_id _id, Vector2 pos);
 void gui_display_error(ui_error_display_control_system err);
 
@@ -149,7 +150,6 @@ void register_progress_bar_type(progress_bar_type prg_bar_type);
 void register_slider_type(slider_type_id _sdr_type_id, spritesheet_id _ss_sdr_body_type, f32 _scale, i32 _width_multiply, button_type_id _left_btn_type_id, button_type_id _right_btn_type_id, i32 _char_limit);
 
 void draw_text_shader(const char *text, shader_id sdr_id, Vector2 position, Font font, float fontsize, Color tint, bool center_horizontal, bool center_vertical, bool use_grid_align, Vector2 grid_coord);
-void draw_text_ex(const char *text, Vector2 position, Font font, f32 _fontsize, Color tint, bool center_horizontal, bool center_vertical, bool use_grid_align, Vector2 grid_coord);
 void DrawTextBoxed(Font font, const char *text, Rectangle rec, float fontSize, float spacing, bool wordWrap, Color tint);
 const char* wrap_text(const char* text, Font font, i32 font_size, Rectangle bounds, bool center_x);
 Font load_font(pak_file_id pak_id, i32 asset_id, i32 font_size, i32* _codepoints, i32 _codepoint_count);
@@ -194,8 +194,10 @@ static inline void draw_text_simple(const char* text, Vector2 pos, font_type in_
     return;
   }
   Font font = font_type_to_font(in_font_type);
+  i32 _font_size = fontsize + state->in_app_settings->render_height * BASE_TEXT_SIZE;
+
   BeginShaderMode(get_shader_by_enum(SHADER_ID_SDF_TEXT)->handle);
-    DrawTextEx(font, text, pos, fontsize, UI_FONT_SPACING, color);
+    DrawTextEx(font, text, pos, _font_size, UI_FONT_SPACING, color);
   EndShaderMode();
 }
 static inline void draw_text(const char* text, Vector2 pos, font_type in_font_type, i32 fontsize, Color color, bool center_horizontal, bool center_vertical, bool use_grid_align = false, 
@@ -205,7 +207,8 @@ static inline void draw_text(const char* text, Vector2 pos, font_type in_font_ty
     return;
   }
   Font font = font_type_to_font(in_font_type);
-  Vector2 text_measure = MeasureTextEx(font, text, fontsize, UI_FONT_SPACING);
+  i32 _font_size = fontsize + state->in_app_settings->render_height * BASE_TEXT_SIZE;
+  Vector2 text_measure = MeasureTextEx(font, text, _font_size, UI_FONT_SPACING);
   Vector2 text_position = pos;
   if (use_grid_align) {
     text_position = position_element_by_grid(text_position, grid_coord, SCREEN_OFFSET);
@@ -217,7 +220,7 @@ static inline void draw_text(const char* text, Vector2 pos, font_type in_font_ty
     text_position.y -= (text_measure.y * .5f);
   }
   BeginShaderMode(get_shader_by_enum(SHADER_ID_SDF_TEXT)->handle);
-    DrawTextEx(font, text, text_position, fontsize, UI_FONT_SPACING, color);
+    DrawTextEx(font, text, text_position, _font_size, UI_FONT_SPACING, color);
   EndShaderMode();
 }
 inline void draw_text_ex(const char* text, Vector2 pos, ::font_type font_type, f32 fontsize, Color tint) {
@@ -225,9 +228,10 @@ inline void draw_text_ex(const char* text, Vector2 pos, ::font_type font_type, f
     return;
   }
   Font font = ui_get_font(font_type);
+  i32 _font_size = fontsize + state->in_app_settings->render_height * BASE_TEXT_SIZE;
 
   BeginShaderMode(get_shader_by_enum(SHADER_ID_SDF_TEXT)->handle);
-    DrawTextEx(font, text, pos, fontsize, UI_FONT_SPACING, tint);
+    DrawTextEx(font, text, pos, _font_size, UI_FONT_SPACING, tint);
   EndShaderMode();
 }
 bool user_interface_system_initialize(const camera_metrics * in_camera_metrics) {
@@ -392,6 +396,8 @@ bool user_interface_system_initialize(const camera_metrics * in_camera_metrics) 
     register_button(BTN_ID_MAINMENU_MAP_CHOICE_BACK,                    BTN_TYPE_MENU_BUTTON);
     register_button(BTN_ID_MAINMENU_TRAIT_CHOICE_BACK,                  BTN_TYPE_MENU_BUTTON);
     register_button(BTN_ID_MAINMENU_TRAIT_CHOICE_ACCEPT,                BTN_TYPE_MENU_BUTTON);
+    register_button(BTN_ID_MAINMENU_SAVE_GAME_SAVE,                     BTN_TYPE_MENU_BUTTON);
+    register_button(BTN_ID_MAINMENU_SAVE_GAME_LOAD,                     BTN_TYPE_MENU_BUTTON);
     register_button(BTN_ID_MAINMENU_SAVE_GAME_BACK,                     BTN_TYPE_MENU_BUTTON);
     register_button(BTN_ID_MAINMENU_CREDITS_BACK,                       BTN_TYPE_MENU_BUTTON);
   }
@@ -695,9 +701,9 @@ bool gui_mini_button(const char* text, button_id _id, Vector2 grid, bool play_on
   );
 }
 bool gui_slider_button(button_id _id, Vector2 pos) {
-  return gui_button("", _id, Font {}, 0, pos, true);
+  return gui_button("", _id, FONT_TYPE_UNDEFINED, 0, pos, true);
 }
-bool gui_button(const char* text, button_id _id, Font font, i32 font_size_scale, Vector2 pos, bool play_on_click_sound) {
+bool gui_button(const char* text, button_id _id, ::font_type font_type, i32 font_size_scale, Vector2 pos, bool play_on_click_sound) {
   if (not text or text == nullptr) {
     return false;
   }
@@ -705,7 +711,7 @@ bool gui_button(const char* text, button_id _id, Font font, i32 font_size_scale,
     IWARN("user_interface::gui_button()::Recieved button type out of bound");
     return false;
   }
-  button *const _btn = __builtin_addressof(state->buttons.at(_id));
+  button *const _btn = __builtin_addressof(state->buttons[_id]);
 
   if (!_btn->is_registered) {
     IWARN("user_interface::gui_button()::The button is not registered");
@@ -715,47 +721,35 @@ bool gui_button(const char* text, button_id _id, Font font, i32 font_size_scale,
   _btn->dest.x = pos.x;
   _btn->dest.y = pos.y;
 
-  Vector2 text_measure;
-  Vector2 text_pos;
-
-  if (not text or not TextIsEqual(text, "")) {
-    text_measure = MeasureTextEx(font, text, font.baseSize * font_size_scale, UI_FONT_SPACING);
-    text_pos = Vector2 {
-      .x = _btn->dest.x + (_btn->dest.width / 2.f)  - (text_measure.x / 2.f),
-      .y = _btn->dest.y + (_btn->dest.height / 2.f) - (text_measure.y / 2.f)
-    };
-  }
-
   Vector2 draw_sprite_scale = Vector2 {_btn->btn_type.scale,_btn->btn_type.scale};
 
   if (_btn->current_state == BTN_STATE_PRESSED) {
     draw_sprite_on_site_by_id(_btn->btn_type.ss_type, WHITE, VECTOR2(_btn->dest.x,_btn->dest.y), draw_sprite_scale, 1);
     if (not TextIsEqual(text, "")) {
-      draw_text_ex(text, text_pos, font, font_size_scale, _btn->btn_type.forground_color_btn_state_pressed, false, false, false, VECTOR2(0.f, 0.f));
+      gui_label_box(text, font_type, font_size_scale, _btn->dest, _btn->btn_type.forground_color_btn_state_pressed, TEXT_ALIGN_CENTER);
     }
     if (play_on_click_sound and _btn->prev_state == BTN_STATE_HOVER) event_fire(EVENT_CODE_PLAY_SOUND_GROUP, event_context(SOUNDGROUP_ID_BUTTON_ON_CLICK, static_cast<i32>(true)));
   }
   if (_btn->current_state == BTN_STATE_HOVER) {
     draw_sprite_on_site_by_id(_btn->btn_type.ss_type, WHITE, VECTOR2(_btn->dest.x,_btn->dest.y), draw_sprite_scale, 1);
     if (not TextIsEqual(text, "")) {
-      draw_text_ex(text, text_pos, font, font_size_scale, _btn->btn_type.forground_color_btn_state_hover, false, false, false, VECTOR2(0.f, 0.f));
+      gui_label_box(text, font_type, font_size_scale, _btn->dest, _btn->btn_type.forground_color_btn_state_hover, TEXT_ALIGN_CENTER);
     }
     event_fire(EVENT_CODE_RESET_SOUND_GROUP, event_context(static_cast<i32>(SOUNDGROUP_ID_BUTTON_ON_CLICK)));
   }
   if (_btn->current_state == BTN_STATE_UP) {
     draw_sprite_on_site_by_id(_btn->btn_type.ss_type, WHITE, VECTOR2(_btn->dest.x,_btn->dest.y), draw_sprite_scale, 0);
     if (_btn->current_state != BTN_STATE_HOVER) {
-      draw_text_ex(text, text_pos, font, font_size_scale, _btn->btn_type.forground_color_btn_state_up, false, false, false, VECTOR2(0.f, 0.f));
+      gui_label_box(text, font_type, font_size_scale, _btn->dest, _btn->btn_type.forground_color_btn_state_up, TEXT_ALIGN_CENTER);
     }
   }
   
   return _btn->current_state == _btn->signal_state;
 }
-bool gui_draw_local_button(const char* text, local_button* const btn, const font_type _font_type, const i32 font_size_scale, const Vector2 pos, text_alignment align_to, const bool play_on_click_sound) {
+bool gui_draw_local_button(const char* text, local_button* const btn, const font_type _font_type, const i32 font_size, const Vector2 pos, text_alignment align_to, const bool play_on_click_sound) {
   if (not text or text == nullptr or not btn or btn == nullptr) {
     return false;
   }
-
   if (!btn->is_active) {
     return false;
   } 
@@ -763,35 +757,26 @@ bool gui_draw_local_button(const char* text, local_button* const btn, const font
   btn->dest.x = pos.x;
   btn->dest.y = pos.y;
 
-  Vector2 text_measure = ZEROVEC2;
-  Vector2 text_pos = ZEROVEC2;
-  Font _font = ui_get_font(_font_type);
-  if (!TextIsEqual(text, "")) {
-    text_measure = MeasureTextEx(_font, text, _font.baseSize * font_size_scale, UI_FONT_SPACING);
-    text_pos = ui_align_text(btn->dest, text_measure, align_to);
-  }
-
-
   Vector2 draw_sprite_scale = Vector2 {btn->btn_type.scale, btn->btn_type.scale};
 
   if (btn->current_state == BTN_STATE_PRESSED) {
     draw_sprite_on_site_by_id(btn->btn_type.ss_type, WHITE, VECTOR2(btn->dest.x, btn->dest.y), draw_sprite_scale, 1);
     if (!TextIsEqual(text, "")) {
-      draw_text_ex(text, text_pos, _font, font_size_scale, btn->btn_type.forground_color_btn_state_pressed, false, false, false, VECTOR2(0.f, 0.f));
+      gui_label_box(text, _font_type, font_size, btn->dest, btn->btn_type.forground_color_btn_state_pressed, align_to);
     }
     if (play_on_click_sound and btn->prev_state == BTN_STATE_HOVER) event_fire(EVENT_CODE_PLAY_SOUND_GROUP, event_context(SOUNDGROUP_ID_BUTTON_ON_CLICK, static_cast<i32>(true)));
   } 
   if (btn->current_state == BTN_STATE_HOVER) {
     draw_sprite_on_site_by_id(btn->btn_type.ss_type, WHITE, VECTOR2(btn->dest.x, btn->dest.y), draw_sprite_scale, 1);
     if (!TextIsEqual(text, "")) {
-      draw_text_ex(text, text_pos, _font, font_size_scale, btn->btn_type.forground_color_btn_state_hover, false, false, false, VECTOR2(0.f, 0.f));
+      gui_label_box(text, _font_type, font_size, btn->dest, btn->btn_type.forground_color_btn_state_hover, align_to);
     }
     event_fire(EVENT_CODE_RESET_SOUND_GROUP, event_context(static_cast<i32>(SOUNDGROUP_ID_BUTTON_ON_CLICK)));
   }
   if (btn->current_state == BTN_STATE_UP) {
     draw_sprite_on_site_by_id(btn->btn_type.ss_type, WHITE, VECTOR2(btn->dest.x, btn->dest.y), draw_sprite_scale, 0);
     if (btn->current_state != BTN_STATE_HOVER) {
-      draw_text_ex(text, text_pos, _font, font_size_scale, btn->btn_type.forground_color_btn_state_up, false, false, false, VECTOR2(0.f, 0.f));
+      gui_label_box(text, _font_type, font_size, btn->dest, btn->btn_type.forground_color_btn_state_up, align_to);
     }
   }
   
@@ -1204,8 +1189,9 @@ void gui_label_box(const char* text, font_type type, i32 font_size, Rectangle de
   if (not text or text == nullptr) {
     return;
   }
+  i32 _font_size = font_size + state->in_app_settings->render_height * BASE_TEXT_SIZE;
   Font font = font_type_to_font(type);
-  Vector2 text_measure = MeasureTextEx(font, text, font.baseSize * font_size, UI_FONT_SPACING);
+  Vector2 text_measure = MeasureTextEx(font, text, _font_size, UI_FONT_SPACING);
   Vector2 position = ui_align_text(dest, text_measure, alignment);
   draw_text_simple(text, position, type, font_size, tint);
 }
@@ -1488,17 +1474,16 @@ void gui_fire_display_error(int loc_text_id) {
   err.display_state = ERROR_DISPLAY_ANIMATION_STATE_MOVE_IN;
 }
 void gui_display_error(ui_error_display_control_system err) {
-  Font font = font_type_to_font(DEFAULT_ERROR_FONT_TYPE);
-  Vector2 text_measure = MeasureTextEx(font, err.error_text.c_str(), font.baseSize * DEFAULT_ERROR_FONT_SIZE, UI_FONT_SPACING);
-  Vector2 text_position = err.location;
-  Rectangle bg_dest = Rectangle {text_position.x, text_position.y, text_measure.x * 1.25f, text_measure.y * 1.25f};
+  Vector2 err_dim = { state->in_app_settings->render_width * .35f, state->in_app_settings->render_height * .075f };
+  Rectangle dest = Rectangle {
+    (state->in_app_settings->render_width * .5f) - (err_dim.x * .5f), 
+    err.location.y - (err_dim.y * .5f),
+    err_dim.x, 
+    err_dim.y
+  };
 
-  text_position.x -= (text_measure.x * .5f);
-  text_position.y -= (text_measure.y * .5f);
-
-  // TODO: Make stretch part dynamic
-  draw_atlas_texture_stretch(err.bg_tex_id, Rectangle {64, 0, 32, 32}, bg_dest, true, WHITE);
-  draw_text_simple(err.error_text.c_str(), text_position, DEFAULT_ERROR_FONT_TYPE, DEFAULT_ERROR_FONT_SIZE, WHITE);
+  gui_draw_atlas_texture_id(ATLAS_TEX_ID_HEADER, dest, ZEROVEC2, 0.f, WHITE);
+  gui_label_box(err.error_text.c_str(), DEFAULT_ERROR_FONT_TYPE, DEFAULT_ERROR_FONT_SIZE, dest, WHITE, TEXT_ALIGN_CENTER);
 }
 Rectangle gui_draw_default_background_panel(void) {
   Rectangle header_loc = {0, 0, static_cast<f32>(UI_BASE_RENDER_WIDTH), UI_BASE_RENDER_HEIGHT * .1f};
@@ -1973,45 +1958,6 @@ void draw_text_shader(const char *text, shader_id sdr_id, Vector2 position, Font
   }
 }
 
-/**
- * @brief TODO: This function's purpose is replacing the font when unsupported characters 
- */
-void draw_text_ex(const char *text, Vector2 position, Font font, f32 _fontsize, Color tint, bool center_horizontal, bool center_vertical, bool use_grid_align, Vector2 grid_coord) {
-  f32 font_size = _fontsize * font.baseSize;
-  Vector2 text_measure = MeasureTextEx(font, text, font_size, UI_FONT_SPACING);
-  Vector2 text_position = Vector2 { position.x, position.y };
-  if (use_grid_align) {
-    text_position = position_element_by_grid(text_position, grid_coord, SCREEN_OFFSET);
-  }
-  if (center_horizontal) {
-    text_position.x -= (text_measure.x * .5f);
-  }
-  if (center_vertical) {
-    text_position.y -= (text_measure.y * .5f);
-  }
-  int length = TextLength(text);
-
-  float textOffsetX = 0.0f;
-  float scaleFactor = font_size/(float)font.baseSize;
-
-  BeginShaderMode(get_shader_by_enum(SHADER_ID_SDF_TEXT)->handle);
-  for (i32 itr_000 = 0; itr_000 < length; itr_000++)
-  {
-    int codepointByteCount = 0;
-    int codepoint = GetCodepoint(&text[itr_000], &codepointByteCount);
-    int index = GetGlyphIndex(font, codepoint);
-    float glyphWidth = 0;
-
-    glyphWidth = (font.glyphs[index].advanceX == 0) ? font.recs[index].width*scaleFactor : font.glyphs[index].advanceX*scaleFactor;
-    if (itr_000 + 1 < length) glyphWidth = glyphWidth + UI_FONT_SPACING;
-    
-    if ((codepoint != ' ') && (codepoint != '\t')) {
-      DrawTextCodepoint(font, codepoint, Vector2{ text_position.x + textOffsetX, text_position.y }, font_size, tint);
-    }
-    if ((textOffsetX != 0) || (codepoint != ' ')) textOffsetX += glyphWidth;
-  }
-  EndShaderMode();
-} 
 /**
  * @brief NOTE: Source https://github.com/raysan5/raylib/blob/master/examples/text/text_rectangle_bounds.c
  */
@@ -2518,6 +2464,10 @@ Vector2 ui_align_text(Rectangle in_dest, Vector2 in_text_measure, text_alignment
     };
     case TEXT_ALIGN_RIGHT_CENTER: return Vector2 {
       in_dest.x + in_dest.width - in_text_measure.x,
+      in_dest.y + (in_dest.height * .5f) - (in_text_measure.y * .5f)
+    };
+    case TEXT_ALIGN_CENTER: return Vector2 {
+      in_dest.x + (in_dest.width  * .5f) - (in_text_measure.x * .5f),
       in_dest.y + (in_dest.height * .5f) - (in_text_measure.y * .5f)
     };
     

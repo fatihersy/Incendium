@@ -236,6 +236,7 @@ enum text_alignment {
   TEXT_ALIGN_BOTTOM_RIGHT,
   TEXT_ALIGN_LEFT_CENTER,
   TEXT_ALIGN_RIGHT_CENTER,
+  TEXT_ALIGN_CENTER,
   TEXT_ALIGN_MAX,
 };
 
@@ -871,6 +872,13 @@ struct sigil_slot {
     this->sigil.buffer = ig_buffer;
     this->filled = true;
   }
+  sigil_slot(sigil_slot_id _id, item_data _item, data128 _ui_buffer, bool _filled, bool draw) {
+    this->id = _id;
+    this->sigil = _item;
+    this->ui_buffer = _ui_buffer;
+    this->filled = _filled;
+    this->draw_item = draw;
+  }
 };
 
 
@@ -1292,12 +1300,12 @@ struct player_state {
 //#warning "game types --- game rules struct"
 struct game_rule {
   game_rule_id id;
-  i32 display_name_loc_id;
-  i32 desc_loc_id;
-  Rectangle icon_src;
-  i32 base_level;
-  i32 level;
-  i32 upgrade_cost;
+  i32 display_name_loc_id {};
+  i32 desc_loc_id {};
+  Rectangle icon_src {};
+  i32 base_level {};
+  i32 level {};
+  i32 upgrade_cost {};
 
   ::data_type data_type;
   data128 mm_ex;
@@ -1305,15 +1313,7 @@ struct game_rule {
 
   game_rule(void) {
     this->id = GAME_RULE_UNDEFINED;
-    this->display_name_loc_id = 0;
-    this->desc_loc_id = 0;
-    this->icon_src = ZERORECT;
-    this->base_level = 0;
-    this->level = 0;
-    this->upgrade_cost = 0;
-    this->data_type = DATA_TYPE_UNDEFINED,
-    this->mm_ex = data128();
-    this->ui_buffer = data128();
+    this->data_type = DATA_TYPE_UNDEFINED;
   }
   game_rule(game_rule_id _id, i32 _display_name_loc_id, i32 _description_loc_id, Rectangle _icon_rect, i32 _base_level, ::data_type _data_type, data128 values) : game_rule() {
     this->id = _id;
@@ -1339,6 +1339,7 @@ struct ingame_info {
   const worldmap_stage * current_map_info;
   const std::array<game_rule, GAME_RULE_MAX> * game_rules;
   const i32 * collected_coins;
+  const i32 * collected_souls;
   const i32 * total_boss_count;
   const i32 * total_boss_spawned;
   const i32 * spawn_on_begin;
@@ -1443,28 +1444,30 @@ struct text_spec {
 
 typedef struct save_data {
   save_slot_id id;
-  std::string file_name;
+  
   i32 currency_coins_player_have {};
   i32 currency_souls_player_have {};
   player_state player_data;
   std::array<game_rule, GAME_RULE_MAX> game_rules;
   std::array<sigil_slot, SIGIL_SLOT_MAX> sigil_slots;
 
-  u8 save_date[11] {};
+  std::string file_name;
+  std::string save_date;
   f64 time_spend {};
-  
   bool is_success {};
+
   save_data(void) {
     this->id = SAVE_SLOT_UNDEFINED;
   }
   save_data(std::string filename) : save_data() {
     this->file_name = filename;
   }
-  save_data(save_slot_id id, player_state in_player_state, std::array<game_rule, GAME_RULE_MAX>& _game_rules, i32 currency_coins) : save_data() {
+  save_data(save_slot_id id, player_state in_player_state, std::array<game_rule, GAME_RULE_MAX>& _game_rules, i32 currency_coins, i32 currency_souls) : save_data() {
     this->id = id;
     this->player_data = in_player_state;
     this->game_rules = _game_rules;
     this->currency_coins_player_have = currency_coins;
+    this->currency_souls_player_have = currency_souls;
   }
 } save_data;
 

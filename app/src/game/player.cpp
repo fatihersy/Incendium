@@ -1,4 +1,5 @@
 #include "player.h"
+#include <cmath>
 #include <algorithm>
 
 #include "core/event.h"
@@ -111,7 +112,7 @@ bool player_system_initialize(const camera_metrics* in_camera_metrics,const app_
     set_character_stat(CHARACTER_STATS_MANA_REGEN,                DATA_TYPE_I32, data128(10));
     set_character_stat(CHARACTER_STATS_MOVE_SPEED,                DATA_TYPE_F32, data128(128.00f));
     set_character_stat(CHARACTER_STATS_AOE,                       DATA_TYPE_F32, data128());
-    set_character_stat(CHARACTER_STATS_OVERALL_DAMAGE,            DATA_TYPE_F32, data128());
+    set_character_stat(CHARACTER_STATS_OVERALL_DAMAGE,            DATA_TYPE_F32, data128(.7f));
     set_character_stat(CHARACTER_STATS_ABILITY_CD,                DATA_TYPE_F32, data128());
     set_character_stat(CHARACTER_STATS_PROJECTILE_AMOUNT,         DATA_TYPE_I32, data128());
     set_character_stat(CHARACTER_STATS_EXP_GAIN,                  DATA_TYPE_F32, data128());
@@ -190,17 +191,17 @@ player_update_results update_player(void) {
   player_update_sprite();
 
   const i32 elapsed_time = static_cast<i32>(GetTime());
-  i32& last_time_hp_regen_fired = state->dynamic_player.stats.at(CHARACTER_STATS_HP_REGEN).mm_ex.i32[0];
-  const i32& hp_max = state->dynamic_player.stats.at(CHARACTER_STATS_HEALTH).buffer.i32[3];
+  i32& last_time_hp_regen_fired = state->dynamic_player.stats[CHARACTER_STATS_HP_REGEN].mm_ex.i32[0];
+  const i32& hp_max = state->dynamic_player.stats[CHARACTER_STATS_HEALTH].buffer.i32[3];
   i32& hp_current = state->dynamic_player.health_current;
 
   if (last_time_hp_regen_fired < elapsed_time and hp_current < hp_max) {
     last_time_hp_regen_fired = elapsed_time;
-    const i32& hp_regen_amouth = state->dynamic_player.stats.at(CHARACTER_STATS_HP_REGEN).buffer.i32[3];
+    const i32& hp_regen_amouth = state->dynamic_player.stats[CHARACTER_STATS_HP_REGEN].buffer.i32[3];
     hp_current += hp_regen_amouth;
     hp_current = std::clamp(hp_current, 0, hp_max);
   }
-  _player.health_perc = static_cast<f32>(_player.health_current) / static_cast<f32>(_player.stats.at(CHARACTER_STATS_HEALTH).buffer.i32[3]);
+  _player.health_perc = static_cast<f32>(_player.health_current) / static_cast<f32>(_player.stats[CHARACTER_STATS_HEALTH].buffer.i32[3]);
 
   event_fire(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, event_context((f32)PRG_BAR_ID_PLAYER_EXPERIANCE, (f32)state->dynamic_player.exp_perc));
   event_fire(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, event_context((f32)PRG_BAR_ID_PLAYER_HEALTH, (f32)state->dynamic_player.health_perc));
@@ -286,7 +287,7 @@ void player_add_exp_to_player(i32 raw_exp) {
 
   i32 curr = state->dynamic_player.exp_current;
   i32 to_next = state->dynamic_player.exp_to_next_level;
-  i32 exp = raw_exp + (raw_exp * state->dynamic_player.stats.at(CHARACTER_STATS_EXP_GAIN).buffer.f32[3]);
+  i32 exp = raw_exp + (raw_exp * state->dynamic_player.stats[CHARACTER_STATS_EXP_GAIN].buffer.f32[3]);
 
   if ( curr + exp >= to_next) 
   {
@@ -305,7 +306,7 @@ void player_take_damage(i32 damage) {
   if (not state or state == nullptr) { return; }
 
   if(not state->dynamic_player.is_damagable or state->dynamic_player.is_dead) return;
-  if((state->dynamic_player.health_current - damage) > 0 and (state->dynamic_player.health_current - damage) <= state->dynamic_player.stats.at(CHARACTER_STATS_HEALTH).buffer.i32[3]) {
+  if((state->dynamic_player.health_current - damage) > 0 and (state->dynamic_player.health_current - damage) <= state->dynamic_player.stats[CHARACTER_STATS_HEALTH].buffer.i32[3]) {
     //i32 health_prev = state->dynamic_player.health_current;
     state->dynamic_player.health_current -= damage;
     player_damage_break_init(PLAYER_DAMAGE_BREAK_TIME);
@@ -321,19 +322,19 @@ void player_heal_player(i32 amouth){
   if (not state or state == nullptr) { return; }
 
   if(state->dynamic_player.is_dead) return;
-  if(state->dynamic_player.health_current + amouth <= state->dynamic_player.stats.at(CHARACTER_STATS_HEALTH).buffer.i32[3]) {
+  if(state->dynamic_player.health_current + amouth <= state->dynamic_player.stats[CHARACTER_STATS_HEALTH].buffer.i32[3]) {
     state->dynamic_player.health_current += amouth;
   }
   else {
-    state->dynamic_player.health_current = state->dynamic_player.stats.at(CHARACTER_STATS_HEALTH).buffer.i32[3];
+    state->dynamic_player.health_current = state->dynamic_player.stats[CHARACTER_STATS_HEALTH].buffer.i32[3];
   }
-  state->dynamic_player.health_perc = static_cast<f32>(state->dynamic_player.health_current) / static_cast<f32>(state->dynamic_player.stats.at(CHARACTER_STATS_HEALTH).buffer.i32[3]);
+  state->dynamic_player.health_perc = static_cast<f32>(state->dynamic_player.health_current) / static_cast<f32>(state->dynamic_player.stats[CHARACTER_STATS_HEALTH].buffer.i32[3]);
 }
 void player_consume_mana(i32 cost) {
   if (not state or state == nullptr) { return; }
   if (state->dynamic_player.is_dead) return;
   i32& cur = state->dynamic_player.mana_current;
-  const i32 maxv = state->dynamic_player.stats.at(CHARACTER_STATS_MANA).buffer.i32[3];
+  const i32 maxv = state->dynamic_player.stats[CHARACTER_STATS_MANA].buffer.i32[3];
   cur = (cur - cost) < 0 ? 0 : (cur - cost);
   state->dynamic_player.mana_perc = maxv > 0 ? static_cast<f32>(cur) / static_cast<f32>(maxv) : 0.f;
   event_fire(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, event_context((f32)PRG_BAR_ID_PLAYER_MANA, (f32)state->dynamic_player.mana_perc));
@@ -342,7 +343,7 @@ void player_restore_mana(i32 amount) {
   if (not state or state == nullptr) { return; }
   if (state->dynamic_player.is_dead) return;
   i32& cur = state->dynamic_player.mana_current;
-  const i32 maxv = state->dynamic_player.stats.at(CHARACTER_STATS_MANA).buffer.i32[3];
+  const i32 maxv = state->dynamic_player.stats[CHARACTER_STATS_MANA].buffer.i32[3];
   cur = (cur + amount) > maxv ? maxv : (cur + amount);
   state->dynamic_player.mana_perc = maxv > 0 ? static_cast<f32>(cur) / static_cast<f32>(maxv) : 0.f;
   event_fire(EVENT_CODE_UI_UPDATE_PROGRESS_BAR, event_context((f32)PRG_BAR_ID_PLAYER_MANA, (f32)state->dynamic_player.mana_perc));
@@ -423,12 +424,19 @@ void player_update_attack(void) {
 
     damage_area.x += direction * damage_area.width;
 
+    f32 overall_damage_multiplier = _player.stats[CHARACTER_STATS_OVERALL_DAMAGE].buffer.f32[3];
+    i32 basic_attack_damage = _player.stats[CHARACTER_STATS_BASIC_ATTACK_DAMAGE].buffer.i32[3];
+
+    f64 final_damage_f = std::round(static_cast<f64>(overall_damage_multiplier) * static_cast<f64>(basic_attack_damage));
+
+    i16 final_damage = std::clamp(final_damage_f, -32768.0, 32767.0);
+
     event_fire(EVENT_CODE_DAMAGE_ANY_SPAWN_IF_COLLIDE, event_context(
       static_cast<i16>(damage_area.x),
       static_cast<i16>(damage_area.y),
       static_cast<i16>(damage_area.width),
       static_cast<i16>(damage_area.height),
-      static_cast<i16>(_player.stats.at(CHARACTER_STATS_OVERALL_DAMAGE).buffer.i32[3]),
+      final_damage,
       static_cast<i16>(COLLISION_TYPE_RECTANGLE_RECTANGLE)
     ));
   }
@@ -512,7 +520,7 @@ void player_update_movement(Vector2& move_delta) {
   if (not able_to_walk) {
     return;
   }
-  move_delta = vec2_scale(get_player_direction(), _player.stats.at(CHARACTER_STATS_MOVE_SPEED).buffer.f32[3] * (*state->in_ingame_info->delta_time));
+  move_delta = vec2_scale(get_player_direction(), _player.stats[CHARACTER_STATS_MOVE_SPEED].buffer.f32[3] * (*state->in_ingame_info->delta_time));
 }
 Vector2 get_player_direction(void) {
   Vector2 out_delta = ZEROVEC2;
@@ -566,7 +574,7 @@ void player_roll_init(void) {
       default: return;
     }
   }
-  const f32 roll_distance = _player.stats.at(CHARACTER_STATS_MOVE_SPEED).buffer.f32[3] * PLAYER_ROLL_DURATION * 1.5f;
+  const f32 roll_distance = _player.stats[CHARACTER_STATS_MOVE_SPEED].buffer.f32[3] * PLAYER_ROLL_DURATION * 1.5f;
   _player.roll_control.change_x = player_direction.x * roll_distance;
   _player.roll_control.change_y = player_direction.y * roll_distance;
 }

@@ -186,6 +186,7 @@ damage_deal_result damage_spawn(i32 _id, i32 damage) {
   character->is_damagable = false;
   character->damage_break_time = character->take_damage_left_animation.fps / static_cast<f32>(TARGET_FPS);
   event_fire(EVENT_CODE_PLAY_SOUND_GROUP, event_context(SOUNDGROUP_ID_ZOMBIE_DIE, static_cast<i32>(true)));
+  event_fire(EVENT_CODE_ADD_CURRENCY_SOULS, event_context(static_cast<i32>(1)));
 
   data128 context = data128(
     static_cast<i16>(character->collision.x + character->collision.width  * .5f), // INFO: Position x
@@ -353,8 +354,7 @@ i32 spawn_character(Character2D _character) {
   _character.collision.height = _character.move_left_animation.current_frame_rect.height * _character.scale;
   _character.collision.x = _character.position.x;
   _character.collision.y = _character.position.y;
-  if(CheckCollisionRecs(state->in_camera_metrics->frustum, _character.collision)) { return -1; }
-
+ 
   register_spawn_animation(_character, SPAWN_ZOMBIE_ANIMATION_MOVE_RIGHT);
   register_spawn_animation(_character, SPAWN_ZOMBIE_ANIMATION_TAKE_DAMAGE_LEFT);
   register_spawn_animation(_character, SPAWN_ZOMBIE_ANIMATION_TAKE_DAMAGE_RIGHT);

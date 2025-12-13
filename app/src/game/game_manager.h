@@ -95,6 +95,7 @@ f32 gm_get_player_sprite_scale(void);
 const std::vector<player_inventory_slot>& gm_get_inventory(void);
 const save_data& gm_get_save_data(save_slot_id id);
 void gm_save_to_slot(save_slot_id id);
+bool gm_parse_save_slot(save_slot_id id);
 
 void render_game(void);
 void gm_draw_sigil(item_type type, Vector2 position, bool should_center);

@@ -35,6 +35,7 @@ struct game_manager_system_state {
   std::vector<character_trait> chosen_traits;
   std::array<game_rule, GAME_RULE_MAX> game_rules;
   i32 collected_coins {};
+  i32 collected_souls {};
   i32 total_boss_spawned {};
   i32 total_boss_count {};
   i32 spawn_on_begin {};
@@ -98,6 +99,7 @@ void set_static_player_state_stat(character_stat_id stat_id, i32 level);
 void gm_refresh_stat_by_level(character_stat* stat, i32 level);
 [[__nodiscard__]] bool player_state_rebuild(void);
 i32 gm_get_sigil_upgrade_soul_requirement(i32 level);
+void add_to_inventory(std::vector<player_inventory_slot>& inventory, item_type _item_type, data128 ig_buffer, data128 ui_buffer = data128(), i32 amouth = 1, i32 level = 1);
 
 static inline void set_map_escape_sprite([[__maybe_unused__]] spritesheet_id _sheet_id, Vector2 map_location, f32 scale) {
   spritesheet& spr = state->map_escape_sprite;
@@ -109,6 +111,26 @@ static inline void set_map_escape_sprite([[__maybe_unused__]] spritesheet_id _sh
   spr.coord.height = spr.current_frame_rect.height * scale;
   spr.coord.x = map_location.x - spr.coord.width;
   spr.coord.y = map_location.y - spr.coord.height;
+}
+static inline void reset_sigil_slots(void) {
+  item_data empty_item = gm_get_default_items()[ITEM_TYPE_EMPTY];
+  auto set_default_sigil_slot = [&empty_item](sigil_slot_id _id, data128 ui_buffer) {
+    state->sigil_slots[_id] = sigil_slot(_id, empty_item, ui_buffer, false, false);
+  };
+
+  set_default_sigil_slot(SIGIL_SLOT_HEAD, data128());
+  set_default_sigil_slot(SIGIL_SLOT_ARCH_1, data128());
+  set_default_sigil_slot(SIGIL_SLOT_ARCH_2, data128());
+  set_default_sigil_slot(SIGIL_SLOT_ARCH_3, data128());
+  set_default_sigil_slot(SIGIL_SLOT_ARCH_4, data128());
+  set_default_sigil_slot(SIGIL_SLOT_COMMON_1, data128());
+  set_default_sigil_slot(SIGIL_SLOT_COMMON_2, data128());
+  set_default_sigil_slot(SIGIL_SLOT_COMMON_3, data128());
+  set_default_sigil_slot(SIGIL_SLOT_COMMON_4, data128());
+  set_default_sigil_slot(SIGIL_SLOT_COMMON_5, data128());
+  set_default_sigil_slot(SIGIL_SLOT_COMMON_6, data128());
+  set_default_sigil_slot(SIGIL_SLOT_COMMON_7, data128());
+  set_default_sigil_slot(SIGIL_SLOT_COMMON_8, data128());
 }
 
 bool game_manager_initialize(const camera_metrics * in_camera_metrics, const app_settings * in_app_settings, tilemap ** const in_active_map_ptr) {
@@ -171,6 +193,7 @@ bool game_manager_initialize(const camera_metrics * in_camera_metrics, const app
   state->game_info.current_map_info             = __builtin_addressof(state->stage);
   state->game_info.game_rules                   = __builtin_addressof(state->game_rules);
   state->game_info.collected_coins              = __builtin_addressof(state->collected_coins);
+  state->game_info.collected_souls              = __builtin_addressof(state->collected_souls);
   state->game_info.spawn_on_begin               = __builtin_addressof(state->spawn_on_begin);
   state->game_info.spawn_on_map_max             = __builtin_addressof(state->spawn_on_map_max);
   state->game_info.spawn_spawn_count            = __builtin_addressof(state->spawn_spawn_count);
@@ -194,6 +217,7 @@ bool game_manager_initialize(const camera_metrics * in_camera_metrics, const app
   event_register(EVENT_CODE_ADD_CURRENCY_COINS, game_manager_on_event);
   event_register(EVENT_CODE_KILL_ALL_SPAWNS, game_manager_on_event);
   event_register(EVENT_CODE_ADD_TO_INVENTORY, game_manager_on_event);
+  event_register(EVENT_CODE_ADD_CURRENCY_SOULS, game_manager_on_event);
 
   // Traits
   {
@@ -412,6 +436,8 @@ bool game_manager_initialize(const camera_metrics * in_camera_metrics, const app
   }
   // Items
 
+  reset_sigil_slots();
+
   state->playlist = create_playlist(PLAYLIST_PRESET_INGAME_PLAY_LIST);
   
   if (not in_app_settings or in_app_settings == nullptr or not in_active_map_ptr or in_active_map_ptr == nullptr) {
@@ -422,12 +448,11 @@ bool game_manager_initialize(const camera_metrics * in_camera_metrics, const app
     IERROR("game_manager::game_manager_reinit()::Player system initialization failed");
     return false;
   }
-  if (in_app_settings->active_save_slot > SAVE_SLOT_UNDEFINED and in_app_settings->active_save_slot < SAVE_SLOT_MAX) {
-    if(not parse_or_create_save_data_from_file(in_app_settings->active_save_slot, save_data(in_app_settings->active_save_slot, (*get_default_player()), state->default_game_rules, 0))) {
-      IWARN("game_manager::game_manager_reinit()::Failed to parse save file");
-      return false;
-    }
-  }
+
+  parse_save_data(SAVE_SLOT_1, save_data(SAVE_SLOT_1, (*get_default_player()), state->default_game_rules, 0, 0));
+  parse_save_data(SAVE_SLOT_2, save_data(SAVE_SLOT_2, (*get_default_player()), state->default_game_rules, 0, 0));
+  parse_save_data(SAVE_SLOT_3, save_data(SAVE_SLOT_3, (*get_default_player()), state->default_game_rules, 0, 0));
+  parse_save_data(SAVE_SLOT_4, save_data(SAVE_SLOT_4, (*get_default_player()), state->default_game_rules, 0, 0));
 
   if(in_app_settings->active_save_slot > SAVE_SLOT_UNDEFINED and in_app_settings->active_save_slot < SAVE_SLOT_MAX) {
     gm_load_game(in_app_settings->active_save_slot);
@@ -496,6 +521,9 @@ void update_game_manager(void) {
         update_spawns(state->game_info.player_state_dynamic->position);
         generate_in_game_info();
         update_abilities(get_player_state()->ability_system);
+        if (state->play_time <= 0.f) {
+          gm_end_game(true);
+        }
       }
       else {
         gm_end_game(false);
@@ -573,10 +601,6 @@ void render_game(void) {
         render_collectible_manager();
         render_abilities(get_player_state()->ability_system);
         render_spawns();
-      
-        //for (size_t itr_000 = 0; itr_000 < (*state->in_active_map)->collisions.size() ; ++itr_000) {
-        //  DrawRectangleLinesEx((*state->in_active_map)->collisions.at(itr_000).dest, 2.f, BLUE);
-        //}
       }
       else {
         render_player();
@@ -715,9 +739,14 @@ void gm_start_game() {
   state->play_time = (*state->game_info.total_play_time);
 
   populate_map_with_spawns(stage.spawn_on_begin);
+  spawn_boss();
+  spawn_boss();
+  spawn_boss();
+  spawn_boss();
   if (state->game_info.in_spawns->empty()) {
     return false;
   }
+
   _add_ability(state->starter_ability);
   //upgrade_ability(_player->ability_system.abilities.at(state->starter_ability));
   refresh_ability(_player->ability_system.abilities.at(state->starter_ability));
@@ -738,20 +767,33 @@ void gm_end_game(bool is_win) {
   //event_fire(EVENT_CODE_PLAY_SOUND, event_context()); // TODO: play win or lose sound
   event_fire(EVENT_CODE_CAMERA_SET_ZOOM_TARGET, event_context(static_cast<f32>(ZOOM_CAMERA_GAME_RESULTS)));
 
+  save_data * save = state->game_progression_data;
+
+  save->currency_coins_player_have += state->collected_coins;
+  save->currency_souls_player_have += state->collected_souls;
+  
+  for (player_inventory_slot& slot : state->player_inventory) {
+    add_to_inventory(state->player_state_static.inventory, slot.item.type, slot.item.buffer, data128(), slot.amouth, slot.item.level);
+  }
+  save->player_data = state->player_state_static;
+
   gm_save_game();
 }
 void gm_save_game(void) {
   if (not state->game_progression_data) {
     return;
   }
+  state->player_state_static.inventory = state->player_inventory;
   state->game_progression_data->player_data = state->player_state_static;
   state->game_progression_data->game_rules = state->game_rules;
+  state->game_progression_data->sigil_slots = state->sigil_slots;
   save_save_data(state->in_app_settings->active_save_slot, (*state->game_progression_data) );
 }
 void gm_load_game(save_slot_id slot_id) {
   state->player_state_static = *(get_default_player());
   state->game_progression_data = &get_save_data(slot_id);
   state->game_rules = state->default_game_rules;
+  reset_sigil_slots();
 
   for (size_t itr_000 = FIRST_UPGRADABLE_GAME_RULE; itr_000 < LAST_UPGRADABLE_GAME_RULE; ++itr_000) {
     i32 level = state->game_progression_data->player_data.stats.at(itr_000).current_level;
@@ -867,13 +909,13 @@ void populate_map_with_spawns(i32 min_count) {
   for (i32 itr_000 = 0; itr_000 < min_count && (spawn_trying_limit <= SPAWN_TRYING_LIMIT && spawn_trying_limit != 0); ) 
   {
     Vector2 position = Vector2 {
-      static_cast<f32>(get_random((i32)state->stage.spawning_areas.at(0).x, (i32)state->stage.spawning_areas.at(0).x + state->stage.spawning_areas.at(0).width)),
-      static_cast<f32>(get_random((i32)state->stage.spawning_areas.at(0).y, (i32)state->stage.spawning_areas.at(0).y + state->stage.spawning_areas.at(0).height))
+      static_cast<f32>(get_random_ssl((i32)state->stage.spawning_areas.at(0).x, (i32)state->stage.spawning_areas.at(0).x + state->stage.spawning_areas.at(0).width)),
+      static_cast<f32>(get_random_ssl((i32)state->stage.spawning_areas.at(0).y, (i32)state->stage.spawning_areas.at(0).y + state->stage.spawning_areas.at(0).height))
     };
-    if (spawn_character(Character2D(
+    if (not CheckCollisionPointRec(position, state->in_camera_metrics->frustum) and spawn_character(Character2D(
         SPAWN_TYPE_BROWN, //static_cast<i32>(get_random(SPAWN_TYPE_UNDEFINED+1, SPAWN_TYPE_MAX-2) >= 0),
         static_cast<i32>(state->game_info.player_state_dynamic->level), 
-        static_cast<i32>(get_random(0, 100)), 
+        static_cast<i32>(get_random_ssl(0, 100)), 
         position
       ))) { 
         ++itr_000; 
@@ -995,7 +1037,12 @@ void gm_add_to_inventory(item_type _item_type, data128 ig_buffer, data128 ui_buf
   if (_item_type == ITEM_TYPE_EMPTY) {
     return;
   }
-  std::vector<player_inventory_slot>& inventory = state->player_inventory;
+  add_to_inventory(state->player_inventory, _item_type, ig_buffer, ui_buffer, amouth, level);
+}
+void add_to_inventory(std::vector<player_inventory_slot>& inventory, item_type _item_type, data128 ig_buffer, data128 ui_buffer, i32 amouth, i32 level) {
+  if (_item_type >= ITEM_TYPE_MAX or _item_type <= ITEM_TYPE_UNDEFINED) {
+    return;
+  }
   auto create_slot = [&](void) -> player_inventory_slot {
     player_inventory_slot slot = player_inventory_slot();
     slot.slot_id = state->next_inventory_slot_id++;
@@ -1019,10 +1066,10 @@ void gm_add_to_inventory(item_type _item_type, data128 ig_buffer, data128 ui_buf
         return;
       }
     }
-    state->player_inventory.push_back(create_slot());
+    inventory.push_back(create_slot());
     return;
   }
-  state->player_inventory.push_back(create_slot());
+  inventory.push_back(create_slot());
 }
 void gm_set_sigil_slot(sigil_slot slot) {
   if (slot.sigil.type <= M_ITEM_TYPE_SIGIL_START or slot.sigil.type >= M_ITEM_TYPE_SIGIL_END) {
@@ -1542,9 +1589,14 @@ void gm_save_to_slot(save_slot_id id) {
   }
   save_data _data = (*state->game_progression_data);
   _data.player_data = state->player_state_static;
+  _data.player_data.inventory = state->player_inventory;
   _data.game_rules = state->game_rules;
+  _data.sigil_slots = state->sigil_slots;
 
   save_save_data(id, _data);
+}
+bool gm_parse_save_slot(save_slot_id id) {
+  return parse_save_data(id, save_data(id, (*get_default_player()), state->default_game_rules, 0, 0));
 }
 bool _add_ability(ability_id _id) {
   if (_id <= ABILITY_ID_UNDEFINED or _id >= ABILITY_ID_MAX) {
@@ -1607,7 +1659,11 @@ bool game_manager_on_event(i32 code, event_context context) {
       return true;
     }
     case EVENT_CODE_ADD_CURRENCY_COINS: {
-      state->game_info.collected_coins += context.data.i32[0];
+      state->collected_coins += context.data.i32[0];
+      return true;
+    }
+    case EVENT_CODE_ADD_CURRENCY_SOULS: {
+      state->collected_souls += context.data.i32[0];
       return true;
     }
     case EVENT_CODE_ADD_TO_INVENTORY: {
