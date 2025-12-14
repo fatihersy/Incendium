@@ -194,45 +194,49 @@ damage_deal_result damage_spawn(i32 _id, i32 damage) {
     static_cast<i16>(character->collision.y + character->collision.height * .5f), // INFO: Loot drop animation position y begin
     static_cast<i16>(character->collision.height * .5f) // INFO: Loot drop animation position y change
   );
+
+  using DropInfo = std::tuple<item_type, i32, data128>;
+  using DropInfoVector = std::vector<DropInfo>;
+
   switch (character->type) {
     case SPAWN_TYPE_BROWN: {
-      spawn_item(std::vector<std::tuple<item_type, i32, data128>>({
-          std::tuple<item_type, i32, data128>(ITEM_TYPE_EXPERIENCE, 100, data128(static_cast<i32>(GET_SPW_EXP(character)))),
-          std::tuple<item_type, i32, data128>(ITEM_TYPE_COIN, 65, data128(static_cast<i32>(GET_SPW_COIN(character)))),
+      spawn_item(DropInfoVector({
+          DropInfo(ITEM_TYPE_EXPERIENCE, 100, data128(static_cast<i32>(GET_SPW_EXP(character)))),
+          DropInfo(ITEM_TYPE_COIN, 65, data128(static_cast<i32>(GET_SPW_COIN(character)))),
         }), 
         context
       );
       break;
     }
     case SPAWN_TYPE_ORANGE: {
-      spawn_item(std::vector<std::tuple<item_type, i32, data128>>({
-          std::tuple<item_type, i32, data128>(ITEM_TYPE_EXPERIENCE, 100, data128(static_cast<i32>(GET_SPW_EXP(character)))),
-          std::tuple<item_type, i32, data128>(ITEM_TYPE_COIN, 65, data128(static_cast<i32>(GET_SPW_COIN(character)))),
+      spawn_item(DropInfoVector({
+          DropInfo(ITEM_TYPE_EXPERIENCE, 100, data128(static_cast<i32>(GET_SPW_EXP(character)))),
+          DropInfo(ITEM_TYPE_COIN, 65, data128(static_cast<i32>(GET_SPW_COIN(character)))),
         }), 
         context
       );
       break;
     }
     case SPAWN_TYPE_YELLOW: {
-      spawn_item(std::vector<std::tuple<item_type, i32, data128>>({
-          std::tuple<item_type, i32, data128>(ITEM_TYPE_EXPERIENCE, 100, data128(static_cast<i32>(GET_SPW_EXP(character)))),
-          std::tuple<item_type, i32, data128>(ITEM_TYPE_COIN, 65, data128(static_cast<i32>(GET_SPW_COIN(character)))),
+      spawn_item(DropInfoVector({
+          DropInfo(ITEM_TYPE_EXPERIENCE, 100, data128(static_cast<i32>(GET_SPW_EXP(character)))),
+          DropInfo(ITEM_TYPE_COIN, 65, data128(static_cast<i32>(GET_SPW_COIN(character)))),
         }), 
         context
       );
       break;
     }
     case SPAWN_TYPE_RED: {
-      spawn_item(std::vector<std::tuple<item_type, i32, data128>>({
-          std::tuple<item_type, i32, data128>(ITEM_TYPE_EXPERIENCE, 100, data128(static_cast<i32>(GET_SPW_EXP(character)))),
-          std::tuple<item_type, i32, data128>(ITEM_TYPE_COIN, 65, data128(static_cast<i32>(GET_SPW_COIN(character)))),
+      spawn_item(DropInfoVector({
+          DropInfo(ITEM_TYPE_EXPERIENCE, 100, data128(static_cast<i32>(GET_SPW_EXP(character)))),
+          DropInfo(ITEM_TYPE_COIN, 65, data128(static_cast<i32>(GET_SPW_COIN(character)))),
         }), 
         context
       );
       break;
     }
     case SPAWN_TYPE_BOSS: {
-      spawn_item(std::vector<std::tuple<item_type, i32, data128>>({std::tuple<item_type, i32, data128>(ITEM_TYPE_CHEST, 100, data128())}), context);
+      spawn_item(DropInfoVector({DropInfo(ITEM_TYPE_CHEST, 100, data128())}), context);
       break;
     }
     default: {}
@@ -764,13 +768,10 @@ void update_spawn_animation(Character2D& spawn) {
   }
 }
 void spawn_item(std::vector<std::tuple<item_type, i32, data128>> items, data128 context) {
-
   for (auto& item : items) {
-    item_type type = std::get<0>(item);
-    i32 chance = std::get<1>(item);
-    data128 item_values = std::get<2>(item);
+    auto [ type, chance, item_values ] = item;
 
-    if (get_random(0, 100) < chance) {
+    if (get_random_ssl(0, 100) < chance) {
       event_fire(EVENT_CODE_SPAWN_ITEM, event_context(static_cast<i16>(type), context.i16[0], context.i16[1], context.i16[2], context.i16[3], item_values.i16[0]));
     }
   }

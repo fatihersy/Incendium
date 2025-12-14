@@ -131,6 +131,7 @@ bool player_system_initialize(const camera_metrics* in_camera_metrics,const app_
     set_character_stat(CHARACTER_STATS_LETAL_SIGIL_EFFECTIVENESS, DATA_TYPE_F32, data128());
     set_character_stat(CHARACTER_STATS_DROP_RATE,                 DATA_TYPE_F32, data128());
     set_character_stat(CHARACTER_STATS_REWARD_MODIFIER,           DATA_TYPE_F32, data128());
+    set_character_stat(CHARACTER_STATS_INTERACTION_RADIUS,        DATA_TYPE_F32, data128(50.f));
   }
 
   state->defualt_player.collision.width  = (state->defualt_player.idle_right_sprite.coord.width  * .9f) * PLAYER_PLAYER_SCALE; // INFO: player collision scales with idle spritesheet

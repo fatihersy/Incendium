@@ -1,10 +1,12 @@
 
 #include "collectible_manager.h"
 #include <reasings.h>
+#include <algorithm>
 #include <sound.h>
 
 #include "core/logger.h"
 #include "core/event.h"
+#include "core/ftime.h"
 
 #include "game/spritesheet.h"
 
@@ -28,7 +30,7 @@ typedef struct collectible_manager_system_state {
 static collectible_manager_system_state * state = nullptr;
 
 #define LOOT_ITEM_SCALE 2.f
-#define LOOT_DROP_ANIMATION_DURATION .85f
+#define LOOT_DROP_ANIMATION_DURATION .65f
 #define LOOT_GRAB_ANIMATION_CURVE_CONTROL_OFFSET 50.f
 
 bool collectible_manager_reinit(const camera_metrics * in_camera_metrics, const app_settings * in_app_settings, const tilemap ** const in_active_map_ptr, const ingame_info * in_ingame_info);
@@ -83,100 +85,120 @@ bool collectible_manager_reinit(const camera_metrics * in_camera_metrics, const 
 }
 
 bool update_collectible_manager(void) {
-	if (not state or state == nullptr) {
-    IERROR("collectible_manager::update_collectible_manager()::State is not valid");
-		return false;
-	}
   const player_state * _player = state->in_ingame_info->player_state_dynamic;
 
-	for (size_t itr_000 = 0; itr_000 < state->loots_on_the_map.size(); itr_000++) {
-    loot_item * const item = __builtin_addressof(state->loots_on_the_map.at(itr_000));
-
-    if (not item->is_initialized or not item->is_active) {
+	for (loot_item& item : state->loots_on_the_map) {
+    if (not item.is_initialized or not item.is_active) {
       continue;
     }
-    loot_drop_animation_control_system& drop_control = item->drop_control;
-    if (drop_control.play_animation and drop_control.drop_anim_type == LOOT_DROP_ANIMATION_PLAYER_GRAB and drop_control.accumulator > drop_control.animation_duration) {
-      item->pfn_loot_item_on_loot(item->type, item->id, data128(item->mm_ex.i16[0]));
+    loot_drop_animation_control_system& drop_control = item.drop_control;
+    const bool in_frustum = CheckCollisionRecs(item.world_collision, state->in_camera_metrics->frustum);
+    if (in_frustum) {
+      update_sprite(item.sheet, (*state->in_ingame_info->delta_time));
+      item.is_on_screen = true;
+    } else {
+      item.is_on_screen = false;
+    }
+    if (item.drop_control.play_animation) {
+      if (drop_control.accumulator < drop_control.animation_duration) {
+        switch (item.drop_control.drop_anim_type) {
+          case LOOT_DROP_ANIMATION_DROP_BEGIN: {
+            f32 t = drop_control.accumulator / drop_control.animation_duration;
+            Vector2 p0 = Vector2 { drop_control.buffer.f32[2], drop_control.buffer.f32[3] };
+            Vector2 p2 = Vector2 { item.mm_ex.f32[2], item.mm_ex.f32[3] };
+            f32 amp = item.mm_ex.f32[1] > 0.f ? item.mm_ex.f32[1] : item.world_collision.height * 2.f;
+            Vector2 c1 = Vector2 { p0.x + (p2.x - p0.x) * .35f, p0.y - amp };
+            Vector2 pos = GetSplinePointBezierQuad(p0, c1, p2, t);
+            item.world_collision.x = pos.x - item.world_collision.width * .5f;
+            item.world_collision.y = pos.y - item.world_collision.height * .5f;
+            item.sheet.coord.x = item.world_collision.x;
+            item.sheet.coord.y = item.world_collision.y;
+            drop_control.accumulator += (*state->in_ingame_info->delta_time);
+            if (item.is_player_grabbed == false and CheckCollisionCircleRec(_player->position, _player->interaction_radius, item.world_collision)) {
+              item.is_player_grabbed = true;
+              drop_control = loot_drop_animation_control_system(LOOT_DROP_ANIMATION_PLAYER_GRAB, LOOT_DROP_ANIMATION_DURATION, item.world_collision.x, item.world_collision.y);
+            }
+            break;
+          }
+          case LOOT_DROP_ANIMATION_PLAYER_GRAB: {
+            Vector2 p1 = pVECTOR2(drop_control.buffer.f32);
+            Vector2 p3  = Vector2 { _player->collision.x   + _player->collision.width   * .5f, _player->collision.y   + _player->collision.height   * .5f };
+            Vector2 dir = Vector2 { p3.x - p1.x, p3.y - p1.y };
+            f32 length = sqrtf(dir.x * dir.x + dir.y * dir.y);
+            if (length != 0.0f) {
+              dir.x /= length;
+              dir.y /= length;
+            }
+            f32 offset = LOOT_GRAB_ANIMATION_CURVE_CONTROL_OFFSET;
+            Vector2 c1 = Vector2{ p1.x - dir.x * offset, p1.y - dir.y * offset };
+            
+            Vector2 position = GetSplinePointBezierQuad(p1, c1, p3, drop_control.accumulator / drop_control.animation_duration);
+            item.world_collision.x = position.x;
+            item.world_collision.y = position.y;
+            item.sheet.coord.x = position.x;
+            item.sheet.coord.y = position.y;
+            drop_control.accumulator += (*state->in_ingame_info->delta_time);
+            if (drop_control.accumulator >= drop_control.animation_duration) {
+              item.pfn_loot_item_on_loot(item.type, item.id, data128(item.mm_ex.i16[0]));
+            }
+            break;
+          }
+          default: {
+            IWARN("collectible_manager::update_collectible_manager()::Unsupported item drop animation");
+            drop_control = loot_drop_animation_control_system();
+            break;
+          }
+        }
+      } else {
+        if (drop_control.drop_anim_type == LOOT_DROP_ANIMATION_DROP_BEGIN) {
+          drop_control.play_animation = false;
+          drop_control.accumulator = 0.f;
+          drop_control.drop_anim_type = LOOT_DROP_ANIMATION_UNDEFINED;
+        }
+      }
       continue;
     }
 
-		if (CheckCollisionRecs(item->world_collision, state->in_camera_metrics->frustum)) {
-      update_sprite(item->sheet, (*state->in_ingame_info->delta_time));
-			item->is_on_screen = true;
-      if (item->drop_control.play_animation) {
-
-        if (drop_control.accumulator < drop_control.animation_duration) {
-          switch (item->drop_control.drop_anim_type) {
-            case LOOT_DROP_ANIMATION_ELASTIC_OUT: {
-              item->world_collision.y = EaseElasticOut(drop_control.accumulator, drop_control.buffer.f32[0], drop_control.buffer.f32[1], drop_control.animation_duration);
-              item->sheet.coord.x = item->world_collision.x;
-              item->sheet.coord.y = item->world_collision.y;
-              drop_control.accumulator += (*state->in_ingame_info->delta_time);
-              break;
-            }
-            case LOOT_DROP_ANIMATION_PLAYER_GRAB: {
-              Vector2 p1 = pVECTOR2(drop_control.buffer.f32);
-              Vector2 p3  = Vector2 { _player->collision.x   + _player->collision.width   * .5f, _player->collision.y   + _player->collision.height   * .5f };
-              Vector2 dir = Vector2 { p3.x - p1.x, p3.y - p1.y };
-              f32 length = sqrtf(dir.x * dir.x + dir.y * dir.y);
-              if (length != 0.0f) {
-                dir.x /= length;
-                dir.y /= length;
-              }
-              f32 offset = LOOT_GRAB_ANIMATION_CURVE_CONTROL_OFFSET;
-              Vector2 c1 = Vector2{ p1.x - dir.x * offset, p1.y - dir.y * offset };
-              
-              Vector2 position = GetSplinePointBezierQuad(p1, c1, p3, drop_control.accumulator / drop_control.animation_duration);
-              item->world_collision.x = position.x;
-              item->world_collision.y = position.y;
-              item->sheet.coord.x = position.x;
-              item->sheet.coord.y = position.y;
-
-              drop_control.accumulator += (*state->in_ingame_info->delta_time);
-              break;
-            }
-            default: {
-              IWARN("collectible_manager::update_collectible_manager()::Unsupported item drop animation");
-              drop_control = loot_drop_animation_control_system();
-              break;
-            }
-          }
+    switch (item.type) {
+      case ITEM_TYPE_EXPERIENCE: {
+        if (item.is_player_grabbed == false and CheckCollisionCircleRec(_player->position, _player->interaction_radius, item.world_collision)) {
+          item.is_player_grabbed = true;
+          drop_control = loot_drop_animation_control_system(LOOT_DROP_ANIMATION_PLAYER_GRAB, LOOT_DROP_ANIMATION_DURATION, item.world_collision.x, item.world_collision.y);
         }
-        else {
-          drop_control = loot_drop_animation_control_system();
-        }
+        break;
       }
-
-      switch (item->type) {
-        case ITEM_TYPE_EXPERIENCE: {
-          if (item->is_player_grabbed == false and CheckCollisionCircleRec(_player->position, _player->interaction_radius, item->world_collision)) {
-            item->is_player_grabbed = true;
-            drop_control = loot_drop_animation_control_system(LOOT_DROP_ANIMATION_PLAYER_GRAB, LOOT_DROP_ANIMATION_DURATION, item->world_collision.x, item->world_collision.y);
-          }
+      case ITEM_TYPE_COIN: {
+        if (item.is_player_grabbed == false and CheckCollisionCircleRec(_player->position, _player->interaction_radius, item.world_collision)) {
+          item.is_player_grabbed = true;
+          drop_control = loot_drop_animation_control_system(LOOT_DROP_ANIMATION_PLAYER_GRAB, LOOT_DROP_ANIMATION_DURATION, item.world_collision.x, item.world_collision.y);
         }
-        case ITEM_TYPE_COIN: {
-          if (item->is_player_grabbed == false and CheckCollisionCircleRec(_player->position, _player->interaction_radius, item->world_collision)) {
-            item->is_player_grabbed = true;
-            drop_control = loot_drop_animation_control_system(LOOT_DROP_ANIMATION_PLAYER_GRAB, LOOT_DROP_ANIMATION_DURATION, item->world_collision.x, item->world_collision.y);
-          }
-        }
-        case ITEM_TYPE_HEALTH_FRAGMENT: {
-          if (item->is_player_grabbed == false and CheckCollisionCircleRec(_player->position, _player->interaction_radius, item->world_collision)) {
-            item->is_player_grabbed = true;
-            drop_control = loot_drop_animation_control_system(LOOT_DROP_ANIMATION_PLAYER_GRAB, LOOT_DROP_ANIMATION_DURATION, item->world_collision.x, item->world_collision.y);
-          }
-        }
-        case ITEM_TYPE_CHEST: {
-          if (CheckCollisionCircleRec(_player->position, _player->interaction_radius, item->world_collision)) {
-            item->pfn_loot_item_on_loot(item->type, item->id, data128(item->mm_ex.i16[0]));
-          }
-        }
-        default: { break; }
+        break;
       }
-
-		}
+      case ITEM_TYPE_HEALTH_FRAGMENT: {
+        if (item.is_player_grabbed == false and CheckCollisionCircleRec(_player->position, _player->interaction_radius, item.world_collision)) {
+          item.is_player_grabbed = true;
+          drop_control = loot_drop_animation_control_system(LOOT_DROP_ANIMATION_PLAYER_GRAB, LOOT_DROP_ANIMATION_DURATION, item.world_collision.x, item.world_collision.y);
+        }
+        break;
+      }
+      case ITEM_TYPE_CHEST: {
+        if (CheckCollisionCircleRec(_player->position, _player->interaction_radius, item.world_collision)) {
+          item.pfn_loot_item_on_loot(item.type, item.id, data128(item.mm_ex.i16[0]));
+        }
+        break;
+      }
+      default: { break; }
+    }
 	}
+
+  state->loots_on_the_map.erase(
+    std::remove_if(
+      state->loots_on_the_map.begin(),
+      state->loots_on_the_map.end(),
+      [](const loot_item& it) { return not it.is_active; }
+    ),
+    state->loots_on_the_map.end()
+  );
 
 	return true;
 }
@@ -284,7 +306,7 @@ loot_item * create_loot_item(item_type type, Vector2 position, data128 context) 
       set_sprite(sheet, true, false);
 
       loot_item item = loot_item(type, state->next_item_id++, sheet, 
-        loot_drop_animation_control_system(LOOT_DROP_ANIMATION_ELASTIC_OUT, LOOT_DROP_ANIMATION_DURATION, static_cast<f32>(context.i16[0]), static_cast<f32>(context.i16[1])), 
+        loot_drop_animation_control_system(LOOT_DROP_ANIMATION_DROP_BEGIN, LOOT_DROP_ANIMATION_DURATION, static_cast<f32>(context.i16[0]), static_cast<f32>(context.i16[1])), 
         true
       );
 			item.world_collision.width = sheet.coord.width * LOOT_ITEM_SCALE;
@@ -296,7 +318,20 @@ loot_item * create_loot_item(item_type type, Vector2 position, data128 context) 
 			item.sheet.coord.x  = item.world_collision.x;
 			item.sheet.coord.y = item.world_collision.y;
 
-			item.pfn_loot_item_on_loot = loot_item_on_loot;
+      {
+        const i32 spread_x = static_cast<i32>(item.world_collision.width * 2.f);
+        const i32 offset_x = get_random(-spread_x, spread_x);
+        item.world_collision.x += static_cast<f32>(offset_x);
+        item.sheet.coord.x = item.world_collision.x;
+      }
+
+      item.drop_control.buffer.f32[2] = position.x;
+      item.drop_control.buffer.f32[3] = position.y;
+      item.mm_ex.f32[1] = item.world_collision.height * static_cast<f32>(get_random(2, 4));
+      item.mm_ex.f32[2] = item.world_collision.x + item.world_collision.width * .5f;
+      item.mm_ex.f32[3] = static_cast<f32>(context.i16[0]) + static_cast<f32>(context.i16[1]) + item.world_collision.height * .5f;
+
+      item.pfn_loot_item_on_loot = loot_item_on_loot;
       item.mm_ex.i16[0] = context.i16[2];
       item.drop_control.buffer.f32[1] -= item.world_collision.height;
 
@@ -307,7 +342,7 @@ loot_item * create_loot_item(item_type type, Vector2 position, data128 context) 
       set_sprite(sheet, true, false);
 
       loot_item item = loot_item(type, state->next_item_id++, sheet, 
-        loot_drop_animation_control_system(LOOT_DROP_ANIMATION_ELASTIC_OUT, LOOT_DROP_ANIMATION_DURATION, static_cast<f32>(context.i16[0]), static_cast<f32>(context.i16[1])), 
+        loot_drop_animation_control_system(LOOT_DROP_ANIMATION_DROP_BEGIN, LOOT_DROP_ANIMATION_DURATION, static_cast<f32>(context.i16[0]), static_cast<f32>(context.i16[1])), 
         true
       );
 			item.world_collision.width  = sheet.coord.width * LOOT_ITEM_SCALE;
@@ -319,7 +354,20 @@ loot_item * create_loot_item(item_type type, Vector2 position, data128 context) 
 			item.sheet.coord.x  = item.world_collision.x;
 			item.sheet.coord.y = item.world_collision.y;
 
-			item.pfn_loot_item_on_loot = loot_item_on_loot;
+      {
+        const i32 spread_x = static_cast<i32>(item.world_collision.width * 2.f);
+        const i32 offset_x = get_random(-spread_x, spread_x);
+        item.world_collision.x += static_cast<f32>(offset_x);
+        item.sheet.coord.x = item.world_collision.x;
+      }
+
+      item.drop_control.buffer.f32[2] = position.x;
+      item.drop_control.buffer.f32[3] = position.y;
+      item.mm_ex.f32[1] = item.world_collision.height * static_cast<f32>(get_random(2, 4));
+      item.mm_ex.f32[2] = item.world_collision.x + item.world_collision.width * .5f;
+      item.mm_ex.f32[3] = static_cast<f32>(context.i16[0]) + static_cast<f32>(context.i16[1]) + item.world_collision.height * .5f;
+
+      item.pfn_loot_item_on_loot = loot_item_on_loot;
       item.mm_ex.i16[0] = context.i16[2];
       item.drop_control.buffer.f32[1] -= item.world_collision.height;
 
@@ -330,7 +378,7 @@ loot_item * create_loot_item(item_type type, Vector2 position, data128 context) 
       set_sprite(sheet, true, false);
 
       loot_item item = loot_item(type, state->next_item_id++, sheet, 
-        loot_drop_animation_control_system(LOOT_DROP_ANIMATION_ELASTIC_OUT, LOOT_DROP_ANIMATION_DURATION, static_cast<f32>(context.i16[0]), static_cast<f32>(context.i16[1])), 
+        loot_drop_animation_control_system(LOOT_DROP_ANIMATION_DROP_BEGIN, LOOT_DROP_ANIMATION_DURATION, static_cast<f32>(context.i16[0]), static_cast<f32>(context.i16[1])), 
         true
       );
 			item.world_collision.width  = sheet.coord.width * LOOT_ITEM_SCALE;
@@ -342,7 +390,20 @@ loot_item * create_loot_item(item_type type, Vector2 position, data128 context) 
 			item.sheet.coord.x  = item.world_collision.x;
 			item.sheet.coord.y = item.world_collision.y;
 
-			item.pfn_loot_item_on_loot = loot_item_on_loot;
+      {
+        const i32 spread_x = static_cast<i32>(item.world_collision.width * 2.f);
+        const i32 offset_x = get_random(-spread_x, spread_x);
+        item.world_collision.x += static_cast<f32>(offset_x);
+        item.sheet.coord.x = item.world_collision.x;
+      }
+
+      item.drop_control.buffer.f32[2] = position.x;
+      item.drop_control.buffer.f32[3] = position.y;
+      item.mm_ex.f32[1] = item.world_collision.height * static_cast<f32>(get_random(2, 4));
+      item.mm_ex.f32[2] = item.world_collision.x + item.world_collision.width * .5f;
+      item.mm_ex.f32[3] = static_cast<f32>(context.i16[0]) + static_cast<f32>(context.i16[1]) + item.world_collision.height * .5f;
+
+      item.pfn_loot_item_on_loot = loot_item_on_loot;
       item.mm_ex.i16[0] = context.i16[2];
       item.drop_control.buffer.f32[1] -= item.world_collision.height;
 
@@ -353,7 +414,7 @@ loot_item * create_loot_item(item_type type, Vector2 position, data128 context) 
       set_sprite(sheet, true, false);
 
       loot_item item = loot_item(type, state->next_item_id++, sheet, 
-        loot_drop_animation_control_system(LOOT_DROP_ANIMATION_ELASTIC_OUT, LOOT_DROP_ANIMATION_DURATION, static_cast<f32>(context.i16[0]), static_cast<f32>(context.i16[1])), 
+        loot_drop_animation_control_system(LOOT_DROP_ANIMATION_DROP_BEGIN, LOOT_DROP_ANIMATION_DURATION, static_cast<f32>(context.i16[0]), static_cast<f32>(context.i16[1])), 
         true
       );
 			item.world_collision.width  = sheet.coord.width * LOOT_ITEM_SCALE;
@@ -365,7 +426,20 @@ loot_item * create_loot_item(item_type type, Vector2 position, data128 context) 
 			item.sheet.coord.x  = item.world_collision.x;
 			item.sheet.coord.y = item.world_collision.y;
 
-			item.pfn_loot_item_on_loot = loot_item_on_loot;
+      {
+        const i32 spread_x = static_cast<i32>(item.world_collision.width * 2.f);
+        const i32 offset_x = get_random(-spread_x, spread_x);
+        item.world_collision.x += static_cast<f32>(offset_x);
+        item.sheet.coord.x = item.world_collision.x;
+      }
+
+      item.drop_control.buffer.f32[2] = position.x;
+      item.drop_control.buffer.f32[3] = position.y;
+      item.mm_ex.f32[1] = item.world_collision.height * static_cast<f32>(get_random(2, 4));
+      item.mm_ex.f32[2] = item.world_collision.x + item.world_collision.width * .5f;
+      item.mm_ex.f32[3] = static_cast<f32>(context.i16[0]) + static_cast<f32>(context.i16[1]) + item.world_collision.height * .5f;
+
+      item.pfn_loot_item_on_loot = loot_item_on_loot;
       item.mm_ex.i16[0] = context.i16[2];
       item.drop_control.buffer.f32[1] -= item.world_collision.height;
 
@@ -404,26 +478,26 @@ bool loot_item_on_loot(item_type type, i32 id, data128 context) {
     case ITEM_TYPE_EXPERIENCE: {
       event_fire(EVENT_CODE_PLAY_SOUND, event_context(static_cast<i32>(SOUND_ID_EXP_PICKUP), static_cast<i32>(true)));
 
-      state->loots_on_the_map.erase(state->loots_on_the_map.begin() + item_index);
+      state->loots_on_the_map[item_index].is_active = false;
 			return event_fire(EVENT_CODE_PLAYER_ADD_EXP, event_context(static_cast<i32>(context.i16[0])));
 		}
     case ITEM_TYPE_COIN: {
       event_fire(EVENT_CODE_PLAY_SOUND, event_context(static_cast<i32>(SOUND_ID_COIN_PICKUP)));
 
-      state->loots_on_the_map.erase(state->loots_on_the_map.begin() + item_index);
+      state->loots_on_the_map[item_index].is_active = false;
 			return event_fire(EVENT_CODE_ADD_CURRENCY_COINS, event_context(static_cast<i32>(context.i16[0])));
 		}
     case ITEM_TYPE_HEALTH_FRAGMENT: {
       event_fire(EVENT_CODE_PLAY_SOUND, event_context(static_cast<i32>(SOUND_ID_HEALTH_PICKUP)));
 
-      state->loots_on_the_map.erase(state->loots_on_the_map.begin() + item_index);
+      state->loots_on_the_map[item_index].is_active = false;
 			return event_fire(EVENT_CODE_PLAYER_HEAL, event_context(static_cast<i32>(context.i16[0])));
 		}
     case ITEM_TYPE_CHEST: {
-      std::vector<loot_item>::const_iterator item = state->loots_on_the_map.begin() + item_index;
-      Vector2 chest_screen_location = GetWorldToScreen2D(Vector2 {item->world_collision.x, item->world_collision.y}, state->in_camera_metrics->handle);
+      const loot_item& item = state->loots_on_the_map[item_index];
+      Vector2 chest_screen_location = GetWorldToScreen2D(Vector2 {item.world_collision.x, item.world_collision.y}, state->in_camera_metrics->handle);
       event_fire(EVENT_CODE_BEGIN_CHEST_OPENING_SEQUENCE, event_context(chest_screen_location.x, chest_screen_location.y, static_cast<f32>(LOOT_ITEM_SCALE)));
-      state->loots_on_the_map.erase(item);
+      state->loots_on_the_map[item_index].is_active = false;
 			return true;
 		}
 		default: {

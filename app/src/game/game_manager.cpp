@@ -292,10 +292,10 @@ bool game_manager_initialize(const camera_metrics * in_camera_metrics, const app
 
     // Negavite Traits
     {
-      add_trait(CHARACTER_TRAIT_GAME_RULE, GAME_RULE_BASIC_ATTACKS_REQUIRE_STAMINA, LOC_TEXT_PLAYER_TRAIT_EXERTION, LOC_TEXT_PLAYER_TRAIT_EXERTION_DESC, 1, data128());
-      add_trait(CHARACTER_TRAIT_GAME_RULE, GAME_RULE_JUMP_REQUIRE_STAMINA, LOC_TEXT_PLAYER_TRAIT_HOBBLED, LOC_TEXT_PLAYER_TRAIT_HOBBLED_DESC,            1, data128());
-      add_trait(CHARACTER_TRAIT_GAME_RULE, GAME_RULE_LOOTING_DISTANCE, LOC_TEXT_PLAYER_TRAIT_MYOPIA, LOC_TEXT_PLAYER_TRAIT_MYOPIA_DESC,                  1, data128(0.6f));
-      add_trait(CHARACTER_TRAIT_GAME_RULE, GAME_RULE_ZOMBIE_BITE_CONDITIONS, LOC_TEXT_PLAYER_TRAIT_HEMOPHILIA, LOC_TEXT_PLAYER_TRAIT_HEMOPHILIA_DESC,    1, 
+      add_trait(CHARACTER_TRAIT_GAME_RULE,      GAME_RULE_BASIC_ATTACKS_REQUIRE_STAMINA, LOC_TEXT_PLAYER_TRAIT_EXERTION,  LOC_TEXT_PLAYER_TRAIT_EXERTION_DESC,   1, data128());
+      add_trait(CHARACTER_TRAIT_GAME_RULE,      GAME_RULE_JUMP_REQUIRE_STAMINA,          LOC_TEXT_PLAYER_TRAIT_HOBBLED,   LOC_TEXT_PLAYER_TRAIT_HOBBLED_DESC,    1, data128());
+      add_trait(CHARACTER_TRAIT_CHARACTER_STAT, CHARACTER_STATS_INTERACTION_RADIUS,      LOC_TEXT_PLAYER_TRAIT_MYOPIA,    LOC_TEXT_PLAYER_TRAIT_MYOPIA_DESC,     1, data128(-25.f));
+      add_trait(CHARACTER_TRAIT_GAME_RULE,      GAME_RULE_ZOMBIE_BITE_CONDITIONS,        LOC_TEXT_PLAYER_TRAIT_HEMOPHILIA,LOC_TEXT_PLAYER_TRAIT_HEMOPHILIA_DESC, 1, 
         data128(GAME_RULE_ZOMBIE_BITE_CONDITION_BLEED)
       );
       add_trait(CHARACTER_TRAIT_GAME_RULE, GAME_RULE_NEAR_ZOMBIE_CONDITIONS, LOC_TEXT_PLAYER_TRAIT_DREAD, LOC_TEXT_PLAYER_TRAIT_DREAD_DESC,
@@ -404,7 +404,6 @@ bool game_manager_initialize(const camera_metrics * in_camera_metrics, const app
     };
     add_game_rule(GAME_RULE_BASIC_ATTACKS_REQUIRE_STAMINA,    DATA_TYPE_I32, data128(0));     // INFO: i32, bool
     add_game_rule(GAME_RULE_JUMP_REQUIRE_STAMINA,             DATA_TYPE_I32, data128(0));     // INFO: i32, bool
-    add_game_rule(GAME_RULE_LOOTING_DISTANCE,                 DATA_TYPE_F32, data128(50.f));  // INFO: f32
     add_game_rule(GAME_RULE_ZOMBIE_BITE_CONDITIONS,           DATA_TYPE_I32, data128());      // INFO: i32, enum
     add_game_rule(GAME_RULE_NEAR_ZOMBIE_CONDITIONS,           DATA_TYPE_I32, data128());      // INFO: i32, enum
     add_game_rule(GAME_RULE_ITEM_SLOT_COUNT,                  DATA_TYPE_I32, data128(6));     // INFO: i32
@@ -500,9 +499,6 @@ void game_manager_cleanup_state(void) {
 }
 
 void update_game_manager(void) {
-  if (not state or state == nullptr) {
-    return;
-  }
   state->mouse_pos_screen = Vector2 { GetMousePosition().x * get_app_settings()->scale_ratio.at(0), GetMousePosition().y * get_app_settings()->scale_ratio.at(1)};
   state->mouse_pos_world = GetScreenToWorld2D(Vector2 {state->mouse_pos_screen.x,state->mouse_pos_screen.y}, state->in_camera_metrics->handle);
   state->delta_time = delta_time_ingame();
@@ -571,9 +567,6 @@ void update_game_manager(void) {
   }
 }
 void update_game_manager_debug(void) {
-  if (not state or state == nullptr) {
-    return;
-  }
   state->mouse_pos_world = GetScreenToWorld2D(Vector2{
     GetMousePosition().x * get_app_settings()->scale_ratio.at(0),
     GetMousePosition().y * get_app_settings()->scale_ratio.at(1)
@@ -587,9 +580,6 @@ void update_game_manager_debug(void) {
   }
 }
 void render_game(void) {
-  if (not state or state == nullptr) {
-    return;
-  }
   switch (state->ingame_phase) {
     case INGAME_PLAY_PHASE_IDLE: {
       render_spawns();
@@ -681,19 +671,11 @@ void gm_draw_sigil(item_type type, Vector2 position, bool should_center) {
  * @brief Start game before, then upgrade the stat
  */
 void gm_start_game() {
-  if (not state or state == nullptr) {
-    IERROR("game_manager::gm_start_game()::State is invalid");
-    return;
-  }
   _set_player_position(ZEROVEC2);
   state->playlist.media_play(__builtin_addressof(state->playlist));
   state->ingame_phase = INGAME_PLAY_PHASE_CLEAR_ZOMBIES;
 }
 [[nodiscard]] bool gm_init_game(worldmap_stage stage, std::vector<character_trait>& _chosen_traits, ability_id starter_ability) {
-  if (not state or state == nullptr) {
-    IERROR("game_manager::gm_start_game()::State is invalid");
-    return false;
-  }
   if (stage.spawn_on_begin > MAX_SPAWN_COUNT or stage.spawn_on_map_max > MAX_SPAWN_COUNT) {
     return false;
   }
@@ -897,10 +879,6 @@ void gm_damage_player_if_collide(data128 coll_data, i32 damage, collision_type c
   IERROR("game_manager::gm_damage_player_if_collide()::Function terminated unexpectedly");
 }
 void populate_map_with_spawns(i32 min_count) {
-  if (not state or state == nullptr) {
-    IERROR("game_manager::populate_map_with_spawns()::State is not valid");
-    return;
-  }
   if (not state->game_info.in_spawns or state->game_info.in_spawns == nullptr) {
     IWARN("game_manager::populate_map_with_spawns()::Spawns pointer is not valid");
     return;
@@ -926,10 +904,6 @@ void populate_map_with_spawns(i32 min_count) {
   }
 }
 i32 spawn_boss(void) {
-  if (not state or state == nullptr) {
-    IERROR("game_manager::spawn_boss()::State is invalid");
-    return -1;
-  }
   for (i32 boss_spawning_attemts = 0; boss_spawning_attemts < SPAWN_TRYING_LIMIT; ++boss_spawning_attemts) 
   {
     Vector2 position = Vector2 {
@@ -954,10 +928,6 @@ void currency_coins_add(i32 value) {
   state->game_progression_data->currency_coins_player_have += value;
 }
 void generate_in_game_info(void) {
-  if (not state or state == nullptr) {
-    IERROR("game_manager::generate_in_game_info()::State is not valid");
-    return;
-  }
   if (not state->game_info.in_spawns or state->game_info.in_spawns == nullptr) {
     IWARN("game_manager::generate_in_game_info()::Spawn list is invalid");
     return;
@@ -965,10 +935,6 @@ void generate_in_game_info(void) {
   state->play_time -= state->delta_time;
 }
 void reset_ingame_info(void) {
-  if (not state or state == nullptr) {
-    IERROR("game_manager::reset_ingame_info()::State is invalid");
-    return;
-  }
   clean_up_spawn_state();
   collectible_manager_state_clear();
   state->ingame_phase = INGAME_PLAY_PHASE_UNDEFINED;
@@ -1141,24 +1107,15 @@ void gm_update_inventory_item_by_id(item_data data, i32 id) {
   }
 }
 void gm_set_chosen_traits(std::vector<character_trait> traits) {
-  if (not state or state == nullptr) {
-    IERROR("game_manager::gm_set_chosen_traits()::State is not valid");
-    return;
-  }
   state->chosen_traits = traits;
 }
 bool player_state_rebuild(void) {
-  if (not state or state == nullptr) {
-    IERROR("player::player_state_rebuild()::State is invalid");
-    return false;
-  }
   player_state& _player = state->player_state_static; 
 
-  for (size_t itr_000 = 1u; itr_000 < _player.stats.size() - 1u; itr_000++) {
+  for (size_t itr_000 = CHARACTER_STATS_UNDEFINED + 1; itr_000 < CHARACTER_STATS_MAX; itr_000++) {
     character_stat& stat = _player.stats[itr_000];
     gm_refresh_stat_by_level(&stat, stat.current_level);
   }
-
   _player.exp_to_next_level = level_curve[_player.level];
 
   _player.health_current = _player.stats[CHARACTER_STATS_HEALTH].buffer.i32[3];
@@ -1167,15 +1124,22 @@ bool player_state_rebuild(void) {
   _player.stamina_perc = 1.f;
   _player.mana_current = _player.stats[CHARACTER_STATS_MANA].buffer.i32[3];
   _player.mana_perc = 1.f;
+
+  _player.interaction_radius = _player.stats[CHARACTER_STATS_INTERACTION_RADIUS].buffer.f32[3];
   
   const f32& fps_multiplier = _player.stats[CHARACTER_STATS_BASIC_ATTACK_SPEED].buffer.f32[3];
   _player.attack_1_sprite.fps = (_player.attack_1_sprite.frame_total / PLAYER_BASE_ATTACK_DURATION) * fps_multiplier;
   _player.attack_2_sprite.fps = (_player.attack_2_sprite.frame_total / PLAYER_BASE_ATTACK_DURATION) * fps_multiplier;
   _player.attack_3_sprite.fps = (_player.attack_3_sprite.frame_total / PLAYER_BASE_ATTACK_DURATION) * fps_multiplier;
 
-  if (not std::isfinite(_player.attack_1_sprite.fps) or not std::isfinite(_player.attack_2_sprite.fps) or not std::isfinite(_player.attack_3_sprite.fps)) {
+  if (
+    not std::isfinite(_player.attack_1_sprite.fps) or 
+    not std::isfinite(_player.attack_2_sprite.fps) or 
+    not std::isfinite(_player.attack_3_sprite.fps)
+  ) {
     return false;
   }
+
   return true;
 }
 bool upgrade_ability_by_id(ability_id abl_id) {
@@ -1388,6 +1352,7 @@ void gm_refresh_stat_by_level(character_stat* stat, i32 level) {
     case CHARACTER_STATS_LETAL_SIGIL_EFFECTIVENESS: { set_stat_value_f32(next_curve_value / 100.f ); return; } // DATA_TYPE_F32
     case CHARACTER_STATS_DROP_RATE:                 { set_stat_value_f32(next_curve_value / 100.f ); return; } // DATA_TYPE_F32
     case CHARACTER_STATS_REWARD_MODIFIER:           { set_stat_value_f32(next_curve_value / 100.f ); return; } // DATA_TYPE_F32
+    case CHARACTER_STATS_INTERACTION_RADIUS:        { set_stat_value_f32(next_curve_value / 100.f ); return; } // DATA_TYPE_F32
     default:{
       IWARN("game_manager::gm_refresh_stat_by_level()::Unsuppported stat id");
       return;
@@ -1440,7 +1405,6 @@ bool gm_refresh_game_rule_by_level(game_rule* rule, i32 level) {
     }
     case GAME_RULE_BASIC_ATTACKS_REQUIRE_STAMINA: {    return true; }                                //INFO: i32, bool Should not set by level
     case GAME_RULE_JUMP_REQUIRE_STAMINA: {             return true; }                                //INFO: i32, bool Should not set by level
-    case GAME_RULE_LOOTING_DISTANCE: {                 set_game_rule_value_f32(level); return true; }//INFO: f32
     case GAME_RULE_ZOMBIE_BITE_CONDITIONS: {           return true; }                                //INFO: i32, enum Should not set by level
     case GAME_RULE_NEAR_ZOMBIE_CONDITIONS: {           return true; }                                //INFO: i32, enum Should not set by level
     case GAME_RULE_ITEM_SLOT_COUNT: {                  set_game_rule_value_int(level); return true; }//INFO: i32

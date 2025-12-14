@@ -9,9 +9,9 @@
 #define HEADER_SYMBOL_END "__END__"
 #define HEADER_SYMBOL_END_LENGTH 7
 
-#define ASSET1_FILE_SIZE 165628521u
-#define ASSET2_FILE_SIZE 3016472u // WARN: This is not exact number of asset2 pak file byte size 
-#define MAP_FILE_SIZE 3624970u
+constexpr u64 ASSET1_FILE_SIZE = 165628521u;
+constexpr u64 ASSET2_FILE_SIZE = 1621439u;
+constexpr u64 MAP_FILE_SIZE = 3637195u;
 
 typedef enum worldmap_data_type {
   WORLDMAP_DATA_UNDEFINED,
@@ -227,10 +227,6 @@ bool pak_parser_system_initialize(void) {
 }
 
 bool parse_asset_pak(pak_file_id id) {
-  if (not state or state == nullptr) {
-    IERROR("pak_parser::parse_asset_pak()::State is invalid");
-    return false;
-  }
   switch (id) {
   	case PAK_FILE_ASSET1: {
   		if(not state->asset_pak_datas.at(id).is_initialized) {
@@ -287,14 +283,9 @@ bool parse_asset_pak(pak_file_id id) {
   	  return false;
 		}
   }
-  IERROR("pak_parser::parse_asset_pak()::Function ended unexpectedly");
   return false;
 }
 bool parse_map_pak(void) {
-  if (not state or state == nullptr) {
-    IERROR("pak_parser::parse_map_pak()::State is invalid");
-    return false;
-  }
   if(state->map_pak_data.empty()) {
     const std::string path = pak_id_to_file_name(PAK_FILE_MAP);
     state->read_buffer.clear();
@@ -543,9 +534,6 @@ void assign_pak_data_by_id(pak_file_id id) {
   return;
 }
 void pak_parser_drop_pak_data(pak_file_id id) {
-  if (not state or state == nullptr) {
-    return;
-  }
   switch (id) {
     case PAK_FILE_ASSET1: {
       state->asset_pak_datas.at(id).pak_data.clear();
@@ -555,14 +543,11 @@ void pak_parser_drop_pak_data(pak_file_id id) {
       state->asset_pak_datas.at(id).pak_data.clear();
       return;
     }
+    case PAK_FILE_MAP: {
+      state->map_pak_data.clear();
+    }
     default: return;
   }
-}
-void pak_parser_drop_map_pak_data(void) {
-  if (not state or state == nullptr) {
-    return;
-  }
-  state->map_pak_data.clear();
 }
 void assign_file_data_by_id(pak_file_id id, i32 index, size_t file_offset_in_pak_data) {
   if (id >= PAK_FILE_MAX or id <= PAK_FILE_UNDEFINED) {

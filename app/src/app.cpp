@@ -68,19 +68,19 @@ bool app_initialize(i32 build_id) {
 
   // Requires Raylib
   if(not settings_initialize()) {
-    alert("Settings state init failed", "Fatal");
+    alert("failed to init settings", "Fatal");
     return false; // TODO: Set default settings instead
   }
 
   if(not logging_system_initialize(build_id)) { // INFO: Requires Raylib to file system operations
-    alert("Logging system init failed", "Fatal");
+    alert("failed to init logging", "Fatal");
     return false;
   }
   set_settings_from_ini_file(CONFIG_FILE_LOCATION);
   state->settings = get_app_settings();
 
 	if (not pak_parser_system_initialize()) {
-  	IFATAL("app::app_initialize()::Cannot initialize par parser");
+  	alert("failed to init resourse parser", "Fatal");
   	return false;
 	}
 
@@ -118,12 +118,20 @@ bool app_initialize(i32 build_id) {
     UnloadTexture(loading_tex);
   #endif
   
-  parse_asset_pak(PAK_FILE_ASSET1);
-  parse_asset_pak(PAK_FILE_ASSET2);
-  parse_map_pak();
+
+  if(not parse_asset_pak(PAK_FILE_ASSET1)) {
+    IERROR("app::app_initialize()::failed to parse asset1");
+  }
+  if(not parse_asset_pak(PAK_FILE_ASSET2)) {
+    IERROR("app::app_initialize()::failed to parse asset2");
+  }
+  if(not parse_map_pak()) {
+    IERROR("app::app_initialize()::failed to parse map");
+  }
+
   pak_parser_drop_pak_data(PAK_FILE_ASSET1);
   pak_parser_drop_pak_data(PAK_FILE_ASSET2);
-  pak_parser_drop_map_pak_data();
+  pak_parser_drop_pak_data(PAK_FILE_MAP);
 
   if (not loc_parser_system_initialize()) {
     IFATAL("app::app_initialize()::Localization system init failed");

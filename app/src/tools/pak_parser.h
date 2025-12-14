@@ -16,6 +16,5 @@ const file_buffer *  fetch_asset_file_buffer(pak_file_id pak_id, i32 index);
 const worldmap_stage_file * fetch_map_file_buffer(i32 index);
 
 void pak_parser_drop_pak_data(pak_file_id id);
-void pak_parser_drop_map_pak_data(void);
 
 #endif
